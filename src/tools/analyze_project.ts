@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, extname, basename } from 'path';
 
 interface ProjectAnalysis {
@@ -220,8 +220,8 @@ function detectLanguage(packageJson: any): string {
 }
 
 function detectPackageManager(): string {
-  if (require('fs').existsSync('yarn.lock')) return 'Yarn';
-  if (require('fs').existsSync('pnpm-lock.yaml')) return 'pnpm';
+  if (existsSync('yarn.lock')) return 'Yarn';
+  if (existsSync('pnpm-lock.yaml')) return 'pnpm';
   return 'npm';
 }
 
