@@ -11,12 +11,12 @@
 ```bash
 # 编辑 package.json，替换为你的 GitHub 用户名
 "repository": {
-  "url": "https://github.com/你的用户名/mcp-probe-kit.git"
+  "url": "https://github.com/mybolide/mcp-probe-kit.git"
 },
 "bugs": {
-  "url": "https://github.com/你的用户名/mcp-probe-kit/issues"
+  "url": "https://github.com/mybolide/mcp-probe-kit/issues"
 },
-"homepage": "https://github.com/你的用户名/mcp-probe-kit#readme"
+"homepage": "https://github.com/mybolide/mcp-probe-kit#readme"
 ```
 
 ### 2. 创建 GitHub 仓库
@@ -31,8 +31,8 @@
 ### 3. 推送代码到 GitHub
 
 ```bash
-# 添加远程仓库（替换为你的用户名）
-git remote add origin https://github.com/你的用户名/mcp-probe-kit.git
+# 添加远程仓库
+git remote add origin https://github.com/mybolide/mcp-probe-kit.git
 
 # 推送代码
 git push -u origin main
@@ -126,7 +126,7 @@ npm install -g mcp-probe-kit
 
 ### 📖 使用文档
 
-完整文档请查看 [README.md](https://github.com/你的用户名/mcp-probe-kit#readme)
+完整文档请查看 [README.md](https://github.com/mybolide/mcp-probe-kit#readme)
 
 ### 🙏 致谢
 

@@ -4,7 +4,7 @@
 
 一个强大的 MCP (Model Context Protocol) 服务器，提供 **22 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
 
-**作者**: [小墨 (Kyle)](https://www.bytezonex.com/) | **项目**: [GitHub](https://github.com/yourusername/mcp-probe-kit)
+**作者**: [小墨 (Kyle)](https://www.bytezonex.com/) | **项目**: [GitHub](https://github.com/mybolide/mcp-probe-kit)
 
 ---
 
