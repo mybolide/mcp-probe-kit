@@ -435,7 +435,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             max_depth: {
               type: "number",
-              description: "目录树最大深度（默认 3）",
+              description: "目录树最大深度（默认 5）",
             },
             include_content: {
               type: "boolean",

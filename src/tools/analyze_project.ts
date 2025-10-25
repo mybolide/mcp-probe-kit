@@ -43,7 +43,7 @@ interface ProjectAnalysis {
 
 export async function analyzeProject(args: any): Promise<any> {
   const projectPath = args.project_path || process.cwd();
-  const maxDepth = args.max_depth || 3;
+  const maxDepth = args.max_depth || 5;
   const includeContent = args.include_content !== false;
 
   try {
