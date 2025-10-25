@@ -20,4 +20,5 @@ export { explain } from "./explain.js";
 export { convert } from "./convert.js";
 export { genreadme } from "./genreadme.js";
 export { split } from "./split.js";
+export { analyzeProject } from "./analyze_project.js";
 

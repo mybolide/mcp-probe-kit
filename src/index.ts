@@ -11,14 +11,14 @@ import {
 import { 
   detectShell, initSetting, initProject, gencommit, debug, genapi,
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
-  fix, gensql, resolveConflict, genui, explain, convert, genreadme, split
+  fix, gensql, resolveConflict, genui, explain, convert, genreadme, split, analyzeProject
 } from "./tools/index.js";
 
 // 创建MCP服务器实例
 const server = new Server(
   {
     name: "mcp-probe-kit",
-    version: "1.0.0",
+    version: "1.2.0",
   },
   {
     capabilities: {
@@ -423,6 +423,28 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: [],
         },
       },
+      {
+        name: "analyze_project",
+        description: "【项目分析】深度分析项目结构、代码质量和架构，帮助AI快速理解老项目",
+        inputSchema: {
+          type: "object",
+          properties: {
+            project_path: {
+              type: "string",
+              description: "项目路径（默认当前目录）",
+            },
+            max_depth: {
+              type: "number",
+              description: "目录树最大深度（默认 3）",
+            },
+            include_content: {
+              type: "boolean",
+              description: "是否包含文件内容（默认 true）",
+            },
+          },
+          required: [],
+        },
+      },
     ],
   };
 });
@@ -499,6 +521,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "split":
         return await split(args);
 
+      case "analyze_project":
+        return await analyzeProject(args);
+
       default:
         throw new Error(`未知工具: ${name}`);
     }
@@ -572,6 +597,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 convert: "enabled",
                 genreadme: "enabled",
                 split: "enabled",
+                analyze_project: "enabled",
               },
             },
             null,
