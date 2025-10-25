@@ -10,7 +10,8 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { 
   detectShell, initSetting, initProject, gencommit, debug, genapi,
-  codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf
+  codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
+  fix, gensql, resolveConflict, genui, explain, convert, genreadme
 } from "./tools/index.js";
 
 // 创建MCP服务器实例
@@ -278,6 +279,132 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: [],
         },
       },
+      {
+        name: "fix",
+        description: "【自动修复】自动修复代码问题（Lint、TypeScript、格式化等）",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要修复的代码",
+            },
+            type: {
+              type: "string",
+              description: "修复类型：lint, type, format, import, unused, all（默认 all）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "gensql",
+        description: "【SQL 生成器】根据描述生成 SQL 查询语句",
+        inputSchema: {
+          type: "object",
+          properties: {
+            description: {
+              type: "string",
+              description: "需求描述",
+            },
+            dialect: {
+              type: "string",
+              description: "数据库类型：postgres, mysql, sqlite（默认 postgres）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "resolve_conflict",
+        description: "【Git 冲突解决】分析并解决 Git 冲突",
+        inputSchema: {
+          type: "object",
+          properties: {
+            conflicts: {
+              type: "string",
+              description: "冲突内容（git diff 或冲突文件内容）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "genui",
+        description: "【UI 组件生成器】生成 React/Vue UI 组件代码",
+        inputSchema: {
+          type: "object",
+          properties: {
+            description: {
+              type: "string",
+              description: "组件描述",
+            },
+            framework: {
+              type: "string",
+              description: "框架：react, vue, html（默认 react）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "explain",
+        description: "【代码解释器】详细解释代码逻辑和原理",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要解释的代码",
+            },
+            context: {
+              type: "string",
+              description: "上下文信息",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "convert",
+        description: "【代码转换器】转换代码格式/框架（JS→TS、Class→Hooks 等）",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "源代码",
+            },
+            from: {
+              type: "string",
+              description: "源格式/框架",
+            },
+            to: {
+              type: "string",
+              description: "目标格式/框架",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "genreadme",
+        description: "【README 生成器】根据项目代码生成 README.md 文档",
+        inputSchema: {
+          type: "object",
+          properties: {
+            project_info: {
+              type: "string",
+              description: "项目信息或代码",
+            },
+            style: {
+              type: "string",
+              description: "风格：standard, minimal, detailed（默认 standard）",
+            },
+          },
+          required: [],
+        },
+      },
     ],
   };
 });
@@ -329,6 +456,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "perf":
         return await perf(args);
+
+      case "fix":
+        return await fix(args);
+
+      case "gensql":
+        return await gensql(args);
+
+      case "resolve_conflict":
+        return await resolveConflict(args);
+
+      case "genui":
+        return await genui(args);
+
+      case "explain":
+        return await explain(args);
+
+      case "convert":
+        return await convert(args);
+
+      case "genreadme":
+        return await genreadme(args);
 
       default:
         throw new Error(`未知工具: ${name}`);
@@ -395,6 +543,13 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 genchangelog: "enabled",
                 refactor: "enabled",
                 perf: "enabled",
+                fix: "enabled",
+                gensql: "enabled",
+                resolve_conflict: "enabled",
+                genui: "enabled",
+                explain: "enabled",
+                convert: "enabled",
+                genreadme: "enabled",
               },
             },
             null,

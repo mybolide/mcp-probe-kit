@@ -12,4 +12,11 @@ export { gendoc } from "./gendoc.js";
 export { genchangelog } from "./genchangelog.js";
 export { refactor } from "./refactor.js";
 export { perf } from "./perf.js";
+export { fix } from "./fix.js";
+export { gensql } from "./gensql.js";
+export { resolveConflict } from "./resolve_conflict.js";
+export { genui } from "./genui.js";
+export { explain } from "./explain.js";
+export { convert } from "./convert.js";
+export { genreadme } from "./genreadme.js";
 

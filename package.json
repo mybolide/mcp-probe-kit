@@ -1,7 +1,7 @@
 {
   "name": "mcp-probe-kit",
   "version": "1.0.0",
-  "description": "Cursor Development Enhancement Toolkit - MCP Server with 6 practical tools",
+  "description": "Cursor Development Enhancement Toolkit - MCP Server with 21 practical tools",
   "type": "module",
   "main": "build/index.js",
   "scripts": {

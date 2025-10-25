@@ -2,7 +2,7 @@
 
 > 🚀 Cursor 开发增强工具集 - 让 AI 更懂你的开发流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **14 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **21 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
 
 **作者**: [小墨 (Kyle)](https://www.bytezonex.com/) | **项目**: [GitHub](https://github.com/yourusername/mcp-probe-kit)
 
@@ -10,25 +10,32 @@
 
 ## ✨ 功能特性
 
-### 🔍 代码质量（6 个工具）
+### 🔍 代码质量（7 个工具）
 - **`detect_shell`** - AI 模型套壳检测
 - **`code_review`** - 代码审查助手
 - **`debug`** - 智能调试助手
 - **`gentest`** - 测试用例生成器
 - **`refactor`** - 重构建议
 - **`perf`** - 性能分析
+- **`fix`** - 自动修复代码问题 🆕
 
-### 🛠️ 开发效率（5 个工具）
+### 🛠️ 开发效率（10 个工具）
 - **`gencommit`** - Git 提交消息生成
 - **`genapi`** - API 文档生成
 - **`gendoc`** - 代码注释生成
 - **`genpr`** - PR 描述生成
 - **`genchangelog`** - Changelog 生成
+- **`gensql`** - SQL 查询生成器 🆕
+- **`genui`** - UI 组件生成器 🆕
+- **`explain`** - 代码解释器 🆕
+- **`convert`** - 代码转换器 🆕
+- **`genreadme`** - README 生成器 🆕
 
-### 📦 项目管理（3 个工具）
+### 📦 项目管理（4 个工具）
 - **`init_setting`** - Cursor AI 配置初始化
 - **`init_project`** - Spec-Driven 项目初始化
 - **`check_deps`** - 依赖健康度检查
+- **`resolve_conflict`** - Git 冲突解决助手 🆕
 
 ---
 
@@ -129,6 +136,22 @@ npm install && npm run build
 
 ---
 
+#### `fix` - 自动修复 🆕
+自动修复代码问题（Lint 错误、TypeScript 类型错误、格式化问题）。
+
+**用法**：`fix @file.ts` 或 `fix`（修复所有文件）
+
+**修复类型**：lint, type, format, import, unused, all（默认）
+
+**功能**：
+- Lint 错误自动修复
+- TypeScript 类型错误修复
+- 代码格式化
+- Import 语句优化
+- 移除未使用代码
+
+---
+
 ### 🛠️ 开发效率工具
 
 #### `gencommit` - 提交生成
@@ -178,6 +201,92 @@ npm install && npm run build
 
 ---
 
+#### `gensql` - SQL 生成器 🆕
+根据自然语言描述生成 SQL 查询语句。
+
+**用法**：`gensql` 然后描述需求（如："查询购买金额超过平均值的用户"）
+
+**支持**：PostgreSQL, MySQL, SQLite
+
+**功能**：
+- 复杂查询生成（JOIN、子查询、窗口函数）
+- 建表语句生成
+- 索引优化建议
+- 查询性能分析
+
+---
+
+#### `genui` - UI 组件生成器 🆕
+生成 React/Vue UI 组件代码。
+
+**用法**：`genui` 然后描述组件（如："创建一个带加载状态的 Button 组件"）
+
+**支持框架**：React（默认）, Vue, HTML
+
+**功能**：
+- 完整的组件实现（TypeScript）
+- Tailwind CSS 样式
+- 可访问性（A11y）支持
+- Props 类型定义
+- 使用示例
+
+---
+
+#### `explain` - 代码解释器 🆕
+详细解释代码逻辑和原理，帮助理解复杂代码。
+
+**用法**：`explain @complex-code.ts`
+
+**解释内容**：
+- 整体功能概述
+- 逐行代码说明
+- 核心原理分析
+- 设计模式识别
+- 时间/空间复杂度
+- 使用场景和注意事项
+
+**适用场景**：
+- 理解遗留代码
+- 学习新框架/库
+- 复杂算法分析
+- Code Review
+
+---
+
+#### `convert` - 代码转换器 🆕
+转换代码格式或框架。
+
+**用法**：`convert @file.js` 然后说明转换类型（如："转为 TypeScript"）
+
+**支持转换**：
+- JavaScript → TypeScript
+- Class Component → Hooks
+- Promises → Async/Await
+- CommonJS → ESM
+- CSS → Tailwind CSS
+- Vue 2 → Vue 3
+- JSON → TypeScript Interface
+
+---
+
+#### `genreadme` - README 生成器 🆕
+根据项目代码自动生成 README.md 文档。
+
+**用法**：`genreadme` 或提供项目信息
+
+**风格**：standard（标准）, minimal（极简）, detailed（详细）
+
+**包含内容**：
+- 项目简介和徽章
+- 安装和快速开始
+- 功能特性列表
+- 使用示例
+- API 文档
+- 配置说明
+- 贡献指南
+
+---
+
 ### 📦 项目管理工具
 
 #### `init_setting` - 配置初始化
@@ -206,6 +315,25 @@ npm install && npm run build
 **用法**：`check_deps`
 
 **检查**：过期依赖、安全漏洞、包体积、未使用依赖
+
+---
+
+#### `resolve_conflict` - Git 冲突解决 🆕
+分析并帮助解决 Git 合并冲突。
+
+**用法**：`resolve_conflict` 然后粘贴冲突内容，或直接打开冲突文件
+
+**功能**：
+- 冲突原因分析
+- 双方修改意图识别
+- 推荐合并方案
+- 完整的解决后代码
+- 冲突预防建议
+
+**适用场景**：
+- Feature 分支合并
+- Rebase 冲突
+- Cherry-pick 冲突
 
 ---
 
