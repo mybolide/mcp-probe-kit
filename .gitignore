@@ -1,6 +1,32 @@
-.DS_Store
+# Dependencies
 node_modules/
-dist/
-coverage/
+
+# Build output
+build/
+*.js
+*.d.ts
+!test-server.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
 *.log
+npm-debug.log*
+
+# Environment
 .env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
