@@ -1,0 +1,34 @@
+{
+  "name": "mcp-probe-kit",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "mcp-probe-kit": "bin/cli.mjs"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE",
+    "snippets"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "description": "Zero-config(ish) MCP server for self-diagnosing wrapper setups; includes fingerprint_env, compute_hash, optional network_probe, and bootstrap.",
+  "keywords": [
+    "mcp",
+    "cursor",
+    "probe",
+    "fingerprint",
+    "claude",
+    "copilot",
+    "vscode",
+    "continue"
+  ],
+  "license": "MIT",
+  "author": "mybolide",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mybolide/mcp-probe-kit"
+  }
+}
