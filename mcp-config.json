@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["mcp-probe-kit@latest"],
+      "env": {}
+    }
+  }
+}

@@ -66,7 +66,8 @@
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit"]
+      "args": ["mcp-probe-kit@latest"],
+      "env": {}
     }
   }
 }
