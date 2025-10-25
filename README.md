@@ -2,7 +2,7 @@
 
 > 🚀 Cursor 开发增强工具集 - 让 AI 更懂你的开发流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **22 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **23 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
 
 **作者**: [小墨 (Kyle)](https://www.bytezonex.com/) | **项目**: [GitHub](https://github.com/mybolide/mcp-probe-kit)
 
@@ -32,11 +32,12 @@
 - **`genreadme`** - README 生成器 🆕
 - **`split`** - 文件拆分工具 🆕
 
-### 📦 项目管理（4 个工具）
+### 📦 项目管理（5 个工具）
 - **`init_setting`** - Cursor AI 配置初始化
 - **`init_project`** - Spec-Driven 项目初始化
 - **`check_deps`** - 依赖健康度检查
 - **`resolve_conflict`** - Git 冲突解决助手 🆕
+- **`analyze_project`** - 项目分析工具，帮助AI快速理解老项目 🆕
 
 ---
 
@@ -442,6 +443,89 @@ npm install mcp-probe-kit
 
 ---
 
+#### `analyze_project` - 项目分析工具 🆕
+深度分析项目结构、代码质量和架构，帮助AI快速理解老项目。
+
+**用法**：`analyze_project` 或 `analyze_project @project-path`
+
+**参数**：
+- `project_path` - 项目路径（默认当前目录）
+- `max_depth` - 目录树最大深度（默认 3）
+- `include_content` - 是否包含文件内容（默认 true）
+
+**分析内容**：
+- **项目概览**：项目类型、技术栈、框架、语言、包管理器
+- **目录结构**：清晰的目录树展示
+- **关键文件**：自动识别重要配置文件并提供用途说明
+- **依赖分析**：生产依赖、开发依赖统计和健康度评估
+- **代码指标**：文件数量、行数统计、文件类型分布、最大文件识别
+- **架构模式**：设计模式检测、入口文件识别、核心模块分析
+- **智能建议**：项目复杂度评估和改进建议
+
+**适用场景**：
+- 🔍 接手老项目时快速了解项目结构
+- 📊 代码审查前进行项目概览
+- 🏗️ 架构分析和重构规划
+- 📚 项目文档生成
+- 🤖 AI助手更好地理解项目上下文
+
+**输出示例**：
+```markdown
+# 📊 项目分析报告
+
+## 🏗️ 项目概览
+- **项目名称**: my-project
+- **项目类型**: React 应用
+- **技术栈**: React, Next.js
+- **主要语言**: TypeScript
+- **包管理器**: npm
+
+## 📁 目录结构
+```
+my-project/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── utils/
+├── public/
+└── package.json
+```
+
+## 🔑 关键文件
+### package.json
+**用途**: 项目配置和依赖管理
+
+### src/pages/index.tsx
+**用途**: Next.js 首页组件
+
+## 📦 依赖分析
+- **生产依赖**: 15 个
+- **开发依赖**: 8 个
+- **总依赖数**: 23 个
+
+## 📈 代码指标
+- **总文件数**: 45
+- **总行数**: 2,350
+- **文件类型分布**:
+  - .tsx: 12 个文件
+  - .ts: 8 个文件
+  - .css: 5 个文件
+
+## 🏛️ 架构分析
+- **设计模式**: 组件化, Hooks
+- **入口文件**: src/pages/index.tsx
+- **核心模块**: components, pages, utils
+
+## 📋 项目总结
+**项目目的**: React 应用，使用 Next.js 框架，主要语言为 TypeScript
+**复杂度**: medium
+**建议**: 
+- 考虑模块化重构，减少文件数量
+- 引入设计模式，提高代码组织性
+```
+
+---
+
 ## 🎯 使用场景示例
 
 ### 📝 日常开发流程
@@ -466,6 +550,14 @@ npm install mcp-probe-kit
 2. init_setting                   # 配置 AI
 3. check_deps                     # 检查依赖健康度
 4. 开始开发...
+```
+
+### 🔍 接手老项目
+```
+1. analyze_project                # 深度分析项目结构
+2. check_deps                     # 检查依赖健康度
+3. code_review                    # 代码质量审查
+4. 开始维护和开发...
 ```
 
 ### 📦 版本发布
@@ -493,7 +585,7 @@ npm install mcp-probe-kit
 mcp-probe-kit/
 ├── src/
 │   ├── index.ts              # MCP 服务器主入口
-│   └── tools/                # 工具实现（14 个）
+│   └── tools/                # 工具实现（15 个）
 │       ├── index.ts          # 工具导出
 │       ├── detect_shell.ts   # 套壳检测
 │       ├── code_review.ts    # 代码审查
@@ -508,7 +600,8 @@ mcp-probe-kit/
 │       ├── genchangelog.ts   # Changelog 生成
 │       ├── init_setting.ts   # 配置初始化
 │       ├── init_project.ts   # 项目初始化
-│       └── check_deps.ts     # 依赖检查
+│       ├── check_deps.ts     # 依赖检查
+│       └── analyze_project.ts # 项目分析
 ├── build/                    # 编译输出
 ├── package.json
 ├── tsconfig.json
