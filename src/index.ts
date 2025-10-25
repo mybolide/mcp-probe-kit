@@ -8,7 +8,10 @@ import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { detectShell, initSetting, initProject, gencommit, debug, genapi } from "./tools/index.js";
+import { 
+  detectShell, initSetting, initProject, gencommit, debug, genapi,
+  codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf
+} from "./tools/index.js";
 
 // 创建MCP服务器实例
 const server = new Server(
@@ -132,6 +135,149 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: [],
         },
       },
+      {
+        name: "code_review",
+        description: "【代码审查】全面审查代码质量、安全性、性能和最佳实践",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要审查的代码",
+            },
+            focus: {
+              type: "string",
+              description: "审查重点：quality, security, performance, all（默认 all）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "gentest",
+        description: "【生成测试】为代码生成完整的测试用例（支持 Jest/Vitest/Mocha）",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要测试的代码",
+            },
+            framework: {
+              type: "string",
+              description: "测试框架：jest, vitest, mocha（默认 jest）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "genpr",
+        description: "【生成 PR】分析变更并生成规范的 Pull Request 描述",
+        inputSchema: {
+          type: "object",
+          properties: {
+            branch: {
+              type: "string",
+              description: "分支名称",
+            },
+            commits: {
+              type: "string",
+              description: "Commit 历史",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "check_deps",
+        description: "【依赖检查】分析项目依赖的健康度（版本、安全漏洞、体积）",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "gendoc",
+        description: "【生成注释】为代码生成详细的 JSDoc/TSDoc 注释",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要生成注释的代码",
+            },
+            style: {
+              type: "string",
+              description: "注释风格：jsdoc, tsdoc, javadoc（默认 jsdoc）",
+            },
+            lang: {
+              type: "string",
+              description: "语言：zh, en（默认 zh）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "genchangelog",
+        description: "【生成 Changelog】根据 commit 历史生成 CHANGELOG.md",
+        inputSchema: {
+          type: "object",
+          properties: {
+            version: {
+              type: "string",
+              description: "版本号（如：v1.2.0）",
+            },
+            from: {
+              type: "string",
+              description: "起始 commit/tag",
+            },
+            to: {
+              type: "string",
+              description: "结束 commit/tag（默认 HEAD）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "refactor",
+        description: "【重构建议】分析代码并提供重构建议和实施计划",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要重构的代码",
+            },
+            goal: {
+              type: "string",
+              description: "重构目标：improve_readability, reduce_complexity, extract_function 等",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "perf",
+        description: "【性能分析】分析代码性能瓶颈并提供优化建议",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要性能分析的代码",
+            },
+            type: {
+              type: "string",
+              description: "分析类型：algorithm, memory, react, database, all（默认 all）",
+            },
+          },
+          required: [],
+        },
+      },
     ],
   };
 });
@@ -159,6 +305,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "genapi":
         return await genapi(args);
+
+      case "code_review":
+        return await codeReview(args);
+
+      case "gentest":
+        return await gentest(args);
+
+      case "genpr":
+        return await genpr(args);
+
+      case "check_deps":
+        return await checkDeps(args);
+
+      case "gendoc":
+        return await gendoc(args);
+
+      case "genchangelog":
+        return await genchangelog(args);
+
+      case "refactor":
+        return await refactor(args);
+
+      case "perf":
+        return await perf(args);
 
       default:
         throw new Error(`未知工具: ${name}`);
@@ -217,6 +387,14 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 gencommit: "enabled",
                 debug: "enabled",
                 genapi: "enabled",
+                code_review: "enabled",
+                gentest: "enabled",
+                genpr: "enabled",
+                check_deps: "enabled",
+                gendoc: "enabled",
+                genchangelog: "enabled",
+                refactor: "enabled",
+                perf: "enabled",
               },
             },
             null,
