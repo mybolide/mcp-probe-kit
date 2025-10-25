@@ -11,7 +11,7 @@ import {
 import { 
   detectShell, initSetting, initProject, gencommit, debug, genapi,
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
-  fix, gensql, resolveConflict, genui, explain, convert, genreadme
+  fix, gensql, resolveConflict, genui, explain, convert, genreadme, split
 } from "./tools/index.js";
 
 // 创建MCP服务器实例
@@ -405,6 +405,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: [],
         },
       },
+      {
+        name: "split",
+        description: "【文件拆分】将大文件拆分成多个小文件或小组件",
+        inputSchema: {
+          type: "object",
+          properties: {
+            file: {
+              type: "string",
+              description: "文件内容或路径",
+            },
+            strategy: {
+              type: "string",
+              description: "拆分策略：auto, type, function, component, feature（默认 auto）",
+            },
+          },
+          required: [],
+        },
+      },
     ],
   };
 });
@@ -478,6 +496,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "genreadme":
         return await genreadme(args);
 
+      case "split":
+        return await split(args);
+
       default:
         throw new Error(`未知工具: ${name}`);
     }
@@ -550,6 +571,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 explain: "enabled",
                 convert: "enabled",
                 genreadme: "enabled",
+                split: "enabled",
               },
             },
             null,

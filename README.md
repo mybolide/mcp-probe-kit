@@ -2,7 +2,7 @@
 
 > 🚀 Cursor 开发增强工具集 - 让 AI 更懂你的开发流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **21 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **22 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
 
 **作者**: [小墨 (Kyle)](https://www.bytezonex.com/) | **项目**: [GitHub](https://github.com/yourusername/mcp-probe-kit)
 
@@ -19,17 +19,18 @@
 - **`perf`** - 性能分析
 - **`fix`** - 自动修复代码问题 🆕
 
-### 🛠️ 开发效率（10 个工具）
+### 🛠️ 开发效率（11 个工具）
 - **`gencommit`** - Git 提交消息生成
 - **`genapi`** - API 文档生成
 - **`gendoc`** - 代码注释生成
 - **`genpr`** - PR 描述生成
 - **`genchangelog`** - Changelog 生成
 - **`gensql`** - SQL 查询生成器 🆕
-- **`genui`** - UI 组件生成器 🆕
+- **`genui`** - UI 组件生成器（React + Vue） 🆕
 - **`explain`** - 代码解释器 🆕
 - **`convert`** - 代码转换器 🆕
 - **`genreadme`** - README 生成器 🆕
+- **`split`** - 文件拆分工具 🆕
 
 ### 📦 项目管理（4 个工具）
 - **`init_setting`** - Cursor AI 配置初始化
@@ -216,19 +217,23 @@ npm install && npm run build
 
 ---
 
-#### `genui` - UI 组件生成器 🆕
-生成 React/Vue UI 组件代码。
+#### `genui` - UI 组件生成器（React + Vue） 🆕
+生成 React 或 Vue 3 UI 组件代码。
 
 **用法**：`genui` 然后描述组件（如："创建一个带加载状态的 Button 组件"）
 
-**支持框架**：React（默认）, Vue, HTML
+**支持框架**：
+- **React**: Hooks、forwardRef、TypeScript
+- **Vue 3**: Composition API、script setup、TypeScript
+- **HTML**: 原生 JavaScript
 
 **功能**：
 - 完整的组件实现（TypeScript）
-- Tailwind CSS 样式
+- Tailwind CSS / UnoCSS 样式
 - 可访问性（A11y）支持
-- Props 类型定义
-- 使用示例
+- Props/Emits 类型定义
+- 使用示例和最佳实践
+- 组件库推荐（shadcn/ui、Element Plus 等）
 
 ---
 
@@ -284,6 +289,33 @@ npm install && npm run build
 - API 文档
 - 配置说明
 - 贡献指南
+
+---
+
+#### `split` - 文件拆分工具 🆕
+将大文件拆分成多个小文件或小组件，提高可维护性。
+
+**用法**：`split @LargeFile.tsx` 或提供文件内容
+
+**拆分策略**：
+- **auto**（自动）- AI 分析最佳拆分方式
+- **type**（按类型）- 分离类型定义、常量、工具函数
+- **function**（按功能）- 将多个独立函数拆分
+- **component**（按组件）- 拆分 React/Vue 组件为子组件
+- **feature**（按模块）- 拆分功能模块（如 Redux store）
+
+**适用场景**：
+- 超过 300 行的文件
+- 职责过多的组件
+- 工具函数大杂烩
+- 难以维护的代码
+
+**提供方案**：
+- 拆分策略分析
+- 建议的目录结构
+- 每个新文件的内容
+- 导入导出关系
+- 迁移步骤
 
 ---
 

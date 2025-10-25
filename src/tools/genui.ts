@@ -429,22 +429,320 @@ module.exports = {
 
 ---
 
+## Vue 3 组件示例
+
+### 基础 Button 组件 (Vue 3 + TypeScript)
+\`\`\`vue
+<template>
+  <button
+    :class="buttonClasses"
+    :disabled="isLoading || disabled"
+    v-bind="$attrs"
+  >
+    <svg
+      v-if="isLoading"
+      class="mr-2 h-4 w-4 animate-spin"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        class="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        stroke-width="4"
+      />
+      <path
+        class="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+    <slot />
+  </button>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+
+interface Props {
+  variant?: 'default' | 'destructive' | 'outline' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+  isLoading?: boolean;
+  disabled?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  variant: 'default',
+  size: 'default',
+  isLoading: false,
+  disabled: false,
+});
+
+const buttonClasses = computed(() => {
+  const base = 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
+  
+  const variants = {
+    default: 'bg-blue-600 text-white hover:bg-blue-700',
+    destructive: 'bg-red-600 text-white hover:bg-red-700',
+    outline: 'border border-gray-300 bg-transparent hover:bg-gray-100',
+    ghost: 'hover:bg-gray-100',
+    link: 'text-blue-600 underline-offset-4 hover:underline',
+  };
+  
+  const sizes = {
+    default: 'h-10 px-4 py-2',
+    sm: 'h-9 px-3',
+    lg: 'h-11 px-8',
+    icon: 'h-10 w-10',
+  };
+  
+  return \`\${base} \${variants[props.variant]} \${sizes[props.size]}\`;
+});
+</script>
+\`\`\`
+
+**使用示例：**
+\`\`\`vue
+<template>
+  <div>
+    <Button variant="default" size="lg">提交</Button>
+    <Button variant="outline" :is-loading="true">加载中...</Button>
+    <Button variant="ghost" size="icon">
+      <Icon />
+    </Button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import Button from '@/components/Button.vue';
+</script>
+\`\`\`
+
+---
+
+### Vue 3 Input 组件
+\`\`\`vue
+<template>
+  <div class="w-full space-y-2">
+    <label
+      v-if="label"
+      :for="inputId"
+      class="text-sm font-medium text-gray-700"
+    >
+      {{ label }}
+      <span v-if="required" class="text-red-500 ml-1">*</span>
+    </label>
+    
+    <input
+      :id="inputId"
+      v-model="model"
+      :type="type"
+      :placeholder="placeholder"
+      :required="required"
+      :disabled="disabled"
+      :aria-invalid="!!error"
+      :aria-describedby="error ? \`\${inputId}-error\` : undefined"
+      :class="inputClasses"
+      v-bind="$attrs"
+    />
+    
+    <p v-if="error" :id="\`\${inputId}-error\`" class="text-sm text-red-600">
+      {{ error }}
+    </p>
+    
+    <p v-else-if="helperText" class="text-sm text-gray-500">
+      {{ helperText }}
+    </p>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, useAttrs } from 'vue';
+
+interface Props {
+  modelValue?: string | number;
+  label?: string;
+  type?: string;
+  placeholder?: string;
+  error?: string;
+  helperText?: string;
+  required?: boolean;
+  disabled?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  type: 'text',
+  required: false,
+  disabled: false,
+});
+
+const emit = defineEmits<{
+  'update:modelValue': [value: string | number];
+}>();
+
+const attrs = useAttrs();
+const inputId = computed(() => attrs.id as string || \`input-\${Math.random().toString(36).slice(2)}\`);
+
+const model = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value),
+});
+
+const inputClasses = computed(() => {
+  return \`
+    w-full px-3 py-2 border rounded-md
+    focus:outline-none focus:ring-2 focus:ring-blue-500
+    disabled:bg-gray-100 disabled:cursor-not-allowed
+    \${props.error ? 'border-red-500' : 'border-gray-300'}
+  \`;
+});
+</script>
+\`\`\`
+
+---
+
+### Vue 3 Modal 组件
+\`\`\`vue
+<template>
+  <Teleport to="body">
+    <Transition name="modal">
+      <div
+        v-if="modelValue"
+        class="fixed inset-0 z-50 flex items-center justify-center"
+        @click="handleClose"
+      >
+        <!-- 背景遮罩 -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+        
+        <!-- 弹窗内容 -->
+        <div
+          :class="modalClasses"
+          @click.stop
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="title ? 'modal-title' : undefined"
+        >
+          <!-- 头部 -->
+          <div v-if="title" class="px-6 py-4 border-b">
+            <h2 id="modal-title" class="text-xl font-semibold">
+              {{ title }}
+            </h2>
+          </div>
+          
+          <!-- 关闭按钮 -->
+          <button
+            @click="handleClose"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            aria-label="关闭"
+          >
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <!-- 内容 -->
+          <div class="px-6 py-4 overflow-y-auto flex-1">
+            <slot />
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
+
+<script setup lang="ts">
+import { computed, watch } from 'vue';
+import { onKeyStroke } from '@vueuse/core';
+
+interface Props {
+  modelValue: boolean;
+  title?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  size: 'md',
+});
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean];
+}>();
+
+const handleClose = () => {
+  emit('update:modelValue', false);
+};
+
+// ESC 关闭
+onKeyStroke('Escape', () => {
+  if (props.modelValue) {
+    handleClose();
+  }
+});
+
+// 锁定 body 滚动
+watch(() => props.modelValue, (isOpen) => {
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+});
+
+const modalClasses = computed(() => {
+  const sizeClasses = {
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+  };
+  
+  return \`
+    relative bg-white rounded-lg shadow-xl
+    w-full mx-4 \${sizeClasses[props.size]}
+    max-h-[90vh] flex flex-col
+  \`;
+});
+</script>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+</style>
+\`\`\`
+
+---
+
 ## 组件库推荐
 
-### 🎨 UI 组件库
+### 🎨 React UI 组件库
 - **shadcn/ui** - 可定制的 React 组件
 - **Radix UI** - 无样式的可访问组件
 - **Headless UI** - Tailwind 官方无样式组件
 - **Ant Design** - 企业级 UI 设计语言
 - **Material-UI** - Google Material Design
 
+### 🎨 Vue UI 组件库
+- **Element Plus** - 基于 Vue 3 的企业级组件库
+- **Naive UI** - 完整的 TypeScript 支持
+- **Ant Design Vue** - Vue 版本的 Ant Design
+- **Vuetify** - Material Design 组件框架
+- **PrimeVue** - 丰富的 UI 组件集合
+
 ### 🎭 动画库
 - **Framer Motion** - React 动画库
 - **React Spring** - 基于物理的动画
-- **GSAP** - 高性能动画引擎
+- **GSAP** - 高性能动画引擎（React/Vue 通用）
+- **@vueuse/motion** - Vue 3 组合式动画
 
 ### 📱 响应式工具
 - **Tailwind CSS** - 实用优先的 CSS 框架
+- **UnoCSS** - 即时原子化 CSS 引擎
 - **CSS Modules** - 局部作用域 CSS
 
 ---
@@ -454,7 +752,12 @@ module.exports = {
 2. 样式（Tailwind CSS）
 3. 使用示例
 4. Props 接口定义
-5. 可访问性说明`;
+5. 可访问性说明
+
+**根据框架选择：**
+- **React**: 使用 Hooks、forwardRef、TypeScript
+- **Vue 3**: 使用 Composition API、script setup、TypeScript
+- **HTML**: 使用原生 JavaScript 和 Web Components`;
 
     return {
       content: [
