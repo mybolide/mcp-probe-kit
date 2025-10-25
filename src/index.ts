@@ -592,8 +592,11 @@ async function main() {
   console.error("MCP Probe Kit 服务器已启动");
 }
 
-main().catch((error) => {
-  console.error("服务器启动失败:", error);
-  process.exit(1);
-});
+// 只在直接运行时启动服务器
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error("服务器启动失败:", error);
+    process.exit(1);
+  });
+}
 

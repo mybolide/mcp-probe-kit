@@ -42,14 +42,86 @@
 
 ## 🚀 快速开始
 
-### 1. 安装依赖
+### 📦 方式一：npx 直接使用（推荐）
+
+无需安装，直接使用：
+
 ```bash
-npm install && npm run build
+# 在 Cursor 中配置 MCP 服务器
 ```
 
-### 2. 配置 Cursor
+**Windows 配置路径：**
+```
+%APPDATA%\Cursor\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json
+```
 
-将服务器添加到 Cursor 的 MCP 配置文件：
+**macOS/Linux 配置路径：**
+```
+~/Library/Application Support/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+```
+
+**配置内容：**
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["mcp-probe-kit"]
+    }
+  }
+}
+```
+
+---
+
+### 📦 方式二：全局安装
+
+```bash
+# 全局安装
+npm install -g mcp-probe-kit
+
+# 在 Cursor 中配置
+```
+
+**配置内容：**
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "mcp-probe-kit"
+    }
+  }
+}
+```
+
+---
+
+### 📦 方式三：本地项目安装
+
+```bash
+# 在项目中安装
+npm install mcp-probe-kit
+
+# 在 Cursor 中配置（使用项目路径）
+```
+
+**配置内容：**
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "node",
+      "args": ["./node_modules/mcp-probe-kit/build/index.js"]
+    }
+  }
+}
+```
+
+---
+
+### 🔧 开发模式（本地开发）
+
+如果你在本地开发或修改工具：
 
 **Windows:**
 ```
@@ -75,9 +147,9 @@ npm install && npm run build
 
 ⚠️ **重要**：将路径修改为你的实际项目路径
 
-### 3. 重启 Cursor
+### 🔄 重启 Cursor
 
-完全退出 Cursor 再重新打开（不是重新加载窗口）
+配置完成后，**完全退出 Cursor 再重新打开**（不是重新加载窗口）
 
 ---
 
