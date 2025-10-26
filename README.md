@@ -636,6 +636,78 @@ npm run dev
 
 ---
 
+## ❓ 常见问题
+
+### Q1: 工具无法使用或报错怎么办？
+
+如果遇到安装或运行问题，可以通过以下方式输出详细日志进行排查：
+
+**Windows (PowerShell):**
+```powershell
+npx -y mcp-probe-kit@latest 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+```
+
+**macOS/Linux:**
+```bash
+npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
+```
+
+这会将错误信息保存到 `mcp-probe-kit.log` 文件中，方便排查问题或提交 Issue。
+
+### Q2: 配置后 Cursor 无法识别工具？
+
+1. **完全退出 Cursor** 并重新打开（不是重新加载窗口）
+2. 检查配置文件路径是否正确：
+   - Windows: `%APPDATA%\Cursor\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+   - macOS/Linux: `~/Library/Application Support/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+3. 确认 JSON 格式正确，没有语法错误
+4. 查看 Cursor 的开发者工具（Help → Toggle Developer Tools）中的控制台日志
+
+### Q3: npx 方式每次都很慢？
+
+建议全局安装以提升速度：
+```bash
+npm install -g mcp-probe-kit
+```
+
+然后修改配置为：
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "mcp-probe-kit"
+    }
+  }
+}
+```
+
+### Q4: 工具生成的内容不符合预期？
+
+所有工具都是**指令生成器**，生成的是给 AI 的指令：
+- AI 会根据指令理解你的需求
+- 可以在对话中进一步说明具体要求
+- 例如："用 React Hooks 实现"、"添加 TypeScript 类型"等
+
+### Q5: 如何更新到最新版本？
+
+**npx 方式（推荐）:**
+配置中使用 `@latest` 标签，会自动使用最新版本：
+```json
+"args": ["mcp-probe-kit@latest"]
+```
+
+**全局安装方式:**
+```bash
+npm update -g mcp-probe-kit
+```
+
+**查看当前版本:**
+```bash
+npm list -g mcp-probe-kit
+```
+
+---
+
 ## 🤝 贡献指南
 
 欢迎提交 Issue 和 Pull Request！
