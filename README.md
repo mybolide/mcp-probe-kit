@@ -230,13 +230,30 @@ npm install mcp-probe-kit
 ### 🛠️ 开发效率工具
 
 #### `gencommit` - 提交生成
-自动分析代码变更，生成规范的 Git commit 消息。
+自动分析代码变更，生成规范的 Git commit 消息（支持 emoji）。
 
 **用法**：`gencommit`
 
-**格式**：`<type>(<scope>): <subject>` (遵循 Conventional Commits)
+**格式**：`<type>: <emoji> <subject>` (遵循 Conventional Commits)
 
-**类型**：feat, fix, docs, style, refactor, test, chore
+**类型**：
+- `fixed` 🐛 - 线上/测试缺陷修复
+- `fix` 🐛 - 语义同 fixed，保持兼容
+- `feat` 🎸 - 新增或迭代业务功能
+- `docs` ✏️ - 文档相关更新
+- `style` 💄 - UI/样式调整
+- `chore` 🤖 - 构建、脚本、依赖等杂项
+- `refactor` ♻️ - 重构
+- `test` ✅ - 测试相关
+
+**示例**：
+```bash
+feat: 🎸 添加用户登录功能
+
+影响模块: auth
+- 实现 JWT 认证机制
+- 添加密码加密存储
+```
 
 ---
 
