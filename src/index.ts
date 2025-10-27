@@ -13,12 +13,13 @@ import {
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
   fix, gensql, resolveConflict, genui, explain, convert, genreadme, split, analyzeProject
 } from "./tools/index.js";
+import { VERSION, NAME } from "./version.js";
 
 // 创建MCP服务器实例
 const server = new Server(
   {
-    name: "mcp-probe-kit",
-    version: "1.2.8",
+    name: NAME,
+    version: VERSION,
   },
   {
     capabilities: {
@@ -570,8 +571,8 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
               status: "running",
               timestamp: new Date().toISOString(),
               serverInfo: {
-                name: "mcp-probe-kit",
-                version: "1.2.8",
+                name: NAME,
+                version: VERSION,
                 description: "Cursor 开发增强工具集",
               },
               tools: {

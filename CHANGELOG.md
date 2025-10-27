@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.9] - 2025-10-27
+
+### Changed
+- 💄 优化 `gencommit` 工具的 commit 消息格式规范
+- Subject 保持简洁，不强制包含 scope
+- Scope/模块信息建议放在 body 中说明，更加灵活
+- 更新示例，展示详细版、简单版、最简版三种场景
+- 格式调整为：`type: emoji subject`
+
+### Improved
+- 🔧 优化版本号管理，统一从 package.json 读取
+- 新增 `src/version.ts` 配置文件，避免多处手动修改版本号
+- 今后只需修改 package.json 的版本号即可
+
 ## [1.2.8] - 2025-10-27
 
 ### Changed
@@ -52,6 +66,7 @@ Previous versions - see [GitHub Releases](https://github.com/mybolide/mcp-probe-
 
 ---
 
+[1.2.9]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.8...v1.2.9
 [1.2.8]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.4...v1.2.6

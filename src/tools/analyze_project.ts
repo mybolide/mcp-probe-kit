@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, extname, basename } from 'path';
+import { VERSION } from '../version.js';
 
 interface ProjectAnalysis {
   projectStructure: {
@@ -115,7 +116,7 @@ ${analysis.summary.recommendations.map(rec => `- ${rec}`).join('\n')}
 
 ---
 *分析完成时间: ${new Date().toLocaleString('zh-CN')}*
-*分析工具: MCP Probe Kit v1.2.8*
+*分析工具: MCP Probe Kit v${VERSION}*
 
 **分析说明**:
 - 大型项目会自动采样分析，限制最多扫描 5000 个文件

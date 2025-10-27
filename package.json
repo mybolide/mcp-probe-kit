@@ -1,6 +1,6 @@
 {
   "name": "mcp-probe-kit",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "description": "Cursor Development Enhancement Toolkit - MCP Server with 23 practical tools for code quality, development efficiency, and project management",
   "type": "module",
   "main": "build/index.js",
