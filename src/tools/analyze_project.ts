@@ -28,6 +28,7 @@ interface ProjectAnalysis {
       path: string;
       lines: number;
     }>;
+    skippedFiles: number;
   };
   architecture: {
     patterns: string[];
@@ -47,6 +48,7 @@ export async function analyzeProject(args: any): Promise<any> {
   const includeContent = args.include_content !== false;
 
   try {
+    console.error(`开始分析项目: ${projectPath}`);
     const analysis = await performProjectAnalysis(projectPath, maxDepth, includeContent);
     
     return {
@@ -86,10 +88,14 @@ ${analysis.dependencies.production.slice(0, 10).map(dep => `- ${dep}`).join('\n'
 ## 📈 代码指标
 - **总文件数**: ${analysis.codeMetrics.totalFiles}
 - **总行数**: ${analysis.codeMetrics.totalLines}
+${analysis.codeMetrics.skippedFiles > 0 ? `- **跳过文件**: ${analysis.codeMetrics.skippedFiles} 个（过大或无法读取）` : ''}
 - **文件类型分布**:
-${Object.entries(analysis.codeMetrics.fileTypes).map(([type, count]) => 
-  `  - ${type}: ${count} 个文件`
-).join('\n')}
+${Object.entries(analysis.codeMetrics.fileTypes)
+  .sort(([, a], [, b]) => (b as number) - (a as number))
+  .slice(0, 10)
+  .map(([type, count]) => `  - ${type}: ${count} 个文件`)
+  .join('\n')}
+${Object.keys(analysis.codeMetrics.fileTypes).length > 10 ? '  - ... (更多类型已省略)' : ''}
 
 ### 最大文件
 ${analysis.codeMetrics.largestFiles.slice(0, 5).map(file => 
@@ -109,7 +115,12 @@ ${analysis.summary.recommendations.map(rec => `- ${rec}`).join('\n')}
 
 ---
 *分析完成时间: ${new Date().toLocaleString('zh-CN')}*
-*分析工具: MCP Probe Kit v1.2.0*`,
+*分析工具: MCP Probe Kit v1.2.8*
+
+**分析说明**:
+- 大型项目会自动采样分析，限制最多扫描 5000 个文件
+- 已自动忽略以下目录: \`node_modules\`, \`dist\`, \`build\`, \`.git\`, \`coverage\`, \`.next\`, \`.nuxt\`, \`vendor\` 等
+- 单个文件大小限制: 1MB，超过则跳过`,
         },
       ],
     };
@@ -226,28 +237,44 @@ function detectPackageManager(): string {
 }
 
 function generateDirectoryTree(projectPath: string, maxDepth: number): string {
-  const ignoreDirs = ['node_modules', '.git', 'dist', 'build', '.next', '.nuxt'];
+  const ignoreDirs = [
+    'node_modules', '.git', 'dist', 'build', '.next', '.nuxt', 
+    'coverage', '.vscode', '.idea', 'tmp', 'temp', 'out', 
+    'vendor', '__pycache__', '.cache', '.parcel-cache',
+    'bower_components', 'jspm_packages'
+  ];
+  const MAX_ITEMS_PER_DIR = 50; // 每个目录最多显示50项
   
   function buildTree(dir: string, prefix: string = '', depth: number = 0): string {
     if (depth >= maxDepth) return '';
     
     try {
-      const items = readdirSync(dir)
+      let items = readdirSync(dir)
         .filter(item => !ignoreDirs.includes(item) && !item.startsWith('.'))
         .map(item => {
           const fullPath = join(dir, item);
-          const stat = statSync(fullPath);
-          return { name: item, isDir: stat.isDirectory(), path: fullPath };
+          try {
+            const stat = statSync(fullPath);
+            return { name: item, isDir: stat.isDirectory(), path: fullPath };
+          } catch {
+            return null;
+          }
         })
-        .sort((a, b) => {
-          if (a.isDir && !b.isDir) return -1;
-          if (!a.isDir && b.isDir) return 1;
-          return a.name.localeCompare(b.name);
-        });
+        .filter(item => item !== null) as Array<{ name: string; isDir: boolean; path: string }>;
+      
+      // 限制每个目录显示的项目数量
+      const hasMore = items.length > MAX_ITEMS_PER_DIR;
+      items = items.slice(0, MAX_ITEMS_PER_DIR);
+      
+      items.sort((a, b) => {
+        if (a.isDir && !b.isDir) return -1;
+        if (!a.isDir && b.isDir) return 1;
+        return a.name.localeCompare(b.name);
+      });
 
       let result = '';
       items.forEach((item, index) => {
-        const isLast = index === items.length - 1;
+        const isLast = index === items.length - 1 && !hasMore;
         const currentPrefix = isLast ? '└── ' : '├── ';
         const nextPrefix = isLast ? '    ' : '│   ';
         
@@ -257,6 +284,10 @@ function generateDirectoryTree(projectPath: string, maxDepth: number): string {
           result += buildTree(item.path, prefix + nextPrefix, depth + 1);
         }
       });
+      
+      if (hasMore) {
+        result += `${prefix}└── ... (更多项目被省略)\n`;
+      }
       
       return result;
     } catch {
@@ -275,13 +306,35 @@ async function identifyKeyFiles(projectPath: string, includeContent: boolean) {
     'tsconfig.json', 'babel.config.js', '.env', '.env.example'
   ];
   
+  const MAX_FILE_SIZE = 100 * 1024; // 100KB
+  const MAX_CONTENT_LINES = 100; // 最多显示100行
   const keyFiles = [];
   
   for (const pattern of keyFilePatterns) {
     try {
       const filePath = join(projectPath, pattern);
-      const content = readFileSync(filePath, 'utf-8');
+      const stat = statSync(filePath);
+      
+      // 跳过过大的文件
+      if (stat.size > MAX_FILE_SIZE) {
+        keyFiles.push({
+          path: pattern,
+          purpose: getFilePurpose(pattern, ''),
+          content: includeContent ? `[文件过大 (${Math.round(stat.size / 1024)}KB)，已跳过]` : ''
+        });
+        continue;
+      }
+      
+      let content = readFileSync(filePath, 'utf-8');
       const purpose = getFilePurpose(pattern, content);
+      
+      // 限制内容行数
+      if (includeContent && content) {
+        const lines = content.split('\n');
+        if (lines.length > MAX_CONTENT_LINES) {
+          content = lines.slice(0, MAX_CONTENT_LINES).join('\n') + `\n... (省略 ${lines.length - MAX_CONTENT_LINES} 行)`;
+        }
+      }
       
       keyFiles.push({
         path: pattern,
@@ -337,19 +390,44 @@ function analyzeDependencies(packageJson: any) {
 async function calculateCodeMetrics(projectPath: string) {
   const fileTypes: Record<string, number> = {};
   const largestFiles: Array<{ path: string; lines: number }> = [];
+  const MAX_FILES_TO_SCAN = 5000; // 最多扫描5000个文件
+  const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+  const SAMPLE_LARGE_PROJECTS = true; // 大项目采样
+  
   let totalFiles = 0;
   let totalLines = 0;
+  let skippedFiles = 0;
+  let scannedFiles = 0;
   
   function scanDirectory(dir: string) {
+    // 达到文件数量限制
+    if (scannedFiles >= MAX_FILES_TO_SCAN) {
+      return;
+    }
+    
     try {
       const items = readdirSync(dir);
       
       for (const item of items) {
+        if (scannedFiles >= MAX_FILES_TO_SCAN) break;
+        
         const fullPath = join(dir, item);
-        const stat = statSync(fullPath);
+        let stat;
+        
+        try {
+          stat = statSync(fullPath);
+        } catch {
+          continue;
+        }
         
         if (stat.isDirectory()) {
-          if (!['node_modules', '.git', 'dist', 'build'].includes(item)) {
+          const ignoreDirs = [
+            'node_modules', '.git', 'dist', 'build', '.next', '.nuxt', 
+            'coverage', '.vscode', '.idea', 'tmp', 'temp', 'out', 
+            'vendor', '__pycache__', '.cache', '.parcel-cache',
+            'bower_components', 'jspm_packages', 'target', 'bin', 'obj'
+          ];
+          if (!ignoreDirs.includes(item) && !item.startsWith('.')) {
             scanDirectory(fullPath);
           }
         } else {
@@ -358,15 +436,29 @@ async function calculateCodeMetrics(projectPath: string) {
           
           fileTypes[fileType] = (fileTypes[fileType] || 0) + 1;
           totalFiles++;
+          scannedFiles++;
+          
+          // 跳过过大的文件
+          if (stat.size > MAX_FILE_SIZE) {
+            skippedFiles++;
+            continue;
+          }
           
           try {
-            const content = readFileSync(fullPath, 'utf-8');
-            const lines = content.split('\n').length;
-            totalLines += lines;
-            
-            largestFiles.push({ path: fullPath, lines });
+            // 只读取文本文件
+            const textExtensions = ['.js', '.ts', '.jsx', '.tsx', '.vue', '.py', '.java', '.go', '.rs', '.php', '.rb', '.cpp', '.c', '.h', '.cs', '.swift', '.kt'];
+            if (textExtensions.includes(ext.toLowerCase())) {
+              const content = readFileSync(fullPath, 'utf-8');
+              const lines = content.split('\n').length;
+              totalLines += lines;
+              
+              // 只保存相对路径
+              const relativePath = fullPath.replace(projectPath, '').replace(/\\/g, '/');
+              largestFiles.push({ path: relativePath, lines });
+            }
           } catch {
-            // 忽略无法读取的文件
+            // 忽略无法读取的文件（二进制文件等）
+            skippedFiles++;
           }
         }
       }
@@ -375,7 +467,10 @@ async function calculateCodeMetrics(projectPath: string) {
     }
   }
   
+  console.error('开始扫描代码文件...');
+  console.error('忽略目录: node_modules, dist, build, .git 等');
   scanDirectory(projectPath);
+  console.error(`扫描完成: ${totalFiles} 个文件, ${skippedFiles} 个跳过`);
   
   // 按行数排序，取前10个
   largestFiles.sort((a, b) => b.lines - a.lines);
@@ -384,7 +479,8 @@ async function calculateCodeMetrics(projectPath: string) {
     totalFiles,
     totalLines,
     fileTypes,
-    largestFiles: largestFiles.slice(0, 10)
+    largestFiles: largestFiles.slice(0, 10),
+    skippedFiles
   };
 }
 

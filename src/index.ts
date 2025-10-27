@@ -18,7 +18,7 @@ import {
 const server = new Server(
   {
     name: "mcp-probe-kit",
-    version: "1.2.7",
+    version: "1.2.8",
   },
   {
     capabilities: {
@@ -571,7 +571,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
               timestamp: new Date().toISOString(),
               serverInfo: {
                 name: "mcp-probe-kit",
-                version: "1.2.7",
+                version: "1.2.8",
                 description: "Cursor 开发增强工具集",
               },
               tools: {
