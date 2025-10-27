@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2025-10-27
+
+### Changed
+- 更新 MCP 服务器版本信息，确保所有版本号统一
+- 优化服务器状态资源，用户可通过 `probe://status` 查看实时版本
+
 ## [1.2.6] - 2025-10-27
 
 ### Added
@@ -32,6 +38,7 @@ Previous versions - see [GitHub Releases](https://github.com/mybolide/mcp-probe-
 
 ---
 
+[1.2.7]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.4...v1.2.6
 [1.2.4]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/mybolide/mcp-probe-kit/releases/tag/v1.2.3

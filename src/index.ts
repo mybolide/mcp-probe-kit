@@ -18,7 +18,7 @@ import {
 const server = new Server(
   {
     name: "mcp-probe-kit",
-    version: "1.2.0",
+    version: "1.2.7",
   },
   {
     capabilities: {
@@ -84,7 +84,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "gencommit",
-        description: "【生成提交】分析代码变更并生成规范的 Git commit 消息",
+        description: "【生成提交】分析代码变更并生成规范的 Git commit 消息（支持 emoji）",
         inputSchema: {
           type: "object",
           properties: {
@@ -94,7 +94,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             type: {
               type: "string",
-              description: "提交类型：feat, fix, docs, style, refactor, test, chore",
+              description: "提交类型：fixed, fix, feat, docs, style, chore, refactor, test",
             },
           },
           required: [],
@@ -571,7 +571,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
               timestamp: new Date().toISOString(),
               serverInfo: {
                 name: "mcp-probe-kit",
-                version: "1.0.0",
+                version: "1.2.7",
                 description: "Cursor 开发增强工具集",
               },
               tools: {
