@@ -11,7 +11,7 @@ import {
 import { 
   detectShell, initSetting, initProject, gencommit, debug, genapi,
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
-  fix, gensql, resolveConflict, genui, explain, convert, genreadme, split, analyzeProject
+  fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 
@@ -389,6 +389,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "css_order",
+        description: "【CSS 顺序】按规则书写或重排 CSS 属性顺序",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
         name: "genreadme",
         description: "【README 生成器】根据项目代码生成 README.md 文档",
         inputSchema: {
@@ -516,6 +525,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "convert":
         return await convert(args);
 
+      case "css_order":
+        return await cssOrder(args);
+
       case "genreadme":
         return await genreadme(args);
 
@@ -596,6 +608,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 genui: "enabled",
                 explain: "enabled",
                 convert: "enabled",
+                css_order: "enabled",
                 genreadme: "enabled",
                 split: "enabled",
                 analyze_project: "enabled",

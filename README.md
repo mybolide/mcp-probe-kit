@@ -2,7 +2,7 @@
 
 > 🚀 Cursor 开发增强工具集 - 让 AI 更懂你的开发流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **23 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **24 个实用工具**，覆盖代码质量、开发效率、项目管理全流程。
 
 **作者**: [小墨 (Kyle)](https://www.bytezonex.com/) | **项目**: [GitHub](https://github.com/mybolide/mcp-probe-kit)
 
@@ -19,7 +19,7 @@
 - **`perf`** - 性能分析
 - **`fix`** - 自动修复代码问题 🆕
 
-### 🛠️ 开发效率（11 个工具）
+### 🛠️ 开发效率（12 个工具）
 - **`gencommit`** - Git 提交消息生成
 - **`genapi`** - API 文档生成
 - **`gendoc`** - 代码注释生成
@@ -29,6 +29,7 @@
 - **`genui`** - UI 组件生成器（React + Vue） 🆕
 - **`explain`** - 代码解释器 🆕
 - **`convert`** - 代码转换器 🆕
+- **`css_order`** - CSS 属性顺序规范 🆕
 - **`genreadme`** - README 生成器 🆕
 - **`split`** - 文件拆分工具 🆕
 
@@ -365,6 +366,15 @@ feat: 🎸 添加用户登录功能
 
 ---
 
+#### `css_order` - CSS 顺序规范 🆕
+按规则书写或重排 CSS 属性顺序。
+
+**用法**：`css_order`
+
+**包含**：由外向内排序逻辑、五大类属性划分、常用属性示例、快速对比表、重排要求
+
+---
+
 #### `genreadme` - README 生成器 🆕
 根据项目代码自动生成 README.md 文档。
 
@@ -548,7 +558,7 @@ feat: 🎸 添加用户登录功能
 mcp-probe-kit/
 ├── src/
 │   ├── index.ts              # MCP 服务器主入口
-│   └── tools/                # 工具实现（23 个）
+│   └── tools/                # 工具实现（24 个）
 │       ├── index.ts             # 工具导出
 │       ├── detect_shell.ts      # 套壳检测
 │       ├── code_review.ts       # 代码审查
@@ -566,6 +576,7 @@ mcp-probe-kit/
 │       ├── genui.ts             # UI 组件生成器
 │       ├── explain.ts           # 代码解释器
 │       ├── convert.ts           # 代码转换器
+│       ├── css_order.ts         # CSS 顺序规范
 │       ├── genreadme.ts         # README 生成器
 │       ├── split.ts             # 文件拆分工具
 │       ├── init_setting.ts      # 配置初始化
@@ -776,7 +787,7 @@ MIT License
 ### 为什么叫 Probe Kit？
 
 - **Probe（探针）**：探测代码质量、性能瓶颈、依赖健康度
-- **Kit（工具集）**：23 个工具覆盖开发全流程
+- **Kit（工具集）**：24 个工具覆盖开发全流程
 
 ### 工具分类
 
@@ -790,7 +801,7 @@ MIT License
 ├── perf          性能分析
 └── fix           自动修复
 
-开发效率 (11)
+开发效率 (12)
 ├── gencommit     提交生成
 ├── genapi        文档生成
 ├── gendoc        注释生成
@@ -800,6 +811,7 @@ MIT License
 ├── genui         UI 组件生成器
 ├── explain       代码解释器
 ├── convert       代码转换器
+├── css_order     CSS 顺序规范
 ├── genreadme     README 生成器
 └── split         文件拆分工具
 
