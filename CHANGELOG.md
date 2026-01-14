@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2025-01-14
+
+### Added
+- 🎨 新增 `design2code` 工具 - 设计稿转代码
+  - 支持图片 URL 输入（jpg/png/gif/webp/svg）
+  - 支持 Base64 图片输入
+  - 支持设计稿文字描述输入
+  - 支持 HTML 代码转换
+  - 默认生成 Vue 3 + TypeScript 代码
+  - 支持 React、Vue 双框架
+  - 支持 Tailwind CSS、CSS Modules、Styled Components
+  - 1:1 精确还原设计稿布局和样式
+  - 自动生成响应式设计代码
+  - 智能组件拆分和 TypeScript 类型定义
+
+### Changed
+- 📚 更新所有文档，添加 `design2code` 工具说明
+  - README.md - 添加完整的工具介绍和使用示例
+  - docs/BEST_PRACTICES.md - 添加最佳实践指南
+  - docs/HOW_TO_TRIGGER.md - 添加触发关键词和对话示例
+  - docs/HOW_TO_TRIGGER.html - 更新快速参考手册
+- 📦 工具总数更新为 39 个（31 个基础工具 + 8 个智能编排）
+
 ## [1.3.0] - 2025-10-27
 
 ### Fixed

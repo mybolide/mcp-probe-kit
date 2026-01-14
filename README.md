@@ -7,7 +7,7 @@
 
 > 🚀 AI 开发增强工具集 - 让 AI 更懂你的开发流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **38 个实用工具**（30 个基础工具 + 8 个智能编排），覆盖代码质量、开发效率、项目管理全流程。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **39 个实用工具**（31 个基础工具 + 8 个智能编排），覆盖代码质量、开发效率、项目管理全流程。
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
@@ -27,7 +27,7 @@
 - **`perf`** - 性能分析
 - **`fix`** - 自动修复代码问题
 
-### 🛠️ 开发效率（14 个工具）
+### 🛠️ 开发效率（15 个工具）
 - **`gencommit`** - Git 提交消息生成
 - **`genapi`** - API 文档生成
 - **`gendoc`** - 代码注释生成
@@ -36,6 +36,7 @@
 - **`gensql`** - SQL 查询生成器
 - **`genui`** - UI 组件生成器（React + Vue）
 - **`gen_mock`** - Mock 数据生成器 🆕
+- **`design2code`** - 设计稿转代码（图片/描述/HTML → Vue/React）🆕
 - **`explain`** - 代码解释器
 - **`convert`** - 代码转换器
 - **`css_order`** - CSS 属性顺序规范
@@ -682,6 +683,59 @@ feat: 🎸 添加用户登录功能
 
 ---
 
+#### `design2code` - 设计稿转代码 🆕
+1:1 还原设计稿或将 HTML 转换为 Vue/React 项目页面。
+
+**用法**：`design2code` 然后提供设计稿
+
+**输入方式**：
+- **图片 URL** - 设计稿图片链接（支持 jpg/png/gif/webp/svg）
+- **Base64 图片** - 直接粘贴 base64 编码的图片
+- **设计稿描述** - 用文字描述页面布局和功能
+- **HTML 代码** - 现有的 HTML 代码
+
+**参数**：
+- `input` - 设计稿图片/描述/HTML（必填）
+- `framework` - vue/react（默认 vue）
+- `style_solution` - tailwind/css-modules/styled-components（默认 tailwind）
+- `component_type` - page/component（默认 page）
+
+**功能特性**：
+- 🎨 **精确还原** - 1:1 还原布局、颜色、字体、间距
+- 📱 **响应式设计** - 自动生成移动端/平板/桌面端适配
+- 🧩 **组件化** - 智能拆分可复用组件
+- 💎 **TypeScript** - 完整的类型定义
+- ♿ **可访问性** - 语义化 HTML + ARIA 属性
+- ⚡ **性能优化** - 图片懒加载、代码分割
+
+**适用场景**：
+- 🎨 UI 设计稿转前端代码
+- 🔄 HTML 页面迁移到 Vue/React
+- 📄 落地页快速开发
+- 🎯 原型转生产代码
+
+**输出内容**：
+- 完整的组件代码（Vue 3 Composition API / React Hooks）
+- TypeScript 类型定义
+- Tailwind CSS 样式（或其他方案）
+- 使用示例和说明
+- 响应式断点设计
+- 性能优化建议
+
+**示例**：
+```
+# 图片转代码
+design2code https://example.com/design.png
+
+# 描述转代码
+design2code "创建一个登录页面，包含用户名、密码输入框和登录按钮"
+
+# HTML 转 Vue
+design2code <div class="container">...</div>
+```
+
+---
+
 ### 📦 项目管理工具
 
 #### `init_setting` - 配置初始化
@@ -1179,9 +1233,10 @@ mcp-probe-kit/
 │       ├── gendoc.ts            # 注释生成
 │       ├── genpr.ts             # PR 生成
 │       ├── genchangelog.ts      # Changelog 生成
-│       ├── gensql.ts            # SQL 生成器
+│       ├── gensql.ts             # SQL 生成器
 │       ├── genui.ts             # UI 组件生成器
 │       ├── gen_mock.ts          # Mock 数据生成 🆕
+│       ├── design2code.ts       # 设计稿转代码 🆕
 │       ├── explain.ts           # 代码解释器
 │       ├── convert.ts           # 代码转换器
 │       ├── css_order.ts         # CSS 顺序规范
@@ -1423,7 +1478,7 @@ MIT License
 ├── perf             性能分析
 └── fix              自动修复
 
-开发效率 (14)
+开发效率 (15)
 ├── gencommit        提交生成
 ├── genapi           文档生成
 ├── gendoc           注释生成
@@ -1432,6 +1487,7 @@ MIT License
 ├── gensql           SQL 生成器
 ├── genui            UI 组件生成器
 ├── gen_mock         Mock 数据生成 🆕
+├── design2code      设计稿转代码 🆕
 ├── explain          代码解释器
 ├── convert          代码转换器
 ├── css_order        CSS 顺序规范

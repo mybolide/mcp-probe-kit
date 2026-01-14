@@ -12,7 +12,7 @@ import {
   detectShell, initSetting, initProject, gencommit, debug, genapi,
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
   fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject,
-  initProjectContext, addFeature, securityScan, fixBug, estimate, genMock,
+  initProjectContext, addFeature, securityScan, fixBug, estimate, genMock, design2code,
   startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
@@ -601,6 +601,32 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["schema"],
         },
       },
+      {
+        name: "design2code",
+        description: "【设计稿转代码】1:1 还原设计稿或将 HTML 转换为 Vue/React 项目页面，支持图片、描述、HTML 三种输入方式",
+        inputSchema: {
+          type: "object",
+          properties: {
+            input: {
+              type: "string",
+              description: "设计稿图片（URL 或 base64）、设计稿描述或 HTML 代码",
+            },
+            framework: {
+              type: "string",
+              description: "目标框架：vue, react（默认 vue）",
+            },
+            style_solution: {
+              type: "string",
+              description: "样式方案：tailwind, css-modules, styled-components（默认 tailwind）",
+            },
+            component_type: {
+              type: "string",
+              description: "组件类型：page, component（默认 page）",
+            },
+          },
+          required: ["input"],
+        },
+      },
       // ========== 智能编排工具 ==========
       {
         name: "start_feature",
@@ -862,6 +888,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "gen_mock":
         return await genMock(args);
 
+      case "design2code":
+        return await design2code(args);
+
       // 智能编排工具
       case "start_feature":
         return await startFeature(args);
@@ -968,6 +997,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 fix_bug: "enabled",
                 estimate: "enabled",
                 gen_mock: "enabled",
+                design2code: "enabled",
                 // 智能编排
                 start_feature: "enabled",
                 start_bugfix: "enabled",

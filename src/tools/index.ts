@@ -28,6 +28,7 @@ export { securityScan } from "./security_scan.js";
 export { fixBug } from "./fix_bug.js";
 export { estimate } from "./estimate.js";
 export { genMock } from "./gen_mock.js";
+export { design2code } from "./design2code.js";
 // 智能编排工具
 export { startFeature } from "./start_feature.js";
 export { startBugfix } from "./start_bugfix.js";

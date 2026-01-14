@@ -346,6 +346,27 @@ AI 需要理解你的意图才能调用正确的工具。使用明确的关键�
 
 ---
 
+### 1️⃣7️⃣ 设计稿转代码 → `design2code`
+
+**触发关键词**：设计稿、图片转代码、HTML转Vue、HTML转React、还原设计
+
+**✅ 推荐说法**
+```
+"把这个设计稿转成 Vue 代码"
+"design2code https://example.com/design.png"
+"将这个 HTML 转换为 React 组件"
+"还原这个设计稿"
+"图片转代码"
+```
+
+**❌ 不推荐说法**
+```
+"做个页面"（没说基于什么）
+"转一下"（没说转什么）
+```
+
+---
+
 ---
 
 ## 🚀 智能编排工具触发
@@ -356,7 +377,7 @@ AI 需要理解你的意图才能调用正确的工具。使用明确的关键�
 
 #### 🎯 开发流程类
 
-##### 1️⃣7️⃣ 新功能开发 → `start_feature`
+####### 1️⃣7️⃣ 新功能开发 → `start_feature`
 
 **触发关键词**：新功能、开发功能、添加功能、实现功能、feature
 
@@ -822,6 +843,7 @@ AI: [自动调用 start_review 编排]
 | 提交代码 | commit、提交信息 | `gencommit` |
 | 代码转换 | 转换、改成、迁移 | `convert` |
 | Mock数据 | Mock、模拟数据 | `gen_mock` |
+| 设计稿转代码 | 设计稿、图片转代码、HTML转Vue | `design2code` |
 | Bug修复流程 | 修复Bug、完整修复 | `fix_bug` |
 | 工作量估算 | 估算、工作量、需要多久 | `estimate` |
 
@@ -906,6 +928,14 @@ AI: [自动调用 start_review 编排]
 "refactor @legacy-code.js"
 "这段代码太复杂，简化一下"
 "重构这个方法，提高可读性"
+```
+
+### 设计稿转代码
+```
+"design2code https://example.com/design.png"
+"把这个设计稿转成 Vue 代码"
+"将这个 HTML 转换为 React 组件"
+"design2code" 然后提供设计稿描述
 ```
 
 ### 开发新功能

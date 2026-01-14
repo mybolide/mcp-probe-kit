@@ -85,6 +85,10 @@ interface User {
   email: string;
 }
 
+# 设计稿转代码
+design2code
+然后提供设计稿图片URL、描述或HTML代码
+
 # 代码解释
 explain @complex-algorithm.ts
 
