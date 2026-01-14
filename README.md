@@ -1,12 +1,17 @@
 # MCP Probe Kit
 
+[![npm version](https://img.shields.io/npm/v/mcp-probe-kit.svg)](https://www.npmjs.com/package/mcp-probe-kit)
+[![npm downloads](https://img.shields.io/npm/dm/mcp-probe-kit.svg)](https://www.npmjs.com/package/mcp-probe-kit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/mybolide/mcp-probe-kit.svg)](https://github.com/mybolide/mcp-probe-kit/stargazers)
+
 > 🚀 AI 开发增强工具集 - 让 AI 更懂你的开发流程
 
 一个强大的 MCP (Model Context Protocol) 服务器，提供 **38 个实用工具**（30 个基础工具 + 8 个智能编排），覆盖代码质量、开发效率、项目管理全流程。
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
-**作者**: [小墨 (Kyle)](https://www.bytezonex.com/) | **项目**: [GitHub](https://github.com/mybolide/mcp-probe-kit)
+**作者**: [小墨 (Kyle)](https://www.bytezonex.com/) | **项目**: [GitHub](https://github.com/mybolide/mcp-probe-kit) | **npm**: [mcp-probe-kit](https://www.npmjs.com/package/mcp-probe-kit)
 
 ---
 
