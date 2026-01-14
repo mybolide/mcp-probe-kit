@@ -32,4 +32,4 @@ npm-debug.log*
 .cache/
 
 # Docs
-docs/
+docs/specs/

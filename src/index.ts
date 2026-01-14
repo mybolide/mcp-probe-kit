@@ -12,7 +12,8 @@ import {
   detectShell, initSetting, initProject, gencommit, debug, genapi,
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
   fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject,
-  initProjectContext, addFeature
+  initProjectContext, addFeature, securityScan, fixBug, estimate, genMock,
+  startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 
@@ -492,6 +493,275 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["feature_name", "description"],
         },
       },
+      {
+        name: "security_scan",
+        description: "【安全扫描】分析代码安全性，检测注入、认证、加密等漏洞并提供修复建议",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要扫描的代码",
+            },
+            language: {
+              type: "string",
+              description: "编程语言（默认自动检测）",
+            },
+            scan_type: {
+              type: "string",
+              description: "扫描类型：all, injection, auth, crypto, sensitive_data（默认 all）",
+            },
+          },
+          required: ["code"],
+        },
+      },
+      {
+        name: "fix_bug",
+        description: "【Bug修复】指导完整的Bug修复流程：定位→分析→修复→验证",
+        inputSchema: {
+          type: "object",
+          properties: {
+            error_message: {
+              type: "string",
+              description: "错误信息",
+            },
+            stack_trace: {
+              type: "string",
+              description: "堆栈跟踪",
+            },
+            steps_to_reproduce: {
+              type: "string",
+              description: "复现步骤",
+            },
+            expected_behavior: {
+              type: "string",
+              description: "期望行为",
+            },
+            actual_behavior: {
+              type: "string",
+              description: "实际行为",
+            },
+          },
+          required: ["error_message"],
+        },
+      },
+      {
+        name: "estimate",
+        description: "【工作量估算】评估开发任务的工作量，提供故事点、时间估算和风险分析",
+        inputSchema: {
+          type: "object",
+          properties: {
+            task_description: {
+              type: "string",
+              description: "任务描述",
+            },
+            code_context: {
+              type: "string",
+              description: "相关代码或文件内容",
+            },
+            team_size: {
+              type: "number",
+              description: "团队规模（默认 1）",
+            },
+            experience_level: {
+              type: "string",
+              description: "经验水平：junior, mid, senior（默认 mid）",
+            },
+          },
+          required: ["task_description"],
+        },
+      },
+      {
+        name: "gen_mock",
+        description: "【Mock数据生成】根据数据结构生成符合语义的模拟数据",
+        inputSchema: {
+          type: "object",
+          properties: {
+            schema: {
+              type: "string",
+              description: "数据结构定义（TypeScript interface 或 JSON Schema）",
+            },
+            count: {
+              type: "number",
+              description: "生成数量（默认 1，最大 1000）",
+            },
+            format: {
+              type: "string",
+              description: "输出格式：json, typescript, javascript, csv（默认 json）",
+            },
+            locale: {
+              type: "string",
+              description: "语言区域：zh-CN, en-US（默认 zh-CN）",
+            },
+            seed: {
+              type: "number",
+              description: "随机种子（用于可重复生成）",
+            },
+          },
+          required: ["schema"],
+        },
+      },
+      // ========== 智能编排工具 ==========
+      {
+        name: "start_feature",
+        description: "【编排】新功能开发：自动检查项目上下文 → 生成功能规格 → 工作量估算",
+        inputSchema: {
+          type: "object",
+          properties: {
+            feature_name: {
+              type: "string",
+              description: "功能名称（kebab-case 格式）",
+            },
+            description: {
+              type: "string",
+              description: "功能描述",
+            },
+            docs_dir: {
+              type: "string",
+              description: "文档目录（默认 docs）",
+            },
+          },
+          required: ["feature_name", "description"],
+        },
+      },
+      {
+        name: "start_bugfix",
+        description: "【编排】Bug修复：自动检查项目上下文 → Bug分析修复 → 生成测试",
+        inputSchema: {
+          type: "object",
+          properties: {
+            error_message: {
+              type: "string",
+              description: "错误信息",
+            },
+            stack_trace: {
+              type: "string",
+              description: "堆栈跟踪",
+            },
+          },
+          required: ["error_message"],
+        },
+      },
+      {
+        name: "start_review",
+        description: "【编排】代码体检：自动检查项目上下文 → 代码审查 → 安全扫描 → 性能分析",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要审查的代码",
+            },
+            language: {
+              type: "string",
+              description: "编程语言",
+            },
+          },
+          required: ["code"],
+        },
+      },
+      {
+        name: "start_release",
+        description: "【编排】发布准备：自动检查项目上下文 → 生成Changelog → 生成PR描述",
+        inputSchema: {
+          type: "object",
+          properties: {
+            version: {
+              type: "string",
+              description: "版本号（如 v1.2.0）",
+            },
+            from_tag: {
+              type: "string",
+              description: "起始 tag（默认上个版本）",
+            },
+            branch: {
+              type: "string",
+              description: "分支名称",
+            },
+          },
+          required: ["version"],
+        },
+      },
+      {
+        name: "start_refactor",
+        description: "【编排】代码重构：自动检查项目上下文 → 代码审查 → 重构建议 → 生成测试",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "需要重构的代码",
+            },
+            goal: {
+              type: "string",
+              description: "重构目标：improve_readability, reduce_complexity, extract_function 等",
+            },
+          },
+          required: ["code"],
+        },
+      },
+      {
+        name: "start_onboard",
+        description: "【编排】快速上手：分析项目结构 → 生成项目上下文文档",
+        inputSchema: {
+          type: "object",
+          properties: {
+            project_path: {
+              type: "string",
+              description: "项目路径（默认当前目录）",
+            },
+            docs_dir: {
+              type: "string",
+              description: "文档目录（默认 docs）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "start_api",
+        description: "【编排】API开发：自动检查项目上下文 → 生成API文档 → 生成Mock数据 → 生成测试",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "API 代码",
+            },
+            language: {
+              type: "string",
+              description: "编程语言",
+            },
+            format: {
+              type: "string",
+              description: "文档格式：markdown, openapi（默认 markdown）",
+            },
+          },
+          required: ["code"],
+        },
+      },
+      {
+        name: "start_doc",
+        description: "【编排】文档生成：自动检查项目上下文 → 生成代码注释 → 生成README → 生成API文档",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "代码或项目信息",
+            },
+            style: {
+              type: "string",
+              description: "注释风格：jsdoc, tsdoc（默认 jsdoc）",
+            },
+            lang: {
+              type: "string",
+              description: "语言：zh, en（默认 zh）",
+            },
+          },
+          required: ["code"],
+        },
+      },
     ],
   };
 });
@@ -580,6 +850,43 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "add_feature":
         return await addFeature(args);
 
+      case "security_scan":
+        return await securityScan(args);
+
+      case "fix_bug":
+        return await fixBug(args);
+
+      case "estimate":
+        return await estimate(args);
+
+      case "gen_mock":
+        return await genMock(args);
+
+      // 智能编排工具
+      case "start_feature":
+        return await startFeature(args);
+
+      case "start_bugfix":
+        return await startBugfix(args);
+
+      case "start_review":
+        return await startReview(args);
+
+      case "start_release":
+        return await startRelease(args);
+
+      case "start_refactor":
+        return await startRefactor(args);
+
+      case "start_onboard":
+        return await startOnboard(args);
+
+      case "start_api":
+        return await startApi(args);
+
+      case "start_doc":
+        return await startDoc(args);
+
       default:
         throw new Error(`未知工具: ${name}`);
     }
@@ -657,6 +964,19 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 analyze_project: "enabled",
                 init_project_context: "enabled",
                 add_feature: "enabled",
+                security_scan: "enabled",
+                fix_bug: "enabled",
+                estimate: "enabled",
+                gen_mock: "enabled",
+                // 智能编排
+                start_feature: "enabled",
+                start_bugfix: "enabled",
+                start_review: "enabled",
+                start_release: "enabled",
+                start_refactor: "enabled",
+                start_onboard: "enabled",
+                start_api: "enabled",
+                start_doc: "enabled",
               },
             },
             null,

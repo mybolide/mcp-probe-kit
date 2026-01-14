@@ -24,4 +24,17 @@ export { split } from "./split.js";
 export { analyzeProject } from "./analyze_project.js";
 export { initProjectContext } from "./init_project_context.js";
 export { addFeature } from "./add_feature.js";
+export { securityScan } from "./security_scan.js";
+export { fixBug } from "./fix_bug.js";
+export { estimate } from "./estimate.js";
+export { genMock } from "./gen_mock.js";
+// 智能编排工具
+export { startFeature } from "./start_feature.js";
+export { startBugfix } from "./start_bugfix.js";
+export { startReview } from "./start_review.js";
+export { startRelease } from "./start_release.js";
+export { startRefactor } from "./start_refactor.js";
+export { startOnboard } from "./start_onboard.js";
+export { startApi } from "./start_api.js";
+export { startDoc } from "./start_doc.js";
 

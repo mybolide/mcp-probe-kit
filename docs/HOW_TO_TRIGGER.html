@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>MCP 工具触发快速手册</title>
+<style>
+@page { size: A4; margin: 1.2cm 1cm; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Microsoft YaHei", Arial, sans-serif; line-height: 1.25; color: #333; font-size: 8.5pt; }
+h1 { font-size: 14pt; color: #2c3e50; margin-bottom: 0.2cm; border-bottom: 2px solid #3498db; padding-bottom: 0.1cm; }
+h2 { font-size: 11pt; color: #34495e; margin-top: 0.3cm; margin-bottom: 0.12cm; font-weight: bold; }
+h3 { font-size: 9pt; color: #555; margin-top: 0.18cm; margin-bottom: 0.06cm; font-weight: bold; }
+p { margin-bottom: 0.1cm; }
+code { background: #f4f4f4; padding: 1px 3px; border-radius: 2px; font-family: Consolas, monospace; font-size: 7.5pt; }
+.keyword { display: inline-block; background: #e8f4f8; color: #2980b9; padding: 1px 3px; border-radius: 2px; margin: 1px; font-size: 7.5pt; }
+.good { color: #27ae60; font-weight: bold; }
+.section { margin-bottom: 0.2cm; page-break-inside: avoid; }
+.divider { border-top: 1px solid #ddd; margin: 0.25cm 0; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 0.2cm; font-size: 7.5pt; page-break-inside: avoid; }
+table th, table td { border: 1px solid #ddd; padding: 3px 4px; text-align: left; }
+table th { background-color: #3498db; color: white; font-weight: bold; }
+table tr:nth-child(even) { background-color: #f9f9f9; }
+@media print {
+    body { background: white; }
+    h1, h2, h3 { page-break-after: avoid; }
+    .section, table { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<h1>MCP 工具触发快速手册</h1>
+
+<h2>🔑 基础工具（30个）</h2>
+
+<h3>代码质量（8个）</h3>
+<p><strong>detect_shell</strong> <span class="keyword">套壳</span><span class="keyword">检测</span> | "detect_shell"</p>
+<p><strong>code_review</strong> <span class="keyword">审查</span><span class="keyword">review</span><span class="keyword">检查</span> | "审查这个文件" "检查代码质量"</p>
+<p><strong>security_scan</strong> <span class="keyword">安全</span><span class="keyword">漏洞</span><span class="keyword">注入</span><span class="keyword">XSS</span> | "扫描安全漏洞" "检查SQL注入"</p>
+<p><strong>debug</strong> <span class="keyword">调试</span><span class="keyword">debug</span><span class="keyword">bug</span> | "debug 这个弹窗逻辑" "调试为什么报错"</p>
+<p><strong>gentest</strong> <span class="keyword">测试</span><span class="keyword">test</span><span class="keyword">单元测试</span> | "生成测试用例" "写个测试"</p>
+<p><strong>refactor</strong> <span class="keyword">重构</span><span class="keyword">改进</span><span class="keyword">简化</span> | "重构这段代码" "代码太复杂了"</p>
+<p><strong>perf</strong> <span class="keyword">性能</span><span class="keyword">优化</span><span class="keyword">慢</span><span class="keyword">瓶颈</span> | "分析性能" "有没有性能瓶颈"</p>
+<p><strong>fix</strong> <span class="keyword">修复</span><span class="keyword">fix</span><span class="keyword">lint错误</span> | "修复lint错误" "自动修复格式"</p>
+
+<h3>开发效率（14个）</h3>
+<p><strong>gencommit</strong> <span class="keyword">commit</span><span class="keyword">提交</span> | "生成commit信息" "帮我写提交信息"</p>
+<p><strong>genapi</strong> <span class="keyword">API文档</span><span class="keyword">文档</span> | "生成API文档" "为这个方法添加文档"</p>
+<p><strong>gendoc</strong> <span class="keyword">注释</span><span class="keyword">JSDoc</span> | "添加注释" "生成JSDoc"</p>
+<p><strong>genpr</strong> <span class="keyword">PR</span><span class="keyword">Pull Request</span> | "生成PR描述" "帮我写PR"</p>
+<p><strong>genchangelog</strong> <span class="keyword">Changelog</span><span class="keyword">变更日志</span> | "生成Changelog" "genchangelog v1.2.0"</p>
+<p><strong>gensql</strong> <span class="keyword">SQL</span><span class="keyword">查询</span><span class="keyword">数据库</span> | "生成SQL查询" "写个查询语句"</p>
+<p><strong>genui</strong> <span class="keyword">组件</span><span class="keyword">UI</span><span class="keyword">界面</span> | "生成Button组件" "创建登录表单"</p>
+<p><strong>gen_mock</strong> <span class="keyword">Mock</span><span class="keyword">模拟数据</span> | "生成Mock数据" "创建测试数据"</p>
+<p><strong>explain</strong> <span class="keyword">解释</span><span class="keyword">说明</span><span class="keyword">理解</span> | "解释这段代码" "这个方法是干什么的"</p>
+<p><strong>convert</strong> <span class="keyword">转换</span><span class="keyword">改成</span><span class="keyword">迁移</span> | "转成TypeScript" "Class改Hooks"</p>
+<p><strong>css_order</strong> <span class="keyword">CSS顺序</span><span class="keyword">CSS规范</span> | "css_order"</p>
+<p><strong>genreadme</strong> <span class="keyword">README</span><span class="keyword">项目文档</span> | "生成README" "写个README"</p>
+<p><strong>split</strong> <span class="keyword">拆分</span><span class="keyword">文件拆分</span> | "拆分这个大文件" "split这个组件"</p>
+<p><strong>fix_bug</strong> <span class="keyword">修复Bug</span><span class="keyword">Bug修复流程</span> | "fix_bug 修复这个错误"</p>
+<p><strong>estimate</strong> <span class="keyword">估算</span><span class="keyword">工作量</span> | "估算工作量" "这个任务需要多久"</p>
+
+<h3>项目管理（8个）</h3>
+<p><strong>init_setting</strong> <span class="keyword">初始化配置</span> | "init_setting"</p>
+<p><strong>init_project</strong> <span class="keyword">初始化项目</span><span class="keyword">Spec-Driven</span> | "init_project 创建任务管理系统"</p>
+<p><strong>check_deps</strong> <span class="keyword">依赖检查</span><span class="keyword">依赖健康度</span> | "check_deps" "检查依赖"</p>
+<p><strong>resolve_conflict</strong> <span class="keyword">Git冲突</span><span class="keyword">冲突解决</span> | "resolve_conflict" "解决Git冲突"</p>
+<p><strong>analyze_project</strong> <span class="keyword">项目分析</span><span class="keyword">分析项目</span> | "analyze_project" "分析项目结构"</p>
+<p><strong>init_project_context</strong> <span class="keyword">项目上下文</span><span class="keyword">初始化上下文</span> | "init_project_context"</p>
+<p><strong>add_feature</strong> <span class="keyword">添加功能</span><span class="keyword">新功能规格</span> | "add_feature user-auth '用户认证'"</p>
+
+<div class="divider"></div>
+
+<h2>🚀 智能编排工具（8个 - 推荐优先使用）</h2>
+
+<h3>🎯 开发流程类（3个）</h3>
+<p><strong>start_feature</strong> <span class="keyword">新功能</span><span class="keyword">开发功能</span><span class="keyword">feature</span> | "开发用户登录功能" "start_feature 用户设置" | 自动：上下文→规格→估算</p>
+<p><strong>start_bugfix</strong> <span class="keyword">修Bug</span><span class="keyword">Bug修复</span><span class="keyword">bugfix</span> | "start_bugfix 修复这个错误" "完整修复这个Bug" | 自动：上下文→定位→修复→测试</p>
+<p><strong>start_onboard</strong> <span class="keyword">了解项目</span><span class="keyword">快速上手</span><span class="keyword">onboard</span> | "快速了解这个项目" "start_onboard" | 自动：项目分析→生成上下文</p>
+
+<h3>🔍 质量保障类（2个）</h3>
+<p><strong>start_review</strong> <span class="keyword">全面审查</span><span class="keyword">代码体检</span><span class="keyword">完整检查</span> | "全面审查这个文件" "代码体检" | 自动：上下文→审查→安全→性能</p>
+<p><strong>start_refactor</strong> <span class="keyword">完整重构</span><span class="keyword">重构流程</span> | "完整重构这个模块" "重构并生成测试" | 自动：上下文→审查→重构→测试</p>
+
+<h3>📦 发布管理类（1个）</h3>
+<p><strong>start_release</strong> <span class="keyword">发布</span><span class="keyword">release</span><span class="keyword">版本发布</span> | "准备发布 v1.2.0" "start_release v1.2.0" | 自动：上下文→Changelog→PR</p>
+
+<h3>📝 文档生成类（2个）</h3>
+<p><strong>start_api</strong> <span class="keyword">API开发</span><span class="keyword">接口开发</span> | "为这个API生成完整资料" "start_api 用户接口" | 自动：上下文→文档→Mock→测试</p>
+<p><strong>start_doc</strong> <span class="keyword">生成完整文档</span><span class="keyword">项目文档</span> | "生成完整文档" "start_doc 这个项目" | 自动：上下文→注释→README→API</p>
+
+<div class="divider"></div>
+
+<h2>🎯 快速触发技巧</h2>
+<p><strong>方式1：动词开头</strong> "审查 view.vue" "解释 handleClick" "调试弹窗问题"</p>
+<p><strong>方式2：指定工具</strong> "debug 这个问题" "code_review 这段代码" "start_feature 用户登录"</p>
+<p><strong>方式3：带文件引用</strong> "debug @LoginForm.tsx" "review @api/user.ts" "gentest @Button.tsx"</p>
+
+
+<div class="divider"></div>
+
+<h2>📊 工具选择决策表</h2>
+
+<table>
+<thead>
+<tr><th>场景</th><th>关键词</th><th>工具</th></tr>
+</thead>
+<tbody>
+<tr><td>套壳检测</td><td>套壳、检测</td><td><code>detect_shell</code></td></tr>
+<tr><td>调试问题</td><td>debug、调试、bug</td><td><code>debug</code></td></tr>
+<tr><td>理解代码</td><td>解释、说明、理解</td><td><code>explain</code></td></tr>
+<tr><td>审查代码</td><td>审查、review、检查</td><td><code>code_review</code></td></tr>
+<tr><td>安全检查</td><td>安全、漏洞、注入</td><td><code>security_scan</code></td></tr>
+<tr><td>生成测试</td><td>测试、test</td><td><code>gentest</code></td></tr>
+<tr><td>性能分析</td><td>性能、优化、慢</td><td><code>perf</code></td></tr>
+<tr><td>重构代码</td><td>重构、改进、简化</td><td><code>refactor</code></td></tr>
+<tr><td>修复错误</td><td>修复、fix、lint</td><td><code>fix</code></td></tr>
+<tr><td>生成提交</td><td>commit、提交</td><td><code>gencommit</code></td></tr>
+<tr><td>API文档</td><td>API文档、文档</td><td><code>genapi</code></td></tr>
+<tr><td>代码注释</td><td>注释、JSDoc</td><td><code>gendoc</code></td></tr>
+<tr><td>PR描述</td><td>PR、Pull Request</td><td><code>genpr</code></td></tr>
+<tr><td>变更日志</td><td>Changelog</td><td><code>genchangelog</code></td></tr>
+<tr><td>SQL生成</td><td>SQL、查询、数据库</td><td><code>gensql</code></td></tr>
+<tr><td>UI组件</td><td>组件、UI、界面</td><td><code>genui</code></td></tr>
+<tr><td>Mock数据</td><td>Mock、模拟数据</td><td><code>gen_mock</code></td></tr>
+<tr><td>代码转换</td><td>转换、改成、迁移</td><td><code>convert</code></td></tr>
+<tr><td>CSS规范</td><td>CSS顺序</td><td><code>css_order</code></td></tr>
+<tr><td>README</td><td>README、项目文档</td><td><code>genreadme</code></td></tr>
+<tr><td>文件拆分</td><td>拆分、文件拆分</td><td><code>split</code></td></tr>
+<tr><td>Bug修复流程</td><td>修复Bug、Bug修复流程</td><td><code>fix_bug</code></td></tr>
+<tr><td>工作量估算</td><td>估算、工作量</td><td><code>estimate</code></td></tr>
+<tr><td>初始化配置</td><td>初始化配置</td><td><code>init_setting</code></td></tr>
+<tr><td>初始化项目</td><td>初始化项目</td><td><code>init_project</code></td></tr>
+<tr><td>依赖检查</td><td>依赖检查</td><td><code>check_deps</code></td></tr>
+<tr><td>Git冲突</td><td>Git冲突、冲突解决</td><td><code>resolve_conflict</code></td></tr>
+<tr><td>项目分析</td><td>项目分析、分析项目</td><td><code>analyze_project</code></td></tr>
+<tr><td>项目上下文</td><td>项目上下文</td><td><code>init_project_context</code></td></tr>
+<tr><td>添加功能</td><td>添加功能、新功能规格</td><td><code>add_feature</code></td></tr>
+</tbody>
+</table>
+
+<h3>智能编排工具（推荐）</h3>
+<table>
+<thead>
+<tr><th>场景</th><th>工具</th><th>自动执行</th></tr>
+</thead>
+<tbody>
+<tr><td>开发新功能</td><td><code>start_feature</code> ⭐⭐⭐</td><td>上下文→规格→估算</td></tr>
+<tr><td>完整Bug修复</td><td><code>start_bugfix</code> ⭐⭐⭐</td><td>上下文→定位→修复→测试</td></tr>
+<tr><td>快速上手项目</td><td><code>start_onboard</code> ⭐⭐⭐</td><td>项目分析→生成上下文</td></tr>
+<tr><td>代码体检</td><td><code>start_review</code> ⭐⭐⭐</td><td>上下文→审查→安全→性能</td></tr>
+<tr><td>完整重构</td><td><code>start_refactor</code> ⭐⭐⭐</td><td>上下文→审查→重构→测试</td></tr>
+<tr><td>准备发布</td><td><code>start_release</code> ⭐⭐⭐</td><td>上下文→Changelog→PR</td></tr>
+<tr><td>API开发</td><td><code>start_api</code> ⭐⭐</td><td>上下文→文档→Mock→测试</td></tr>
+<tr><td>生成文档</td><td><code>start_doc</code> ⭐⭐</td><td>上下文→注释→README→API</td></tr>
+</tbody>
+</table>
+
+<div class="divider"></div>
+
+<h2>💡 最佳实践</h2>
+<p><span class="good">✅ 推荐：</span> "debug 这个登录逻辑有问题" "审查 view.vue 的代码质量" "解释 fetchDetail 方法" "生成这个组件的测试用例" "分析这个页面的性能" "扫描安全漏洞" "重构这段复杂代码" "生成Mock数据" "估算这个任务的工作量"</p>
+<p><strong style="color:#e74c3c;">❌ 不推荐：</strong> "看看这个" "帮我弄一下" "这里不对" "优化一下"（没说优化什么） "改改"（没说怎么改） "检查一下"（没说检查什么）</p>
+
+<div class="divider"></div>
+
+<h2>📚 常见场景示例</h2>
+<p><strong>遇到Bug：</strong> "debug 这个登录逻辑，点击登录按钮没反应" ✅</p>
+<p><strong>不理解代码：</strong> "解释一下 @utils/auth.ts 的 validateToken 方法" ✅</p>
+<p><strong>代码审查：</strong> "审查 @components/UserProfile.tsx 的代码质量" ✅</p>
+<p><strong>开发新功能：</strong> "start_feature user-settings '用户设置页面'" ✅</p>
+<p><strong>修复Bug：</strong> "start_bugfix 修复登录超时问题" ✅</p>
+<p><strong>代码体检：</strong> "start_review @feature.ts 全面体检" ✅</p>
+
+<div class="divider"></div>
+
+<h2>🎓 进阶技巧</h2>
+<p><strong>1. 组合关键词：</strong> "审查并生成测试" → AI会依次调用 code_review 和 gentest</p>
+<p><strong>2. 使用上下文：</strong> "这个方法性能不好，帮我优化" → AI会调用 perf 分析，然后 refactor</p>
+<p><strong>3. 明确范围：</strong> "审查所有API文件" → code_review @api/*.ts</p>
+
+<div style="text-align:center;margin-top:0.3cm;padding:0.2cm;background:#f8f9fa;border-radius:3px;">
+<p style="font-size:9pt;"><strong>MCP Probe Kit - AI 开发增强工具集</strong></p>
+</div>
+
+</body>
+</html>
