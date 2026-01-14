@@ -22,4 +22,6 @@ export { cssOrder } from "./css_order.js";
 export { genreadme } from "./genreadme.js";
 export { split } from "./split.js";
 export { analyzeProject } from "./analyze_project.js";
+export { initProjectContext } from "./init_project_context.js";
+export { addFeature } from "./add_feature.js";
 

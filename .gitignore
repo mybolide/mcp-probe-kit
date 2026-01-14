@@ -30,3 +30,6 @@ npm-debug.log*
 *.tmp
 *.temp
 .cache/
+
+# Docs
+docs/

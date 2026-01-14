@@ -11,7 +11,8 @@ import {
 import { 
   detectShell, initSetting, initProject, gencommit, debug, genapi,
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
-  fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject
+  fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject,
+  initProjectContext, addFeature
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 
@@ -455,6 +456,42 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: [],
         },
       },
+      {
+        name: "init_project_context",
+        description: "【初始化项目上下文】生成项目上下文文档，记录技术栈、架构和规范，供后续功能开发参考",
+        inputSchema: {
+          type: "object",
+          properties: {
+            docs_dir: {
+              type: "string",
+              description: "文档目录（默认 docs）",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "add_feature",
+        description: "【添加新功能】为已有项目生成新功能的规格文档（需求、设计、任务清单）",
+        inputSchema: {
+          type: "object",
+          properties: {
+            feature_name: {
+              type: "string",
+              description: "功能名称（kebab-case 格式，如 user-auth）",
+            },
+            description: {
+              type: "string",
+              description: "功能描述",
+            },
+            docs_dir: {
+              type: "string",
+              description: "文档目录（默认 docs）",
+            },
+          },
+          required: ["feature_name", "description"],
+        },
+      },
     ],
   };
 });
@@ -537,6 +574,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "analyze_project":
         return await analyzeProject(args);
 
+      case "init_project_context":
+        return await initProjectContext(args);
+
+      case "add_feature":
+        return await addFeature(args);
+
       default:
         throw new Error(`未知工具: ${name}`);
     }
@@ -612,6 +655,8 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 genreadme: "enabled",
                 split: "enabled",
                 analyze_project: "enabled",
+                init_project_context: "enabled",
+                add_feature: "enabled",
               },
             },
             null,
