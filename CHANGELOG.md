@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2025-01-16
+
+### Changed
+- 📝 更新文档，添加 gen_skill 工具说明
+  - README.md - 添加完整的工具介绍和使用示例
+  - docs/BEST_PRACTICES.md - 添加最佳实践
+  - docs/HOW_TO_TRIGGER.md - 添加触发关键词
+  - docs/HOW_TO_TRIGGER.html - 优化为黑白打印友好版本
+
 ## [1.8.0] - 2025-01-16
 
 ### Added

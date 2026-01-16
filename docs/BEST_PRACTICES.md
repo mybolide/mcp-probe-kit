@@ -112,6 +112,15 @@ fix_bug
 # 工作量估算
 estimate
 然后描述任务："实现用户登录功能"
+
+# 生成 Agent Skills 文档
+gen_skill
+
+# 生成单个工具的技能文档
+gen_skill --tool_name code_review
+
+# 生成分析类工具的技能文档
+gen_skill --scope analysis
 ```
 
 #### 项目管理工具
