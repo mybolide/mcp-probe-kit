@@ -38,4 +38,5 @@ export { startRefactor } from "./start_refactor.js";
 export { startOnboard } from "./start_onboard.js";
 export { startApi } from "./start_api.js";
 export { startDoc } from "./start_doc.js";
+export { genSkill } from "./gen_skill.js";
 

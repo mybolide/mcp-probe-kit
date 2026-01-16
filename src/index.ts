@@ -13,7 +13,8 @@ import {
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
   fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject,
   initProjectContext, addFeature, securityScan, fixBug, estimate, genMock, design2code,
-  startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc
+  startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc,
+  genSkill
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 
@@ -37,7 +38,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "detect_shell",
-        description: "【套壳鉴定】执行套壳探针检测，返回 JSON 指纹",
+        description: "检测 AI 应用环境指纹，识别是否为套壳产品；返回 JSON 检测报告；仅基于环境指纹判断，不做法律/归因结论",
         inputSchema: {
           type: "object",
           properties: {
@@ -55,7 +56,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "init_setting",
-        description: "【初始化配置】在 .cursor/settings.json 中写入推荐的 AI 配置",
+        description: "初始化 Cursor IDE 配置，写入推荐的 AI 设置到 .cursor/settings.json",
         inputSchema: {
           type: "object",
           properties: {
@@ -69,7 +70,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "init_project",
-        description: "【初始化工程】按照 Spec-Driven Development 方式创建项目结构和任务分解，参考 https://github.com/github/spec-kit",
+        description: "创建新项目结构和任务分解，按 Spec-Driven Development 方式生成需求/设计/任务文档",
         inputSchema: {
           type: "object",
           properties: {
@@ -87,7 +88,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "gencommit",
-        description: "【生成提交】分析代码变更并生成规范的 Git commit 消息（支持 emoji）",
+        description: "分析代码变更生成 Git commit 消息，支持 Conventional Commits 和 emoji；输出文本，不执行提交",
         inputSchema: {
           type: "object",
           properties: {
@@ -105,17 +106,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "debug",
-        description: "【调试助手】分析错误并生成调试策略和解决方案",
+        description: "分析错误信息和堆栈，定位问题根因，输出调试策略和解决方案；仅分析定位，不修复代码",
         inputSchema: {
           type: "object",
           properties: {
             error: {
               type: "string",
-              description: "错误信息（错误消息、堆栈跟踪）",
+              description: "完整错误信息，包含错误消息、堆栈跟踪、触发位置",
             },
             context: {
               type: "string",
-              description: "相关代码或场景描述",
+              description: "相关代码片段、复现步骤或运行环境描述",
             },
           },
           required: [],
@@ -123,13 +124,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "genapi",
-        description: "【生成文档】为代码生成 API 文档（支持 Markdown、OpenAPI、JSDoc 格式）",
+        description: "生成 API 文档（Markdown/OpenAPI/JSDoc），包含参数说明与示例；基于现有接口定义/路由/注释推断；输出文本，不修改业务代码",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要生成文档的代码",
+              description: "API 代码（路由定义/Controller/接口函数），包含参数类型和返回值",
             },
             format: {
               type: "string",
@@ -141,13 +142,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "code_review",
-        description: "【代码审查】全面审查代码质量、安全性、性能和最佳实践",
+        description: "审查代码质量、安全性、性能，输出结构化问题清单（severity/category/file/line/suggestion）；仅分析，不自动修改代码",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要审查的代码",
+              description: "代码片段、文件完整内容或 git diff；支持多文件拼接",
             },
             focus: {
               type: "string",
@@ -159,17 +160,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "gentest",
-        description: "【生成测试】为代码生成完整的测试用例（支持 Jest/Vitest/Mocha）",
+        description: "生成单元测试代码（Jest/Vitest/Mocha），包含边界用例和 mock；默认跟随项目现有测试框架与语言；输出代码，不运行测试",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要测试的代码",
+              description: "需要测试的代码（函数/类/模块），包含完整签名和依赖导入",
             },
             framework: {
               type: "string",
-              description: "测试框架：jest, vitest, mocha（默认 jest）",
+              description: "测试框架：jest, vitest, mocha（默认跟随项目现有框架，若无法检测则 jest）",
             },
           },
           required: [],
@@ -177,17 +178,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "genpr",
-        description: "【生成 PR】分析变更并生成规范的 Pull Request 描述",
+        description: "生成 Pull Request 描述，包含变更摘要、影响范围、测试说明；输出文本，不创建 PR",
         inputSchema: {
           type: "object",
           properties: {
             branch: {
               type: "string",
-              description: "分支名称",
+              description: "当前分支名称（如 feature/user-auth）",
             },
             commits: {
               type: "string",
-              description: "Commit 历史",
+              description: "Commit 历史（git log 输出或 commit 消息列表）",
             },
           },
           required: [],
@@ -195,7 +196,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "check_deps",
-        description: "【依赖检查】分析项目依赖的健康度（版本、安全漏洞、体积）",
+        description: "检查依赖健康度（版本过期/安全漏洞/体积），输出升级建议（含潜在 breaking 风险）；仅分析，不自动升级",
         inputSchema: {
           type: "object",
           properties: {},
@@ -204,13 +205,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "gendoc",
-        description: "【生成注释】为代码生成详细的 JSDoc/TSDoc 注释",
+        description: "生成代码注释（JSDoc/TSDoc/Javadoc），补全参数/返回值/异常/示例；输出代码，不改变逻辑",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要生成注释的代码",
+              description: "需要生成注释的代码（函数/类/模块），包含完整签名",
             },
             style: {
               type: "string",
@@ -218,7 +219,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             lang: {
               type: "string",
-              description: "语言：zh, en（默认 zh）",
+              description: "注释语言：zh, en（默认 zh）",
             },
           },
           required: [],
@@ -226,21 +227,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "genchangelog",
-        description: "【生成 Changelog】根据 commit 历史生成 CHANGELOG.md",
+        description: "根据 commit 历史生成 CHANGELOG，按 feat/fix/breaking 分类；输出文本，不打 tag",
         inputSchema: {
           type: "object",
           properties: {
             version: {
               type: "string",
-              description: "版本号（如：v1.2.0）",
+              description: "版本号（如 v1.2.0）",
             },
             from: {
               type: "string",
-              description: "起始 commit/tag",
+              description: "起始 commit hash 或 tag（如 v1.0.0 或 abc1234）",
             },
             to: {
               type: "string",
-              description: "结束 commit/tag（默认 HEAD）",
+              description: "结束 commit hash 或 tag（默认 HEAD）",
             },
           },
           required: [],
@@ -248,17 +249,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "refactor",
-        description: "【重构建议】分析代码并提供重构建议和实施计划",
+        description: "分析代码结构提供重构建议，输出重构步骤和风险评估；仅建议，不自动重构",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要重构的代码",
+              description: "需要重构的代码，包含完整上下文和依赖关系",
             },
             goal: {
               type: "string",
-              description: "重构目标：improve_readability, reduce_complexity, extract_function 等",
+              description: "重构目标：improve_readability, reduce_complexity, extract_function, extract_class, remove_duplication, simplify_conditionals, improve_naming",
             },
           },
           required: [],
@@ -266,13 +267,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "perf",
-        description: "【性能分析】分析代码性能瓶颈并提供优化建议",
+        description: "分析性能瓶颈（算法/内存/数据库/React渲染），输出结构化瓶颈清单（evidence/fix/impact）；如需全面审查请用 start_review",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要性能分析的代码",
+              description: "需要性能分析的代码，包含循环、数据库查询、渲染逻辑等关键路径",
             },
             type: {
               type: "string",
@@ -284,7 +285,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "fix",
-        description: "【自动修复】自动修复代码问题（Lint、TypeScript、格式化等）",
+        description: "自动修复可机械化问题（Lint/TS/格式化/导入/未使用变量），输出补丁（unified diff）；不做业务逻辑改动",
         inputSchema: {
           type: "object",
           properties: {
@@ -302,13 +303,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "gensql",
-        description: "【SQL 生成器】根据描述生成 SQL 查询语句",
+        description: "根据自然语言生成 SQL 语句（PostgreSQL/MySQL/SQLite）；输出文本，不执行查询",
         inputSchema: {
           type: "object",
           properties: {
             description: {
               type: "string",
-              description: "需求描述",
+              description: "查询需求的自然语言描述，包含表名、字段、条件、排序等要求",
             },
             dialect: {
               type: "string",
@@ -320,13 +321,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "resolve_conflict",
-        description: "【Git 冲突解决】分析并解决 Git 冲突",
+        description: "分析 Git 合并冲突，理解双方意图，输出补丁（unified diff）；需人工确认后应用",
         inputSchema: {
           type: "object",
           properties: {
             conflicts: {
               type: "string",
-              description: "冲突内容（git diff 或冲突文件内容）",
+              description: "冲突文件内容（包含 <<<<<<< ======= >>>>>>> 标记）或 git diff 输出",
             },
           },
           required: [],
@@ -334,17 +335,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "genui",
-        description: "【UI 组件生成器】生成 React/Vue UI 组件代码",
+        description: "生成 UI 组件代码（React/Vue/HTML），包含 Props 和样式；默认跟随项目现有前端栈与组件风格；输出代码",
         inputSchema: {
           type: "object",
           properties: {
             description: {
               type: "string",
-              description: "组件描述",
+              description: "组件功能描述，包含交互行为、状态、样式要求",
             },
             framework: {
               type: "string",
-              description: "框架：react, vue, html（默认 react）",
+              description: "框架：react, vue, html（默认跟随项目现有框架，若无法检测则 react）",
             },
           },
           required: [],
@@ -352,17 +353,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "explain",
-        description: "【代码解释器】详细解释代码逻辑和原理",
+        description: "解释代码逻辑和实现原理，包含执行流程、关键概念；输出文本，不修改代码",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要解释的代码",
+              description: "需要解释的代码片段，包含必要的上下文（导入、类型定义）",
             },
             context: {
               type: "string",
-              description: "上下文信息",
+              description: "补充说明（如业务背景、技术栈、想了解的重点）",
             },
           },
           required: [],
@@ -370,21 +371,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "convert",
-        description: "【代码转换器】转换代码格式/框架（JS→TS、Class→Hooks 等）",
+        description: "转换代码格式或框架（JS→TS/Class→Hooks/Vue2→Vue3），保持逻辑不变；输出代码",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "源代码",
+              description: "源代码，包含完整的导入和类型定义",
             },
             from: {
               type: "string",
-              description: "源格式/框架",
+              description: "源格式/框架（如 js, ts, vue2, vue3, class, hooks, options-api, composition-api）",
             },
             to: {
               type: "string",
-              description: "目标格式/框架",
+              description: "目标格式/框架（如 js, ts, vue2, vue3, class, hooks, options-api, composition-api）",
             },
           },
           required: [],
@@ -392,7 +393,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "css_order",
-        description: "【CSS 顺序】按规则书写或重排 CSS 属性顺序",
+        description: "重排 CSS 属性顺序，按布局→盒模型→视觉→其他规则整理；输出文本",
         inputSchema: {
           type: "object",
           properties: {},
@@ -401,7 +402,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "genreadme",
-        description: "【README 生成器】根据项目代码生成 README.md 文档",
+        description: "生成 README（介绍/安装/使用/脚本/FAQ）；输出文本；如需 OpenAPI 请用 genapi 或 start_doc",
         inputSchema: {
           type: "object",
           properties: {
@@ -419,13 +420,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "split",
-        description: "【文件拆分】将大文件拆分成多个小文件或小组件",
+        description: "拆分大文件为小模块，按类型/功能/组件策略拆分；尽量保持对外导出与行为不变；输出代码",
         inputSchema: {
           type: "object",
           properties: {
             file: {
               type: "string",
-              description: "文件内容或路径",
+              description: "文件完整内容（推荐）或相对路径；内容需包含所有导入导出",
             },
             strategy: {
               type: "string",
@@ -437,7 +438,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "analyze_project",
-        description: "【项目分析】深度分析项目结构、代码质量和架构，帮助AI快速理解老项目",
+        description: "分析项目结构、技术栈、架构模式，输出项目全景报告；如需生成上下文文档请用 init_project_context",
         inputSchema: {
           type: "object",
           properties: {
@@ -459,7 +460,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "init_project_context",
-        description: "【初始化项目上下文】生成项目上下文文档，记录技术栈、架构和规范，供后续功能开发参考",
+        description: "生成项目上下文文档（技术栈/架构/编码规范），供后续开发参考；如需分析项目请先用 analyze_project",
         inputSchema: {
           type: "object",
           properties: {
@@ -473,7 +474,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "add_feature",
-        description: "【添加新功能】为已有项目生成新功能的规格文档（需求、设计、任务清单）",
+        description: "生成新功能规格文档（需求/设计/任务清单），基于项目上下文；如需完整流程请用 start_feature",
         inputSchema: {
           type: "object",
           properties: {
@@ -495,13 +496,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "security_scan",
-        description: "【安全扫描】分析代码安全性，检测注入、认证、加密等漏洞并提供修复建议",
+        description: "专项安全漏洞扫描（注入/认证/加密/敏感数据），输出结构化风险清单（severity/type/location/fix）；如需全面审查请用 start_review",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要扫描的代码",
+              description: "需要扫描的代码，包含完整上下文（导入、配置、数据库操作等）",
             },
             language: {
               type: "string",
@@ -517,29 +518,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "fix_bug",
-        description: "【Bug修复】指导完整的Bug修复流程：定位→分析→修复→验证",
+        description: "指导 Bug 修复流程，输出根因分析+修复方案+验证步骤；不保证自动修改代码，如要自动改可配合 fix",
         inputSchema: {
           type: "object",
           properties: {
             error_message: {
               type: "string",
-              description: "错误信息",
+              description: "完整错误消息，包含错误类型和描述",
             },
             stack_trace: {
               type: "string",
-              description: "堆栈跟踪",
+              description: "完整调用栈，包含文件路径和行号",
             },
             steps_to_reproduce: {
               type: "string",
-              description: "复现步骤",
+              description: "复现步骤（操作序列或测试用例）",
             },
             expected_behavior: {
               type: "string",
-              description: "期望行为",
+              description: "期望行为（正确的输出或状态）",
             },
             actual_behavior: {
               type: "string",
-              description: "实际行为",
+              description: "实际行为（错误的输出或状态）",
             },
           },
           required: ["error_message"],
@@ -547,17 +548,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "estimate",
-        description: "【工作量估算】评估开发任务的工作量，提供故事点、时间估算和风险分析",
+        description: "估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点；仅估算，不生成代码",
         inputSchema: {
           type: "object",
           properties: {
             task_description: {
               type: "string",
-              description: "任务描述",
+              description: "任务描述（功能需求、技术要求、验收标准）",
             },
             code_context: {
               type: "string",
-              description: "相关代码或文件内容",
+              description: "相关代码、现有实现或架构文档，用于评估复杂度",
             },
             team_size: {
               type: "number",
@@ -573,13 +574,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "gen_mock",
-        description: "【Mock数据生成】根据数据结构生成符合语义的模拟数据",
+        description: "根据 TypeScript 类型或 JSON Schema 生成 Mock 数据；输出文本，不写入数据库",
         inputSchema: {
           type: "object",
           properties: {
             schema: {
               type: "string",
-              description: "数据结构定义（TypeScript interface 或 JSON Schema）",
+              description: "数据结构定义（TypeScript interface 或 JSON Schema），字段名应有语义便于生成真实数据",
             },
             count: {
               type: "number",
@@ -595,7 +596,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             seed: {
               type: "number",
-              description: "随机种子（用于可重复生成）",
+              description: "随机种子（用于可重复生成，相同种子产生相同数据）",
             },
           },
           required: ["schema"],
@@ -603,17 +604,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "design2code",
-        description: "【设计稿转代码】1:1 还原设计稿或将 HTML 转换为 Vue/React 项目页面，支持图片、描述、HTML 三种输入方式",
+        description: "设计稿转代码（图片URL/描述/HTML→Vue/React），1:1 还原布局和样式；默认输出与项目一致的框架与样式方案；输出代码",
         inputSchema: {
           type: "object",
           properties: {
             input: {
               type: "string",
-              description: "设计稿图片（URL 或 base64）、设计稿描述或 HTML 代码",
+              description: "设计稿图片 URL、base64 编码图片、设计稿文字描述或 HTML 源码（三选一）",
             },
             framework: {
               type: "string",
-              description: "目标框架：vue, react（默认 vue）",
+              description: "目标框架：vue, react（默认跟随项目现有框架，若无法检测则 vue）",
             },
             style_solution: {
               type: "string",
@@ -621,7 +622,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             component_type: {
               type: "string",
-              description: "组件类型：page, component（默认 page）",
+              description: "组件类型：page（页面级）, component（通用组件）（默认 page）",
             },
           },
           required: ["input"],
@@ -630,7 +631,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       // ========== 智能编排工具 ==========
       {
         name: "start_feature",
-        description: "【编排】新功能开发：自动检查项目上下文 → 生成功能规格 → 工作量估算",
+        description: "新功能开发编排：检查上下文→生成规格→估算工作量；若只需规格文档请用 add_feature",
         inputSchema: {
           type: "object",
           properties: {
@@ -652,7 +653,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "start_bugfix",
-        description: "【编排】Bug修复：自动检查项目上下文 → Bug分析修复 → 生成测试",
+        description: "Bug 修复编排：检查上下文→分析定位→修复方案→生成测试；若只需定位与调试策略请用 debug；若只需修复流程指导请用 fix_bug",
         inputSchema: {
           type: "object",
           properties: {
@@ -670,17 +671,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "start_review",
-        description: "【编排】代码体检：自动检查项目上下文 → 代码审查 → 安全扫描 → 性能分析",
+        description: "代码全面体检：代码审查+安全扫描+性能分析，输出综合报告；若只需单项请用对应工具",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "需要审查的代码",
+              description: "需要审查的代码，建议提供完整文件或模块以便全面分析",
             },
             language: {
               type: "string",
-              description: "编程语言",
+              description: "编程语言（默认自动检测）",
             },
           },
           required: ["code"],
@@ -688,7 +689,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "start_release",
-        description: "【编排】发布准备：自动检查项目上下文 → 生成Changelog → 生成PR描述",
+        description: "发布准备编排：生成 Changelog→生成 PR 描述；若只需单项请用 genchangelog 或 genpr",
         inputSchema: {
           type: "object",
           properties: {
@@ -710,7 +711,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "start_refactor",
-        description: "【编排】代码重构：自动检查项目上下文 → 代码审查 → 重构建议 → 生成测试",
+        description: "代码重构编排：审查现状→重构建议→生成测试；若只需建议请用 refactor",
         inputSchema: {
           type: "object",
           properties: {
@@ -728,7 +729,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "start_onboard",
-        description: "【编排】快速上手：分析项目结构 → 生成项目上下文文档",
+        description: "快速上手编排：分析项目→生成上下文文档；若只需分析请用 analyze_project",
         inputSchema: {
           type: "object",
           properties: {
@@ -746,17 +747,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "start_api",
-        description: "【编排】API开发：自动检查项目上下文 → 生成API文档 → 生成Mock数据 → 生成测试",
+        description: "API 开发编排：生成文档→生成 Mock→生成测试；若只需单项请用对应生成工具",
         inputSchema: {
           type: "object",
           properties: {
             code: {
               type: "string",
-              description: "API 代码",
+              description: "API 代码（路由/Controller/Service），包含完整的请求响应定义",
             },
             language: {
               type: "string",
-              description: "编程语言",
+              description: "编程语言（默认自动检测）",
             },
             format: {
               type: "string",
@@ -768,7 +769,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "start_doc",
-        description: "【编排】文档生成：自动检查项目上下文 → 生成代码注释 → 生成README → 生成API文档",
+        description: "文档补全编排：注释→README→API 文档；若只需单项文档请用对应生成工具",
         inputSchema: {
           type: "object",
           properties: {
@@ -786,6 +787,32 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
           },
           required: ["code"],
+        },
+      },
+      {
+        name: "gen_skill",
+        description: "生成 Agent Skills 文档，为 MCP Probe Kit 工具生成符合开放标准的技能文档；输出到 skills/ 目录，用户可自行修改扩展",
+        inputSchema: {
+          type: "object",
+          properties: {
+            scope: {
+              type: "string",
+              description: "生成范围：all（全部）, basic, generation, analysis, refactoring, workflow, context, orchestration（默认 all）",
+            },
+            tool_name: {
+              type: "string",
+              description: "指定单个工具名称（如 code_review），优先级高于 scope",
+            },
+            output_dir: {
+              type: "string",
+              description: "输出目录（默认 skills）",
+            },
+            lang: {
+              type: "string",
+              description: "文档语言：zh, en（默认 zh）",
+            },
+          },
+          required: [],
         },
       },
     ],
@@ -916,6 +943,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "start_doc":
         return await startDoc(args);
 
+      case "gen_skill":
+        return await genSkill(args);
+
       default:
         throw new Error(`未知工具: ${name}`);
     }
@@ -1007,6 +1037,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 start_onboard: "enabled",
                 start_api: "enabled",
                 start_doc: "enabled",
+                gen_skill: "enabled",
               },
             },
             null,
