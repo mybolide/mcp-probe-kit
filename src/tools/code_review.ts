@@ -114,6 +114,39 @@ ${code || "请提供需要审查的代码"}
 
 ---
 
+---
+
+## 📤 输出格式要求
+
+请严格按以下 JSON 格式输出审查结果：
+
+\`\`\`json
+{
+  "summary": "代码整体评价（一句话）",
+  "score": 85,
+  "issues": [
+    {
+      "severity": "critical|high|medium|low",
+      "category": "quality|security|performance|style",
+      "file": "文件路径（如有）",
+      "line": 10,
+      "code": "问题代码片段",
+      "message": "问题描述",
+      "suggestion": "修复建议",
+      "fix_example": "修复示例代码"
+    }
+  ],
+  "highlights": ["做得好的地方1", "做得好的地方2"]
+}
+\`\`\`
+
+## ⚠️ 边界约束
+
+- ❌ 仅分析，不自动修改源代码
+- ❌ 不执行代码或 shell 命令
+- ❌ 不做业务逻辑正确性判断（只关注代码质量）
+- ✅ 输出结构化问题清单和改进建议
+
 现在请开始代码审查，生成详细的审查报告。`;
 
     return {

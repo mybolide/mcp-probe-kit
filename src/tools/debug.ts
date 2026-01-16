@@ -54,6 +54,47 @@ ${context || "请提供相关代码或场景描述"}
 - TimeoutError → 检查异步操作和网络请求
 - MemoryError → 检查内存泄漏和资源释放
 
+---
+
+## 📤 输出格式要求
+
+请严格按以下 JSON 格式输出分析结果：
+
+\`\`\`json
+{
+  "error_analysis": {
+    "type": "错误类型（SyntaxError/TypeError/LogicError等）",
+    "severity": "critical|high|medium|low",
+    "root_cause": "根本原因分析"
+  },
+  "possible_causes": [
+    {
+      "probability": "high|medium|low",
+      "description": "可能原因描述",
+      "evidence": "支持证据"
+    }
+  ],
+  "debug_strategy": [
+    {
+      "step": 1,
+      "action": "调试步骤描述",
+      "expected_result": "预期结果"
+    }
+  ],
+  "solutions": {
+    "quick_fix": "临时解决方案",
+    "root_fix": "根本解决方案",
+    "prevention": "预防措施"
+  }
+}
+\`\`\`
+
+## ⚠️ 边界约束
+
+- ❌ 仅分析和建议，不自动修改代码
+- ❌ 不执行代码或命令
+- ✅ 输出结构化调试策略和解决方案
+
 现在请按照上述步骤分析错误并提供具体的调试方案。`;
 
     return {

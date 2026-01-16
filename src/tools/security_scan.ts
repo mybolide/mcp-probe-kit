@@ -232,15 +232,41 @@ logger.info("API call with token:", maskToken(apiToken))
 
 ---
 
-## ✅ 扫描检查清单
+## 📤 输出格式要求
 
-- [ ] 注入类漏洞已检查
-- [ ] 认证授权问题已检查
-- [ ] 加密安全问题已检查
-- [ ] 敏感数据泄露已检查
-- [ ] 其他安全问题已检查
-- [ ] 漏洞报告已生成
-- [ ] 修复建议已提供
+请严格按以下 JSON 格式输出扫描结果：
+
+\`\`\`json
+{
+  "scan_summary": {
+    "total_issues": 5,
+    "critical": 1,
+    "high": 2,
+    "medium": 1,
+    "low": 1
+  },
+  "findings": [
+    {
+      "severity": "critical|high|medium|low|info",
+      "type": "漏洞类型（如 SQL Injection）",
+      "cwe": "CWE-89",
+      "location": { "file": "文件路径", "line": 42 },
+      "vulnerable_code": "问题代码片段",
+      "exploit_scenario": "攻击场景描述",
+      "fix": "修复建议",
+      "fix_example": "修复代码示例"
+    }
+  ],
+  "recommendations": ["安全最佳实践建议1", "建议2"]
+}
+\`\`\`
+
+## ⚠️ 边界约束
+
+- ❌ 仅分析代码，不执行任何操作
+- ❌ 不做法律/归因结论
+- ❌ 不保证发现所有漏洞（静态分析有局限性）
+- ✅ 输出结构化风险清单和修复建议
 
 ---
 

@@ -248,6 +248,50 @@ describe('[功能描述]', () => {
 
 ---
 
+## 📤 输出格式要求
+
+请严格按以下 JSON 格式输出修复指南：
+
+\`\`\`json
+{
+  "bug_summary": "Bug 简述（一句话）",
+  "analysis": {
+    "error_type": "错误类型",
+    "direct_cause": "直接原因",
+    "root_cause": "根本原因",
+    "affected_scope": "影响范围"
+  },
+  "location": {
+    "file": "问题文件路径",
+    "line": 42,
+    "function": "问题函数名",
+    "code_snippet": "问题代码片段"
+  },
+  "fix_plan": {
+    "chosen_solution": "选择的修复方案",
+    "reason": "选择理由",
+    "steps": [
+      { "step": 1, "action": "修复步骤", "file": "文件", "change": "变更内容" }
+    ],
+    "code_before": "修改前代码",
+    "code_after": "修改后代码"
+  },
+  "verification": {
+    "test_cases": ["测试用例1", "测试用例2"],
+    "manual_checks": ["手动验证项1", "手动验证项2"]
+  }
+}
+\`\`\`
+
+## ⚠️ 边界约束
+
+- ❌ 仅提供修复指南，不保证自动修改代码
+- ❌ 不执行代码或命令
+- ✅ 输出结构化修复方案和验证步骤
+- 💡 如需自动修复，可配合 fix 工具应用 patch
+
+---
+
 *指南版本: 1.0.0*
 *工具: MCP Probe Kit - fix_bug*
 `;

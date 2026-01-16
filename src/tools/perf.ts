@@ -335,6 +335,43 @@ console.log(\`耗时: \${end - start}ms\`);
 
 ---
 
+---
+
+## 📤 输出格式要求
+
+请严格按以下 JSON 格式输出分析结果：
+
+\`\`\`json
+{
+  "summary": "性能评估总结（一句话）",
+  "overall_score": 70,
+  "bottlenecks": [
+    {
+      "type": "algorithm|memory|io|render|database",
+      "severity": "critical|high|medium|low",
+      "location": { "file": "文件路径", "line": 25 },
+      "current_complexity": "O(n²)",
+      "evidence": "问题证据描述",
+      "fix": "优化建议",
+      "expected_improvement": "70%",
+      "fix_example": "优化后代码示例"
+    }
+  ],
+  "metrics": {
+    "time_complexity": "O(n²)",
+    "space_complexity": "O(n)",
+    "potential_improvement": "60-80%"
+  }
+}
+\`\`\`
+
+## ⚠️ 边界约束
+
+- ❌ 仅分析，不自动修改代码
+- ❌ 不执行性能测试（仅静态分析）
+- ❌ 不做精确的性能数值预测
+- ✅ 输出结构化瓶颈清单和优化建议
+
 现在请分析代码，提供详细的性能优化建议。`;
 
     return {

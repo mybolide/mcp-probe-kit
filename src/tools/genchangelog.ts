@@ -203,7 +203,15 @@ npx standard-version --first-release
 
 ---
 
-现在请根据 commit 历史生成详细的 CHANGELOG.md 文件。`;
+---
+
+## ⚠️ 边界约束
+
+- ❌ 仅输出 CHANGELOG 文本，不自动写入文件
+- ❌ 不执行 git 命令
+- ✅ 输出完整的 CHANGELOG Markdown
+
+现在请根据 commit 历史生成详细的 CHANGELOG.md 内容。`;
 
     return {
       content: [
