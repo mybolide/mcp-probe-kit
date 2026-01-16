@@ -179,6 +179,62 @@ table th { background-color: #ddd; font-weight: bold; }
 <p><strong>2. 使用上下文：</strong> "这个方法性能不好，帮我优化" - AI会调用 perf 分析，然后 refactor</p>
 <p><strong>3. 明确范围：</strong> "审查所有API文件" - code_review @api/*.ts</p>
 
+<div class="divider"></div>
+
+<h2>OpenCode / oh-my-opencode 使用</h2>
+
+<h3>配置 MCP</h3>
+<p>在 <code>~/.opencode/mcp.json</code> 中添加：</p>
+<p><code>{ "mcpServers": { "mcp-probe-kit": { "command": "npx", "args": ["mcp-probe-kit@latest"] } } }</code></p>
+
+<h3>命令行调用</h3>
+<p><strong>/tool</strong> - 列出所有可用工具</p>
+<p><strong>/tool code_review</strong> - 调用指定工具</p>
+<p><strong>/mcp</strong> - 查看 MCP 服务器状态</p>
+
+<h3>对话式调用（推荐）</h3>
+<p>直接在对话中使用关键词，AI 会自动调用对应工具：</p>
+<p>"审查这段代码" → code_review</p>
+<p>"debug 这个错误" → debug</p>
+<p>"生成测试" → gentest</p>
+<p>"start_feature 用户登录" → start_feature</p>
+
+<h3>oh-my-opencode 高级功能</h3>
+<p><strong>关键词检测器</strong> - 自动检测提示中的关键词并激活专门模式：</p>
+<table>
+<thead>
+<tr><th>关键词</th><th>模式</th><th>说明</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ultrawork</code> / <code>ulw</code></td><td>最大性能模式</td><td>并行智能体编排</td></tr>
+<tr><td><code>search</code> / <code>find</code></td><td>搜索模式</td><td>并行 explore + librarian 智能体</td></tr>
+<tr><td><code>analyze</code> / <code>investigate</code></td><td>深度分析模式</td><td>多阶段专家咨询</td></tr>
+</tbody>
+</table>
+
+<p><strong>Ralph Loop</strong> - 自引用开发循环，持续运行直到任务完成：</p>
+<p>使用 <code>/ralph-loop "构建一个 REST API"</code> 开始</p>
+<p>结束条件：检测到 &lt;promise&gt;DONE&lt;/promise&gt;、达到最大迭代次数（默认100）或 <code>/cancel-ralph</code></p>
+<p>配置：<code>oh-my-opencode.json</code> 中 <code>{ "ralph_loop": { "enabled": true, "default_max_iterations": 100 } }</code></p>
+
+<h3>常用命令示例</h3>
+<table>
+<thead>
+<tr><th>命令</th><th>说明</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/tool code_review</code></td><td>代码审查</td></tr>
+<tr><td><code>/tool debug</code></td><td>调试分析</td></tr>
+<tr><td><code>/tool gentest</code></td><td>生成测试</td></tr>
+<tr><td><code>/tool gencommit</code></td><td>生成提交信息</td></tr>
+<tr><td><code>/tool start_feature</code></td><td>新功能开发编排</td></tr>
+<tr><td><code>/tool start_review</code></td><td>代码体检编排</td></tr>
+<tr><td><code>/tool start_bugfix</code></td><td>Bug修复编排</td></tr>
+<tr><td><code>ulw 重构这个模块</code></td><td>最大性能模式</td></tr>
+<tr><td><code>/ralph-loop "任务描述"</code></td><td>自引用循环</td></tr>
+</tbody>
+</table>
+
 <div style="text-align:center;margin-top:0.4cm;padding:0.2cm;border-top:1px solid #000;">
 <p style="font-size:10pt;"><strong>MCP Probe Kit v1.8.1 - AI 开发增强工具集（40个工具）</strong></p>
 </div>
