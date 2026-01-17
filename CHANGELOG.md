@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.1] - 2025-01-17
+
+### Fixed
+- 🐛 **修复 inputSchema 类型定义，符合 MCP 协议规范**
+  - v1.10.0 将 `inputSchema.type` 改为 `"string"` 导致 MCP SDK 验证失败
+  - MCP 协议要求 inputSchema 必须是 `type: "object"`
+  - 改为 `type: "object"` + `properties: {}` + `additionalProperties: true`
+  - 这样既符合 MCP 规范，又允许接收任意格式输入
+  - `parseArgs` 函数会智能处理所有输入格式（字符串、JSON、对象）
+  - 保留了 description 中的自然语言支持说明
+
+### Technical Details
+- `additionalProperties: true` 允许传递任意字段
+- `properties: {}` 表示不强制要求特定字段
+- AI 仍然可以传递字符串、对象或任意格式，`parseArgs` 会自动处理
+
 ## [1.10.0] - 2025-01-17
 
 ### Changed
@@ -215,6 +231,7 @@ Previous versions - see [GitHub Releases](https://github.com/mybolide/mcp-probe-
 
 ---
 
+[1.10.1]: https://github.com/mybolide/mcp-probe-kit/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/mybolide/mcp-probe-kit/compare/v1.8.0...v1.8.1
