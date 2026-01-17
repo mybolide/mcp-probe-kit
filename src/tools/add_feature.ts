@@ -15,6 +15,53 @@ import { parseArgs, getString, validateRequired } from "../utils/parseArgs.js";
 // 默认文档目录
 const DEFAULT_DOCS_DIR = "docs";
 
+/**
+ * 从自然语言输入中提取功能名和描述
+ * @param input - 自然语言输入
+ * @returns 提取的功能名和描述
+ */
+function extractFeatureInfo(input: string): { name: string; description: string } {
+  // 移除常见的引导词
+  let text = input
+    .replace(/^(添加|实现|开发|创建|新增|生成|构建|做|要|想要|需要|帮我|请|麻烦)/i, "")
+    .trim();
+  
+  // 移除结尾的"功能"、"模块"等词
+  text = text.replace(/(功能|模块|特性|组件|系统|服务)$/i, "").trim();
+  
+  // 如果文本很短（少于20个字符），直接作为功能名
+  if (text.length < 20) {
+    const name = text
+      .toLowerCase()
+      .replace(/[\s\u4e00-\u9fa5]+/g, "-") // 将空格和中文替换为连字符
+      .replace(/[^a-z0-9-]/g, "") // 移除非字母数字和连字符
+      .replace(/-+/g, "-") // 合并多个连字符
+      .replace(/^-|-$/g, ""); // 移除首尾连字符
+    
+    return {
+      name: name || "new-feature",
+      description: input,
+    };
+  }
+  
+  // 如果文本较长，尝试提取关键词作为功能名
+  // 提取前几个关键词
+  const words = text.split(/[\s,，、]+/).filter(w => w.length > 0);
+  const keyWords = words.slice(0, 3).join(" ");
+  
+  const name = keyWords
+    .toLowerCase()
+    .replace(/[\s\u4e00-\u9fa5]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  
+  return {
+    name: name || "new-feature",
+    description: input,
+  };
+}
+
 // 提示词模板
 const PROMPT_TEMPLATE = `# 添加新功能指南
 
@@ -433,13 +480,14 @@ export async function addFeature(args: any) {
       feature_name?: string;
       description?: string;
       docs_dir?: string;
+      input?: string;
     }>(args, {
       defaultValues: {
         feature_name: "",
         description: "",
         docs_dir: DEFAULT_DOCS_DIR,
       },
-      primaryField: "description", // 纯文本输入默认映射到 description 字段
+      primaryField: "input", // 纯文本输入默认映射到 input 字段
       fieldAliases: {
         feature_name: ["name", "feature", "功能名", "功能名称"],
         description: ["desc", "requirement", "描述", "需求"],
@@ -447,12 +495,39 @@ export async function addFeature(args: any) {
       },
     });
 
-    const featureName = getString(parsedArgs.feature_name);
-    const description = getString(parsedArgs.description);
+    let featureName = getString(parsedArgs.feature_name);
+    let description = getString(parsedArgs.description);
     const docsDir = getString(parsedArgs.docs_dir) || DEFAULT_DOCS_DIR;
 
+    // 如果是纯自然语言输入（input 字段有值但 feature_name 和 description 为空）
+    const input = getString(parsedArgs.input);
+    if (input && !featureName && !description) {
+      // 智能提取功能名和描述
+      // 尝试从自然语言中提取功能名（通常是关键词）
+      const extracted = extractFeatureInfo(input);
+      featureName = extracted.name;
+      description = extracted.description;
+    }
+
+    // 如果只有 description 没有 feature_name，尝试从 description 提取
+    if (!featureName && description) {
+      const extracted = extractFeatureInfo(description);
+      featureName = extracted.name;
+      if (!description || description === featureName) {
+        description = extracted.description;
+      }
+    }
+
     // 验证必填参数
-    validateRequired(parsedArgs, ["feature_name", "description"]);
+    if (!featureName || !description) {
+      throw new Error(
+        "请提供功能名称和描述。\n\n" +
+        "示例用法：\n" +
+        "- 自然语言：'添加用户认证功能'\n" +
+        "- 详细描述：'实现用户登录、注册和密码重置功能'\n" +
+        "- JSON格式：{\"feature_name\": \"user-auth\", \"description\": \"用户认证功能\"}"
+      );
+    }
 
     // 构建指南文本（替换占位符）
     const guide = PROMPT_TEMPLATE

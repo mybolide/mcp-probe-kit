@@ -54,7 +54,18 @@ export function parseArgs<T extends Record<string, any>>(
   }
   // 3. 处理对象类型 - 标准 JSON 对象
   else if (typeof args === "object" && !Array.isArray(args)) {
-    parsedArgs = normalizeObjectKeys(args, fieldAliases);
+    // 3.1 检查是否有嵌套的 input 字段（MCP 常见格式）
+    // 例如: {"input": {"feature_name": "...", "description": "..."}}
+    if (args.input && typeof args.input === "object" && !Array.isArray(args.input)) {
+      // 展平嵌套结构，优先使用 input 内的字段
+      parsedArgs = { ...args, ...args.input };
+      delete parsedArgs.input; // 移除 input 字段避免冲突
+    } else {
+      parsedArgs = args;
+    }
+    
+    // 3.2 规范化字段名（处理别名）
+    parsedArgs = normalizeObjectKeys(parsedArgs, fieldAliases);
   }
   // 4. 其他类型
   else {
