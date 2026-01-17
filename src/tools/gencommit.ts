@@ -6,22 +6,32 @@ export async function gencommit(args: any) {
     // 使用智能参数解析，支持自然语言输入
     // 用户可以直接说 "帮我生成 commit 消息" 或传递 JSON 对象
     const parsedArgs = parseArgs<{
+      input?: string;
       changes?: string;
       type?: string;
     }>(args, {
       defaultValues: {
+        input: "",
         changes: "",
         type: "",
       },
-      primaryField: "changes", // 纯文本输入默认映射到 changes 字段
+      primaryField: "input", // 纯文本输入默认映射到 input 字段
       fieldAliases: {
+        input: ["输入"],
         changes: ["change", "diff", "code", "修改", "变更"],
         type: ["commit_type", "类型"],
       },
     });
     
-    const changes = getString(parsedArgs.changes);
+    // 优先使用 input 参数（自然语言输入）
+    const input = getString(parsedArgs.input);
+    let changes = getString(parsedArgs.changes);
     const type = getString(parsedArgs.type); // fixed, fix, feat, docs, style, chore, refactor, test
+
+    // 如果提供了 input，将其作为 changes
+    if (input) {
+      changes = input;
+    }
 
     const message = `请按以下步骤生成规范的 Git commit 消息：
 

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2025-01-17
+
+### Changed
+- 🎯 **重大改进：所有 40 个工具的 inputSchema 类型从 `object` 改为 `string`**
+  - AI 现在可以直接传递自然语言字符串，无需构造 JSON 对象
+  - 解决了 AI 因看到 `type: "object"` 而拒绝调用工具的问题
+  - 每个工具的 description 添加 💡 emoji 说明支持的输入格式
+  - 完全兼容：`parseArgs` 函数自动处理字符串、JSON 字符串、对象等所有格式
+  - 用户体验提升：从 "AI 拒绝调用" → "AI 主动使用自然语言调用"
+
+### Improved
+- 📝 更新文档 `docs/MCP-Probe-Kit-使用手册.html`
+  - 添加 4 个遗漏的工具：init_setting, detect_shell, css_order, gen_skill
+  - 优化打印布局，减少间距和字体大小，适配 2 页打印
+  - 更新工具统计：40 个核心工具 + 1 个扩展工具（oh-my-openCode）
+
+### Technical Details
+**为什么改为 `type: "string"`？**
+- AI 看到 `type: "object"` 时，即使 description 说支持自然语言，AI 仍然认为必须传递对象
+- 改为 `type: "string"` 后，AI 明确知道可以直接传递字符串
+- `parseArgs` 函数智能处理所有输入格式，保证向后兼容
+
+**支持的输入格式：**
+1. 自然语言：`"请审查这段代码：function login() {...}"`
+2. 直接粘贴代码/文本：`"function login() {...}"`
+3. JSON 字符串：`'{"code": "function login() {...}", "focus": "security"}'`
+
 ## [1.9.0] - 2025-01-17
 
 ### Added
@@ -188,6 +215,7 @@ Previous versions - see [GitHub Releases](https://github.com/mybolide/mcp-probe-
 
 ---
 
+[1.10.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/mybolide/mcp-probe-kit/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.7.0...v1.8.0
