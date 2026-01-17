@@ -1,6 +1,6 @@
 {
   "name": "mcp-probe-kit",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "description": "AI Development Enhancement Toolkit - MCP Server with 40 practical tools (32 basic + 8 orchestration) for code quality, development efficiency, and project management",
   "type": "module",
   "main": "build/index.js",

@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // perf 工具实现
 export async function perf(args: any) {
   try {
-    const code = args?.code || "";
-    const type = args?.type || "all"; // algorithm, memory, react, database
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      type?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        type: "all",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "function"],
+        type: ["analysis_type", "category", "类型", "分析类型"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const type = getString(parsedArgs.type) || "all"; // algorithm, memory, react, database
 
     const message = `请分析以下代码的性能问题并提供优化建议：
 

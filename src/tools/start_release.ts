@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * start_release 智能编排工具
  * 
@@ -129,14 +131,32 @@ const PROMPT_TEMPLATE = `# 📦 发布准备编排指南
 
 export async function startRelease(args: any) {
   try {
-    const version = args?.version;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      version?: string;
+      from_tag?: string;
+      branch?: string;
+    }>(args, {
+      defaultValues: {
+        version: "",
+        from_tag: "上个版本 tag",
+        branch: "",
+      },
+      primaryField: "version", // 纯文本输入默认映射到 version 字段
+      fieldAliases: {
+        version: ["ver", "v", "版本", "版本号"],
+        from_tag: ["from", "start", "起始", "起始版本"],
+        branch: ["分支", "发布分支"],
+      },
+    });
+
+    const version = getString(parsedArgs.version);
+    const fromTag = getString(parsedArgs.from_tag) || "上个版本 tag";
+    const branch = getString(parsedArgs.branch) || "release/" + version;
 
     if (!version) {
       throw new Error("缺少必填参数: version（版本号，如 v1.2.0）");
     }
-
-    const fromTag = args?.from_tag || "上个版本 tag";
-    const branch = args?.branch || "release/" + version;
 
     const guide = PROMPT_TEMPLATE
       .replace(/{version}/g, version)

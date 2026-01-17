@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // gensql 工具实现
 export async function gensql(args: any) {
   try {
-    const description = args?.description || "";
-    const dialect = args?.dialect || "postgres"; // postgres, mysql, sqlite
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      description?: string;
+      dialect?: string;
+    }>(args, {
+      defaultValues: {
+        description: "",
+        dialect: "postgres",
+      },
+      primaryField: "description", // 纯文本输入默认映射到 description 字段
+      fieldAliases: {
+        description: ["query", "requirement", "需求", "查询需求"],
+        dialect: ["database", "db", "type", "数据库", "数据库类型"],
+      },
+    });
+    
+    const description = getString(parsedArgs.description);
+    const dialect = getString(parsedArgs.dialect) || "postgres"; // postgres, mysql, sqlite
 
     const message = `请根据以下需求生成 SQL：
 

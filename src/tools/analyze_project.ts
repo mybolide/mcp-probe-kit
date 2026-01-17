@@ -1,3 +1,4 @@
+import { parseArgs, getString, getNumber, getBoolean } from "../utils/parseArgs.js";
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, extname, basename } from 'path';
 import { VERSION } from '../version.js';
@@ -44,9 +45,28 @@ interface ProjectAnalysis {
 }
 
 export async function analyzeProject(args: any): Promise<any> {
-  const projectPath = args.project_path || process.cwd();
-  const maxDepth = args.max_depth || 5;
-  const includeContent = args.include_content !== false;
+  // 智能参数解析，支持自然语言输入
+  const parsedArgs = parseArgs<{
+    project_path?: string;
+    max_depth?: number;
+    include_content?: boolean;
+  }>(args, {
+    defaultValues: {
+      project_path: process.cwd(),
+      max_depth: 5,
+      include_content: true,
+    },
+    primaryField: "project_path", // 纯文本输入默认映射到 project_path 字段
+    fieldAliases: {
+      project_path: ["path", "dir", "directory", "路径", "项目路径"],
+      max_depth: ["depth", "level", "深度", "层级"],
+      include_content: ["content", "with_content", "包含内容"],
+    },
+  });
+
+  const projectPath = getString(parsedArgs.project_path) || process.cwd();
+  const maxDepth = getNumber(parsedArgs.max_depth, 5);
+  const includeContent = getBoolean(parsedArgs.include_content, true);
 
   try {
     console.error(`开始分析项目: ${projectPath}`);

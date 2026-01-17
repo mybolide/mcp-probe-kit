@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * gen_skill - 生成 Agent Skills 文档
  */
@@ -470,10 +472,32 @@ function generateReadme(tools: string[], lang: "zh" | "en"): string {
 
 export async function genSkill(args: any) {
   try {
-    const scope = args?.scope || "all";
-    const toolName = args?.tool_name;
-    const outputDir = args?.output_dir || "skills";
-    const lang = args?.lang || "zh";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      scope?: string;
+      tool_name?: string;
+      output_dir?: string;
+      lang?: string;
+    }>(args, {
+      defaultValues: {
+        scope: "all",
+        tool_name: "",
+        output_dir: "skills",
+        lang: "zh",
+      },
+      primaryField: "scope", // 纯文本输入默认映射到 scope 字段
+      fieldAliases: {
+        scope: ["range", "category", "范围", "类别"],
+        tool_name: ["tool", "name", "工具", "工具名"],
+        output_dir: ["dir", "output", "目录", "输出目录"],
+        lang: ["language", "语言"],
+      },
+    });
+
+    const scope = getString(parsedArgs.scope) || "all";
+    const toolName = getString(parsedArgs.tool_name);
+    const outputDir = getString(parsedArgs.output_dir) || "skills";
+    const lang = getString(parsedArgs.lang) || "zh";
     const isZh = lang === "zh";
 
     let toolsToGenerate: string[] = [];

@@ -220,20 +220,43 @@ const PROMPT_TEMPLATE = `# 工作量估算指南
 *工具: MCP Probe Kit - estimate*
 `;
 
+import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
+
 /**
  * estimate 工具实现
  */
 export async function estimate(args: any) {
   try {
-    const taskDescription = args?.task_description;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      task_description?: string;
+      code_context?: string;
+      team_size?: number;
+      experience_level?: string;
+    }>(args, {
+      defaultValues: {
+        task_description: "",
+        code_context: "",
+        team_size: 1,
+        experience_level: "mid",
+      },
+      primaryField: "task_description", // 纯文本输入默认映射到 task_description 字段
+      fieldAliases: {
+        task_description: ["task", "description", "requirement", "任务", "任务描述"],
+        code_context: ["context", "code", "上下文", "相关代码"],
+        team_size: ["team", "size", "团队", "团队规模"],
+        experience_level: ["level", "experience", "经验", "经验水平"],
+      },
+    });
+
+    const taskDescription = getString(parsedArgs.task_description);
+    const codeContext = getString(parsedArgs.code_context);
+    const teamSize = getNumber(parsedArgs.team_size, 1);
+    const experienceLevel = getString(parsedArgs.experience_level) || "mid";
 
     if (!taskDescription) {
       throw new Error("缺少必填参数: task_description（任务描述）");
     }
-
-    const codeContext = args?.code_context || "";
-    const teamSize = args?.team_size || 1;
-    const experienceLevel = args?.experience_level || "mid";
 
     const expLevelMap: Record<string, string> = {
       junior: "初级（1-2年经验）",

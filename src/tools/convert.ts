@@ -1,9 +1,30 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // convert 工具实现
 export async function convert(args: any) {
   try {
-    const code = args?.code || "";
-    const from = args?.from || "";
-    const to = args?.to || "";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      from?: string;
+      to?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        from: "",
+        to: "",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "content"],
+        from: ["source_format", "source_type", "源格式", "源类型"],
+        to: ["target_format", "target_type", "目标格式", "目标类型"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const from = getString(parsedArgs.from);
+    const to = getString(parsedArgs.to);
 
     const message = `请转换以下代码：
 

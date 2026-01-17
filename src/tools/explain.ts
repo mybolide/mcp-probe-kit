@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // explain 工具实现
 export async function explain(args: any) {
   try {
-    const code = args?.code || "";
-    const context = args?.context || "";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      context?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        context: "",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "snippet"],
+        context: ["background", "info", "上下文", "背景"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const context = getString(parsedArgs.context);
 
     const message = `请详细解释以下代码：
 

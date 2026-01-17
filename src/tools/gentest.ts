@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // gentest 工具实现
 export async function gentest(args: any) {
   try {
-    const code = args?.code || "";
-    const framework = args?.framework || "jest"; // jest, vitest, mocha
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      framework?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        framework: "jest",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "function"],
+        framework: ["test_framework", "lib", "框架", "测试框架"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const framework = getString(parsedArgs.framework) || "jest"; // jest, vitest, mocha
 
     const message = `请为以下代码生成完整的测试用例：
 

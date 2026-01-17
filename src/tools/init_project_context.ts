@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * init_project_context 工具
  * 
@@ -305,8 +307,20 @@ project/
  */
 export async function initProjectContext(args: any) {
   try {
-    // 解析参数
-    const docsDir = args?.docs_dir || DEFAULT_DOCS_DIR;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      docs_dir?: string;
+    }>(args, {
+      defaultValues: {
+        docs_dir: DEFAULT_DOCS_DIR,
+      },
+      primaryField: "docs_dir", // 纯文本输入默认映射到 docs_dir 字段
+      fieldAliases: {
+        docs_dir: ["dir", "output", "directory", "目录", "文档目录"],
+      },
+    });
+
+    const docsDir = getString(parsedArgs.docs_dir) || DEFAULT_DOCS_DIR;
 
     // 构建指南文本（替换占位符）
     const guide = PROMPT_TEMPLATE.replace(/{docs_dir}/g, docsDir);

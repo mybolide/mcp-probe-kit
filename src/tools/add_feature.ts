@@ -1,3 +1,5 @@
+import { parseArgs, getString, validateRequired } from "../utils/parseArgs.js";
+
 /**
  * add_feature 工具
  * 
@@ -426,19 +428,31 @@ interface [ModelName] {
  */
 export async function addFeature(args: any) {
   try {
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      feature_name?: string;
+      description?: string;
+      docs_dir?: string;
+    }>(args, {
+      defaultValues: {
+        feature_name: "",
+        description: "",
+        docs_dir: DEFAULT_DOCS_DIR,
+      },
+      primaryField: "description", // 纯文本输入默认映射到 description 字段
+      fieldAliases: {
+        feature_name: ["name", "feature", "功能名", "功能名称"],
+        description: ["desc", "requirement", "描述", "需求"],
+        docs_dir: ["dir", "output", "目录", "文档目录"],
+      },
+    });
+
+    const featureName = getString(parsedArgs.feature_name);
+    const description = getString(parsedArgs.description);
+    const docsDir = getString(parsedArgs.docs_dir) || DEFAULT_DOCS_DIR;
+
     // 验证必填参数
-    const featureName = args?.feature_name;
-    const description = args?.description;
-
-    if (!featureName) {
-      throw new Error("缺少必填参数: feature_name（功能名称）");
-    }
-    if (!description) {
-      throw new Error("缺少必填参数: description（功能描述）");
-    }
-
-    // 解析可选参数
-    const docsDir = args?.docs_dir || DEFAULT_DOCS_DIR;
+    validateRequired(parsedArgs, ["feature_name", "description"]);
 
     // 构建指南文本（替换占位符）
     const guide = PROMPT_TEMPLATE

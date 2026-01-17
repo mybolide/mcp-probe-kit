@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // genreadme 工具实现
 export async function genreadme(args: any) {
   try {
-    const projectInfo = args?.project_info || "";
-    const style = args?.style || "standard"; // standard, minimal, detailed
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      project_info?: string;
+      style?: string;
+    }>(args, {
+      defaultValues: {
+        project_info: "",
+        style: "standard",
+      },
+      primaryField: "project_info", // 纯文本输入默认映射到 project_info 字段
+      fieldAliases: {
+        project_info: ["info", "description", "project", "项目信息", "项目描述"],
+        style: ["format", "type", "风格", "模板"],
+      },
+    });
+    
+    const projectInfo = getString(parsedArgs.project_info);
+    const style = getString(parsedArgs.style) || "standard"; // standard, minimal, detailed
 
     const message = `请生成项目的 README.md 文档：
 

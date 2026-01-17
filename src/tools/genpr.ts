@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // genpr 工具实现
 export async function genpr(args: any) {
   try {
-    const branch = args?.branch || "";
-    const commits = args?.commits || "";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      branch?: string;
+      commits?: string;
+    }>(args, {
+      defaultValues: {
+        branch: "",
+        commits: "",
+      },
+      primaryField: "commits", // 纯文本输入默认映射到 commits 字段
+      fieldAliases: {
+        branch: ["分支", "branch_name"],
+        commits: ["commit_history", "log", "提交", "提交历史"],
+      },
+    });
+    
+    const branch = getString(parsedArgs.branch);
+    const commits = getString(parsedArgs.commits);
 
     const message = `请生成规范的 Pull Request 描述：
 

@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * start_api 智能编排工具
  * 
@@ -156,14 +158,32 @@ const PROMPT_TEMPLATE = `# 🔌 API 开发编排指南
 
 export async function startApi(args: any) {
   try {
-    const code = args?.code;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      language?: string;
+      format?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        language: "typescript",
+        format: "markdown",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "api", "代码", "endpoint"],
+        language: ["lang", "语言", "编程语言"],
+        format: ["output", "type", "格式", "输出格式"],
+      },
+    });
+
+    const code = getString(parsedArgs.code);
+    const language = getString(parsedArgs.language) || "typescript";
+    const format = getString(parsedArgs.format) || "markdown";
 
     if (!code) {
       throw new Error("缺少必填参数: code（API 代码）");
     }
-
-    const language = args?.language || "typescript";
-    const format = args?.format || "markdown";
 
     const guide = PROMPT_TEMPLATE
       .replace(/{code}/g, code)

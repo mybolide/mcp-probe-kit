@@ -1,9 +1,30 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // gendoc 工具实现
 export async function gendoc(args: any) {
   try {
-    const code = args?.code || "";
-    const style = args?.style || "jsdoc"; // jsdoc, tsdoc, javadoc
-    const lang = args?.lang || "zh"; // zh, en
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      style?: string;
+      lang?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        style: "jsdoc",
+        lang: "zh",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "function"],
+        style: ["format", "type", "风格", "注释风格"],
+        lang: ["language", "语言"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const style = getString(parsedArgs.style) || "jsdoc"; // jsdoc, tsdoc, javadoc
+    const lang = getString(parsedArgs.lang) || "zh"; // zh, en
 
     const message = `请为以下代码生成详细的注释文档：
 

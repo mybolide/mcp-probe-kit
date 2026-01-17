@@ -1,7 +1,22 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // resolve_conflict 工具实现
 export async function resolveConflict(args: any) {
   try {
-    const conflicts = args?.conflicts || "";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      conflicts?: string;
+    }>(args, {
+      defaultValues: {
+        conflicts: "",
+      },
+      primaryField: "conflicts", // 纯文本输入默认映射到 conflicts 字段
+      fieldAliases: {
+        conflicts: ["conflict", "diff", "merge", "冲突", "合并冲突"],
+      },
+    });
+    
+    const conflicts = getString(parsedArgs.conflicts);
 
     const message = `请分析并解决以下 Git 冲突：
 

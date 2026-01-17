@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // genapi 工具实现
 export async function genapi(args: any) {
   try {
-    const code = args?.code || "";
-    const format = args?.format || "markdown"; // markdown, openapi, jsdoc
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      format?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        format: "markdown",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "api", "代码", "endpoint"],
+        format: ["output_format", "type", "格式", "输出格式"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const format = getString(parsedArgs.format) || "markdown"; // markdown, openapi, jsdoc
 
     const message = `请为以下代码生成 API 文档：
 

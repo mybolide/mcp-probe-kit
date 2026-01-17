@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // code_review 工具实现
 export async function codeReview(args: any) {
   try {
-    const code = args?.code || "";
-    const focus = args?.focus || "all"; // quality, security, performance, all
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      focus?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        focus: "all",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "content"],
+        focus: ["type", "category", "类型", "重点"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const focus = getString(parsedArgs.focus) || "all"; // quality, security, performance, all
 
     const message = `请对以下代码进行全面审查：
 

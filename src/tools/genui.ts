@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // genui 工具实现
 export async function genui(args: any) {
   try {
-    const description = args?.description || "";
-    const framework = args?.framework || "react"; // react, vue, html
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      description?: string;
+      framework?: string;
+    }>(args, {
+      defaultValues: {
+        description: "",
+        framework: "react",
+      },
+      primaryField: "description", // 纯文本输入默认映射到 description 字段
+      fieldAliases: {
+        description: ["requirement", "spec", "需求", "组件描述"],
+        framework: ["lib", "library", "框架", "前端框架"],
+      },
+    });
+    
+    const description = getString(parsedArgs.description);
+    const framework = getString(parsedArgs.framework) || "react"; // react, vue, html
 
     const message = `请生成以下 UI 组件：
 

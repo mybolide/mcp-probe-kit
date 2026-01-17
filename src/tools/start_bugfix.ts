@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * start_bugfix 智能编排工具
  * 
@@ -103,13 +105,29 @@ const PROMPT_TEMPLATE = `# 🐛 Bug 修复编排指南
 
 export async function startBugfix(args: any) {
   try {
-    const errorMessage = args?.error_message;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      error_message?: string;
+      stack_trace?: string;
+    }>(args, {
+      defaultValues: {
+        error_message: "",
+        stack_trace: "",
+      },
+      primaryField: "error_message", // 纯文本输入默认映射到 error_message 字段
+      fieldAliases: {
+        error_message: ["error", "err", "message", "错误", "错误信息"],
+        stack_trace: ["stack", "trace", "堆栈", "调用栈"],
+      },
+    });
+
+    const errorMessage = getString(parsedArgs.error_message);
+    const stackTrace = getString(parsedArgs.stack_trace);
 
     if (!errorMessage) {
       throw new Error("缺少必填参数: error_message（错误信息）");
     }
 
-    const stackTrace = args?.stack_trace || "";
     const stackTraceSection = stackTrace
       ? `**堆栈跟踪**:\n\`\`\`\n${stackTrace}\n\`\`\``
       : "";

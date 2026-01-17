@@ -1,8 +1,25 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // debug 工具实现
 export async function debug(args: any) {
   try {
-    const error = args?.error || "";
-    const context = args?.context || "";
+    const parsedArgs = parseArgs<{
+      error?: string;
+      context?: string;
+    }>(args, {
+      defaultValues: {
+        error: "",
+        context: "",
+      },
+      primaryField: "error", // 纯文本输入默认映射到 error 字段
+      fieldAliases: {
+        error: ["err", "exception", "错误", "异常"],
+        context: ["ctx", "code", "上下文", "代码"],
+      },
+    });
+    
+    const error = getString(parsedArgs.error);
+    const context = getString(parsedArgs.context);
 
     const message = `请分析以下错误并提供调试策略：
 

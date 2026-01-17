@@ -1,3 +1,4 @@
+import { parseArgs, getString, getBoolean } from "../utils/parseArgs.js";
 import crypto from "crypto";
 import https from "https";
 import http from "http";
@@ -70,9 +71,24 @@ async function probeUrl(
 
 // detect_shell 工具实现
 export async function detectShell(args: any) {
-  const nonce =
-    (args?.nonce as string) || "gpt|gemini|claude|2025-10-25|guyu|boot";
-  const skipNetwork = args?.skip_network as boolean;
+  // 智能参数解析，支持自然语言输入
+  const parsedArgs = parseArgs<{
+    nonce?: string;
+    skip_network?: boolean;
+  }>(args, {
+    defaultValues: {
+      nonce: "gpt|gemini|claude|2025-10-25|guyu|boot",
+      skip_network: false,
+    },
+    primaryField: "nonce", // 纯文本输入默认映射到 nonce 字段
+    fieldAliases: {
+      nonce: ["随机字符串", "校验字符串"],
+      skip_network: ["skip", "跳过网络", "跳过"],
+    },
+  });
+
+  const nonce = getString(parsedArgs.nonce) || "gpt|gemini|claude|2025-10-25|guyu|boot";
+  const skipNetwork = getBoolean(parsedArgs.skip_network, false);
 
   // 计算 nonce 的哈希
   const hash = crypto.createHash("sha256");

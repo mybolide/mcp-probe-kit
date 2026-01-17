@@ -1,5 +1,5 @@
-// check_deps 工具实现
-export async function checkDeps(args: any) {
+// check_deps 工具实现（无参数）
+export async function checkDeps(_args: any) {
   try {
     const message = `请分析项目依赖的健康状况：
 

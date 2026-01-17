@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * start_review 智能编排工具
  * 
@@ -142,13 +144,28 @@ const PROMPT_TEMPLATE = `# 🔍 代码体检编排指南
 
 export async function startReview(args: any) {
   try {
-    const code = args?.code;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      language?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        language: "auto",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "content"],
+        language: ["lang", "语言", "编程语言"],
+      },
+    });
+
+    const code = getString(parsedArgs.code);
+    const language = getString(parsedArgs.language) || "auto";
 
     if (!code) {
       throw new Error("缺少必填参数: code（需要审查的代码）");
     }
-
-    const language = args?.language || "auto";
 
     const guide = PROMPT_TEMPLATE
       .replace(/{code}/g, code)

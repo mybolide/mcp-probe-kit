@@ -274,19 +274,39 @@ logger.info("API call with token:", maskToken(apiToken))
 *工具: MCP Probe Kit - security_scan*
 `;
 
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * security_scan 工具实现
  */
 export async function securityScan(args: any) {
   try {
-    const code = args?.code;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      language?: string;
+      scan_type?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        language: "auto",
+        scan_type: "all",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "content"],
+        language: ["lang", "语言", "编程语言"],
+        scan_type: ["type", "category", "类型", "扫描类型"],
+      },
+    });
+
+    const code = getString(parsedArgs.code);
+    const language = getString(parsedArgs.language) || "auto";
+    const scanType = getString(parsedArgs.scan_type) || "all";
 
     if (!code) {
       throw new Error("缺少必填参数: code（需要扫描的代码）");
     }
-
-    const language = args?.language || "auto";
-    const scanType = args?.scan_type || "all";
 
     const scanTypeDesc: Record<string, string> = {
       all: "全面扫描（注入、认证、加密、敏感数据）",

@@ -295,22 +295,47 @@ describe('[功能描述]', () => {
 *指南版本: 1.0.0*
 *工具: MCP Probe Kit - fix_bug*
 `;
+import { parseArgs, getString } from "../utils/parseArgs.js";
 
 /**
  * fix_bug 工具实现
  */
 export async function fixBug(args: any) {
   try {
-    const errorMessage = args?.error_message;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      error_message?: string;
+      stack_trace?: string;
+      steps_to_reproduce?: string;
+      expected_behavior?: string;
+      actual_behavior?: string;
+    }>(args, {
+      defaultValues: {
+        error_message: "",
+        stack_trace: "",
+        steps_to_reproduce: "",
+        expected_behavior: "",
+        actual_behavior: "",
+      },
+      primaryField: "error_message", // 纯文本输入默认映射到 error_message 字段
+      fieldAliases: {
+        error_message: ["error", "err", "message", "错误", "错误信息"],
+        stack_trace: ["stack", "trace", "堆栈", "调用栈"],
+        steps_to_reproduce: ["steps", "reproduce", "步骤", "复现步骤"],
+        expected_behavior: ["expected", "期望", "期望行为"],
+        actual_behavior: ["actual", "实际", "实际行为"],
+      },
+    });
+
+    const errorMessage = getString(parsedArgs.error_message);
+    const stackTrace = getString(parsedArgs.stack_trace);
+    const stepsToReproduce = getString(parsedArgs.steps_to_reproduce);
+    const expectedBehavior = getString(parsedArgs.expected_behavior);
+    const actualBehavior = getString(parsedArgs.actual_behavior);
 
     if (!errorMessage) {
       throw new Error("缺少必填参数: error_message（错误信息）");
     }
-
-    const stackTrace = args?.stack_trace || "";
-    const stepsToReproduce = args?.steps_to_reproduce || "";
-    const expectedBehavior = args?.expected_behavior || "";
-    const actualBehavior = args?.actual_behavior || "";
 
     // 构建可选部分
     const stackTraceSection = stackTrace

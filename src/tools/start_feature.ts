@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * start_feature 智能编排工具
  * 
@@ -97,8 +99,28 @@ const PROMPT_TEMPLATE = `# 🚀 新功能开发编排指南
 
 export async function startFeature(args: any) {
   try {
-    const featureName = args?.feature_name;
-    const description = args?.description;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      feature_name?: string;
+      description?: string;
+      docs_dir?: string;
+    }>(args, {
+      defaultValues: {
+        feature_name: "",
+        description: "",
+        docs_dir: "docs",
+      },
+      primaryField: "description", // 纯文本输入默认映射到 description 字段
+      fieldAliases: {
+        feature_name: ["name", "feature", "功能名", "功能名称"],
+        description: ["desc", "requirement", "描述", "需求"],
+        docs_dir: ["dir", "output", "目录", "文档目录"],
+      },
+    });
+
+    const featureName = getString(parsedArgs.feature_name);
+    const description = getString(parsedArgs.description);
+    const docsDir = getString(parsedArgs.docs_dir) || "docs";
 
     if (!featureName) {
       throw new Error("缺少必填参数: feature_name（功能名称）");
@@ -106,8 +128,6 @@ export async function startFeature(args: any) {
     if (!description) {
       throw new Error("缺少必填参数: description（功能描述）");
     }
-
-    const docsDir = args?.docs_dir || "docs";
 
     const guide = PROMPT_TEMPLATE
       .replace(/{feature_name}/g, featureName)

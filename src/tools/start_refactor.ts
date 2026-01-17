@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * start_refactor 智能编排工具
  * 
@@ -148,13 +150,28 @@ const PROMPT_TEMPLATE = `# ♻️ 代码重构编排指南
 
 export async function startRefactor(args: any) {
   try {
-    const code = args?.code;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      goal?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        goal: "improve_readability",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "content"],
+        goal: ["target", "objective", "目标", "重构目标"],
+      },
+    });
+
+    const code = getString(parsedArgs.code);
+    const goal = getString(parsedArgs.goal) || "improve_readability";
 
     if (!code) {
       throw new Error("缺少必填参数: code（需要重构的代码）");
     }
-
-    const goal = args?.goal || "improve_readability";
 
     const goalDesc: Record<string, string> = {
       improve_readability: "提高可读性",

@@ -1,9 +1,30 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // genchangelog 工具实现
 export async function genchangelog(args: any) {
   try {
-    const version = args?.version || "";
-    const from = args?.from || "";
-    const to = args?.to || "HEAD";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      version?: string;
+      from?: string;
+      to?: string;
+    }>(args, {
+      defaultValues: {
+        version: "",
+        from: "",
+        to: "HEAD",
+      },
+      primaryField: "version", // 纯文本输入默认映射到 version 字段
+      fieldAliases: {
+        version: ["ver", "v", "版本", "版本号"],
+        from: ["from_tag", "start", "起始", "起始版本"],
+        to: ["to_tag", "end", "结束", "结束版本"],
+      },
+    });
+    
+    const version = getString(parsedArgs.version);
+    const from = getString(parsedArgs.from);
+    const to = getString(parsedArgs.to) || "HEAD";
 
     const message = `请生成项目的 CHANGELOG（变更日志）：
 

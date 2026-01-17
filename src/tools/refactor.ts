@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // refactor 工具实现
 export async function refactor(args: any) {
   try {
-    const code = args?.code || "";
-    const goal = args?.goal || ""; // improve_readability, reduce_complexity, extract_function, etc.
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      goal?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        goal: "",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "content"],
+        goal: ["target", "objective", "目标", "重构目标"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const goal = getString(parsedArgs.goal); // improve_readability, reduce_complexity, extract_function, etc.
 
     const message = `请为以下代码提供重构建议：
 

@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // init_project 工具实现
 export async function initProject(args: any) {
   try {
-    const input = args?.input || "";
-    const projectName = args?.project_name || "新项目";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      input?: string;
+      project_name?: string;
+    }>(args, {
+      defaultValues: {
+        input: "",
+        project_name: "新项目",
+      },
+      primaryField: "input", // 纯文本输入默认映射到 input 字段
+      fieldAliases: {
+        input: ["requirement", "description", "需求", "项目需求"],
+        project_name: ["name", "project", "项目名", "项目名称"],
+      },
+    });
+    
+    const input = getString(parsedArgs.input);
+    const projectName = getString(parsedArgs.project_name) || "新项目";
     const featureSlug = projectName.toLowerCase().replace(/\s+/g, '-');
 
     const message = `你需要按照 Spec-Driven Development（规范驱动开发）的方式初始化项目，参考 https://github.com/github/spec-kit 的工作流程。

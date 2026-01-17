@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * design2code - 设计稿转代码工具
  * 
@@ -246,10 +248,32 @@ src/components/
 
 export async function design2code(args: any) {
   try {
-    const input = args?.input;
-    const framework = args?.framework || "vue";
-    const styleSolution = args?.style_solution || "tailwind";
-    const componentType = args?.component_type || "page";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      input?: string;
+      framework?: string;
+      style_solution?: string;
+      component_type?: string;
+    }>(args, {
+      defaultValues: {
+        input: "",
+        framework: "vue",
+        style_solution: "tailwind",
+        component_type: "page",
+      },
+      primaryField: "input", // 纯文本输入默认映射到 input 字段
+      fieldAliases: {
+        input: ["design", "image", "url", "设计稿", "图片"],
+        framework: ["lib", "library", "框架", "前端框架"],
+        style_solution: ["style", "css", "样式", "样式方案"],
+        component_type: ["type", "kind", "类型", "组件类型"],
+      },
+    });
+
+    const input = getString(parsedArgs.input);
+    const framework = getString(parsedArgs.framework) || "vue";
+    const styleSolution = getString(parsedArgs.style_solution) || "tailwind";
+    const componentType = getString(parsedArgs.component_type) || "page";
 
     if (!input) {
       throw new Error("缺少必填参数: input（设计稿图片 URL/base64、设计稿描述或 HTML 代码）");

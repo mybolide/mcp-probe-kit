@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // fix 工具实现
 export async function fix(args: any) {
   try {
-    const code = args?.code || "";
-    const type = args?.type || "all"; // lint, type, format, import, unused
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      type?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        type: "all",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "content"],
+        type: ["fix_type", "category", "类型", "修复类型"],
+      },
+    });
+    
+    const code = getString(parsedArgs.code);
+    const type = getString(parsedArgs.type) || "all"; // lint, type, format, import, unused
 
     const message = `请自动修复以下代码问题：
 

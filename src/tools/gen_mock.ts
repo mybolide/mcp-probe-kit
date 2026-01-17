@@ -204,21 +204,47 @@ interface Config {
 *工具: MCP Probe Kit - gen_mock*
 `;
 
+import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
+
 /**
  * gen_mock 工具实现
  */
 export async function genMock(args: any) {
   try {
-    const schema = args?.schema;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      schema?: string;
+      count?: number;
+      format?: string;
+      locale?: string;
+      seed?: number;
+    }>(args, {
+      defaultValues: {
+        schema: "",
+        count: 1,
+        format: "json",
+        locale: "zh-CN",
+        seed: 0,
+      },
+      primaryField: "schema", // 纯文本输入默认映射到 schema 字段
+      fieldAliases: {
+        schema: ["type", "interface", "structure", "类型", "数据结构"],
+        count: ["num", "amount", "number", "数量"],
+        format: ["output", "type", "格式", "输出格式"],
+        locale: ["lang", "language", "语言", "区域"],
+        seed: ["random_seed", "种子"],
+      },
+    });
+
+    const schema = getString(parsedArgs.schema);
+    const count = getNumber(parsedArgs.count, 1);
+    const format = getString(parsedArgs.format) || "json";
+    const locale = getString(parsedArgs.locale) || "zh-CN";
+    const seed = getNumber(parsedArgs.seed, 0);
 
     if (!schema) {
       throw new Error("缺少必填参数: schema（数据结构定义）");
     }
-
-    const count = args?.count || 1;
-    const format = args?.format || "json";
-    const locale = args?.locale || "zh-CN";
-    const seed = args?.seed;
 
     if (count < 1 || count > 1000) {
       throw new Error("count 参数必须在 1-1000 之间");

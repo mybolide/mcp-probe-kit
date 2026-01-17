@@ -1,8 +1,26 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 // split 工具实现
 export async function split(args: any) {
   try {
-    const file = args?.file || "";
-    const strategy = args?.strategy || "auto"; // auto, type, function, component, feature
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      file?: string;
+      strategy?: string;
+    }>(args, {
+      defaultValues: {
+        file: "",
+        strategy: "auto",
+      },
+      primaryField: "file", // 纯文本输入默认映射到 file 字段
+      fieldAliases: {
+        file: ["code", "source", "content", "文件", "代码"],
+        strategy: ["method", "type", "策略", "拆分策略"],
+      },
+    });
+    
+    const file = getString(parsedArgs.file);
+    const strategy = getString(parsedArgs.strategy) || "auto"; // auto, type, function, component, feature
 
     const message = `请拆分以下文件：
 

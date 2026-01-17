@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * start_doc 智能编排工具
  * 
@@ -168,14 +170,35 @@ const PROMPT_TEMPLATE = `# 📖 文档生成编排指南
 
 export async function startDoc(args: any) {
   try {
-    const code = args?.code || args?.project_info;
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      code?: string;
+      project_info?: string;
+      style?: string;
+      lang?: string;
+    }>(args, {
+      defaultValues: {
+        code: "",
+        project_info: "",
+        style: "jsdoc",
+        lang: "zh",
+      },
+      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      fieldAliases: {
+        code: ["source", "src", "代码", "content"],
+        project_info: ["info", "project", "项目信息"],
+        style: ["format", "type", "风格", "注释风格"],
+        lang: ["language", "语言"],
+      },
+    });
+
+    const code = getString(parsedArgs.code) || getString(parsedArgs.project_info);
+    const style = getString(parsedArgs.style) || "jsdoc";
+    const lang = getString(parsedArgs.lang) || "zh";
 
     if (!code) {
       throw new Error("缺少必填参数: code 或 project_info");
     }
-
-    const style = args?.style || "jsdoc";
-    const lang = args?.lang || "zh";
 
     const guide = PROMPT_TEMPLATE
       .replace(/{code}/g, code)

@@ -1,3 +1,5 @@
+import { parseArgs, getString } from "../utils/parseArgs.js";
+
 /**
  * start_onboard 智能编排工具
  * 
@@ -129,8 +131,24 @@ const PROMPT_TEMPLATE = `# 📚 快速上手编排指南
 
 export async function startOnboard(args: any) {
   try {
-    const projectPath = args?.project_path || ".";
-    const docsDir = args?.docs_dir || "docs";
+    // 智能参数解析，支持自然语言输入
+    const parsedArgs = parseArgs<{
+      project_path?: string;
+      docs_dir?: string;
+    }>(args, {
+      defaultValues: {
+        project_path: ".",
+        docs_dir: "docs",
+      },
+      primaryField: "project_path", // 纯文本输入默认映射到 project_path 字段
+      fieldAliases: {
+        project_path: ["path", "dir", "directory", "路径", "项目路径"],
+        docs_dir: ["docs", "output", "目录", "文档目录"],
+      },
+    });
+
+    const projectPath = getString(parsedArgs.project_path) || ".";
+    const docsDir = getString(parsedArgs.docs_dir) || "docs";
 
     const guide = PROMPT_TEMPLATE
       .replace(/{project_path}/g, projectPath)
