@@ -7,7 +7,9 @@
 
 > 🚀 AI 开发增强工具集 - 让 AI 更懂你的开发流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **40 个实用工具**（32 个基础工具 + 8 个智能编排），覆盖代码质量、开发效率、项目管理全流程。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **42 个实用工具**（34 个基础工具 + 8 个智能编排），覆盖代码质量、开发效率、项目管理全流程。
+
+**✨ v1.12.0 新增**: Interview 模式 - 先慢下来，通过访谈把需求想清楚，反而能更快！
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
@@ -17,10 +19,14 @@
 
 ## ✨ 功能特性
 
+### 🎯 访谈工具（2 个工具）🆕
+- **`interview`** - 需求访谈模式：在开发前通过结构化提问澄清需求，避免理解偏差和返工
+- **`ask_user`** - 通用提问工具：AI 可随时向用户提问，澄清不确定的信息
+
 ### 🔍 代码质量（8 个工具）
 - **`detect_shell`** - AI 模型套壳检测
 - **`code_review`** - 代码审查助手
-- **`security_scan`** - 安全漏洞扫描 🆕
+- **`security_scan`** - 安全漏洞扫描
 - **`debug`** - 智能调试助手
 - **`gentest`** - 测试用例生成器
 - **`refactor`** - 重构建议
@@ -35,17 +41,16 @@
 - **`genchangelog`** - Changelog 生成
 - **`gensql`** - SQL 查询生成器
 - **`genui`** - UI 组件生成器（React + Vue）
-- **`gen_mock`** - Mock 数据生成器 🆕
-- **`gen_skill`** - Agent Skills 文档生成器 🆕
-- **`design2code`** - 设计稿转代码（图片/描述/HTML → Vue/React）🆕
+- **`gen_mock`** - Mock 数据生成器
+- **`gen_skill`** - Agent Skills 文档生成器
+- **`design2code`** - 设计稿转代码（图片/描述/HTML → Vue/React）
 - **`explain`** - 代码解释器
 - **`convert`** - 代码转换器
 - **`css_order`** - CSS 属性顺序规范
 - **`genreadme`** - README 生成器
 - **`split`** - 文件拆分工具
-- **`fix_bug`** - Bug 修复流程指南 🆕
-- **`estimate`** - 工作量估算 🆕
-- **`gen_skill`** - Agent Skills 文档生成器 🆕
+- **`fix_bug`** - Bug 修复流程指南
+- **`estimate`** - 工作量估算
 
 ### 📦 项目管理（8 个工具）
 - **`init_setting`** - Cursor AI 配置初始化
@@ -53,22 +58,22 @@
 - **`check_deps`** - 依赖健康度检查
 - **`resolve_conflict`** - Git 冲突解决助手
 - **`analyze_project`** - 项目分析工具，帮助AI快速理解老项目
-- **`init_project_context`** - 初始化项目上下文，生成技术栈和架构文档 🆕
-- **`add_feature`** - 添加新功能，生成需求/设计/任务文档 🆕
-- **`start_onboard`** - 快速上手项目（智能编排）🆕
+- **`init_project_context`** - 初始化项目上下文，生成技术栈和架构文档
+- **`add_feature`** - 添加新功能，生成需求/设计/任务文档
+- **`start_onboard`** - 快速上手项目（智能编排）
 
 ### 🚀 智能编排（8 个工具）
 
 智能编排工具自动组合多个基础工具，一键完成复杂工作流：
 
-- **`start_feature`** - 新功能开发：上下文 → 功能规格 → 工作量估算 🆕
-- **`start_bugfix`** - Bug 修复：上下文 → 分析修复 → 测试 → 提交 🆕
-- **`start_review`** - 代码体检：上下文 → 质量审查 → 安全扫描 → 性能分析 🆕
-- **`start_release`** - 发布准备：上下文 → Changelog → PR 描述 🆕
-- **`start_refactor`** - 代码重构：上下文 → 审查 → 重构 → 测试 🆕
-- **`start_onboard`** - 快速上手：项目分析 → 生成上下文文档 🆕
-- **`start_api`** - API 开发：上下文 → API 文档 → Mock 数据 → 测试 🆕
-- **`start_doc`** - 文档生成：上下文 → 代码注释 → README → API 文档 🆕
+- **`start_feature`** - 新功能开发：上下文 → 功能规格 → 工作量估算
+- **`start_bugfix`** - Bug 修复：上下文 → 分析修复 → 测试 → 提交
+- **`start_review`** - 代码体检：上下文 → 质量审查 → 安全扫描 → 性能分析
+- **`start_release`** - 发布准备：上下文 → Changelog → PR 描述
+- **`start_refactor`** - 代码重构：上下文 → 审查 → 重构 → 测试
+- **`start_onboard`** - 快速上手：项目分析 → 生成上下文文档
+- **`start_api`** - API 开发：上下文 → API 文档 → Mock 数据 → 测试
+- **`start_doc`** - 文档生成：上下文 → 代码注释 → README → API 文档
 
 ---
 
@@ -306,6 +311,85 @@ npm install mcp-probe-kit
 ---
 
 ## 📖 工具使用指南
+
+### 🎯 访谈工具 🆕
+
+#### `interview` - 需求访谈模式
+
+在开发前通过结构化访谈澄清需求，避免理解偏差和返工。
+
+**核心理念**: 先慢下来，把问题想清楚，反而能更快地交付正确的解决方案。
+
+**用法**：
+```
+interview "实现用户登录功能"
+```
+
+**访谈内容**：
+- **阶段 1**: 背景理解（3个问题）- 痛点、用户、业务驱动
+- **阶段 2**: 功能边界（4个问题）- 核心价值、范围、输入输出
+- **阶段 3**: 技术约束（4个问题）- 技术栈、性能、兼容性、安全
+- **阶段 4**: 验收标准（3个问题）- 成功标准、测试场景、效果衡量
+
+**工作流程**：
+```
+1. AI: interview "登录功能"
+   ↓
+2. 生成 12-15 个结构化问题
+   ↓
+3. 用户回答所有问题
+   ↓
+4. AI 生成 docs/interviews/user-login-interview.md
+   ↓
+5. 用户选择:
+   - 立即开发: start_feature --from-interview user-login
+   - 生成规格: add_feature --from-interview user-login
+   - 稍后开发: 访谈记录已保存，随时可用
+```
+
+**适用场景**：
+- ✅ 需求不明确的新功能
+- ✅ 复杂的业务功能
+- ✅ 涉及多方协作的功能
+- ❌ 简单的 Bug 修复
+- ❌ 需求非常明确的功能
+
+**详细文档**: 查看 [Interview 使用指南](docs/INTERVIEW_GUIDE.md)
+
+---
+
+#### `ask_user` - 通用提问工具
+
+AI 可在任何时候主动向用户提问，澄清不确定的信息。
+
+**用法**：
+```
+ask_user "你希望支持哪些支付方式？"
+ask_user --questions ["问题1", "问题2"] --context "背景信息"
+```
+
+**功能特点**：
+- 支持单个或多个问题
+- 可提供选项供用户选择
+- 可标注必答/可选
+- 可在任何工具中使用
+
+**使用场景**：
+```
+场景1: 代码审查时
+AI: "发现了性能问题，但不确定优先级"
+调用: ask_user "这个性能问题的优先级如何？是否需要立即优化？"
+
+场景2: 技术方案选择
+AI: "可以用两种方案，不确定你的偏好"
+调用: ask_user --options ["方案A: 性能优先", "方案B: 可读性优先"]
+
+场景3: Bug 修复时
+AI: "需要确认是否向后兼容"
+调用: ask_user "修复这个 Bug 是否需要保持向后兼容？"
+```
+
+---
 
 ### 🔍 代码质量工具
 
@@ -1154,6 +1238,52 @@ design2code <div class="container">...</div>
 
 ## 🎯 使用场景示例
 
+### 🎤 Interview 模式（推荐）🆕
+
+#### 场景 1: 需求不明确时
+```
+用户: "我想做登录功能"
+  ↓
+AI: interview "登录功能"
+  ↓
+生成 12-15 个结构化问题
+  ↓
+用户: 回答所有问题
+  ↓
+AI: 生成 docs/interviews/user-login-interview.md
+  ↓
+用户: "开始开发"
+  ↓
+AI: start_feature --from-interview user-login
+  ↓
+生成完整的功能规格文档 + 工作量估算
+```
+
+#### 场景 2: 分步进行
+```
+第1天:
+用户: "我想做登录功能"
+AI: interview "登录功能"
+用户: [回答问题]
+AI: 生成访谈记录
+
+第3天:
+用户: "开始做登录功能"
+AI: start_feature --from-interview user-login
+AI: 读取之前的访谈，生成规格文档
+```
+
+#### 场景 3: AI 主动提问
+```
+用户: "优化这段代码"
+AI: 发现不确定因素
+AI: ask_user "优化目标是性能还是可读性？"
+用户: "性能"
+AI: 继续优化
+```
+
+---
+
 ### 📝 日常开发流程
 ```
 1. code_review @feature.ts     # 代码提交前审查
@@ -1187,7 +1317,19 @@ design2code <div class="container">...</div>
 5. 开始维护和开发...
 ```
 
-### 🎯 添加新功能（Spec-Driven）
+### 🎯 添加新功能（两种方式）
+
+#### 方式 1: Interview 模式（需求不明确时）🆕
+```
+1. interview "用户登录认证功能"  # 访谈澄清需求
+2. 回答 12-15 个问题
+3. start_feature --from-interview user-auth  # 基于访谈生成规格
+4. 根据 tasks.md 逐步实现
+5. gentest @feature.ts            # 生成测试
+6. gencommit                      # 提交代码
+```
+
+#### 方式 2: 直接开发（需求明确时）
 ```
 1. init_project_context           # 确保项目上下文存在
 2. add_feature user-auth "用户登录认证功能"  # 生成功能规格

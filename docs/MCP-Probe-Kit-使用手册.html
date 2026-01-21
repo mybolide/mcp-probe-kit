@@ -122,9 +122,26 @@
     </style>
 </head>
 <body>
-    <h1>🛠️ MCP Probe Kit 工具速查手册</h1>
+    <h1>🛠️ MCP Probe Kit 工具速查手册 (42个工具)</h1>
     
-    <h2>📋 代码生成工具（10个）</h2>
+    <h2>🎯 需求访谈工具（2个）🆕</h2>
+    <div class="grid">
+        <div class="tool-card">
+            <div class="tool-name">1. interview - 需求访谈模式</div>
+            <div class="tool-desc">在开发前通过结构化访谈澄清需求，避免理解偏差</div>
+            <div class="tool-example">示例: "interview 用户登录功能"</div>
+            <div class="tool-params">参数: description(必填), context(可选)</div>
+        </div>
+        
+        <div class="tool-card">
+            <div class="tool-name">2. ask_user - AI 主动提问</div>
+            <div class="tool-desc">AI 可在任何时候向用户提问，澄清不确定的信息</div>
+            <div class="tool-example">示例: AI自动调用或"有什么需要确认的吗？"</div>
+            <div class="tool-params">参数: question(必填), options(可选)</div>
+        </div>
+    </div>
+    
+    <h2>📋 代码生成工具（12个）</h2>
     <div class="grid">
         <div class="tool-card">
             <div class="tool-name">1. gencommit</div>
@@ -195,54 +212,68 @@
             <div class="tool-example">💬 "生成 10 条用户数据"</div>
             <div class="tool-params">count, format: json/ts/csv, locale</div>
         </div>
+        
+        <div class="tool-card">
+            <div class="tool-name">11. gen_skill</div>
+            <div class="tool-desc">生成 Agent Skills 文档</div>
+            <div class="tool-example">💬 "生成技能文档"</div>
+            <div class="tool-params">scope: all/basic, tool_name, lang</div>
+        </div>
+        
+        <div class="tool-card">
+            <div class="tool-name">12. design2code</div>
+            <div class="tool-desc">设计稿转前端代码</div>
+            <div class="tool-example">💬 "根据这个设计稿生成代码"</div>
+            <div class="tool-params">input: 图片URL/描述, framework</div>
+        </div>
     </div>
     
     <h2>🔍 分析诊断工具（7个）</h2>
     <div class="grid">
         <div class="tool-card">
-            <div class="tool-name">11. debug</div>
+            <div class="tool-name">1. debug</div>
             <div class="tool-desc">错误调试分析，定位问题根因</div>
             <div class="tool-example">💬 "帮我调试这个错误：[粘贴错误堆栈]"</div>
             <div class="tool-params">error(必填), context: 相关代码</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">12. code_review</div>
+            <div class="tool-name">2. code_review</div>
             <div class="tool-desc">代码质量/安全/性能审查</div>
             <div class="tool-example">💬 "审查这段代码"</div>
             <div class="tool-params">focus: quality/security/performance/all</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">13. security_scan</div>
+            <div class="tool-name">3. security_scan</div>
             <div class="tool-desc">专项安全漏洞检测</div>
             <div class="tool-example">💬 "扫描这段代码的安全问题"</div>
             <div class="tool-params">scan_type: injection/auth/crypto/all</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">14. perf</div>
+            <div class="tool-name">4. perf</div>
             <div class="tool-desc">性能瓶颈分析</div>
             <div class="tool-example">💬 "分析这段代码的性能问题"</div>
             <div class="tool-params">type: algorithm/memory/react/database</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">15. check_deps</div>
+            <div class="tool-name">5. check_deps</div>
             <div class="tool-desc">检查依赖健康度和漏洞</div>
             <div class="tool-example">💬 "检查项目依赖的安全问题"</div>
             <div class="tool-params">无需参数</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">16. explain</div>
+            <div class="tool-name">6. explain</div>
             <div class="tool-desc">解释代码逻辑和原理</div>
             <div class="tool-example">💬 "解释这段代码的作用"</div>
             <div class="tool-params">code(必填), context: 补充说明</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">17. analyze_project</div>
+            <div class="tool-name">7. analyze_project</div>
             <div class="tool-desc">分析项目结构/技术栈/架构</div>
             <div class="tool-example">💬 "分析当前项目的结构"</div>
             <div class="tool-params">project_path, max_depth, include_content</div>
@@ -252,42 +283,42 @@
     <h2>🔧 重构优化工具（6个）</h2>
     <div class="grid">
         <div class="tool-card">
-            <div class="tool-name">18. refactor</div>
+            <div class="tool-name">1. refactor</div>
             <div class="tool-desc">提供代码重构建议</div>
             <div class="tool-example">💬 "这段代码如何重构"</div>
             <div class="tool-params">goal: improve_readability/reduce_complexity</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">19. fix</div>
+            <div class="tool-name">2. fix</div>
             <div class="tool-desc">自动修复 Lint/格式/类型错误</div>
             <div class="tool-example">💬 "修复这段代码的 Lint 错误"</div>
             <div class="tool-params">type: lint/type/format/import/unused/all</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">20. convert</div>
+            <div class="tool-name">3. convert</div>
             <div class="tool-desc">转换代码格式或框架</div>
             <div class="tool-example">💬 "把这段 JS 转成 TS"</div>
             <div class="tool-params">from/to: js/ts/vue2/vue3/class/hooks</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">21. split</div>
+            <div class="tool-name">4. split</div>
             <div class="tool-desc">拆分大文件为小模块</div>
             <div class="tool-example">💬 "拆分这个大文件"</div>
             <div class="tool-params">strategy: auto/type/function/component</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">22. resolve_conflict</div>
+            <div class="tool-name">5. resolve_conflict</div>
             <div class="tool-desc">解决 Git 合并冲突</div>
             <div class="tool-example">💬 "帮我解决这个合并冲突"</div>
             <div class="tool-params">conflicts(必填): 冲突文件内容</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">23. design2code</div>
+            <div class="tool-name">6. design2code</div>
             <div class="tool-desc">设计稿转前端代码</div>
             <div class="tool-example">💬 "根据这个设计稿生成代码"</div>
             <div class="tool-params">input: 图片URL/描述, framework, style_solution</div>
@@ -297,137 +328,134 @@
     <h2>🎯 工作流编排工具（8个）- 自动化多步骤流程</h2>
     <div class="grid">
         <div class="tool-card single-col">
-            <div class="tool-name">24. start_feature - 新功能开发流程</div>
+            <div class="tool-name">1. start_feature - 新功能开发流程</div>
             <div class="tool-desc">检查上下文 → 生成规格 → 估算工作量</div>
             <div class="tool-example">💬 "开始开发用户认证功能" / "新增商品推荐模块"</div>
             <div class="tool-params">feature_name(必填), description(必填), docs_dir</div>
         </div>
         
         <div class="tool-card single-col">
-            <div class="tool-name">25. start_bugfix - Bug 修复流程</div>
+            <div class="tool-name">2. start_bugfix - Bug 修复流程</div>
             <div class="tool-desc">检查上下文 → 分析定位 → 修复方案 → 生成测试</div>
             <div class="tool-example">💬 "修复这个 Bug：点击推荐按钮报错" / "解决登录失败问题"</div>
             <div class="tool-params">error_message(必填), stack_trace</div>
         </div>
         
         <div class="tool-card single-col">
-            <div class="tool-name">26. start_review - 代码全面体检</div>
+            <div class="tool-name">3. start_review - 代码全面体检</div>
             <div class="tool-desc">代码审查 + 安全扫描 + 性能分析</div>
             <div class="tool-example">💬 "全面审查这段代码" / "对这个文件做完整体检"</div>
             <div class="tool-params">code(必填), language</div>
         </div>
         
         <div class="tool-card single-col">
-            <div class="tool-name">27. start_release - 发布准备流程</div>
+            <div class="tool-name">4. start_release - 发布准备流程</div>
             <div class="tool-desc">生成 Changelog + PR 描述</div>
             <div class="tool-example">💬 "准备发布 v1.2.0" / "生成这个版本的发布文档"</div>
             <div class="tool-params">version(必填), from_tag, branch</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">28. start_refactor</div>
+            <div class="tool-name">5. start_refactor</div>
             <div class="tool-desc">审查现状 → 重构建议 → 生成测试</div>
             <div class="tool-example">💬 "重构这段代码"</div>
             <div class="tool-params">code(必填), goal</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">29. start_onboard</div>
+            <div class="tool-name">6. start_onboard</div>
             <div class="tool-desc">分析项目 → 生成上下文文档</div>
             <div class="tool-example">💬 "帮我快速了解这个项目"</div>
             <div class="tool-params">project_path, docs_dir</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">30. start_api</div>
+            <div class="tool-name">7. start_api</div>
             <div class="tool-desc">生成文档 → 生成 Mock → 生成测试</div>
             <div class="tool-example">💬 "为这个 API 生成完整文档"</div>
             <div class="tool-params">code(必填), format, language</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">31. start_doc</div>
+            <div class="tool-name">8. start_doc</div>
             <div class="tool-desc">注释 → README → API 文档</div>
             <div class="tool-example">💬 "为这个项目补全所有文档"</div>
             <div class="tool-params">code(必填), lang, style</div>
         </div>
     </div>
     
-    <h2>🏗️ 项目管理工具（10个）</h2>
+    <h2>🏗️ 项目管理工具（5个）</h2>
     <div class="grid">
         <div class="tool-card">
-            <div class="tool-name">32. init_project</div>
+            <div class="tool-name">1. init_project</div>
             <div class="tool-desc">创建项目结构和任务分解</div>
             <div class="tool-example">💬 "初始化一个电商管理系统"</div>
             <div class="tool-params">project_name, input: 需求描述</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">33. init_project_context</div>
+            <div class="tool-name">2. init_project_context</div>
             <div class="tool-desc">生成技术栈/架构/编码规范文档</div>
             <div class="tool-example">💬 "生成项目上下文文档"</div>
             <div class="tool-params">docs_dir</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">34. add_feature</div>
+            <div class="tool-name">3. add_feature</div>
             <div class="tool-desc">生成功能需求/设计/任务清单</div>
             <div class="tool-example">💬 "添加用户权限管理功能"</div>
             <div class="tool-params">feature_name(必填), description(必填)</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">35. fix_bug</div>
+            <div class="tool-name">4. fix_bug</div>
             <div class="tool-desc">根因分析 + 修复方案 + 验证步骤</div>
             <div class="tool-example">💬 "指导修复这个 Bug"</div>
             <div class="tool-params">error_message(必填), stack_trace</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">36. estimate</div>
+            <div class="tool-name">5. estimate</div>
             <div class="tool-desc">估算开发时间和风险</div>
             <div class="tool-example">💬 "估算这个功能的开发时间"</div>
             <div class="tool-params">task_description(必填), experience_level</div>
         </div>
-        
+    </div>
+    
+    <h2>🛠️ 其他工具（4个）</h2>
+    <div class="grid">
         <div class="tool-card">
-            <div class="tool-name">37. init_setting</div>
-            <div class="tool-desc">初始化 Cursor IDE 配置</div>
-            <div class="tool-example">💬 "初始化 Cursor 配置"</div>
-            <div class="tool-params">project_path: 项目路径</div>
-        </div>
-        
-        <div class="tool-card">
-            <div class="tool-name">38. detect_shell</div>
+            <div class="tool-name">1. detect_shell</div>
             <div class="tool-desc">检测 AI 应用环境指纹</div>
             <div class="tool-example">💬 "检测环境" / "检测是否为套壳"</div>
             <div class="tool-params">nonce, skip_network</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">39. css_order</div>
+            <div class="tool-name">2. init_setting</div>
+            <div class="tool-desc">初始化 Cursor IDE 配置</div>
+            <div class="tool-example">💬 "初始化 Cursor 配置"</div>
+            <div class="tool-params">project_path: 项目路径</div>
+        </div>
+        
+        <div class="tool-card">
+            <div class="tool-name">3. css_order</div>
             <div class="tool-desc">重排 CSS 属性顺序</div>
             <div class="tool-example">💬 "整理这段 CSS 的属性顺序"</div>
             <div class="tool-params">直接粘贴 CSS 代码</div>
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">40. gen_skill</div>
+            <div class="tool-name">4. gen_skill</div>
             <div class="tool-desc">生成 Agent Skills 文档</div>
             <div class="tool-example">💬 "生成技能文档" / "生成所有工具的文档"</div>
             <div class="tool-params">scope: all/basic/generation, tool_name, lang</div>
-        </div>
-        
-        <div class="tool-card">
-            <div class="tool-name">41. oh-my-openCode</div>
-            <div class="tool-desc">自动检测提示中的关键词并激活专门模式</div>
-            <div class="tool-example">💬 "ulw"</div>
-            <div class="tool-params">最大性能模式，带并行智能体编排</div>
         </div>
     </div>
     
     <div class="tips">
         <strong>💡 使用技巧：</strong><br>
+        • <strong>Interview 模式：</strong>需求不明确时先用 interview 访谈，再用 start_feature 开发<br>
         • <strong>组合使用：</strong>debug 定位 → fix 修复 | analyze_project 了解 → add_feature 添加<br>
         • <strong>工作流优先：</strong>复杂任务用 start_* 系列（自动编排），简单任务用单个工具（更快）<br>
         • <strong>提供完整信息：</strong>粘贴完整错误堆栈、提供代码上下文、描述清楚期望结果<br>
@@ -443,7 +471,7 @@
     </div>
     
     <div style="text-align: center; margin-top: 8px; font-size: 7.5pt; color: #999;">
-        MCP Probe Kit 工具速查手册 | MCP工具: 40个 + 扩展工具: 1个 | 打印日期: <script>document.write(new Date().toLocaleDateString('zh-CN'))</script>
+        MCP Probe Kit 工具速查手册 | MCP工具: 42个 | 打印日期: <script>document.write(new Date().toLocaleDateString('zh-CN'))</script>
     </div>
 </body>
 </html>

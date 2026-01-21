@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2025-01-21
+
+### Added
+- 🎸 **新增 `interview` 工具 - 需求访谈模式**
+  - 在开发前通过结构化提问澄清需求
+  - 生成访谈记录文件 `docs/interviews/{feature-name}-interview.md`
+  - 支持 4 个阶段共 12-15 个问题（背景理解、功能边界、技术约束、验收标准）
+  - 避免理解偏差和返工，践行"先慢下来，反而能更快"的理念
+- 🎸 **新增 `ask_user` 工具 - 通用提问工具**
+  - AI 可在任何时候主动向用户提问
+  - 支持单个或多个问题
+  - 支持提供选项和标注重要性
+  - 灵活、轻量、可在任何工具中使用
+
+### Changed
+- 📦 **工具总数更新为 42 个**（34 个基础工具 + 8 个智能编排）
+- 📚 **新增访谈工具文档**
+  - `docs/INTERVIEW_GUIDE.md` - 完整使用指南
+  - `docs/INTERVIEW_QUICK_REF.md` - 快速参考
+
+### Workflow
+新的开发流程：
+```
+用户: "我想做登录功能"
+  ↓
+AI: interview "登录功能"
+  ↓
+用户: 回答访谈问题
+  ↓
+AI: 生成 docs/interviews/user-login-interview.md
+  ↓
+用户选择:
+  - 立即开发: start_feature --from-interview user-login
+  - 生成规格: add_feature --from-interview user-login
+  - 稍后开发: 访谈记录已保存，随时可用
+```
+
 ## [1.11.0] - 2025-01-17
 
 ### Changed

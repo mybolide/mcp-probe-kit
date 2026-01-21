@@ -14,7 +14,7 @@ import {
   fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject,
   initProjectContext, addFeature, securityScan, fixBug, estimate, genMock, design2code,
   startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc,
-  genSkill
+  genSkill, interview, askUser
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
@@ -128,6 +128,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await startDoc(args);
       case "gen_skill":
         return await genSkill(args);
+      // 访谈工具
+      case "interview":
+        return await interview(args);
+      case "ask_user":
+        return await askUser(args);
       default:
         throw new Error(`未知工具: ${name}`);
     }

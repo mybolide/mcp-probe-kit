@@ -9,6 +9,7 @@ import { codeGenToolSchemas } from "./code-gen-tools.js";
 import { docUtilToolSchemas } from "./doc-util-tools.js";
 import { projectToolSchemas } from "./project-tools.js";
 import { orchestrationToolSchemas } from "./orchestration-tools.js";
+import { interviewToolSchemas } from "./interview-tools.js";
 
 // 合并所有工具 schemas
 export const allToolSchemas = [
@@ -19,4 +20,5 @@ export const allToolSchemas = [
   ...docUtilToolSchemas,
   ...projectToolSchemas,
   ...orchestrationToolSchemas,
+  ...interviewToolSchemas,
 ];
