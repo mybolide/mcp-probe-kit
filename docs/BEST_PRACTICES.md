@@ -318,6 +318,32 @@ start_doc @src/
 # ✓ 生成 API 文档
 ```
 
+#### start_ralph - Ralph Loop 循环开发（推荐）🆕
+
+```
+# 启动循环开发
+start_ralph "实现用户登录功能"
+
+# 指定模式和参数
+start_ralph --goal "修复登录 bug" --mode safe --max_iterations 10
+
+# 自动完成：
+# ✓ 生成 .ralph/ 目录结构
+# ✓ 生成 PROMPT.md（循环 prompt）
+# ✓ 生成 @fix_plan.md（任务清单）
+# ✓ 生成 PROGRESS.md（迭代日志）
+# ✓ 生成安全模式脚本（多重保护）
+# ✓ 提供执行指南
+
+# 然后：
+cd .ralph
+chmod +x ralph_loop_safe.sh  # Linux/Mac
+./ralph_loop_safe.sh
+
+# Windows:
+# powershell -ExecutionPolicy Bypass -File ralph_loop_safe.ps1
+```
+
 ---
 
 ## 💡 使用技巧
@@ -775,13 +801,13 @@ start_refactor @code.ts --goal reduce_complexity
 | `interview` | 需求访谈 | ⭐⭐⭐⭐⭐ 🆕 |
 | `start_feature` | 开发新功能 | ⭐⭐⭐⭐⭐ |
 | `start_bugfix` | 修复 Bug | ⭐⭐⭐⭐⭐ |
+| `start_ralph` | 循环开发 | ⭐⭐⭐⭐ 🆕 |
 | `start_review` | 代码体检 | ⭐⭐⭐⭐ |
 | `gencommit` | 生成提交 | ⭐⭐⭐⭐ |
 | `gentest` | 生成测试 | ⭐⭐⭐⭐ |
 | `ask_user` | AI 提问 | ⭐⭐⭐ 🆕 |
 | `start_onboard` | 快速上手 | ⭐⭐⭐ |
 | `start_refactor` | 代码重构 | ⭐⭐⭐ |
-| `check_deps` | 检查依赖 | ⭐⭐⭐ |
 
 ---
 

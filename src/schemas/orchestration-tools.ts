@@ -194,4 +194,63 @@ export const orchestrationToolSchemas = [
       additionalProperties: true,
     },
   },
+  {
+    name: "start_ralph",
+    description: "当用户需要启动 Ralph Wiggum Loop 循环开发时使用。生成 .ralph/ 目录结构、安全模式脚本和执行指南。默认启用多重安全保护，防止无人值守时费用失控",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: {
+          type: "string",
+          description: "本次要完成的目标/需求描述。例如：'实现用户认证功能'、'修复登录 bug'",
+        },
+        mode: {
+          type: "string",
+          description: "运行模式：safe（安全模式，默认）、normal（普通模式）。安全模式包含多重保护机制",
+        },
+        completion_promise: {
+          type: "string",
+          description: "完成条件描述。默认：'tests passing + requirements met'",
+        },
+        test_command: {
+          type: "string",
+          description: "每轮执行的测试命令。默认：'npm test'（会在首轮由 agent 识别正确命令）",
+        },
+        cli_command: {
+          type: "string",
+          description: "Claude Code CLI 命令名。默认：'claude-code'（可能需要改为 'claude'）",
+        },
+        max_iterations: {
+          type: "number",
+          description: "最大迭代轮数。safe 模式默认：8",
+        },
+        max_minutes: {
+          type: "number",
+          description: "最大运行分钟数。safe 模式默认：25",
+        },
+        confirm_every: {
+          type: "number",
+          description: "每几轮要求人工确认。safe 模式默认：1（每轮都确认）",
+        },
+        confirm_timeout: {
+          type: "number",
+          description: "确认等待秒数，超时自动停止。safe 模式默认：20",
+        },
+        max_same_output: {
+          type: "number",
+          description: "输出重复多少次停止（防卡死）。safe 模式默认：2",
+        },
+        max_diff_lines: {
+          type: "number",
+          description: "git diff 变更行数超过此值停止（防失控）。safe 模式默认：300",
+        },
+        cooldown_seconds: {
+          type: "number",
+          description: "每轮后冷却秒数。safe 模式默认：8",
+        },
+      },
+      required: [],
+      additionalProperties: true,
+    },
+  },
 ] as const;

@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2025-01-21
+
+### Added
+- 🚀 **新增 `start_ralph` 工具 - Ralph Wiggum Loop 循环开发**
+  - 生成 `.ralph/` 目录结构和安全模式脚本
+  - 支持循环迭代开发，自动多轮执行
+  - **多重安全保护机制**：
+    - 硬上限：最大迭代次数（默认 8）、最大运行时间（默认 25 分钟）
+    - 人工确认：每轮确认（可配置）、超时自动停止（默认 20 秒）
+    - 紧急停止：STOP 文件机制、Ctrl+C 手动停止
+    - 失控保护：输出重复检测、Git diff 变更量检测、冷却时间
+    - 双门控退出：必须同时满足完成条件和退出信号
+  - 生成文件：
+    - `PROMPT.md` - 循环 prompt（含目标、规则、退出条件）
+    - `@fix_plan.md` - 任务分解清单（agent 更新）
+    - `PROGRESS.md` - 迭代日志（agent 更新）
+    - `ralph_loop_safe.sh/ps1` - 安全模式脚本（推荐）
+    - `ralph_loop.sh` - 普通模式脚本（可选）
+  - 跨平台支持：Linux/Mac（Bash）、Windows（PowerShell）
+  - 与现有工具协同：可先用 `init_project_context`、`start_feature` 生成上下文
+
+### Changed
+- 📦 **工具总数更新为 43 个**（34 个基础工具 + 9 个智能编排）
+- 📚 **文档更新**
+  - `docs/MCP-Probe-Kit-使用手册.md` - 新增 Ralph Loop 详细说明
+  - `README.md` - 更新工具列表和功能特性
+
+### Technical
+- 新增 `src/tools/start_ralph.ts` - Ralph Loop 工具实现
+- 更新 `src/schemas/orchestration-tools.ts` - 添加 start_ralph schema
+- 更新 `src/index.ts` - 注册 start_ralph 工具
+
+---
+
 ## [1.12.0] - 2025-01-21
 
 ### Added

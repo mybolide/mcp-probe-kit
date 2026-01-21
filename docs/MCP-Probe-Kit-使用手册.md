@@ -560,6 +560,134 @@ AI: "需要确认是否向后兼容"
 
 ---
 
+### 9. start_ralph - Ralph Wiggum Loop 循环开发 🆕
+**用途：** 生成 Ralph Loop 工作目录和安全模式脚本，实现循环迭代开发
+
+**核心理念：** 通过循环喂同一个 PROMPT 让 agent 多轮迭代完成任务，同时提供多重安全保护防止无人值守时费用失控
+
+**提问示例：**
+- "启动 Ralph Loop 开发用户认证功能"
+- "用 Ralph 模式修复登录 bug"
+- "创建 Ralph Loop 循环开发环境"
+
+**参数说明：**
+- `goal`: 目标描述（必填）- 例如："实现用户认证功能"
+- `mode`: safe（安全模式，默认）/ normal（普通模式）
+- `completion_promise`: 完成条件（可选）- 默认："tests passing + requirements met"
+- `test_command`: 测试命令（可选）- 默认："npm test"
+- `cli_command`: CLI 命令名（可选）- 默认："claude-code"
+- `max_iterations`: 最大迭代次数（可选）- safe 默认：8
+- `max_minutes`: 最大运行分钟（可选）- safe 默认：25
+- `confirm_every`: 确认频率（可选）- safe 默认：1（每轮确认）
+- `confirm_timeout`: 确认超时秒数（可选）- safe 默认：20
+- `max_same_output`: 最大重复次数（可选）- safe 默认：2
+- `max_diff_lines`: 最大变更行数（可选）- safe 默认：300
+- `cooldown_seconds`: 冷却时间（可选）- safe 默认：8
+
+**生成内容：**
+```
+.ralph/
+├── PROMPT.md              # 循环 prompt（含目标、规则、退出条件）
+├── @fix_plan.md           # 任务分解清单（agent 更新）
+├── PROGRESS.md            # 迭代日志（agent 更新）
+├── ralph_loop_safe.sh     # 安全模式脚本（默认，推荐）
+└── ralph_loop.sh          # 普通模式脚本（可选）
+```
+
+**安全保护机制（Safe Mode）：**
+1. **硬上限**
+   - 最大迭代次数：达到上限必停
+   - 最大运行时间：达到时长必停
+
+2. **人工确认**
+   - 每轮提示确认（可配置频率）
+   - 超时自动停止（默认 20 秒）
+   - 非交互环境拒绝运行
+
+3. **紧急停止**
+   - 创建 `STOP` 文件立即退出
+   - Ctrl+C 手动停止
+
+4. **失控保护**
+   - 输出重复检测（避免卡死循环）
+   - Git diff 变更量检测（超过阈值停止）
+   - 冷却时间（降低请求频率）
+
+5. **双门控退出**
+   - 必须同时满足：`COMPLETION_PROMISE_MET: true` + `EXIT_SIGNAL: true`
+   - 避免误判提前退出
+
+**使用流程：**
+```bash
+# 1. 生成 Ralph Loop 环境
+claude-code "使用 start_ralph 启动开发，goal='实现用户认证功能'"
+
+# 2. 创建 .ralph 目录并复制文件
+mkdir -p .ralph
+cd .ralph
+# 复制生成的 PROMPT.md、@fix_plan.md、PROGRESS.md、脚本文件
+
+# 3. 运行安全模式脚本
+chmod +x ralph_loop_safe.sh
+./ralph_loop_safe.sh
+
+# 4. 监控进度
+tail -f ralph.log          # 查看日志
+cat PROGRESS.md            # 查看进度
+cat @fix_plan.md           # 查看任务
+
+# 5. 紧急停止（如需要）
+touch STOP
+```
+
+**调整参数：**
+```bash
+# 增加最大迭代次数
+MAX_ITERS=15 ./ralph_loop_safe.sh
+
+# 延长运行时间
+MAX_MINUTES=40 ./ralph_loop_safe.sh
+
+# 使用不同的 CLI 命令
+CLI_COMMAND='claude' ./ralph_loop_safe.sh
+
+# 减少确认频率（每 3 轮确认一次）
+CONFIRM_EVERY=3 ./ralph_loop_safe.sh
+```
+
+**与其他工具协同：**
+```bash
+# 推荐工作流：
+# 1. 生成项目上下文
+claude-code "使用 init_project_context 生成项目文档"
+
+# 2. 生成功能规格（可选）
+claude-code "使用 start_feature 生成用户认证功能规格"
+
+# 3. 启动 Ralph Loop
+claude-code "使用 start_ralph 启动开发，goal='实现 docs/specs/user-auth/ 中的功能'"
+
+# 4. 执行循环
+cd .ralph && ./ralph_loop_safe.sh
+```
+
+**适用场景：**
+- ✅ 需要多轮迭代的复杂功能开发
+- ✅ Bug 修复需要多次尝试
+- ✅ 代码重构需要小步快跑
+- ✅ 测试驱动开发（TDD）流程
+- ❌ 简单的一次性任务
+- ❌ 需要大量人工决策的任务
+
+**注意事项：**
+- 默认安全模式非常保守，适合首次使用
+- 确保测试命令正确（首轮会自动识别）
+- 在 git 仓库中使用效果最佳
+- 监控 API 费用，避免超支
+- 普通模式无确认，谨慎使用
+
+---
+
 ## 🏗️ 项目管理工具
 
 ### 1. init_project - 初始化项目
