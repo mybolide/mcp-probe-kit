@@ -9,6 +9,8 @@
  */
 
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { getReasoningEngine } from "./ui-ux-tools.js";
+import { DesignRequest } from "../utils/design-reasoning-engine.js";
 
 const PROMPT_TEMPLATE = `# 快速开始
 
@@ -31,8 +33,9 @@ const PROMPT_TEMPLATE = `# 快速开始
 **参数**:
 \`\`\`json
 {
-  "product_type": "SaaS",
-  "stack": "{framework}"
+  "product_type": "{description}",
+  "stack": "{framework}",
+  "description": "{description}"
 }
 \`\`\`
 
@@ -128,12 +131,12 @@ export async function startUi(args: any) {
         mode: ["模式"],
       },
     });
-    
+
     const description = getString(parsedArgs.description);
     const framework = getString(parsedArgs.framework) || "react";
     const mode = getString(parsedArgs.mode) || "manual";
     let templateName = getString(parsedArgs.template);
-    
+
     // 验证 mode 参数
     const validModes = ["auto", "manual"];
     if (mode && !validModes.includes(mode)) {
@@ -156,29 +159,83 @@ start_ui "用户列表" --mode=auto
         isError: true,
       };
     }
-    
-    // 自动模式尚未实现
+
+    // 自动模式实现
     if (mode === "auto") {
+      // 1. 获取推理引擎
+      const engine = await getReasoningEngine();
+
+      // 2. 构造设计请求
+      const request: DesignRequest = {
+        productType: description, // 初始尝试用描述作为类型
+        description: description,
+        stack: framework,
+      };
+
+      // 3. 生成推荐
+      const recommendation = engine.generateRecommendation(request);
+
+      // 4. 提取推理结果
+      const inferredProductType = recommendation.target;
+      const inferredKeywords = recommendation.style.keywords.join(", ");
+      const inferredStack = framework; // 保持用户指定的技术栈，或默认为 react
+
+      // 5. 生成智能执行计划
+      const smartPlan = `# 🚀 智能 UI 开发计划
+
+基于您的描述 "**${description}**"，AI 引擎已为您规划了最佳开发路径。
+
+## 🧠 智能分析结果
+
+- **产品类型**: ${inferredProductType}
+- **推荐风格**: ${recommendation.style.primary}
+- **关键特性**: ${inferredKeywords}
+- **技术栈**: ${inferredStack}
+
+---
+
+## 📋 执行步骤（已自动优化参数）
+
+请按顺序执行以下命令：
+
+### 1. 生成设计系统 🎨
+\`\`\`bash
+ui_design_system --product_type="${inferredProductType}" --stack="${inferredStack}" --keywords="${inferredKeywords}" --description="${description}"
+\`\`\`
+
+### 2. 生成组件目录 📦
+\`\`\`bash
+init_component_catalog
+\`\`\`
+
+### 3. 生成 UI 模板 📄
+\`\`\`bash
+# 搜索现有模板或生成新模板
+ui_search --mode=template --query="${templateName || description}"
+\`\`\`
+
+### 4. 渲染代码 💻
+\`\`\`bash
+render_ui docs/ui/${templateName || 'template'}.json --framework="${inferredStack}"
+\`\`\`
+
+---
+
+## 💡 为什么选择这个方案？
+
+${recommendation.reasoning}
+`;
+
       return {
         content: [
           {
             type: "text",
-            text: `⚠️ 自动模式尚未实现
-
-自动模式将在未来版本中支持。目前请使用手动模式：
-
-\`\`\`
-start_ui "${description}" --mode=manual
-\`\`\`
-
-手动模式会返回详细的执行指导，您可以按步骤调用工具。
-`,
+            text: smartPlan,
           },
         ],
-        isError: false,
       };
     }
-    
+
     // 如果没有提供模板名，从描述中生成
     if (!templateName && description) {
       // 简单的命名转换：登录页面 → login-page
@@ -191,7 +248,7 @@ start_ui "${description}" --mode=manual
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
     }
-    
+
     if (!description) {
       return {
         content: [
@@ -220,7 +277,7 @@ start_ui "设置页面" --framework=react
         isError: true,
       };
     }
-    
+
     // 转义 JSON 字符串中的特殊字符
     const escapeJson = (str: string) => {
       return str
@@ -230,17 +287,17 @@ start_ui "设置页面" --framework=react
         .replace(/\r/g, '\\r')
         .replace(/\t/g, '\\t');
     };
-    
+
     // 安全的字符串替换，避免 $& 等特殊字符被解释为替换模式
     const safeReplace = (template: string, placeholder: string, value: string) => {
       return template.split(placeholder).join(value);
     };
-    
+
     let guide = PROMPT_TEMPLATE;
     guide = safeReplace(guide, '{description}', escapeJson(description));
     guide = safeReplace(guide, '{framework}', framework);
     guide = safeReplace(guide, '{templateName}', templateName || 'ui-template');
-    
+
     return {
       content: [
         {

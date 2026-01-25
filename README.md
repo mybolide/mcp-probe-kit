@@ -23,22 +23,52 @@
 - **`ui_design_system`** - 设计系统生成器：基于 100 条行业规则的智能推荐，生成设计推荐和创作指导，AI 根据指导自由创作文档（输出 ASCII Box + JSON + 创作指导）
 - **`init_component_catalog`** - 组件目录生成器：基于设计系统生成组件目录，定义可用的 UI 组件及其属性（占位符语法）
 - **`render_ui`** - UI 渲染引擎：将 JSON 模板渲染为最终代码，自动应用设计规范（占位符替换）
-- **`start_ui`** - 统一 UI 开发编排：一键完成整个 UI 开发流程（设计系统 → 组件目录 → 模板 → 代码）
+- **`start_ui`** - 统一 UI 开发编排：一键完成整个 UI 开发流程（支持 `auto` 智能模式，自动推导设计参数）
 - **`ui_search`** - UI/UX 智能搜索：BM25 算法搜索颜色、图标、图表、组件、设计模式等 24 类数据（支持 catalog/template 模式）
 - **`sync_ui_data`** - 数据同步工具：从 npm 包 `uipro-cli` 自动同步最新 UI/UX 数据（来源：[ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)）
 
 **完整工作流**：
 ```bash
-# 第1步：生成设计系统
-ui_design_system --product_type="SaaS" --stack="react"
+# 🚀 方式一：智能模式（推荐）
+# 一句话描述需求，AI 自动推导设计风格、配色和技术栈
+start_ui "SaaS 后台管理系统" --mode=auto
 
-# 第2步：一键生成多个页面（自动应用设计规范）
+# 📦 方式二：手动模式
+# 1. 生成设计系统 (可省略 product_type，AI 会自动从描述推导)
+ui_design_system --stack="react" --description="企业级 CRM 客户管理系统"
+
+# 2. 生成页面（自动应用设计规范）
 start_ui "登录页面"
 start_ui "用户列表"
-start_ui "设置页面"
 
 # 结果：所有页面样式完全统一 ✨
 ```
+
+### 🤖 智能模式 vs 手动模式
+
+`start_ui` 支持两种模式，满足不同场景需求：
+
+#### 1. 自动模式 (`--mode=auto`) - **推荐**
+AI 自动分析你的自然语言描述，推导最佳参数并生成执行计划。
+```bash
+start_ui "加密货币交易看板" --mode=auto
+```
+**特点**:
+- ✅ 自动推导产品类型 (Fintech)
+- ✅ 自动推导设计风格 (Dark Mode, High Contrast)
+- ✅ 自动推导技术栈
+- ✅ 直接生成可执行命令
+
+#### 2. 手动模式 (`--mode=manual`)
+生成详细的分步指南，由你手动控制每一步的执行。
+```bash
+start_ui "登录页面" --mode=manual
+```
+**特点**:
+- ✅ 返回 4 个标准步骤的执行指南
+- ✅ 适合需要精细控制参数的场景
+- ✅ 适合学习和理解工作流
+- ✅ 默认模式（如果不指定 --mode）
 
 ### �🎯 访谈工具（2 个工具）
 - **`interview`** - 需求访谈模式：在开发前通过结构化提问澄清需求，避免理解偏差和返工

@@ -165,27 +165,27 @@ export function generateCreationGuidance(
   // 根据技术栈调整配置主题
   if (stack) {
     const stackLower = stack.toLowerCase();
-    
+
     if (stackLower.includes('tailwind')) {
       config.push('Tailwind CSS 配置文件示例');
       config.push('自定义 Tailwind 插件');
     }
-    
+
     if (stackLower.includes('react') || stackLower.includes('next')) {
       config.push('React 组件样式方案（CSS Modules / Styled Components）');
       config.push('Theme Provider 配置');
     }
-    
+
     if (stackLower.includes('vue') || stackLower.includes('nuxt')) {
       config.push('Vue 组件样式方案（Scoped CSS / CSS Modules）');
       config.push('Vue 插件配置');
     }
-    
+
     if (stackLower.includes('svelte')) {
       config.push('Svelte 组件样式方案');
       config.push('Svelte 预处理器配置');
     }
-    
+
     if (stackLower.includes('astro')) {
       config.push('Astro 组件样式方案');
       config.push('Astro 集成配置');
@@ -247,13 +247,13 @@ async function getDataLoader(): Promise<UIDataLoader> {
 /**
  * 获取推理引擎实例
  */
-async function getReasoningEngine(): Promise<DesignReasoningEngine> {
+export async function getReasoningEngine(): Promise<DesignReasoningEngine> {
   if (!reasoningEngine) {
     const loader = await getDataLoader();
     const searchEngine = loader.getSearchEngine();
-    
+
     reasoningEngine = new DesignReasoningEngine();
-    
+
     // 加载所有数据（包括推理规则）
     const products = searchEngine.getCategoryData('products') || [];
     const styles = searchEngine.getCategoryData('styles') || [];
@@ -262,7 +262,7 @@ async function getReasoningEngine(): Promise<DesignReasoningEngine> {
     const landing = searchEngine.getCategoryData('landing') || [];
     const uxGuidelines = searchEngine.getCategoryData('ux-guidelines') || [];
     const reasoning = (searchEngine.getCategoryData('ui-reasoning') || []) as any[];
-    
+
     reasoningEngine.loadData({
       products,
       styles,
@@ -294,33 +294,33 @@ export async function uiDesignSystem(args: any) {
       targetAudience: args.target_audience,
       keywords: args.keywords ? args.keywords.split(',').map((k: string) => k.trim()) : undefined,
     };
-    
+
     // 获取推理引擎
     const engine = await getReasoningEngine();
-    
+
     // 生成设计系统推荐
     const recommendation = engine.generateRecommendation(request);
-    
+
     // 格式化输出（保留 ASCII Box 和 JSON 格式化）
     const formatter = new ASCIIBoxFormatter();
     const asciiBox = formatter.format(recommendation);
-    
+
     // 生成 JSON 格式
     const designSystemJson = formatDesignSystemJson(
       recommendation,
       request.productType,
       request.stack
     );
-    
+
     // 生成文件索引（按创建顺序）
     const fileIndex = generateFileIndex();
-    
+
     // 生成创作指导
     const creationGuidance = generateCreationGuidance(
       request.productType,
       request.stack
     );
-    
+
     // 构建输出对象
     const output: UIDesignSystemOutput = {
       asciiBox,
@@ -329,12 +329,12 @@ export async function uiDesignSystem(args: any) {
       creationGuidance,
       recommendation,
     };
-    
+
     // 格式化文件索引列表
     const fileIndexList = fileIndex
       .map(file => `${file.order}. **${file.path}** ${file.required ? '(必需)' : '(可选)'}\n   ${file.purpose}`)
       .join('\n\n');
-    
+
     // 格式化创作指导
     const guidanceText = `
 ### 设计原则文档主题
@@ -352,7 +352,7 @@ ${creationGuidance.config.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
 ### 创作提示
 ${creationGuidance.tips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
 `;
-    
+
     // 返回新的输出格式（Requirements: 2.1, 2.5, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6）
     return {
       content: [
@@ -489,18 +489,18 @@ export async function uiSearch(args: any) {
   try {
     const mode = args.mode || 'search';
     const query = args.query || '';
-    
+
     // 模式 1: catalog - 返回组件目录
     if (mode === 'catalog') {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const catalogPath = path.join(process.cwd(), 'docs', 'ui', 'component-catalog.json');
-      
+
       try {
         const catalogContent = await fs.readFile(catalogPath, 'utf-8');
         const catalog = JSON.parse(catalogContent);
-        
+
         // 格式化组件列表
         const components = catalog.components || [];
         const componentList = components.map((comp: any, index: number) => {
@@ -511,7 +511,7 @@ export async function uiSearch(args: any) {
 **样式**: ${comp.styles ? Object.keys(comp.styles).join(', ') : '无'}
 `;
         }).join('\n---\n\n');
-        
+
         return {
           content: [
             {
@@ -544,22 +544,22 @@ ${componentList}
         };
       }
     }
-    
+
     // 模式 2: template - 搜索 UI 模板
     if (mode === 'template') {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const templatesDir = path.join(process.cwd(), 'docs', 'ui', 'pages');
-      
+
       try {
         // 检查模板目录是否存在
         await fs.access(templatesDir);
-        
+
         // 读取所有模板文件
         const files = await fs.readdir(templatesDir);
         const jsonFiles = files.filter(f => f.endsWith('.json'));
-        
+
         if (jsonFiles.length === 0) {
           return {
             content: [
@@ -582,7 +582,7 @@ start_ui "用户列表"
             ],
           };
         }
-        
+
         // 读取所有模板内容
         const templates = await Promise.all(
           jsonFiles.map(async (file) => {
@@ -597,17 +597,17 @@ start_ui "用户列表"
             };
           })
         );
-        
+
         // 如果有查询，进行简单的文本匹配
         let filteredTemplates = templates;
         if (query) {
           const lowerQuery = query.toLowerCase();
-          filteredTemplates = templates.filter(t => 
+          filteredTemplates = templates.filter(t =>
             t.name.toLowerCase().includes(lowerQuery) ||
             t.description.toLowerCase().includes(lowerQuery)
           );
         }
-        
+
         if (filteredTemplates.length === 0) {
           return {
             content: [
@@ -624,7 +624,7 @@ start_ui "用户列表"
             ],
           };
         }
-        
+
         // 格式化模板列表
         const templateList = filteredTemplates.map((t, index) => {
           return `### ${index + 1}. ${t.name}
@@ -638,7 +638,7 @@ ${JSON.stringify(t.template, null, 2)}
 \`\`\`
 `;
         }).join('\n---\n\n');
-        
+
         return {
           content: [
             {
@@ -684,20 +684,20 @@ start_ui "设置页面"
         };
       }
     }
-    
+
     // 模式 3: search - 默认搜索模式（原有功能）
     const loader = await getDataLoader();
     const searchEngine = loader.getSearchEngine();
-    
+
     const options: UISearchOptions = {
       category: args.category,
       stack: args.stack,
       limit: args.limit || 10,
       minScore: args.min_score || 0,
     };
-    
+
     const results = searchEngine.search(query, options);
-    
+
     if (results.length === 0) {
       return {
         content: [
@@ -719,7 +719,7 @@ start_ui "设置页面"
         ],
       };
     }
-    
+
     // 格式化结果
     const formattedResults = results.map((result, index) => {
       const data = result.data;
@@ -732,13 +732,13 @@ start_ui "设置页面"
           return `- **${key}**: ${value}`;
         })
         .join('\n');
-      
+
       return `### ${index + 1}. ${result.category} (相关度: ${result.score.toFixed(2)})
 
 ${fields}
 `;
     }).join('\n---\n\n');
-    
+
     return {
       content: [
         {
@@ -780,15 +780,15 @@ export async function syncUiData(args: any) {
   try {
     const force = args.force || false;
     const verbose = args.verbose || false;
-    
+
     // 检查是否需要更新
     if (!force) {
       const loader = await getDataLoader();
       const cacheManager = loader.getCacheManager();
-      
+
       try {
         const updateInfo = await cacheManager.checkUpdate();
-        
+
         if (!updateInfo.hasUpdate) {
           return {
             content: [
@@ -805,23 +805,23 @@ export async function syncUiData(args: any) {
             ],
           };
         }
-        
+
         console.log(`Update available: ${updateInfo.currentVersion || 'none'} -> ${updateInfo.latestVersion}`);
       } catch (error) {
         console.log('Failed to check update, proceeding with sync...');
       }
     }
-    
+
     // 执行同步
     await syncUIDataToCache(force, verbose);
-    
+
     // 重新加载数据
     if (dataLoader) {
       await dataLoader.reload();
     }
-    
+
     const cacheDir = dataLoader?.getCacheManager().getCacheDir() || '';
-    
+
     return {
       content: [
         {
