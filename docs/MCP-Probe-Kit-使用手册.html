@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Probe Kit 工具速查手册</title>
+    <title>MCP Probe Kit 工具速查手册 v1.15.0</title>
     <style>
         * {
             margin: 0;
@@ -119,27 +119,62 @@
             font-size: 7.5pt;
             color: #c7254e;
         }
+        
+        .new-badge {
+            background: #28a745;
+            color: white;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-size: 7pt;
+            margin-left: 4px;
+        }
     </style>
 </head>
 <body>
-    <h1>🛠️ MCP Probe Kit 工具速查手册 (43个工具)</h1>
+    <h1>🛠️ MCP Probe Kit 工具速查手册 v1.15.0 (49个工具)</h1>
     
-    <h2>🎯 需求访谈工具（2个）🆕</h2>
+    <h2>🎨 UI/UX Pro Max 工具（3个）<span class="new-badge">新增</span></h2>
+    <div class="grid">
+        <div class="tool-card single-col">
+            <div class="tool-name">1. ui_design_system - 设计系统生成器</div>
+            <div class="tool-desc">基于 100 条行业规则的智能推荐，生成设计系统推荐和创作指导</div>
+            <div class="tool-example">💬 "帮我生成一个 React 设计系统" / "生成蓝色主题设计系统"</div>
+            <div class="tool-params">product_type: SaaS/E-commerce/Healthcare, stack: react/vue/nextjs, primary_color</div>
+        </div>
+        
+        <div class="tool-card">
+            <div class="tool-name">2. ui_search - UI/UX 智能搜索</div>
+            <div class="tool-desc">搜索 UI 组件、颜色方案、图标、设计模式、最佳实践</div>
+            <div class="tool-example">💬 "我需要一个 React 的主按钮组件"</div>
+            <div class="tool-params">query(必填), category, stack, mode: search/catalog/template</div>
+        </div>
+        
+        <div class="tool-card">
+            <div class="tool-name">3. sync_ui_data - 数据同步工具</div>
+            <div class="tool-desc">同步最新的 UI/UX 数据到本地缓存</div>
+            <div class="tool-example">💬 "检查 UI 数据更新" / "强制同步 UI 数据"</div>
+            <div class="tool-params">force: true/false, verbose: true/false</div>
+        </div>
+    </div>
+
+    
+    <h2>🎯 需求访谈工具（2个）<span class="new-badge">新增</span></h2>
     <div class="grid">
         <div class="tool-card">
             <div class="tool-name">1. interview - 需求访谈模式</div>
             <div class="tool-desc">在开发前通过结构化访谈澄清需求，避免理解偏差</div>
-            <div class="tool-example">示例: "interview 用户登录功能"</div>
-            <div class="tool-params">参数: description(必填), context(可选)</div>
+            <div class="tool-example">💬 "interview 用户登录功能"</div>
+            <div class="tool-params">description(必填), context(可选)</div>
         </div>
         
         <div class="tool-card">
             <div class="tool-name">2. ask_user - AI 主动提问</div>
             <div class="tool-desc">AI 可在任何时候向用户提问，澄清不确定的信息</div>
-            <div class="tool-example">示例: AI自动调用或"有什么需要确认的吗？"</div>
-            <div class="tool-params">参数: question(必填), options(可选)</div>
+            <div class="tool-example">💬 AI自动调用或"有什么需要确认的吗？"</div>
+            <div class="tool-params">question(必填), options(可选)</div>
         </div>
     </div>
+
     
     <h2>📋 代码生成工具（12个）</h2>
     <div class="grid">
@@ -227,6 +262,7 @@
             <div class="tool-params">input: 图片URL/描述, framework</div>
         </div>
     </div>
+
     
     <h2>🔍 分析诊断工具（7个）</h2>
     <div class="grid">
@@ -279,6 +315,7 @@
             <div class="tool-params">project_path, max_depth, include_content</div>
         </div>
     </div>
+
     
     <h2>🔧 重构优化工具（6个）</h2>
     <div class="grid">
@@ -318,12 +355,13 @@
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">6. design2code</div>
-            <div class="tool-desc">设计稿转前端代码</div>
-            <div class="tool-example">💬 "根据这个设计稿生成代码"</div>
-            <div class="tool-params">input: 图片URL/描述, framework, style_solution</div>
+            <div class="tool-name">6. css_order</div>
+            <div class="tool-desc">重排 CSS 属性顺序</div>
+            <div class="tool-example">💬 "整理这段 CSS 的属性顺序"</div>
+            <div class="tool-params">直接粘贴 CSS 代码</div>
         </div>
     </div>
+
     
     <h2>🎯 工作流编排工具（9个）- 自动化多步骤流程</h2>
     <div class="grid">
@@ -384,12 +422,37 @@
         </div>
         
         <div class="tool-card">
-            <div class="tool-name">9. start_ralph 🆕</div>
+            <div class="tool-name">9. start_ralph <span class="new-badge">新增</span></div>
             <div class="tool-desc">Ralph Loop 循环开发 - 生成安全模式脚本 → 多轮迭代 → 自动保护</div>
             <div class="tool-example">💬 "start_ralph 实现用户登录功能"</div>
             <div class="tool-params">goal(必填), mode: safe/normal, max_iterations: 8, max_minutes: 25</div>
         </div>
     </div>
+    
+    <h2>🎨 UI 开发编排工具（3个）<span class="new-badge">新增</span></h2>
+    <div class="grid">
+        <div class="tool-card single-col">
+            <div class="tool-name">1. start_ui - 统一 UI 开发编排 <span class="new-badge">优化</span></div>
+            <div class="tool-desc">智能文件检查 → 简洁指导输出 → 双模式支持（manual/auto）→ 安全字符串处理</div>
+            <div class="tool-example">💬 "生成一个登录页面" / "start_ui '电商商品列表' --mode=auto"</div>
+            <div class="tool-params">description(必填), framework: react/vue/html, mode: manual/auto</div>
+        </div>
+        
+        <div class="tool-card">
+            <div class="tool-name">2. init_component_catalog</div>
+            <div class="tool-desc">生成组件目录，定义可用的 UI 组件</div>
+            <div class="tool-example">💬 "生成组件目录"</div>
+            <div class="tool-params">无需参数（自动读取设计系统）</div>
+        </div>
+        
+        <div class="tool-card">
+            <div class="tool-name">3. render_ui</div>
+            <div class="tool-desc">将 JSON 模板渲染为最终代码</div>
+            <div class="tool-example">💬 "渲染 login-form.json"</div>
+            <div class="tool-params">template(必填), framework: react/vue/html</div>
+        </div>
+    </div>
+
     
     <h2>🏗️ 项目管理工具（5个）</h2>
     <div class="grid">
@@ -429,7 +492,7 @@
         </div>
     </div>
     
-    <h2>🛠️ 其他工具（4个）</h2>
+    <h2>🛠️ 其他工具（2个）</h2>
     <div class="grid">
         <div class="tool-card">
             <div class="tool-name">1. detect_shell</div>
@@ -444,25 +507,13 @@
             <div class="tool-example">💬 "初始化 Cursor 配置"</div>
             <div class="tool-params">project_path: 项目路径</div>
         </div>
-        
-        <div class="tool-card">
-            <div class="tool-name">3. css_order</div>
-            <div class="tool-desc">重排 CSS 属性顺序</div>
-            <div class="tool-example">💬 "整理这段 CSS 的属性顺序"</div>
-            <div class="tool-params">直接粘贴 CSS 代码</div>
-        </div>
-        
-        <div class="tool-card">
-            <div class="tool-name">4. gen_skill</div>
-            <div class="tool-desc">生成 Agent Skills 文档</div>
-            <div class="tool-example">💬 "生成技能文档" / "生成所有工具的文档"</div>
-            <div class="tool-params">scope: all/basic/generation, tool_name, lang</div>
-        </div>
     </div>
+
     
     <div class="tips">
         <strong>💡 使用技巧：</strong><br>
         • <strong>Interview 模式：</strong>需求不明确时先用 interview 访谈，再用 start_feature 开发<br>
+        • <strong>UI 开发：</strong>start_ui 提供 manual（步骤指导）和 auto（智能推理）两种模式<br>
         • <strong>组合使用：</strong>debug 定位 → fix 修复 | analyze_project 了解 → add_feature 添加<br>
         • <strong>工作流优先：</strong>复杂任务用 start_* 系列（自动编排），简单任务用单个工具（更快）<br>
         • <strong>提供完整信息：</strong>粘贴完整错误堆栈、提供代码上下文、描述清楚期望结果<br>
@@ -474,11 +525,20 @@
         • <strong>修 Bug：</strong>"修复这个 Bug：[错误信息]" → 自动分析定位修复测试<br>
         • <strong>新功能：</strong>"开发用户登录功能" → 自动生成规格估算工作量<br>
         • <strong>代码审查：</strong>"全面审查这段代码" → 质量+安全+性能综合分析<br>
-        • <strong>发版准备：</strong>"准备发布 v1.2.0" → 自动生成 Changelog 和 PR 描述
+        • <strong>发版准备：</strong>"准备发布 v1.2.0" → 自动生成 Changelog 和 PR 描述<br>
+        • <strong>UI 开发：</strong>"start_ui '登录页面'" → 检查设计系统 → 生成组件 → 渲染代码
+    </div>
+    
+    <div class="workflow" style="background: #e7f3ff; border-left-color: #2196f3;">
+        <strong>🎨 UI 开发完整流程（v1.15.0 优化）：</strong><br>
+        1. <strong>生成设计系统：</strong>ui_design_system --product_type="SaaS" --stack="react"<br>
+        2. <strong>一键生成页面：</strong>start_ui "登录页面" （自动检查文件、提供步骤指导）<br>
+        3. <strong>智能模式：</strong>start_ui "电商商品列表" --mode=auto （AI 自动推理参数）<br>
+        4. <strong>批量生成：</strong>所有页面自动使用相同设计规范，样式完全统一 ✨
     </div>
     
     <div style="text-align: center; margin-top: 8px; font-size: 7.5pt; color: #999;">
-        MCP Probe Kit 工具速查手册 | MCP工具: 42个 | 打印日期: <script>document.write(new Date().toLocaleDateString('zh-CN'))</script>
+        MCP Probe Kit 工具速查手册 v1.15.0 | 49个工具 (37基础 + 9编排 + 3 UI/UX) | 打印日期: 2026-01-25
     </div>
 </body>
 </html>

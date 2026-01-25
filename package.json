@@ -1,6 +1,6 @@
 {
   "name": "mcp-probe-kit",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "AI Development Enhancement Toolkit - MCP Server with 49 practical tools (37 basic + 9 orchestration + 3 UI/UX) for code quality, development efficiency, project management, and complete UI/UX design workflow. Now with Ralph Loop for iterative development and UI/UX Pro Max for design-to-code automation.",
   "type": "module",
   "main": "build/index.js",

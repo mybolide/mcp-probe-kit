@@ -1,6 +1,6 @@
 # MCP Probe Kit 工具使用手册
 
-> **版本**: v1.14.0 | **工具总数**: 49 个（37 个基础工具 + 9 个智能编排 + 3 个 UI/UX 新增）
+> **版本**: v1.15.0 | **工具总数**: 49 个（37 个基础工具 + 9 个智能编排 + 3 个 UI/UX 新增）
 
 ## � UI/UX Pro Max 工具 🆕
 
@@ -280,10 +280,10 @@ AI 调用: render_ui
 **用途：** 一键完成整个 UI 开发流程，从设计系统到最终代码
 
 **核心功能：**
-- **自动检查设计系统**：如果不存在，提示用户先生成
-- **自动生成组件目录**：如果不存在，自动调用 `init_component_catalog`
-- **智能模板生成**：根据描述生成 JSON 模板
-- **自动渲染代码**：调用 `render_ui` 生成最终代码
+- **智能文件检查**：自动检查设计系统和组件目录是否存在，存在则跳过生成
+- **简洁指导输出**：提供清晰的步骤指导（<800 tokens），AI 代理可准确执行
+- **双模式支持**：manual（手动模式，提供步骤指导）和 auto（自动模式，智能推理参数）
+- **安全字符串处理**：正确处理特殊字符，避免替换错误
 
 **提问示例：**
 - "生成一个登录页面"
@@ -294,27 +294,30 @@ AI 调用: render_ui
 - `description`: UI 需求描述（必填）
 - `framework`: 目标框架（可选，默认 react）
 - `template`: 模板名称（可选，自动生成）
+- `mode`: 运行模式（可选，默认 manual）
+  - `manual`: 提供步骤指导，AI 按步骤调用工具
+  - `auto`: 智能推理产品类型和参数，自动优化执行计划
 
-**完整工作流：**
+**完整工作流（manual 模式）：**
 ```
-第1步：检查设计系统 ✅
-  ├─ 检查 docs/ui/design-system.json
-  └─ 如果不存在，提示用户先运行 ui_design_system
+第1步：生成设计系统（如不存在）✅
+  ├─ 检查 docs/design-system.md 是否存在
+  └─ 不存在则调用 ui_design_system
 
-第2步：检查/生成组件目录 🔄
-  ├─ 检查 docs/ui/component-catalog.json
-  └─ 如果不存在，自动调用 init_component_catalog
+第2步：生成组件目录（如不存在）🔄
+  ├─ 检查 docs/component-catalog.json 是否存在
+  └─ 不存在则调用 init_component_catalog
 
-第3步：搜索/生成 UI 模板 🔍
+第3步：搜索 UI 模板 🔍
   ├─ 调用 ui_search --mode=template
-  └─ 如果没找到，生成新模板并保存到 docs/ui/pages/
+  └─ 如果没找到，使用默认模板
 
 第4步：渲染最终代码 🎨
   ├─ 调用 render_ui
   └─ 输出完整的组件代码
 ```
 
-**使用示例：**
+**使用示例（manual 模式）：**
 ```
 你: "生成一个登录页面"
 
@@ -324,26 +327,48 @@ AI 调用: start_ui
   framework: "react"
 }
 
-返回:
-✅ 执行摘要
-  - 设计规范: ✅ 已应用 docs/ui/design-system.json
-  - 组件目录: ✅ 已使用 docs/ui/component-catalog.json
-  - UI 模板: ✅ 已生成 docs/ui/pages/login-page.json
-  - 最终代码: ✅ 已生成 React 代码
+返回: 清晰的步骤指导
+# 快速开始
 
-🎨 设计规范应用
-  - ✅ 颜色: 使用 design-system.json 中的配色方案
-  - ✅ 字体: 使用 design-system.json 中的字体系统
-  - ✅ 间距: 使用 design-system.json 中的间距比例
-  - ✅ 圆角: 使用 design-system.json 中的圆角规范
-  - ✅ 阴影: 使用 design-system.json 中的阴影效果
+执行以下工具：
 
-结果: 整个项目样式完全统一 ✨
+1. 检查 `docs/design-system.md` 是否存在，不存在则调用 `ui_design_system --product_type="SaaS" --stack="react"`
+2. 检查 `docs/component-catalog.json` 是否存在，不存在则调用 `init_component_catalog`
+3. `ui_search --mode=template --query="登录页面"`
+4. `render_ui --template="docs/ui/login-page.json" --framework="react"`
+
+[详细步骤说明...]
+```
+
+**使用示例（auto 模式）：**
+```
+你: "生成一个电商商品列表页面"
+
+AI 调用: start_ui
+参数: {
+  description: "电商商品列表页面",
+  framework: "react",
+  mode: "auto"
+}
+
+返回: 智能推理结果和优化的执行计划
+# 🚀 智能 UI 开发计划
+
+基于您的描述 "**电商商品列表页面**"，AI 引擎已为您规划了最佳开发路径。
+
+## 🧠 智能分析结果
+
+- **产品类型**: E-commerce
+- **推荐风格**: Modern, Clean, Conversion-focused
+- **关键特性**: product-grid, filters, cart-integration
+- **技术栈**: react
+
+[优化的执行步骤...]
 ```
 
 **💡 使用技巧：**
 
-**技巧 1：快速原型**
+**技巧 1：快速原型（manual 模式）**
 ```bash
 # 一键生成多个页面
 start_ui "登录页面"
@@ -353,13 +378,22 @@ start_ui "设置页面"
 ```
 所有页面自动使用相同的设计规范！
 
-**技巧 2：修改设计规范**
-1. 编辑 `docs/ui/design-system.json`
+**技巧 2：智能推理（auto 模式）**
+```bash
+# AI 自动推理产品类型和最佳参数
+start_ui "电商商品列表" --mode=auto
+start_ui "医疗预约系统" --mode=auto
+start_ui "金融数据看板" --mode=auto
+```
+AI 引擎会根据描述自动选择最合适的设计风格和参数！
+
+**技巧 3：修改设计规范**
+1. 编辑 `docs/design-system.json`
 2. 修改颜色、字体等
 3. 重新运行 `start_ui`
 4. 所有页面自动应用新规范
 
-**技巧 3：保存模板**
+**技巧 4：保存模板**
 - 生成的模板保存在 `docs/ui/pages/` 目录
 - 可以复用、修改、版本控制
 
