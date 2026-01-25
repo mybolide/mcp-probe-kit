@@ -6,16 +6,229 @@
  */
 
 import { UIDataLoader } from '../utils/ui-data-loader.js';
-import { DesignReasoningEngine, DesignRequest } from '../utils/design-reasoning-engine.js';
+import { DesignReasoningEngine, DesignRequest, DesignSystemRecommendation } from '../utils/design-reasoning-engine.js';
 import { ASCIIBoxFormatter } from '../utils/ascii-box-formatter.js';
 import { UISearchOptions } from '../utils/ui-search-engine.js';
 import { syncUIDataToCache } from '../utils/ui-sync.js';
 import { formatDesignSystemJson } from '../utils/design-system-json-formatter.js';
-import { DesignSystemTemplates } from '../prompts/design-system-templates.js';
+
+/**
+ * 文件索引接口
+ * 定义需要创建的文件及其元数据
+ */
+export interface FileIndex {
+  path: string;          // 文件路径（如 "docs/design-system.json"）
+  purpose: string;       // 文件用途说明
+  order: number;         // 创建顺序（1, 2, 3...）
+  required: boolean;     // 是否必需
+}
+
+/**
+ * 创作指导接口
+ * 为 AI 提供文档创作的主题和提示，而非具体内容
+ */
+export interface CreationGuidance {
+  principles: string[];      // 设计原则文档应包含的主题
+  interaction: string[];     // 交互规范文档应包含的主题
+  layout: string[];          // 布局规范文档应包含的主题
+  config: string[];          // 技术配置文档应包含的主题
+  tips: string[];            // 创作提示
+}
+
+/**
+ * UI 设计系统输出接口（重构版）
+ * 返回核心数据和创作指导，而非预生成的文档内容
+ */
+export interface UIDesignSystemOutput {
+  asciiBox: string;                           // ASCII Box 格式的核心推荐
+  designSystemJson: object;                   // 机器可读的精确配置
+  fileIndex: FileIndex[];                     // 要创建的文件索引（按顺序）
+  creationGuidance: CreationGuidance;         // 创作指导
+  recommendation: DesignSystemRecommendation; // 原始推荐数据
+}
 
 // 全局数据加载器实例
 let dataLoader: UIDataLoader | null = null;
 let reasoningEngine: DesignReasoningEngine | null = null;
+
+/**
+ * 生成文件索引
+ * 定义需要创建的文件列表及其创建顺序
+ * 
+ * @returns FileIndex[] - 按创建顺序排列的文件索引数组
+ * 
+ * Requirements: 3.1, 3.2, 3.3, 3.4
+ */
+export function generateFileIndex(): FileIndex[] {
+  return [
+    {
+      path: 'docs/design-system.json',
+      purpose: '机器可读的设计系统配置文件，包含颜色、字体、间距等精确数值',
+      order: 1,
+      required: true,
+    },
+    {
+      path: 'docs/design-guidelines/README.md',
+      purpose: '设计指南目录文件，提供所有设计文档的索引和导航',
+      order: 2,
+      required: true,
+    },
+    {
+      path: 'docs/design-guidelines/01-principles.md',
+      purpose: '设计原则文档，定义核心设计价值观和指导原则',
+      order: 3,
+      required: true,
+    },
+    {
+      path: 'docs/design-guidelines/02-interaction.md',
+      purpose: '交互规范文档，定义用户交互模式和反馈机制',
+      order: 4,
+      required: true,
+    },
+    {
+      path: 'docs/design-guidelines/03-layout.md',
+      purpose: '布局规范文档，定义栅格系统和页面布局模式',
+      order: 5,
+      required: true,
+    },
+    {
+      path: 'docs/design-guidelines/04-config.md',
+      purpose: '技术配置文档，提供具体技术栈的配置代码示例',
+      order: 6,
+      required: true,
+    },
+    {
+      path: 'docs/design-system.md',
+      purpose: '设计系统主文档，包含 ASCII Box 推荐和完整的设计系统概览',
+      order: 7,
+      required: true,
+    },
+  ];
+}
+
+/**
+ * 生成创作指导
+ * 为 AI 提供文档创作的主题和提示，而非具体内容
+ * 
+ * @param productType - 产品类型（如 "SaaS", "E-commerce"）
+ * @param stack - 技术栈（如 "react", "vue", "nextjs"）
+ * @returns CreationGuidance - 包含各类文档的主题列表和创作提示
+ * 
+ * Requirements: 4.2, 4.3, 4.4, 4.5, 5.3, 5.4
+ */
+export function generateCreationGuidance(
+  productType: string,
+  stack?: string
+): CreationGuidance {
+  // 设计原则文档的主题列表
+  const principles = [
+    '核心设计原则（一致性、反馈、效率、容错性）',
+    '设计价值观和理念',
+    '用户体验目标',
+    '可访问性原则',
+    '设计决策指导',
+    '品牌一致性要求',
+  ];
+
+  // 交互规范文档的主题列表
+  const interaction = [
+    '按钮和链接的交互状态（hover、active、disabled）',
+    '表单交互模式（输入、验证、错误提示）',
+    '反馈机制（成功、错误、警告、信息提示）',
+    '加载状态和骨架屏',
+    '动效和过渡效果规范',
+    '手势和触摸交互（移动端）',
+    '键盘导航和快捷键',
+  ];
+
+  // 布局规范文档的主题列表
+  const layout = [
+    '栅格系统（列数、间距、断点）',
+    '页面布局模式（单栏、双栏、三栏）',
+    '组件布局和对齐规则',
+    '响应式设计策略',
+    '间距系统（margin、padding）',
+    '容器和包装器规范',
+    'Z-index 层级管理',
+  ];
+
+  // 技术配置文档的主题列表
+  const config = [
+    '设计 Token 配置（颜色、字体、间距）',
+    '主题配置代码示例',
+    'CSS Variables 定义',
+    '组件样式实现指南',
+    '工具类和辅助函数',
+    '构建和打包配置',
+  ];
+
+  // 根据技术栈调整配置主题
+  if (stack) {
+    const stackLower = stack.toLowerCase();
+    
+    if (stackLower.includes('tailwind')) {
+      config.push('Tailwind CSS 配置文件示例');
+      config.push('自定义 Tailwind 插件');
+    }
+    
+    if (stackLower.includes('react') || stackLower.includes('next')) {
+      config.push('React 组件样式方案（CSS Modules / Styled Components）');
+      config.push('Theme Provider 配置');
+    }
+    
+    if (stackLower.includes('vue') || stackLower.includes('nuxt')) {
+      config.push('Vue 组件样式方案（Scoped CSS / CSS Modules）');
+      config.push('Vue 插件配置');
+    }
+    
+    if (stackLower.includes('svelte')) {
+      config.push('Svelte 组件样式方案');
+      config.push('Svelte 预处理器配置');
+    }
+    
+    if (stackLower.includes('astro')) {
+      config.push('Astro 组件样式方案');
+      config.push('Astro 集成配置');
+    }
+  }
+
+  // 生成创作提示
+  const tips = [
+    `根据产品类型 "${productType}" 调整文档重点和示例`,
+    '使用 design-system.json 中的精确数值（颜色、字体大小、间距等）',
+    '参考 ASCII Box 推荐中的核心建议',
+    '根据反模式（antiPatterns）提供"应避免"的建议',
+    '提供具体的代码示例，而非抽象描述',
+    '确保所有文档之间保持一致性',
+    '使用清晰的标题层级和结构',
+  ];
+
+  // 根据技术栈添加特定提示
+  if (stack) {
+    tips.push(`在技术配置文档中提供 ${stack} 的具体实现示例`);
+    tips.push(`确保代码示例符合 ${stack} 的最佳实践`);
+  }
+
+  // 根据产品类型添加特定提示
+  const productTypeLower = productType.toLowerCase();
+  if (productTypeLower.includes('saas') || productTypeLower.includes('b2b')) {
+    tips.push('强调专业性、效率和数据密集型界面的设计');
+  } else if (productTypeLower.includes('ecommerce') || productTypeLower.includes('e-commerce')) {
+    tips.push('强调产品展示、购物流程和转化率优化');
+  } else if (productTypeLower.includes('healthcare') || productTypeLower.includes('medical')) {
+    tips.push('强调可访问性、清晰度和信任感');
+  } else if (productTypeLower.includes('fintech') || productTypeLower.includes('finance')) {
+    tips.push('强调安全性、可信度和数据可视化');
+  }
+
+  return {
+    principles,
+    interaction,
+    layout,
+    config,
+    tips,
+  };
+}
 
 /**
  * 获取数据加载器实例
@@ -64,7 +277,12 @@ async function getReasoningEngine(): Promise<DesignReasoningEngine> {
 }
 
 /**
- * UI 设计系统生成工具（重构版 - 只返回模板内容，不写文件）
+ * UI 设计系统生成工具（重构版 - AI 驱动的文档生成）
+ * 
+ * 不再使用硬编码模板，而是返回核心数据和创作指导，
+ * 让 AI 根据推荐自由创建文档内容
+ * 
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.5, 6.1-6.6
  */
 export async function uiDesignSystem(args: any) {
   try {
@@ -83,9 +301,9 @@ export async function uiDesignSystem(args: any) {
     // 生成设计系统推荐
     const recommendation = engine.generateRecommendation(request);
     
-    // 格式化输出
+    // 格式化输出（保留 ASCII Box 和 JSON 格式化）
     const formatter = new ASCIIBoxFormatter();
-    const asciiBox = formatter.format(recommendation);  // ASCII Box 格式（核心）
+    const asciiBox = formatter.format(recommendation);
     
     // 生成 JSON 格式
     const designSystemJson = formatDesignSystemJson(
@@ -94,37 +312,63 @@ export async function uiDesignSystem(args: any) {
       request.stack
     );
     
-    // 准备模板参数
-    const templateParams = {
-      productType: request.productType,
-      stack: request.stack,
-      targetAudience: request.targetAudience,
-      recommendation,
-      designSystemJson,
+    // 生成文件索引（按创建顺序）
+    const fileIndex = generateFileIndex();
+    
+    // 生成创作指导
+    const creationGuidance = generateCreationGuidance(
+      request.productType,
+      request.stack
+    );
+    
+    // 构建输出对象
+    const output: UIDesignSystemOutput = {
       asciiBox,
+      designSystemJson,
+      fileIndex,
+      creationGuidance,
+      recommendation,
     };
     
-    // 使用模板类生成所有文档内容（但不写文件）
-    const indexMd = DesignSystemTemplates.generateIndexMd(templateParams);
-    const principlesDoc = DesignSystemTemplates.generatePrinciplesMd(templateParams);
-    const interactionDoc = DesignSystemTemplates.generateInteractionMd(templateParams);
-    const layoutDoc = DesignSystemTemplates.generateLayoutMd(templateParams);
-    const configDoc = DesignSystemTemplates.generateConfigMd(templateParams);
-    const readmeDoc = DesignSystemTemplates.generateReadmeMd(templateParams);
+    // 格式化文件索引列表
+    const fileIndexList = fileIndex
+      .map(file => `${file.order}. **${file.path}** ${file.required ? '(必需)' : '(可选)'}\n   ${file.purpose}`)
+      .join('\n\n');
     
-    // 返回所有模板内容，让 AI 决定如何处理
+    // 格式化创作指导
+    const guidanceText = `
+### 设计原则文档主题
+${creationGuidance.principles.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
+
+### 交互规范文档主题
+${creationGuidance.interaction.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
+
+### 布局规范文档主题
+${creationGuidance.layout.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
+
+### 技术配置文档主题
+${creationGuidance.config.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
+
+### 创作提示
+${creationGuidance.tips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
+`;
+    
+    // 返回新的输出格式（Requirements: 2.1, 2.5, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6）
     return {
       content: [
         {
           type: "text",
-          text: `✅ 设计系统推荐已生成
+          text: `# ✅ 设计系统推荐已生成
 
 **产品类型**: ${request.productType}
 **技术栈**: ${request.stack || 'html'}
+${request.targetAudience ? `**目标用户**: ${request.targetAudience}` : ''}
 
 ---
 
-## 🎨 AI 设计推荐
+## 🎨 1. 核心设计推荐（ASCII Box）
+
+以下是基于 AI 推理引擎生成的核心设计推荐：
 
 \`\`\`
 ${asciiBox}
@@ -132,37 +376,9 @@ ${asciiBox}
 
 ---
 
-## 📝 请创建以下文件
+## 📊 2. 精确配置数据（JSON）
 
-## � 请创建以下文件
-
-**重要**: 以下是 AI 推荐的设计系统文档内容，请将这些内容写入到对应的文件中。
-
-### 文件结构
-
-\`\`\`
-docs/
-├── design-system.md          # 主文档（包含上述 ASCII Box 推荐）
-├── design-system.json        # JSON 配置（供程序读取）
-└── design-guidelines/        # 详细设计指南
-    ├── README.md             # 文档索引
-    ├── 01-principles.md      # 设计原则
-    ├── 02-interaction.md     # 交互规范
-    ├── 03-layout.md          # 布局规范
-    └── 04-config.md          # 技术配置
-\`\`\`
-
----
-
-### 📄 请创建文件: docs/design-system.md
-
-\`\`\`markdown
-${indexMd}
-\`\`\`
-
----
-
-### 📄 请创建文件: docs/design-system.json
+以下是机器可读的设计系统配置，包含所有精确数值：
 
 \`\`\`json
 ${JSON.stringify(designSystemJson, null, 2)}
@@ -170,49 +386,73 @@ ${JSON.stringify(designSystemJson, null, 2)}
 
 ---
 
-### 📄 请创建文件: docs/design-guidelines/README.md
+## 📁 3. 文件索引（按创建顺序）
 
-\`\`\`markdown
-${readmeDoc}
-\`\`\`
+请严格按照以下顺序创建文件：
 
----
+${fileIndexList}
 
-### 📄 请创建文件: docs/design-guidelines/01-principles.md
-
-\`\`\`markdown
-${principlesDoc}
-\`\`\`
+**注意**: design-system.md 是最后创建的主文档，它应该包含完整的设计系统概览和 ASCII Box 推荐。
 
 ---
 
-### 📄 请创建文件: docs/design-guidelines/02-interaction.md
+## 📝 4. 文档创作指导
 
-\`\`\`markdown
-${interactionDoc}
-\`\`\`
+以下是各类文档应包含的关键主题。**请根据上述 ASCII Box 推荐和 JSON 数据自由创作内容，不要使用固定模板**：
 
----
-
-### 📄 请创建文件: docs/design-guidelines/03-layout.md
-
-\`\`\`markdown
-${layoutDoc}
-\`\`\`
+${guidanceText}
 
 ---
 
-### 📄 请创建文件: docs/design-guidelines/04-config.md
+## ✨ 请根据以上推荐和指导创建文档
 
-\`\`\`markdown
-${configDoc}
-\`\`\`
+**现在，请按照文件索引的顺序，逐个创建设计系统文档。**
+
+### 创作要求：
+
+1. **使用核心数据**：
+   - 将 ASCII Box 中的核心推荐作为设计依据
+   - 使用 JSON 数据中的精确数值（颜色代码、字体大小、间距值等）
+   - 确保所有数值与 JSON 配置保持一致
+
+2. **遵循文件顺序**：
+   - 严格按照文件索引的顺序创建（1→2→3→4→5→6→7）
+   - design-system.json 最先创建（包含所有精确配置）
+   - design-system.md 最后创建（包含完整概览）
+
+3. **自由创作内容**：
+   - 参考创作指导中的主题列表
+   - 根据产品类型 "${request.productType}" 调整重点
+   ${request.stack ? `- 提供 ${request.stack} 的具体实现示例` : ''}
+   - 不要局限于固定模板，发挥创造力
+
+4. **保持一致性**：
+   - 所有文档使用相同的设计 Token（颜色、字体、间距）
+   - 确保术语和命名规范统一
+   - 交叉引用其他文档时保持准确
+
+5. **提供实用示例**：
+   - 包含具体的代码示例（不要抽象描述）
+   - 展示实际应用场景
+   - 参考反模式（antiPatterns）提供"应避免"的建议
+
+### 开始创作：
+
+**第一步**：创建 \`docs/design-system.json\`，包含所有精确配置数据（使用上面的 JSON）
+
+**第二步**：创建 \`docs/design-guidelines/README.md\`，提供设计指南的索引和导航
+
+**第三步至第六步**：依次创建四个设计指南文档（principles、interaction、layout、config）
+
+**最后一步**：创建 \`docs/design-system.md\`，包含以下内容：
+   - ASCII Box 推荐（核心设计）
+   - 完整的设计系统概览
+   - **文件索引**（列出所有设计文档的链接，方便后续查看和使用）
+   - 快速开始指南
 
 ---
 
-## ✅ 完成后
-
-文件创建完成后，即可使用 \`start_ui "页面名称"\` 生成 UI 组件，所有组件将自动应用上述设计系统规范。
+🚀 **准备好了吗？让我们开始创建第一个文件吧！**
 `,
         },
       ],

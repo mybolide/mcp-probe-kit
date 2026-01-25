@@ -9,15 +9,15 @@
 > **实现方式**: Python 原版 → TypeScript 移植（功能完全一致）
 
 ### 1. ui_design_system - 设计系统生成器
-**用途：** 基于 100 条行业规则的智能推荐，自动生成完整的 UI 设计系统配置
+**用途：** 基于 100 条行业规则的智能推荐，生成设计系统推荐和创作指导
 
 **核心功能：**
 - **智能推理引擎**：6 步推理流程（产品类型匹配 → 应用推理规则 → 多领域搜索 → 优先级选择 → 组合效果 → 生成推荐）
 - **100 条行业规则**：覆盖 SaaS、电商、医疗、金融、教育等多个行业
 - **完整设计系统**：色彩（11 级色阶）、字体（Sans/Serif/Mono）、间距（基于 4px）、组件样式
 - **多技术栈支持**：React、Vue、Next.js、Tailwind、Svelte、Astro 等
-- **双格式输出**：Markdown（人类阅读）+ JSON（机器读取）
-- **自动保存文件**：自动保存到 `docs/design-system.md` 和 `docs/design-system.json` ✨
+- **双格式输出**：ASCII Box 推荐 + JSON 配置数据
+- **AI 驱动创作**：提供创作指导，AI 根据推荐自由创作文档 ✨
 
 **提问示例：**
 - "帮我生成一个 React 设计系统"
@@ -33,9 +33,21 @@
 - `spacing`: 间距系统（可选）- compact/normal/relaxed
 - `border_radius`: 圆角风格（可选）- none/small/medium/large
 
-**输出文件：**
-- `docs/design-system.md` - Markdown 文档（人类阅读）
-- `docs/ui/design-system.json` - JSON 配置（机器读取，供后续工具使用）
+**输出内容：**
+- **ASCII Box 推荐**：核心设计推荐（颜色、字体、间距等）
+- **JSON 配置数据**：精确的设计规范数值
+- **文件索引**：需要创建的文件列表（按顺序）
+- **创作指导**：每个文档应包含的主题和提示
+
+**工作流程：**
+1. 工具返回设计推荐和创作指导
+2. AI 根据指导创建文档内容
+3. 生成文档：设计原则、交互规范、布局规范、技术配置
+
+**注意：**
+- 工具不再自动生成完整文档内容
+- AI 会根据推荐和指导自由创作
+- 这样可以根据具体情况调整文档内容和结构
 
 **使用示例：**
 ```
@@ -49,11 +61,20 @@ AI 调用: ui_design_system
 }
 
 返回: 
-✅ 文件已保存
-  - docs/design-system.md（人类阅读）
-  - docs/ui/design-system.json（机器读取）
-  
-包含完整的设计系统配置
+✅ 设计推荐和创作指导
+  - ASCII Box 推荐（核心设计）
+  - JSON 配置数据（精确数值）
+  - 文件索引（要创建的文件）
+  - 创作指导（每个文档的主题）
+
+AI 根据指导创建文档:
+  ├─ docs/design-system.md（主文档）
+  ├─ docs/design-system.json（JSON 配置）
+  └─ docs/design-guidelines/（详细规范）
+      ├─ 01-principles.md（设计原则）
+      ├─ 02-interaction.md（交互规范）
+      ├─ 03-layout.md（布局规范）
+      └─ 04-config.md（技术配置）
 ```
 
 ---

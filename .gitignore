@@ -35,3 +35,6 @@ npm-debug.log*
 docs/specs/
 .kiro
 skills
+
+test-*
+vitest.config.ts

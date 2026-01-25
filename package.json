@@ -11,7 +11,10 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "dev": "tsc && node build/index.js",
-    "test": "npm run build && node test-server.js",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:server": "npm run build && node test-server.js",
     "inspector": "npx @modelcontextprotocol/inspector node build/index.js",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
@@ -65,9 +68,11 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/tar": "^6.1.13",
+    "@vitest/ui": "^4.0.18",
     "csv-parse": "^6.1.0",
     "tar": "^7.5.6",
     "tsx": "^4.21.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.18"
   }
 }
