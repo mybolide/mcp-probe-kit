@@ -38,3 +38,4 @@ skills
 
 test-*
 vitest.config.ts
+test-output.txt
