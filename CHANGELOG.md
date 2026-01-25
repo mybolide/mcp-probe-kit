@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2025-01-24
+
+### Added
+- 🎨 **新增 UI/UX Pro Max 工具集 - 设计系统生成与搜索**
+  - **3 个新工具**：
+    - `ui_design_system` - 生成完整设计系统（色彩、字体、间距、组件）
+    - `ui_search` - 智能搜索 UI/UX 数据库（BM25 算法）
+    - `sync_ui_data` - 同步最新 UI/UX 数据到本地缓存
+  - **三层数据策略**：
+    1. 内嵌数据（构建时同步，离线可用）
+    2. 缓存数据（运行时更新到 `~/.mcp-probe-kit/ui-ux-data/`）
+    3. 手动同步（用户触发，强制更新）
+  - **数据来源**：npm 包 `uipro-cli` (v2.2.0+)
+  - **支持技术栈**：React、Vue、Next.js、Nuxt.js、Tailwind、Svelte、Astro 等
+  - **数据类别**：颜色、图标、图表、落地页、产品、字体、样式、UX 指南等
+  - **BM25 搜索引擎**：智能相关性排序，支持中英文搜索
+  - **设计系统生成器**：自动生成可用代码（React/Vue/Tailwind/CSS）
+
+### Changed
+- 📦 **工具总数更新为 46 个**（37 个基础工具 + 9 个智能编排）
+- 🔧 **构建流程优化**：添加 `prebuild` 脚本自动同步 UI/UX 数据
+- 📚 **新增依赖**：`tar`、`csv-parse`、`tsx` 用于数据同步
+
+### Technical Details
+- 实现 BM25 搜索算法（`src/utils/bm25.ts`）
+- UI 搜索引擎（`src/utils/ui-search-engine.ts`）
+- 设计系统生成器（`src/utils/design-system-generator.ts`）
+- 缓存管理器（`src/utils/cache-manager.ts`）
+- 数据加载器（`src/utils/ui-data-loader.ts`）
+- 数据同步工具（`src/utils/ui-sync.ts`）
+
 ## [1.13.0] - 2025-01-21
 
 ### Added

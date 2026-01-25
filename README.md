@@ -7,9 +7,9 @@
 
 > 🚀 AI 开发增强工具集 - 让 AI 更懂你的开发流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **43 个实用工具**（34 个基础工具 + 9 个智能编排），覆盖代码质量、开发效率、项目管理全流程。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **49 个实用工具**（37 个基础工具 + 9 个智能编排 + 3 个 UI/UX 新增），覆盖代码质量、开发效率、项目管理、UI/UX 设计全流程。
 
-**✨ v1.12.0 新增**: Interview 模式 - 先慢下来，通过访谈把需求想清楚，反而能更快！
+**✨ v1.14.0 新增**: UI/UX Pro Max - 完整 UI 开发工作流，从设计系统到最终代码，支持 React、Vue、Tailwind 等多种技术栈！
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
@@ -19,7 +19,28 @@
 
 ## ✨ 功能特性
 
-### 🎯 访谈工具（2 个工具）🆕
+### 🎨 UI/UX Pro Max（6 个工具）🆕
+- **`ui_design_system`** - 设计系统生成器：基于 100 条行业规则的智能推荐，自动生成完整的色彩、字体、间距、组件配置（输出 Markdown + JSON）
+- **`init_component_catalog`** - 组件目录生成器：基于设计系统生成组件目录，定义可用的 UI 组件及其属性（占位符语法）
+- **`render_ui`** - UI 渲染引擎：将 JSON 模板渲染为最终代码，自动应用设计规范（占位符替换）
+- **`start_ui`** - 统一 UI 开发编排：一键完成整个 UI 开发流程（设计系统 → 组件目录 → 模板 → 代码）
+- **`ui_search`** - UI/UX 智能搜索：BM25 算法搜索颜色、图标、图表、组件、设计模式等 24 类数据（支持 catalog/template 模式）
+- **`sync_ui_data`** - 数据同步工具：从 npm 包 `uipro-cli` 自动同步最新 UI/UX 数据（来源：[ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)）
+
+**完整工作流**：
+```bash
+# 第1步：生成设计系统
+ui_design_system --product_type="SaaS" --stack="react"
+
+# 第2步：一键生成多个页面（自动应用设计规范）
+start_ui "登录页面"
+start_ui "用户列表"
+start_ui "设置页面"
+
+# 结果：所有页面样式完全统一 ✨
+```
+
+### �🎯 访谈工具（2 个工具）
 - **`interview`** - 需求访谈模式：在开发前通过结构化提问澄清需求，避免理解偏差和返工
 - **`ask_user`** - 通用提问工具：AI 可随时向用户提问，澄清不确定的信息
 

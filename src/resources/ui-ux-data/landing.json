@@ -1,0 +1,262 @@
+[
+  {
+    "No": "1",
+    "Pattern Name": "Hero + Features + CTA",
+    "Keywords": "hero, hero-centric, features, feature-rich, cta, call-to-action",
+    "Section Order": "1. Hero with headline/image, 2. Value prop, 3. Key features (3-5), 4. CTA section, 5. Footer",
+    "Primary CTA Placement": "Hero (sticky) + Bottom",
+    "Color Strategy": "Hero: Brand primary or vibrant. Features: Card bg #FAFAFA. CTA: Contrasting accent color",
+    "Recommended Effects": "Hero parallax, feature card hover lift, CTA glow on hover",
+    "Conversion Optimization": "Deep CTA placement. Use contrasting color (at least 7:1 contrast ratio). Sticky navbar CTA."
+  },
+  {
+    "No": "2",
+    "Pattern Name": "Hero + Testimonials + CTA",
+    "Keywords": "hero, testimonials, social-proof, trust, reviews, cta",
+    "Section Order": "1. Hero, 2. Problem statement, 3. Solution overview, 4. Testimonials carousel, 5. CTA",
+    "Primary CTA Placement": "Hero (sticky) + Post-testimonials",
+    "Color Strategy": "Hero: Brand color. Testimonials: Light bg #F5F5F5. Quotes: Italic, muted color #666. CTA: Vibrant",
+    "Recommended Effects": "Testimonial carousel slide animations, quote marks animations, avatar fade-in",
+    "Conversion Optimization": "Social proof before CTA. Use 3-5 testimonials. Include photo + name + role. CTA after social proof."
+  },
+  {
+    "No": "3",
+    "Pattern Name": "Product Demo + Features",
+    "Keywords": "demo, product-demo, features, showcase, interactive",
+    "Section Order": "1. Hero, 2. Product video/mockup (center), 3. Feature breakdown per section, 4. Comparison (optional), 5. CTA",
+    "Primary CTA Placement": "Video center + CTA right/bottom",
+    "Color Strategy": "Video surround: Brand color overlay. Features: Icon color #0080FF. Text: Dark #222",
+    "Recommended Effects": "Video play button pulse, feature scroll reveals, demo interaction highlights",
+    "Conversion Optimization": "Embedded product demo increases engagement. Use interactive mockup if possible. Auto-play video muted."
+  },
+  {
+    "No": "4",
+    "Pattern Name": "Minimal Single Column",
+    "Keywords": "minimal, simple, direct, single-column, clean",
+    "Section Order": "1. Hero headline, 2. Short description, 3. Benefit bullets (3 max), 4. CTA, 5. Footer",
+    "Primary CTA Placement": "Center, large CTA button",
+    "Color Strategy": "Minimalist: Brand + white #FFFFFF + accent. Buttons: High contrast 7:1+. Text: Black/Dark grey",
+    "Recommended Effects": "Minimal hover effects. Smooth scroll. CTA scale on hover (subtle)",
+    "Conversion Optimization": "Single CTA focus. Large typography. Lots of whitespace. No nav clutter. Mobile-first."
+  },
+  {
+    "No": "5",
+    "Pattern Name": "Funnel (3-Step Conversion)",
+    "Keywords": "funnel, conversion, steps, wizard, onboarding",
+    "Section Order": "1. Hero, 2. Step 1 (problem), 3. Step 2 (solution), 4. Step 3 (action), 5. CTA progression",
+    "Primary CTA Placement": "Each step: mini-CTA. Final: main CTA",
+    "Color Strategy": "Step colors: 1 (Red/Problem), 2 (Orange/Process), 3 (Green/Solution). CTA: Brand color",
+    "Recommended Effects": "Step number animations, progress bar fill, step transitions smooth scroll",
+    "Conversion Optimization": "Progressive disclosure. Show only essential info per step. Use progress indicators. Multiple CTAs."
+  },
+  {
+    "No": "6",
+    "Pattern Name": "Comparison Table + CTA",
+    "Keywords": "comparison, table, compare, versus, cta",
+    "Section Order": "1. Hero, 2. Problem intro, 3. Comparison table (product vs competitors), 4. Pricing (optional), 5. CTA",
+    "Primary CTA Placement": "Table: Right column. CTA: Below table",
+    "Color Strategy": "Table: Alternating rows (white/light grey). Your product: Highlight #FFFACD (light yellow) or green. Text: Dark",
+    "Recommended Effects": "Table row hover highlight, price toggle animations, feature checkmark animations",
+    "Conversion Optimization": "Use comparison to show unique value. Highlight your product row. Include 'free trial' in pricing row."
+  },
+  {
+    "No": "7",
+    "Pattern Name": "Lead Magnet + Form",
+    "Keywords": "lead, form, signup, capture, email, magnet",
+    "Section Order": "1. Hero (benefit headline), 2. Lead magnet preview (ebook cover, checklist, etc), 3. Form (minimal fields), 4. CTA submit",
+    "Primary CTA Placement": "Form CTA: Submit button",
+    "Color Strategy": "Lead magnet: Professional design. Form: Clean white bg. Inputs: Light border #CCCCCC. CTA: Brand color",
+    "Recommended Effects": "Form focus state animations, input validation animations, success confirmation animation",
+    "Conversion Optimization": "Form fields ≤ 3 for best conversion. Offer valuable lead magnet preview. Show form submission progress."
+  },
+  {
+    "No": "8",
+    "Pattern Name": "Pricing Page + CTA",
+    "Keywords": "pricing, plans, tiers, comparison, cta",
+    "Section Order": "1. Hero (pricing headline), 2. Price comparison cards, 3. Feature comparison table, 4. FAQ section, 5. Final CTA",
+    "Primary CTA Placement": "Each card: CTA button. Sticky CTA in nav",
+    "Color Strategy": "Free: Grey, Starter: Blue, Pro: Green/Gold, Enterprise: Dark. Cards: 1px border, shadow",
+    "Recommended Effects": "Price toggle animation (monthly/yearly), card comparison highlight, FAQ accordion open/close",
+    "Conversion Optimization": "Recommend starter plan (pre-select/highlight). Show annual discount (20-30%). Use FAQs to address concerns."
+  },
+  {
+    "No": "9",
+    "Pattern Name": "Video-First Hero",
+    "Keywords": "video, hero, media, visual, engaging",
+    "Section Order": "1. Hero with video background, 2. Key features overlay, 3. Benefits section, 4. CTA",
+    "Primary CTA Placement": "Overlay on video (center/bottom) + Bottom section",
+    "Color Strategy": "Dark overlay 60% on video. Brand accent for CTA. White text on dark.",
+    "Recommended Effects": "Video autoplay muted, parallax scroll, text fade-in on scroll",
+    "Conversion Optimization": "86% higher engagement with video. Add captions for accessibility. Compress video for performance."
+  },
+  {
+    "No": "10",
+    "Pattern Name": "Scroll-Triggered Storytelling",
+    "Keywords": "storytelling, scroll, narrative, story, immersive",
+    "Section Order": "1. Intro hook, 2. Chapter 1 (problem), 3. Chapter 2 (journey), 4. Chapter 3 (solution), 5. Climax CTA",
+    "Primary CTA Placement": "End of each chapter (mini) + Final climax CTA",
+    "Color Strategy": "Progressive reveal. Each chapter has distinct color. Building intensity.",
+    "Recommended Effects": "ScrollTrigger animations, parallax layers, progressive disclosure, chapter transitions",
+    "Conversion Optimization": "Narrative increases time-on-page 3x. Use progress indicator. Mobile: simplify animations."
+  },
+  {
+    "No": "11",
+    "Pattern Name": "AI Personalization Landing",
+    "Keywords": "ai, personalization, smart, recommendation, dynamic",
+    "Section Order": "1. Dynamic hero (personalized), 2. Relevant features, 3. Tailored testimonials, 4. Smart CTA",
+    "Primary CTA Placement": "Context-aware placement based on user segment",
+    "Color Strategy": "Adaptive based on user data. A/B test color variations per segment.",
+    "Recommended Effects": "Dynamic content swap, fade transitions, personalized product recommendations",
+    "Conversion Optimization": "20%+ conversion with personalization. Requires analytics integration. Fallback for new users."
+  },
+  {
+    "No": "12",
+    "Pattern Name": "Waitlist/Coming Soon",
+    "Keywords": "waitlist, coming-soon, launch, early-access, notify",
+    "Section Order": "1. Hero with countdown, 2. Product teaser/preview, 3. Email capture form, 4. Social proof (waitlist count)",
+    "Primary CTA Placement": "Email form prominent (above fold) + Sticky form on scroll",
+    "Color Strategy": "Anticipation: Dark + accent highlights. Countdown in brand color. Urgency indicators.",
+    "Recommended Effects": "Countdown timer animation, email validation feedback, success confetti, social share buttons",
+    "Conversion Optimization": "Scarcity + exclusivity. Show waitlist count. Early access benefits. Referral program."
+  },
+  {
+    "No": "13",
+    "Pattern Name": "Comparison Table Focus",
+    "Keywords": "comparison, table, versus, compare, features",
+    "Section Order": "1. Hero (problem statement), 2. Comparison matrix (you vs competitors), 3. Feature deep-dive, 4. Winner CTA",
+    "Primary CTA Placement": "After comparison table (highlighted row) + Bottom",
+    "Color Strategy": "Your product column highlighted (accent bg or green). Competitors neutral. Checkmarks green.",
+    "Recommended Effects": "Table row hover highlight, feature checkmark animations, sticky comparison header",
+    "Conversion Optimization": "Show value vs competitors. 35% higher conversion. Be factual. Include pricing if favorable."
+  },
+  {
+    "No": "14",
+    "Pattern Name": "Pricing-Focused Landing",
+    "Keywords": "pricing, price, cost, plans, subscription",
+    "Section Order": "1. Hero (value proposition), 2. Pricing cards (3 tiers), 3. Feature comparison, 4. FAQ, 5. Final CTA",
+    "Primary CTA Placement": "Each pricing card + Sticky CTA in nav + Bottom",
+    "Color Strategy": "Popular plan highlighted (brand color border/bg). Free: grey. Enterprise: dark/premium.",
+    "Recommended Effects": "Price toggle monthly/annual animation, card hover lift, FAQ accordion smooth open",
+    "Conversion Optimization": "Annual discount 20-30%. Recommend mid-tier (most popular badge). Address objections in FAQ."
+  },
+  {
+    "No": "15",
+    "Pattern Name": "App Store Style Landing",
+    "Keywords": "app, mobile, download, store, install",
+    "Section Order": "1. Hero with device mockup, 2. Screenshots carousel, 3. Features with icons, 4. Reviews/ratings, 5. Download CTAs",
+    "Primary CTA Placement": "Download buttons prominent (App Store + Play Store) throughout",
+    "Color Strategy": "Dark/light matching app store feel. Star ratings in gold. Screenshots with device frames.",
+    "Recommended Effects": "Device mockup rotations, screenshot slider, star rating animations, download button pulse",
+    "Conversion Optimization": "Show real screenshots. Include ratings (4.5+ stars). QR code for mobile. Platform-specific CTAs."
+  },
+  {
+    "No": "16",
+    "Pattern Name": "FAQ/Documentation Landing",
+    "Keywords": "faq, documentation, help, support, questions",
+    "Section Order": "1. Hero with search bar, 2. Popular categories, 3. FAQ accordion, 4. Contact/support CTA",
+    "Primary CTA Placement": "Search bar prominent + Contact CTA for unresolved questions",
+    "Color Strategy": "Clean, high readability. Minimal color. Category icons in brand color. Success green for resolved.",
+    "Recommended Effects": "Search autocomplete, smooth accordion open/close, category hover, helpful feedback buttons",
+    "Conversion Optimization": "Reduce support tickets. Track search analytics. Show related articles. Contact escalation path."
+  },
+  {
+    "No": "17",
+    "Pattern Name": "Immersive/Interactive Experience",
+    "Keywords": "immersive, interactive, experience, 3d, animation",
+    "Section Order": "1. Full-screen interactive element, 2. Guided product tour, 3. Key benefits revealed, 4. CTA after completion",
+    "Primary CTA Placement": "After interaction complete + Skip option for impatient users",
+    "Color Strategy": "Immersive experience colors. Dark background for focus. Highlight interactive elements.",
+    "Recommended Effects": "WebGL, 3D interactions, gamification elements, progress indicators, reward animations",
+    "Conversion Optimization": "40% higher engagement. Performance trade-off. Provide skip option. Mobile fallback essential."
+  },
+  {
+    "No": "18",
+    "Pattern Name": "Event/Conference Landing",
+    "Keywords": "event, conference, meetup, registration, schedule",
+    "Section Order": "1. Hero (date/location/countdown), 2. Speakers grid, 3. Agenda/schedule, 4. Sponsors, 5. Register CTA",
+    "Primary CTA Placement": "Register CTA sticky + After speakers + Bottom",
+    "Color Strategy": "Urgency colors (countdown). Event branding. Speaker cards professional. Sponsor logos neutral.",
+    "Recommended Effects": "Countdown timer, speaker hover cards with bio, agenda tabs, early bird countdown",
+    "Conversion Optimization": "Early bird pricing with deadline. Social proof (past attendees). Speaker credibility. Multi-ticket discounts."
+  },
+  {
+    "No": "19",
+    "Pattern Name": "Product Review/Ratings Focused",
+    "Keywords": "reviews, ratings, testimonials, social-proof, stars",
+    "Section Order": "1. Hero (product + aggregate rating), 2. Rating breakdown, 3. Individual reviews, 4. Buy/CTA",
+    "Primary CTA Placement": "After reviews summary + Buy button alongside reviews",
+    "Color Strategy": "Trust colors. Star ratings gold. Verified badge green. Review sentiment colors.",
+    "Recommended Effects": "Star fill animations, review filtering, helpful vote interactions, photo lightbox",
+    "Conversion Optimization": "User-generated content builds trust. Show verified purchases. Filter by rating. Respond to negative reviews."
+  },
+  {
+    "No": "20",
+    "Pattern Name": "Community/Forum Landing",
+    "Keywords": "community, forum, social, members, discussion",
+    "Section Order": "1. Hero (community value prop), 2. Popular topics/categories, 3. Active members showcase, 4. Join CTA",
+    "Primary CTA Placement": "Join button prominent + After member showcase",
+    "Color Strategy": "Warm, welcoming. Member photos add humanity. Topic badges in brand colors. Activity indicators green.",
+    "Recommended Effects": "Member avatars animation, activity feed live updates, topic hover previews, join success celebration",
+    "Conversion Optimization": "Show active community (member count, posts today). Highlight benefits. Preview content. Easy onboarding."
+  },
+  {
+    "No": "21",
+    "Pattern Name": "Before-After Transformation",
+    "Keywords": "before-after, transformation, results, comparison",
+    "Section Order": "1. Hero (problem state), 2. Transformation slider/comparison, 3. How it works, 4. Results CTA",
+    "Primary CTA Placement": "After transformation reveal + Bottom",
+    "Color Strategy": "Contrast: muted/grey (before) vs vibrant/colorful (after). Success green for results.",
+    "Recommended Effects": "Slider comparison interaction, before/after reveal animations, result counters, testimonial videos",
+    "Conversion Optimization": "Visual proof of value. 45% higher conversion. Real results. Specific metrics. Guarantee offer."
+  },
+  {
+    "No": "22",
+    "Pattern Name": "Marketplace / Directory",
+    "Keywords": "marketplace, directory, search, listing",
+    "Section Order": "1. Hero (Search focused), 2. Categories, 3. Featured Listings, 4. Trust/Safety, 5. CTA (Become a host/seller)",
+    "Primary CTA Placement": "Hero Search Bar + Navbar 'List your item'",
+    "Color Strategy": "Search: High contrast. Categories: Visual icons. Trust: Blue/Green.",
+    "Recommended Effects": "Search autocomplete animation",
+    "Conversion Optimization": " map hover pins,  card carousel, Search bar is the CTA. Reduce friction to search. Popular searches suggestions."
+  },
+  {
+    "No": "23",
+    "Pattern Name": "Newsletter / Content First",
+    "Keywords": "newsletter, content, writer, blog, subscribe",
+    "Section Order": "1. Hero (Value Prop + Form), 2. Recent Issues/Archives, 3. Social Proof (Subscriber count), 4. About Author",
+    "Primary CTA Placement": "Hero inline form + Sticky header form",
+    "Color Strategy": "Minimalist. Paper-like background. Text focus. Accent color for Subscribe.",
+    "Recommended Effects": "Text highlight animations",
+    "Conversion Optimization": " typewriter effect,  subtle fade-in, Single field form (Email only). Show 'Join X, 000 readers'. Read sample link."
+  },
+  {
+    "No": "24",
+    "Pattern Name": "Webinar Registration",
+    "Keywords": "webinar, registration, event, training, live",
+    "Section Order": "1. Hero (Topic + Timer + Form), 2. What you'll learn, 3. Speaker Bio, 4. Urgency/Bonuses, 5. Form (again)",
+    "Primary CTA Placement": "Hero (Right side form) + Bottom anchor",
+    "Color Strategy": "Urgency: Red/Orange. Professional: Blue/Navy. Form: High contrast white.",
+    "Recommended Effects": "Countdown timer",
+    "Conversion Optimization": " speaker avatar float,  urgent ticker, Limited seats logic. 'Live' indicator. Auto-fill timezone."
+  },
+  {
+    "No": "25",
+    "Pattern Name": "Enterprise Gateway",
+    "Keywords": "enterprise, corporate, gateway, solutions, portal",
+    "Section Order": "1. Hero (Video/Mission), 2. Solutions by Industry, 3. Solutions by Role, 4. Client Logos, 5. Contact Sales",
+    "Primary CTA Placement": "Contact Sales (Primary) + Login (Secondary)",
+    "Color Strategy": "Corporate: Navy/Grey. High integrity. Conservative accents.",
+    "Recommended Effects": "Slow video background",
+    "Conversion Optimization": " logo carousel,  tab switching for industries, Path selection (I am a...). Mega menu navigation. Trust signals prominent."
+  },
+  {
+    "No": "26",
+    "Pattern Name": "Portfolio Grid",
+    "Keywords": "portfolio, grid, showcase, gallery, masonry",
+    "Section Order": "1. Hero (Name/Role), 2. Project Grid (Masonry), 3. About/Philosophy, 4. Contact",
+    "Primary CTA Placement": "Project Card Hover + Footer Contact",
+    "Color Strategy": "Neutral background (let work shine). Text: Black/White. Accent: Minimal.",
+    "Recommended Effects": "Image lazy load reveal",
+    "Conversion Optimization": " hover overlay info,  lightbox view, Visuals first. Filter by category. Fast loading essential."
+  }
+]

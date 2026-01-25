@@ -1,6 +1,532 @@
 # MCP Probe Kit 工具使用手册
 
-## 🎯 需求访谈工具 🆕
+> **版本**: v1.14.0 | **工具总数**: 49 个（37 个基础工具 + 9 个智能编排 + 3 个 UI/UX 新增）
+
+## � UI/UX Pro Max 工具 🆕
+
+> **数据来源**: [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) 项目  
+> **同步方式**: 通过 npm 包 `uipro-cli` 自动同步最新数据  
+> **实现方式**: Python 原版 → TypeScript 移植（功能完全一致）
+
+### 1. ui_design_system - 设计系统生成器
+**用途：** 基于 100 条行业规则的智能推荐，自动生成完整的 UI 设计系统配置
+
+**核心功能：**
+- **智能推理引擎**：6 步推理流程（产品类型匹配 → 应用推理规则 → 多领域搜索 → 优先级选择 → 组合效果 → 生成推荐）
+- **100 条行业规则**：覆盖 SaaS、电商、医疗、金融、教育等多个行业
+- **完整设计系统**：色彩（11 级色阶）、字体（Sans/Serif/Mono）、间距（基于 4px）、组件样式
+- **多技术栈支持**：React、Vue、Next.js、Tailwind、Svelte、Astro 等
+- **双格式输出**：Markdown（人类阅读）+ JSON（机器读取）
+- **自动保存文件**：自动保存到 `docs/design-system.md` 和 `docs/design-system.json` ✨
+
+**提问示例：**
+- "帮我生成一个 React 设计系统"
+- "为我的 Next.js 项目生成 Tailwind 配置"
+- "生成一个蓝色主题的设计系统"
+
+**参数说明：**
+- `product_type`: 产品类型（推荐）- SaaS/E-commerce/Healthcare/Fintech 等
+- `stack`: 技术栈（可选）- react/vue/nextjs/tailwind/svelte/astro
+- `color_scheme`: 色彩方案（可选）- light/dark/auto
+- `primary_color`: 主色调（可选）- 十六进制颜色值
+- `typography`: 字体方案（可选）- modern/classic/minimal
+- `spacing`: 间距系统（可选）- compact/normal/relaxed
+- `border_radius`: 圆角风格（可选）- none/small/medium/large
+
+**输出文件：**
+- `docs/design-system.md` - Markdown 文档（人类阅读）
+- `docs/ui/design-system.json` - JSON 配置（机器读取，供后续工具使用）
+
+**使用示例：**
+```
+你: "我要做一个 React 项目，帮我生成一套蓝色主题的设计系统"
+
+AI 调用: ui_design_system
+参数: {
+  product_type: "SaaS",
+  stack: "react",
+  primary_color: "#3b82f6"
+}
+
+返回: 
+✅ 文件已保存
+  - docs/design-system.md（人类阅读）
+  - docs/ui/design-system.json（机器读取）
+  
+包含完整的设计系统配置
+```
+
+---
+
+### 2. ui_search - UI/UX 智能搜索
+**用途：** 搜索 UI 组件、颜色方案、图标、设计模式、最佳实践
+
+**核心功能：**
+- **BM25 算法**：智能相关性排序（与原版一致）
+- **24 类数据**：colors、icons、charts、landing、products、typography、styles、ux-guidelines 等
+- **多语言支持**：中英文搜索
+- **技术栈过滤**：React、Vue、Next.js、Flutter、SwiftUI 等
+- **精准匹配**：按类别和技术栈过滤
+
+**提问示例：**
+- "我需要一个 React 的主按钮组件"
+- "搜索一下蓝色主题的配色方案"
+- "表单验证有什么 UX 最佳实践？"
+- "给我推荐一些图标"
+
+**参数说明：**
+- `query`: 搜索关键词（必填）
+- `category`: 数据类别（可选）- colors/icons/charts/react/vue 等
+- `stack`: 技术栈过滤（可选）
+- `limit`: 返回结果数量（可选，默认 10）
+- `min_score`: 最小相关性得分（可选，默认 0）
+
+**可搜索的类别：**
+- **设计元素**: colors（颜色）, icons（图标）, typography（字体）, styles（样式）
+- **组件**: charts（图表）, landing（落地页）, products（产品）, web-interface（Web 界面）
+- **指南**: ux-guidelines（UX 设计指南）, react-performance（React 性能）
+- **技术栈**: react, vue, nextjs, nuxtjs, svelte, astro, flutter, react-native, swiftui, shadcn 等
+
+**使用示例：**
+```
+你: "我需要一个 React 的主按钮组件"
+
+AI 调用: ui_search
+参数: {
+  query: "button primary",
+  category: "react",
+  limit: 5
+}
+
+返回: 5 个按钮组件实现，包括：
+- 组件代码
+- Props 说明
+- 使用示例
+- 相关性得分
+```
+
+---
+
+### 3. sync_ui_data - 数据同步工具
+**用途：** 同步最新的 UI/UX 数据到本地缓存
+
+**核心功能：**
+- **自动检查更新**：对比本地版本与 npm registry 最新版本
+- **智能同步**：仅在有新版本时下载（可强制同步）
+- **数据来源**：npm 包 `uipro-cli`（该包从 [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) 项目同步数据）
+- **格式转换**：自动将 CSV 转换为 JSON
+- **版本管理**：记录同步时间和版本号
+
+**提问示例：**
+- "检查一下 UI 数据有没有更新"
+- "更新 UI/UX 数据"
+- "强制同步 UI 数据"
+
+**参数说明：**
+- `force`: 是否强制同步（可选，默认 false）
+- `verbose`: 是否显示详细日志（可选，默认 false）
+
+**数据存储位置：**
+- **内嵌数据**: npm 包内部 `src/resources/ui-ux-data/`（构建时同步）
+- **缓存数据**: `~/.mcp-probe-kit/ui-ux-data/`（运行时更新）
+
+**数据流程：**
+```
+GitHub 项目 (ui-ux-pro-max-skill)
+    ↓
+npm 包 (uipro-cli)
+    ↓
+MCP Probe Kit (构建时/运行时同步)
+    ↓
+本地缓存 (~/.mcp-probe-kit/ui-ux-data/)
+```
+
+**使用示例：**
+```
+你: "检查一下 UI 数据有没有更新"
+
+AI 调用: sync_ui_data
+参数: { force: false }
+
+返回:
+✅ UI/UX 数据已是最新版本
+当前版本: 2.2.0
+最新版本: 2.2.0
+```
+
+**📖 相关资源：**
+- **原版项目**: [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (Python)
+- **数据包**: [uipro-cli](https://www.npmjs.com/package/uipro-cli) (npm)
+- **本实现**: TypeScript 移植版（功能完全一致）
+
+---
+
+### 4. init_component_catalog - 组件目录生成器 🆕
+**用途：** 基于设计系统规范生成组件目录，定义可用的 UI 组件及其属性
+
+**核心功能：**
+- **自动读取设计规范**：从 `docs/design-system.json` 读取配置
+- **占位符语法**：组件样式使用 `{colors.primary.500}` 格式
+- **渲染时替换**：`render_ui` 工具会自动替换占位符为实际值
+- **样式统一**：所有组件使用相同的设计规范
+- **自动保存文件**：自动保存到 `docs/component-catalog.json` ✨
+
+**提问示例：**
+- "生成组件目录"
+- "初始化 UI 组件库"
+
+**参数说明：**
+- 无需参数（自动读取 `docs/design-system.json`）
+
+**前置条件：**
+- 必须先运行 `ui_design_system` 生成设计系统
+
+**生成的组件：**
+- **基础组件**（7 个）：Button, Input, Card, Form, Modal, Table, Alert
+- **布局组件**（3 个）：Container, Stack, Grid
+
+**输出文件：**
+- `docs/ui/component-catalog.json` - 组件目录（包含占位符）
+
+**组件定义示例：**
+```json
+{
+  "name": "Button",
+  "description": "按钮组件",
+  "props": {
+    "variant": "primary | secondary | outline",
+    "size": "sm | md | lg",
+    "label": "string"
+  },
+  "baseClasses": "bg-[{colors.primary.500}] text-white hover:bg-[{colors.primary.600}]"
+}
+```
+
+**使用示例：**
+```
+你: "生成组件目录"
+
+AI 调用: init_component_catalog
+
+返回: 
+✅ 组件目录生成成功
+文件: docs/ui/component-catalog.json
+包含 10 个组件（7 个基础 + 3 个布局）
+```
+
+---
+
+### 5. render_ui - UI 渲染引擎 🆕
+**用途：** 将 JSON 模板渲染为最终代码，自动应用设计规范
+
+**核心功能：**
+- **读取三个文件**：模板 JSON、组件目录、设计规范
+- **占位符替换**：`{colors.primary.500}` → `#3b82f6`
+- **代码生成**：React/Vue/HTML 完整组件代码
+- **样式统一**：所有组件自动应用设计规范
+
+**提问示例：**
+- "渲染这个 UI 模板"
+- "把 login-form.json 转换成 React 代码"
+
+**参数说明：**
+- `template`: 模板文件路径（必填，如 `docs/ui/pages/login-form.json`）
+- `framework`: 目标框架（可选，默认 react）
+
+**占位符替换规则：**
+- `{colors.primary.500}` → 从 design-system.json 读取颜色
+- `{typography.fontSize.base}` → 从 design-system.json 读取字体大小
+- `{spacing.scale.4}` → 从 design-system.json 读取间距
+- `{borderRadius.md}` → 从 design-system.json 读取圆角
+- `{shadows.md}` → 从 design-system.json 读取阴影
+
+**使用示例：**
+```
+你: "把 login-form.json 转换成 React 代码"
+
+AI 调用: render_ui
+参数: {
+  template: "docs/ui/pages/login-form.json",
+  framework: "react"
+}
+
+返回: 完整的 React 组件代码（已应用设计规范）
+```
+
+---
+
+### 6. start_ui - 统一 UI 开发编排 🆕
+**用途：** 一键完成整个 UI 开发流程，从设计系统到最终代码
+
+**核心功能：**
+- **自动检查设计系统**：如果不存在，提示用户先生成
+- **自动生成组件目录**：如果不存在，自动调用 `init_component_catalog`
+- **智能模板生成**：根据描述生成 JSON 模板
+- **自动渲染代码**：调用 `render_ui` 生成最终代码
+
+**提问示例：**
+- "生成一个登录页面"
+- "我要做一个用户列表"
+- "帮我生成设置页面"
+
+**参数说明：**
+- `description`: UI 需求描述（必填）
+- `framework`: 目标框架（可选，默认 react）
+- `template`: 模板名称（可选，自动生成）
+
+**完整工作流：**
+```
+第1步：检查设计系统 ✅
+  ├─ 检查 docs/ui/design-system.json
+  └─ 如果不存在，提示用户先运行 ui_design_system
+
+第2步：检查/生成组件目录 🔄
+  ├─ 检查 docs/ui/component-catalog.json
+  └─ 如果不存在，自动调用 init_component_catalog
+
+第3步：搜索/生成 UI 模板 🔍
+  ├─ 调用 ui_search --mode=template
+  └─ 如果没找到，生成新模板并保存到 docs/ui/pages/
+
+第4步：渲染最终代码 🎨
+  ├─ 调用 render_ui
+  └─ 输出完整的组件代码
+```
+
+**使用示例：**
+```
+你: "生成一个登录页面"
+
+AI 调用: start_ui
+参数: {
+  description: "登录页面",
+  framework: "react"
+}
+
+返回:
+✅ 执行摘要
+  - 设计规范: ✅ 已应用 docs/ui/design-system.json
+  - 组件目录: ✅ 已使用 docs/ui/component-catalog.json
+  - UI 模板: ✅ 已生成 docs/ui/pages/login-page.json
+  - 最终代码: ✅ 已生成 React 代码
+
+🎨 设计规范应用
+  - ✅ 颜色: 使用 design-system.json 中的配色方案
+  - ✅ 字体: 使用 design-system.json 中的字体系统
+  - ✅ 间距: 使用 design-system.json 中的间距比例
+  - ✅ 圆角: 使用 design-system.json 中的圆角规范
+  - ✅ 阴影: 使用 design-system.json 中的阴影效果
+
+结果: 整个项目样式完全统一 ✨
+```
+
+**💡 使用技巧：**
+
+**技巧 1：快速原型**
+```bash
+# 一键生成多个页面
+start_ui "登录页面"
+start_ui "注册页面"
+start_ui "用户列表"
+start_ui "设置页面"
+```
+所有页面自动使用相同的设计规范！
+
+**技巧 2：修改设计规范**
+1. 编辑 `docs/ui/design-system.json`
+2. 修改颜色、字体等
+3. 重新运行 `start_ui`
+4. 所有页面自动应用新规范
+
+**技巧 3：保存模板**
+- 生成的模板保存在 `docs/ui/pages/` 目录
+- 可以复用、修改、版本控制
+
+---
+
+### 7. ui_search（增强版）- UI/UX 智能搜索 🆕
+**用途：** 搜索 UI 组件、颜色方案、图标、设计模式、组件目录、UI 模板
+
+**新增模式：**
+- **search 模式**（默认）：搜索 UI/UX 数据库
+- **catalog 模式**：查看组件目录
+- **template 模式**：搜索 UI 模板
+
+**提问示例：**
+- "查看组件目录"（catalog 模式）
+- "搜索登录表单模板"（template 模式）
+- "我需要一个 React 的主按钮组件"（search 模式）
+
+**参数说明：**
+- `mode`: 搜索模式（可选，默认 search）
+  - `search`: 搜索 UI/UX 数据
+  - `catalog`: 查看组件目录
+  - `template`: 搜索 UI 模板
+- `query`: 搜索关键词（catalog 模式不需要）
+- `category`: 数据类别（仅 search 模式）
+- `stack`: 技术栈过滤（仅 search 模式）
+- `limit`: 返回结果数量（默认 10）
+- `min_score`: 最小相关性得分（默认 0）
+
+**使用示例：**
+
+**示例 1：查看组件目录**
+```
+你: "查看组件目录"
+
+AI 调用: ui_search
+参数: { mode: "catalog" }
+
+返回:
+📦 组件目录
+共 10 个可用组件
+
+1. Button
+   描述: 按钮组件
+   Props: variant, size, label
+   样式: primary, secondary, outline
+
+2. Input
+   描述: 输入框组件
+   Props: label, type, placeholder
+   样式: default, error
+...
+```
+
+**示例 2：搜索 UI 模板**
+```
+你: "搜索登录表单模板"
+
+AI 调用: ui_search
+参数: {
+  mode: "template",
+  query: "登录表单"
+}
+
+返回:
+📄 UI 模板搜索结果
+找到 1 个匹配模板
+
+1. LoginForm
+   文件: docs/ui/pages/login-form.json
+   描述: 登录表单页面
+   组件数: 5
+```
+
+**示例 3：搜索 UI/UX 数据**
+```
+你: "我需要一个 React 的主按钮组件"
+
+AI 调用: ui_search
+参数: {
+  mode: "search",
+  query: "button primary",
+  category: "react",
+  limit: 5
+}
+
+返回: React 按钮组件的搜索结果
+```
+
+---
+
+## 🎨 完整 UI 开发工作流
+
+### 工作流程图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    完整 UI 开发工作流                        │
+└─────────────────────────────────────────────────────────────┘
+
+第1步：生成设计系统
+  ↓
+  ui_design_system --product_type="SaaS" --stack="react"
+  ↓
+  输出: docs/design-system.md（人类阅读）
+       docs/ui/design-system.json（机器读取）
+
+第2步：初始化组件目录（可选，start_ui 会自动调用）
+  ↓
+  init_component_catalog
+  ↓
+  输出: docs/ui/component-catalog.json
+
+第3步：生成 UI 页面（一键完成）
+  ↓
+  start_ui "登录页面"
+  ↓
+  自动执行:
+    ├─ 检查设计系统 ✅
+    ├─ 生成组件目录 🔄
+    ├─ 生成 UI 模板 🔍
+    └─ 渲染最终代码 🎨
+  ↓
+  输出: docs/ui/pages/login-page.json（模板）
+       完整的 React 组件代码
+
+第4步：生成更多页面
+  ↓
+  start_ui "用户列表"
+  start_ui "设置页面"
+  ↓
+  所有页面自动使用相同的设计规范 ✨
+```
+
+### 工具关系图
+
+```
+基础层（Base Layer）
+  ├─ ui_design_system    → 生成设计规范
+  ├─ init_component_catalog → 生成组件目录
+  └─ ui_search          → 搜索数据/模板/组件
+
+渲染层（Rendering Layer）
+  └─ render_ui          → JSON 模板 → 代码
+
+编排层（Orchestration Layer）
+  └─ start_ui           → 一键完成整个流程
+```
+
+### 适用场景
+
+**场景 1：新项目启动**
+```bash
+# 第1步：生成设计系统
+ui_design_system --product_type="SaaS" --stack="react"
+
+# 第2步：生成多个页面
+start_ui "登录页面"
+start_ui "注册页面"
+start_ui "用户列表"
+start_ui "设置页面"
+
+# 结果：所有页面样式完全统一 ✨
+```
+
+**场景 2：快速原型**
+```bash
+# 一键生成（自动检查设计系统）
+start_ui "登录页面"
+start_ui "数据表格"
+start_ui "表单页面"
+```
+
+**场景 3：高级定制**
+```bash
+# 第1步：生成设计系统
+ui_design_system --product_type="E-commerce" --stack="vue"
+
+# 第2步：自定义组件目录
+# 编辑 docs/component-catalog.json
+
+# 第3步：生成页面
+start_ui "商品列表" --framework=vue
+```
+
+---
+
+## 🎯 需求访谈工具
 
 ### 1. interview - 需求访谈模式
 **用途：** 在开发前通过结构化访谈澄清需求，避免理解偏差

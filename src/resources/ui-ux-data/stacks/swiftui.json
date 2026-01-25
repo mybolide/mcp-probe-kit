@@ -1,0 +1,26 @@
+[
+  {
+    "No": "1",
+    "Category": "Views",
+    "Guideline": "Use struct for views",
+    "Description": "SwiftUI views are value types",
+    "Do": "struct MyView: View",
+    "Don't": "class MyView: View",
+    "Code Good": "struct ContentView: View { var body: some View }",
+    "Code Bad": "class ContentView: View",
+    "Severity": "High",
+    "Docs URL": "https://developer.apple.com/documentation/swiftui/view"
+  },
+  {
+    "No": "2",
+    "Category": "Views",
+    "Guideline": "Keep views small and focused",
+    "Description": "Single responsibility for each view",
+    "Do": "Extract subviews for complex layouts",
+    "Don't": "Large monolithic views",
+    "Code Good": "Extract HeaderView FooterView",
+    "Code Bad": "500+ line View struct",
+    "Severity": "Medium",
+    "Docs URL": ""
+  }
+]

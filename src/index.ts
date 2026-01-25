@@ -14,7 +14,8 @@ import {
   fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject,
   initProjectContext, addFeature, securityScan, fixBug, estimate, genMock, design2code,
   startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc,
-  genSkill, startRalph, interview, askUser
+  genSkill, startRalph, interview, askUser,
+  uiDesignSystem, initComponentCatalog, uiSearch, syncUiData, renderUi, startUi
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
@@ -135,6 +136,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await interview(args);
       case "ask_user":
         return await askUser(args);
+      // UI/UX Pro Max 工具
+      case "ui_design_system":
+        return await uiDesignSystem(args);
+      case "init_component_catalog":
+        return await initComponentCatalog(args);
+      case "ui_search":
+        return await uiSearch(args);
+      case "sync_ui_data":
+        return await syncUiData(args);
+      case "render_ui":
+        return await renderUi(args);
+      case "start_ui":
+        return await startUi(args);
       default:
         throw new Error(`未知工具: ${name}`);
     }

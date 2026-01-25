@@ -2,11 +2,15 @@
 
 > 完整的工具调用指南和使用技巧
 
+**版本**: v1.14.0 | **工具总数**: 46 个
+
 ---
 
 ## 📖 目录
 
 - [工具调用写法指南](#工具调用写法指南)
+  - [UI/UX 工具调用](#uiux-工具调用) 🆕
+  - [访谈工具调用](#访谈工具调用)
   - [基础工具调用](#基础工具调用)
   - [智能编排调用](#智能编排调用)
 - [使用技巧](#使用技巧)
@@ -17,7 +21,90 @@
 
 ## 🎯 工具调用写法指南
 
-### 访谈工具调用 🆕
+### UI/UX 工具调用 🆕
+
+#### ui_design_system - 设计系统生成
+
+```
+# 方式 1：最简单（只指定技术栈）
+ui_design_system --stack react
+
+# 方式 2：指定主色调
+ui_design_system --stack react --primary-color "#3b82f6"
+
+# 方式 3：完整配置
+ui_design_system \
+  --stack nextjs \
+  --color-scheme light \
+  --primary-color "#3b82f6" \
+  --typography modern \
+  --spacing normal \
+  --border-radius medium
+
+# 方式 4：对话式
+"帮我生成一个 React 设计系统，主色调用蓝色"
+"为我的 Tailwind 项目生成配置"
+
+# 自动完成：
+# ✓ 生成完整的色彩系统（11 级色阶）
+# ✓ 生成字体系统（Sans/Serif/Mono）
+# ✓ 生成间距系统（基于 4px）
+# ✓ 生成组件样式（圆角、阴影、动画）
+# ✓ 输出可直接使用的代码
+```
+
+#### ui_search - UI/UX 智能搜索
+
+```
+# 方式 1：简单搜索
+ui_search "button primary"
+
+# 方式 2：指定类别
+ui_search "button" --category react
+
+# 方式 3：完整配置
+ui_search \
+  --query "button primary hover" \
+  --category react \
+  --limit 5 \
+  --min-score 1.0
+
+# 方式 4：对话式
+"我需要一个 React 的主按钮组件"
+"搜索一下蓝色主题的配色方案"
+"表单验证有什么 UX 最佳实践？"
+
+# 搜索技巧：
+# ✓ 使用具体关键词："primary button hover" 而不是 "button"
+# ✓ 指定类别：colors, icons, react, vue, ux-guidelines 等
+# ✓ 调整结果数量：--limit 3（快速预览）或 --limit 20（详细搜索）
+# ✓ 支持中英文：可以搜索 "按钮" 或 "button"
+```
+
+#### sync_ui_data - 数据同步
+
+```
+# 方式 1：检查更新
+sync_ui_data
+
+# 方式 2：强制同步
+sync_ui_data --force
+
+# 方式 3：详细日志
+sync_ui_data --force --verbose
+
+# 方式 4：对话式
+"检查一下 UI 数据有没有更新"
+"强制更新 UI 数据"
+
+# 数据位置：
+# ✓ 内嵌数据：npm 包内部（离线可用）
+# ✓ 缓存数据：~/.mcp-probe-kit/ui-ux-data/（自动更新）
+```
+
+---
+
+### 访谈工具调用
 
 #### interview - 需求访谈
 
@@ -918,10 +1005,179 @@ AI: 好的，我来对支付 API 进行全面体检。
 
 ---
 
+## 🎨 UI/UX 工具使用技巧 🆕
+
+### 设计系统生成技巧
+
+**1. 新项目启动**
+```
+# 步骤 1：生成基础设计系统
+ui_design_system --stack react
+
+# 步骤 2：根据需求调整
+ui_design_system --stack react --primary-color "#3b82f6" --border-radius large
+
+# 步骤 3：复制生成的代码到项目中
+```
+
+**2. 技术栈选择**
+```
+# React 项目
+ui_design_system --stack react
+
+# Next.js 项目
+ui_design_system --stack nextjs
+
+# Tailwind 项目（生成 tailwind.config.js）
+ui_design_system --stack tailwind
+
+# Vue 项目
+ui_design_system --stack vue
+```
+
+**3. 主题定制**
+```
+# 浅色主题
+ui_design_system --stack react --color-scheme light
+
+# 深色主题
+ui_design_system --stack react --color-scheme dark
+
+# 自适应主题
+ui_design_system --stack react --color-scheme auto
+```
+
+### UI 搜索技巧
+
+**1. 组件搜索**
+```
+# ❌ 不好：太模糊
+ui_search "button"
+
+# ✅ 好：具体明确
+ui_search "button primary hover effect" --category react
+
+# ✅ 更好：指定技术栈
+ui_search "button primary" --category react --limit 5
+```
+
+**2. 颜色搜索**
+```
+# 搜索配色方案
+ui_search "blue professional" --category colors
+
+# 搜索特定用途的颜色
+ui_search "saas tech primary color" --category colors
+
+# 搜索完整色阶
+ui_search "blue gradient" --category colors
+```
+
+**3. 最佳实践搜索**
+```
+# 搜索 UX 指南
+ui_search "form validation" --category ux-guidelines
+
+# 搜索性能优化
+ui_search "react performance" --category react-performance
+
+# 搜索设计模式
+ui_search "card layout" --category web-interface
+```
+
+**4. 调整搜索结果**
+```
+# 快速预览（3 个结果）
+ui_search "button" --limit 3
+
+# 详细搜索（20 个结果）
+ui_search "button" --limit 20
+
+# 过滤低相关性结果
+ui_search "button" --min-score 2.0
+```
+
+### 数据同步技巧
+
+**1. 定期检查**
+```
+# 每周检查一次（推荐）
+sync_ui_data
+
+# 如果已是最新版本，不会重复下载
+```
+
+**2. 遇到问题时**
+```
+# 搜索结果不准确？强制更新
+sync_ui_data --force --verbose
+
+# 查看详细日志
+sync_ui_data --verbose
+```
+
+**3. 数据位置**
+```
+# 内嵌数据（离线可用）
+位置：npm 包内部
+更新：重新安装 mcp-probe-kit
+
+# 缓存数据（自动更新）
+位置：~/.mcp-probe-kit/ui-ux-data/
+更新：首次使用时自动检查
+
+# 手动同步（立即更新）
+命令：sync_ui_data --force
+```
+
+### 组合使用技巧
+
+**场景 1：新项目完整流程**
+```
+# 步骤 1：生成设计系统
+ui_design_system --stack react --primary-color "#3b82f6"
+
+# 步骤 2：搜索需要的组件
+ui_search "button card form" --category react
+
+# 步骤 3：搜索配色方案
+ui_search "blue professional" --category colors
+
+# 步骤 4：应用到项目
+```
+
+**场景 2：优化现有项目**
+```
+# 步骤 1：搜索最佳实践
+ui_search "form validation ux" --category ux-guidelines
+
+# 步骤 2：搜索优化方案
+ui_search "react performance" --category react-performance
+
+# 步骤 3：搜索改进的组件
+ui_search "button loading state" --category react
+```
+
+**场景 3：设计系统迁移**
+```
+# 步骤 1：生成新的设计系统
+ui_design_system --stack tailwind
+
+# 步骤 2：搜索对应的组件
+ui_search "button" --category tailwind
+
+# 步骤 3：逐步替换旧组件
+```
+
+---
+
 ## 📚 相关文档
 
 - [README](../README.md) - 项目介绍和快速开始
 - [工具列表](../README.md#功能特性) - 所有工具的详细说明
+- [UI/UX 快速开始](../QUICK-START-UI-UX.md) - UI/UX 工具快速入门 🆕
+- [UI/UX 完整文档](./UI-UX-PRO-MAX-GUIDE.md) - UI/UX 工具详细文档 🆕
+- [UI/UX 使用演示](./UI-UX-DEMO.md) - UI/UX 工具使用示例 🆕
 - [常见问题](../README.md#常见问题) - FAQ
 
 ---

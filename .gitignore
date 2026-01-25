@@ -33,3 +33,5 @@ npm-debug.log*
 
 # Docs
 docs/specs/
+.kiro
+skills

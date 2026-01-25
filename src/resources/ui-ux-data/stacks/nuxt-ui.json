@@ -1,0 +1,14 @@
+[
+  {
+    "No": "1",
+    "Category": "Installation",
+    "Guideline": "Add Nuxt UI module",
+    "Description": "Install and configure Nuxt UI in your Nuxt project",
+    "Do": "pnpm add @nuxt/ui and add to modules",
+    "Don't": "Manual component imports",
+    "Code Good": "modules: ['@nuxt/ui']",
+    "Code Bad": "import { UButton } from '@nuxt/ui'",
+    "Severity": "High",
+    "Docs URL": "https://ui.nuxt.com/docs/getting-started/installation/nuxt"
+  }
+]

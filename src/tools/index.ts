@@ -43,4 +43,9 @@ export { startRalph } from "./start_ralph.js";
 // 访谈工具
 export { interview } from "./interview.js";
 export { askUser } from "./ask_user.js";
+// UI/UX Pro Max 工具
+export { uiDesignSystem, uiSearch, syncUiData } from "./ui-ux-tools.js";
+export { initComponentCatalog } from "./init_component_catalog.js";
+export { renderUi } from "./render_ui.js";
+export { startUi } from "./start_ui.js";
 
