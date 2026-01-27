@@ -48,6 +48,11 @@ export const ProjectContextSchema = {
   type: 'object',
   properties: {
     summary: { type: 'string' },
+    mode: { 
+      type: 'string',
+      enum: ['single', 'modular'],
+      description: '生成模式：single（单文件）或 modular（模块化）'
+    },
     projectOverview: {
       type: 'object',
       properties: {
@@ -362,6 +367,7 @@ export interface ProjectInit {
 
 export interface ProjectContext {
   summary: string;
+  mode?: 'single' | 'modular';
   projectOverview: {
     name?: string;
     description?: string;
