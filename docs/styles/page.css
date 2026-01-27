@@ -6,6 +6,17 @@
     box-sizing: border-box;
 }
 
+/* 移除点击后的蓝色边框 */
+*:focus {
+    outline: none;
+}
+
+/* 为键盘导航用户保留可访问性 */
+*:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
 :root {
     --primary: #2563EB;
     --primary-hover: #1D4ED8;
@@ -613,8 +624,8 @@ code {
     }
 }
 
-/* Accessibility */
-a:focus, button:focus, input:focus {
+/* Accessibility - 保留键盘导航，移除鼠标点击的蓝色边框 */
+a:focus-visible, button:focus-visible, input:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }

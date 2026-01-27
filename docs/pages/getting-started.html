@@ -79,7 +79,7 @@
                             <span class="icon">🛠️</span>
                             <span>所有工具</span>
                         </div>
-                        <span class="badge">48</span>
+                        <span class="badge">39</span>
                     </a>
                 </div>
                 
@@ -203,6 +203,7 @@
                                     <span class="recommended">推荐</span>
                                 </button>
                                 <button class="tab-button" data-tab="global">全局安装</button>
+                                <button class="tab-button" data-tab="source">源码编译</button>
                             </div>
                             
                             <div class="tab-content active" id="npx">
@@ -266,6 +267,69 @@
                                     <div class="callout-icon">⚠️</div>
                                     <div class="callout-content">
                                         <p><strong>注意：</strong>需要手动运行 <code>npm update -g mcp-probe-kit</code> 来更新版本。</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-content" id="source">
+                                <p>从源码编译安装，适合开发者和贡献者：</p>
+                                
+                                <p><strong>1. 克隆仓库</strong></p>
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-language">Bash</span>
+                                        <button class="copy-button" onclick="copyCode(this, 'source-clone')">
+                                            <span>📋</span>
+                                            <span>复制</span>
+                                        </button>
+                                    </div>
+                                    <pre><code id="source-clone">git clone https://github.com/mybolide/mcp-probe-kit.git
+cd mcp-probe-kit</code></pre>
+                                </div>
+
+                                <p><strong>2. 安装依赖并编译</strong></p>
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-language">Bash</span>
+                                        <button class="copy-button" onclick="copyCode(this, 'source-build')">
+                                            <span>📋</span>
+                                            <span>复制</span>
+                                        </button>
+                                    </div>
+                                    <pre><code id="source-build">npm install
+npm run build</code></pre>
+                                </div>
+
+                                <p><strong>3. 配置文件</strong></p>
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-language">JSON</span>
+                                        <button class="copy-button" onclick="copyCode(this, 'source-config')">
+                                            <span>📋</span>
+                                            <span>复制</span>
+                                        </button>
+                                    </div>
+                                    <pre><code id="source-config">{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "node",
+      "args": ["/path/to/mcp-probe-kit/build/index.js"]
+    }
+  }
+}</code></pre>
+                                </div>
+
+                                <div class="callout info">
+                                    <div class="callout-icon">💡</div>
+                                    <div class="callout-content">
+                                        <p><strong>提示：</strong>将 <code>/path/to/mcp-probe-kit</code> 替换为实际的项目路径。Windows 用户使用完整路径，如 <code>D:/workspace/mcp-probe-kit/build/index.js</code></p>
+                                    </div>
+                                </div>
+
+                                <div class="callout warning">
+                                    <div class="callout-icon">⚠️</div>
+                                    <div class="callout-content">
+                                        <p><strong>注意：</strong>修改代码后需要重新运行 <code>npm run build</code> 编译，然后重启 MCP 客户端。</p>
                                     </div>
                                 </div>
                             </div>

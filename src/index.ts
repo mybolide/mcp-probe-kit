@@ -19,7 +19,6 @@ import {
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
-import { getToolParamsGuide } from "./resources/index.js";
 import { filterTools, getToolsetFromEnv, getToolsetSize } from "./lib/toolset-manager.js";
 import { getTasksManager } from "./lib/tasks-manager.js";
 
@@ -33,8 +32,6 @@ const server = new Server(
     capabilities: {
       tools: {},
       resources: {},
-      // 新增 MCP 2025-11-25 能力声明
-      tasks: {},
     },
   }
 );
@@ -165,12 +162,6 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
         description: "MCP Probe Kit 服务器当前状态",
         mimeType: "application/json",
       },
-      {
-        uri: "probe://tool-params-guide",
-        name: "工具参数指南",
-        description: "所有工具的参数说明和使用示例，帮助 AI 正确传参",
-        mimeType: "application/json",
-      },
     ],
   };
 });
@@ -192,7 +183,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
               serverInfo: {
                 name: NAME,
                 version: VERSION,
-                description: "Cursor 开发增强工具集",
+                description: "AI 驱动的完整研发工具集",
               },
               toolCount: allToolSchemas.length,
             },
@@ -204,25 +195,16 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     };
   }
 
-  if (uri === "probe://tool-params-guide") {
-    return {
-      contents: [
-        {
-          uri,
-          mimeType: "application/json",
-          text: JSON.stringify(getToolParamsGuide(VERSION), null, 2),
-        },
-      ],
-    };
-  }
-
   throw new Error(`未知资源: ${uri}`);
 });
 
 // ============================================
-// Tasks API 端点
+// Tasks API 端点 - 暂时禁用，等待 MCP SDK 正式支持
 // ============================================
+// 注意：当前 MCP SDK 版本不支持自定义 method，Tasks API 功能暂时禁用
+// 相关 issue: https://github.com/modelcontextprotocol/sdk/issues/xxx
 
+/*
 // 获取任务状态
 server.setRequestHandler({ method: "tasks/get" } as any, async (request: any) => {
   try {
@@ -283,6 +265,7 @@ server.setRequestHandler({ method: "tasks/list" } as any, async () => {
     throw new Error(`Failed to list tasks: ${errorMessage}`);
   }
 });
+*/
 
 // 启动服务器
 async function main() {

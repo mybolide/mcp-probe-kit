@@ -544,7 +544,8 @@ tr:hover {
 }
 
 /* ========== 可访问性 ========== */
-a:focus, button:focus {
+/* 保留键盘导航，移除鼠标点击的蓝色边框 */
+a:focus-visible, button:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }

@@ -8,21 +8,19 @@ export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
 /**
  * 工具集定义
  * 
- * - core: 15 个核心工具（高频使用）
- * - ui: 6 个 UI/UX 工具（推荐使用 start_ui 统一入口）
- * - workflow: 25-30 个工作流工具（包含 core + 编排工具）
- * - full: 所有 49 个工具（默认）
+ * - core: 14 个核心工具（高频使用）
+ * - ui: 5 个 UI/UX 工具（推荐使用 start_ui 统一入口）
+ * - workflow: 27 个工作流工具（包含 core + 编排工具）
+ * - full: 所有 39 个工具（默认）
  */
 export const TOOLSET_DEFINITIONS = {
-  // 核心工具集（15 个）- 最常用的基础工具
+  // 核心工具集（14 个）- 最常用的基础工具
   core: [
     'gencommit',
     'code_review',
     'debug',
-    'fix',
     'gentest',
     'gendoc',
-    'explain',
     'refactor',
     'perf',
     'security_scan',
@@ -31,29 +29,26 @@ export const TOOLSET_DEFINITIONS = {
     'gensql',
     'genreadme',
     'check_deps',
+    'gen_mock',
   ],
 
-  // UI/UX 工具集（6 个）- 对外工具，推荐使用 start_ui 统一入口
+  // UI/UX 工具集（5 个）- 对外工具，推荐使用 start_ui 统一入口
   ui: [
     'start_ui',         // ⭐ 统一入口（编排工具）
     'ui_search',        // 搜索 UI/UX 数据库
     'ui_design_system', // 生成设计系统
-    'design2code',      // 设计稿转代码
-    'genui',            // 生成 UI 组件
     'sync_ui_data',     // 同步 UI 数据
     // 注意：不包含内部工具 init_component_catalog 和 render_ui
   ],
 
-  // 工作流工具集（25-30 个）- 包含核心工具 + 编排工具
+  // 工作流工具集（27 个）- 包含核心工具 + 编排工具
   workflow: [
     // 核心工具（复用）
     'gencommit',
     'code_review',
     'debug',
-    'fix',
     'gentest',
     'gendoc',
-    'explain',
     'refactor',
     'perf',
     'security_scan',
@@ -62,8 +57,9 @@ export const TOOLSET_DEFINITIONS = {
     'gensql',
     'genreadme',
     'check_deps',
+    'gen_mock',
     
-    // 编排工具（9 个）
+    // 编排工具（10 个）
     'start_feature',
     'start_bugfix',
     'start_review',
@@ -73,21 +69,14 @@ export const TOOLSET_DEFINITIONS = {
     'start_api',
     'start_doc',
     'start_ralph',
-    
-    // UI 工具（6 个）
     'start_ui',
-    'ui_search',
-    'ui_design_system',
-    'design2code',
-    'genui',
-    'sync_ui_data',
     
     // 交互工具（2 个）
     'interview',
     'ask_user',
   ],
 
-  // 完整工具集（49 个）- 包含所有工具（包括内部工具）
+  // 完整工具集（39 个）- 包含所有工具（包括内部工具）
   full: 'all' as const,
 };
 
@@ -140,7 +129,7 @@ export function getToolsetFromEnv(): ToolsetType {
  */
 export function getToolsetSize(toolset: ToolsetType): number {
   if (toolset === 'full') {
-    return 49;
+    return 39;
   }
   
   const allowedTools = TOOLSET_DEFINITIONS[toolset];
