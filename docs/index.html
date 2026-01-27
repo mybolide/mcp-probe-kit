@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Probe Kit - AI 驱动的完整研发工具集 | 39个工具覆盖开发全流程</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="MCP Probe Kit 提供 39 个 AI 驱动的研发工具，覆盖需求分析、代码开发、质量保障、Bug修复、版本发布全流程。支持 Cursor、Cline、Claude Desktop，100% 结构化输出。">
+    <meta name="keywords" content="MCP Probe Kit, AI开发工具, 代码生成, 代码审查, Git工具, UI开发, 研发效率, Cursor, Cline, Claude, MCP Server">
+    <meta name="author" content="小墨 (Kyle) - ByteZoneX">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/">
+    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/">
+    <meta property="og:title" content="MCP Probe Kit - AI 驱动的完整研发工具集">
+    <meta property="og:description" content="39 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。支持 Cursor、Cline、Claude Desktop。">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/">
+    <meta property="twitter:title" content="MCP Probe Kit - AI 驱动的完整研发工具集">
+    <meta property="twitter:description" content="39 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            /* Light Mode Colors */
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-tertiary: #64748B;
+            --bg-page: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --bg-hover: #F1F5F9;
+            --border: #E2E8F0;
+            --border-hover: #CBD5E1;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* A. 顶部导航栏 */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            height: 60px;
+            transition: box-shadow 0.2s;
+        }
+        
+        .navbar.scrolled {
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .navbar-brand:hover {
+            color: var(--primary);
+        }
+        
+        .navbar-links {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        
+        .navbar-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .navbar-link:hover {
+            color: var(--primary);
+        }
+        
+        .navbar-link.external::after {
+            content: "↗";
+            font-size: 12px;
+        }
+        
+        /* B. Hero 首屏 */
+        .hero {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            padding: 64px 24px;
+            text-align: center;
+        }
+        
+        .hero-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .hero-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+        
+        .hero-subtitle {
+            font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 8px;
+        }
+        
+        .hero-version {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 32px;
+        }
+        
+        .hero-cta {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        
+        /* C. 主内容区：2×2 卡片网格 */
+        .main-content {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            width: 100%;
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .card-desc {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+        
+        .card-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        
+        .card-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            margin: 0 -12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .card-link:hover {
+            background: var(--bg-hover);
+            color: var(--primary);
+        }
+        
+        .card-link:hover .link-arrow {
+            transform: translateX(4px);
+        }
+        
+        .link-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .link-arrow {
+            color: var(--text-tertiary);
+            transition: transform 0.2s;
+            font-size: 16px;
+        }
+        
+        .badge {
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .external-icon {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+        
+        /* D. Footer */
+        .footer {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 24px;
+            margin-top: auto;
+        }
+        
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .footer a:hover {
+            color: var(--primary-hover);
+        }
+        
+        /* 响应式 */
+        @media (max-width: 1023px) {
+            .cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            
+            .main-content {
+                padding: 40px 20px;
+            }
+        }
+        
+        @media (max-width: 639px) {
+            .navbar-links {
+                gap: 16px;
+            }
+            
+            .navbar-link {
+                font-size: 13px;
+            }
+            
+            .navbar-link span {
+                display: none;
+            }
+            
+            .hero {
+                padding: 48px 20px;
+            }
+            
+            .hero-title {
+                font-size: 32px;
+            }
+            
+            .hero-subtitle {
+                font-size: 16px;
+            }
+            
+            .hero-cta {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .cards-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .main-content {
+                padding: 32px 16px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .footer-container {
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+            }
+        }
+        
+        /* 可访问性 */
+        a:focus, button:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        /* 滚动行为 */
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body>
+    <!-- A. 顶部导航栏 -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-container">
+            <a href="./index.html" class="navbar-brand">
+                <span>🚀</span>
+                <span>MCP Probe Kit</span>
+            </a>
+            <div class="navbar-links">
+                <a href="./pages/all-tools.html" class="navbar-link">文档</a>
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="navbar-link external">
+                    <span>主站</span> ByteZoneX
+                </a>
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="navbar-link external">
+                    GitHub
+                </a>
+                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="navbar-link external">
+                    npm
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- B. Hero 首屏 -->
+    <section class="hero">
+        <div class="hero-container">
+            <h1 class="hero-title">🚀 MCP Probe Kit</h1>
+            <p class="hero-subtitle">AI 开发增强工具集 · 文档中心</p>
+            <div class="hero-version">v2.0.0</div>
+            <div class="hero-cta">
+                <a href="./pages/getting-started.html" class="btn btn-primary">快速开始</a>
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="btn btn-secondary">
+                    访问主站 ByteZoneX ↗
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- C. 主内容区：2×2 卡片网格 -->
+    <main class="main-content">
+        <div class="cards-grid">
+            <!-- 1. 快速开始 -->
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span>📖</span>
+                        <span>快速开始</span>
+                    </h2>
+                </div>
+                <p class="card-desc">5 分钟快速上手 MCP Probe Kit v2.0</p>
+                <nav class="card-links">
+                    <a href="./pages/getting-started.html" class="card-link">
+                        <span>安装配置</span>
+                        <span class="link-arrow">→</span>
+                    </a>
+                </nav>
+            </article>
+            
+            <!-- 2. 工具文档 -->
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span>🛠️</span>
+                        <span>工具文档</span>
+                    </h2>
+                </div>
+                <p class="card-desc">39 个实用工具的完整参考</p>
+                <nav class="card-links">
+                    <a href="./pages/all-tools.html" class="card-link">
+                        <div class="link-content">
+                            <span>所有工具</span>
+                            <span class="badge">39</span>
+                        </div>
+                        <span class="link-arrow">→</span>
+                    </a>
+                </nav>
+            </article>
+            
+            <!-- 3. 指南 -->
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span>📚</span>
+                        <span>指南</span>
+                    </h2>
+                </div>
+                <p class="card-desc">迁移指南和最佳实践</p>
+                <nav class="card-links">
+                    <a href="./pages/migration.html" class="card-link">
+                        <span>v1.x → v2.0 迁移指南</span>
+                        <span class="link-arrow">→</span>
+                    </a>
+                    <a href="./pages/examples.html" class="card-link">
+                        <span>最佳实践</span>
+                        <span class="link-arrow">→</span>
+                    </a>
+                </nav>
+            </article>
+            
+            <!-- 4. 资源 -->
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span>🔗</span>
+                        <span>资源</span>
+                    </h2>
+                </div>
+                <p class="card-desc">源代码和社区支持</p>
+                <nav class="card-links">
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="card-link">
+                        <div class="link-content">
+                            <span>ByteZoneX 主站</span>
+                            <span class="external-icon">↗</span>
+                        </div>
+                        <span class="link-arrow">→</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="card-link">
+                        <div class="link-content">
+                            <span>GitHub 仓库</span>
+                            <span class="external-icon">↗</span>
+                        </div>
+                        <span class="link-arrow">→</span>
+                    </a>
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="card-link">
+                        <div class="link-content">
+                            <span>npm 包</span>
+                            <span class="external-icon">↗</span>
+                        </div>
+                        <span class="link-arrow">→</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="card-link">
+                        <div class="link-content">
+                            <span>问题反馈</span>
+                            <span class="external-icon">↗</span>
+                        </div>
+                        <span class="link-arrow">→</span>
+                    </a>
+                </nav>
+            </article>
+        </div>
+    </main>
+    
+    <!-- D. Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
+            <div>
+                © 2024-2026 MCP Probe Kit · MIT License · 
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // 导航栏滚动效果
+        const navbar = document.getElementById('navbar');
+        let lastScroll = 0;
+        
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            
+            if (currentScroll > 10) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+            
+            lastScroll = currentScroll;
+        });
+    </script>
+</body>
+</html>

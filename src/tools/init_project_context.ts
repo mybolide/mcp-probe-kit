@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { ProjectContext } from "../schemas/output/project-tools.js";
 
 /**
  * init_project_context 工具
@@ -325,25 +327,54 @@ export async function initProjectContext(args: any) {
     // 构建指南文本（替换占位符）
     const guide = PROMPT_TEMPLATE.replace(/{docs_dir}/g, docsDir);
 
-    // 返回结果
-    return {
-      content: [
-        {
-          type: "text",
-          text: guide,
-        },
+    // 创建结构化数据对象
+    const structuredData: ProjectContext = {
+      summary: "生成项目上下文文档",
+      projectOverview: {
+        name: "待分析",
+        description: "待分析",
+        techStack: [],
+        architecture: "待分析"
+      },
+      codingStandards: [
+        "分析 ESLint 配置",
+        "分析 Prettier 配置",
+        "分析命名规范",
+        "分析 TypeScript 配置"
       ],
+      workflows: [
+        {
+          name: "开发流程",
+          description: "分析 package.json scripts",
+          steps: ["npm run dev", "npm run build", "npm test"]
+        }
+      ],
+      documentation: [
+        {
+          path: `${docsDir}/project-context.md`,
+          purpose: "项目上下文文档"
+        }
+      ]
     };
+
+    return okStructured(guide, structuredData, {
+      schema: (await import("../schemas/output/project-tools.js")).ProjectContextSchema,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 初始化项目上下文失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    
+    const errorData: ProjectContext = {
+      summary: "项目上下文初始化失败",
+      projectOverview: {
+        name: "",
+        description: "",
+        techStack: [],
+        architecture: ""
+      }
     };
+    
+    return okStructured(`❌ 初始化项目上下文失败: ${errorMessage}`, errorData, {
+      schema: (await import("../schemas/output/project-tools.js")).ProjectContextSchema,
+    });
   }
 }

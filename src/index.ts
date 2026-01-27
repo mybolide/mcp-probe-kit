@@ -9,17 +9,19 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { 
-  detectShell, initSetting, initProject, gencommit, debug, genapi,
+  initProject, gencommit, debug, genapi,
   codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
-  fix, gensql, resolveConflict, genui, explain, convert, cssOrder, genreadme, split, analyzeProject,
-  initProjectContext, addFeature, securityScan, fixBug, estimate, genMock, design2code,
+  gensql, resolveConflict, genreadme, analyzeProject,
+  initProjectContext, addFeature, securityScan, fixBug, estimate, genMock,
   startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc,
-  genSkill, startRalph, interview, askUser,
+  startRalph, interview, askUser,
   uiDesignSystem, initComponentCatalog, uiSearch, syncUiData, renderUi, startUi
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
 import { getToolParamsGuide } from "./resources/index.js";
+import { filterTools, getToolsetFromEnv, getToolsetSize } from "./lib/toolset-manager.js";
+import { getTasksManager } from "./lib/tasks-manager.js";
 
 // 创建MCP服务器实例
 const server = new Server(
@@ -31,14 +33,21 @@ const server = new Server(
     capabilities: {
       tools: {},
       resources: {},
+      // 新增 MCP 2025-11-25 能力声明
+      tasks: {},
     },
   }
 );
 
-// 定义工具列表 - 从 schemas 导入
+// 定义工具列表 - 从 schemas 导入，并根据工具集过滤
 server.setRequestHandler(ListToolsRequestSchema, async () => {
+  const toolset = getToolsetFromEnv();
+  const filteredTools = filterTools(allToolSchemas, toolset);
+  
+  console.error(`[MCP Probe Kit] 当前工具集: ${toolset} (${filteredTools.length}/${allToolSchemas.length} 个工具)`);
+  
   return {
-    tools: allToolSchemas,
+    tools: filteredTools,
   };
 });
 
@@ -48,10 +57,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case "detect_shell":
-        return await detectShell(args);
-      case "init_setting":
-        return await initSetting(args);
       case "init_project":
         return await initProject(args);
       case "gencommit":
@@ -76,24 +81,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await refactor(args);
       case "perf":
         return await perf(args);
-      case "fix":
-        return await fix(args);
       case "gensql":
         return await gensql(args);
       case "resolve_conflict":
         return await resolveConflict(args);
-      case "genui":
-        return await genui(args);
-      case "explain":
-        return await explain(args);
-      case "convert":
-        return await convert(args);
-      case "css_order":
-        return await cssOrder(args);
       case "genreadme":
         return await genreadme(args);
-      case "split":
-        return await split(args);
       case "analyze_project":
         return await analyzeProject(args);
       case "init_project_context":
@@ -108,8 +101,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await estimate(args);
       case "gen_mock":
         return await genMock(args);
-      case "design2code":
-        return await design2code(args);
       // 智能编排工具
       case "start_feature":
         return await startFeature(args);
@@ -127,8 +118,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await startApi(args);
       case "start_doc":
         return await startDoc(args);
-      case "gen_skill":
-        return await genSkill(args);
       case "start_ralph":
         return await startRalph(args);
       // 访谈工具
@@ -228,6 +217,71 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   }
 
   throw new Error(`未知资源: ${uri}`);
+});
+
+// ============================================
+// Tasks API 端点
+// ============================================
+
+// 获取任务状态
+server.setRequestHandler({ method: "tasks/get" } as any, async (request: any) => {
+  try {
+    const { taskId } = request.params;
+    const tasksManager = getTasksManager();
+    const task = tasksManager.getTask(taskId);
+    
+    return {
+      task,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to get task: ${errorMessage}`);
+  }
+});
+
+// 获取任务结果
+server.setRequestHandler({ method: "tasks/result" } as any, async (request: any) => {
+  try {
+    const { taskId } = request.params;
+    const tasksManager = getTasksManager();
+    const result = tasksManager.getTaskResult(taskId);
+    
+    return result;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to get task result: ${errorMessage}`);
+  }
+});
+
+// 取消任务
+server.setRequestHandler({ method: "tasks/cancel" } as any, async (request: any) => {
+  try {
+    const { taskId } = request.params;
+    const tasksManager = getTasksManager();
+    tasksManager.cancelTask(taskId);
+    
+    return {
+      _meta: {},
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to cancel task: ${errorMessage}`);
+  }
+});
+
+// 列出所有任务
+server.setRequestHandler({ method: "tasks/list" } as any, async () => {
+  try {
+    const tasksManager = getTasksManager();
+    const tasks = tasksManager.listTasks();
+    
+    return {
+      tasks,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to list tasks: ${errorMessage}`);
+  }
 });
 
 // 启动服务器

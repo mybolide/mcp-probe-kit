@@ -19,7 +19,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 简单的 token 估算：按空格和标点分割
           const tokenCount = text.split(/[\s\n]+/).length;
@@ -42,7 +42,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 应该包含 H1 标题（快速开始）
           expect(text).toMatch(/^#\s+快速开始/m);
@@ -71,7 +71,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 如果包含 JSON 参数，应该在代码块中
           const jsonBlocks = text.match(/```json[\s\S]*?```/g);
@@ -93,7 +93,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 提取所有 JSON 代码块
           const jsonBlocks = text.match(/```json\n([\s\S]*?)\n```/g);
@@ -132,7 +132,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 应该包含有效的工具名称
           const validTools = [
@@ -167,7 +167,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 应该包含"预期输出"部分
           expect(text).toMatch(/预期输出|Expected Output/i);
@@ -195,7 +195,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 应该包含依赖关系的说明（如"确保步骤 1"）
           const hasDependency = 
@@ -221,7 +221,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 应该包含"失败处理"部分
           expect(text).toMatch(/失败处理|Failure Handling|On Failure/i);
@@ -321,7 +321,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 应该包含明确的工具名称
           const hasToolNames = 
@@ -350,7 +350,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 不应该包含模糊的指令（没有具体工具名称或文件名）
           // 如果包含"检查"，应该伴随具体的文件名或工具名
@@ -383,7 +383,7 @@ describe('start_ui 属性测试', () => {
         }),
         async (input) => {
           const result = await startUi(input);
-          const text = result.content[0].text;
+          const text = result.content[0].text || '';
           
           // 应该包含职责说明
           expect(text).toMatch(/职责说明|职责|Responsibility/i);

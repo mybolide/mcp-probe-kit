@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>所有工具 - 39个AI研发工具完整列表 | MCP Probe Kit</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="MCP Probe Kit 完整工具列表：10个工作流编排工具、7个代码分析工具、4个Git工具、7个生成工具、7个项目管理工具、6个UI/UX工具。每个工具包含详细使用说明、参数定义和代码示例。">
+    <meta name="keywords" content="AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, Mock 数据生成, SQL 生成, 代码重构, 性能优化, 安全扫描">
+    <meta name="author" content="小墨 (Kyle) - ByteZoneX">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/all-tools.html">
+    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/all-tools.html">
+    <meta property="og:title" content="所有工具 - 39个AI研发工具完整列表 | MCP Probe Kit">
+    <meta property="og:description" content="浏览 MCP Probe Kit 全部 39 个工具，覆盖工作流编排、代码分析、Git 自动化、UI 生成等 7 大类别。每个工具都有详细文档和示例。">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/pages/all-tools.html">
+    <meta property="twitter:title" content="所有工具 - 39个AI研发工具完整列表 | MCP Probe Kit">
+    <meta property="twitter:description" content="浏览 MCP Probe Kit 全部 39 个工具，覆盖开发全流程。">
+    
+    <link rel="stylesheet" href="../styles/page.css">
+    <style>
+        /* 工具页面专用样式 */
+        
+        .category-section {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .category-icon {
+            font-size: 28px;
+        }
+        
+        .category-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .category-count {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .search-box {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .search-input::placeholder {
+            color: var(--text-tertiary);
+        }
+        
+        .search-results {
+            margin-top: var(--spacing-sm);
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .tools-grid {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+        
+        .tool-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--spacing-lg);
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        
+        .tool-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+        }
+        
+        .tool-main {
+            flex: 1;
+        }
+        
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .tool-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .tool-badges {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+        
+        .tool-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .tool-badge.structured {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+        
+        .tool-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .tool-meta {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .tool-details {
+            display: block;
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+        }
+        
+        .tool-section {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .tool-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .tool-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .tool-section-content {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        .tool-section-content ul {
+            margin: var(--spacing-sm) 0;
+            padding-left: var(--spacing-lg);
+        }
+        
+        .tool-section-content li {
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .tool-section-content code {
+            background: var(--bg-hover);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #DB2777;
+        }
+        
+        .tool-example {
+            background: #F8FAFC;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .tool-example-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .tool-example-code {
+            background: #1E293B;
+            color: #E2E8F0;
+            padding: var(--spacing-md);
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+        
+        .no-results-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+    </style>
+</head>
+<body>
+    <!-- Topbar -->
+    <nav class="topbar" id="topbar">
+        <div class="topbar-container">
+            <a href="../index.html" class="topbar-brand">
+                <span>🚀</span>
+                <span>MCP Probe Kit</span>
+            </a>
+            
+            <div class="topbar-actions">
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>ByteZoneX</span>
+                </a>
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>GitHub</span>
+                </a>
+                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>npm</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Layout Container -->
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">快速开始</div>
+                    <a href="../index.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🏠</span>
+                            <span>文档首页</span>
+                        </div>
+                    </a>
+                    <a href="./getting-started.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">📖</span>
+                            <span>安装配置</span>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">工具文档</div>
+                    <a href="./all-tools.html" class="nav-item active">
+                        <div class="nav-item-content">
+                            <span class="icon">🛠️</span>
+                            <span>所有工具</span>
+                        </div>
+                        <span class="badge">48</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">指南</div>
+                    <a href="./migration.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🚀</span>
+                            <span>迁移指南</span>
+                        </div>
+                    </a>
+                    <a href="./examples.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">💡</span>
+                            <span>最佳实践</span>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">资源</div>
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🌐</span>
+                            <span>ByteZoneX 主站</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">💻</span>
+                            <span>GitHub 仓库</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">📦</span>
+                            <span>npm 包</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🐛</span>
+                            <span>问题反馈</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="sidebar-footer-title">快速链接</div>
+                <div class="sidebar-footer-links">
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>🌐</span>
+                        <span>ByteZoneX</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>💻</span>
+                        <span>GitHub</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>📦</span>
+                        <span>npm</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                </div>
+                
+                <!-- QR Code -->
+                <div class="sidebar-qrcode">
+                    <div class="sidebar-qrcode-title">关注公众号</div>
+                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" />
+                    <div class="sidebar-qrcode-desc">获取更多技术分享</div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper">
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb">
+                    <a href="../index.html">文档首页</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="#">工具文档</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>所有工具</span>
+                </nav>
+                
+                <!-- Page Header -->
+                <h1 class="page-title">所有工具</h1>
+                <p class="page-description">MCP Probe Kit 提供 48 个实用工具，100% 支持结构化输出</p>
+                <div class="page-meta">
+                    <span>📦 v2.0.0</span>
+                    <span>·</span>
+                    <span>最后更新：2026-01-27</span>
+                    <span>·</span>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/edit/main/docs/pages/all-tools.html" target="_blank" rel="noopener">编辑此页 ↗</a>
+                    <span>·</span>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/issues/new" target="_blank" rel="noopener">反馈问题 ↗</a>
+                </div>
+                
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="search-input" 
+                        placeholder="🔍 搜索工具名称或描述..." 
+                        autocomplete="off"
+                    />
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+                
+                <!-- 工具列表容器 -->
+                <div id="tools-container"></div>
+                
+                <!-- Next Steps CTA -->
+                <div class="next-cta">
+                    <h3>🎯 开始使用</h3>
+                    <p>选择你感兴趣的工具，提升开发效率</p>
+                    <div class="next-cta-links">
+                        <a href="./getting-started.html" class="next-cta-link">
+                            <span>📖</span>
+                            <span>安装配置</span>
+                        </a>
+                        <a href="./examples.html" class="next-cta-link">
+                            <span>💡</span>
+                            <span>学习最佳实践</span>
+                        </a>
+                        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="next-cta-link">
+                            <span>💻</span>
+                            <span>GitHub 仓库</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-container">
+                    <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
+                    <div>
+                        © 2024-2026 MCP Probe Kit · MIT License · 
+                        <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+    
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+    
+    <!-- 引入工具数据 -->
+    <script src="../data/tools.js"></script>
+    <script>
+        // Topbar scroll effect
+        const topbar = document.getElementById('topbar');
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 10) {
+                topbar.classList.add('scrolled');
+            } else {
+                topbar.classList.remove('scrolled');
+            }
+        });
+        
+        // Sidebar toggle (mobile)
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+        
+        // Close sidebar when clicking outside (mobile)
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-content').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.remove('open');
+            });
+        }
+        
+        // 渲染工具列表
+        let allTools = []; // 存储所有工具的扁平数组
+        
+        function renderTools(filteredTools = null) {
+            const container = document.getElementById('tools-container');
+            let html = '';
+            
+            // 如果有过滤结果，只渲染过滤后的工具
+            if (filteredTools) {
+                if (filteredTools.length === 0) {
+                    html = `
+                        <div class="no-results">
+                            <div class="no-results-icon">🔍</div>
+                            <p>未找到匹配的工具</p>
+                        </div>
+                    `;
+                } else {
+                    html += '<div class="tools-grid">';
+                    filteredTools.forEach(tool => {
+                        html += renderToolCard(tool);
+                    });
+                    html += '</div>';
+                }
+            } else {
+                // 渲染所有分类
+                for (const [categoryKey, categoryInfo] of Object.entries(categories)) {
+                    const tools = toolsData[categoryKey];
+                    if (!tools || tools.length === 0) continue;
+                    
+                    html += `
+                        <div class="category-section">
+                            <div class="category-header">
+                                <span class="category-icon">${categoryInfo.icon}</span>
+                                <h2 class="category-title">${categoryInfo.title}</h2>
+                                <span class="category-count">${categoryInfo.count} 个</span>
+                            </div>
+                            <div class="tools-grid">
+                    `;
+                    
+                    tools.forEach(tool => {
+                        html += renderToolCard({ ...tool, category: categoryKey });
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // 渲染单个工具卡片
+        function renderToolCard(tool) {
+            const hasDetails = tool.params || tool.usage || tool.example;
+            
+            let detailsHTML = '';
+            if (hasDetails) {
+                detailsHTML = `
+                    <div class="tool-details">
+                        ${tool.usage ? `
+                            <div class="tool-section">
+                                <div class="tool-section-title">📖 使用说明</div>
+                                <div class="tool-section-content">${tool.usage}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${tool.params ? `
+                            <div class="tool-section">
+                                <div class="tool-section-title">⚙️ 参数说明</div>
+                                <div class="tool-section-content">
+                                    <ul>
+                                        ${tool.params.map(p => `
+                                            <li>
+                                                <code>${p.name}</code> 
+                                                <span style="color: var(--text-tertiary);">(${p.type}${p.required ? ', 必填' : ', 可选'})</span>
+                                                - ${p.desc}
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${tool.example ? `
+                            <div class="tool-section">
+                                <div class="tool-section-title">💡 使用示例</div>
+                                <div class="tool-example">
+                                    <div class="tool-example-code">${tool.example.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="tool-card">
+                    <div class="tool-main">
+                        <div class="tool-header">
+                            <div class="tool-name">${tool.name}</div>
+                            <div class="tool-badges">
+                                <span class="tool-badge structured">✓ 结构化</span>
+                            </div>
+                        </div>
+                        <div class="tool-description">${tool.description}</div>
+                        <div class="tool-meta">Schema: ${tool.schema}</div>
+                    </div>
+                    ${detailsHTML}
+                </div>
+            `;
+        }
+        
+        // 搜索功能
+        function searchTools(query) {
+            if (!query.trim()) {
+                document.getElementById('searchResults').textContent = '';
+                renderTools();
+                return;
+            }
+            
+            const lowerQuery = query.toLowerCase();
+            const results = allTools.filter(tool => {
+                return tool.name.toLowerCase().includes(lowerQuery) || 
+                       tool.description.toLowerCase().includes(lowerQuery);
+            });
+            
+            const resultsText = results.length > 0 
+                ? `找到 ${results.length} 个匹配的工具` 
+                : '未找到匹配的工具';
+            document.getElementById('searchResults').textContent = resultsText;
+            
+            renderTools(results);
+        }
+        
+        // 初始化
+        function init() {
+            // 构建扁平的工具数组
+            allTools = [];
+            for (const [categoryKey, tools] of Object.entries(toolsData)) {
+                tools.forEach(tool => {
+                    allTools.push({ ...tool, category: categoryKey });
+                });
+            }
+            
+            // 渲染所有工具
+            renderTools();
+            
+            // 绑定搜索事件
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                searchTools(e.target.value);
+            });
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

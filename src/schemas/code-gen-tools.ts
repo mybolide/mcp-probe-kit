@@ -65,25 +65,6 @@ export const codeGenToolSchemas = [
     },
   },
   {
-    name: "genui",
-    description: "当用户需要生成 UI 组件代码时使用。根据描述生成 UI 组件代码（React/Vue/HTML），包含 Props 和样式",
-    inputSchema: {
-      type: "object",
-      properties: {
-        description: {
-          type: "string",
-          description: "组件描述。可以是简短描述（如'登录表单组件'）或详细的UI需求",
-        },
-        framework: {
-          type: "string",
-          description: "前端框架：react、vue、html。可选，默认 react",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
     name: "gensql",
     description: "当用户需要根据自然语言生成 SQL 查询时使用。将自然语言描述转换为 SQL 语句（PostgreSQL/MySQL/SQLite）",
     inputSchema: {
@@ -123,33 +104,6 @@ export const codeGenToolSchemas = [
         locale: {
           type: "string",
           description: "数据语言：zh-CN（中文）、en-US（英文）、ja-JP（日文）。可选，默认为 zh-CN",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
-    name: "design2code",
-    description: "当用户需要将设计稿转换为代码时使用。将设计稿（图片URL/描述/HTML）转换为前端代码（React/Vue），1:1 还原布局和样式",
-    inputSchema: {
-      type: "object",
-      properties: {
-        input: {
-          type: "string",
-          description: "设计稿输入：图片 URL、base64 图片、HTML 代码或设计稿描述",
-        },
-        framework: {
-          type: "string",
-          description: "目标框架：vue、react。可选，默认为 vue",
-        },
-        style_solution: {
-          type: "string",
-          description: "样式方案：tailwind、css-modules、styled-components。可选，默认为 tailwind",
-        },
-        component_type: {
-          type: "string",
-          description: "组件类型：page（页面组件）、component（通用组件）。可选，默认为 page",
         },
       },
       required: [],

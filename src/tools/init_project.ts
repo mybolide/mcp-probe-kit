@@ -1,6 +1,13 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { ProjectInit } from "../schemas/output/project-tools.js";
 
-// init_project 工具实现
+/**
+ * init_project 工具
+ * 
+ * 功能：按照 Spec-Driven Development 方式初始化项目
+ * 输出：项目结构、文档模板和初始化指南
+ */
 export async function initProject(args: any) {
   try {
     // 智能参数解析，支持自然语言输入
@@ -183,26 +190,61 @@ ${input}
 🚀 **开始执行**：
 现在请按照上述步骤创建项目结构和所有必需的文档。`;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+    // 创建结构化数据对象
+    const structuredData: ProjectInit = {
+      summary: `初始化项目：${projectName}`,
+      projectName: projectName,
+      structure: {
+        directories: [
+          'docs/',
+          'docs/specs/',
+          `docs/specs/${featureSlug}/`,
+          'scripts/',
+          'src/'
+        ],
+        files: [
+          'docs/project-context.md',
+          'docs/constitution.md',
+          `docs/specs/${featureSlug}/requirements.md`,
+          `docs/specs/${featureSlug}/design.md`,
+          `docs/specs/${featureSlug}/tasks.md`,
+          `docs/specs/${featureSlug}/research.md`,
+          'scripts/check-prerequisites.sh',
+          'scripts/setup.sh'
+        ]
+      },
+      nextSteps: [
+        '创建项目目录结构',
+        '生成 project-context.md',
+        '生成 constitution.md',
+        '生成需求文档 requirements.md',
+        '生成设计文档 design.md',
+        '生成任务清单 tasks.md',
+        '生成技术调研 research.md',
+        '创建辅助脚本'
+      ]
     };
+
+    return okStructured(message, structuredData, {
+      schema: (await import("../schemas/output/project-tools.js")).ProjectInitSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 初始化项目失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    
+    const errorData: ProjectInit = {
+      summary: "项目初始化失败",
+      projectName: "",
+      structure: {
+        directories: [],
+        files: []
+      },
+      nextSteps: []
     };
+    
+    return okStructured(`❌ 初始化项目失败: ${errorMessage}`, errorData, {
+      schema: (await import("../schemas/output/project-tools.js")).ProjectInitSchema,
+    });
   }
 }
 

@@ -1,9 +1,11 @@
 import { parseArgs, getString, getNumber, getBoolean } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { ProjectAnalysis } from "../schemas/output/project-tools.js";
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, extname, basename } from 'path';
 import { VERSION } from '../version.js';
 
-interface ProjectAnalysis {
+interface ProjectAnalysisInternal {
   projectStructure: {
     name: string;
     type: string;
@@ -72,11 +74,7 @@ export async function analyzeProject(args: any): Promise<any> {
     console.error(`开始分析项目: ${projectPath}`);
     const analysis = await performProjectAnalysis(projectPath, maxDepth, includeContent);
     
-    return {
-      content: [
-        {
-          type: "text",
-          text: `# 📊 项目分析报告
+    const message = `# 📊 项目分析报告
 
 ## 🏗️ 项目概览
 - **项目名称**: ${analysis.projectStructure.name}
@@ -141,20 +139,66 @@ ${analysis.summary.recommendations.map(rec => `- ${rec}`).join('\n')}
 **分析说明**:
 - 大型项目会自动采样分析，限制最多扫描 5000 个文件
 - 已自动忽略以下目录: \`node_modules\`, \`dist\`, \`build\`, \`.git\`, \`coverage\`, \`.next\`, \`.nuxt\`, \`vendor\` 等
-- 单个文件大小限制: 1MB，超过则跳过`,
-        },
-      ],
-    };
-  } catch (error) {
-    return {
-      content: [
+- 单个文件大小限制: 1MB，超过则跳过`;
+
+    // 创建结构化数据对象
+    const structuredData: ProjectAnalysis = {
+      summary: `项目分析：${analysis.projectStructure.name}`,
+      structure: {
+        totalFiles: analysis.codeMetrics.totalFiles,
+        totalLines: analysis.codeMetrics.totalLines,
+        languages: analysis.codeMetrics.fileTypes
+      },
+      techStack: [
         {
-          type: "text",
-          text: `❌ 项目分析失败: ${error instanceof Error ? error.message : String(error)}`,
+          name: analysis.projectStructure.framework,
+          version: "待检测",
+          purpose: "主要框架"
         },
+        {
+          name: analysis.projectStructure.language,
+          version: "待检测",
+          purpose: "编程语言"
+        }
       ],
-      isError: true,
+      architecture: {
+        pattern: analysis.architecture.patterns.join(', '),
+        layers: analysis.architecture.mainModules,
+        description: analysis.summary.purpose
+      },
+      dependencies: {
+        production: analysis.dependencies.production.length,
+        development: analysis.dependencies.development.length,
+        outdated: 0
+      },
+      codeQuality: {
+        complexity: analysis.summary.complexity,
+        maintainability: 0,
+        testCoverage: 0
+      },
+      recommendations: analysis.summary.recommendations
     };
+
+    return okStructured(message, structuredData, {
+      schema: (await import("../schemas/output/project-tools.js")).ProjectAnalysisSchema,
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    const errorData: ProjectAnalysis = {
+      summary: "项目分析失败",
+      structure: {
+        totalFiles: 0,
+        totalLines: 0,
+        languages: {}
+      },
+      techStack: [],
+      recommendations: [errorMsg]
+    };
+    
+    return okStructured(`❌ 项目分析失败: ${errorMsg}`, errorData, {
+      schema: (await import("../schemas/output/project-tools.js")).ProjectAnalysisSchema,
+    });
   }
 }
 
@@ -162,7 +206,7 @@ async function performProjectAnalysis(
   projectPath: string, 
   maxDepth: number, 
   includeContent: boolean
-): Promise<ProjectAnalysis> {
+): Promise<ProjectAnalysisInternal> {
   // 读取 package.json
   const packageJson = await readPackageJson(projectPath);
   

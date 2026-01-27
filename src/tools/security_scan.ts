@@ -275,6 +275,8 @@ logger.info("API call with token:", maskToken(apiToken))
 `;
 
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { SecurityReport } from "../schemas/output/core-tools.js";
 
 /**
  * security_scan 工具实现
@@ -321,14 +323,29 @@ export async function securityScan(args: any) {
       .replace(/{language}/g, language)
       .replace(/{scan_type}/g, scanTypeDesc[scanType] || scanType);
 
-    return {
-      content: [{ type: "text", text: guide }],
+    // 创建结构化数据对象
+    const securityReport: SecurityReport = {
+      summary: `安全扫描 - ${scanTypeDesc[scanType] || scanType}`,
+      overallRisk: 'medium',
+      vulnerabilities: [],
     };
+
+    return okStructured(guide, securityReport, {
+      schema: (await import('../schemas/output/core-tools.js')).SecurityReportSchema,
+    });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `❌ 安全扫描失败: ${errorMsg}` }],
-      isError: true,
+    const errorData: SecurityReport = {
+      summary: `安全扫描失败: ${errorMsg}`,
+      overallRisk: 'none',
+      vulnerabilities: [],
     };
+    return okStructured(
+      `❌ 安全扫描失败: ${errorMsg}`,
+      errorData,
+      {
+        schema: (await import('../schemas/output/core-tools.js')).SecurityReportSchema,
+      }
+    );
   }
 }

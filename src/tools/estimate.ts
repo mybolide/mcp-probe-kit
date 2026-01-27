@@ -1,3 +1,7 @@
+import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { Estimate } from "../schemas/output/project-tools.js";
+
 /**
  * estimate 工具
  * 
@@ -220,8 +224,6 @@ const PROMPT_TEMPLATE = `# 工作量估算指南
 *工具: MCP Probe Kit - estimate*
 `;
 
-import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
-
 /**
  * estimate 工具实现
  */
@@ -274,14 +276,46 @@ export async function estimate(args: any) {
       .replace(/{experience_level}/g, expLevelMap[experienceLevel] || experienceLevel)
       .replace(/{code_context_section}/g, codeContextSection);
 
-    return {
-      content: [{ type: "text", text: guide }],
+    // 创建结构化数据对象
+    const structuredData: Estimate = {
+      summary: `工作量估算：${taskDescription.substring(0, 50)}...`,
+      storyPoints: 0,
+      timeEstimates: {
+        optimistic: "待估算",
+        normal: "待估算",
+        pessimistic: "待估算"
+      },
+      breakdown: [
+        { task: "需求理解", hours: 0, complexity: "low" },
+        { task: "设计", hours: 0, complexity: "medium" },
+        { task: "编码", hours: 0, complexity: "medium" },
+        { task: "测试", hours: 0, complexity: "medium" }
+      ],
+      risks: [],
+      assumptions: [
+        `团队规模：${teamSize} 人`,
+        `经验水平：${expLevelMap[experienceLevel] || experienceLevel}`
+      ]
     };
+
+    return okStructured(guide, structuredData, {
+      schema: (await import("../schemas/output/project-tools.js")).EstimateSchema,
+    });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `❌ 工作量估算失败: ${errorMsg}` }],
-      isError: true,
+    
+    const errorData: Estimate = {
+      summary: "工作量估算失败",
+      storyPoints: 0,
+      timeEstimates: {
+        optimistic: "未知",
+        normal: "未知",
+        pessimistic: "未知"
+      }
     };
+    
+    return okStructured(`❌ 工作量估算失败: ${errorMsg}`, errorData, {
+      schema: (await import("../schemas/output/project-tools.js")).EstimateSchema,
+    });
   }
 }

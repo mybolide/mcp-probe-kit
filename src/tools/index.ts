@@ -1,5 +1,3 @@
-export { detectShell } from "./detect_shell.js";
-export { initSetting } from "./init_setting.js";
 export { initProject } from "./init_project.js";
 export { gencommit } from "./gencommit.js";
 export { debug } from "./debug.js";
@@ -12,15 +10,9 @@ export { gendoc } from "./gendoc.js";
 export { genchangelog } from "./genchangelog.js";
 export { refactor } from "./refactor.js";
 export { perf } from "./perf.js";
-export { fix } from "./fix.js";
 export { gensql } from "./gensql.js";
 export { resolveConflict } from "./resolve_conflict.js";
-export { genui } from "./genui.js";
-export { explain } from "./explain.js";
-export { convert } from "./convert.js";
-export { cssOrder } from "./css_order.js";
 export { genreadme } from "./genreadme.js";
-export { split } from "./split.js";
 export { analyzeProject } from "./analyze_project.js";
 export { initProjectContext } from "./init_project_context.js";
 export { addFeature } from "./add_feature.js";
@@ -28,7 +20,6 @@ export { securityScan } from "./security_scan.js";
 export { fixBug } from "./fix_bug.js";
 export { estimate } from "./estimate.js";
 export { genMock } from "./gen_mock.js";
-export { design2code } from "./design2code.js";
 // 智能编排工具
 export { startFeature } from "./start_feature.js";
 export { startBugfix } from "./start_bugfix.js";
@@ -38,7 +29,6 @@ export { startRefactor } from "./start_refactor.js";
 export { startOnboard } from "./start_onboard.js";
 export { startApi } from "./start_api.js";
 export { startDoc } from "./start_doc.js";
-export { genSkill } from "./gen_skill.js";
 export { startRalph } from "./start_ralph.js";
 // 访谈工具
 export { interview } from "./interview.js";

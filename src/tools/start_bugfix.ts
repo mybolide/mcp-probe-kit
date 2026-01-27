@@ -1,4 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import { BugFixReportSchema } from "../schemas/structured-output.js";
+import type { BugFixReport } from "../schemas/structured-output.js";
 
 /**
  * start_bugfix 智能编排工具
@@ -137,9 +140,48 @@ export async function startBugfix(args: any) {
       .replace(/{stack_trace}/g, stackTrace)
       .replace(/{stack_trace_section}/g, stackTraceSection);
 
-    return {
-      content: [{ type: "text", text: guide }],
+    // 创建结构化的 Bug 修复报告
+    const bugfixReport: BugFixReport = {
+      summary: `Bug 修复工作流：${errorMessage.substring(0, 50)}${errorMessage.length > 50 ? '...' : ''}`,
+      status: 'pending',
+      steps: [
+        {
+          name: '检查项目上下文',
+          status: 'pending',
+          description: '检查 docs/project-context.md 是否存在，如不存在则调用 init_project_context',
+        },
+        {
+          name: 'Bug 分析与修复',
+          status: 'pending',
+          description: '调用 fix_bug 工具进行问题定位和修复',
+        },
+        {
+          name: '生成回归测试',
+          status: 'pending',
+          description: '调用 gentest 工具生成测试用例',
+        },
+      ],
+      artifacts: [],
+      nextSteps: [
+        '检查并读取项目上下文文档',
+        '调用 fix_bug 工具分析和修复问题',
+        '调用 gentest 工具生成回归测试',
+        '运行测试验证修复',
+      ],
+      rootCause: '待分析（需要调用 fix_bug 工具）',
+      fixPlan: '待制定（需要调用 fix_bug 工具）',
+      testPlan: '待生成（需要调用 gentest 工具）',
+      affectedFiles: [],
     };
+
+    return okStructured(
+      guide,
+      bugfixReport,
+      {
+        schema: BugFixReportSchema,
+        note: 'AI 应该按照指南执行步骤，并在每个步骤完成后更新 structuredContent 中的状态',
+      }
+    );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return {

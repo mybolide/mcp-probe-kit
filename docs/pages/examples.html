@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最佳实践 - 完整研发流程实战指南 | MCP Probe Kit</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="MCP Probe Kit 最佳实践：从需求分析到版本发布的完整研发流程。涵盖需求规划、功能开发、代码质量、Bug修复、版本发布、项目维护 6 大阶段，以及 Ralph Wiggum Loop 自动化开发实践。">
+    <meta name="keywords" content="研发最佳实践, 开发流程, 需求分析, 代码质量, Bug修复, 版本发布, 自动化开发, Ralph Wiggum Loop, CI/CD">
+    <meta name="author" content="小墨 (Kyle) - ByteZoneX">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/examples.html">
+    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/examples.html">
+    <meta property="og:title" content="最佳实践 - 完整研发流程实战指南 | MCP Probe Kit">
+    <meta property="og:description" content="学习如何使用 MCP Probe Kit 优化完整研发流程，从需求到上线的最佳实践，包含 Ralph Wiggum Loop 自动化开发。">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/pages/examples.html">
+    <meta property="twitter:title" content="最佳实践 - 完整研发流程实战指南 | MCP Probe Kit">
+    <meta property="twitter:description" content="从需求到上线的完整研发流程最佳实践。">
+    
+    <link rel="stylesheet" href="../styles/page.css">
+</head>
+<body>
+    <!-- Topbar -->
+    <nav class="topbar" id="topbar">
+        <div class="topbar-container">
+            <a href="../index.html" class="topbar-brand">
+                <span>🚀</span>
+                <span>MCP Probe Kit</span>
+            </a>
+            
+            <div class="topbar-actions">
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>ByteZoneX</span>
+                </a>
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>GitHub</span>
+                </a>
+                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>npm</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Layout Container -->
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">快速开始</div>
+                    <a href="../index.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🏠</span>
+                            <span>文档首页</span>
+                        </div>
+                    </a>
+                    <a href="./getting-started.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">📖</span>
+                            <span>安装配置</span>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">工具文档</div>
+                    <a href="./all-tools.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🛠️</span>
+                            <span>所有工具</span>
+                        </div>
+                        <span class="badge">48</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">指南</div>
+                    <a href="./migration.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🚀</span>
+                            <span>迁移指南</span>
+                        </div>
+                    </a>
+                    <a href="./examples.html" class="nav-item active">
+                        <div class="nav-item-content">
+                            <span class="icon">💡</span>
+                            <span>最佳实践</span>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">资源</div>
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🌐</span>
+                            <span>ByteZoneX 主站</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">💻</span>
+                            <span>GitHub 仓库</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">📦</span>
+                            <span>npm 包</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🐛</span>
+                            <span>问题反馈</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="sidebar-footer-title">快速链接</div>
+                <div class="sidebar-footer-links">
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>🌐</span>
+                        <span>ByteZoneX</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>💻</span>
+                        <span>GitHub</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>📦</span>
+                        <span>npm</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                </div>
+                
+                <!-- QR Code -->
+                <div class="sidebar-qrcode">
+                    <div class="sidebar-qrcode-title">关注公众号</div>
+                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" />
+                    <div class="sidebar-qrcode-desc">获取更多技术分享</div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper">
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb">
+                    <a href="../index.html">文档首页</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="#">指南</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>最佳实践</span>
+                </nav>
+                
+                <!-- Page Header -->
+                <h1 class="page-title">最佳实践</h1>
+                <p class="page-description">MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南</p>
+                <div class="page-meta">
+                    <span>📦 v2.0.0</span>
+                    <span>·</span>
+                    <span>最后更新：2026-01-27</span>
+                </div>
+                
+                <!-- 研发流程概览 -->
+                <h2>完整研发流程</h2>
+                <p>MCP Probe Kit 的 48 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。</p>
+                
+                <div class="callout info">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-content">
+                        <p><strong>核心理念：</strong>通过工作流编排工具（start_*）串联整个开发流程，让 AI 成为你的研发助手。</p>
+                    </div>
+                </div>
+                
+                <!-- 阶段 1：需求阶段 -->
+                <h2>阶段 1：需求分析与规划</h2>
+                
+                <h3>1.1 新项目启动</h3>
+                <p>使用 <code>init_project</code> 按 Spec-Driven Development 方式生成项目文档。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 我要创建一个任务管理系统
+
+AI: 使用 init_project 工具
+input: "任务管理系统，支持任务创建、分配、跟踪、提醒"
+project_name: "TaskManager"
+
+→ 生成：需求文档、设计文档、任务清单</code></pre>
+                </div>
+                
+                <h3>1.2 需求澄清（避免理解偏差）</h3>
+                <p>使用 <code>interview</code> 工具进行结构化需求访谈。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 添加用户登录功能
+
+AI: 使用 interview 工具
+description: "实现用户登录功能"
+
+→ AI 会提问：
+  - 支持哪些登录方式？（邮箱/手机/第三方）
+  - 是否需要记住登录状态？
+  - 密码规则是什么？
+  - 是否需要验证码？
+
+→ 生成：访谈记录文档</code></pre>
+                </div>
+                
+                <h3>1.3 工作量估算</h3>
+                <p>使用 <code>estimate</code> 工具估算开发时间和资源。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>AI: 使用 estimate 工具
+task_description: "实现用户认证功能"
+experience_level: "mid"
+team_size: 2
+
+→ 输出：
+  - 故事点：8 SP
+  - 时间范围：乐观 3天 / 正常 5天 / 悲观 8天
+  - 风险点：第三方登录集成可能延期</code></pre>
+                </div>
+                
+                <!-- 阶段 2：开发阶段 -->
+                <h2>阶段 2：功能开发</h2>
+                
+                <h3>2.1 完整功能开发流程（推荐）</h3>
+                <p>使用 <code>start_feature</code> 工作流编排，一键完成从规格到估算。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 开发用户认证功能
+
+AI: 使用 start_feature 工具
+description: "用户认证功能，支持邮箱登录和 Google 登录"
+feature_name: "user-auth"
+
+→ 自动执行：
+  ✓ 检查项目上下文
+  ✓ 生成功能规格文档
+  ✓ 估算开发工作量
+  ✓ 输出完整开发计划</code></pre>
+                </div>
+                
+                <h3>2.2 UI 开发流程</h3>
+                <p>使用 <code>start_ui</code> 工作流，从设计系统到代码一气呵成。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 创建登录页面
+
+AI: 使用 start_ui 工具
+description: "登录页面，包含邮箱密码输入和 Google 登录按钮"
+framework: "react"
+
+→ 自动执行：
+  ✓ 检查/生成设计系统
+  ✓ 初始化组件目录
+  ✓ 搜索/生成 UI 模板
+  ✓ 渲染最终 React 代码</code></pre>
+                </div>
+                
+                <h3>2.3 代码生成</h3>
+                <p>根据需要使用各种生成工具：</p>
+                <ul>
+                    <li><code>genapi</code> - 生成 API 文档（OpenAPI/Swagger）</li>
+                    <li><code>gensql</code> - 自然语言生成 SQL 查询</li>
+                    <li><code>gen_mock</code> - 生成测试数据</li>
+                    <li><code>gentest</code> - 生成单元测试</li>
+                </ul>
+                
+                <!-- 阶段 3：代码质量 -->
+                <h2>阶段 3：代码质量保障</h2>
+                
+                <h3>3.1 全面代码审查（推荐）</h3>
+                <p>使用 <code>start_review</code> 工作流，一次性完成代码审查、安全扫描、性能分析。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 审查这段代码
+
+AI: 使用 start_review 工具
+code: "function login(user, pass) { ... }"
+
+→ 自动执行：
+  ✓ 代码审查（质量、风格、最佳实践）
+  ✓ 安全扫描（SQL注入、XSS、CSRF）
+  ✓ 性能分析（算法、内存、数据库）
+  ✓ 输出综合报告</code></pre>
+                </div>
+                
+                <h3>3.2 单项检查</h3>
+                <p>针对特定问题使用单项工具：</p>
+                <ul>
+                    <li><code>code_review</code> - 代码审查</li>
+                    <li><code>security_scan</code> - 安全扫描</li>
+                    <li><code>perf</code> - 性能分析</li>
+                    <li><code>refactor</code> - 重构建议</li>
+                </ul>
+                
+                <!-- 阶段 4：Bug 修复 -->
+                <h2>阶段 4：Bug 修复</h2>
+                
+                <h3>4.1 系统化 Bug 修复（推荐）</h3>
+                <p>使用 <code>start_bugfix</code> 工作流，从分析到测试一站式解决。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 登录功能报错了
+
+AI: 使用 start_bugfix 工具
+error_message: "TypeError: Cannot read property 'token' of undefined"
+stack_trace: "at login.js:45:12"
+
+→ 自动执行：
+  ✓ 检查项目上下文
+  ✓ 分析错误原因
+  ✓ 定位问题代码
+  ✓ 提供修复方案
+  ✓ 生成测试用例</code></pre>
+                </div>
+                
+                <h3>4.2 快速调试</h3>
+                <p>使用 <code>debug</code> 工具快速定位问题。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>AI: 使用 debug 工具
+error: "数据库连接超时"
+context: "await db.connect({ timeout: 1000 })"
+
+→ 输出：
+  - 根因：超时时间设置过短
+  - 调试策略：增加超时时间或优化连接池
+  - 解决方案：timeout: 5000</code></pre>
+                </div>
+                
+                <!-- 阶段 5：版本发布 -->
+                <h2>阶段 5：版本发布</h2>
+                
+                <h3>5.1 自动化发布流程（推荐）</h3>
+                <p>使用 <code>start_release</code> 工作流，自动生成 Changelog 和 PR 描述。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 准备发布 v2.0.0
+
+AI: 使用 start_release 工具
+version: "v2.0.0"
+from_tag: "v1.9.0"
+
+→ 自动执行：
+  ✓ 生成 CHANGELOG（按 feat/fix/breaking 分类）
+  ✓ 生成 PR 描述（变更摘要、影响范围、测试说明）
+  ✓ 输出发布检查清单</code></pre>
+                </div>
+                
+                <h3>5.2 Git 工作流</h3>
+                <p>使用 Git 工具提升协作效率：</p>
+                <ul>
+                    <li><code>gencommit</code> - 生成规范的 commit 消息</li>
+                    <li><code>genchangelog</code> - 生成 CHANGELOG</li>
+                    <li><code>genpr</code> - 生成 PR 描述</li>
+                    <li><code>resolve_conflict</code> - 解决合并冲突</li>
+                </ul>
+                
+                <!-- 阶段 6：项目维护 -->
+                <h2>阶段 6：项目维护</h2>
+                
+                <h3>6.1 新成员上手</h3>
+                <p>使用 <code>start_onboard</code> 工作流，快速了解项目。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>新成员: 我刚加入项目，需要了解项目结构
+
+AI: 使用 start_onboard 工具
+
+→ 自动执行：
+  ✓ 分析项目结构
+  ✓ 识别技术栈
+  ✓ 生成上下文文档
+  ✓ 输出开发规范</code></pre>
+                </div>
+                
+                <h3>6.2 文档维护</h3>
+                <p>使用 <code>start_doc</code> 工作流，一键补全项目文档。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>AI: 使用 start_doc 工具
+code: "整个项目代码"
+
+→ 自动执行：
+  ✓ 生成代码注释（JSDoc/TSDoc）
+  ✓ 生成 README 文档
+  ✓ 生成 API 文档
+  ✓ 输出完整文档集</code></pre>
+                </div>
+                
+                <h3>6.3 依赖管理</h3>
+                <p>使用 <code>check_deps</code> 定期检查依赖健康度。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>AI: 使用 check_deps 工具
+
+→ 输出：
+  - 过期依赖：react@17.0.0 → 18.2.0
+  - 安全漏洞：lodash@4.17.15 (CVE-2021-23337)
+  - 体积问题：moment.js 可替换为 date-fns
+  - 升级建议：优先级排序</code></pre>
+                </div>
+                
+                <!-- 高级实践 -->
+                <h2>高级实践：Ralph Wiggum Loop</h2>
+                
+                <h3>自动化循环开发</h3>
+                <p>使用 <code>start_ralph</code> 启动自动化开发循环，AI 持续迭代直到完成目标。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">高级实践</span>
+                    </div>
+                    <pre><code>你: 实现用户认证功能
+
+AI: 使用 start_ralph 工具
+goal: "实现用户认证功能，包含登录、注册、密码重置"
+mode: "safe"  // 启用安全保护
+max_iterations: 8
+max_minutes: 25
+
+→ AI 自动循环：
+  第1轮：分析需求 → 生成代码
+  第2轮：运行测试 → 修复错误
+  第3轮：代码审查 → 优化代码
+  ...
+  直到：测试通过 + 需求满足</code></pre>
+                </div>
+                
+                <div class="callout warning">
+                    <div class="callout-icon">⚠️</div>
+                    <div class="callout-content">
+                        <p><strong>安全提示：</strong>Ralph Loop 默认启用多重安全保护（最大迭代次数、运行时间、代码变更量限制），防止失控。</p>
+                    </div>
+                </div>
+                
+                <!-- 总结 -->
+                <h2>最佳实践总结</h2>
+                
+                <div class="callout success">
+                    <div class="callout-icon">✅</div>
+                    <div class="callout-content">
+                        <p><strong>核心原则：</strong></p>
+                        <ul>
+                            <li>✓ 优先使用工作流编排工具（start_*）- 自动化完整流程</li>
+                            <li>✓ 需求阶段使用 interview - 避免理解偏差</li>
+                            <li>✓ 开发前使用 estimate - 合理规划时间</li>
+                            <li>✓ 提交前使用 start_review - 保证代码质量</li>
+                            <li>✓ 发布前使用 start_release - 规范发布流程</li>
+                            <li>✓ 定期使用 check_deps - 维护依赖健康</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 更多资源 -->
+                <h2>更多资源</h2>
+                <ul>
+                    <li><a href="./all-tools.html">完整工具参考</a> - 查看所有 48 个工具的详细说明</li>
+                    <li><a href="./getting-started.html">安装配置</a> - 快速开始使用</li>
+                    <li><a href="./migration.html">迁移指南</a> - 从 v1.x 迁移到 v2.0</li>
+                    <li><a href="https://github.com/mybolide/mcp-probe-kit" target="_blank">GitHub 仓库</a> - 源代码和问题反馈</li>
+                </ul>
+                
+                <!-- Next Steps -->
+                <div class="next-cta">
+                    <h3>🚀 开始实践</h3>
+                    <p>将这些最佳实践应用到你的项目中</p>
+                    <div class="next-cta-links">
+                        <a href="./getting-started.html" class="next-cta-link">
+                            <span>📖</span>
+                            <span>安装配置</span>
+                        </a>
+                        <a href="./all-tools.html" class="next-cta-link">
+                            <span>🛠️</span>
+                            <span>查看所有工具</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-container">
+                    <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
+                    <div>
+                        © 2024-2026 MCP Probe Kit · MIT License · 
+                        <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+    
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+    
+    <script>
+        const topbar = document.getElementById('topbar');
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 10) {
+                topbar.classList.add('scrolled');
+            } else {
+                topbar.classList.remove('scrolled');
+            }
+        });
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+        
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-content').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.remove('open');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -296,6 +296,8 @@ describe('[功能描述]', () => {
 *工具: MCP Probe Kit - fix_bug*
 `;
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { BugAnalysis } from "../schemas/output/index.js";
 
 /**
  * fix_bug 工具实现
@@ -362,14 +364,41 @@ export async function fixBug(args: any) {
       .replace(/{reproduce_section}/g, reproduceSection)
       .replace(/{behavior_section}/g, behaviorSection);
 
-    return {
-      content: [{ type: "text", text: guide }],
+    // 创建结构化数据
+    const structuredData: BugAnalysis = {
+      summary: "Bug 修复指南已生成",
+      bugType: "functional", // AI 会填充
+      severity: "medium", // AI 会填充
+      rootCause: "", // AI 会填充
+      fixPlan: {
+        steps: [], // AI 会填充
+      },
+      testPlan: {}, // AI 会填充
     };
+
+    return okStructured(
+      guide,
+      structuredData,
+      {
+        schema: (await import('../schemas/output/core-tools.js')).BugAnalysisSchema,
+      }
+    );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `❌ 生成修复指南失败: ${errorMsg}` }],
-      isError: true,
-    };
+    
+    return okStructured(
+      `❌ 生成修复指南失败: ${errorMsg}`,
+      {
+        summary: `生成修复指南失败: ${errorMsg}`,
+        bugType: "functional",
+        severity: "low",
+        rootCause: errorMsg,
+        fixPlan: { steps: [] },
+        testPlan: {},
+      },
+      {
+        schema: (await import('../schemas/output/core-tools.js')).BugAnalysisSchema,
+      }
+    );
   }
 }

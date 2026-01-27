@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { DebugReport } from "../schemas/output/index.js";
 
 // debug 工具实现
 export async function debug(args: any) {
@@ -114,26 +116,37 @@ ${context || "请提供相关代码或场景描述"}
 
 现在请按照上述步骤分析错误并提供具体的调试方案。`;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+    // 创建结构化数据
+    const structuredData: DebugReport = {
+      summary: "错误分析完成，请查看详细报告",
+      rootCause: "", // AI 会填充
+      errorType: "unknown", // AI 会填充
+      solutions: [], // AI 会填充
     };
+
+    return okStructured(
+      message,
+      structuredData,
+      {
+        schema: (await import('../schemas/output/core-tools.js')).DebugReportSchema,
+      }
+    );
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 生成调试策略失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
+    
+    return okStructured(
+      `❌ 生成调试策略失败: ${errorMessage}`,
+      {
+        summary: `调试分析失败: ${errorMessage}`,
+        rootCause: errorMessage,
+        errorType: "unknown",
+        solutions: [],
+      },
+      {
+        schema: (await import('../schemas/output/core-tools.js')).DebugReportSchema,
+      }
+    );
   }
 }
 

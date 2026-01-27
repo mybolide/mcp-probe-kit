@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { PerformanceReport } from "../schemas/output/core-tools.js";
 
 // perf 工具实现
 export async function perf(args: any) {
@@ -392,26 +394,33 @@ console.log(\`耗时: \${end - start}ms\`);
 
 现在请分析代码，提供详细的性能优化建议。`;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+    // 创建结构化数据对象
+    const perfReport: PerformanceReport = {
+      summary: `性能分析 - ${type}`,
+      overallScore: 70,
+      bottlenecks: [],
+      optimizations: [],
     };
+
+    return okStructured(message, perfReport, {
+      schema: (await import('../schemas/output/core-tools.js')).PerformanceReportSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 性能分析失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    const errorData: PerformanceReport = {
+      summary: `性能分析失败: ${errorMessage}`,
+      overallScore: 0,
+      bottlenecks: [],
+      optimizations: [],
     };
+    return okStructured(
+      `❌ 性能分析失败: ${errorMessage}`,
+      errorData,
+      {
+        schema: (await import('../schemas/output/core-tools.js')).PerformanceReportSchema,
+      }
+    );
   }
 }
 

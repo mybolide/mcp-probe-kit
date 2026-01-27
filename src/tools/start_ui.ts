@@ -11,6 +11,9 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { getReasoningEngine } from "./ui-ux-tools.js";
 import { DesignRequest } from "../utils/design-reasoning-engine.js";
+import { okStructured } from "../lib/response.js";
+import { UIReportSchema } from "../schemas/structured-output.js";
+import type { UIReport } from "../schemas/structured-output.js";
 
 const PROMPT_TEMPLATE = `# 快速开始
 
@@ -226,14 +229,63 @@ render_ui docs/ui/${templateName || 'template'}.json --framework="${inferredStac
 ${recommendation.reasoning}
 `;
 
-      return {
-        content: [
+      // Create structured UI report for auto mode
+      const uiReport: UIReport = {
+        summary: `智能 UI 开发：${description}`,
+        status: 'pending',
+        steps: [
           {
-            type: "text",
-            text: smartPlan,
+            name: '生成设计系统',
+            status: 'pending',
+            description: `调用 ui_design_system 生成设计规范`,
+          },
+          {
+            name: '生成组件目录',
+            status: 'pending',
+            description: '调用 init_component_catalog 生成组件目录',
+          },
+          {
+            name: '搜索 UI 模板',
+            status: 'pending',
+            description: '调用 ui_search 搜索匹配的模板',
+          },
+          {
+            name: '渲染最终代码',
+            status: 'pending',
+            description: '调用 render_ui 生成组件代码',
           },
         ],
+        artifacts: [],
+        nextSteps: [
+          `调用 ui_design_system --product_type="${inferredProductType}" --stack="${inferredStack}"`,
+          '调用 init_component_catalog',
+          `调用 ui_search --mode=template --query="${description}"`,
+          `调用 render_ui --framework="${inferredStack}"`,
+        ],
+        designSystem: {
+          colors: {},
+          typography: {},
+          spacing: {},
+        },
+        renderedCode: {
+          framework: inferredStack as 'react' | 'vue' | 'html',
+          code: '待生成',
+        },
+        consistencyRules: [
+          '所有组件使用设计系统中定义的颜色',
+          '所有组件使用设计系统中定义的字体',
+          '所有组件使用设计系统中定义的间距',
+        ],
       };
+
+      return okStructured(
+        smartPlan,
+        uiReport,
+        {
+          schema: UIReportSchema,
+          note: 'AI 应该按照智能计划执行步骤，并在每个步骤完成后更新 structuredContent',
+        }
+      );
     }
 
     // 如果没有提供模板名，从描述中生成
@@ -298,14 +350,63 @@ start_ui "设置页面" --framework=react
     guide = safeReplace(guide, '{framework}', framework);
     guide = safeReplace(guide, '{templateName}', templateName || 'ui-template');
 
-    return {
-      content: [
+    // Create structured UI report for manual mode
+    const uiReport: UIReport = {
+      summary: `UI 开发工作流：${description}`,
+      status: 'pending',
+      steps: [
         {
-          type: "text",
-          text: guide,
+          name: '检查设计系统',
+          status: 'pending',
+          description: '检查 docs/design-system.md 是否存在',
+        },
+        {
+          name: '检查组件目录',
+          status: 'pending',
+          description: '检查 docs/component-catalog.json 是否存在',
+        },
+        {
+          name: '搜索 UI 模板',
+          status: 'pending',
+          description: '调用 ui_search 搜索匹配的模板',
+        },
+        {
+          name: '渲染最终代码',
+          status: 'pending',
+          description: '调用 render_ui 生成组件代码',
         },
       ],
+      artifacts: [],
+      nextSteps: [
+        '检查设计系统文件，如不存在则调用 ui_design_system',
+        '检查组件目录，如不存在则调用 init_component_catalog',
+        `调用 ui_search --mode=template --query="${description}"`,
+        `调用 render_ui --framework="${framework}"`,
+      ],
+      designSystem: {
+        colors: {},
+        typography: {},
+        spacing: {},
+      },
+      renderedCode: {
+        framework: framework as 'react' | 'vue' | 'html',
+        code: '待生成',
+      },
+      consistencyRules: [
+        '所有组件使用设计系统中定义的颜色',
+        '所有组件使用设计系统中定义的字体',
+        '所有组件使用设计系统中定义的间距',
+      ],
     };
+
+    return okStructured(
+      guide,
+      uiReport,
+      {
+        schema: UIReportSchema,
+        note: 'AI 应该按照指南执行步骤，并在每个步骤完成后更新 structuredContent',
+      }
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {

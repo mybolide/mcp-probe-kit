@@ -17,7 +17,7 @@ describe('start_ui 集成测试', () => {
       
       expect(result.isError).not.toBe(true);
       
-      const text = result.content[0].text;
+      const text = result.content[0].text || '';
       
       // 1. 应该包含快速开始部分
       expect(text).toMatch(/^#\s+快速开始/m);
@@ -89,7 +89,7 @@ describe('start_ui 集成测试', () => {
       
       expect(result.isError).not.toBe(true);
       
-      const text = result.content[0].text;
+      const text = result.content[0].text || '';
       
       // 应该包含转义后的描述
       expect(text).toMatch(/带有用户认证和权限管理的管理后台/);
@@ -132,7 +132,7 @@ describe('start_ui 集成测试', () => {
       
       expect(result.isError).toBe(true);
       
-      const text = result.content[0].text;
+      const text = result.content[0].text || '';
       
       // 应该说明问题
       expect(text).toMatch(/无效的模式/);
@@ -153,7 +153,7 @@ describe('start_ui 集成测试', () => {
         framework: 'vue'
       });
       
-      const text = result.content[0].text;
+      const text = result.content[0].text || '';
       
       // 提取所有 JSON 代码块
       const jsonBlocks = text.match(/```json\n([\s\S]*?)\n```/g);
@@ -182,7 +182,7 @@ describe('start_ui 集成测试', () => {
         framework: 'react'
       });
       
-      const text = result.content[0].text;
+      const text = result.content[0].text || '';
       
       // 定义有效的工具名称
       const validTools = [

@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { APIDocumentation } from "../schemas/output/generation-tools.js";
 
 // genapi 工具实现
 export async function genapi(args: any) {
@@ -157,26 +159,33 @@ paths:
 
 现在请根据上述代码生成完整的 API 文档。`;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+    // 创建结构化数据对象
+    const apiDoc: APIDocumentation = {
+      summary: `生成 ${format} 格式的 API 文档`,
+      format: format as any,
+      endpoints: [],
+      documentation: message,
     };
+
+    return okStructured(message, apiDoc, {
+      schema: (await import("../schemas/output/generation-tools.js")).APIDocumentationSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 生成 API 文档失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    const errorData: APIDocumentation = {
+      summary: `生成 API 文档失败: ${errorMessage}`,
+      format: 'markdown',
+      endpoints: [],
+      documentation: '',
     };
+    return okStructured(
+      `❌ 生成 API 文档失败: ${errorMessage}`,
+      errorData,
+      {
+        schema: (await import("../schemas/output/generation-tools.js")).APIDocumentationSchema,
+      }
+    );
   }
 }
 

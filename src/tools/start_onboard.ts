@@ -1,4 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import { OnboardingReportSchema } from "../schemas/structured-output.js";
+import type { OnboardingReport } from "../schemas/structured-output.js";
 
 /**
  * start_onboard 智能编排工具
@@ -154,9 +157,50 @@ export async function startOnboard(args: any) {
       .replace(/{project_path}/g, projectPath)
       .replace(/{docs_dir}/g, docsDir);
 
-    return {
-      content: [{ type: "text", text: guide }],
+    // Create structured onboarding report
+    const onboardingReport: OnboardingReport = {
+      summary: `项目上手工作流：${projectPath}`,
+      status: 'pending',
+      steps: [
+        {
+          name: '项目分析',
+          status: 'pending',
+          description: '调用 analyze_project 分析项目结构和技术栈',
+        },
+        {
+          name: '生成项目上下文',
+          status: 'pending',
+          description: '调用 init_project_context 生成项目文档',
+        },
+      ],
+      artifacts: [],
+      nextSteps: [
+        '调用 analyze_project 分析项目',
+        '调用 init_project_context 生成文档',
+        `阅读 ${docsDir}/project-context.md`,
+        '查看 README.md 了解项目背景',
+      ],
+      projectSummary: {
+        name: '待分析',
+        description: '待分析',
+        techStack: [],
+        architecture: '待分析',
+      },
+      quickstart: {
+        setup: ['待分析'],
+        commonTasks: [],
+      },
+      keyFiles: [],
     };
+
+    return okStructured(
+      guide,
+      onboardingReport,
+      {
+        schema: OnboardingReportSchema,
+        note: 'AI 应该按照指南执行步骤，并在分析完成后更新 structuredContent 中的项目信息',
+      }
+    );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return {

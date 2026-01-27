@@ -11,6 +11,8 @@ import { ASCIIBoxFormatter } from '../utils/ascii-box-formatter.js';
 import { UISearchOptions } from '../utils/ui-search-engine.js';
 import { syncUIDataToCache } from '../utils/ui-sync.js';
 import { formatDesignSystemJson } from '../utils/design-system-json-formatter.js';
+import { okStructured } from '../lib/response.js';
+import type { DesignSystem, UISearchResult, SyncReport } from '../schemas/output/ui-ux-tools.js';
 
 /**
  * 文件索引接口
@@ -353,12 +355,7 @@ ${creationGuidance.config.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
 ${creationGuidance.tips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
 `;
 
-    // 返回新的输出格式（Requirements: 2.1, 2.5, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6）
-    return {
-      content: [
-        {
-          type: "text",
-          text: `# ✅ 设计系统推荐已生成
+    const message = `# ✅ 设计系统推荐已生成
 
 **产品类型**: ${request.productType}
 **技术栈**: ${request.stack || 'html'}
@@ -453,17 +450,45 @@ ${guidanceText}
 ---
 
 🚀 **准备好了吗？让我们开始创建第一个文件吧！**
-`,
-        },
-      ],
+`;
+
+    // 构建结构化数据对象
+    const structuredData: DesignSystem = {
+      summary: `设计系统推荐已生成 - ${request.productType}`,
+      productType: request.productType,
+      colors: {
+        primary: (recommendation.colors?.primary as any) || {},
+        secondary: (recommendation.colors?.secondary as any) || {},
+        neutral: {},
+        semantic: {},
+      },
+      typography: {
+        fontFamilies: {},
+        fontSizes: {},
+        fontWeights: {},
+        lineHeights: {},
+      },
+      spacing: {},
+      breakpoints: {},
+      components: [],
+      documentation: asciiBox,
     };
+
+    // 返回结构化输出（Requirements: 2.1, 2.5, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6）
+    return okStructured(message, structuredData, {
+      schema: (await import('../schemas/output/ui-ux-tools.js')).DesignSystemSchema,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 设计系统生成失败: ${errorMessage}
+    
+    const errorData: DesignSystem = {
+      summary: "设计系统生成失败",
+      productType: args.product_type || 'Unknown',
+      colors: {},
+      typography: {},
+    };
+    
+    return okStructured(`❌ 设计系统生成失败: ${errorMessage}
 
 **可能的原因**:
 1. 数据未加载完成
@@ -474,11 +499,9 @@ ${guidanceText}
 1. 提供更具体的产品类型（如 "SaaS", "E-commerce", "Healthcare"）
 2. 添加产品描述帮助推理引擎理解需求
 3. 检查数据是否已同步（使用 \`sync_ui_data\` 工具）
-`,
-        },
-      ],
-      isError: true,
-    };
+`, errorData, {
+      schema: (await import('../schemas/output/ui-ux-tools.js')).DesignSystemSchema,
+    });
   }
 }
 
@@ -512,11 +535,7 @@ export async function uiSearch(args: any) {
 `;
         }).join('\n---\n\n');
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `# 📦 组件目录
+        const message = `# 📦 组件目录
 
 共 ${components.length} 个可用组件
 
@@ -525,23 +544,38 @@ export async function uiSearch(args: any) {
 ${componentList}
 
 **提示**: 这些组件可以在 UI 模板中使用
-`,
-            },
-          ],
+`;
+
+        const structuredData: UISearchResult = {
+          summary: `组件目录 - ${components.length} 个组件`,
+          query: 'catalog',
+          category: 'components',
+          results: components.map((comp: any) => ({
+            id: comp.name,
+            title: comp.name,
+            description: comp.description || '无描述',
+            category: 'component',
+          })),
+          totalResults: components.length,
         };
+
+        return okStructured(message, structuredData, {
+          schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+        });
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `❌ 未找到组件目录文件
+        const errorData: UISearchResult = {
+          summary: "未找到组件目录",
+          query: 'catalog',
+          results: [],
+          totalResults: 0,
+        };
+        
+        return okStructured(`❌ 未找到组件目录文件
 
 请先运行 \`init_component_catalog\` 生成组件目录。
-`,
-            },
-          ],
-          isError: true,
-        };
+`, errorData, {
+          schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+        });
       }
     }
 
@@ -561,11 +595,15 @@ ${componentList}
         const jsonFiles = files.filter(f => f.endsWith('.json'));
 
         if (jsonFiles.length === 0) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `📭 暂无可用模板
+          const emptyData: UISearchResult = {
+            summary: "暂无可用模板",
+            query: query || 'template',
+            category: 'template',
+            results: [],
+            totalResults: 0,
+          };
+          
+          return okStructured(`📭 暂无可用模板
 
 **建议**:
 1. 使用 \`start_ui\` 生成新模板
@@ -577,10 +615,9 @@ ${componentList}
 start_ui "登录页面"
 start_ui "用户列表"
 \`\`\`
-`,
-              },
-            ],
-          };
+`, emptyData, {
+            schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+          });
         }
 
         // 读取所有模板内容
@@ -609,20 +646,28 @@ start_ui "用户列表"
         }
 
         if (filteredTemplates.length === 0) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `未找到匹配的模板
+          const noMatchData: UISearchResult = {
+            summary: "未找到匹配的模板",
+            query: query,
+            category: 'template',
+            results: templates.map(t => ({
+              id: t.file,
+              title: t.name,
+              description: t.description,
+              category: 'template',
+            })),
+            totalResults: 0,
+          };
+          
+          return okStructured(`未找到匹配的模板
 
 **查询**: ${query}
 **可用模板**: ${templates.map(t => t.name).join(', ')}
 
 **建议**: 使用 \`start_ui "${query}"\` 生成新模板
-`,
-              },
-            ],
-          };
+`, noMatchData, {
+            schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+          });
         }
 
         // 格式化模板列表
@@ -639,11 +684,7 @@ ${JSON.stringify(t.template, null, 2)}
 `;
         }).join('\n---\n\n');
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `# 📄 UI 模板搜索结果
+        const message = `# 📄 UI 模板搜索结果
 
 找到 ${filteredTemplates.length} 个匹配模板
 
@@ -655,16 +696,35 @@ ${templateList}
 \`\`\`
 render_ui docs/ui/pages/<文件名>.json --framework=react
 \`\`\`
-`,
-            },
-          ],
+`;
+
+        const structuredData: UISearchResult = {
+          summary: `找到 ${filteredTemplates.length} 个模板`,
+          query: query || 'template',
+          category: 'template',
+          results: filteredTemplates.map(t => ({
+            id: t.file,
+            title: t.name,
+            description: t.description,
+            category: 'template',
+            preview: JSON.stringify(t.template, null, 2),
+          })),
+          totalResults: filteredTemplates.length,
         };
+
+        return okStructured(message, structuredData, {
+          schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+        });
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `📭 暂无可用模板
+        const errorData: UISearchResult = {
+          summary: "暂无可用模板",
+          query: query || 'template',
+          category: 'template',
+          results: [],
+          totalResults: 0,
+        };
+        
+        return okStructured(`📭 暂无可用模板
 
 模板目录不存在或为空。
 
@@ -678,10 +738,9 @@ start_ui "设置页面"
 \`\`\`
 
 模板会自动保存到 \`docs/ui/pages/\` 目录。
-`,
-            },
-          ],
-        };
+`, errorData, {
+          schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+        });
       }
     }
 
@@ -699,11 +758,15 @@ start_ui "设置页面"
     const results = searchEngine.search(query, options);
 
     if (results.length === 0) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `未找到匹配的 UI/UX 数据。
+      const noResultData: UISearchResult = {
+        summary: "未找到匹配的 UI/UX 数据",
+        query: query,
+        category: options.category,
+        results: [],
+        totalResults: 0,
+      };
+      
+      return okStructured(`未找到匹配的 UI/UX 数据。
 
 **搜索条件:**
 - 查询: ${query}
@@ -714,10 +777,9 @@ start_ui "设置页面"
 1. 尝试使用更通用的关键词
 2. 检查拼写是否正确
 3. 移除类别或技术栈限制
-`,
-          },
-        ],
-      };
+`, noResultData, {
+        schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+      });
     }
 
     // 格式化结果
@@ -739,11 +801,7 @@ ${fields}
 `;
     }).join('\n---\n\n');
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: `# UI/UX 搜索结果
+    const message = `# UI/UX 搜索结果
 
 找到 ${results.length} 条匹配结果
 
@@ -755,21 +813,39 @@ ${fields}
 ---
 
 ${formattedResults}
-`,
-        },
-      ],
+`;
+
+    const structuredData: UISearchResult = {
+      summary: `找到 ${results.length} 条结果`,
+      query: query,
+      category: options.category,
+      results: results.map(result => ({
+        id: result.data.id || result.data.name || '',
+        title: result.data.title || result.data.name || '',
+        description: result.data.description || '',
+        category: result.category,
+        score: result.score,
+        preview: JSON.stringify(result.data, null, 2),
+      })),
+      totalResults: results.length,
     };
+
+    return okStructured(message, structuredData, {
+      schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ UI 搜索失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    
+    const errorData: UISearchResult = {
+      summary: "UI 搜索失败",
+      query: args.query || '',
+      results: [],
+      totalResults: 0,
     };
+    
+    return okStructured(`❌ UI 搜索失败: ${errorMessage}`, errorData, {
+      schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+    });
   }
 }
 
@@ -790,20 +866,23 @@ export async function syncUiData(args: any) {
         const updateInfo = await cacheManager.checkUpdate();
 
         if (!updateInfo.hasUpdate) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `✅ UI/UX 数据已是最新版本
+          const upToDateData: SyncReport = {
+            summary: "UI/UX 数据已是最新版本",
+            status: 'success',
+            synced: {},
+            version: updateInfo.currentVersion || 'unknown',
+            timestamp: new Date().toISOString(),
+          };
+          
+          return okStructured(`✅ UI/UX 数据已是最新版本
 
 **当前版本:** ${updateInfo.currentVersion}
 **最新版本:** ${updateInfo.latestVersion}
 
 无需更新。如需强制同步，请使用 \`force: true\` 参数。
-`,
-              },
-            ],
-          };
+`, upToDateData, {
+            schema: (await import('../schemas/output/ui-ux-tools.js')).SyncReportSchema,
+          });
         }
 
         console.log(`Update available: ${updateInfo.currentVersion || 'none'} -> ${updateInfo.latestVersion}`);
@@ -821,27 +900,49 @@ export async function syncUiData(args: any) {
     }
 
     const cacheDir = dataLoader?.getCacheManager().getCacheDir() || '';
+    
+    // 获取同步的数据统计
+    const loader = await getDataLoader();
+    const searchEngine = loader.getSearchEngine();
+    
+    const syncedData: SyncReport = {
+      summary: "UI/UX 数据同步成功",
+      status: 'success',
+      synced: {
+        colors: (searchEngine.getCategoryData('colors') || []).length,
+        icons: (searchEngine.getCategoryData('icons') || []).length,
+        components: (searchEngine.getCategoryData('products') || []).length,
+        patterns: (searchEngine.getCategoryData('landing') || []).length,
+      },
+      timestamp: new Date().toISOString(),
+    };
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: `✅ UI/UX 数据同步成功
+    return okStructured(`✅ UI/UX 数据同步成功
 
 数据已更新到缓存目录: ${cacheDir}
 
+**同步统计:**
+- 颜色: ${syncedData.synced.colors} 条
+- 图标: ${syncedData.synced.icons} 条
+- 组件: ${syncedData.synced.components} 条
+- 模式: ${syncedData.synced.patterns} 条
+
 **提示:** 数据已自动重新加载，可以立即使用最新数据。
-`,
-        },
-      ],
-    };
+`, syncedData, {
+      schema: (await import('../schemas/output/ui-ux-tools.js')).SyncReportSchema,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ UI 数据同步失败: ${errorMessage}
+    
+    const errorData: SyncReport = {
+      summary: "UI 数据同步失败",
+      status: 'failed',
+      synced: {},
+      timestamp: new Date().toISOString(),
+      errors: [errorMessage],
+    };
+    
+    return okStructured(`❌ UI 数据同步失败: ${errorMessage}
 
 **可能的原因:**
 1. 网络连接问题
@@ -853,11 +954,9 @@ export async function syncUiData(args: any) {
 1. 检查网络连接
 2. 稍后重试
 3. 使用 \`verbose: true\` 查看详细日志
-`,
-        },
-      ],
-      isError: true,
-    };
+`, errorData, {
+      schema: (await import('../schemas/output/ui-ux-tools.js')).SyncReportSchema,
+    });
   }
 }
 

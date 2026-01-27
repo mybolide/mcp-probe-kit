@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { RefactorPlan } from "../schemas/output/core-tools.js";
 
 // refactor 工具实现
 export async function refactor(args: any) {
@@ -321,28 +323,71 @@ const result = pipe(
 - ✅ 保持功能不变，仅改善代码结构
 - ✅ 输出结构化重构方案和示例代码
 
+---
+
+## 📤 输出格式要求
+
+请严格按以下 JSON 格式输出重构计划：
+
+\`\`\`json
+{
+  "summary": "重构摘要",
+  "goal": "improve_readability|reduce_complexity|improve_performance|improve_maintainability|modernize",
+  "currentIssues": ["问题1", "问题2"],
+  "refactoringSteps": [
+    {
+      "step": 1,
+      "title": "步骤标题",
+      "description": "步骤描述",
+      "before": "重构前代码",
+      "after": "重构后代码",
+      "rationale": "重构理由"
+    }
+  ],
+  "riskAssessment": {
+    "level": "low|medium|high",
+    "risks": ["风险1", "风险2"],
+    "mitigations": ["缓解措施1", "缓解措施2"]
+  },
+  "expectedBenefits": ["收益1", "收益2"]
+}
+\`\`\`
+
 现在请分析代码，提供详细的重构建议和实施计划。`;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+    // 创建结构化数据对象
+    const refactorPlan: RefactorPlan = {
+      summary: `代码重构计划 - 目标: ${goal || '全面优化'}`,
+      goal: (goal as any) || 'improve_maintainability',
+      refactoringSteps: [],
+      riskAssessment: {
+        level: 'medium',
+        risks: [],
+      },
     };
+
+    return okStructured(message, refactorPlan, {
+      schema: (await import('../schemas/output/core-tools.js')).RefactorPlanSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 重构分析失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    const errorData: RefactorPlan = {
+      summary: `重构分析失败: ${errorMessage}`,
+      goal: 'improve_maintainability',
+      refactoringSteps: [],
+      riskAssessment: {
+        level: 'high',
+        risks: [errorMessage],
+      },
     };
+    return okStructured(
+      `❌ 重构分析失败: ${errorMessage}`,
+      errorData,
+      {
+        schema: (await import('../schemas/output/core-tools.js')).RefactorPlanSchema,
+      }
+    );
   }
 }
 

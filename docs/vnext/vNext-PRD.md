@@ -150,14 +150,16 @@
 14. `estimate`
 15. `start_bugfix`（你也可以改成 `start_feature`，但必须保留一个高价值编排入口）
 
-**ui（≤10）主推**：
+**ui（6个）主推**：
 
-* `start_ui`
-* `ui_search`
-* `ui_design_system`
-* `design2code`
-* （可选）`genui`
-* 其余 UI pipeline 步骤（`init_component_catalog/render_ui/sync_ui_data`）默认不在 ui toolset 暴露，但 full 可用。
+* `start_ui` - 统一 UI 开发入口（推荐使用）
+* `ui_search` - 智能搜索（基于 ui-ux-pro-max-skill）
+* `ui_design_system` - 设计系统生成（基于 ui-ux-pro-max-skill）
+* `design2code` - 设计稿转代码
+* `genui` - 通用 UI 组件生成
+* `sync_ui_data` - 数据同步
+
+**说明**：`init_component_catalog` 和 `render_ui` 作为 `start_ui` 的内部步骤，不在 ui toolset 暴露（避免用户困惑），但在 `full` 模式下仍可用。
 
 **full**：49 工具全量
 

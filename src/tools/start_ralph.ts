@@ -1,4 +1,7 @@
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import { RalphLoopReportSchema } from "../schemas/structured-output.js";
+import type { RalphLoopReport } from "../schemas/structured-output.js";
 
 /**
  * start_ralph 智能编排工具
@@ -807,9 +810,98 @@ ${normalScript}
 **Happy coding! 🚀**
 `;
 
-    return {
-      content: [{ type: "text", text: output }],
+    // Create structured Ralph Loop report
+    const ralphReport: RalphLoopReport = {
+      summary: `Ralph Loop 循环开发：${params.goal}`,
+      status: 'pending',
+      steps: [
+        {
+          name: '创建 .ralph 目录',
+          status: 'pending',
+          description: '创建 .ralph/ 目录结构',
+        },
+        {
+          name: '复制配置文件',
+          status: 'pending',
+          description: '复制 PROMPT.md, @fix_plan.md, PROGRESS.md 和脚本文件',
+        },
+        {
+          name: '配置脚本权限',
+          status: 'pending',
+          description: '使脚本可执行（Linux/Mac）',
+        },
+        {
+          name: '启动循环',
+          status: 'pending',
+          description: '运行 ralph_loop_safe 脚本',
+        },
+      ],
+      artifacts: [
+        {
+          path: '.ralph/PROMPT.md',
+          type: 'doc',
+          purpose: '循环提示词和规则',
+        },
+        {
+          path: '.ralph/@fix_plan.md',
+          type: 'doc',
+          purpose: '任务分解和优先级',
+        },
+        {
+          path: '.ralph/PROGRESS.md',
+          type: 'doc',
+          purpose: '迭代日志',
+        },
+        {
+          path: `.ralph/ralph_loop_safe.${isWindows ? 'ps1' : 'sh'}`,
+          type: 'config',
+          purpose: '安全模式脚本',
+        },
+      ],
+      nextSteps: [
+        '创建 .ralph/ 目录',
+        '复制文件内容到对应文件',
+        '使脚本可执行',
+        '运行 ralph_loop_safe 脚本',
+      ],
+      loopPolicy: {
+        maxIterations: params.max_iterations,
+        maxMinutes: params.max_minutes,
+        confirmEvery: params.confirm_every,
+        cooldownSeconds: params.cooldown_seconds,
+      },
+      iterations: [],
+      stopConditions: {
+        reason: '未启动',
+        metConditions: [],
+      },
+      safetyChecks: [
+        {
+          check: 'Max iterations limit',
+          passed: true,
+          message: `设置为 ${params.max_iterations} 次`,
+        },
+        {
+          check: 'Max time limit',
+          passed: true,
+          message: `设置为 ${params.max_minutes} 分钟`,
+        },
+        {
+          check: 'Confirmation required',
+          passed: true,
+          message: `每 ${params.confirm_every} 轮确认一次`,
+        },
+      ],
     };
+
+    return okStructured(
+      output,
+      ralphReport,
+      {
+        schema: RalphLoopReportSchema,
+        note: 'AI 应该帮助用户创建 .ralph/ 目录并复制文件，然后指导用户启动循环',
+      }
+    );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return {

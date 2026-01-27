@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { ConflictResolution } from "../schemas/output/project-tools.js";
 
 // resolve_conflict 工具实现
 export async function resolveConflict(args: any) {
@@ -331,26 +333,31 @@ git mergetool
 3. 推荐的合并方案
 4. 完整的解决后代码`;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+    // 创建结构化数据对象
+    const structuredData: ConflictResolution = {
+      summary: "Git 冲突解决指南",
+      conflicts: [],
+      resolvedCode: "待分析冲突后生成",
+      explanation: "请提供冲突内容以进行分析"
     };
+
+    return okStructured(message, structuredData, {
+      schema: (await import("../schemas/output/project-tools.js")).ConflictResolutionSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 冲突解决失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    
+    const errorData: ConflictResolution = {
+      summary: "冲突解决失败",
+      conflicts: [],
+      resolvedCode: "",
+      explanation: errorMessage
     };
+    
+    return okStructured(`❌ 冲突解决失败: ${errorMessage}`, errorData, {
+      schema: (await import("../schemas/output/project-tools.js")).ConflictResolutionSchema,
+    });
   }
 }
 

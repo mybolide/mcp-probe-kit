@@ -1,3 +1,6 @@
+import { okStructured } from "../lib/response.js";
+import type { DependencyReport } from "../schemas/output/project-tools.js";
+
 // check_deps 工具实现（无参数）
 export async function checkDeps(_args: any) {
   try {
@@ -181,26 +184,37 @@ grep -r "from 'package-name'" src/
 
 现在请开始依赖分析，生成详细的分析报告和升级计划。`;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+    // 创建结构化数据对象
+    const structuredData: DependencyReport = {
+      summary: "依赖健康度分析",
+      totalDependencies: 0,
+      outdated: [],
+      vulnerabilities: [],
+      unused: [],
+      recommendations: [
+        "运行 npm outdated 检查过期依赖",
+        "运行 npm audit 检查安全漏洞",
+        "使用 depcheck 查找未使用的依赖",
+        "定期更新依赖以保持项目健康"
+      ]
     };
+
+    return okStructured(message, structuredData, {
+      schema: (await import("../schemas/output/project-tools.js")).DependencyReportSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 依赖分析失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    
+    const errorData: DependencyReport = {
+      summary: "依赖分析失败",
+      totalDependencies: 0,
+      recommendations: [errorMessage]
     };
+    
+    return okStructured(`❌ 依赖分析失败: ${errorMessage}`, errorData, {
+      schema: (await import("../schemas/output/project-tools.js")).DependencyReportSchema,
+    });
   }
 }
 

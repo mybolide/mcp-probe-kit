@@ -172,29 +172,6 @@ export const orchestrationToolSchemas = [
     },
   },
   {
-    name: "gen_skill",
-    description: "当用户需要生成 Agent Skills 文档时使用。为 MCP Probe Kit 工具生成符合开放标准的技能文档，输出到 skills/ 目录",
-    inputSchema: {
-      type: "object",
-      properties: {
-        scope: {
-          type: "string",
-          description: "生成范围：all（所有工具）、single（单个工具）。可选，默认 all",
-        },
-        tool_name: {
-          type: "string",
-          description: "工具名称。当 scope 为 single 时必填",
-        },
-        lang: {
-          type: "string",
-          description: "文档语言：zh（中文）、en（英文）。可选，默认 zh",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
     name: "start_ralph",
     description: "当用户需要启动 Ralph Wiggum Loop 循环开发时使用。生成 .ralph/ 目录结构、安全模式脚本和执行指南。默认启用多重安全保护，防止无人值守时费用失控",
     inputSchema: {

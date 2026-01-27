@@ -42,25 +42,6 @@ export const codeAnalysisToolSchemas = [
     },
   },
   {
-    name: "explain",
-    description: "当用户不理解某段代码、需要代码解释时使用。解释代码逻辑和实现原理，包含执行流程、关键概念",
-    inputSchema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "要解释的代码。可以是代码片段或完整函数",
-        },
-        context: {
-          type: "string",
-          description: "业务背景或上下文。可选，有助于更好的解释",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
     name: "perf",
     description: "当用户关注代码性能、需要优化性能时使用。分析性能瓶颈（算法/内存/数据库/React渲染），输出瓶颈清单和优化建议",
     inputSchema: {
@@ -115,25 +96,6 @@ export const codeAnalysisToolSchemas = [
         goal: {
           type: "string",
           description: "重构目标：improve_readability（可读性）、reduce_complexity（复杂度）、performance（性能）。可选",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
-    name: "fix",
-    description: "当用户需要自动修复代码问题（Lint/格式化/类型错误）时使用。自动修复可机械化问题，输出补丁（unified diff）",
-    inputSchema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "要修复的代码",
-        },
-        type: {
-          type: "string",
-          description: "修复类型：lint（代码规范）、ts（TypeScript错误）、format（格式化）、import（导入）。可选，会自动识别",
         },
       },
       required: [],

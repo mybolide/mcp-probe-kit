@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { Documentation } from "../schemas/output/generation-tools.js";
 
 // gendoc 工具实现
 export async function gendoc(args: any) {
@@ -216,26 +218,33 @@ type TypeName = {
 3. 使用示例
 4. 特殊情况说明`;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+    // 创建结构化数据对象
+    const documentation: Documentation = {
+      summary: `为代码生成 ${style} 风格的${lang === "zh" ? "中文" : "英文"}注释`,
+      docType: style as any,
+      documentation: message,
+      functions: [],
     };
+
+    return okStructured(message, documentation, {
+      schema: (await import("../schemas/output/generation-tools.js")).DocumentationSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 生成注释失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    const errorData: Documentation = {
+      summary: `生成注释失败: ${errorMessage}`,
+      docType: 'jsdoc',
+      documentation: '',
+      functions: [],
     };
+    return okStructured(
+      `❌ 生成注释失败: ${errorMessage}`,
+      errorData,
+      {
+        schema: (await import("../schemas/output/generation-tools.js")).DocumentationSchema,
+      }
+    );
   }
 }
 

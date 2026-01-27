@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { TestSuite } from "../schemas/output/core-tools.js";
 
 // gentest 工具实现
 export async function gentest(args: any) {
@@ -158,28 +160,65 @@ const createUser = (overrides = {}) => ({
 2. 所有必要的测试用例
 3. Mock/Stub 设置
 4. 测试数据准备
-5. 清晰的注释说明`;
+5. 清晰的注释说明
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+---
+
+## 📤 输出格式要求
+
+请严格按以下 JSON 格式输出测试套件：
+
+\`\`\`json
+{
+  "summary": "测试套件摘要",
+  "framework": "jest|vitest|mocha",
+  "testCases": [
+    {
+      "name": "测试用例名称",
+      "description": "测试用例描述",
+      "type": "unit|integration|e2e",
+      "code": "完整的测试代码",
+      "assertions": ["断言1", "断言2"]
+    }
+  ],
+  "edgeCases": [
+    {
+      "scenario": "边界场景描述",
+      "input": "输入数据",
+      "expectedOutput": "预期输出"
+    }
+  ],
+  "mockData": {
+    "mockName": "mock数据"
+  }
+}
+\`\`\``;
+
+    // 创建结构化数据对象
+    const testSuite: TestSuite = {
+      summary: `为提供的代码生成 ${framework} 测试用例`,
+      framework: framework as any,
+      testCases: [],
     };
+
+    return okStructured(message, testSuite, {
+      schema: (await import('../schemas/output/core-tools.js')).TestSuiteSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 生成测试用例失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    const errorData: TestSuite = {
+      summary: `生成测试用例失败: ${errorMessage}`,
+      framework: 'jest',
+      testCases: [],
     };
+    return okStructured(
+      `❌ 生成测试用例失败: ${errorMessage}`,
+      errorData,
+      {
+        schema: (await import('../schemas/output/core-tools.js')).TestSuiteSchema,
+      }
+    );
   }
 }
 

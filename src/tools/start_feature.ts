@@ -1,4 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import { FeatureReportSchema } from "../schemas/structured-output.js";
+import type { FeatureReport } from "../schemas/structured-output.js";
 
 /**
  * start_feature 智能编排工具
@@ -203,9 +206,64 @@ export async function startFeature(args: any) {
       .replace(/{description}/g, description)
       .replace(/{docs_dir}/g, docsDir);
 
-    return {
-      content: [{ type: "text", text: guide }],
+    // 创建结构化的功能开发报告
+    const featureReport: FeatureReport = {
+      summary: `新功能开发工作流：${featureName}`,
+      status: 'pending',
+      steps: [
+        {
+          name: '检查项目上下文',
+          status: 'pending',
+          description: `检查 ${docsDir}/project-context.md 是否存在，如不存在则调用 init_project_context`,
+        },
+        {
+          name: '生成功能规格',
+          status: 'pending',
+          description: '调用 add_feature 工具生成需求、设计和任务文档',
+        },
+        {
+          name: '工作量估算',
+          status: 'pending',
+          description: '调用 estimate 工具进行工作量估算',
+        },
+      ],
+      artifacts: [],
+      nextSteps: [
+        '检查并读取项目上下文文档',
+        '调用 add_feature 工具生成功能规格文档',
+        '调用 estimate 工具进行工作量估算',
+        '按照 tasks.md 开始开发',
+      ],
+      specArtifacts: [
+        {
+          path: `${docsDir}/specs/${featureName}/requirements.md`,
+          type: 'requirements',
+        },
+        {
+          path: `${docsDir}/specs/${featureName}/design.md`,
+          type: 'design',
+        },
+        {
+          path: `${docsDir}/specs/${featureName}/tasks.md`,
+          type: 'tasks',
+        },
+      ],
+      estimate: {
+        optimistic: '待估算',
+        normal: '待估算',
+        pessimistic: '待估算',
+      },
+      dependencies: [],
     };
+
+    return okStructured(
+      guide,
+      featureReport,
+      {
+        schema: FeatureReportSchema,
+        note: 'AI 应该按照指南执行步骤，并在每个步骤完成后更新 structuredContent 中的状态和估算信息',
+      }
+    );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return {

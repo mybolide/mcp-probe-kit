@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>迁移指南 - 从旧版本升级到最新版 | MCP Probe Kit</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="MCP Probe Kit 迁移指南：从 v1.x 升级到 v2.x 的完整步骤。了解重大变更、新增功能、配置调整和最佳实践，确保平滑升级。">
+    <meta name="keywords" content="MCP Probe Kit 升级, 版本迁移, v2.x 新特性, 配置迁移, 工具升级指南, 破坏性变更">
+    <meta name="author" content="小墨 (Kyle) - ByteZoneX">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
+    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
+    <meta property="og:title" content="迁移指南 - 从旧版本升级到最新版 | MCP Probe Kit">
+    <meta property="og:description" content="详细的 MCP Probe Kit 版本升级指南，了解新特性、配置变更和迁移步骤，确保平滑过渡。">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
+    <meta property="twitter:title" content="迁移指南 - 从旧版本升级到最新版 | MCP Probe Kit">
+    <meta property="twitter:description" content="详细的版本升级指南，了解新特性和迁移步骤。">
+    
+    <link rel="stylesheet" href="../styles/page.css">
+</head>
+<body>
+    <!-- Topbar -->
+    <nav class="topbar" id="topbar">
+        <div class="topbar-container">
+            <a href="../index.html" class="topbar-brand">
+                <span>🚀</span>
+                <span>MCP Probe Kit</span>
+            </a>
+            
+            <div class="topbar-actions">
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>ByteZoneX</span>
+                </a>
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>GitHub</span>
+                </a>
+                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
+                    <span>npm</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Layout Container -->
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">快速开始</div>
+                    <a href="../index.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🏠</span>
+                            <span>文档首页</span>
+                        </div>
+                    </a>
+                    <a href="./getting-started.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">📖</span>
+                            <span>安装配置</span>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">工具文档</div>
+                    <a href="./all-tools.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🛠️</span>
+                            <span>所有工具</span>
+                        </div>
+                        <span class="badge">48</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">指南</div>
+                    <a href="./migration.html" class="nav-item active">
+                        <div class="nav-item-content">
+                            <span class="icon">🚀</span>
+                            <span>迁移指南</span>
+                        </div>
+                    </a>
+                    <a href="./examples.html" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">💡</span>
+                            <span>最佳实践</span>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">资源</div>
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🌐</span>
+                            <span>ByteZoneX 主站</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">💻</span>
+                            <span>GitHub 仓库</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">📦</span>
+                            <span>npm 包</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="nav-item">
+                        <div class="nav-item-content">
+                            <span class="icon">🐛</span>
+                            <span>问题反馈</span>
+                        </div>
+                        <span class="external-icon">↗</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="sidebar-footer-title">快速链接</div>
+                <div class="sidebar-footer-links">
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>🌐</span>
+                        <span>ByteZoneX</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>💻</span>
+                        <span>GitHub</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
+                        <span>📦</span>
+                        <span>npm</span>
+                        <span class="external-icon">↗</span>
+                    </a>
+                </div>
+                
+                <!-- QR Code -->
+                <div class="sidebar-qrcode">
+                    <div class="sidebar-qrcode-title">关注公众号</div>
+                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" />
+                    <div class="sidebar-qrcode-desc">获取更多技术分享</div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper">
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb">
+                    <a href="../index.html">文档首页</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="#">指南</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>迁移指南</span>
+                </nav>
+                
+                <!-- Page Header -->
+                <h1 class="page-title">v2.0 迁移指南</h1>
+                <p class="page-description">从 v1.x 平滑迁移到 v2.0，了解重大变更和新特性</p>
+                <div class="page-meta">
+                    <span>📦 v2.0.0</span>
+                    <span>·</span>
+                    <span>最后更新：2026-01-27</span>
+                </div>
+                
+                <!-- Content -->
+                <h2>概述</h2>
+                <p>MCP Probe Kit v2.0 是一个重大版本更新，从 13 个工具扩展到 48 个工具，带来了更强大的功能和更好的开发体验。</p>
+                
+                <div class="callout info">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-content">
+                        <p><strong>迁移时间：</strong>大多数项目可以在 10-15 分钟内完成迁移，v1.x 的所有工具在 v2.0 中都保持兼容。</p>
+                    </div>
+                </div>
+                
+                <h2>主要变更</h2>
+                
+                <h3>1. 工具数量大幅增加</h3>
+                <p>v1.x: 13 个工具 → v2.0: 48 个工具（新增 35 个）</p>
+                
+                <h3>2. 新增工作流编排</h3>
+                <p>10 个 <code>start_*</code> 工作流编排工具，提供端到端的自动化开发流程：</p>
+                <ul>
+                    <li><code>start_feature</code> - 功能开发工作流</li>
+                    <li><code>start_bugfix</code> - Bug 修复工作流</li>
+                    <li><code>start_ui</code> - UI 开发工作流</li>
+                    <li><code>start_ralph</code> - Ralph Wiggum Loop 自动化开发</li>
+                </ul>
+                
+                <h3>3. 新增 UI/UX 工具集</h3>
+                <p>完整的 UI/UX 工具链：</p>
+                <ul>
+                    <li><code>ui_design_system</code> - 智能设计系统生成器</li>
+                    <li><code>ui_search</code> - UI/UX 数据库搜索</li>
+                    <li><code>render_ui</code> - UI 渲染引擎</li>
+                    <li><code>design2code</code> - 设计稿转代码</li>
+                </ul>
+                
+                <h3>4. 100% 结构化输出</h3>
+                <p>所有 48 个工具都支持结构化输出，确保输出格式一致、可预测。</p>
+                
+                <h2>迁移步骤</h2>
+                
+                <h3>步骤 1：更新版本</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">Bash</span>
+                    </div>
+                    <pre><code># 如果使用 npx（推荐）
+# 无需操作，自动使用最新版本
+
+# 如果全局安装
+npm update -g mcp-probe-kit</code></pre>
+                </div>
+                
+                <h3>步骤 2：检查配置文件</h3>
+                <p>v2.0 的配置文件格式与 v1.x 完全兼容，无需修改。</p>
+                
+                <div class="callout success">
+                    <div class="callout-icon">✅</div>
+                    <div class="callout-content">
+                        <p><strong>向后兼容：</strong>v1.x 的所有工具在 v2.0 中都保持兼容，可以无缝升级。</p>
+                    </div>
+                </div>
+                
+                <h2>获取帮助</h2>
+                <p>如果在迁移过程中遇到问题：</p>
+                <ul>
+                    <li>📖 查看 <a href="./all-tools.html">完整工具参考</a></li>
+                    <li>💬 在 <a href="https://github.com/mybolide/mcp-probe-kit/discussions" target="_blank">GitHub Discussions</a> 提问</li>
+                    <li>🐛 在 <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank">GitHub Issues</a> 报告 Bug</li>
+                </ul>
+                
+                <!-- Next Steps -->
+                <div class="next-cta">
+                    <h3>🎉 迁移完成！</h3>
+                    <p>开始探索 v2.0 的强大功能</p>
+                    <div class="next-cta-links">
+                        <a href="./all-tools.html" class="next-cta-link">
+                            <span>🛠️</span>
+                            <span>查看所有工具</span>
+                        </a>
+                        <a href="./examples.html" class="next-cta-link">
+                            <span>💡</span>
+                            <span>学习最佳实践</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-container">
+                    <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
+                    <div>
+                        © 2024-2026 MCP Probe Kit · MIT License · 
+                        <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+    
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+    
+    <script>
+        const topbar = document.getElementById('topbar');
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 10) {
+                topbar.classList.add('scrolled');
+            } else {
+                topbar.classList.remove('scrolled');
+            }
+        });
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+        
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-content').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.remove('open');
+            });
+        }
+    </script>
+</body>
+</html>

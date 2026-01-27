@@ -1,4 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import type { DocWorkflowReport } from "../schemas/output/workflow-tools.js";
 
 /**
  * start_doc 智能编排工具
@@ -6,168 +8,6 @@ import { parseArgs, getString } from "../utils/parseArgs.js";
  * 场景：文档生成
  * 编排：[检查上下文] → gendoc → genreadme → genapi
  */
-
-const PROMPT_TEMPLATE = `# 📖 文档生成编排指南
-
-## 🎯 目标
-
-为项目/代码生成完整的文档
-
-**输入内容**:
-\`\`\`
-{code}
-\`\`\`
-
----
-
-## 📋 步骤 0: 项目上下文（自动处理）
-
-**操作**:
-1. 检查 \`docs/project-context.md\` 是否存在
-2. **如果不存在**：
-   - 调用 \`init_project_context\` 工具
-   - 等待生成完成
-3. **读取** \`docs/project-context.md\` 内容
-4. 了解项目的文档风格、技术栈
-
----
-
-## 📝 步骤 1: 生成代码注释
-
-**调用工具**: \`gendoc\`
-
-**参数**:
-\`\`\`json
-{
-  "code": "[代码内容]",
-  "style": "{style}",
-  "lang": "{lang}"
-}
-\`\`\`
-
-**生成内容**:
-- 函数/方法注释
-- 参数说明
-- 返回值说明
-- 使用示例
-
-**产出**: 带注释的代码
-
----
-
-## 📄 步骤 2: 生成 README
-
-**调用工具**: \`genreadme\`
-
-**参数**:
-\`\`\`json
-{
-  "project_info": "[项目信息或代码]",
-  "style": "standard"
-}
-\`\`\`
-
-**生成内容**:
-- 项目简介
-- 功能特性
-- 安装使用
-- API 说明
-- 贡献指南
-
-**产出**: README.md
-
----
-
-## 🔌 步骤 3: 生成 API 文档（如适用）
-
-**调用工具**: \`genapi\`
-
-**参数**:
-\`\`\`json
-{
-  "code": "[API 相关代码]",
-  "format": "markdown"
-}
-\`\`\`
-
-**生成内容**:
-- API 端点列表
-- 请求/响应格式
-- 参数说明
-
-**产出**: API 文档
-
----
-
-## ✅ 完成检查
-
-- [ ] 项目上下文已读取
-- [ ] 代码注释已生成
-- [ ] README 已生成
-- [ ] API 文档已生成（如适用）
-
----
-
-## 📊 输出汇总
-
-完成后，向用户提供：
-
-### 1. 代码注释
-
-\`\`\`typescript
-/**
- * [函数描述]
- * @param {Type} param - [参数说明]
- * @returns {Type} [返回值说明]
- * @example
- * [使用示例]
- */
-\`\`\`
-
-### 2. README.md
-
-\`\`\`markdown
-# 项目名称
-
-## 简介
-...
-
-## 功能特性
-...
-
-## 快速开始
-...
-
-## API 文档
-...
-
-## 贡献指南
-...
-
-## 许可证
-...
-\`\`\`
-
-### 3. API 文档（如适用）
-
-\`\`\`markdown
-## API 参考
-...
-\`\`\`
-
-### 4. 文档清单
-
-| 文档 | 状态 | 位置 |
-|------|------|------|
-| 代码注释 | ✅ | 源代码中 |
-| README | ✅ | README.md |
-| API 文档 | ✅/- | docs/api.md |
-
----
-
-*编排工具: MCP Probe Kit - start_doc*
-`;
-
 export async function startDoc(args: any) {
   try {
     // 智能参数解析，支持自然语言输入
@@ -200,19 +40,88 @@ export async function startDoc(args: any) {
       throw new Error("缺少必填参数: code 或 project_info");
     }
 
-    const guide = PROMPT_TEMPLATE
-      .replace(/{code}/g, code)
-      .replace(/{style}/g, style)
-      .replace(/{lang}/g, lang);
+    const message = `# 📖 文档生成编排
 
-    return {
-      content: [{ type: "text", text: guide }],
+为项目/代码生成完整的文档
+
+**输入内容**:
+\`\`\`
+${code}
+\`\`\`
+
+---
+
+## 📋 执行步骤
+
+### 步骤 1: 生成代码注释
+调用 \`gendoc\` 工具，生成函数/方法注释、参数说明、返回值说明和使用示例。
+
+### 步骤 2: 生成 README
+调用 \`genreadme\` 工具，生成项目简介、功能特性、安装使用、API 说明和贡献指南。
+
+### 步骤 3: 生成 API 文档（如适用）
+调用 \`genapi\` 工具，生成 API 端点列表、请求/响应格式和参数说明。
+
+---
+
+## 📊 输出内容
+
+完成后，提供：
+1. 代码注释（${style} 风格）
+2. README.md
+3. API 文档（如适用）
+4. 文档清单
+
+**重要**: 请使用结构化输出格式返回结果。`;
+
+    // 创建结构化数据对象
+    const structuredData: DocWorkflowReport = {
+      summary: "文档生成编排",
+      status: "pending",
+      steps: [
+        {
+          name: "gendoc",
+          description: "生成代码注释",
+          status: "pending",
+        },
+        {
+          name: "genreadme",
+          description: "生成 README",
+          status: "pending",
+        },
+        {
+          name: "genapi",
+          description: "生成 API 文档",
+          status: "pending",
+        },
+      ],
+      coverage: {
+        functions: 0,
+        classes: 0,
+        modules: 0,
+      },
     };
+
+    return okStructured(message, structuredData, {
+      schema: (await import("../schemas/output/workflow-tools.js")).DocWorkflowSchema,
+    });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `❌ 编排执行失败: ${errorMsg}` }],
-      isError: true,
+    
+    const errorData: DocWorkflowReport = {
+      summary: "文档生成失败",
+      status: "failed",
+      steps: [],
+      coverage: {
+        functions: 0,
+        classes: 0,
+        modules: 0,
+      },
+      warnings: [errorMsg],
     };
+    
+    return okStructured(`❌ 编排执行失败: ${errorMsg}`, errorData, {
+      schema: (await import("../schemas/output/workflow-tools.js")).DocWorkflowSchema,
+    });
   }
 }
