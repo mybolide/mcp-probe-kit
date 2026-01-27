@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-01-27
+
+### ✨ 新功能
+
+**init_project_context 工具增强**
+- 新增 `mode` 参数，支持两种文档生成模式：
+  - `single`（单文件模式）：生成一个包含所有信息的 `project-context.md` 文件（默认，v2.0 兼容）
+  - `modular`（模块化模式）：生成 1 个索引文件 + 5 个分类文档，便于大型项目管理
+- 模块化模式生成 6 个文档：
+  - `project-context.md` - 索引文件（唯一入口）
+  - `project-context/tech-stack.md` - 技术栈信息
+  - `project-context/architecture.md` - 架构和项目结构
+  - `project-context/coding-standards.md` - 编码规范
+  - `project-context/dependencies.md` - 依赖管理
+  - `project-context/workflows.md` - 开发流程和命令
+
+### 🔧 改进
+
+- 增强错误处理，提供更友好的错误提示
+- 添加 `mode` 字段到 `ProjectContext` Schema，标识使用的生成模式
+- 完善的参数验证（拒绝无效的 mode 值）
+- 支持自定义文档目录（`docs_dir` 参数）
+
+### 📝 文档
+
+- 更新工具使用说明
+- 添加模块化模式使用示例
+
+### 🧪 测试
+
+- 新增 9 个契约测试，覆盖单文件和模块化两种模式
+- 所有 151 个测试通过
+
+### 🔄 向后兼容
+
+- 默认使用单文件模式，完全兼容 v2.0
+- 现有用户无需修改任何代码
+
+---
+
 ## [2.0.0] - 2026-01-27
 
 ### 🎉 重大版本发布 - 完整文档系统与工具精简

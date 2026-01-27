@@ -186,6 +186,16 @@ start_ui "登录页面" --mode=auto
 # 自动完成：设计系统 → 组件生成 → 代码输出
 ```
 
+### 项目上下文文档
+```bash
+# 单文件模式（默认）- 生成一个完整的 project-context.md
+init_project_context
+
+# 模块化模式 - 生成 6 个分类文档（适合大型项目）
+init_project_context --mode=modular
+# 生成：project-context.md（索引）+ 5 个分类文档
+```
+
 **👉 [更多使用示例](https://mcp-probe-kit.bytezonex.com/pages/examples.html)**
 
 ---
