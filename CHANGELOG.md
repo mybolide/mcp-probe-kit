@@ -5,549 +5,163 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-01-26
+---
 
-### 🎉 重大版本发布 - 结构化输出与工具精简
+## [2.0.0] - 2026-01-27
 
-#### 架构升级
+### 🎉 重大版本发布 - 完整文档系统与工具精简
 
-**✅ 结构化输出（Structured Output）**
-- 所有 37 个工具支持结构化输出
-- 返回机器可读的 JSON 数据 + 人类可读的文本
-- 包含 Schema 定义（`_meta.schema`）
-- 41 个 Schema 定义，按功能分类到 6 个文件
-- 142 个契约测试，100% 通过
-- 完全向后兼容
+#### 核心变更
 
-**✅ 工具精简（Tool Cleanup）**
-- 从 49 个工具精简到 37 个
-- 删除 10 个过时/重复工具
+**✅ 工具精简优化**
+- 从 48 个工具精简到 39 个核心工具
+- 删除低频、重复、过时的工具
+- 100% 支持结构化输出
 - 提高维护性和用户体验
 
-**✅ 测试覆盖**
-- 142 个契约测试（100% 通过）
-- 集成测试、性能测试完整
-- 测试执行时间 < 3 秒
+**✅ 完整文档系统**
+- 全新文档网站：https://mcp-probe-kit.bytezonex.com
+- 5 个核心页面：首页、安装配置、所有工具、迁移指南、最佳实践
+- 完整的 SEO 优化和响应式设计
+- 支持源码编译安装方式
 
-#### 已删除的工具（10 个）
+**✅ 架构优化**
+- 修复 MCP SDK 兼容性问题（Tasks API）
+- 删除未使用代码（净减少 751 行）
+- 优化 CSS 样式（修复点击蓝色边框问题）
 
-**生成工具（5 个）**
-- ❌ `genui` - 已合并到 `start_ui`
-- ❌ `fix` - 功能与 `code_review` 重叠
-- ❌ `explain` - AI 核心能力，不需要工具
-- ❌ `convert` - 功能过于宽泛
-- ❌ `css_order` - 规范已整合到 `ui_design_system`
+#### 工具分类（39 个）
 
-**编排工具（2 个）**
-- ❌ `start_feature` - 功能与 `add_feature` 重叠
-- ❌ `start_bugfix` - 功能与 `fix_bug` 重叠
+**工作流编排（10 个）**
+- start_feature, start_bugfix, start_review, start_release, start_refactor
+- start_onboard, start_api, start_doc, start_ui, start_ralph
 
-**项目管理工具（1 个）**
-- ❌ `split` - 功能过于简单
+**代码分析（7 个）**
+- code_review, security_scan, debug, perf, refactor, fix_bug, estimate
 
-**辅助工具（3 个）**
-- ❌ `detect_shell` - 功能过于简单
-- ❌ `init_setting` - 不是高频工具
-- ❌ `gen_skill` - 开发者内部工具
+**Git 工具（4 个）**
+- gencommit, genchangelog, genpr, resolve_conflict
 
-**UI/UX 工具（1 个）**
-- ❌ `design2code` - 已合并到 `start_ui`
-
-**编排工具（2 个）**
-- ❌ `start_onboard` - 功能与 `analyze_project` 重叠
-- ❌ `start_doc` - 功能与 `gendoc` 重叠
-
-#### 保留的工具（37 个）
-
-**代码质量（7 个）**
-- ✅ code_review, security_scan, debug, gentest, refactor, perf, fix_bug
-
-**开发效率（7 个）**
-- ✅ gencommit, genapi, gendoc, genpr, genchangelog, gensql, genreadme
+**生成工具（7 个）**
+- genapi, gendoc, gentest, gensql, genreadme, gen_mock, genui
 
 **项目管理（7 个）**
-- ✅ init_project, check_deps, resolve_conflict, analyze_project, init_project_context, add_feature, estimate
+- init_project, analyze_project, init_project_context, add_feature
+- check_deps, interview, ask_user
 
-**UI/UX 工具（5 个）**
-- ✅ ui_design_system, ui_search, sync_ui_data, init_component_catalog, render_ui
-
-**智能编排（5 个）**
-- ✅ start_review, start_release, start_refactor, start_api, start_ui
-
-**访谈工具（2 个）**
-- ✅ interview, ask_user
-
-**内部工具（4 个）**
-- ✅ gen_mock, init_component_catalog, render_ui, start_ralph
-
-#### Schema 定义
-
-**输出 Schema（41 个）**
-- `src/schemas/output/core-tools.ts` - 核心开发工具 (7 个)
-- `src/schemas/output/generation-tools.ts` - 代码生成工具 (7 个)
-- `src/schemas/output/workflow-tools.ts` - 工作流编排工具 (5 个)
-- `src/schemas/output/project-tools.ts` - 项目管理工具 (7 个)
-- `src/schemas/output/ui-ux-tools.ts` - UI/UX 工具 (5 个)
-- `src/schemas/output/index.ts` - 统一导出
+**UI/UX 工具（6 个）**
+- ui_design_system, ui_search, sync_ui_data, init_component_catalog
+- render_ui, design2code
 
 #### 文档更新
 
-**核心文档**
-- ✅ README.md - 更新工具列表和特性说明
-- ✅ docs/STRUCTURED_OUTPUT.md - 结构化输出完整指南
-- ✅ CHANGELOG.md - 详细的变更记录
+- ✅ 完整的在线文档系统
+- ✅ 简化的 README（从 1755 行精简到 200 行）
+- ✅ 迁移指南（v1.x → v2.0）
+- ✅ 最佳实践指南（完整研发流程）
 
-**迁移指南**
-- ✅ docs/MIGRATION.md - v1.x 到 v2.0 迁移指南
-- ✅ docs/TOOL_CLEANUP.md - 工具清理方案
+#### 技术细节
 
-#### 性能优化
-
-- 测试执行时间 < 3 秒
-- 工具加载时间优化
-- Schema 验证性能提升
-
-#### 向后兼容性
-
-- 所有工具保持 `content.text` 字段
-- 旧客户端可正常使用
-- 新客户端可选择使用结构化数据
-
----
-
-## [2.0.0-dev] - 开发中
-
-### 🎯 架构升级 - MCP 2025-11-25 协议
-
-#### 已完成的里程碑
-
-**M1: SDK 升级 + 基础回归** ✅
-- 升级 SDK 到 v1.25.3
-- 适配 MCP 2025-11-25 协议
-- 添加基础契约测试和兼容性测试
-- 所有 49 个工具正常工作
-
-**M2: 工具集管理 + 统一输出** ✅
-- 实现工具集管理器（core/ui/workflow/full）
-- 支持环境变量 `MCP_TOOLSET` 按需加载工具
-- 创建统一输出封装（okText/okStructured/errorResponse）
-- 21 个集成测试全部通过
-
-**M4: Tasks API** ✅
-- 实现 Tasks 管理器（任务生命周期管理）
-- 实现 4 个 tasks/* 端点（get/result/cancel/list）
-- 16 个集成测试全部通过
-- 基础设施已完成，为未来长任务支持做好准备
-
-**M5: Elicitation** ✅
-- 实现 Elicitation 辅助模块（智能回退方案）
-- 验证 interview 和 ask_user 工具兼容性
-- 11 个集成测试全部通过
-- 核心理念："先慢下来，把问题想清楚"
-
-**M6: 文档完善** ⏳
-- ✅ M6.1: 核心文档编写完成（TASKS.md, MIGRATION.md, COMPATIBILITY.md）
-- ✅ M6.2: 性能基准测试完成（9 个测试全部通过）
-- 🔴 M6.3: 文档站待完善
-
-**M7: Beta 测试与发布** 🔴
-- 待 M6 完成后开始
-
-#### 延后到 v2.1
-
-**M3: P0 工具结构化输出** 🟡
-- Schema 已定义，实际实现延后
-- 不阻塞 v2.0 发布
-
----
+- 修复 "Schema is missing a method literal" 错误
+- 暂时禁用 Tasks API（等待 MCP SDK 正式支持）
+- 删除未使用文件：elicitation-helper.ts, tool-params-guide.ts, resources/index.ts
+- 优化 CSS：使用 :focus-visible 保留键盘导航可访问性
 
 ---
 
 ## [1.14.0] - 2025-01-24
 
 ### Added
-- 🎨 **新增 UI/UX Pro Max 工具集 - 设计系统生成与搜索**
-  - **3 个新工具**：
-    - `ui_design_system` - 生成完整设计系统（色彩、字体、间距、组件）
-    - `ui_search` - 智能搜索 UI/UX 数据库（BM25 算法）
-    - `sync_ui_data` - 同步最新 UI/UX 数据到本地缓存
-  - **三层数据策略**：
-    1. 内嵌数据（构建时同步，离线可用）
-    2. 缓存数据（运行时更新到 `~/.mcp-probe-kit/ui-ux-data/`）
-    3. 手动同步（用户触发，强制更新）
-  - **数据来源**：npm 包 `uipro-cli` (v2.2.0+)
-  - **支持技术栈**：React、Vue、Next.js、Nuxt.js、Tailwind、Svelte、Astro 等
-  - **数据类别**：颜色、图标、图表、落地页、产品、字体、样式、UX 指南等
-  - **BM25 搜索引擎**：智能相关性排序，支持中英文搜索
-  - **设计系统生成器**：自动生成可用代码（React/Vue/Tailwind/CSS）
+- 🎨 **UI/UX Pro Max 工具集**
+  - `ui_design_system` - 智能设计系统生成器
+  - `ui_search` - UI/UX 数据库搜索（BM25 算法）
+  - `sync_ui_data` - 同步最新 UI/UX 数据
+  - 支持 React、Vue、Next.js、Tailwind 等主流技术栈
+  - 内嵌数据 + 缓存策略，离线可用
 
-### Changed
-- 📦 **工具总数更新为 46 个**（37 个基础工具 + 9 个智能编排）
-- 🔧 **构建流程优化**：添加 `prebuild` 脚本自动同步 UI/UX 数据
-- 📚 **新增依赖**：`tar`、`csv-parse`、`tsx` 用于数据同步
-
-### Technical Details
-- 实现 BM25 搜索算法（`src/utils/bm25.ts`）
-- UI 搜索引擎（`src/utils/ui-search-engine.ts`）
-- 设计系统生成器（`src/utils/design-system-generator.ts`）
-- 缓存管理器（`src/utils/cache-manager.ts`）
-- 数据加载器（`src/utils/ui-data-loader.ts`）
-- 数据同步工具（`src/utils/ui-sync.ts`）
+---
 
 ## [1.13.0] - 2025-01-21
 
 ### Added
-- 🚀 **新增 `start_ralph` 工具 - Ralph Wiggum Loop 循环开发**
-  - 生成 `.ralph/` 目录结构和安全模式脚本
-  - 支持循环迭代开发，自动多轮执行
-  - **多重安全保护机制**：
-    - 硬上限：最大迭代次数（默认 8）、最大运行时间（默认 25 分钟）
-    - 人工确认：每轮确认（可配置）、超时自动停止（默认 20 秒）
-    - 紧急停止：STOP 文件机制、Ctrl+C 手动停止
-    - 失控保护：输出重复检测、Git diff 变更量检测、冷却时间
-    - 双门控退出：必须同时满足完成条件和退出信号
-  - 生成文件：
-    - `PROMPT.md` - 循环 prompt（含目标、规则、退出条件）
-    - `@fix_plan.md` - 任务分解清单（agent 更新）
-    - `PROGRESS.md` - 迭代日志（agent 更新）
-    - `ralph_loop_safe.sh/ps1` - 安全模式脚本（推荐）
-    - `ralph_loop.sh` - 普通模式脚本（可选）
-  - 跨平台支持：Linux/Mac（Bash）、Windows（PowerShell）
-  - 与现有工具协同：可先用 `init_project_context`、`start_feature` 生成上下文
-
-### Changed
-- 📦 **工具总数更新为 43 个**（34 个基础工具 + 9 个智能编排）
-- 📚 **文档更新**
-  - `docs/MCP-Probe-Kit-使用手册.md` - 新增 Ralph Loop 详细说明
-  - `README.md` - 更新工具列表和功能特性
-
-### Technical
-- 新增 `src/tools/start_ralph.ts` - Ralph Loop 工具实现
-- 更新 `src/schemas/orchestration-tools.ts` - 添加 start_ralph schema
-- 更新 `src/index.ts` - 注册 start_ralph 工具
+- 🚀 **Ralph Wiggum Loop 循环开发**
+  - `start_ralph` - 自动化循环迭代开发
+  - 多重安全保护机制（迭代次数、运行时间、人工确认）
+  - 生成 `.ralph/` 目录和安全模式脚本
+  - 跨平台支持（Linux/Mac/Windows）
 
 ---
 
 ## [1.12.0] - 2025-01-21
 
 ### Added
-- 🎸 **新增 `interview` 工具 - 需求访谈模式**
-  - 在开发前通过结构化提问澄清需求
-  - 生成访谈记录文件 `docs/interviews/{feature-name}-interview.md`
-  - 支持 4 个阶段共 12-15 个问题（背景理解、功能边界、技术约束、验收标准）
-  - 避免理解偏差和返工，践行"先慢下来，反而能更快"的理念
-- 🎸 **新增 `ask_user` 工具 - 通用提问工具**
-  - AI 可在任何时候主动向用户提问
-  - 支持单个或多个问题
-  - 支持提供选项和标注重要性
-  - 灵活、轻量、可在任何工具中使用
+- 🎸 **需求访谈工具**
+  - `interview` - 结构化需求访谈，避免理解偏差
+  - `ask_user` - AI 主动提问工具
+  - 生成访谈记录文档
 
-### Changed
-- 📦 **工具总数更新为 42 个**（34 个基础工具 + 8 个智能编排）
-- 📚 **新增访谈工具文档**
-  - `docs/INTERVIEW_GUIDE.md` - 完整使用指南
-  - `docs/INTERVIEW_QUICK_REF.md` - 快速参考
-
-### Workflow
-新的开发流程：
-```
-用户: "我想做登录功能"
-  ↓
-AI: interview "登录功能"
-  ↓
-用户: 回答访谈问题
-  ↓
-AI: 生成 docs/interviews/user-login-interview.md
-  ↓
-用户选择:
-  - 立即开发: start_feature --from-interview user-login
-  - 生成规格: add_feature --from-interview user-login
-  - 稍后开发: 访谈记录已保存，随时可用
-```
+---
 
 ## [1.11.0] - 2025-01-17
 
 ### Changed
-- 🏗️ **重大重构：模块化 Schema 定义**
-  - 将 800+ 行的 `src/index.ts` 拆分为模块化结构
-  - 创建 `src/schemas/` 目录，按功能分类：
-    - `basic-tools.ts` - 基础工具 (3个)
-    - `git-tools.ts` - Git 相关工具 (4个)
-    - `code-analysis-tools.ts` - 代码分析工具 (8个)
-    - `code-gen-tools.ts` - 代码生成工具 (7个)
-    - `doc-util-tools.ts` - 文档和工具类 (5个)
-    - `project-tools.ts` - 项目管理工具 (4个)
-    - `orchestration-tools.ts` - 智能编排工具 (9个)
-  - 所有 40 个工具的 `inputSchema.properties` 现已完整定义
-  - 每个参数都有详细的 description 和 example
-  - 保持所有参数为可选 (`required: []`)，维持灵活性
+- 🏗️ **模块化 Schema 定义**
+  - 将 800+ 行代码拆分为模块化结构
+  - 创建 `src/schemas/` 目录，按功能分类
+  - 所有工具的 inputSchema.properties 完整定义
+  - 新增 MCP Resource: `probe://tool-params-guide`
 
-### Added
-- ✨ **完善 inputSchema.properties 定义**
-  - AI 通过 ListTools 可以自动获取所有参数信息
-  - 每个工具的参数都有清晰的类型、描述和示例
-  - 减少 AI 参数传递错误，提高调用准确性
-- 📚 **完整的 MCP Resource: `probe://tool-params-guide`**
-  - 包含所有 40 个工具的详细参数说明
-  - 每个工具都有参数说明、使用示例和最佳实践
-  - AI 可以主动查询获取详细的参数说明
-  - 提供参数传递的注意事项和常见用法
-  - 创建独立的 `src/resources/` 目录管理 Resource 定义
-
-### Improved
-- 🔧 **增强 parseArgs 函数**
-  - 自动检测并展平嵌套的 `{input: {...}}` 结构
-  - 智能提取 feature_name（如果未提供）
-  - 更好的错误处理和日志输出
-- 🎯 **优化工具 description**
-  - 所有工具的 description 改为"触发场景"描述方式
-  - 让 AI 更清楚地理解何时应该调用哪个工具
-  - 格式：当用户需要...时使用
-
-### Technical Details
-- 模块化后的代码更易维护和扩展
-- 每个 schema 文件独立管理，便于更新
-- 通过 `src/schemas/index.ts` 统一导出
-- Resource 定义独立到 `src/resources/` 目录
-- 编译测试通过，服务器正常启动
-
-## [1.10.1] - 2025-01-17
-
-### Fixed
-- 🐛 **修复 inputSchema 类型定义，符合 MCP 协议规范**
-  - v1.10.0 将 `inputSchema.type` 改为 `"string"` 导致 MCP SDK 验证失败
-  - MCP 协议要求 inputSchema 必须是 `type: "object"`
-  - 改为 `type: "object"` + `properties: {}` + `additionalProperties: true`
-  - 这样既符合 MCP 规范，又允许接收任意格式输入
-  - `parseArgs` 函数会智能处理所有输入格式（字符串、JSON、对象）
-  - 保留了 description 中的自然语言支持说明
-
-### Technical Details
-- `additionalProperties: true` 允许传递任意字段
-- `properties: {}` 表示不强制要求特定字段
-- AI 仍然可以传递字符串、对象或任意格式，`parseArgs` 会自动处理
+---
 
 ## [1.10.0] - 2025-01-17
 
 ### Changed
-- 🎯 **重大改进：所有 40 个工具的 inputSchema 类型从 `object` 改为 `string`**
-  - AI 现在可以直接传递自然语言字符串，无需构造 JSON 对象
-  - 解决了 AI 因看到 `type: "object"` 而拒绝调用工具的问题
-  - 每个工具的 description 添加 💡 emoji 说明支持的输入格式
-  - 完全兼容：`parseArgs` 函数自动处理字符串、JSON 字符串、对象等所有格式
-  - 用户体验提升：从 "AI 拒绝调用" → "AI 主动使用自然语言调用"
+- 🎯 **自然语言输入支持**
+  - 所有工具支持直接传递自然语言字符串
+  - inputSchema 类型从 `object` 改为 `string`
+  - 智能参数解析，支持 5+ 种输入格式
+  - 支持中文字段别名
 
-### Improved
-- 📝 更新文档 `docs/MCP-Probe-Kit-使用手册.html`
-  - 添加 4 个遗漏的工具：init_setting, detect_shell, css_order, gen_skill
-  - 优化打印布局，减少间距和字体大小，适配 2 页打印
-  - 更新工具统计：40 个核心工具 + 1 个扩展工具（oh-my-openCode）
-
-### Technical Details
-**为什么改为 `type: "string"`？**
-- AI 看到 `type: "object"` 时，即使 description 说支持自然语言，AI 仍然认为必须传递对象
-- 改为 `type: "string"` 后，AI 明确知道可以直接传递字符串
-- `parseArgs` 函数智能处理所有输入格式，保证向后兼容
-
-**支持的输入格式：**
-1. 自然语言：`"请审查这段代码：function login() {...}"`
-2. 直接粘贴代码/文本：`"function login() {...}"`
-3. JSON 字符串：`'{"code": "function login() {...}", "focus": "security"}'`
-
-## [1.9.0] - 2025-01-17
-
-### Added
-- 🎸 **智能参数解析系统** - 所有 40 个工具现在支持自然语言输入
-  - 新增 `src/utils/parseArgs.ts` 核心解析工具
-  - 支持 5+ 种输入格式：纯自然语言、JSON 对象、JSON 字符串、key=value、字段别名
-  - 支持中文字段别名，降低使用门槛
-  - 强大的容错处理，自动处理 null/undefined/格式错误
-  - 向后完全兼容，不影响现有 JSON 格式调用
-
-### Changed
-- ♻️ **重构所有 40 个工具的参数处理**
-  - 基础工具（2个）：gencommit, debug
-  - 高优先级工具（5个）：code_review, gentest, genapi, fix, refactor
-  - 编排工具（8个）：start_feature, start_bugfix, start_review, start_release, start_refactor, start_onboard, start_api, start_doc
-  - 生成类工具（7个）：gendoc, genpr, genchangelog, genreadme, gensql, genui, gen_mock
-  - 分析类工具（5个）：explain, perf, security_scan, estimate, fix_bug
-  - 转换类工具（4个）：convert, split, resolve_conflict, design2code
-  - 项目管理工具（4个）：init_project, analyze_project, init_project_context, add_feature
-  - 其他工具（5个）：check_deps, css_order, detect_shell, init_setting, gen_skill
-
-### Improved
-- 🚀 **用户体验大幅提升**
-  - 从 "必须构造 JSON" → "直接说人话"
-  - 从 "容易出错" → "自动容错"
-  - 从 "记住字段名" → "随意表达"
-  - 容错率提升 90%+
-  - 支持格式增加 5 倍
-
-### Documentation
-- 📝 新增完整文档
-  - `docs/NATURAL_LANGUAGE_SUPPORT.md` - 自然语言支持完整文档
-  - `docs/QUICK_START_NATURAL_LANGUAGE.md` - 快速开始指南
-  - `TOOLS_AUDIT_REPORT.md` - 工具审计报告
-  - `SOLUTION_SUMMARY.md` - 解决方案总结
-  - `UPDATE_PROGRESS.md` - 更新进度跟踪
-
-### Examples
-**之前（必须构造 JSON）：**
-```javascript
-{ "code": "function login() {...}", "focus": "security" }
-```
-
-**现在（支持自然语言）：**
-```javascript
-// 方式 1: 纯自然语言（推荐）
-"请审查这段代码：function login() {...}"
-
-// 方式 2: 标准 JSON（仍然支持）
-{ code: "function login() {...}", focus: "security" }
-
-// 方式 3: 使用中文别名
-{ 代码: "function login() {...}", 类型: "security" }
-```
-
-## [1.8.1] - 2025-01-16
-
-### Changed
-- 📝 更新文档，添加 gen_skill 工具说明
-  - README.md - 添加完整的工具介绍和使用示例
-  - docs/BEST_PRACTICES.md - 添加最佳实践
-  - docs/HOW_TO_TRIGGER.md - 添加触发关键词
-  - docs/HOW_TO_TRIGGER.html - 优化为黑白打印友好版本
+---
 
 ## [1.8.0] - 2025-01-16
 
 ### Added
-- 🎸 新增 `gen_skill` 工具 - 生成 Agent Skills 文档
-  - 支持 Agent Skills 开放标准（agentskills.io）
-  - 支持生成单个工具或全部工具的技能文档
-  - 生成符合 Claude/Gemini/OpenCode 兼容的 SKILL.md 格式
-  - 自动生成 README 索引文件
-  - 支持中英文输出
+- 🎸 **Agent Skills 支持**
+  - `gen_skill` - 生成 Agent Skills 文档
+  - 支持 agentskills.io 开放标准
+  - 兼容 Claude/Gemini/OpenCode
 
-### Changed
-- ♻️ 优化所有工具的 description 描述
-  - 统一输出术语：输出文本/输出代码/输出补丁（unified diff）
-  - 添加边界约束（不做业务逻辑改动、仅分析不自动修改代码）
-  - 添加工具交叉引用（如需全面审查请用 start_review）
-  - 提升 AI 路由精度，减少误触发
-- ♻️ 优化 inputSchema 参数描述
-  - 添加格式示例（如 feature/user-auth、v1.0.0）
-  - 添加上下文要求（包含完整签名和依赖导入）
-  - 添加默认值说明（默认跟随项目现有框架）
-- ♻️ 优化 PROMPT_TEMPLATE 工业级标准
-  - 为分析类工具添加 JSON 输出格式约束（code_review, security_scan, perf, debug, estimate, fix_bug）
-  - 为所有工具添加边界约束（不自动修改代码/不执行命令）
-  - 统一输出格式，便于下游工具解析和编排串联
-
-### Improved
-- 📦 工具总数更新为 40 个（32 个基础工具 + 8 个智能编排）
+---
 
 ## [1.7.0] - 2025-01-14
 
 ### Added
-- 🎨 新增 `design2code` 工具 - 设计稿转代码
-  - 支持图片 URL 输入（jpg/png/gif/webp/svg）
-  - 支持 Base64 图片输入
-  - 支持设计稿文字描述输入
-  - 支持 HTML 代码转换
-  - 默认生成 Vue 3 + TypeScript 代码
+- 🎨 **设计稿转代码**
+  - `design2code` - 支持图片 URL、Base64、文字描述
   - 支持 React、Vue 双框架
-  - 支持 Tailwind CSS、CSS Modules、Styled Components
-  - 1:1 精确还原设计稿布局和样式
-  - 自动生成响应式设计代码
-  - 智能组件拆分和 TypeScript 类型定义
+  - 1:1 精确还原设计稿
 
-### Changed
-- 📚 更新所有文档，添加 `design2code` 工具说明
-  - README.md - 添加完整的工具介绍和使用示例
-  - docs/BEST_PRACTICES.md - 添加最佳实践指南
-  - docs/HOW_TO_TRIGGER.md - 添加触发关键词和对话示例
-  - docs/HOW_TO_TRIGGER.html - 更新快速参考手册
-- 📦 工具总数更新为 39 个（31 个基础工具 + 8 个智能编排）
-
-## [1.3.0] - 2025-10-27
-
-### Fixed
-- 📝 修复 README.md 中 gencommit 工具的格式说明
-- 更新文档为新的 emoji commit 格式
-- 添加详细的类型说明和示例
-
-## [1.2.9] - 2025-10-27
-
-### Changed
-- 💄 优化 `gencommit` 工具的 commit 消息格式规范
-- Subject 保持简洁，不强制包含 scope
-- Scope/模块信息建议放在 body 中说明，更加灵活
-- 更新示例，展示详细版、简单版、最简版三种场景
-- 格式调整为：`type: emoji subject`
-
-### Improved
-- 🔧 优化版本号管理，统一从 package.json 读取
-- 新增 `src/version.ts` 配置文件，避免多处手动修改版本号
-- 今后只需修改 package.json 的版本号即可
-
-## [1.2.8] - 2025-10-27
-
-### Changed
-- 🚀 优化 `analyze_project` 工具，大幅提升大型项目分析性能
-- 限制最多扫描 5000 个文件，防止超大项目分析超时
-- 限制每个目录最多显示 50 项，避免输出过长
-- 限制单个文件大小为 1MB，跳过超大文件
-- 增强忽略目录列表，完全跳过 `node_modules`、`dist`、`build` 等大型目录
-- 添加更多忽略目录：`vendor`、`__pycache__`、`.cache`、`bower_components` 等
-- 文件类型分布按数量排序，只显示前 10 种
-- 关键文件内容限制为 100 行，超长内容自动截断
-- 使用相对路径显示文件，提高可读性
-- 添加扫描进度日志和忽略目录提示
-
-## [1.2.7] - 2025-10-27
-
-### Changed
-- 更新 MCP 服务器版本信息，确保所有版本号统一
-- 优化服务器状态资源，用户可通过 `probe://status` 查看实时版本
+---
 
 ## [1.2.6] - 2025-10-27
 
 ### Added
-- 🎸 为 commit 类型添加 emoji 支持，提升视觉体验
-- 新增 `fixed` 类型用于线上/测试缺陷修复
-- 为所有 commit 类型配置 emoji 表情（🐛🎸✏️💄🤖♻️✅）
-- 添加带 emoji 的 commit 消息示例
-
-### Changed
-- 更新 gencommit 工具的类型描述，区分 `fixed` 和 `fix` 的使用场景
-- 优化类型排序，将 fixed/fix 放在首位
-
-## [1.2.4] - 2025-10-26
-
-### Added
-- 添加 FAQ 常见问题解答章节
-- 添加故障排查指南
-
-### Changed
-- 更新脚本和文档
-
-## [1.2.3] - 2025-10-26
-
-Previous versions - see [GitHub Releases](https://github.com/mybolide/mcp-probe-kit/releases)
+- 🎸 **Commit Emoji 支持**
+  - 为所有 commit 类型添加 emoji（�🎸✏️💄🤖♻️✅）
+  - 新增 `fixed` 类型用于线上缺陷修复
 
 ---
 
-[1.10.1]: https://github.com/mybolide/mcp-probe-kit/compare/v1.10.0...v1.10.1
-[1.10.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.9.0...v1.10.0
-[1.9.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.8.1...v1.9.0
-[1.8.1]: https://github.com/mybolide/mcp-probe-kit/compare/v1.8.0...v1.8.1
-[1.8.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.7.0...v1.8.0
-[1.7.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.3.0...v1.7.0
-[1.3.0]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.9...v1.3.0
-[1.2.9]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.8...v1.2.9
-[1.2.8]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.7...v1.2.8
-[1.2.7]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.6...v1.2.7
-[1.2.6]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.4...v1.2.6
-[1.2.4]: https://github.com/mybolide/mcp-probe-kit/compare/v1.2.3...v1.2.4
-[1.2.3]: https://github.com/mybolide/mcp-probe-kit/releases/tag/v1.2.3
+## Earlier Versions
 
+See [GitHub Releases](https://github.com/mybolide/mcp-probe-kit/releases) for versions prior to 1.2.6.
+
+---
+
+## Links
+
+- [Documentation](https://mcp-probe-kit.bytezonex.com)
+- [GitHub Repository](https://github.com/mybolide/mcp-probe-kit)
+- [npm Package](https://www.npmjs.com/package/mcp-probe-kit)
+- [Issue Tracker](https://github.com/mybolide/mcp-probe-kit/issues)
