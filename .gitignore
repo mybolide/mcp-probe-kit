@@ -6,6 +6,7 @@ build/
 *.js
 *.d.ts
 !test-server.js
+!docs/**/*.js
 
 # IDE
 .vscode/

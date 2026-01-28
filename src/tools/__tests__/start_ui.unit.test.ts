@@ -95,14 +95,14 @@ describe('start_ui 单元测试', () => {
       expect(result.content[0].text).toMatch(/快速开始|Quick Start/i);
     });
 
-    test('auto 模式返回未实现消息', async () => {
+    test('auto 模式返回智能计划', async () => {
       const result = await startUi({ 
         description: '测试',
         mode: 'auto'
       });
       
       expect(result.isError).toBe(false);
-      expect(result.content[0].text).toMatch(/尚未实现|not yet implemented/i);
+      expect(result.content[0].text).toMatch(/智能 UI 开发计划|智能分析结果/i);
     });
   });
 

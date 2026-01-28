@@ -57,8 +57,29 @@
 - `ui_design_system` - 智能设计系统生成
 - `start_ui` - 一键 UI 开发（支持智能模式）
 - `design2code` - 设计稿转代码
-- `ui_search` - UI/UX 数据搜索
+- `ui_search` - UI/UX 数据搜索（BM25 算法）
+- `sync_ui_data` - 同步最新 UI/UX 数据到本地
 - 更多...
+
+**灵感来源：**
+- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX 设计系统理念
+- [json-render](https://github.com/vercel-labs/json-render) - JSON 模板渲染引擎
+
+**为什么使用 `sync_ui_data`？**
+
+我们的 `start_ui` 工具依赖丰富的 UI/UX 数据库（颜色、图标、图表、组件、设计模式等）来生成高质量的设计系统和代码。这些数据来自 npm 包 [uipro-cli](https://www.npmjs.com/package/uipro-cli)，包含：
+- 🎨 颜色方案（主流品牌色、配色方案）
+- 🔣 图标库（React Icons、Heroicons 等）
+- 📊 图表组件（Recharts、Chart.js 等）
+- 🎯 落地页模板（SaaS、电商、政府等）
+- 📐 设计规范（间距、字体、阴影等）
+
+**数据同步策略：**
+1. **内嵌数据**：构建时同步，离线可用
+2. **缓存数据**：运行时更新到 `~/.mcp-probe-kit/ui-ux-data/`
+3. **手动同步**：使用 `sync_ui_data` 强制更新最新数据
+
+这确保了即使在离线环境下，`start_ui` 也能生成专业级的 UI 代码。
 
 ### 🎤 需求访谈
 
@@ -165,6 +186,16 @@ start_ui "登录页面" --mode=auto
 # 自动完成：设计系统 → 组件生成 → 代码输出
 ```
 
+### 项目上下文文档
+```bash
+# 单文件模式（默认）- 生成一个完整的 project-context.md
+init_project_context
+
+# 模块化模式 - 生成 6 个分类文档（适合大型项目）
+init_project_context --mode=modular
+# 生成：project-context.md（索引）+ 5 个分类文档
+```
+
 **👉 [更多使用示例](https://mcp-probe-kit.bytezonex.com/pages/examples.html)**
 
 ---
@@ -230,8 +261,13 @@ MIT License
 - **GitHub**: [mcp-probe-kit](https://github.com/mybolide/mcp-probe-kit)
 - **npm**: [mcp-probe-kit](https://www.npmjs.com/package/mcp-probe-kit)
 - **文档**: [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)
-- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
-- [GitHub Spec-Kit](https://github.com/github/spec-kit)
+
+**相关项目：**
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) - MCP 协议官方文档
+- [GitHub Spec-Kit](https://github.com/github/spec-kit) - GitHub 规格化开发工具
+- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX 设计系统理念来源
+- [json-render](https://github.com/vercel-labs/json-render) - JSON 模板渲染引擎灵感来源
+- [uipro-cli](https://www.npmjs.com/package/uipro-cli) - UI/UX 数据源
 
 ---
 

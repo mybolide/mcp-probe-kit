@@ -45,6 +45,7 @@ export function okStructured(
       },
     ],
     structuredContent,
+    isError: false,
   };
 
   if (meta) {
