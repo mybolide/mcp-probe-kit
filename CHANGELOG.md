@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > 本版本正在开发中，功能尚未最终确定
 
+### ✨ 新功能
+
+**start_ui 工具增强**
+- 🎯 **第一步生成项目上下文**：调用 `init_project_context` 确保项目文档完整
+- 📝 **自动更新索引**：生成 UI 文档后自动添加到 `project-context.md` 索引中
+- 🔍 **自动检测框架**：使用 `project-detector` 自动识别项目使用的框架（React/Vue/HTML）
+- 📋 **完整工作流**：6 个步骤覆盖从项目上下文到 UI 生成的完整流程
+
+### 🔧 改进
+
+- 工作流步骤从 4 个增加到 6 个，更完整的开发流程
+- 不再需要手动指定框架，自动从项目中检测
+- UI 文档自动集成到项目上下文系统中
+
 ---
 
 ## [2.1.2] - 2026-01-28
