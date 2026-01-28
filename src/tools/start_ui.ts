@@ -162,16 +162,17 @@ export async function startUi(args: any) {
     const detection = detectProjectType(projectRoot);
     
     // 从检测结果中提取框架信息
-    let detectedFramework = 'react'; // 默认值
+    let detectedFramework = 'html'; // 默认值改为 html（最通用）
     if (detection.framework) {
       const fw = detection.framework.toLowerCase();
-      if (fw.includes('vue')) {
+      if (fw.includes('vue') || fw.includes('nuxt')) {
         detectedFramework = 'vue';
       } else if (fw.includes('react') || fw.includes('next')) {
         detectedFramework = 'react';
       } else if (fw.includes('html') || fw === 'none') {
         detectedFramework = 'html';
       }
+      // 对于 library/mcp-server 等类型，保持默认值 html
     }
     
     // 智能参数解析
