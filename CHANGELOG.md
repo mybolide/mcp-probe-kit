@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - Unreleased
+
+### 🚀 开发中
+
+> 本版本正在开发中，功能尚未最终确定
+
+---
+
 ## [2.1.2] - 2026-01-28
 
 ### 🐛 修复
