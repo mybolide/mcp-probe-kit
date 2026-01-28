@@ -126,7 +126,7 @@ body {
 
 /* ========== Sidebar ========== */
 .sidebar {
-    width: 260px;
+    width: 300px;
     background: var(--bg-card);
     border-right: 1px solid var(--border);
     position: fixed;
@@ -246,17 +246,18 @@ body {
 
 .nav-subitem {
     display: block;
-    padding: 8px 20px 8px 48px;
-    margin: 2px 12px;
+    padding: 8px 16px 8px 40px;
+    margin: 2px 8px;
     color: var(--text-secondary);
     text-decoration: none;
     transition: all 0.2s;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     position: relative;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-family: 'Courier New', monospace;
 }
 
 .nav-subitem:hover {
@@ -353,7 +354,7 @@ body {
 /* ========== Main Content ========== */
 .main-content {
     flex: 1;
-    margin-left: 260px;
+    margin-left: 300px;
     display: flex;
     flex-direction: column;
 }

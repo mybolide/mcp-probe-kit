@@ -477,6 +477,72 @@
             submenu.classList.toggle('expanded');
         }
         
+        // 工具简短描述（最多4个字）
+        const toolDescriptions = {
+            // 工作流编排
+            'start_feature': '新功能',
+            'start_bugfix': '修Bug',
+            'start_review': '代码审查',
+            'start_release': '发版本',
+            'start_refactor': '重构',
+            'start_onboard': '快速上手',
+            'start_api': 'API开发',
+            'start_doc': '写文档',
+            'start_ui': 'UI开发',
+            'start_ralph': '循环开发',
+            
+            // 代码分析
+            'code_review': '审查代码',
+            'security_scan': '安全扫描',
+            'debug': '调试',
+            'perf': '性能优化',
+            'refactor': '重构建议',
+            'fix_bug': '修复Bug',
+            'estimate': '工作量',
+            
+            // Git 工具
+            'gencommit': '生成提交',
+            'genchangelog': '生成日志',
+            'genpr': '生成PR',
+            'resolve_conflict': '解决冲突',
+            
+            // 生成工具
+            'genapi': 'API文档',
+            'gendoc': '生成注释',
+            'gentest': '生成测试',
+            'gensql': '生成SQL',
+            'genreadme': '生成说明',
+            'gen_mock': '生成数据',
+            'genui': '生成UI',
+            
+            // 项目管理
+            'init_project': '初始化',
+            'analyze_project': '分析项目',
+            'init_project_context': '项目上下文',
+            'add_feature': '添加功能',
+            'check_deps': '检查依赖',
+            'interview': '需求访谈',
+            'ask_user': '提问用户',
+            
+            // UI/UX 工具
+            'ui_design_system': '设计系统',
+            'ui_search': '搜索UI',
+            'sync_ui_data': '同步数据',
+            'init_component_catalog': '组件目录',
+            'render_ui': '渲染UI',
+            'design2code': '设计转码',
+            
+            // 其他工具
+            'fix': '修复',
+            'split': '拆分',
+            'convert': '转换',
+            'explain': '解释',
+            'css_order': 'CSS排序',
+            'detect_shell': '检测Shell',
+            'init_setting': '初始设置',
+            'gen_skill': '生成技能'
+        };
+        
         // 生成侧边栏工具列表
         function generateSidebarTools() {
             const submenu = document.getElementById('tools-submenu');
@@ -488,9 +554,12 @@
                 
                 tools.forEach(tool => {
                     const toolId = tool.name.replace(/_/g, '-');
+                    const desc = toolDescriptions[tool.name] || '';
+                    const displayText = desc ? `${tool.name} (${desc})` : tool.name;
+                    
                     html += `
-                        <a href="#${toolId}" class="nav-subitem" onclick="scrollToTool('${toolId}')">
-                            ${tool.name}
+                        <a href="javascript:void(0)" class="nav-subitem" onclick="scrollToTool('${toolId}', event)" title="${tool.description}">
+                            ${displayText}
                         </a>
                     `;
                 });
@@ -500,10 +569,34 @@
         }
         
         // 滚动到指定工具
-        function scrollToTool(toolId) {
+        function scrollToTool(toolId, event) {
+            // 阻止默认行为
+            if (event) {
+                event.preventDefault();
+            }
+            
+            // 移除所有选中状态
+            document.querySelectorAll('.nav-subitem').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // 添加当前选中状态
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+            
             const element = document.getElementById(toolId);
             if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // 计算滚动位置，留出 header 高度 (60px) + 间距 (40px)
+                const headerHeight = 100;
+                const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+                const offsetPosition = elementPosition - headerHeight;
+                
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+                
                 // 高亮显示
                 element.style.transition = 'background 0.3s';
                 element.style.background = 'rgba(37, 99, 235, 0.05)';
