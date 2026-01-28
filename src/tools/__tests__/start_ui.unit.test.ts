@@ -45,10 +45,10 @@ describe('start_ui 单元测试', () => {
   });
 
   describe('参数解析', () => {
-    test('默认 framework 为 react', async () => {
+    test('默认 framework 为 html（最通用）', async () => {
       const result = await startUi({ description: '测试' });
       
-      expect(result.content[0].text).toMatch(/react/i);
+      expect(result.content[0].text).toMatch(/html/i);
     });
 
     test('支持 vue framework', async () => {

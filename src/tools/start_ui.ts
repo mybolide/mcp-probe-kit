@@ -14,6 +14,7 @@ import { DesignRequest } from "../utils/design-reasoning-engine.js";
 import { okStructured } from "../lib/response.js";
 import { UIReportSchema } from "../schemas/structured-output.js";
 import type { UIReport } from "../schemas/structured-output.js";
+import { detectProjectType } from "../lib/project-detector.js";
 
 const PROMPT_TEMPLATE = `# 快速开始
 
@@ -21,14 +22,31 @@ const PROMPT_TEMPLATE = `# 快速开始
 
 执行以下工具：
 
-1. 检查 \`docs/design-system.md\` 是否存在，不存在则调用 \`ui_design_system --product_type="SaaS" --stack="{framework}"\`
-2. 检查 \`docs/component-catalog.json\` 是否存在，不存在则调用 \`init_component_catalog\`
-3. \`ui_search --mode=template --query="{description}"\`
-4. \`render_ui --template="docs/ui/{templateName}.json" --framework="{framework}"\`
+1. 检查 \`docs/project-context.md\` 是否存在，不存在则调用 \`init_project_context\`
+2. 检查 \`docs/design-system.md\` 是否存在，不存在则调用 \`ui_design_system --product_type="SaaS" --stack="{framework}"\`
+3. 检查 \`docs/component-catalog.json\` 是否存在，不存在则调用 \`init_component_catalog\`
+4. \`ui_search --mode=template --query="{description}"\`
+5. \`render_ui --template="docs/ui/{templateName}.json" --framework="{framework}"\`
+6. 将生成的 UI 文档添加到 \`docs/project-context.md\` 索引中
 
 ---
 
-## 步骤 1: 生成设计系统（如不存在）✅
+## 步骤 1: 生成项目上下文（如不存在）📋
+
+**检查**: 查看 \`docs/project-context.md\` 是否存在
+
+**如果不存在，调用工具**: \`init_project_context\`
+**参数**: 无（使用默认配置）
+
+**预期输出**: 
+- \`docs/project-context.md\` - 项目上下文索引文件
+- \`docs/project-context/\` - 项目文档目录
+
+**失败处理**: 确保 docs 目录存在且有写入权限
+
+---
+
+## 步骤 2: 生成设计系统（如不存在）🎨
 
 **检查**: 查看 \`docs/design-system.md\` 是否存在
 
@@ -47,7 +65,7 @@ const PROMPT_TEMPLATE = `# 快速开始
 
 ---
 
-## 步骤 2: 生成组件目录（如不存在）🔄
+## 步骤 3: 生成组件目录（如不存在）📦
 
 **检查**: 查看 \`docs/component-catalog.json\` 是否存在
 
@@ -55,11 +73,11 @@ const PROMPT_TEMPLATE = `# 快速开始
 **参数**: 无
 
 **预期输出**: \`docs/component-catalog.json\`
-**失败处理**: 确保步骤 1 的设计系统文件已生成
+**失败处理**: 确保步骤 2 的设计系统文件已生成
 
 ---
 
-## 步骤 3: 搜索 UI 模板 🔍
+## 步骤 4: 搜索 UI 模板 🔍
 
 **工具**: \`ui_search\`
 **参数**:
@@ -71,11 +89,11 @@ const PROMPT_TEMPLATE = `# 快速开始
 \`\`\`
 
 **预期输出**: 匹配的模板列表（可能为空）
-**失败处理**: 如果没有找到模板，继续到步骤 4 使用默认模板
+**失败处理**: 如果没有找到模板，继续到步骤 5 使用默认模板
 
 ---
 
-## 步骤 4: 渲染最终代码 🎨
+## 步骤 5: 渲染最终代码 💻
 
 **工具**: \`render_ui\`
 **参数**:
@@ -88,6 +106,32 @@ const PROMPT_TEMPLATE = `# 快速开始
 
 **预期输出**: 完整的 {framework} 组件代码
 **失败处理**: 如果模板不存在，工具会使用默认模板生成代码
+
+---
+
+## 步骤 6: 更新项目上下文索引 📝
+
+**操作**: 将生成的 UI 文档添加到 \`docs/project-context.md\` 中
+
+**添加内容**:
+在 "## 📚 文档导航" 部分添加：
+
+\`\`\`markdown
+### [UI 设计系统](./design-system.md)
+项目的 UI 设计规范，包括颜色、字体、组件样式等
+
+### [UI 组件目录](./component-catalog.json)
+可用的 UI 组件及其属性定义
+\`\`\`
+
+在 "## 💡 开发时查看对应文档" 部分的 "添加新功能" 下添加：
+\`\`\`markdown
+- **UI 设计系统**: [design-system.md](./design-system.md) - 查看设计规范
+- **UI 组件目录**: [component-catalog.json](./component-catalog.json) - 查看可用组件
+\`\`\`
+
+**预期结果**: \`docs/project-context.md\` 包含 UI 相关文档的链接
+**失败处理**: 如果文件不存在，跳过此步骤
 
 ---
 
@@ -109,10 +153,71 @@ A: 在 \`docs/ui/\` 目录创建 JSON 模板文件，然后在步骤 4 中指定
 `;
 
 /**
+ * 从 project-context.md 读取框架信息
+ */
+function getFrameworkFromContext(projectRoot: string): string | null {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const contextPath = path.join(projectRoot, 'docs', 'project-context.md');
+    
+    if (!fs.existsSync(contextPath)) {
+      return null;
+    }
+    
+    const content = fs.readFileSync(contextPath, 'utf-8');
+    
+    // 匹配表格中的框架信息：| 框架 | xxx |
+    const match = content.match(/\|\s*框架\s*\|\s*([^\|]+)\s*\|/);
+    if (match && match[1]) {
+      const framework = match[1].trim();
+      if (framework && framework !== '无' && framework !== '未检测到') {
+        return framework;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * 统一 UI 开发编排工具
  */
 export async function startUi(args: any) {
   try {
+    const projectRoot = process.cwd();
+    
+    // 优先从 project-context.md 读取框架信息
+    let detectedFramework = 'html'; // 默认值
+    const contextFramework = getFrameworkFromContext(projectRoot);
+    
+    if (contextFramework) {
+      // 从 project-context.md 中读取到了框架信息
+      const fw = contextFramework.toLowerCase();
+      if (fw.includes('vue') || fw.includes('nuxt')) {
+        detectedFramework = 'vue';
+      } else if (fw.includes('react') || fw.includes('next')) {
+        detectedFramework = 'react';
+      } else if (fw.includes('html')) {
+        detectedFramework = 'html';
+      }
+    } else {
+      // 如果没有 project-context.md，则实时检测
+      const detection = detectProjectType(projectRoot);
+      if (detection.framework) {
+        const fw = detection.framework.toLowerCase();
+        if (fw.includes('vue') || fw.includes('nuxt')) {
+          detectedFramework = 'vue';
+        } else if (fw.includes('react') || fw.includes('next')) {
+          detectedFramework = 'react';
+        } else if (fw.includes('html') || fw === 'none') {
+          detectedFramework = 'html';
+        }
+      }
+    }
+    
     // 智能参数解析
     const parsedArgs = parseArgs<{
       description?: string;
@@ -122,7 +227,7 @@ export async function startUi(args: any) {
     }>(args, {
       defaultValues: {
         description: "",
-        framework: "react",
+        framework: detectedFramework, // 使用检测到的框架
         template: "",
         mode: "manual",
       },
@@ -136,7 +241,7 @@ export async function startUi(args: any) {
     });
 
     const description = getString(parsedArgs.description);
-    const framework = getString(parsedArgs.framework) || "react";
+    const framework = getString(parsedArgs.framework) || detectedFramework;
     const mode = getString(parsedArgs.mode) || "manual";
     let templateName = getString(parsedArgs.template);
 
@@ -201,26 +306,34 @@ start_ui "用户列表" --mode=auto
 
 请按顺序执行以下命令：
 
-### 1. 生成设计系统 🎨
+### 1. 生成项目上下文 📋
+\`\`\`bash
+init_project_context
+\`\`\`
+
+### 2. 生成设计系统 🎨
 \`\`\`bash
 ui_design_system --product_type="${inferredProductType}" --stack="${inferredStack}" --keywords="${inferredKeywords}" --description="${description}"
 \`\`\`
 
-### 2. 生成组件目录 📦
+### 3. 生成组件目录 📦
 \`\`\`bash
 init_component_catalog
 \`\`\`
 
-### 3. 生成 UI 模板 📄
+### 4. 生成 UI 模板 📄
 \`\`\`bash
 # 搜索现有模板或生成新模板
 ui_search --mode=template --query="${templateName || description}"
 \`\`\`
 
-### 4. 渲染代码 💻
+### 5. 渲染代码 💻
 \`\`\`bash
 render_ui docs/ui/${templateName || 'template'}.json --framework="${inferredStack}"
 \`\`\`
+
+### 6. 更新项目上下文 📝
+将生成的 UI 文档链接添加到 \`docs/project-context.md\` 的文档导航部分。
 
 ---
 
@@ -234,6 +347,11 @@ ${recommendation.reasoning}
         summary: `智能 UI 开发：${description}`,
         status: 'pending',
         steps: [
+          {
+            name: '生成项目上下文',
+            status: 'pending',
+            description: `调用 init_project_context 生成项目文档`,
+          },
           {
             name: '生成设计系统',
             status: 'pending',
@@ -254,13 +372,20 @@ ${recommendation.reasoning}
             status: 'pending',
             description: '调用 render_ui 生成组件代码',
           },
+          {
+            name: '更新项目上下文',
+            status: 'pending',
+            description: '将 UI 文档添加到 project-context.md 索引',
+          },
         ],
         artifacts: [],
         nextSteps: [
+          '调用 init_project_context',
           `调用 ui_design_system --product_type="${inferredProductType}" --stack="${inferredStack}"`,
           '调用 init_component_catalog',
           `调用 ui_search --mode=template --query="${description}"`,
           `调用 render_ui --framework="${inferredStack}"`,
+          '更新 docs/project-context.md 添加 UI 文档链接',
         ],
         designSystem: {
           colors: {},
@@ -356,6 +481,11 @@ start_ui "设置页面" --framework=react
       status: 'pending',
       steps: [
         {
+          name: '检查项目上下文',
+          status: 'pending',
+          description: '检查 docs/project-context.md 是否存在',
+        },
+        {
           name: '检查设计系统',
           status: 'pending',
           description: '检查 docs/design-system.md 是否存在',
@@ -375,13 +505,20 @@ start_ui "设置页面" --framework=react
           status: 'pending',
           description: '调用 render_ui 生成组件代码',
         },
+        {
+          name: '更新项目上下文',
+          status: 'pending',
+          description: '将 UI 文档添加到 project-context.md 索引',
+        },
       ],
       artifacts: [],
       nextSteps: [
+        '检查项目上下文，如不存在则调用 init_project_context',
         '检查设计系统文件，如不存在则调用 ui_design_system',
         '检查组件目录，如不存在则调用 init_component_catalog',
         `调用 ui_search --mode=template --query="${description}"`,
         `调用 render_ui --framework="${framework}"`,
+        '更新 docs/project-context.md 添加 UI 文档链接',
       ],
       designSystem: {
         colors: {},

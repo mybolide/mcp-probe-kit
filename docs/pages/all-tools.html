@@ -296,13 +296,19 @@
                 
                 <div class="nav-section">
                     <div class="nav-section-title">工具文档</div>
-                    <a href="./all-tools.html" class="nav-item active">
+                    <div class="nav-item nav-item-toggle active expanded" onclick="toggleSubmenu(this)">
                         <div class="nav-item-content">
                             <span class="icon">🛠️</span>
                             <span>所有工具</span>
                         </div>
-                        <span class="badge">39</span>
-                    </a>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="badge">39</span>
+                            <span class="toggle-icon">▶</span>
+                        </div>
+                    </div>
+                    <div class="nav-submenu expanded" id="tools-submenu">
+                        <!-- 工具列表将通过 JavaScript 动态生成 -->
+                    </div>
                 </div>
                 
                 <div class="nav-section">
@@ -464,6 +470,49 @@
     <!-- 引入工具数据 -->
     <script src="../data/tools.js"></script>
     <script>
+        // 切换子菜单展开/收起
+        function toggleSubmenu(element) {
+            element.classList.toggle('expanded');
+            const submenu = document.getElementById('tools-submenu');
+            submenu.classList.toggle('expanded');
+        }
+        
+        // 生成侧边栏工具列表
+        function generateSidebarTools() {
+            const submenu = document.getElementById('tools-submenu');
+            let html = '';
+            
+            for (const [categoryKey, categoryInfo] of Object.entries(categories)) {
+                const tools = toolsData[categoryKey];
+                if (!tools || tools.length === 0) continue;
+                
+                tools.forEach(tool => {
+                    const toolId = tool.name.replace(/_/g, '-');
+                    html += `
+                        <a href="#${toolId}" class="nav-subitem" onclick="scrollToTool('${toolId}')">
+                            ${tool.name}
+                        </a>
+                    `;
+                });
+            }
+            
+            submenu.innerHTML = html;
+        }
+        
+        // 滚动到指定工具
+        function scrollToTool(toolId) {
+            const element = document.getElementById(toolId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // 高亮显示
+                element.style.transition = 'background 0.3s';
+                element.style.background = 'rgba(37, 99, 235, 0.05)';
+                setTimeout(() => {
+                    element.style.background = '';
+                }, 2000);
+            }
+        }
+        
         // Topbar scroll effect
         const topbar = document.getElementById('topbar');
         window.addEventListener('scroll', () => {
@@ -584,7 +633,7 @@
             }
             
             return `
-                <div class="tool-card">
+                <div class="tool-card" id="${tool.name.replace(/_/g, '-')}">
                     <div class="tool-main">
                         <div class="tool-header">
                             <div class="tool-name">${tool.name}</div>
@@ -631,6 +680,9 @@
                     allTools.push({ ...tool, category: categoryKey });
                 });
             }
+            
+            // 生成侧边栏工具列表
+            generateSidebarTools();
             
             // 渲染所有工具
             renderTools();
