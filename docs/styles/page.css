@@ -218,6 +218,55 @@ body {
     opacity: 1;
 }
 
+/* 子菜单样式 */
+.nav-item-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+.nav-item-toggle .toggle-icon {
+    transition: transform 0.2s;
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.nav-item-toggle.expanded .toggle-icon {
+    transform: rotate(90deg);
+}
+
+.nav-submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.nav-submenu.expanded {
+    max-height: 2000px;
+}
+
+.nav-subitem {
+    display: block;
+    padding: 8px 20px 8px 48px;
+    margin: 2px 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 0.2s;
+    border-radius: 6px;
+    font-size: 13px;
+    position: relative;
+}
+
+.nav-subitem:hover {
+    background: var(--bg-hover);
+    color: var(--primary);
+}
+
+.nav-subitem.active {
+    background: rgba(37, 99, 235, 0.05);
+    color: var(--primary);
+    font-weight: 600;
+}
+
 .badge {
     background: var(--bg-hover);
     color: var(--text-secondary);
