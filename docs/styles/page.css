@@ -254,6 +254,9 @@ body {
     border-radius: 6px;
     font-size: 13px;
     position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .nav-subitem:hover {
