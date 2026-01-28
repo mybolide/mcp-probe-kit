@@ -1,7 +1,4 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
-import { okStructured } from "../lib/response.js";
-import { CommitMessageSchema } from "../schemas/structured-output.js";
-import type { CommitMessage } from "../schemas/structured-output.js";
 
 // gencommit 工具实现
 export async function gencommit(args: any) {
@@ -122,29 +119,17 @@ chore: 🤖 升级依赖版本至 1.2.9
 - 如果变更较多，建议分多次提交
 - 确保 commit 消息清晰描述了"做了什么"和"为什么"`;
 
-    // 创建示例结构化数据（用于演示格式）
-    // 注意：实际的 commit 数据应该由 AI 根据实际变更生成
-    const exampleCommitData: CommitMessage = {
-      type: (type as CommitMessage['type']) || 'feat',
-      scope: '',
-      subject: '示例：添加新功能',
-      body: '这是一个示例 commit 消息\n\n实际使用时，AI 会根据代码变更生成真实的 commit 内容',
-      footer: '',
-      fullMessage: 'feat: 🎸 示例：添加新功能\n\n这是一个示例 commit 消息\n\n实际使用时，AI 会根据代码变更生成真实的 commit 内容',
-      emoji: '🎸',
+    // 返回纯文本指导
+    // AI 会根据这些指导分析代码变更并生成符合规范的 commit 消息
+    return {
+      content: [
+        {
+          type: "text",
+          text: textMessage,
+        },
+      ],
+      isError: false,
     };
-
-    // 返回结构化输出
-    // textMessage 提供人类可读的指导信息
-    // exampleCommitData 提供结构化数据示例（AI 会根据实际情况生成真实数据）
-    return okStructured(
-      textMessage,
-      exampleCommitData,
-      {
-        schema: CommitMessageSchema,
-        note: 'AI 应该根据实际代码变更生成真实的 commit 数据，而不是使用这个示例',
-      }
-    );
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);

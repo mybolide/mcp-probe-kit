@@ -12,16 +12,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ 新功能
 
 **产品设计工作流**
-- 🎯 **gen_prd** - 生成产品需求文档（PRD）
-- 📐 **gen_prototype** - 生成原型设计文档
-- 🎨 **HTML 可交互原型** - 基于原型文档生成可演示的 HTML 原型
-- 🚀 **start_product** - 产品设计完整工作流编排
+- 🎯 **gen_prd** - 生成产品需求文档（PRD），包含产品概述、功能需求、优先级、非功能性需求和页面清单
+- 📐 **gen_prototype** - 生成原型设计文档，为每个页面生成独立的 Markdown 文档，包含页面结构、交互说明和元素清单
+- 🎨 **HTML 可交互原型** - 自动生成可在浏览器中直接查看的 HTML 原型，应用设计系统样式，支持响应式布局
+- 🚀 **start_product** - 产品设计完整工作流编排，一键完成：PRD → 原型文档 → 设计系统 → HTML 原型 → 项目上下文更新
 
 ### 🔧 改进
 
 - 完善产品设计到开发的完整链路
-- 与现有 UI/UX 工具深度集成
+- 与现有 UI/UX 工具深度集成（ui_design_system、start_ui）
 - 支持从需求访谈到原型演示的一站式流程
+- HTML 原型可直接给客户演示，无需额外的原型工具
+- 工具总数从 39 个增加到 42 个
+
+### 📚 使用场景
+
+**完整产品设计流程：**
+```bash
+# 一键生成完整产品设计
+start_product --description "在线教育平台" --product_name "EduPro"
+
+# 生成的文件：
+# - docs/prd/product-requirements.md (PRD 文档)
+# - docs/prototype/*.md (原型文档)
+# - docs/design-system/design-system.json (设计系统)
+# - docs/html-prototype/index.html (HTML 原型索引)
+# - docs/html-prototype/page-*.html (各页面 HTML 原型)
+```
+
+**单独使用工具：**
+```bash
+# 只生成 PRD
+gen_prd --description "在线教育平台"
+
+# 基于 PRD 生成原型
+gen_prototype --prd_path "docs/prd/product-requirements.md"
+```
 
 ---
 
