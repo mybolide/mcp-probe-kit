@@ -153,26 +153,69 @@ A: 在 \`docs/ui/\` 目录创建 JSON 模板文件，然后在步骤 4 中指定
 `;
 
 /**
+ * 从 project-context.md 读取框架信息
+ */
+function getFrameworkFromContext(projectRoot: string): string | null {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const contextPath = path.join(projectRoot, 'docs', 'project-context.md');
+    
+    if (!fs.existsSync(contextPath)) {
+      return null;
+    }
+    
+    const content = fs.readFileSync(contextPath, 'utf-8');
+    
+    // 匹配表格中的框架信息：| 框架 | xxx |
+    const match = content.match(/\|\s*框架\s*\|\s*([^\|]+)\s*\|/);
+    if (match && match[1]) {
+      const framework = match[1].trim();
+      if (framework && framework !== '无' && framework !== '未检测到') {
+        return framework;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * 统一 UI 开发编排工具
  */
 export async function startUi(args: any) {
   try {
-    // 检测项目框架
     const projectRoot = process.cwd();
-    const detection = detectProjectType(projectRoot);
     
-    // 从检测结果中提取框架信息
-    let detectedFramework = 'html'; // 默认值改为 html（最通用）
-    if (detection.framework) {
-      const fw = detection.framework.toLowerCase();
+    // 优先从 project-context.md 读取框架信息
+    let detectedFramework = 'html'; // 默认值
+    const contextFramework = getFrameworkFromContext(projectRoot);
+    
+    if (contextFramework) {
+      // 从 project-context.md 中读取到了框架信息
+      const fw = contextFramework.toLowerCase();
       if (fw.includes('vue') || fw.includes('nuxt')) {
         detectedFramework = 'vue';
       } else if (fw.includes('react') || fw.includes('next')) {
         detectedFramework = 'react';
-      } else if (fw.includes('html') || fw === 'none') {
+      } else if (fw.includes('html')) {
         detectedFramework = 'html';
       }
-      // 对于 library/mcp-server 等类型，保持默认值 html
+    } else {
+      // 如果没有 project-context.md，则实时检测
+      const detection = detectProjectType(projectRoot);
+      if (detection.framework) {
+        const fw = detection.framework.toLowerCase();
+        if (fw.includes('vue') || fw.includes('nuxt')) {
+          detectedFramework = 'vue';
+        } else if (fw.includes('react') || fw.includes('next')) {
+          detectedFramework = 'react';
+        } else if (fw.includes('html') || fw === 'none') {
+          detectedFramework = 'html';
+        }
+      }
     }
     
     // 智能参数解析
