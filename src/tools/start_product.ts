@@ -1,192 +1,322 @@
-import { genPrd } from "./gen_prd.js";
-import { genPrototype } from "./gen_prototype.js";
-import { initProjectContext } from "./init_project_context.js";
-import { uiDesignSystem } from "./ui-ux-tools.js";
+import { parseArgs, getString, getBoolean } from "../utils/parseArgs.js";
 import { promises as fs } from "fs";
-import path from "path";
 
-interface StartProductInput {
-  description: string;
-  product_name?: string;
-  product_type?: string;
-  skip_design_system?: boolean;
-  docs_dir?: string;
-}
+/**
+ * start_product - 产品设计完整工作流指导
+ * 
+ * 返回从需求到 HTML 原型的完整工作流执行指导，由 AI 按步骤调用工具并创建文件
+ */
 
-interface StartProductOutput {
-  success: boolean;
-  message: string;
-  data: {
-    steps_completed: string[];
-    files_generated: {
-      prd: string;
-      prototype_index: string;
-      prototype_pages: string[];
-      design_system?: string;
-      html_prototypes: string[];
-      html_index: string;
-    };
-  };
-}
-
-interface PageInfo {
-  name: string;
-  path: string;
-  type: string;
-  description: string;
-}
-
-async function extractPagesFromPrototype(prototypeDir: string): Promise<PageInfo[]> {
-  const pages: PageInfo[] = [];
-  const files = await fs.readdir(prototypeDir);
-  
-  for (const file of files) {
-    if (file.startsWith('page-') && file.endsWith('.md')) {
-      const filePath = path.join(prototypeDir, file);
-      const content = await fs.readFile(filePath, 'utf-8');
-      const nameMatch = content.match(/# 页面原型 - (.+)/);
-      const pathMatch = content.match(/\*\*页面路径\*\*: (.+)/);
-      const typeMatch = content.match(/\*\*页面类型\*\*: (.+)/);
-      const descMatch = content.match(/\*\*页面说明\*\*: (.+)/);
-      if (nameMatch) {
-        pages.push({
-          name: nameMatch[1].trim(),
-          path: pathMatch ? pathMatch[1].trim() : '/',
-          type: typeMatch ? typeMatch[1].trim() : '页面',
-          description: descMatch ? descMatch[1].trim() : '',
-        });
-      }
-    }
-  }
-  return pages;
-}
-
-function generateHtmlPrototype(page: PageInfo, designSystem: any, allPages: PageInfo[]): string {
-  const colors = designSystem?.colors || { primary: '#3B82F6', secondary: '#10B981', background: '#FFFFFF', text: '#1F2937' };
-  const navLinks = allPages.map(p => {
-    const fileName = 'page-' + p.name.replace(/\s+/g, '-').toLowerCase() + '.html';
-    const isActive = p.name === page.name;
-    return '<a href="' + fileName + '" class="' + (isActive ? 'active' : '') + '">' + p.name + '</a>';
-  }).join('\n          ');
-  
-  return '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>' + page.name + ' - 产品原型</title>\n  <style>\n    * { margin: 0; padding: 0; box-sizing: border-box; }\n    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: ' + colors.text + '; background-color: ' + colors.background + '; line-height: 1.6; }\n    header { background-color: ' + colors.primary + '; color: white; padding: 1rem 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n    header .container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }\n    header .logo { font-size: 1.5rem; font-weight: bold; }\n    header nav a { color: white; text-decoration: none; margin-left: 2rem; padding: 0.5rem 1rem; border-radius: 4px; transition: background-color 0.3s; }\n    header nav a:hover, header nav a.active { background-color: rgba(255,255,255,0.2); }\n    main { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }\n    .hero { text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, ' + colors.primary + '15 0%, ' + colors.secondary + '15 100%); border-radius: 8px; margin-bottom: 3rem; }\n    .hero h1 { font-size: 2.5rem; margin-bottom: 1rem; color: ' + colors.primary + '; }\n    .hero p { font-size: 1.25rem; color: ' + colors.text + '; opacity: 0.8; margin-bottom: 2rem; }\n    .hero .cta-button { display: inline-block; background-color: ' + colors.primary + '; color: white; padding: 1rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; }\n    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem; }\n    .card { background: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 2rem; }\n    .card h3 { color: ' + colors.primary + '; margin-bottom: 1rem; }\n    footer { background-color: #F9FAFB; padding: 2rem; text-align: center; margin-top: 4rem; border-top: 1px solid #E5E7EB; }\n  </style>\n</head>\n<body>\n  <header>\n    <div class="container">\n      <div class="logo">产品原型</div>\n      <nav>' + navLinks + '</nav>\n    </div>\n  </header>\n  <main>\n    <div class="hero">\n      <h1>' + page.name + '</h1>\n      <p>' + page.description + '</p>\n      <a href="#" class="cta-button">开始使用</a>\n    </div>\n    <div class="card-grid">\n      <div class="card"><h3>功能模块 1</h3><p>功能描述</p></div>\n      <div class="card"><h3>功能模块 2</h3><p>功能描述</p></div>\n      <div class="card"><h3>功能模块 3</h3><p>功能描述</p></div>\n    </div>\n  </main>\n  <footer><p>&copy; 2026 产品原型 | 由 mcp-probe-kit 生成</p></footer>\n  <script>\n    document.querySelectorAll(\'.cta-button\').forEach(button => {\n      button.addEventListener(\'click\', (e) => { e.preventDefault(); alert(\'这是原型演示\'); });\n    });\n  </script>\n</body>\n</html>';
-}
-
-function generateHtmlIndex(pages: PageInfo[], designSystem: any): string {
-  const colors = designSystem?.colors || { primary: '#3B82F6', secondary: '#10B981', text: '#1F2937' };
-  const pageCards = pages.map(page => {
-    const fileName = 'page-' + page.name.replace(/\s+/g, '-').toLowerCase() + '.html';
-    return '<div class="page-card"><h3>' + page.name + '</h3><p class="page-type">' + page.type + '</p><p class="page-desc">' + page.description + '</p><a href="' + fileName + '" class="view-button">查看原型</a></div>';
-  }).join('\n');
-  
-  return '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>产品原型索引</title>\n  <style>\n    * { margin: 0; padding: 0; box-sizing: border-box; }\n    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, ' + colors.primary + '10 0%, ' + colors.secondary + '10 100%); min-height: 100vh; padding: 2rem; }\n    .container { max-width: 1200px; margin: 0 auto; }\n    header { text-align: center; margin-bottom: 3rem; }\n    header h1 { font-size: 3rem; color: ' + colors.primary + '; margin-bottom: 1rem; }\n    .page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem; }\n    .page-card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }\n    .page-card h3 { font-size: 1.5rem; color: ' + colors.primary + '; margin-bottom: 0.5rem; }\n    .page-type { display: inline-block; background-color: ' + colors.secondary + '20; color: ' + colors.secondary + '; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.875rem; margin-bottom: 1rem; }\n    .page-desc { color: ' + colors.text + '; opacity: 0.7; margin-bottom: 1.5rem; }\n    .view-button { display: inline-block; background-color: ' + colors.primary + '; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; }\n    footer { text-align: center; margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #E5E7EB; opacity: 0.6; }\n  </style>\n</head>\n<body>\n  <div class="container">\n    <header><h1>🎨 产品原型索引</h1><p>共 ' + pages.length + ' 个页面原型</p></header>\n    <div class="page-grid">' + pageCards + '</div>\n    <footer><p>&copy; 2026 产品原型 | 由 mcp-probe-kit 生成</p></footer>\n  </div>\n</body>\n</html>';
-}
-
-async function updateProjectContext(prdPath: string, prototypeIndexPath: string, htmlIndexPath: string, designSystemPath?: string): Promise<void> {
+export async function startProduct(args: any) {
   try {
-    const contextPath = "docs/project-context.md";
-    try { await fs.access(contextPath); } catch { return; }
-    let content = await fs.readFile(contextPath, "utf-8");
-    if (!content.includes("## 产品设计")) {
-      content += '\n\n## 产品设计\n\n### 产品需求文档（PRD）\n- [产品需求文档](../' + prdPath + ')\n\n### 原型设计\n- [原型设计索引](../' + prototypeIndexPath + ')\n- [HTML 原型演示](../' + htmlIndexPath + ')\n' + (designSystemPath ? '\n### 设计系统\n- [设计系统](../' + designSystemPath + ')\n' : '');
-      await fs.writeFile(contextPath, content, "utf-8");
-    }
-  } catch (error) {
-    console.warn('Warning: Failed to update project context:', error);
-  }
-}
+    // 使用智能参数解析
+    const parsedArgs = parseArgs<{
+      description?: string;
+      requirements_file?: string;
+      product_name?: string;
+      product_type?: string;
+      skip_design_system?: boolean;
+      docs_dir?: string;
+    }>(args, {
+      defaultValues: {
+        description: "",
+        requirements_file: "",
+        product_name: "新产品",
+        product_type: "SaaS",
+        skip_design_system: false,
+        docs_dir: "docs",
+      },
+      primaryField: "description",
+      fieldAliases: {
+        description: ["desc", "需求", "描述"],
+        requirements_file: ["req_file", "需求文件"],
+        product_name: ["name", "产品名称"],
+        product_type: ["type", "产品类型"],
+        skip_design_system: ["skip_design"],
+        docs_dir: ["dir", "目录"],
+      },
+    });
 
-export async function startProduct(input: StartProductInput): Promise<StartProductOutput> {
-  const stepsCompleted: string[] = [];
-  const filesGenerated: StartProductOutput['data']['files_generated'] = {
-    prd: '', prototype_index: '', prototype_pages: [], html_prototypes: [], html_index: '',
-  };
-  
-  try {
-    if (!input.description || input.description.trim() === "") {
-      return { success: false, message: "缺少必需参数：description", data: { steps_completed: [], files_generated: filesGenerated } };
-    }
-    
-    const docsDir = input.docs_dir || "docs";
-    
-    console.log("📋 步骤 1/6: 检查项目上下文...");
-    try {
-      await fs.access(path.join(docsDir, "project-context.md"));
-      stepsCompleted.push("检查项目上下文（已存在）");
-    } catch {
-      await initProjectContext({ docs_dir: docsDir });
-      stepsCompleted.push("创建项目上下文");
-    }
-    
-    console.log("📝 步骤 2/6: 生成 PRD...");
-    const prdResult = await genPrd({ description: input.description, product_name: input.product_name, docs_dir: docsDir });
-    if (!prdResult.success) throw new Error('生成 PRD 失败：' + prdResult.message);
-    filesGenerated.prd = prdResult.data.prd_path;
-    stepsCompleted.push("生成 PRD 文档");
-    
-    console.log("🎨 步骤 3/6: 生成原型文档...");
-    const prototypeResult = await genPrototype({ prd_path: prdResult.data.prd_path, docs_dir: docsDir });
-    if (!prototypeResult.success) throw new Error('生成原型文档失败：' + prototypeResult.message);
-    filesGenerated.prototype_index = prototypeResult.data.index_path;
-    filesGenerated.prototype_pages = prototypeResult.data.page_paths;
-    stepsCompleted.push('生成原型文档（' + prototypeResult.data.page_count + ' 个页面）');
-    
-    let designSystem: any = null;
-    if (!input.skip_design_system) {
-      console.log("🎨 步骤 4/6: 生成设计系统...");
-      const designSystemResult = await uiDesignSystem({ product_type: input.product_type || 'SaaS', description: input.description }) as any;
-      if (designSystemResult && designSystemResult.success) {
-        filesGenerated.design_system = designSystemResult.data.design_system_path;
-        stepsCompleted.push("生成设计系统");
-        try {
-          const designSystemPath = path.join(docsDir, "design-system", "design-system.json");
-          const designSystemContent = await fs.readFile(designSystemPath, 'utf-8');
-          designSystem = JSON.parse(designSystemContent);
-        } catch (error) {
-          console.warn("Warning: Failed to read design system:", error);
-        }
+    let description = getString(parsedArgs.description);
+    const requirementsFile = getString(parsedArgs.requirements_file);
+    const productName = getString(parsedArgs.product_name) || "新产品";
+    const productType = getString(parsedArgs.product_type) || "SaaS";
+    const skipDesignSystem = getBoolean(parsedArgs.skip_design_system);
+    const docsDir = getString(parsedArgs.docs_dir) || "docs";
+
+    // 如果提供了需求文件，读取文件内容
+    let requirementsSource = '';
+    if (requirementsFile) {
+      try {
+        description = await fs.readFile(requirementsFile, 'utf-8');
+        requirementsSource = `需求文档文件: ${requirementsFile}`;
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `❌ 无法读取需求文档文件: ${requirementsFile}\n错误: ${(error as Error).message}`,
+            },
+          ],
+          isError: true,
+        };
       }
     } else {
-      stepsCompleted.push("跳过设计系统生成");
+      requirementsSource = '用户提供的描述';
     }
-    
-    console.log("🌐 步骤 5/6: 生成 HTML 原型...");
-    const htmlDir = path.join(docsDir, "html-prototype");
-    await fs.mkdir(htmlDir, { recursive: true });
-    const prototypeDir = path.join(docsDir, "prototype");
-    const pages = await extractPagesFromPrototype(prototypeDir);
-    
-    for (const page of pages) {
-      const fileName = 'page-' + page.name.replace(/\s+/g, '-').toLowerCase() + '.html';
-      const filePath = path.join(htmlDir, fileName);
-      const htmlContent = generateHtmlPrototype(page, designSystem, pages);
-      await fs.writeFile(filePath, htmlContent, 'utf-8');
-      filesGenerated.html_prototypes.push(filePath);
+
+    if (!description || description.trim() === "") {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "❌ 缺少必需参数：必须提供 description 或 requirements_file",
+          },
+        ],
+        isError: true,
+      };
     }
-    
-    const indexPath = path.join(htmlDir, "index.html");
-    const indexContent = generateHtmlIndex(pages, designSystem);
-    await fs.writeFile(indexPath, indexContent, 'utf-8');
-    filesGenerated.html_index = indexPath;
-    stepsCompleted.push('生成 HTML 原型（' + pages.length + ' 个页面 + 索引页）');
-    
-    console.log("📚 步骤 6/6: 更新项目上下文...");
-    await updateProjectContext(filesGenerated.prd, filesGenerated.prototype_index, filesGenerated.html_index, filesGenerated.design_system);
-    stepsCompleted.push("更新项目上下文索引");
-    
-    const summary = '✅ 产品设计工作流完成！\n\n📊 完成的步骤：\n' + stepsCompleted.map((step, i) => (i + 1) + '. ' + step).join('\n') + '\n\n📁 生成的文件：\n- PRD 文档：' + filesGenerated.prd + '\n- 原型索引：' + filesGenerated.prototype_index + '\n- 原型页面：' + filesGenerated.prototype_pages.length + ' 个\n' + (filesGenerated.design_system ? '- 设计系统：' + filesGenerated.design_system + '\n' : '') + '- HTML 原型：' + filesGenerated.html_prototypes.length + ' 个页面\n- HTML 索引：' + filesGenerated.html_index + '\n\n**🎉 可以直接在浏览器中打开 HTML 原型查看效果！**\n\n打开方式：\n1. 在浏览器中打开：' + filesGenerated.html_index + '\n2. 或使用本地服务器：npx serve ' + path.dirname(filesGenerated.html_index) + '\n\n**下一步建议：**\n1. 在浏览器中查看 HTML 原型，与团队评审\n2. 根据反馈调整原型文档和设计系统\n3. 使用 start_ui 工具开始实际开发';
-    
+
+    const guidanceText = `# 🚀 产品设计工作流执行指导
+
+基于${requirementsSource}，请按照以下步骤完成从需求到 HTML 原型的完整产品设计流程。
+
+## 📋 需求信息
+
+- **产品名称**: ${productName}
+- **产品类型**: ${productType}
+- **文档目录**: ${docsDir}
+- **需求来源**: ${requirementsSource}
+- **跳过设计系统**: ${skipDesignSystem ? '是' : '否'}
+
+${requirementsFile ? `\n**📄 需求文档内容**:\n\n${description.substring(0, 500)}${description.length > 500 ? '...\n\n（完整内容已读取，共 ' + description.length + ' 字符）' : ''}` : `\n**📄 产品描述**:\n\n${description}`}
+
+---
+
+## 🎯 执行步骤
+
+请按顺序执行以下步骤：
+
+### 步骤 1: 检查/生成项目上下文 📋
+
+**检查**: 查看 \`${docsDir}/project-context.md\` 是否存在
+
+**如果不存在，调用 MCP 工具**: \`init_project_context\`
+\`\`\`json
+{
+  "docs_dir": "${docsDir}"
+}
+\`\`\`
+
+**预期输出**: 
+- \`${docsDir}/project-context.md\` - 项目上下文索引文件
+
+---
+
+### 步骤 2: 生成产品需求文档（PRD） 📝
+
+**调用 MCP 工具**: \`gen_prd\`
+\`\`\`json
+{
+  "description": "${description.replace(/"/g, '\\"').replace(/\n/g, '\\n').substring(0, 200)}...",
+  "product_name": "${productName}",
+  "docs_dir": "${docsDir}"
+}
+\`\`\`
+
+**重要**: 
+- 工具会返回 PRD 文档模板和创建指导
+- 请根据指导创建 \`${docsDir}/prd/product-requirements.md\` 文件
+- 智能填充所有标记为 [请根据产品描述填写] 的部分
+- 确保 PRD 包含完整的页面清单（第 5 章节）
+
+**预期输出**: 
+- \`${docsDir}/prd/product-requirements.md\` - 完整的 PRD 文档
+
+---
+
+### 步骤 3: 生成原型设计文档 🎨
+
+**调用 MCP 工具**: \`gen_prototype\`
+\`\`\`json
+{
+  "prd_path": "${docsDir}/prd/product-requirements.md",
+  "docs_dir": "${docsDir}"
+}
+\`\`\`
+
+**重要**: 
+- 工具会返回原型设计文档模板和创建指导
+- 请根据指导创建原型索引和各页面原型文档
+- 从 PRD 的页面清单中提取所有页面
+- 为每个页面创建 \`${docsDir}/prototype/page-[页面名称].md\` 文件
+
+**预期输出**: 
+- \`${docsDir}/prototype/prototype-index.md\` - 原型索引
+- \`${docsDir}/prototype/page-*.md\` - 各页面原型文档
+
+---
+
+${!skipDesignSystem ? `### 步骤 4: 生成设计系统 🎨
+
+**调用 MCP 工具**: \`ui_design_system\`
+\`\`\`json
+{
+  "product_type": "${productType}",
+  "description": "${productName}",
+  "stack": "html"
+}
+\`\`\`
+
+**预期输出**: 
+- \`${docsDir}/design-system.json\` - 设计系统配置
+- \`${docsDir}/design-system.md\` - 设计系统文档
+
+---
+
+### 步骤 5: 生成 HTML 原型 🌐
+
+**调用 MCP 工具**: \`start_ui\`
+\`\`\`json
+{
+  "description": "基于原型文档生成所有页面的 HTML 原型"
+}
+\`\`\`
+
+**说明**: 
+- \`start_ui\` 工具会自动读取 \`${docsDir}/prototype/\` 目录下的所有页面原型文档
+- 自动读取 \`${docsDir}/design-system.json\` 获取设计规范
+- 为每个页面生成对应的 HTML 文件到 \`${docsDir}/html-prototype/\` 目录
+- 生成索引页面 \`${docsDir}/html-prototype/index.html\`
+
+**预期输出**:
+- \`${docsDir}/html-prototype/index.html\` - HTML 原型索引
+- \`${docsDir}/html-prototype/page-*.html\` - 各页面 HTML 文件
+
+---
+
+### 步骤 6: 更新项目上下文 📚
+
+**操作**: 将生成的文档添加到 \`${docsDir}/project-context.md\` 索引中
+
+**在文件末尾添加**:
+\`\`\`markdown
+## 产品设计
+
+### 产品需求文档（PRD）
+- [产品需求文档](./prd/product-requirements.md)
+
+### 原型设计
+- [原型设计索引](./prototype/prototype-index.md)
+- [HTML 原型演示](./html-prototype/index.html)
+
+### 设计系统
+- [设计系统](./design-system.md)
+\`\`\`
+
+---
+
+` : `### 步骤 4: 生成 HTML 原型 🌐
+
+**说明**: 基于原型文档生成简单的 HTML 文件（跳过设计系统）
+
+**操作**: 
+1. 读取 \`${docsDir}/prototype/\` 目录下的所有 \`page-*.md\` 文件
+2. 为每个页面生成对应的 HTML 文件到 \`${docsDir}/html-prototype/\` 目录
+3. 生成索引页面 \`${docsDir}/html-prototype/index.html\`
+4. 使用默认的颜色和样式
+
+**HTML 生成要求**:
+- 使用默认的颜色方案（主色: #3B82F6, 辅色: #10B981）
+- 包含页面导航（所有页面的链接）
+- 响应式设计
+- 可直接在浏览器中打开查看
+
+---
+
+### 步骤 5: 更新项目上下文 📚
+
+**操作**: 将生成的文档添加到 \`${docsDir}/project-context.md\` 索引中
+
+**在文件末尾添加**:
+\`\`\`markdown
+## 产品设计
+
+### 产品需求文档（PRD）
+- [产品需求文档](./prd/product-requirements.md)
+
+### 原型设计
+- [原型设计索引](./prototype/prototype-index.md)
+- [HTML 原型演示](./html-prototype/index.html)
+\`\`\`
+
+---
+
+`}## ✅ 完成后
+
+所有文档应该已经生成在 \`${docsDir}\` 目录下：
+- ✅ PRD 文档
+- ✅ 原型设计文档
+${!skipDesignSystem ? '- ✅ 设计系统\n' : ''}- ✅ HTML 可交互原型
+
+**查看原型**: 在浏览器中打开 \`${docsDir}/html-prototype/index.html\`
+
+---
+
+## 📁 预期文件结构
+
+\`\`\`
+${docsDir}/
+├── project-context.md          # 项目上下文索引
+├── prd/
+│   └── product-requirements.md # PRD 文档
+├── prototype/
+│   ├── prototype-index.md      # 原型索引
+│   ├── page-首页.md
+│   ├── page-登录页.md
+│   └── page-*.md               # 其他页面原型
+${!skipDesignSystem ? `├── design-system.json          # 设计系统配置
+├── design-system.md            # 设计系统文档
+` : ''}└── html-prototype/
+    ├── index.html              # HTML 原型索引
+    ├── page-首页.html
+    ├── page-登录页.html
+    └── page-*.html             # 其他页面 HTML
+\`\`\`
+
+---
+
+## 🎯 下一步建议
+
+1. 与团队评审 HTML 原型
+2. 根据反馈调整原型文档
+3. 使用 \`start_ui\` 工具开始实际开发
+4. 使用 \`start_feature\` 工具开始功能开发
+
+---
+
+💡 **提示**: 这是一个完整的工作流指导，AI 需要按步骤调用 MCP 工具并创建所有文件。每个步骤都很重要，请确保按顺序执行。
+`;
+
     return {
-      success: true,
-      message: summary,
-      data: { steps_completed: stepsCompleted, files_generated: filesGenerated },
+      content: [
+        {
+          type: "text",
+          text: guidanceText,
+        },
+      ],
+      isError: false,
     };
-    
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
-      success: false,
-      message: '产品设计工作流执行失败：' + error + '\n\n已完成的步骤：\n' + stepsCompleted.map((step, i) => (i + 1) + '. ' + step).join('\n'),
-      data: { steps_completed: stepsCompleted, files_generated: filesGenerated },
+      content: [
+        {
+          type: "text",
+          text: `❌ 生成工作流指导失败: ${errorMessage}`,
+        },
+      ],
+      isError: true,
     };
   }
 }
