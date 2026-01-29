@@ -7,9 +7,9 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **39 个实用工具**，覆盖代码质量、开发效率、项目管理、UI/UX 设计全流程，所有工具都支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **42 个实用工具**，覆盖代码质量、开发效率、项目管理、UI/UX 设计、产品设计全流程，所有工具都支持**结构化输出**。
 
-**🎉 v2.0 特性**：结构化输出、工作流编排、UI/UX Pro Max、需求访谈
+**🎉 v2.3 特性**：产品设计工作流（PRD → 原型 → HTML）、结构化输出、工作流编排、UI/UX Pro Max、需求访谈
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
@@ -20,7 +20,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 39个工具完整列表
+- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 42个工具完整列表
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
 - [迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - 版本升级指南
 
@@ -28,7 +28,7 @@
 
 ## ✨ 核心特性
 
-### 📦 39 个实用工具
+### 📦 42 个实用工具
 
 - **🔄 工作流编排** (10个) - 一键完成复杂开发流程
 - **🔍 代码分析** (7个) - 代码审查、调试、性能优化
@@ -36,6 +36,7 @@
 - **✨ 生成工具** (7个) - 文档、测试、Mock 数据生成
 - **📋 项目管理** (7个) - 需求分析、工作量估算、项目分析
 - **🎨 UI/UX 工具** (6个) - 设计系统、组件生成、设计稿转代码
+- **🚀 产品设计** (3个) - PRD、原型设计、完整产品工作流
 - **🔧 其他工具** (7个) - 代码修复、格式转换、依赖检查
 
 ### 🎯 结构化输出
@@ -50,6 +51,20 @@
 - `start_review` - 代码体检（质量 → 安全 → 性能）
 - `start_ui` - UI 开发（设计系统 → 组件 → 代码）
 - 更多...
+
+### 🚀 产品设计工作流
+
+3 个产品设计工具，从需求到可交互原型：
+- `gen_prd` - 生成产品需求文档（PRD）
+- `gen_prototype` - 生成原型设计文档
+- `start_product` - 完整产品设计流程（PRD → 原型 → 设计系统 → HTML 原型）
+
+**工作流程：**
+1. **需求分析** - 生成标准 PRD 文档（产品概述、功能需求、页面清单）
+2. **原型设计** - 为每个页面生成详细的原型文档
+3. **设计系统** - 基于产品类型生成设计规范
+4. **HTML 原型** - 生成可直接在浏览器中查看的交互原型
+5. **项目上下文** - 自动更新项目文档
 
 ### 🎨 UI/UX Pro Max
 
@@ -178,6 +193,12 @@ start_feature user-auth "用户认证功能"
 start_bugfix
 # 然后粘贴错误信息
 # 自动完成：问题定位 → 修复方案 → 测试代码
+```
+
+### 产品设计
+```bash
+start_product "在线教育平台" --product_type=SaaS
+# 自动完成：PRD → 原型设计 → 设计系统 → HTML 原型
 ```
 
 ### UI 开发

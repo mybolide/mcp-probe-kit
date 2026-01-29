@@ -1,7 +1,7 @@
 {
-  "version": "2.0.0-dev",
+  "version": "2.3.0-dev",
   "protocol": "2025-11-25",
-  "totalTools": 39,
+  "totalTools": 42,
   "toolsets": {
     "core": {
       "description": "15 个核心工具（高频使用）",

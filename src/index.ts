@@ -15,7 +15,8 @@ import {
   initProjectContext, addFeature, securityScan, fixBug, estimate, genMock,
   startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc,
   startRalph, interview, askUser,
-  uiDesignSystem, initComponentCatalog, uiSearch, syncUiData, renderUi, startUi
+  uiDesignSystem, initComponentCatalog, uiSearch, syncUiData, renderUi, startUi,
+  genPrd, genPrototype, startProduct
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
@@ -55,86 +56,93 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case "init_project":
-        return await initProject(args);
+        return await initProject(args as any);
       case "gencommit":
-        return await gencommit(args);
+        return await gencommit(args as any);
       case "debug":
-        return await debug(args);
+        return await debug(args as any);
       case "genapi":
-        return await genapi(args);
+        return await genapi(args as any);
       case "code_review":
-        return await codeReview(args);
+        return await codeReview(args as any);
       case "gentest":
-        return await gentest(args);
+        return await gentest(args as any);
       case "genpr":
-        return await genpr(args);
+        return await genpr(args as any);
       case "check_deps":
-        return await checkDeps(args);
+        return await checkDeps(args as any);
       case "gendoc":
-        return await gendoc(args);
+        return await gendoc(args as any);
       case "genchangelog":
-        return await genchangelog(args);
+        return await genchangelog(args as any);
       case "refactor":
-        return await refactor(args);
+        return await refactor(args as any);
       case "perf":
-        return await perf(args);
+        return await perf(args as any);
       case "gensql":
-        return await gensql(args);
+        return await gensql(args as any);
       case "resolve_conflict":
-        return await resolveConflict(args);
+        return await resolveConflict(args as any);
       case "genreadme":
-        return await genreadme(args);
+        return await genreadme(args as any);
       case "analyze_project":
-        return await analyzeProject(args);
+        return await analyzeProject(args as any);
       case "init_project_context":
-        return await initProjectContext(args);
+        return await initProjectContext(args as any);
       case "add_feature":
-        return await addFeature(args);
+        return await addFeature(args as any);
       case "security_scan":
-        return await securityScan(args);
+        return await securityScan(args as any);
       case "fix_bug":
-        return await fixBug(args);
+        return await fixBug(args as any);
       case "estimate":
-        return await estimate(args);
+        return await estimate(args as any);
       case "gen_mock":
-        return await genMock(args);
+        return await genMock(args as any);
       // 智能编排工具
       case "start_feature":
-        return await startFeature(args);
+        return await startFeature(args as any);
       case "start_bugfix":
-        return await startBugfix(args);
+        return await startBugfix(args as any);
       case "start_review":
-        return await startReview(args);
+        return await startReview(args as any);
       case "start_release":
-        return await startRelease(args);
+        return await startRelease(args as any);
       case "start_refactor":
-        return await startRefactor(args);
+        return await startRefactor(args as any);
       case "start_onboard":
-        return await startOnboard(args);
+        return await startOnboard(args as any);
       case "start_api":
-        return await startApi(args);
+        return await startApi(args as any);
       case "start_doc":
-        return await startDoc(args);
+        return await startDoc(args as any);
       case "start_ralph":
-        return await startRalph(args);
+        return await startRalph(args as any);
       // 访谈工具
       case "interview":
-        return await interview(args);
+        return await interview(args as any);
       case "ask_user":
-        return await askUser(args);
+        return await askUser(args as any);
       // UI/UX Pro Max 工具
       case "ui_design_system":
-        return await uiDesignSystem(args);
+        return await uiDesignSystem(args as any);
       case "init_component_catalog":
-        return await initComponentCatalog(args);
+        return await initComponentCatalog(args as any);
       case "ui_search":
-        return await uiSearch(args);
+        return await uiSearch(args as any);
       case "sync_ui_data":
-        return await syncUiData(args);
+        return await syncUiData(args as any);
       case "render_ui":
-        return await renderUi(args);
+        return await renderUi(args as any);
       case "start_ui":
-        return await startUi(args);
+        return await startUi(args as any);
+      // 产品设计工作流
+      case "gen_prd":
+        return await genPrd(args || {});
+      case "gen_prototype":
+        return await genPrototype(args || {});
+      case "start_product":
+        return await startProduct(args || {});
       default:
         throw new Error(`未知工具: ${name}`);
     }

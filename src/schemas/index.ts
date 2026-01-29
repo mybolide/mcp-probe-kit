@@ -11,6 +11,7 @@ import { projectToolSchemas } from "./project-tools.js";
 import { orchestrationToolSchemas } from "./orchestration-tools.js";
 import { interviewToolSchemas } from "./interview-tools.js";
 import { uiUxSchemas } from "./ui-ux-schemas.js";
+import { productDesignSchemas } from "./product-design-schemas.js";
 
 // 合并所有工具 schemas
 export const allToolSchemas = [
@@ -23,4 +24,5 @@ export const allToolSchemas = [
   ...orchestrationToolSchemas,
   ...interviewToolSchemas,
   ...uiUxSchemas,
+  ...productDesignSchemas,
 ];
