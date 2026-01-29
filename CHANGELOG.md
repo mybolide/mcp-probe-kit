@@ -7,7 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.3.0] - 开发中
+## [2.3.1] - 2026-01-29
+
+### 🐛 Bug 修复
+
+**产品设计工具指导文本优化**
+- 🔧 **add_feature** - 重构指导文本模板，参考 gen_prd 的格式，使用更清晰的 markdown 模板和 `[填写：xxx]` 标记
+- 🔧 **gen_prd** - 统一目录结构为 `docs/specs/{feature_name}/`，与 add_feature 保持一致
+- 🔧 **gen_prototype** - 添加 featureName 提取逻辑，统一目录结构
+- 🔧 **start_product** - 更新工作流指导，确保所有文档在正确的目录下创建
+
+### 📝 改进说明
+
+之前的工具指导文本不够清晰，AI 可能无法正确理解如何创建文件。本次更新：
+- 所有产品设计工具现在使用统一的 `docs/specs/{feature_name}/` 目录结构
+- 指导文本更加明确，直接提供完整的 markdown 模板
+- 使用 `[填写：xxx]` 标记需要 AI 智能填充的部分
+- 移除冗长的编写指南，让模板更简洁直观
+
+---
+
+## [2.3.0] - 2026-01-29
 
 ### ✨ 新功能
 
