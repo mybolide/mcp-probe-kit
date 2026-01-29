@@ -78,7 +78,7 @@
                             <span class="icon">🛠️</span>
                             <span>所有工具</span>
                         </div>
-                        <span class="badge">39</span>
+                        <span class="badge">42</span>
                     </a>
                 </div>
                 
@@ -177,19 +177,151 @@
                 <h1 class="page-title">最佳实践</h1>
                 <p class="page-description">MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南</p>
                 <div class="page-meta">
-                    <span>📦 v2.0.0</span>
+                    <span>📦 v2.3.0</span>
                     <span>·</span>
                     <span>最后更新：2026-01-27</span>
                 </div>
                 
                 <!-- 研发流程概览 -->
                 <h2>完整研发流程</h2>
-                <p>MCP Probe Kit 的 39 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。</p>
+                <p>MCP Probe Kit 的 42 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。</p>
                 
                 <div class="callout info">
                     <div class="callout-icon">💡</div>
                     <div class="callout-content">
                         <p><strong>核心理念：</strong>通过工作流编排工具（start_*）串联整个开发流程，让 AI 成为你的研发助手。</p>
+                    </div>
+                </div>
+                
+                <!-- 阶段 0：产品设计 -->
+                <h2>阶段 0：产品设计（从需求到原型）</h2>
+                
+                <h3>0.1 完整产品设计流程（推荐）</h3>
+                <p>使用 <code>start_product</code> 工作流编排，一键完成从需求到 HTML 原型的完整产品设计。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 我有一个产品需求文档 project.md，帮我生成完整的产品设计
+
+AI: 使用 start_product 工具
+requirements_file: "project.md"
+product_name: "在线教育平台"
+product_type: "Education"
+
+→ 自动执行：
+  ✓ 步骤 1: 检查/生成项目上下文
+  ✓ 步骤 2: 生成 PRD 文档（产品需求文档）
+  ✓ 步骤 3: 生成原型设计文档（所有页面）
+  ✓ 步骤 4: 生成设计系统（颜色、字体、组件）
+  ✓ 步骤 5: 生成 HTML 可交互原型
+  ✓ 步骤 6: 更新项目上下文索引
+
+→ 输出文件：
+  - docs/prd/product-requirements.md
+  - docs/prototype/prototype-index.md
+  - docs/prototype/page-*.md
+  - docs/design-system.json
+  - docs/html-prototype/index.html</code></pre>
+                </div>
+                
+                <div class="callout info">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-content">
+                        <p><strong>工具设计理念：</strong>产品设计工具采用"返回指导而非直接创建文件"的模式，AI 根据工具返回的指导文档智能填充内容并创建文件，确保灵活性和可控性。</p>
+                    </div>
+                </div>
+                
+                <h3>0.2 单独生成 PRD 文档</h3>
+                <p>使用 <code>gen_prd</code> 工具单独生成产品需求文档。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>你: 生成一个在线教育平台的 PRD
+
+AI: 使用 gen_prd 工具
+description: "在线教育平台，支持课程管理、视频播放、作业提交、互动问答"
+product_name: "EduPlatform"
+
+→ 工具返回：PRD 文档模板和创建指导
+→ AI 根据指导创建：docs/prd/product-requirements.md
+
+PRD 包含：
+  - 产品概述（愿景、目标用户、核心价值）
+  - 功能需求（核心功能、用户故事）
+  - 功能优先级（P0/P1/P2）
+  - 非功能性需求（性能、安全、兼容性）
+  - 页面清单（所有需要的页面）</code></pre>
+                </div>
+                
+                <h3>0.3 生成原型设计文档</h3>
+                <p>使用 <code>gen_prototype</code> 工具基于 PRD 生成原型设计文档。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>AI: 使用 gen_prototype 工具
+prd_path: "docs/prd/product-requirements.md"
+
+→ 工具返回：原型文档模板和创建指导
+→ AI 根据指导创建：
+  - docs/prototype/prototype-index.md（原型索引）
+  - docs/prototype/page-首页.md
+  - docs/prototype/page-登录页.md
+  - docs/prototype/page-课程列表.md
+  - ...（所有页面的原型文档）
+
+每个原型文档包含：
+  - 页面信息（名称、路径、类型）
+  - 页面结构（Header、Main Content、Footer）
+  - 交互说明（用户操作和系统响应）
+  - 页面元素清单（所有 UI 元素）
+  - 设计建议（布局、视觉、交互）</code></pre>
+                </div>
+                
+                <h3>0.4 生成 HTML 可交互原型</h3>
+                <p>使用 <code>start_ui</code> 工具基于原型文档生成 HTML 原型。</p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">最佳实践</span>
+                    </div>
+                    <pre><code>AI: 使用 start_ui 工具
+description: "基于原型文档生成所有页面的 HTML 原型"
+
+→ 自动执行：
+  ✓ 读取 docs/prototype/ 下的所有原型文档
+  ✓ 读取 docs/design-system.json 获取设计规范
+  ✓ 为每个页面生成 HTML 文件
+  ✓ 生成索引页面 index.html
+
+→ 输出：
+  - docs/html-prototype/index.html（原型索引）
+  - docs/html-prototype/page-首页.html
+  - docs/html-prototype/page-登录页.html
+  - ...（所有页面的 HTML 文件）
+
+→ 特点：
+  - 使用设计系统的颜色和字体
+  - 包含页面导航
+  - 响应式设计
+  - 可直接在浏览器中打开查看</code></pre>
+                </div>
+                
+                <h3>0.5 产品设计工作流总结</h3>
+                <div class="callout success">
+                    <div class="callout-icon">✅</div>
+                    <div class="callout-content">
+                        <p><strong>推荐流程：</strong></p>
+                        <ul>
+                            <li>✓ 准备需求文档（Markdown 格式）</li>
+                            <li>✓ 使用 <code>start_product</code> 一键生成完整产品设计</li>
+                            <li>✓ 在浏览器中查看 HTML 原型（docs/html-prototype/index.html）</li>
+                            <li>✓ 与团队评审原型，收集反馈</li>
+                            <li>✓ 根据反馈调整原型文档</li>
+                            <li>✓ 使用 <code>start_ui</code> 重新生成 HTML 原型</li>
+                            <li>✓ 确认后进入开发阶段</li>
+                        </ul>
                     </div>
                 </div>
                 
@@ -501,7 +633,7 @@ max_minutes: 25
                 <!-- 更多资源 -->
                 <h2>更多资源</h2>
                 <ul>
-                    <li><a href="./all-tools.html">完整工具参考</a> - 查看所有 39 个工具的详细说明</li>
+                    <li><a href="./all-tools.html">完整工具参考</a> - 查看所有 42 个工具的详细说明</li>
                     <li><a href="./getting-started.html">安装配置</a> - 快速开始使用</li>
                     <li><a href="./migration.html">迁移指南</a> - 从 v1.x 迁移到 v2.0</li>
                     <li><a href="https://github.com/mybolide/mcp-probe-kit" target="_blank">GitHub 仓库</a> - 源代码和问题反馈</li>

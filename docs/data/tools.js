@@ -857,16 +857,119 @@ AI: 请使用 gen_skill 工具生成技能文档
 scope: "all"
 lang: "zh"`
     }
-  ]
-};
+  ],
+  
+  // 产品设计工作流工具
+  productDesign: [
+    {
+      name: 'gen_prd',
+      description: '生成产品需求文档（PRD），包含产品概述、功能需求、优先级、非功能性需求和页面清单',
+      schema: 'GenPrdSchema',
+      params: [
+        { name: 'description', type: 'string', required: true, desc: '产品描述或访谈记录' },
+        { name: 'product_name', type: 'string', required: false, desc: '产品名称，默认为"新产品"' },
+        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' }
+      ],
+      usage: '基于产品描述生成标准的 PRD 文档，为产品设计提供基础',
+      example: `// 使用示例
+AI: 请使用 gen_prd 工具生成产品需求文档
 
-// 分类信息（按显示顺序）
-const categories = {
-  workflow: { icon: '🔄', title: '工作流编排', count: 10 },
-  analysis: { icon: '🔍', title: '代码分析', count: 7 },
-  git: { icon: '🌿', title: 'Git 工具', count: 4 },
-  generation: { icon: '✨', title: '生成工具', count: 7 },
-  project: { icon: '📋', title: '项目管理', count: 7 },
-  uiux: { icon: '🎨', title: 'UI/UX 工具', count: 6 },
-  other: { icon: '🔧', title: '其他工具', count: 7 }
+description: "在线教育平台，支持直播课程、录播课程、作业提交和成绩管理"
+product_name: "EduPro"`
+    },
+    {
+      name: 'gen_prototype',
+      description: '生成原型设计文档，为每个页面生成独立的 Markdown 文档，包含页面结构、交互说明和元素清单',
+      schema: 'GenPrototypeSchema',
+      params: [
+        { name: 'prd_path', type: 'string', required: false, desc: 'PRD 文档路径，如果提供将从 PRD 中提取页面清单' },
+        { name: 'description', type: 'string', required: false, desc: '功能描述，如果没有 PRD 可直接提供' },
+        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' }
+      ],
+      usage: '基于 PRD 或功能描述生成原型设计文档，为 UI 开发提供指导',
+      example: `// 使用示例
+AI: 请使用 gen_prototype 工具生成原型设计文档
+
+prd_path: "docs/prd/product-requirements.md"`
+    },
+    {
+      name: 'start_product',
+      description: '产品设计完整工作流编排：PRD → 原型文档 → 设计系统 → HTML 原型 → 项目上下文更新。生成的 HTML 原型可直接在浏览器中查看',
+      schema: 'StartProductSchema',
+      params: [
+        { name: 'description', type: 'string', required: false, desc: '产品描述，详细描述产品目标、功能和用户需求。如果提供了 requirements_file，此参数可选' },
+        { name: 'requirements_file', type: 'string', required: false, desc: '需求文档文件路径，如 "docs/requirements.md"。工具会读取完整文件内容作为需求' },
+        { name: 'product_name', type: 'string', required: false, desc: '产品名称' },
+        { name: 'product_type', type: 'string', required: false, desc: '产品类型，如 SaaS、E-commerce 等，用于生成设计系统' },
+        { name: 'skip_design_system', type: 'boolean', required: false, desc: '跳过设计系统生成，默认为 false' },
+        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' }
+      ],
+      usage: '一键完成从需求到 HTML 原型的全流程，生成可直接演示的产品原型。支持从文件读取完整需求文档',
+      example: `// 使用示例 1：直接提供描述
+AI: 请使用 start_product 工具完成产品设计
+
+description: "在线教育平台，支持直播课程、录播课程、作业提交和成绩管理"
+product_name: "EduPro"
+product_type: "SaaS"
+
+// 使用示例 2：从文件读取需求（推荐用于长文档）
+AI: 请使用 start_product 工具完成产品设计
+
+requirements_file: "docs/requirements.md"
+product_name: "EduPro"
+product_type: "SaaS"
+
+// 工具会自动：
+// 1. 读取完整需求文档（如果提供了 requirements_file）
+// 2. 生成 PRD 文档
+// 3. 生成原型设计文档
+// 4. 生成设计系统
+// 5. 生成 HTML 可交互原型
+// 6. 更新项目上下文`
+    }
+  ],
+
+  // 工具分类元数据
+  categories: {
+    workflow: {
+      icon: '🔄',
+      title: '工作流编排',
+      description: '完整的开发工作流自动化，从需求到发布的全流程支持'
+    },
+    analysis: {
+      icon: '🔍',
+      title: '代码分析',
+      description: '智能代码审查、调试、性能分析和安全扫描'
+    },
+    git: {
+      icon: '📝',
+      title: 'Git 工具',
+      description: 'Git 提交消息、变更日志、PR 描述和冲突解决'
+    },
+    generation: {
+      icon: '⚡',
+      title: '代码生成',
+      description: '自动生成文档、测试、Mock 数据和 UI 组件'
+    },
+    project: {
+      icon: '📦',
+      title: '项目管理',
+      description: '项目初始化、功能规划、工作量估算和需求访谈'
+    },
+    uiux: {
+      icon: '🎨',
+      title: 'UI/UX 设计',
+      description: '设计系统、组件库、原型设计和设计稿转代码'
+    },
+    productDesign: {
+      icon: '🚀',
+      title: '产品设计',
+      description: '从需求到原型的完整产品设计工作流'
+    },
+    other: {
+      icon: '🛠️',
+      title: '其他工具',
+      description: '代码修复、格式转换、依赖检查等实用工具'
+    }
+  }
 };

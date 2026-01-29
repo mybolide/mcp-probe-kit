@@ -241,7 +241,16 @@ body {
 }
 
 .nav-submenu.expanded {
-    max-height: 2000px;
+    max-height: none;
+}
+
+.nav-category-title {
+    padding: 12px 16px 8px 24px;
+    margin: 8px 8px 4px 8px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
 }
 
 .nav-subitem {
