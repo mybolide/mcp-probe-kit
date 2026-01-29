@@ -138,11 +138,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await startUi(args as any);
       // 产品设计工作流
       case "gen_prd":
-        return await genPrd(args as any);
+        return await genPrd(args || {});
       case "gen_prototype":
-        return await genPrototype(args as any);
+        return await genPrototype(args || {});
       case "start_product":
-        return await startProduct(args as any);
+        return await startProduct(args || {});
       default:
         throw new Error(`未知工具: ${name}`);
     }

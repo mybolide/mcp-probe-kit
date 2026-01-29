@@ -45,7 +45,11 @@ export const startProductSchema = {
   properties: {
     description: {
       type: "string",
-      description: "产品描述。详细描述产品的目标、功能、用户需求等信息。这是整个工作流的基础输入。",
+      description: "产品描述。详细描述产品的目标、功能、用户需求等信息。这是整个工作流的基础输入。如果提供了 requirements_file，此参数可选。",
+    },
+    requirements_file: {
+      type: "string",
+      description: "需求文档文件路径（可选）。如果提供，将读取该文件的完整内容作为产品需求。支持 Markdown、文本等格式。例如：'docs/requirements.md'、'project.md'。",
     },
     product_name: {
       type: "string",
@@ -64,7 +68,7 @@ export const startProductSchema = {
       description: "文档输出目录（可选）。默认为 'docs'。所有文档将保存到此目录下的子目录中。",
     },
   },
-  required: ["description"],
+  required: [],
 };
 
 export const productDesignSchemas = [
