@@ -28,7 +28,7 @@ export const orchestrationToolSchemas = [
   },
   {
     name: "start_bugfix",
-    description: "当用户需要完整的 Bug 修复流程时使用。编排：检查上下文→分析定位→修复方案→生成测试。若只需定位请用 debug",
+    description: "当用户需要完整的 Bug 修复流程时使用。编排：检查上下文→分析定位→修复方案→生成测试。",
     inputSchema: {
       type: "object",
       properties: {
@@ -108,7 +108,7 @@ export const orchestrationToolSchemas = [
   },
   {
     name: "start_onboard",
-    description: "当用户需要快速上手新项目时使用。编排：分析项目→生成上下文文档。若只需分析请用 analyze_project",
+    description: "当用户需要快速上手新项目时使用。编排：生成上下文文档。",
     inputSchema: {
       type: "object",
       properties: {

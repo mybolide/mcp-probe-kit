@@ -1,6 +1,6 @@
 /**
  * 项目管理工具的结构化输出 Schema
- * 包含: init_project, init_project_context, add_feature, analyze_project, estimate, check_deps, split, resolve_conflict
+ * 包含: init_project, init_project_context, add_feature, estimate, split, resolve_conflict
  */
 
 /**
@@ -139,65 +139,6 @@ export const FeatureSpecSchema = {
 } as const;
 
 /**
- * Project Analysis Schema
- * 用于 analyze_project 工具的结构化输出
- */
-export const ProjectAnalysisSchema = {
-  type: 'object',
-  properties: {
-    summary: { type: 'string' },
-    structure: {
-      type: 'object',
-      properties: {
-        totalFiles: { type: 'number' },
-        totalLines: { type: 'number' },
-        languages: { type: 'object', additionalProperties: { type: 'number' } },
-      },
-    },
-    techStack: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          version: { type: 'string' },
-          purpose: { type: 'string' },
-        },
-      },
-    },
-    architecture: {
-      type: 'object',
-      properties: {
-        pattern: { type: 'string' },
-        layers: { type: 'array', items: { type: 'string' } },
-        description: { type: 'string' },
-      },
-    },
-    dependencies: {
-      type: 'object',
-      properties: {
-        production: { type: 'number' },
-        development: { type: 'number' },
-        outdated: { type: 'number' },
-      },
-    },
-    codeQuality: {
-      type: 'object',
-      properties: {
-        complexity: { type: 'string', enum: ['low', 'medium', 'high'] },
-        maintainability: { type: 'number' },
-        testCoverage: { type: 'number' },
-      },
-    },
-    recommendations: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-  },
-  required: ['summary', 'structure', 'techStack'],
-} as const;
-
-/**
  * Estimate Schema
  * 用于 estimate 工具的结构化输出
  */
@@ -243,51 +184,6 @@ export const EstimateSchema = {
     },
   },
   required: ['summary', 'storyPoints', 'timeEstimates'],
-} as const;
-
-/**
- * Dependency Report Schema
- * 用于 check_deps 工具的结构化输出
- */
-export const DependencyReportSchema = {
-  type: 'object',
-  properties: {
-    summary: { type: 'string' },
-    totalDependencies: { type: 'number' },
-    outdated: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          current: { type: 'string' },
-          latest: { type: 'string' },
-          type: { type: 'string', enum: ['major', 'minor', 'patch'] },
-        },
-      },
-    },
-    vulnerabilities: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] },
-          description: { type: 'string' },
-          fixAvailable: { type: 'boolean' },
-        },
-      },
-    },
-    unused: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-    recommendations: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-  },
-  required: ['summary', 'totalDependencies'],
 } as const;
 
 /**
@@ -410,36 +306,6 @@ export interface FeatureSpec {
   };
 }
 
-export interface ProjectAnalysis {
-  summary: string;
-  structure: {
-    totalFiles?: number;
-    totalLines?: number;
-    languages?: Record<string, number>;
-  };
-  techStack: Array<{
-    name?: string;
-    version?: string;
-    purpose?: string;
-  }>;
-  architecture?: {
-    pattern?: string;
-    layers?: string[];
-    description?: string;
-  };
-  dependencies?: {
-    production?: number;
-    development?: number;
-    outdated?: number;
-  };
-  codeQuality?: {
-    complexity?: 'low' | 'medium' | 'high';
-    maintainability?: number;
-    testCoverage?: number;
-  };
-  recommendations?: string[];
-}
-
 export interface Estimate {
   summary: string;
   storyPoints: number;
@@ -459,25 +325,6 @@ export interface Estimate {
     mitigation?: string;
   }>;
   assumptions?: string[];
-}
-
-export interface DependencyReport {
-  summary: string;
-  totalDependencies: number;
-  outdated?: Array<{
-    name?: string;
-    current?: string;
-    latest?: string;
-    type?: 'major' | 'minor' | 'patch';
-  }>;
-  vulnerabilities?: Array<{
-    name?: string;
-    severity?: 'critical' | 'high' | 'medium' | 'low';
-    description?: string;
-    fixAvailable?: boolean;
-  }>;
-  unused?: string[];
-  recommendations?: string[];
 }
 
 export interface SplitPlan {

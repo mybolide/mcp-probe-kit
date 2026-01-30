@@ -3,15 +3,15 @@
  * 用于 MCP 2025-11-25 协议的 structuredContent
  * 
  * 注意：其他工具的 Schema 已按功能分类到 src/schemas/output/ 目录：
- * - core-tools.ts: 核心开发工具 (code_review, debug, fix_bug, gentest, refactor, security_scan, perf)
+ * - core-tools.ts: 核心开发工具 (code_review, fix_bug, gentest, refactor, security_scan, perf)
  * - generation-tools.ts: 代码生成工具 (gendoc, genapi, gensql, genreadme, genui, gen_mock, etc.)
  * - workflow-tools.ts: 工作流编排工具 (start_review, start_release, start_refactor, start_api, start_doc)
- * - project-tools.ts: 项目管理工具 (init_project, add_feature, analyze_project, estimate, etc.)
+ * - project-tools.ts: 项目管理工具 (init_project, add_feature, estimate, etc.)
  * - ui-ux-tools.ts: UI/UX 工具 (ui_design_system, ui_search, design2code, etc.)
  * - helper-tools.ts: 辅助工具 (detect_shell, init_setting, gen_skill)
  * 
  * 使用方式：
- * import { CodeReviewReportSchema, DebugReportSchema } from '@/schemas/output';
+ * import { CodeReviewReportSchema } from '@/schemas/output';
  */
 
 /**
@@ -702,76 +702,6 @@ export const CodeReviewReportSchema = {
     },
   },
   required: ['summary', 'overallScore', 'issues'],
-} as const;
-
-/**
- * Debug Report Schema
- * 用于 debug 工具的结构化输出
- */
-export const DebugReportSchema = {
-  type: 'object',
-  properties: {
-    summary: {
-      type: 'string',
-      description: '调试摘要',
-    },
-    rootCause: {
-      type: 'string',
-      description: '根本原因分析',
-    },
-    errorType: {
-      type: 'string',
-      enum: ['syntax', 'runtime', 'logic', 'performance', 'memory', 'network', 'unknown'],
-      description: '错误类型',
-    },
-    location: {
-      type: 'object',
-      description: '错误位置',
-      properties: {
-        file: { type: 'string' },
-        line: { type: 'number' },
-        column: { type: 'number' },
-        function: { type: 'string' },
-      },
-    },
-    stackTrace: {
-      type: 'array',
-      description: '堆栈跟踪',
-      items: {
-        type: 'object',
-        properties: {
-          file: { type: 'string' },
-          line: { type: 'number' },
-          function: { type: 'string' },
-        },
-      },
-    },
-    debugStrategy: {
-      type: 'array',
-      description: '调试策略',
-      items: { type: 'string' },
-    },
-    solutions: {
-      type: 'array',
-      description: '解决方案列表',
-      items: {
-        type: 'object',
-        properties: {
-          title: { type: 'string' },
-          description: { type: 'string' },
-          code: { type: 'string' },
-          priority: { type: 'string', enum: ['high', 'medium', 'low'] },
-        },
-        required: ['title', 'description'],
-      },
-    },
-    relatedIssues: {
-      type: 'array',
-      description: '相关问题',
-      items: { type: 'string' },
-    },
-  },
-  required: ['summary', 'rootCause', 'errorType', 'solutions'],
 } as const;
 
 /**

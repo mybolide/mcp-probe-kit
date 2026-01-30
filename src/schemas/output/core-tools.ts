@@ -1,6 +1,6 @@
 /**
  * 核心开发工具的结构化输出 Schema
- * 包含: code_review, debug, fix_bug, gentest, refactor, security_scan, perf
+ * 包含: code_review, fix_bug, gentest, refactor, security_scan, perf
  */
 
 /**
@@ -66,66 +66,6 @@ export const CodeReviewReportSchema = {
     },
   },
   required: ['summary', 'overallScore', 'issues'],
-} as const;
-
-/**
- * Debug Report Schema
- * 用于 debug 工具的结构化输出
- */
-export const DebugReportSchema = {
-  type: 'object',
-  properties: {
-    summary: { type: 'string', description: '调试摘要' },
-    rootCause: { type: 'string', description: '根本原因分析' },
-    errorType: {
-      type: 'string',
-      enum: ['syntax', 'runtime', 'logic', 'performance', 'memory', 'network', 'unknown'],
-      description: '错误类型',
-    },
-    location: {
-      type: 'object',
-      properties: {
-        file: { type: 'string' },
-        line: { type: 'number' },
-        column: { type: 'number' },
-        function: { type: 'string' },
-      },
-    },
-    stackTrace: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          file: { type: 'string' },
-          line: { type: 'number' },
-          function: { type: 'string' },
-        },
-      },
-    },
-    debugStrategy: {
-      type: 'array',
-      items: { type: 'string' },
-      description: '调试策略',
-    },
-    solutions: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          title: { type: 'string' },
-          description: { type: 'string' },
-          code: { type: 'string' },
-          priority: { type: 'string', enum: ['high', 'medium', 'low'] },
-        },
-        required: ['title', 'description'],
-      },
-    },
-    relatedIssues: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-  },
-  required: ['summary', 'rootCause', 'errorType', 'solutions'],
 } as const;
 
 /**
@@ -447,31 +387,6 @@ export interface CodeReviewReport {
     maintainability?: number;
     testCoverage?: number;
   };
-}
-
-export interface DebugReport {
-  summary: string;
-  rootCause: string;
-  errorType: 'syntax' | 'runtime' | 'logic' | 'performance' | 'memory' | 'network' | 'unknown';
-  location?: {
-    file?: string;
-    line?: number;
-    column?: number;
-    function?: string;
-  };
-  stackTrace?: Array<{
-    file?: string;
-    line?: number;
-    function?: string;
-  }>;
-  debugStrategy?: string[];
-  solutions: Array<{
-    title: string;
-    description: string;
-    code?: string;
-    priority?: 'high' | 'medium' | 'low';
-  }>;
-  relatedIssues?: string[];
 }
 
 export interface BugAnalysis {

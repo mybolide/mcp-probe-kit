@@ -4,25 +4,6 @@
 
 export const codeAnalysisToolSchemas = [
   {
-    name: "debug",
-    description: "当用户遇到错误、需要调试问题时使用。分析错误信息和堆栈跟踪，定位问题根因，提供调试策略和解决方案",
-    inputSchema: {
-      type: "object",
-      properties: {
-        error: {
-          type: "string",
-          description: "错误信息。可以是错误消息、堆栈跟踪或完整的错误输出",
-        },
-        context: {
-          type: "string",
-          description: "相关代码上下文。可选，有助于更准确的分析",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
     name: "code_review",
     description: "当用户需要审查代码质量、检查代码问题时使用。审查代码的质量、安全性、性能，输出结构化问题清单（severity/category/suggestion）",
     inputSchema: {
