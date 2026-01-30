@@ -23,14 +23,4 @@ export const docUtilToolSchemas = [
       additionalProperties: true,
     },
   },
-  {
-    name: "check_deps",
-    description: "当用户需要检查项目依赖健康度、查找过期依赖时使用。检查依赖版本、安全漏洞、体积，输出升级建议",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-      additionalProperties: true,
-    },
-  },
 ] as const;

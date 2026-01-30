@@ -4,25 +4,6 @@
 
 export const projectToolSchemas = [
   {
-    name: "analyze_project",
-    description: "当用户需要了解项目结构、分析项目技术栈时使用。分析项目结构、技术栈、架构模式，输出项目全景报告",
-    inputSchema: {
-      type: "object",
-      properties: {
-        project_path: {
-          type: "string",
-          description: "项目路径。可选，默认为当前目录",
-        },
-        max_depth: {
-          type: "number",
-          description: "分析深度。可选，默认 5",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
     name: "init_project_context",
     description: "当用户需要生成项目上下文文档、帮助团队快速上手时使用。生成项目上下文文档（技术栈/架构/编码规范），供后续开发参考",
     inputSchema: {

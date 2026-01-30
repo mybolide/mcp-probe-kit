@@ -78,7 +78,7 @@
                             <span class="icon">🛠️</span>
                             <span>所有工具</span>
                         </div>
-                        <span class="badge">42</span>
+                        <span class="badge">39</span>
                     </a>
                 </div>
                 
@@ -184,7 +184,7 @@
                 
                 <!-- 研发流程概览 -->
                 <h2>完整研发流程</h2>
-                <p>MCP Probe Kit 的 42 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。</p>
+                <p>MCP Probe Kit 的 39 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。</p>
                 
                 <div class="callout info">
                     <div class="callout-icon">💡</div>
@@ -483,22 +483,6 @@ stack_trace: "at login.js:45:12"
   ✓ 生成测试用例</code></pre>
                 </div>
                 
-                <h3>4.2 快速调试</h3>
-                <p>使用 <code>debug</code> 工具快速定位问题。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>AI: 使用 debug 工具
-error: "数据库连接超时"
-context: "await db.connect({ timeout: 1000 })"
-
-→ 输出：
-  - 根因：超时时间设置过短
-  - 调试策略：增加超时时间或优化连接池
-  - 解决方案：timeout: 5000</code></pre>
-                </div>
-                
                 <!-- 阶段 5：版本发布 -->
                 <h2>阶段 5：版本发布</h2>
                 
@@ -543,8 +527,6 @@ from_tag: "v1.9.0"
 AI: 使用 start_onboard 工具
 
 → 自动执行：
-  ✓ 分析项目结构
-  ✓ 识别技术栈
   ✓ 生成上下文文档
   ✓ 输出开发规范</code></pre>
                 </div>
@@ -565,20 +547,7 @@ code: "整个项目代码"
   ✓ 输出完整文档集</code></pre>
                 </div>
                 
-                <h3>6.3 依赖管理</h3>
-                <p>使用 <code>check_deps</code> 定期检查依赖健康度。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>AI: 使用 check_deps 工具
-
-→ 输出：
-  - 过期依赖：react@17.0.0 → 18.2.0
-  - 安全漏洞：lodash@4.17.15 (CVE-2021-23337)
-  - 体积问题：moment.js 可替换为 date-fns
-  - 升级建议：优先级排序</code></pre>
-                </div>
+                
                 
                 <!-- 高级实践 -->
                 <h2>高级实践：Ralph Wiggum Loop</h2>
@@ -625,7 +594,6 @@ max_minutes: 25
                             <li>✓ 开发前使用 estimate - 合理规划时间</li>
                             <li>✓ 提交前使用 start_review - 保证代码质量</li>
                             <li>✓ 发布前使用 start_release - 规范发布流程</li>
-                            <li>✓ 定期使用 check_deps - 维护依赖健康</li>
                         </ul>
                     </div>
                 </div>
@@ -633,7 +601,7 @@ max_minutes: 25
                 <!-- 更多资源 -->
                 <h2>更多资源</h2>
                 <ul>
-                    <li><a href="./all-tools.html">完整工具参考</a> - 查看所有 42 个工具的详细说明</li>
+                    <li><a href="./all-tools.html">完整工具参考</a> - 查看所有 39 个工具的详细说明</li>
                     <li><a href="./getting-started.html">安装配置</a> - 快速开始使用</li>
                     <li><a href="./migration.html">迁移指南</a> - 从 v1.x 迁移到 v2.0</li>
                     <li><a href="https://github.com/mybolide/mcp-probe-kit" target="_blank">GitHub 仓库</a> - 源代码和问题反馈</li>

@@ -7,7 +7,7 @@ import type { OnboardingReport } from "../schemas/structured-output.js";
  * start_onboard 智能编排工具
  * 
  * 场景：快速上手项目
- * 编排：analyze_project → init_project_context
+ * 编排：init_project_context
  */
 
 const PROMPT_TEMPLATE = `# 📚 快速上手编排指南
@@ -18,38 +18,15 @@ const PROMPT_TEMPLATE = `# 📚 快速上手编排指南
 
 ---
 
-## 🔍 步骤 1: 项目分析
-
-**调用工具**: \`analyze_project\`
-
-**参数**:
-\`\`\`json
-{
-  "project_path": "{project_path}",
-  "max_depth": 5,
-  "include_content": true
-}
-\`\`\`
-
-**分析内容**:
-- 项目结构
-- 技术栈识别
-- 入口文件
-- 核心模块
-- 依赖关系
-
-**产出**: 项目分析报告
-
----
-
-## 📝 步骤 2: 生成项目上下文
+## 📝 步骤 1: 生成项目上下文
 
 **调用工具**: \`init_project_context\`
 
 **参数**:
 \`\`\`json
 {
-  "docs_dir": "{docs_dir}"
+  "docs_dir": "{docs_dir}",
+  "project_root": "{project_path}"
 }
 \`\`\`
 
@@ -65,7 +42,6 @@ const PROMPT_TEMPLATE = `# 📚 快速上手编排指南
 
 ## ✅ 完成检查
 
-- [ ] 项目结构已分析
 - [ ] 技术栈已识别
 - [ ] 项目上下文已生成
 - [ ] 文档已保存
@@ -94,20 +70,7 @@ const PROMPT_TEMPLATE = `# 📚 快速上手编排指南
 | 构建工具 | [工具列表] |
 | 测试框架 | [框架列表] |
 
-### 3. 项目结构
-
-\`\`\`
-[目录树]
-\`\`\`
-
-### 4. 核心文件
-
-| 文件 | 用途 |
-|------|------|
-| [文件1] | [用途] |
-| [文件2] | [用途] |
-
-### 5. 快速开始
+### 3. 快速开始
 
 \`\`\`bash
 # 安装依赖
@@ -120,7 +83,7 @@ const PROMPT_TEMPLATE = `# 📚 快速上手编排指南
 [测试命令]
 \`\`\`
 
-### 6. 下一步建议
+### 4. 下一步建议
 
 1. 阅读 \`{docs_dir}/project-context.md\` 了解详细信息
 2. 查看 README.md 了解项目背景
@@ -163,11 +126,6 @@ export async function startOnboard(args: any) {
       status: 'pending',
       steps: [
         {
-          name: '项目分析',
-          status: 'pending',
-          description: '调用 analyze_project 分析项目结构和技术栈',
-        },
-        {
           name: '生成项目上下文',
           status: 'pending',
           description: '调用 init_project_context 生成项目文档',
@@ -175,19 +133,18 @@ export async function startOnboard(args: any) {
       ],
       artifacts: [],
       nextSteps: [
-        '调用 analyze_project 分析项目',
         '调用 init_project_context 生成文档',
         `阅读 ${docsDir}/project-context.md`,
         '查看 README.md 了解项目背景',
       ],
       projectSummary: {
-        name: '待分析',
-        description: '待分析',
+        name: '待生成',
+        description: '待生成',
         techStack: [],
-        architecture: '待分析',
+        architecture: '待生成',
       },
       quickstart: {
-        setup: ['待分析'],
+        setup: ['待生成'],
         commonTasks: [],
       },
       keyFiles: [],
@@ -198,7 +155,7 @@ export async function startOnboard(args: any) {
       onboardingReport,
       {
         schema: OnboardingReportSchema,
-        note: 'AI 应该按照指南执行步骤，并在分析完成后更新 structuredContent 中的项目信息',
+        note: 'AI 应该按照指南执行步骤，并在上下文生成后更新 structuredContent 中的项目信息',
       }
     );
   } catch (error) {

@@ -9,9 +9,9 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { 
-  initProject, gencommit, debug, genapi,
-  codeReview, gentest, genpr, checkDeps, gendoc, genchangelog, refactor, perf,
-  gensql, resolveConflict, genreadme, analyzeProject,
+  initProject, gencommit, genapi,
+  codeReview, gentest, genpr, gendoc, genchangelog, refactor, perf,
+  gensql, resolveConflict, genreadme,
   initProjectContext, addFeature, securityScan, fixBug, estimate, genMock,
   startFeature, startBugfix, startReview, startRelease, startRefactor, startOnboard, startApi, startDoc,
   startRalph, interview, askUser,
@@ -59,8 +59,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await initProject(args as any);
       case "gencommit":
         return await gencommit(args as any);
-      case "debug":
-        return await debug(args as any);
       case "genapi":
         return await genapi(args as any);
       case "code_review":
@@ -69,8 +67,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await gentest(args as any);
       case "genpr":
         return await genpr(args as any);
-      case "check_deps":
-        return await checkDeps(args as any);
       case "gendoc":
         return await gendoc(args as any);
       case "genchangelog":
@@ -85,8 +81,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await resolveConflict(args as any);
       case "genreadme":
         return await genreadme(args as any);
-      case "analyze_project":
-        return await analyzeProject(args as any);
       case "init_project_context":
         return await initProjectContext(args as any);
       case "add_feature":

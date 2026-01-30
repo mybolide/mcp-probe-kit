@@ -38,7 +38,7 @@ stack_trace: "at login.js:45:12"`
     },
     {
       name: 'start_onboard',
-      description: '项目上手工作流：分析项目 → 生成上下文文档，帮助新成员快速了解项目',
+      description: '项目上手工作流：生成上下文文档，帮助新成员快速了解项目',
       schema: 'OnboardingReportSchema',
       params: [
         { name: 'project_path', type: 'string', required: false, desc: '项目路径，默认为当前目录' },
@@ -49,7 +49,7 @@ stack_trace: "at login.js:45:12"`
 AI: 请使用 start_onboard 工具帮我了解这个项目
 
 // 工具会生成：
-// - 项目结构分析
+// - 项目上下文文档
 // - 技术栈说明
 // - 开发规范文档`
     },
@@ -179,22 +179,6 @@ code: "function login(user, pass) {
   db.query(query);
 }"
 focus: "security"`
-    },
-    {
-      name: 'debug',
-      description: '调试分析工具，分析错误信息和堆栈跟踪，定位问题根因，提供调试策略',
-      schema: 'DebugReportSchema',
-      params: [
-        { name: 'error', type: 'string', required: true, desc: '错误信息，可以是错误消息、堆栈跟踪或完整的错误输出' },
-        { name: 'context', type: 'string', required: false, desc: '相关代码上下文，有助于更准确的分析' }
-      ],
-      usage: '分析错误信息和堆栈跟踪，定位问题根因，提供调试策略和解决方案',
-      example: `// 使用示例
-AI: 请使用 debug 工具分析这个错误
-
-error: "TypeError: Cannot read property 'map' of undefined
-  at UserList.render (UserList.js:23:15)"
-context: "const users = await fetchUsers();"`
     },
     {
       name: 'fix_bug',
@@ -586,24 +570,6 @@ experience_level: "mid"
 team_size: 2`
     },
     {
-      name: 'analyze_project',
-      description: '分析项目结构、技术栈、架构模式，输出项目全景报告',
-      schema: 'ProjectAnalysisSchema',
-      params: [
-        { name: 'project_path', type: 'string', required: false, desc: '项目路径，默认为当前目录' },
-        { name: 'max_depth', type: 'number', required: false, desc: '分析深度，默认 5' }
-      ],
-      usage: '分析项目结构、技术栈、架构模式，输出项目全景报告',
-      example: `// 使用示例
-AI: 请使用 analyze_project 工具分析项目
-
-// 工具会输出：
-// - 项目结构分析
-// - 技术栈识别
-// - 架构模式分析
-// - 依赖关系图`
-    },
-    {
       name: 'interview',
       description: '需求访谈工具，通过结构化提问澄清需求，避免理解偏差和返工',
       schema: 'InterviewReportSchema',
@@ -814,21 +780,6 @@ css: ".button {
 }"`
     },
     {
-      name: 'check_deps',
-      description: '检查依赖健康度，查找过期依赖、安全漏洞、体积问题',
-      schema: 'DependencyCheckSchema',
-      params: [],
-      usage: '检查依赖版本、安全漏洞、体积，输出升级建议',
-      example: `// 使用示例
-AI: 请使用 check_deps 工具检查项目依赖
-
-// 工具会检查：
-// - 过期的依赖包
-// - 安全漏洞
-// - 包体积问题
-// - 升级建议`
-    },
-    {
       name: 'init_setting',
       description: '写入推荐的 AI 配置到 .cursor/settings.json',
       schema: 'SettingInitSchema',
@@ -939,7 +890,7 @@ product_type: "SaaS"
     analysis: {
       icon: '🔍',
       title: '代码分析',
-      description: '智能代码审查、调试、性能分析和安全扫描'
+      description: '智能代码审查、性能分析和安全扫描'
     },
     git: {
       icon: '📝',
@@ -969,7 +920,7 @@ product_type: "SaaS"
     other: {
       icon: '🛠️',
       title: '其他工具',
-      description: '代码修复、格式转换、依赖检查等实用工具'
+      description: '代码修复、格式转换等实用工具'
     }
   }
 };

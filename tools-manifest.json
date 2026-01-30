@@ -1,15 +1,14 @@
 {
   "version": "2.3.0-dev",
   "protocol": "2025-11-25",
-  "totalTools": 42,
+  "totalTools": 39,
   "toolsets": {
     "core": {
-      "description": "15 个核心工具（高频使用）",
-      "count": 15,
+      "description": "13 个核心工具（高频使用）",
+      "count": 13,
       "tools": [
         "gencommit",
         "code_review",
-        "debug",
         "gentest",
         "gendoc",
         "refactor",
@@ -19,7 +18,6 @@
         "genapi",
         "gensql",
         "genreadme",
-        "check_deps",
         "genchangelog",
         "genpr"
       ]
@@ -36,12 +34,11 @@
       "note": "内部工具 init_component_catalog 和 render_ui 不在此工具集中，但在 full 模式下可用"
     },
     "workflow": {
-      "description": "25-30 个工作流工具（包含 core + 编排工具）",
-      "count": 30,
+      "description": "23-28 个工作流工具（包含 core + 编排工具）",
+      "count": 28,
       "tools": [
         "gencommit",
         "code_review",
-        "debug",
         "gentest",
         "gendoc",
         "refactor",
@@ -51,7 +48,6 @@
         "genapi",
         "gensql",
         "genreadme",
-        "check_deps",
         "genchangelog",
         "genpr",
         "start_feature",
@@ -79,14 +75,13 @@
   },
   "categories": {
     "basic": {
-      "description": "基础工具（27 个）",
+      "description": "基础工具（24 个）",
       "tools": [
         "init_project",
         "gencommit",
         "genchangelog",
         "genpr",
         "resolve_conflict",
-        "debug",
         "code_review",
         "perf",
         "security_scan",
@@ -98,11 +93,9 @@
         "gensql",
         "gen_mock",
         "genreadme",
-        "analyze_project",
         "init_project_context",
         "add_feature",
         "estimate",
-        "check_deps",
         "interview",
         "ask_user"
       ]
@@ -159,7 +152,6 @@
       "description": "高价值工具",
       "tools": [
         "code_review",
-        "debug",
         "fix_bug",
         "gentest",
         "refactor",
@@ -172,20 +164,19 @@
     "description": "支持结构化输出的工具（v2.0+）",
     "version": "2.0.0",
     "completedDate": "2026-01-26",
-    "tools": [
-      "gencommit",
-      "start_feature",
-      "start_bugfix",
-      "start_ui",
-      "start_onboard",
-      "start_ralph",
-      "code_review",
-      "debug",
-      "fix_bug",
-      "gentest",
-      "refactor",
-      "security_scan",
-      "perf",
+      "tools": [
+        "gencommit",
+        "start_feature",
+        "start_bugfix",
+        "start_ui",
+        "start_onboard",
+        "start_ralph",
+        "code_review",
+        "fix_bug",
+        "gentest",
+        "refactor",
+        "security_scan",
+        "perf",
       "gendoc",
       "genapi",
       "gensql",
@@ -197,15 +188,13 @@
       "start_release",
       "start_refactor",
       "start_api",
-      "start_doc",
-      "init_project",
-      "init_project_context",
-      "add_feature",
-      "analyze_project",
-      "estimate",
-      "check_deps",
-      "resolve_conflict"
-    ],
+        "start_doc",
+        "init_project",
+        "init_project_context",
+        "add_feature",
+        "estimate",
+        "resolve_conflict"
+      ],
     "schemas": {
       "gencommit": "CommitMessageSchema",
       "start_feature": "FeatureReportSchema",
@@ -214,7 +203,6 @@
       "start_onboard": "OnboardingReportSchema",
       "start_ralph": "RalphLoopReportSchema",
       "code_review": "CodeReviewReportSchema",
-      "debug": "DebugReportSchema",
       "fix_bug": "BugAnalysisSchema",
       "gentest": "TestGenerationReportSchema",
       "refactor": "RefactorReportSchema",
@@ -235,15 +223,13 @@
       "init_project": "ProjectInitSchema",
       "init_project_context": "ProjectContextSchema",
       "add_feature": "FeatureSpecSchema",
-      "analyze_project": "ProjectAnalysisSchema",
       "estimate": "EstimateSchema",
-      "check_deps": "DependencyReportSchema",
       "resolve_conflict": "ConflictResolutionSchema"
     },
     "coverage": {
-      "total": 39,
-      "completed": 32,
-      "percentage": 82.1
+      "total": 36,
+      "completed": 29,
+      "percentage": 80.6
     }
   },
   "deletedTools": {

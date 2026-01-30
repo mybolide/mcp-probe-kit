@@ -57,7 +57,6 @@ export const SCHEMA_MAP = {
   
   // 核心开发工具
   code_review: 'CodeReviewReportSchema',
-  debug: 'DebugReportSchema',
   fix_bug: 'BugAnalysisSchema',
   gentest: 'TestSuiteSchema',
   refactor: 'RefactorPlanSchema',
@@ -89,9 +88,7 @@ export const SCHEMA_MAP = {
   init_project: 'ProjectInitSchema',
   init_project_context: 'ProjectContextSchema',
   add_feature: 'FeatureSpecSchema',
-  analyze_project: 'ProjectAnalysisSchema',
   estimate: 'EstimateSchema',
-  check_deps: 'DependencyReportSchema',
   split: 'SplitPlanSchema',
   resolve_conflict: 'ConflictResolutionSchema',
   

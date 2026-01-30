@@ -8,17 +8,16 @@ export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
 /**
  * 工具集定义
  * 
- * - core: 14 个核心工具（高频使用）
+ * - core: 12 个核心工具（高频使用）
  * - ui: 5 个 UI/UX 工具（推荐使用 start_ui 统一入口）
- * - workflow: 27 个工作流工具（包含 core + 编排工具）
+ * - workflow: 24 个工作流工具（包含 core + 编排工具）
  * - full: 所有 39 个工具（默认）
  */
 export const TOOLSET_DEFINITIONS = {
-  // 核心工具集（14 个）- 最常用的基础工具
+  // 核心工具集（12 个）- 最常用的基础工具
   core: [
     'gencommit',
     'code_review',
-    'debug',
     'gentest',
     'gendoc',
     'refactor',
@@ -28,7 +27,6 @@ export const TOOLSET_DEFINITIONS = {
     'genapi',
     'gensql',
     'genreadme',
-    'check_deps',
     'gen_mock',
   ],
 
@@ -41,12 +39,11 @@ export const TOOLSET_DEFINITIONS = {
     // 注意：不包含内部工具 init_component_catalog 和 render_ui
   ],
 
-  // 工作流工具集（27 个）- 包含核心工具 + 编排工具
+  // 工作流工具集（24 个）- 包含核心工具 + 编排工具
   workflow: [
     // 核心工具（复用）
     'gencommit',
     'code_review',
-    'debug',
     'gentest',
     'gendoc',
     'refactor',
@@ -56,7 +53,6 @@ export const TOOLSET_DEFINITIONS = {
     'genapi',
     'gensql',
     'genreadme',
-    'check_deps',
     'gen_mock',
     
     // 编排工具（10 个）

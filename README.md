@@ -7,7 +7,7 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **42 个实用工具**，覆盖代码质量、开发效率、项目管理、UI/UX 设计、产品设计全流程，所有工具都支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **39 个实用工具**，覆盖代码质量、开发效率、项目管理、UI/UX 设计、产品设计全流程，所有工具都支持**结构化输出**。
 
 **🎉 v2.3 特性**：产品设计工作流（PRD → 原型 → HTML）、结构化输出、工作流编排、UI/UX Pro Max、需求访谈
 
@@ -20,7 +20,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 42个工具完整列表
+- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 39个工具完整列表
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
 - [迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - 版本升级指南
 
@@ -28,7 +28,7 @@
 
 ## ✨ 核心特性
 
-### 📦 42 个实用工具
+### 📦 39 个实用工具
 
 - **🔄 工作流编排** (10个) - 一键完成复杂开发流程
 - **🔍 代码分析** (7个) - 代码审查、调试、性能优化
