@@ -1,4 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
+import type { CommitMessage } from "../schemas/structured-output.js";
 
 // gencommit 工具实现
 export async function gencommit(args: any) {
@@ -33,7 +36,22 @@ export async function gencommit(args: any) {
       changes = input;
     }
 
-    const textMessage = `请按以下步骤生成规范的 Git commit 消息：
+    const header = renderGuidanceHeader({
+      tool: "gencommit",
+      goal: "生成符合 Conventional Commits 规范的 Git commit 消息。",
+      tasks: changes
+        ? [
+            "已提供变更内容：根据变更直接生成 commit 消息",
+            "仅输出最终 commit message（避免解释）",
+          ]
+        : [
+            "未提供变更内容：先提示用户补充变更信息",
+            "基于变更生成 commit 消息",
+          ],
+      outputs: ["仅输出最终 commit message（可包含 body/footer）"],
+    });
+
+    const textMessage = `${header}请按以下步骤生成规范的 Git commit 消息：
 
 **第一步：获取变更信息**
 ${changes ? `已提供变更内容：\n${changes}` : `
@@ -119,17 +137,34 @@ chore: 🤖 升级依赖版本至 1.2.9
 - 如果变更较多，建议分多次提交
 - 确保 commit 消息清晰描述了"做了什么"和"为什么"`;
 
-    // 返回纯文本指导
-    // AI 会根据这些指导分析代码变更并生成符合规范的 commit 消息
-    return {
-      content: [
-        {
-          type: "text",
-          text: textMessage,
-        },
-      ],
-      isError: false,
+    const allowedTypes = new Set([
+      "feat",
+      "fix",
+      "docs",
+      "refactor",
+      "test",
+      "chore",
+      "style",
+      "perf",
+      "ci",
+      "build",
+      "revert",
+    ]);
+    const normalizedType = type === "fixed"
+      ? "fix"
+      : type && allowedTypes.has(type)
+        ? type
+        : "chore";
+
+    const structuredData: CommitMessage = {
+      type: normalizedType as CommitMessage["type"],
+      subject: "",
+      fullMessage: "",
     };
+
+    return okStructured(textMessage, structuredData, {
+      schema: (await import("../schemas/structured-output.js")).CommitMessageSchema,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);

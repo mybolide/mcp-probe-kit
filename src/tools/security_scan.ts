@@ -276,6 +276,7 @@ logger.info("API call with token:", maskToken(apiToken))
 
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { SecurityReport } from "../schemas/output/core-tools.js";
 
 /**
@@ -318,10 +319,17 @@ export async function securityScan(args: any) {
       sensitive_data: "敏感数据泄露",
     };
 
-    const guide = PROMPT_TEMPLATE
+    const header = renderGuidanceHeader({
+      tool: "security_scan",
+      goal: "输出结构化的安全扫描报告。",
+      tasks: ["基于代码进行安全扫描", "仅输出扫描结果"],
+      outputs: ["结构化安全报告（JSON）"],
+    });
+
+    const guide = `${header}${PROMPT_TEMPLATE
       .replace(/{code}/g, code)
       .replace(/{language}/g, language)
-      .replace(/{scan_type}/g, scanTypeDesc[scanType] || scanType);
+      .replace(/{scan_type}/g, scanTypeDesc[scanType] || scanType)}`;
 
     // 创建结构化数据对象
     const securityReport: SecurityReport = {

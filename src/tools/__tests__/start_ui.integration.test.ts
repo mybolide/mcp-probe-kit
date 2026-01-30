@@ -22,13 +22,14 @@ describe('start_ui 集成测试', () => {
       // 1. 应该包含快速开始部分
       expect(text).toMatch(/^#\s+快速开始/m);
       
-      // 2. 应该包含 6 个步骤（新增了项目上下文和更新索引）
+      // 2. 应该包含 7 个步骤（新增了保存模板步骤）
       expect(text).toMatch(/步骤 1.*生成项目上下文/);
       expect(text).toMatch(/步骤 2.*生成设计系统/);
       expect(text).toMatch(/步骤 3.*生成组件目录/);
       expect(text).toMatch(/步骤 4.*搜索.*模板/);
-      expect(text).toMatch(/步骤 5.*渲染.*代码/);
-      expect(text).toMatch(/步骤 6.*更新项目上下文/);
+      expect(text).toMatch(/步骤 5.*保存.*模板/);
+      expect(text).toMatch(/步骤 6.*渲染.*代码/);
+      expect(text).toMatch(/步骤 7.*更新项目上下文/);
       
       // 3. 每个步骤应该包含工具名称
       expect(text).toMatch(/init_project_context/);

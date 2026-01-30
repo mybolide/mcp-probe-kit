@@ -21,6 +21,26 @@ export const orchestrationToolSchemas = [
           type: "string",
           description: "文档输出目录，默认为 docs",
         },
+        template_profile: {
+          type: "string",
+          description: "模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）",
+        },
+        requirements_mode: {
+          type: "string",
+          description: "需求模式：steady（默认，直接生成规格）或 loop（需求澄清与补全）",
+        },
+        loop_max_rounds: {
+          type: "number",
+          description: "需求 loop 最大轮次（默认 2）",
+        },
+        loop_question_budget: {
+          type: "number",
+          description: "每轮最多提问数量（默认 5）",
+        },
+        loop_assumption_cap: {
+          type: "number",
+          description: "每轮假设上限（默认 3）",
+        },
       },
       required: [],
       additionalProperties: true,
@@ -43,6 +63,26 @@ export const orchestrationToolSchemas = [
         code_context: {
           type: "string",
           description: "相关代码。可选",
+        },
+        template_profile: {
+          type: "string",
+          description: "模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）",
+        },
+        requirements_mode: {
+          type: "string",
+          description: "需求模式：steady（默认，直接修复）或 loop（需求澄清与补全）",
+        },
+        loop_max_rounds: {
+          type: "number",
+          description: "需求 loop 最大轮次（默认 2）",
+        },
+        loop_question_budget: {
+          type: "number",
+          description: "每轮最多提问数量（默认 5）",
+        },
+        loop_assumption_cap: {
+          type: "number",
+          description: "每轮假设上限（默认 3）",
         },
       },
       required: [],

@@ -148,6 +148,48 @@ export const WorkflowReportSchema = {
 } as const;
 
 /**
+ * Execution Plan Schema
+ * 用于 start_* 编排工具的执行计划（metadata.plan）
+ */
+export const ExecutionPlanSchema = {
+  type: 'object',
+  properties: {
+    mode: {
+      type: 'string',
+      enum: ['delegated'],
+      description: '执行模式（delegated = AI 按步骤调用工具）',
+    },
+    steps: {
+      type: 'array',
+      description: '执行步骤',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: '步骤 ID' },
+          tool: { type: 'string', description: '工具名称（无工具时可省略）' },
+          action: { type: 'string', description: '手动操作描述（无工具时使用）' },
+          args: { type: 'object', description: '工具参数' },
+          outputs: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '预期产物',
+          },
+          when: { type: 'string', description: '执行条件（可选）' },
+          dependsOn: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '依赖步骤',
+          },
+          note: { type: 'string', description: '补充说明' },
+        },
+        required: ['id'],
+      },
+    },
+  },
+  required: ['mode', 'steps'],
+} as const;
+
+/**
  * Bug Fix Report Schema
  * 用于 start_bugfix 的特定字段
  */
@@ -498,6 +540,137 @@ export const RalphLoopReportSchema = {
 } as const;
 
 /**
+ * Requirements Loop Schema
+ * 用于需求澄清与补全的结构化输出
+ */
+export const RequirementsLoopSchema = {
+  type: 'object',
+  properties: {
+    mode: {
+      type: 'string',
+      enum: ['loop'],
+      description: '需求循环模式标记',
+    },
+    round: {
+      type: 'number',
+      minimum: 1,
+      description: '当前轮次',
+    },
+    maxRounds: {
+      type: 'number',
+      minimum: 1,
+      description: '最大轮次',
+    },
+    questionBudget: {
+      type: 'number',
+      minimum: 0,
+      description: '本轮问题配额',
+    },
+    assumptionCap: {
+      type: 'number',
+      minimum: 0,
+      description: '本轮假设上限',
+    },
+    requirements: {
+      type: 'array',
+      description: '需求条目列表',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: '需求 ID' },
+          title: { type: 'string', description: '需求标题' },
+          description: { type: 'string', description: '需求描述' },
+          source: {
+            type: 'string',
+            enum: ['User', 'Derived', 'Assumption'],
+            description: '来源标记',
+          },
+          acceptance: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '验收标准（EARS）',
+          },
+        },
+        required: ['id', 'title', 'description', 'source', 'acceptance'],
+      },
+    },
+    openQuestions: {
+      type: 'array',
+      description: '待确认问题',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          question: { type: 'string' },
+          context: { type: 'string' },
+          required: { type: 'boolean' },
+        },
+        required: ['id', 'question'],
+      },
+    },
+    assumptions: {
+      type: 'array',
+      description: '待确认假设',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          statement: { type: 'string' },
+          risk: { type: 'string', enum: ['low', 'medium', 'high'] },
+          needsConfirmation: { type: 'boolean' },
+        },
+        required: ['id', 'statement', 'risk', 'needsConfirmation'],
+      },
+    },
+    delta: {
+      type: 'object',
+      description: '本轮变更摘要',
+      properties: {
+        added: { type: 'array', items: { type: 'string' } },
+        modified: { type: 'array', items: { type: 'string' } },
+        removed: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['added', 'modified', 'removed'],
+    },
+    validation: {
+      type: 'object',
+      description: '结构化自检结果',
+      properties: {
+        passed: { type: 'boolean' },
+        missingFields: { type: 'array', items: { type: 'string' } },
+        warnings: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['passed', 'missingFields'],
+    },
+    stopConditions: {
+      type: 'object',
+      description: '结束条件状态',
+      properties: {
+        ready: { type: 'boolean' },
+        reasons: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['ready', 'reasons'],
+    },
+    metadata: {
+      type: 'object',
+      description: '额外元数据（如 delegated plan）',
+      additionalProperties: true,
+    },
+  },
+  required: [
+    'mode',
+    'round',
+    'maxRounds',
+    'requirements',
+    'openQuestions',
+    'assumptions',
+    'delta',
+    'validation',
+    'stopConditions',
+  ],
+} as const;
+
+/**
  * TypeScript 类型定义
  */
 export interface CommitMessage {
@@ -532,6 +705,22 @@ export interface WorkflowReport {
   nextSteps?: string[];
   warnings?: string[];
   metadata?: Record<string, any>;
+}
+
+export interface PlanStep {
+  id: string;
+  tool?: string;
+  action?: string;
+  args?: Record<string, any>;
+  outputs?: string[];
+  when?: string;
+  dependsOn?: string[];
+  note?: string;
+}
+
+export interface ExecutionPlan {
+  mode: 'delegated';
+  steps: PlanStep[];
 }
 
 export interface BugFixReport extends WorkflowReport {
@@ -618,6 +807,60 @@ export interface RalphLoopReport extends WorkflowReport {
     passed: boolean;
     message?: string;
   }>;
+}
+
+export interface RequirementItem {
+  id: string;
+  title: string;
+  description: string;
+  source: 'User' | 'Derived' | 'Assumption';
+  acceptance: string[];
+}
+
+export interface OpenQuestion {
+  id: string;
+  question: string;
+  context?: string;
+  required?: boolean;
+}
+
+export interface RequirementAssumption {
+  id: string;
+  statement: string;
+  risk: 'low' | 'medium' | 'high';
+  needsConfirmation: boolean;
+}
+
+export interface RequirementsDelta {
+  added: string[];
+  modified: string[];
+  removed: string[];
+}
+
+export interface RequirementsValidation {
+  passed: boolean;
+  missingFields: string[];
+  warnings?: string[];
+}
+
+export interface RequirementsStopConditions {
+  ready: boolean;
+  reasons: string[];
+}
+
+export interface RequirementsLoopReport {
+  mode: 'loop';
+  round: number;
+  maxRounds: number;
+  questionBudget?: number;
+  assumptionCap?: number;
+  requirements: RequirementItem[];
+  openQuestions: OpenQuestion[];
+  assumptions: RequirementAssumption[];
+  delta: RequirementsDelta;
+  validation: RequirementsValidation;
+  stopConditions: RequirementsStopConditions;
+  metadata?: Record<string, any>;
 }
 
 // ============================================================================

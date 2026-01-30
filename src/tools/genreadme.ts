@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { Readme } from "../schemas/output/generation-tools.js";
 
 // genreadme 工具实现
@@ -24,7 +25,14 @@ export async function genreadme(args: any) {
     const projectInfo = getString(parsedArgs.project_info);
     const style = getString(parsedArgs.style) || "standard"; // standard, minimal, detailed
 
-    const message = `请生成项目的 README.md 文档：
+    const header = renderGuidanceHeader({
+      tool: "genreadme",
+      goal: "生成完整的 README 文档。",
+      tasks: ["基于项目信息生成 README", "仅输出 README 内容"],
+      outputs: [`${style} 风格的 README`],
+    });
+
+    const message = `${header}请生成项目的 README.md 文档：
 
 📝 **项目信息**：
 ${projectInfo || "请提供项目相关信息或代码"}

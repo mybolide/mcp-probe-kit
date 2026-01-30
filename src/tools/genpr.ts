@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { PullRequest } from "../schemas/output/generation-tools.js";
 
 // genpr 工具实现
@@ -24,7 +25,14 @@ export async function genpr(args: any) {
     const branch = getString(parsedArgs.branch);
     const commits = getString(parsedArgs.commits);
 
-    const message = `请生成规范的 Pull Request 描述：
+    const header = renderGuidanceHeader({
+      tool: "genpr",
+      goal: "生成结构化的 Pull Request 描述。",
+      tasks: ["基于 commit 历史生成 PR 描述", "仅输出最终 PR 文本"],
+      outputs: ["PR 描述（含变更说明/测试计划/Checklist）"],
+    });
+
+    const message = `${header}请生成规范的 Pull Request 描述：
 
 📝 **分支信息**：
 ${branch || "请提供分支名称"}

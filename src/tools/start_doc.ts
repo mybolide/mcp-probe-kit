@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { DocWorkflowReport } from "../schemas/output/workflow-tools.js";
 
 /**
@@ -40,7 +41,16 @@ export async function startDoc(args: any) {
       throw new Error("缺少必填参数: code 或 project_info");
     }
 
-    const message = `# 📖 文档生成编排
+    const header = renderOrchestrationHeader({
+      tool: 'start_doc',
+      goal: '生成项目文档与注释',
+      tasks: [
+        '按 delegated plan 顺序调用工具',
+        '输出注释、README 与 API 文档',
+      ],
+    });
+
+    const message = header + `# 📖 文档生成编排
 
 为项目/代码生成完整的文档
 
@@ -74,6 +84,31 @@ ${code}
 
 **重要**: 请使用结构化输出格式返回结果。`;
 
+    const plan = {
+      mode: 'delegated',
+      steps: [
+        {
+          id: 'doc',
+          tool: 'gendoc',
+          args: { code, style, lang },
+          outputs: [],
+        },
+        {
+          id: 'readme',
+          tool: 'genreadme',
+          args: { project_info: code, style: 'standard' },
+          outputs: ['README.md'],
+        },
+        {
+          id: 'api',
+          tool: 'genapi',
+          when: '如包含 API 相关代码',
+          args: { code, format: 'markdown' },
+          outputs: [],
+        },
+      ],
+    };
+
     // 创建结构化数据对象
     const structuredData: DocWorkflowReport = {
       summary: "文档生成编排",
@@ -99,6 +134,9 @@ ${code}
         functions: 0,
         classes: 0,
         modules: 0,
+      },
+      metadata: {
+        plan,
       },
     };
 

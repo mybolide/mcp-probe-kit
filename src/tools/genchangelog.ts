@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { Changelog } from "../schemas/output/generation-tools.js";
 
 // genchangelog 工具实现
@@ -28,7 +29,14 @@ export async function genchangelog(args: any) {
     const from = getString(parsedArgs.from);
     const to = getString(parsedArgs.to) || "HEAD";
 
-    const message = `请生成项目的 CHANGELOG（变更日志）：
+    const header = renderGuidanceHeader({
+      tool: "genchangelog",
+      goal: "生成符合 Keep a Changelog 规范的变更日志。",
+      tasks: ["根据 commit 范围生成 CHANGELOG", "仅输出最终变更日志内容"],
+      outputs: ["CHANGELOG 文本（结构化分类）"],
+    });
+
+    const message = `${header}请生成项目的 CHANGELOG（变更日志）：
 
 📝 **版本信息**：
 ${version || "请提供版本号（如：v1.2.0）"}

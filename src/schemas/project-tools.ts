@@ -36,6 +36,10 @@ export const projectToolSchemas = [
           type: "string",
           description: "文档输出目录，默认为 docs",
         },
+        template_profile: {
+          type: "string",
+          description: "模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）",
+        },
       },
       required: [],
       additionalProperties: true,

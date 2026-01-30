@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { RefactorWorkflowReport } from "../schemas/output/workflow-tools.js";
 
 /**
@@ -41,7 +42,16 @@ export async function startRefactor(args: any) {
       improve_naming: "改进命名",
     };
 
-    const message = `# ♻️ 代码重构编排
+    const header = renderOrchestrationHeader({
+      tool: 'start_refactor',
+      goal: `重构目标：${goalDesc[goal] || goal}`,
+      tasks: [
+        '按 delegated plan 顺序调用工具',
+        '输出重构方案与保护性测试建议',
+      ],
+    });
+
+    const message = header + `# ♻️ 代码重构编排
 
 重构以下代码：
 
@@ -76,6 +86,30 @@ ${code}
 
 **重要**: 请使用结构化输出格式返回结果。`;
 
+    const plan = {
+      mode: 'delegated',
+      steps: [
+        {
+          id: 'code-review',
+          tool: 'code_review',
+          args: { code, focus: 'all' },
+          outputs: [],
+        },
+        {
+          id: 'refactor',
+          tool: 'refactor',
+          args: { code, goal },
+          outputs: [],
+        },
+        {
+          id: 'tests',
+          tool: 'gentest',
+          args: { code: '[重构后的代码]' },
+          outputs: [],
+        },
+      ],
+    };
+
     // 创建结构化数据对象
     const structuredData: RefactorWorkflowReport = {
       summary: `代码重构 - ${goalDesc[goal] || goal}`,
@@ -100,6 +134,9 @@ ${code}
       refactorPlan: {}, // AI 将填充实际的重构计划
       riskAssessment: {
         level: "medium",
+      },
+      metadata: {
+        plan,
       },
     };
 

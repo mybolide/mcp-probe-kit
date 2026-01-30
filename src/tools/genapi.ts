@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { APIDocumentation } from "../schemas/output/generation-tools.js";
 
 // genapi 工具实现
@@ -24,7 +25,14 @@ export async function genapi(args: any) {
     const code = getString(parsedArgs.code);
     const format = getString(parsedArgs.format) || "markdown"; // markdown, openapi, jsdoc
 
-    const message = `请为以下代码生成 API 文档：
+    const header = renderGuidanceHeader({
+      tool: "genapi",
+      goal: "生成完整的 API 文档。",
+      tasks: ["基于代码生成文档", "仅输出文档内容"],
+      outputs: [`${format} 格式的 API 文档`],
+    });
+
+    const message = `${header}请为以下代码生成 API 文档：
 
 📝 **代码**：
 ${code || "请提供需要生成文档的代码（函数、类、API 端点等）"}

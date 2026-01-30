@@ -1,5 +1,6 @@
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { RalphLoopReportSchema } from "../schemas/structured-output.js";
 import type { RalphLoopReport } from "../schemas/structured-output.js";
 
@@ -757,7 +758,16 @@ export async function startRalph(args: any) {
 
     // 组装输出
     const scriptExt = isWindows ? "ps1" : "sh";
-    const output = `${guide}
+    const header = renderOrchestrationHeader({
+      tool: 'start_ralph',
+      goal: `执行 Ralph Loop：${params.goal}`,
+      tasks: [
+        '生成 .ralph/ 目录结构与脚本',
+        '按指南运行 loop 并监控结果',
+      ],
+    });
+
+    const output = `${header}${guide}
 
 ---
 
@@ -809,6 +819,44 @@ ${normalScript}
 
 **Happy coding! 🚀**
 `;
+
+    const plan = {
+      mode: 'delegated',
+      steps: [
+        {
+          id: 'create-dir',
+          tool: 'manual',
+          action: 'create_directory',
+          args: { path: '.ralph' },
+          outputs: ['.ralph/'],
+        },
+        {
+          id: 'write-files',
+          tool: 'manual',
+          action: 'write_files',
+          outputs: [
+            '.ralph/PROMPT.md',
+            '.ralph/@fix_plan.md',
+            '.ralph/PROGRESS.md',
+            `.ralph/ralph_loop_safe.${isWindows ? 'ps1' : 'sh'}`,
+            '.ralph/ralph_loop.sh',
+          ],
+        },
+        {
+          id: 'chmod',
+          tool: 'manual',
+          action: 'set_executable',
+          when: '非 Windows 环境',
+          outputs: [],
+        },
+        {
+          id: 'run-loop',
+          tool: 'manual',
+          action: 'run_script',
+          outputs: [],
+        },
+      ],
+    };
 
     // Create structured Ralph Loop report
     const ralphReport: RalphLoopReport = {
@@ -892,6 +940,9 @@ ${normalScript}
           message: `每 ${params.confirm_every} 轮确认一次`,
         },
       ],
+      metadata: {
+        plan,
+      },
     };
 
     return okStructured(

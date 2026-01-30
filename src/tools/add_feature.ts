@@ -1,5 +1,6 @@
 import { parseArgs, getString, validateRequired } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { loadTemplate, normalizeTemplateProfile } from "../lib/template-loader.js";
 import type { FeatureSpec } from "../schemas/output/project-tools.js";
 
 /**
@@ -16,6 +17,56 @@ import type { FeatureSpec } from "../schemas/output/project-tools.js";
 
 // 默认文档目录
 const DEFAULT_DOCS_DIR = "docs";
+
+type TemplateProfileResolved = 'guided' | 'strict';
+type TemplateProfileRequest = 'guided' | 'strict' | 'auto';
+
+function decideTemplateProfile(description: string): TemplateProfileResolved {
+  const text = description || '';
+  const lengthScore = text.length >= 200 ? 2 : text.length >= 120 ? 1 : 0;
+  const structureSignals = [
+    /(^|\n)\s*#{1,3}\s+\S+/m,
+    /(^|\n)\s*[-*]\s+\S+/m,
+    /(^|\n)\s*\d+\.\s+\S+/m,
+    /需求|验收|接口|API|数据库|模型|字段|流程|架构|权限|角色|非功能/m,
+  ];
+  const signalScore = structureSignals.reduce((score, regex) => score + (regex.test(text) ? 1 : 0), 0);
+
+  if (lengthScore >= 1 && signalScore >= 2) {
+    return 'strict';
+  }
+  return 'guided';
+}
+
+function resolveTemplateProfile(rawProfile: string, description: string): {
+  requested: TemplateProfileRequest;
+  resolved: TemplateProfileResolved;
+  warning?: string;
+  reason?: string;
+} {
+  const normalized = rawProfile.trim().toLowerCase();
+  if (!normalized || normalized === 'auto') {
+    const resolved = decideTemplateProfile(description);
+    return {
+      requested: 'auto',
+      resolved,
+      reason: resolved === 'strict' ? '需求结构化且较完整' : '需求较简略或需更多指导',
+    };
+  }
+
+  if (normalized === 'guided' || normalized === 'strict') {
+    return {
+      requested: normalized as TemplateProfileRequest,
+      resolved: normalizeTemplateProfile(normalized) as TemplateProfileResolved,
+    };
+  }
+
+  return {
+    requested: 'auto',
+    resolved: normalizeTemplateProfile(normalized) as TemplateProfileResolved,
+    warning: `模板档位 "${rawProfile}" 不支持，已回退为 ${normalizeTemplateProfile(normalized)}`,
+  };
+}
 
 /**
  * 从自然语言输入中提取功能名和描述
@@ -64,377 +115,6 @@ function extractFeatureInfo(input: string): { name: string; description: string 
   };
 }
 
-// 提示词模板
-const PROMPT_TEMPLATE = `# 添加新功能指南
-
-## 🎯 任务目标
-
-为项目添加新功能：**{feature_name}**
-
-**功能描述**: {description}
-
----
-
-## 📋 前置检查
-
-### 检查项目上下文
-
-1. 检查文件 \`{docs_dir}/project-context.md\` 是否存在
-2. 如果存在，读取并参考其中的技术栈、架构模式、编码规范
-3. 如果不存在，建议先运行 \`init_project_context\` 工具
-
----
-
-## 📝 创建文档
-
-请在 \`{docs_dir}/specs/{feature_name}/\` 目录下创建以下三个文件：
-
-### 文件 1: requirements.md
-
-**文件路径**: \`{docs_dir}/specs/{feature_name}/requirements.md\`
-
-**文件内容**（请将以下模板保存为该文件，并根据功能描述智能填充标记为 [填写] 的部分）:
-
-\`\`\`markdown
-# 需求文档：{feature_name}
-
-## 功能概述
-
-{description}
-
-## 术语定义
-
-- **[术语1]**: [填写：定义]
-- **[术语2]**: [填写：定义]
-
----
-
-## 需求列表
-
-### 需求 1: [填写：需求标题]
-
-**用户故事:** 作为 [填写：角色]，我想要 [填写：功能]，以便 [填写：目标]。
-
-#### 验收标准
-
-1. WHEN [填写：触发条件] THEN 系统 SHALL [填写：响应]
-2. WHILE [填写：状态条件] THE 系统 SHALL [填写：响应]
-3. IF [填写：异常条件] THEN 系统 SHALL [填写：处理方式]
-
----
-
-### 需求 2: [填写：需求标题]
-
-**用户故事:** 作为 [填写：角色]，我想要 [填写：功能]，以便 [填写：目标]。
-
-#### 验收标准
-
-1. THE 系统 SHALL [填写：响应]
-2. WHEN [填写：触发条件] THE 系统 SHALL [填写：响应]
-
----
-
-## EARS 格式说明
-
-本文档使用 EARS (Easy Approach to Requirements Syntax) 格式编写需求：
-
-| 模式 | 格式 | 适用场景 |
-|------|------|----------|
-| Ubiquitous | THE [system] SHALL [response] | 始终适用的需求 |
-| Event-driven | WHEN [trigger], THE [system] SHALL [response] | 事件触发的需求 |
-| State-driven | WHILE [condition], THE [system] SHALL [response] | 状态相关的需求 |
-| Unwanted | IF [condition], THEN THE [system] SHALL [response] | 异常处理需求 |
-| Optional | WHERE [option], THE [system] SHALL [response] | 可选功能需求 |
-
----
-
-## 非功能需求
-
-### 性能要求
-- [填写：性能相关需求]
-
-### 安全要求
-- [填写：安全相关需求]
-
-### 兼容性要求
-- [填写：兼容性相关需求]
-
----
-
-## 依赖关系
-
-- [填写：列出与其他功能的依赖]
-
----
-
-*文档版本: 1.0.0*
-*创建时间: [当前时间]*
-\`\`\`
-
----
-
-### 文件 2: design.md
-
-**文件路径**: \`{docs_dir}/specs/{feature_name}/design.md\`
-
-**文件内容**（请将以下模板保存为该文件，并根据功能描述和项目上下文智能填充标记为 [填写] 的部分）:
-
-\`\`\`markdown
-# 设计文档：{feature_name}
-
-## 概述
-
-{description}
-
-本设计文档描述 {feature_name} 功能的技术实现方案。
-
----
-
-## 技术方案
-
-### 技术选型
-
-| 类别 | 选择 | 理由 |
-|------|------|------|
-| [填写：类别] | [填写：技术] | [填写：选择理由] |
-
-### 架构设计
-
-[填写：描述功能的架构设计，参考项目现有架构]
-
-\\\`\\\`\\\`
-[填写：架构图或流程图，使用 ASCII 或 Mermaid]
-\\\`\\\`\\\`
-
----
-
-## 数据模型
-
-[填写：如果功能涉及数据存储，描述数据模型]
-
-### 数据结构
-
-\\\`\\\`\\\`typescript
-interface [填写：ModelName] {
-  [填写：field]: [填写：type];
-}
-\\\`\\\`\\\`
-
----
-
-## API 设计
-
-[填写：如果功能涉及 API，描述 API 设计]
-
-### 接口定义
-
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| [填写：GET/POST/...] | [填写：/path] | [填写：描述] |
-
----
-
-## 文件结构
-
-[填写：描述功能涉及的文件和目录]
-
-\\\`\\\`\\\`
-[项目目录]/
-├── [填写：新增文件1]
-├── [填写：新增文件2]
-└── [填写：修改文件]
-\\\`\\\`\\\`
-
-### 文件说明
-
-| 文件 | 用途 |
-|------|------|
-| [填写：文件路径] | [填写：用途说明] |
-
----
-
-## 依赖关系
-
-### 新增依赖
-
-| 依赖 | 版本 | 用途 |
-|------|------|------|
-| [填写：依赖名] | [填写：版本] | [填写：用途] |
-
-### 内部依赖
-
-- [填写：列出依赖的内部模块]
-
----
-
-## 设计决策
-
-### 决策 1: [填写：决策标题]
-
-**问题**: [填写：描述面临的问题]
-
-**选项**:
-1. [填写：选项 A]: [填写：描述]
-2. [填写：选项 B]: [填写：描述]
-
-**决策**: 选择 [填写：选项]
-
-**理由**: [填写：解释选择的理由]
-
----
-
-## 风险评估
-
-| 风险 | 影响 | 缓解措施 |
-|------|------|----------|
-| [填写：风险描述] | [填写：高/中/低] | [填写：缓解措施] |
-
----
-
-*设计版本: 1.0.0*
-*创建时间: [当前时间]*
-\`\`\`
-
----
-
-### 文件 3: tasks.md
-
-**文件路径**: \`{docs_dir}/specs/{feature_name}/tasks.md\`
-
-**文件内容**（请将以下模板保存为该文件，并根据需求和设计智能生成任务清单）:
-
-\`\`\`markdown
-# 任务清单：{feature_name}
-
-## 概述
-
-实现 {feature_name} 功能的任务分解。
-
----
-
-## 任务列表
-
-### 阶段 1: 准备工作
-
-- [ ] 1.1 [填写：任务标题]
-  - [填写：具体操作说明]
-  - _需求: [填写：对应的需求编号]_
-
-- [ ] 1.2 [填写：任务标题]
-  - [填写：具体操作说明]
-  - _需求: [填写：对应的需求编号]_
-
----
-
-### 阶段 2: 核心实现
-
-- [ ] 2.1 [填写：任务标题]
-  - [填写：具体操作说明]
-  - _需求: [填写：对应的需求编号]_
-
-- [ ] 2.2 [填写：任务标题]
-  - [填写：具体操作说明]
-  - 依赖: 任务 2.1
-  - _需求: [填写：对应的需求编号]_
-
----
-
-### 阶段 3: 集成测试
-
-- [ ] 3.1 [填写：任务标题]
-  - [填写：具体操作说明]
-  - _需求: [填写：对应的需求编号]_
-
----
-
-## 检查点
-
-- [ ] 阶段 1 完成后：[填写：验证内容]
-- [ ] 阶段 2 完成后：[填写：验证内容]
-- [ ] 阶段 3 完成后：[填写：验证内容]
-
----
-
-## 文件变更清单
-
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| [填写：文件路径] | 新建/修改 | [填写：说明] |
-
----
-
-## 依赖任务
-
-- [填写：列出依赖的其他任务或功能]
-
----
-
-*任务版本: 1.0.0*
-*创建时间: [当前时间]*
-\`\`\`
-
----
-
-## ✅ 完成后检查
-
-**请确认以下文件已创建**:
-- [ ] \`{docs_dir}/specs/{feature_name}/requirements.md\` - 需求文档已创建
-- [ ] \`{docs_dir}/specs/{feature_name}/design.md\` - 设计文档已创建
-- [ ] \`{docs_dir}/specs/{feature_name}/tasks.md\` - 任务清单已创建
-
-**内容质量检查**:
-
-### requirements.md 检查
-
-- [ ] 功能概述清晰描述了功能目的
-- [ ] 术语定义完整
-- [ ] 每个需求都有用户故事
-- [ ] 验收标准使用 EARS 格式
-- [ ] 非功能需求已考虑
-- [ ] 依赖关系已列出
-
-### design.md 检查
-
-- [ ] 技术选型有明确理由
-- [ ] 架构设计符合项目现有架构
-- [ ] 数据模型定义清晰（如适用）
-- [ ] API 设计完整（如适用）
-- [ ] 文件结构清晰
-- [ ] 设计决策有记录
-
-### tasks.md 检查
-
-- [ ] 任务分阶段合理
-- [ ] 每个任务有明确目标
-- [ ] 依赖关系正确
-- [ ] 任务关联了需求
-- [ ] 检查点完整
-- [ ] 文件变更清单完整
-
-### 通用检查
-
-- [ ] 三个文件都已创建
-- [ ] 文件路径正确: \`{docs_dir}/specs/{feature_name}/\`
-- [ ] 所有占位符已替换
-- [ ] Markdown 格式正确
-- [ ] 内容与项目上下文一致（如有）
-
----
-
-## 📌 注意事项
-
-1. **参考项目上下文**: 如果存在 \`{docs_dir}/project-context.md\`，请参考其中的技术栈和架构信息
-2. **保持一致性**: 文档风格应与项目现有文档保持一致
-3. **需求可测试**: 每个验收标准都应该是可测试的
-4. **任务可执行**: 每个任务都应该是具体可执行的
-5. **时间格式**: 使用 YYYY-MM-DD HH:mm:ss 格式
-
----
-
-*指南版本: 1.0.0*
-*工具: MCP Probe Kit - add_feature*
-`;
-
 /**
  * add_feature 工具实现
  * 
@@ -451,24 +131,28 @@ export async function addFeature(args: any) {
       feature_name?: string;
       description?: string;
       docs_dir?: string;
+      template_profile?: string;
       input?: string;
     }>(args, {
       defaultValues: {
         feature_name: "",
         description: "",
         docs_dir: DEFAULT_DOCS_DIR,
+        template_profile: "auto",
       },
       primaryField: "input", // 纯文本输入默认映射到 input 字段
       fieldAliases: {
         feature_name: ["name", "feature", "功能名", "功能名称"],
         description: ["desc", "requirement", "描述", "需求"],
         docs_dir: ["dir", "output", "目录", "文档目录"],
+        template_profile: ["profile", "mode", "模板档位", "模板模式", "模板级别"],
       },
     });
 
     let featureName = getString(parsedArgs.feature_name);
     let description = getString(parsedArgs.description);
     const docsDir = getString(parsedArgs.docs_dir) || DEFAULT_DOCS_DIR;
+    const rawProfile = getString(parsedArgs.template_profile);
 
     // 如果是纯自然语言输入（input 字段有值但 feature_name 和 description 为空）
     const input = getString(parsedArgs.input);
@@ -500,11 +184,150 @@ export async function addFeature(args: any) {
       );
     }
 
-    // 构建指南文本（替换占位符）
-    const guide = PROMPT_TEMPLATE
-      .replace(/{feature_name}/g, featureName)
-      .replace(/{description}/g, description)
-      .replace(/{docs_dir}/g, docsDir);
+    const profileDecision = resolveTemplateProfile(rawProfile, description);
+    const templateProfile = profileDecision.resolved;
+
+    const templateVars = {
+      feature_name: featureName,
+      description,
+      docs_dir: docsDir,
+    };
+
+    const [requirementsTemplate, designTemplate, tasksTemplate] = await Promise.all([
+      loadTemplate({
+        category: 'specs',
+        name: 'feature',
+        profile: templateProfile,
+        file: 'requirements.md',
+        variables: templateVars,
+      }),
+      loadTemplate({
+        category: 'specs',
+        name: 'feature',
+        profile: templateProfile,
+        file: 'design.md',
+        variables: templateVars,
+      }),
+      loadTemplate({
+        category: 'specs',
+        name: 'feature',
+        profile: templateProfile,
+        file: 'tasks.md',
+        variables: templateVars,
+      }),
+    ]);
+
+    const validationWarnings: string[] = [];
+    if (profileDecision.warning) {
+      validationWarnings.push(profileDecision.warning);
+    }
+
+    const combinedValidation = {
+      requirements: requirementsTemplate.validation,
+      design: designTemplate.validation,
+      tasks: tasksTemplate.validation,
+      warnings: validationWarnings,
+    };
+
+    const formatValidation = (label: string, validation: { passed: boolean; missingSections: string[]; missingFields: string[]; warnings: string[] }) => {
+      if (validation.passed) {
+        return `- ${label}: 通过`;
+      }
+      const parts: string[] = [];
+      if (validation.missingSections.length > 0) {
+        parts.push(`缺少章节: ${validation.missingSections.join(', ')}`);
+      }
+      if (validation.missingFields.length > 0) {
+        parts.push(`缺少字段: ${validation.missingFields.join(', ')}`);
+      }
+      if (validation.warnings.length > 0) {
+        parts.push(`警告: ${validation.warnings.join('；')}`);
+      }
+      return `- ${label}: 未通过（${parts.join(' / ')}）`;
+    };
+
+    const fenceOpen = "````markdown";
+    const fenceClose = "````";
+    const guide = `# 添加新功能指南（模板驱动）
+
+## 🎯 任务目标
+
+为项目添加新功能：**${featureName}**
+
+**功能描述**: ${description}
+
+**模板档位**: ${templateProfile}${profileDecision.requested === 'auto' ? '（自动）' : ''}
+${profileDecision.requested === 'auto' && profileDecision.reason ? `**选择理由**: ${profileDecision.reason}` : ''}
+
+---
+
+## 📋 前置检查
+
+1. 检查文件 \`${docsDir}/project-context.md\` 是否存在
+2. 如果存在，读取并参考其中的技术栈、架构模式、编码规范
+3. 如果不存在，建议先运行 \`init_project_context\` 工具
+
+---
+
+## ✅ 模板校验结果
+
+${formatValidation('requirements.md', requirementsTemplate.validation)}
+${formatValidation('design.md', designTemplate.validation)}
+${formatValidation('tasks.md', tasksTemplate.validation)}
+${combinedValidation.warnings.length > 0 ? `- 其他警告: ${combinedValidation.warnings.join('；')}` : ''}
+
+---
+
+## 📝 创建文档
+
+请在 \`${docsDir}/specs/${featureName}/\` 目录下创建以下三个文件：
+
+### 文件 1: requirements.md
+
+**文件路径**: \`${docsDir}/specs/${featureName}/requirements.md\`
+**模板来源**: ${requirementsTemplate.source}
+
+${fenceOpen}
+${requirementsTemplate.content}
+${fenceClose}
+
+---
+
+### 文件 2: design.md
+
+**文件路径**: \`${docsDir}/specs/${featureName}/design.md\`
+**模板来源**: ${designTemplate.source}
+
+${fenceOpen}
+${designTemplate.content}
+${fenceClose}
+
+---
+
+### 文件 3: tasks.md
+
+**文件路径**: \`${docsDir}/specs/${featureName}/tasks.md\`
+**模板来源**: ${tasksTemplate.source}
+
+${fenceOpen}
+${tasksTemplate.content}
+${fenceClose}
+
+---
+
+## ✅ 完成后检查
+
+- [ ] \`${docsDir}/specs/${featureName}/requirements.md\` 已创建
+- [ ] \`${docsDir}/specs/${featureName}/design.md\` 已创建
+- [ ] \`${docsDir}/specs/${featureName}/tasks.md\` 已创建
+- [ ] 所有占位符已替换
+- [ ] 内容与项目上下文一致（如有）
+
+---
+
+*指南版本: 1.1.0*
+*工具: MCP Probe Kit - add_feature*
+`;
 
     // 创建结构化数据对象
     const structuredData: FeatureSpec = {
@@ -549,6 +372,11 @@ export async function addFeature(args: any) {
 
     return okStructured(guide, structuredData, {
       schema: (await import("../schemas/output/project-tools.js")).FeatureSpecSchema,
+      template: {
+        profile: templateProfile,
+        requested: profileDecision.requested,
+        validation: combinedValidation,
+      },
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

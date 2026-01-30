@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { CodeReviewReport } from "../schemas/output/index.js";
 
 // code_review 工具实现
@@ -24,7 +25,14 @@ export async function codeReview(args: any) {
     const code = getString(parsedArgs.code);
     const focus = getString(parsedArgs.focus) || "all"; // quality, security, performance, all
 
-    const message = `请对以下代码进行全面审查：
+    const header = renderGuidanceHeader({
+      tool: "code_review",
+      goal: "输出结构化的代码审查报告。",
+      tasks: ["基于代码进行质量/安全/性能检查", "仅输出审查结果"],
+      outputs: ["结构化审查报告（JSON）"],
+    });
+
+    const message = `${header}请对以下代码进行全面审查：
 
 📝 **代码内容**：
 ${code || "请提供需要审查的代码"}

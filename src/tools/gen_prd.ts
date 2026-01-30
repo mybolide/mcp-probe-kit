@@ -1,4 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
+import type { GenPrdReport } from "../schemas/output/product-design-tools.js";
 
 /**
  * gen_prd - 生成产品需求文档（PRD）指导
@@ -32,18 +35,33 @@ export async function genPrd(args: any) {
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
 
     if (!description) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: "❌ 缺少必需参数：description（产品描述或访谈记录）",
-          },
-        ],
-        isError: true,
+      const errorData: GenPrdReport = {
+        summary: "PRD 生成失败",
+        productName,
+        docsDir,
+        filePath: `${docsDir}/prd/product-requirements.md`,
+        content: "",
       };
+      return okStructured(
+        "❌ 缺少必需参数：description（产品描述或访谈记录）",
+        errorData,
+        {
+          schema: (await import("../schemas/output/product-design-tools.js")).GenPrdSchema,
+        }
+      );
     }
 
-    const guidanceText = `# 📝 生成产品需求文档（PRD）指导
+    const header = renderGuidanceHeader({
+      tool: "gen_prd",
+      goal: "生成一份可落盘的 PRD 文档。",
+      tasks: [
+        "根据产品描述填充 PRD 模板",
+        `将内容写入 ${docsDir}/prd/product-requirements.md`,
+      ],
+      outputs: ["PRD 文档内容（严格按模板结构）"],
+    });
+
+    const guidanceText = `${header}# 📝 生成产品需求文档（PRD）指导
 
 ## 📋 输入信息
 
@@ -268,25 +286,28 @@ ${description}
 💡 **提示**: 这是一个指导文档，AI 需要根据产品描述智能填充所有内容并创建实际的 PRD 文件。
 `;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: guidanceText,
-        },
-      ],
-      isError: false,
+    const structuredData: GenPrdReport = {
+      summary: `生成 PRD：${productName}`,
+      productName,
+      docsDir,
+      filePath: `${docsDir}/prd/product-requirements.md`,
+      content: "",
     };
+
+    return okStructured(guidanceText, structuredData, {
+      schema: (await import("../schemas/output/product-design-tools.js")).GenPrdSchema,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 生成 PRD 指导失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    const errorData: GenPrdReport = {
+      summary: "PRD 生成失败",
+      productName: "新产品",
+      docsDir: "docs",
+      filePath: "docs/prd/product-requirements.md",
+      content: "",
     };
+    return okStructured(`❌ 生成 PRD 指导失败: ${errorMessage}`, errorData, {
+      schema: (await import("../schemas/output/product-design-tools.js")).GenPrdSchema,
+    });
   }
 }

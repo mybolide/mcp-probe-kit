@@ -18,6 +18,9 @@ export * from './project-tools.js';
 // UI/UX 工具 (6 个)
 export * from './ui-ux-tools.js';
 
+// 产品设计工具 (3 个)
+export * from './product-design-tools.js';
+
 // 辅助工具 (3 个)
 export * from './helper-tools.js';
 
@@ -30,6 +33,7 @@ export {
   UIReportSchema,
   OnboardingReportSchema,
   RalphLoopReportSchema,
+  RequirementsLoopSchema,
   // 类型定义
   CommitMessage,
   WorkflowStep,
@@ -40,6 +44,7 @@ export {
   UIReport,
   OnboardingReport,
   RalphLoopReport,
+  RequirementsLoopReport,
 } from '../structured-output.js';
 
 /**
@@ -54,6 +59,9 @@ export const SCHEMA_MAP = {
   start_ui: 'UIReportSchema',
   start_onboard: 'OnboardingReportSchema',
   start_ralph: 'RalphLoopReportSchema',
+  gen_prd: 'GenPrdSchema',
+  gen_prototype: 'GenPrototypeSchema',
+  interview: 'InterviewReportSchema',
   
   // 核心开发工具
   code_review: 'CodeReviewReportSchema',

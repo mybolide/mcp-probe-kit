@@ -5,6 +5,9 @@
  */
 
 import { parseArgs } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
+import type { InterviewReport } from "../schemas/output/product-design-tools.js";
 
 // 访谈问题模板（仅支持 feature 类型）
 const FEATURE_INTERVIEW_TEMPLATE = {
@@ -141,6 +144,14 @@ function generateInterviewQuestions(featureName: string): string {
   const lines: string[] = [];
   const template = FEATURE_INTERVIEW_TEMPLATE;
 
+  lines.push(
+    renderGuidanceHeader({
+      tool: "interview",
+      goal: "通过结构化访谈澄清功能需求，减少返工。",
+      tasks: ["逐条回答以下问题（必答/可选已标注）"],
+      outputs: ["完整的访谈答复"],
+    })
+  );
   lines.push("# 📋 需求访谈 - 新功能开发");
   lines.push("");
   lines.push("**核心理念**: 先慢下来，把问题想清楚，反而能更快地交付正确的解决方案。");
@@ -201,6 +212,28 @@ function generateInterviewQuestions(featureName: string): string {
   lines.push("**请开始回答上面的问题吧！**");
 
   return lines.join("\n");
+}
+
+function buildQuestionList() {
+  const questions: Array<{
+    id: string;
+    question: string;
+    required?: boolean;
+    placeholder?: string;
+  }> = [];
+
+  for (const phase of FEATURE_INTERVIEW_TEMPLATE.phases) {
+    for (const q of phase.questions) {
+      questions.push({
+        id: q.id,
+        question: q.question,
+        required: q.required,
+        placeholder: q.placeholder,
+      });
+    }
+  }
+
+  return questions;
 }
 
 // 生成访谈记录文件内容
@@ -296,11 +329,16 @@ export async function interview(args: any) {
 
     // 场景1: 无参数调用 - 显示使用说明
     if (!description && !featureName) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `# 📋 需求访谈工具
+      const header = renderGuidanceHeader({
+        tool: "interview",
+        goal: "在开发前澄清需求，形成可落盘的访谈记录。",
+        tasks: [
+          "提供功能描述以开始访谈",
+          "或提交 answers 生成访谈记录",
+        ],
+        outputs: ["访谈问题列表或访谈记录文件"],
+      });
+      const text = `${header}# 📋 需求访谈工具
 
 ## 功能说明
 
@@ -356,20 +394,35 @@ interview --feature-name user-login --answers {...}
 - ✅ 减少返工，提高交付质量
 - ✅ 形成清晰的需求文档
 
-**先慢下来，反而能更快。**`,
-          },
-        ],
+**先慢下来，反而能更快。**`;
+      const structuredData: InterviewReport = {
+        summary: "需求访谈工具使用说明",
+        mode: "usage",
+        content: text,
       };
+      return okStructured(text, structuredData, {
+        schema: (await import("../schemas/output/product-design-tools.js")).InterviewReportSchema,
+      });
     }
 
     // 场景2: 开始访谈 - 生成问题列表
     if (description && !answers) {
       const name = featureName || extractFeatureName(description);
       const questions = generateInterviewQuestions(name);
-      
-      return {
-        content: [{ type: "text", text: questions }],
+      const structuredData: InterviewReport = {
+        summary: `需求访谈问题：${name}`,
+        mode: "questions",
+        featureName: name,
+        content: questions,
+        questions: buildQuestionList(),
+        nextSteps: [
+          "逐条回答问题并提交 answers",
+          `interview --feature-name ${name} --answers {...}`,
+        ],
       };
+      return okStructured(questions, structuredData, {
+        schema: (await import("../schemas/output/product-design-tools.js")).InterviewReportSchema,
+      });
     }
 
     // 场景3: 提交回答 - 生成访谈记录
@@ -378,6 +431,14 @@ interview --feature-name user-login --answers {...}
       const filePath = `docs/interviews/${featureName}-interview.md`;
       
       const lines: string[] = [];
+      lines.push(
+        renderGuidanceHeader({
+          tool: "interview",
+          goal: "生成可落盘的访谈记录并给出下一步选项。",
+          tasks: ["按提示创建访谈记录文件", "选择下一步（start_feature / add_feature）"],
+          outputs: ["访谈记录文件内容"],
+        })
+      );
       lines.push("# ✅ 访谈完成");
       lines.push("");
       lines.push("感谢你的详细回答！我已经整理好访谈记录。");
@@ -423,26 +484,42 @@ interview --feature-name user-login --answers {...}
       lines.push("");
       lines.push("💡 **提示**: 建议先创建访谈记录文件，然后再决定下一步。");
       
-      return {
-        content: [{ type: "text", text: lines.join("\n") }],
+      const outputText = lines.join("\n");
+      const structuredData: InterviewReport = {
+        summary: `访谈记录已生成：${featureName}`,
+        mode: "record",
+        featureName,
+        filePath,
+        content: record,
+        nextSteps: [
+          `创建访谈记录文件：${filePath}`,
+          `start_feature --from-interview ${featureName}`,
+          `add_feature --from-interview ${featureName}`,
+        ],
       };
+      return okStructured(outputText, structuredData, {
+        schema: (await import("../schemas/output/product-design-tools.js")).InterviewReportSchema,
+      });
     }
 
     // 其他情况 - 错误提示
-    return {
-      content: [
-        {
-          type: "text",
-          text: "❌ 参数错误。请使用 `interview` 查看使用说明。",
-        },
-      ],
-      isError: true,
+    const errorData: InterviewReport = {
+      summary: "访谈失败",
+      mode: "usage",
+      content: "参数错误。请使用 `interview` 查看使用说明。",
     };
+    return okStructured("❌ 参数错误。请使用 `interview` 查看使用说明。", errorData, {
+      schema: (await import("../schemas/output/product-design-tools.js")).InterviewReportSchema,
+    });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `❌ 访谈失败: ${errorMsg}` }],
-      isError: true,
+    const errorData: InterviewReport = {
+      summary: "访谈失败",
+      mode: "usage",
+      content: errorMsg,
     };
+    return okStructured(`❌ 访谈失败: ${errorMsg}`, errorData, {
+      schema: (await import("../schemas/output/product-design-tools.js")).InterviewReportSchema,
+    });
   }
 }

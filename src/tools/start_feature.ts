@@ -1,7 +1,8 @@
-import { parseArgs, getString } from "../utils/parseArgs.js";
+import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
-import { FeatureReportSchema } from "../schemas/structured-output.js";
-import type { FeatureReport } from "../schemas/structured-output.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
+import { FeatureReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
+import type { FeatureReport, RequirementsLoopReport } from "../schemas/structured-output.js";
 
 /**
  * start_feature 智能编排工具
@@ -82,7 +83,8 @@ const PROMPT_TEMPLATE = `# 🚀 新功能开发编排（委托式）
 {
   "feature_name": "{feature_name}",
   "description": "{description}",
-  "docs_dir": "{docs_dir}"
+  "docs_dir": "{docs_dir}",
+  "template_profile": "{template_profile}"
 }
 \`\`\`
 **预期输出**:
@@ -111,6 +113,69 @@ const PROMPT_TEMPLATE = `# 🚀 新功能开发编排（委托式）
 
 *编排工具: MCP Probe Kit - start_feature*`;
 
+const LOOP_PROMPT_TEMPLATE = `# 🧭 需求澄清与补全（Requirements Loop）
+
+本模式用于**生产级稳健补全**：在不改变用户意图的前提下补齐关键要素，并输出可审计的结构化结果。
+
+## 🎯 目标
+开发新功能：**{feature_name}**  
+功能描述：{description}
+
+## ✅ 规则
+1. **不覆盖用户原始需求**
+2. **补全内容必须标注来源**（User / Derived / Assumption）
+3. **假设必须进入待确认列表**
+4. **每轮问题 ≤ {question_budget}，假设 ≤ {assumption_cap}**
+
+---
+
+## 🔁 执行步骤（每轮）
+
+### 1) 生成待确认问题
+使用 \`ask_user\` 提问，问题来源于“功能需求补全清单”（角色/触发/约束/异常/依赖等）。
+
+**调用示例**:
+\`\`\`json
+{
+  "questions": [
+    { "question": "目标用户或角色是谁？", "context": "角色定义", "required": true },
+    { "question": "触发场景是什么？", "context": "业务场景", "required": true }
+  ]
+}
+\`\`\`
+
+### 2) 更新结构化输出
+将回答补入 \`requirements\`，并标注来源：
+- User：用户明确回答
+- Derived：合理推导
+- Assumption：无法确认但补全（需确认）
+
+### 3) 自检与结束
+若 \`openQuestions\` 为空且无高风险假设，则结束 loop，进入规格生成与估算。
+
+---
+
+## ✅ 结束后继续
+当满足结束条件时，执行：
+1. 调用 \`add_feature\` 生成规格文档
+2. 调用 \`estimate\` 进行工作量估算
+
+---
+
+*编排工具: MCP Probe Kit - start_feature (requirements loop)*
+`;
+
+function buildOpenQuestions(questionBudget: number) {
+  const base = [
+    { question: "目标用户或角色是谁？", context: "角色定义", required: true },
+    { question: "核心业务场景与触发条件是什么？", context: "业务场景", required: true },
+    { question: "有哪些关键约束或权限边界？", context: "权限与边界", required: true },
+    { question: "异常/失败时应如何处理？", context: "异常处理", required: true },
+    { question: "依赖哪些系统或接口？", context: "依赖关系", required: true },
+  ];
+  return base.slice(0, Math.max(0, questionBudget));
+}
+
 export async function startFeature(args: any) {
   try {
     // 智能参数解析，支持自然语言输入
@@ -118,24 +183,44 @@ export async function startFeature(args: any) {
       feature_name?: string;
       description?: string;
       docs_dir?: string;
+      template_profile?: string;
+      requirements_mode?: string;
+      loop_max_rounds?: number;
+      loop_question_budget?: number;
+      loop_assumption_cap?: number;
       input?: string;
     }>(args, {
       defaultValues: {
         feature_name: "",
         description: "",
         docs_dir: "docs",
+        template_profile: "auto",
+        requirements_mode: "steady",
+        loop_max_rounds: 2,
+        loop_question_budget: 5,
+        loop_assumption_cap: 3,
       },
       primaryField: "input", // 纯文本输入默认映射到 input 字段
       fieldAliases: {
         feature_name: ["name", "feature", "功能名", "功能名称"],
         description: ["desc", "requirement", "描述", "需求"],
         docs_dir: ["dir", "output", "目录", "文档目录"],
+        template_profile: ["profile", "template_profile", "模板档位", "模板模式"],
+        requirements_mode: ["mode", "requirements_mode", "loop", "需求模式"],
+        loop_max_rounds: ["max_rounds", "rounds", "最大轮次"],
+        loop_question_budget: ["question_budget", "问题数量", "问题预算"],
+        loop_assumption_cap: ["assumption_cap", "假设上限"],
       },
     });
 
     let featureName = getString(parsedArgs.feature_name);
     let description = getString(parsedArgs.description);
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
+    const templateProfile = getString(parsedArgs.template_profile) || "auto";
+    const requirementsMode = getString(parsedArgs.requirements_mode) || "steady";
+    const maxRounds = getNumber(parsedArgs.loop_max_rounds, 2);
+    const questionBudget = getNumber(parsedArgs.loop_question_budget, 5);
+    const assumptionCap = getNumber(parsedArgs.loop_assumption_cap, 3);
 
     // 如果是纯自然语言输入（input 字段有值但 feature_name 和 description 为空）
     const input = getString(parsedArgs.input);
@@ -165,10 +250,142 @@ export async function startFeature(args: any) {
       );
     }
 
-    const guide = PROMPT_TEMPLATE
+    if (requirementsMode === "loop") {
+      const openQuestions = buildOpenQuestions(questionBudget).map((q, index) => ({
+        id: `Q-${index + 1}`,
+        ...q,
+      }));
+
+      const requirements = [
+        {
+          id: "FR-1",
+          title: featureName,
+          description: description,
+          source: "User" as const,
+          acceptance: [
+            `WHEN 用户触发 ${featureName} THEN 系统 SHALL 按需求响应`,
+            `IF 条件不满足 THEN 系统 SHALL 给出明确提示`,
+          ],
+        },
+      ];
+
+      const assumptions = [] as RequirementsLoopReport['assumptions'];
+      const missingFields = openQuestions.map((q) => q.context || q.question);
+      const stopReady = openQuestions.length === 0 && assumptions.length === 0;
+
+      const plan = {
+        mode: 'delegated',
+        steps: [
+          {
+            id: 'loop-1',
+            tool: 'ask_user',
+            args: { questions: openQuestions.map(({ question, context, required }) => ({ question, context, required })) },
+            outputs: [],
+          },
+          ...(maxRounds > 1
+            ? [
+                {
+                  id: 'loop-2',
+                  tool: 'ask_user',
+                  when: '仍存在 openQuestions 或 assumptions',
+                  args: { questions: '[根据上一轮补全结果生成问题]' },
+                  outputs: [],
+                },
+              ]
+            : []),
+          {
+            id: 'spec',
+            tool: 'add_feature',
+            when: 'stopConditions.ready=true',
+            args: { feature_name: featureName, description, docs_dir: docsDir, template_profile: templateProfile },
+            outputs: [
+              `${docsDir}/specs/${featureName}/requirements.md`,
+              `${docsDir}/specs/${featureName}/design.md`,
+              `${docsDir}/specs/${featureName}/tasks.md`,
+            ],
+          },
+          {
+            id: 'estimate',
+            tool: 'estimate',
+            when: 'stopConditions.ready=true',
+            args: {
+              task_description: `实现 ${featureName} 功能：${description}`,
+              code_context: `参考生成的 ${docsDir}/specs/${featureName}/tasks.md`,
+            },
+            outputs: [],
+          },
+        ],
+      };
+
+      const header = renderOrchestrationHeader({
+        tool: 'start_feature',
+        goal: `开发新功能：${featureName}`,
+        tasks: [
+          '按 Requirements Loop 规则提问并更新结构化输出',
+          '满足结束条件后生成规格并完成估算',
+        ],
+        notes: [`模板档位: ${templateProfile}`],
+      });
+
+      const guide = header + LOOP_PROMPT_TEMPLATE
+        .replace(/{feature_name}/g, featureName)
+        .replace(/{description}/g, description)
+        .replace(/{question_budget}/g, String(questionBudget))
+        .replace(/{assumption_cap}/g, String(assumptionCap));
+
+      const loopReport: RequirementsLoopReport = {
+        mode: 'loop',
+        round: 1,
+        maxRounds,
+        questionBudget,
+        assumptionCap,
+        requirements,
+        openQuestions,
+        assumptions,
+        delta: {
+          added: ['FR-1'],
+          modified: [],
+          removed: [],
+        },
+        validation: {
+          passed: stopReady,
+          missingFields: missingFields,
+          warnings: [],
+        },
+        stopConditions: {
+          ready: stopReady,
+          reasons: stopReady ? ['所有关键问题已确认'] : ['存在待确认问题'],
+        },
+        metadata: {
+          plan,
+        },
+      };
+
+      return okStructured(
+        guide,
+        loopReport,
+        {
+          schema: RequirementsLoopSchema,
+          note: 'AI 应按轮次澄清需求并更新结构化输出，满足结束条件后再进入 add_feature / estimate',
+        }
+      );
+    }
+
+    const header = renderOrchestrationHeader({
+      tool: 'start_feature',
+      goal: `开发新功能：${featureName}`,
+      tasks: [
+        '按 delegated plan 顺序调用工具',
+        '生成规格文档并完成工作量估算',
+      ],
+      notes: [`模板档位: ${templateProfile}`],
+    });
+
+    const guide = header + PROMPT_TEMPLATE
       .replace(/{feature_name}/g, featureName)
       .replace(/{description}/g, description)
-      .replace(/{docs_dir}/g, docsDir);
+      .replace(/{docs_dir}/g, docsDir)
+      .replace(/{template_profile}/g, templateProfile);
 
     const plan = {
       mode: 'delegated',
@@ -183,7 +400,7 @@ export async function startFeature(args: any) {
         {
           id: 'spec',
           tool: 'add_feature',
-          args: { feature_name: featureName, description, docs_dir: docsDir },
+          args: { feature_name: featureName, description, docs_dir: docsDir, template_profile: templateProfile },
           outputs: [
             `${docsDir}/specs/${featureName}/requirements.md`,
             `${docsDir}/specs/${featureName}/design.md`,

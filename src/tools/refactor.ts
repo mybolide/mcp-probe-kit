@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { RefactorPlan } from "../schemas/output/core-tools.js";
 
 // refactor 工具实现
@@ -24,7 +25,14 @@ export async function refactor(args: any) {
     const code = getString(parsedArgs.code);
     const goal = getString(parsedArgs.goal); // improve_readability, reduce_complexity, extract_function, etc.
 
-    const message = `请为以下代码提供重构建议：
+    const header = renderGuidanceHeader({
+      tool: "refactor",
+      goal: "输出结构化的重构计划。",
+      tasks: ["分析代码问题并给出重构步骤", "仅输出重构方案"],
+      outputs: ["结构化重构计划（JSON）"],
+    });
+
+    const message = `${header}请为以下代码提供重构建议：
 
 📝 **代码内容**：
 ${code || "请提供需要重构的代码"}
