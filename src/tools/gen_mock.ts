@@ -1,5 +1,6 @@
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { MockData } from "../schemas/output/generation-tools.js";
 
 /**
@@ -46,7 +47,14 @@ export async function genMock(args: any) {
       throw new Error("count 参数必须在 1-1000 之间");
     }
 
-    const message = `请生成 Mock 数据：
+    const header = renderGuidanceHeader({
+      tool: "gen_mock",
+      goal: "生成符合结构定义的 Mock 数据。",
+      tasks: ["根据 schema 生成数据", "仅输出 Mock 数据结果"],
+      outputs: [`${format} 格式的 Mock 数据`],
+    });
+
+    const message = `${header}请生成 Mock 数据：
 
 📝 **数据结构**：
 \`\`\`

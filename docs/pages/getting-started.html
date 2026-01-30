@@ -180,9 +180,13 @@
                 <h1 class="page-title">安装配置</h1>
                 <p class="page-description">5 分钟快速上手 MCP Probe Kit v2.0，支持 Cursor、Cline 和 Claude Desktop</p>
                 <div class="page-meta">
-                    <span>📦 v2.3.0</span>
+                    <span>📦 v2.5.0</span>
                     <span>·</span>
                     <span>最后更新：2026-01-27</span>
+                    <span>·</span>
+                    <span>协议：MCP 2025-11-25</span>
+                    <span>·</span>
+                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
                     <span>·</span>
                     <a href="https://github.com/mybolide/mcp-probe-kit/edit/main/docs/pages/getting-started.html" target="_blank" rel="noopener">编辑此页 ↗</a>
                     <span>·</span>
@@ -428,6 +432,42 @@ npm run build</code></pre>
                                     <li>如果提示"命令不存在"，确认 Node.js 和 npm 已正确安装</li>
                                     <li>Windows 用户：确保使用完整路径或 npx 方式</li>
                                 </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: 委托式编排协议 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <h3 class="step-title">了解委托式编排（Delegated Plan）</h3>
+                    </div>
+                    <div class="step-content">
+                        <p><code>start_*</code> 编排工具不会直接执行操作，而是返回一个可执行计划。AI 需要按步骤调用工具并创建文件。</p>
+                        <p><strong>结构化输出关键字段：</strong><code>summary</code>、<code>status</code>、<code>steps</code>、<code>artifacts</code>、<code>metadata.plan</code>、<code>specArtifacts</code>、<code>estimate</code></p>
+                        <p><strong>需求澄清模式：</strong>当需求不完整时，可使用 <code>requirements_mode=loop</code> 先澄清再进入执行。</p>
+                        <p><strong>模板档位：</strong><code>template_profile=auto</code> 会自动选择 <code>guided</code>/<code>strict</code>。普通模型优先 <code>guided</code>，结构化需求可用 <code>strict</code>。</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-language">Plan 示例</span>
+                            </div>
+                            <pre><code>{
+  "mode": "delegated",
+  "steps": [
+    {
+      "id": "spec",
+      "tool": "add_feature",
+      "args": { "feature_name": "user-auth", "description": "用户认证功能" },
+      "outputs": ["docs/specs/user-auth/requirements.md"]
+    }
+  ]
+}</code></pre>
+                        </div>
+                        <div class="callout info">
+                            <div class="callout-icon">💡</div>
+                            <div class="callout-content">
+                                <p><strong>要点：</strong>按顺序执行 <code>steps</code>，并确保 <code>outputs</code> 所列文件真实落盘。</p>
                             </div>
                         </div>
                     </div>

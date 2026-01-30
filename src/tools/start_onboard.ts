@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { OnboardingReportSchema } from "../schemas/structured-output.js";
 import type { OnboardingReport } from "../schemas/structured-output.js";
 
@@ -116,9 +117,33 @@ export async function startOnboard(args: any) {
     const projectPath = getString(parsedArgs.project_path) || ".";
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
 
-    const guide = PROMPT_TEMPLATE
+    const header = renderOrchestrationHeader({
+      tool: 'start_onboard',
+      goal: '快速了解并上手项目',
+      tasks: [
+        '按 delegated plan 顺序调用工具',
+        '生成并汇总项目上下文与快速开始信息',
+      ],
+    });
+
+    const guide = header + PROMPT_TEMPLATE
       .replace(/{project_path}/g, projectPath)
       .replace(/{docs_dir}/g, docsDir);
+
+    const plan = {
+      mode: 'delegated',
+      steps: [
+        {
+          id: 'context',
+          tool: 'init_project_context',
+          args: {
+            docs_dir: docsDir,
+            project_root: projectPath,
+          },
+          outputs: [`${docsDir}/project-context.md`],
+        },
+      ],
+    };
 
     // Create structured onboarding report
     const onboardingReport: OnboardingReport = {
@@ -148,6 +173,9 @@ export async function startOnboard(args: any) {
         commonTasks: [],
       },
       keyFiles: [],
+      metadata: {
+        plan,
+      },
     };
 
     return okStructured(

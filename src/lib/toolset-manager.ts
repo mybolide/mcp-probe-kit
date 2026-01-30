@@ -3,18 +3,20 @@
  * 根据环境变量 MCP_TOOLSET 过滤工具列表
  */
 
+import { allToolSchemas } from '../schemas/index.js';
+
 export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
 
 /**
  * 工具集定义
  * 
- * - core: 12 个核心工具（高频使用）
- * - ui: 5 个 UI/UX 工具（推荐使用 start_ui 统一入口）
- * - workflow: 24 个工作流工具（包含 core + 编排工具）
- * - full: 所有 39 个工具（默认）
+ * - core: 核心工具（高频使用）
+ * - ui: UI/UX 工具（推荐使用 start_ui 统一入口）
+ * - workflow: 工作流工具（包含 core + 编排工具）
+ * - full: 所有工具（默认）
  */
 export const TOOLSET_DEFINITIONS = {
-  // 核心工具集（12 个）- 最常用的基础工具
+  // 核心工具集 - 最常用的基础工具
   core: [
     'gencommit',
     'code_review',
@@ -30,7 +32,7 @@ export const TOOLSET_DEFINITIONS = {
     'gen_mock',
   ],
 
-  // UI/UX 工具集（5 个）- 对外工具，推荐使用 start_ui 统一入口
+  // UI/UX 工具集 - 对外工具，推荐使用 start_ui 统一入口
   ui: [
     'start_ui',         // ⭐ 统一入口（编排工具）
     'ui_search',        // 搜索 UI/UX 数据库
@@ -39,7 +41,7 @@ export const TOOLSET_DEFINITIONS = {
     // 注意：不包含内部工具 init_component_catalog 和 render_ui
   ],
 
-  // 工作流工具集（24 个）- 包含核心工具 + 编排工具
+  // 工作流工具集 - 包含核心工具 + 编排工具
   workflow: [
     // 核心工具（复用）
     'gencommit',
@@ -72,7 +74,7 @@ export const TOOLSET_DEFINITIONS = {
     'ask_user',
   ],
 
-  // 完整工具集（39 个）- 包含所有工具（包括内部工具）
+  // 完整工具集 - 包含所有工具（包括内部工具）
   full: 'all' as const,
 };
 
@@ -125,7 +127,7 @@ export function getToolsetFromEnv(): ToolsetType {
  */
 export function getToolsetSize(toolset: ToolsetType): number {
   if (toolset === 'full') {
-    return 39;
+    return allToolSchemas.length;
   }
   
   const allowedTools = TOOLSET_DEFINITIONS[toolset];

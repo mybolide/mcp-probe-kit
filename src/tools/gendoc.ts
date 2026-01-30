@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { Documentation } from "../schemas/output/generation-tools.js";
 
 // gendoc 工具实现
@@ -28,7 +29,15 @@ export async function gendoc(args: any) {
     const style = getString(parsedArgs.style) || "jsdoc"; // jsdoc, tsdoc, javadoc
     const lang = getString(parsedArgs.lang) || "zh"; // zh, en
 
-    const message = `请为以下代码生成详细的注释文档：
+    const languageLabel = lang === "zh" ? "中文" : "英文";
+    const header = renderGuidanceHeader({
+      tool: "gendoc",
+      goal: "生成完整的代码注释文档。",
+      tasks: ["为代码补全注释", "仅输出带注释的代码"],
+      outputs: [`${style} 风格的注释代码（${languageLabel}）`],
+    });
+
+    const message = `${header}请为以下代码生成详细的注释文档：
 
 📝 **代码内容**：
 ${code || "请提供需要生成注释的代码"}

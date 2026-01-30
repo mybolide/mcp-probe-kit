@@ -177,9 +177,13 @@
                 <h1 class="page-title">最佳实践</h1>
                 <p class="page-description">MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南</p>
                 <div class="page-meta">
-                    <span>📦 v2.3.0</span>
+                    <span>📦 v2.5.0</span>
                     <span>·</span>
                     <span>最后更新：2026-01-27</span>
+                    <span>·</span>
+                    <span>协议：MCP 2025-11-25</span>
+                    <span>·</span>
+                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
                 </div>
                 
                 <!-- 研发流程概览 -->
@@ -401,6 +405,61 @@ feature_name: "user-auth"
   ✓ 估算开发工作量
   ✓ 输出完整开发计划</code></pre>
                 </div>
+
+                <div class="callout info">
+                    <div class="callout-icon">🧭</div>
+                    <div class="callout-content">
+                        <p><strong>委托式编排：</strong><code>start_feature</code> 会在 <code>structuredContent.metadata.plan</code> 中返回执行计划，AI 需要按步骤调用工具并创建文件。</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-language">Plan 示例</span>
+                            </div>
+                            <pre><code>{
+  "mode": "delegated",
+  "steps": [
+    {
+      "id": "spec",
+      "tool": "add_feature",
+      "args": { "feature_name": "user-auth", "description": "用户认证功能" },
+      "outputs": ["docs/specs/user-auth/requirements.md"]
+    }
+  ]
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="callout info">
+                    <div class="callout-icon">🧭</div>
+                    <div class="callout-content">
+                        <p><strong>需求澄清模式：</strong>当需求不够明确时，使用 <code>requirements_mode=loop</code> 先澄清再进入规格生成。</p>
+                        <p><strong>模板档位：</strong><code>template_profile=auto</code> 自动选择指导强度，普通模型优先 guided。</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-language">示例</span>
+                            </div>
+                            <pre><code>AI: 使用 start_feature 工具
+feature_name: "user-auth"
+description: "用户认证功能"
+template_profile: "auto"
+requirements_mode: "loop"
+loop_max_rounds: 2
+loop_question_budget: 5</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="callout info">
+                    <div class="callout-icon">🧩</div>
+                    <div class="callout-content">
+                        <p><strong>模板档位策略：</strong></p>
+                        <ul>
+                            <li><code>guided</code>：需求信息少/不完整，普通模型优先</li>
+                            <li><code>strict</code>：需求已结构化，指引更紧凑</li>
+                            <li><code>auto</code>：默认推荐，自动选择 guided/strict</li>
+                        </ul>
+                    </div>
+                </div>
                 
                 <h3>2.2 UI 开发流程</h3>
                 <p>使用 <code>start_ui</code> 工作流，从设计系统到代码一气呵成。</p>
@@ -413,12 +472,31 @@ feature_name: "user-auth"
 AI: 使用 start_ui 工具
 description: "登录页面，包含邮箱密码输入和 Google 登录按钮"
 framework: "react"
+template_profile: "auto"
 
 → 自动执行：
   ✓ 检查/生成设计系统
   ✓ 初始化组件目录
   ✓ 搜索/生成 UI 模板
   ✓ 渲染最终 React 代码</code></pre>
+                </div>
+
+                <div class="callout info">
+                    <div class="callout-icon">🧭</div>
+                    <div class="callout-content">
+                        <p><strong>需求澄清模式：</strong>当 UI 需求不清晰时，先澄清再执行 UI 流程。</p>
+                        <p><strong>模板档位：</strong>需要更严格时可设为 <code>template_profile=strict</code>。</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-language">示例</span>
+                            </div>
+                            <pre><code>AI: 使用 start_ui 工具
+description: "登录页面"
+template_profile: "strict"
+requirements_mode: "loop"
+loop_max_rounds: 2</code></pre>
+                        </div>
+                    </div>
                 </div>
                 
                 <h3>2.3 代码生成</h3>
@@ -474,6 +552,7 @@ code: "function login(user, pass) { ... }"
 AI: 使用 start_bugfix 工具
 error_message: "TypeError: Cannot read property 'token' of undefined"
 stack_trace: "at login.js:45:12"
+template_profile: "auto"
 
 → 自动执行：
   ✓ 检查项目上下文
@@ -481,6 +560,24 @@ stack_trace: "at login.js:45:12"
   ✓ 定位问题代码
   ✓ 提供修复方案
   ✓ 生成测试用例</code></pre>
+                </div>
+
+                <div class="callout info">
+                    <div class="callout-icon">🧭</div>
+                    <div class="callout-content">
+                        <p><strong>需求澄清模式：</strong>当 Bug 信息不完整时，先澄清再进入修复。</p>
+                        <p><strong>模板档位：</strong>普通模型可用 <code>template_profile=guided</code>，结构化信息可用 <code>strict</code>。</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-language">示例</span>
+                            </div>
+                            <pre><code>AI: 使用 start_bugfix 工具
+error_message: "TypeError: token is undefined"
+template_profile: "guided"
+requirements_mode: "loop"
+loop_question_budget: 5</code></pre>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- 阶段 5：版本发布 -->

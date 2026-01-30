@@ -4,6 +4,7 @@
  */
 
 import { parseArgs } from "../utils/parseArgs.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 
 interface Question {
   question: string;
@@ -27,11 +28,17 @@ export async function askUser(args: any) {
     const reason = parsed.reason;
 
     if (!question && !questions) {
+      const header = renderGuidanceHeader({
+        tool: "ask_user",
+        goal: "向用户提出关键问题，补全需求或做出决策。",
+        tasks: ["按示例提供问题参数，或直接回答问题"],
+        outputs: ["清晰的回答或可执行的参数"],
+      });
       return {
         content: [
           {
             type: "text",
-            text: `# ❓ 向用户提问工具
+            text: `${header}# ❓ 向用户提问工具
 
 ## 使用方法
 
@@ -74,6 +81,14 @@ ask_user "是否需要支持移动端？" --context "当前只有 PC 端实现"
 
     const lines: string[] = [];
 
+    lines.push(
+      renderGuidanceHeader({
+        tool: "ask_user",
+        goal: "向用户确认关键问题，以便继续完成任务。",
+        tasks: ["回答下面的问题（必答/可选已标注）"],
+        outputs: ["逐条回答问题"],
+      })
+    );
     lines.push("# ❓ AI 需要向你确认一些信息");
     lines.push("");
 

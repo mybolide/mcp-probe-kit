@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { APIWorkflowReport } from "../schemas/output/workflow-tools.js";
 
 /**
@@ -37,7 +38,16 @@ export async function startApi(args: any) {
       throw new Error("缺少必填参数: code（API 代码）");
     }
 
-    const message = `# 🔌 API 开发编排
+    const header = renderOrchestrationHeader({
+      tool: 'start_api',
+      goal: '生成 API 开发资料',
+      tasks: [
+        '按 delegated plan 顺序调用工具',
+        '生成 API 文档、Mock 数据与测试代码',
+      ],
+    });
+
+    const message = header + `# 🔌 API 开发编排
 
 为以下 API 代码生成完整的开发资料：
 
@@ -70,6 +80,35 @@ ${code}
 
 **重要**: 请使用结构化输出格式返回结果。`;
 
+    const plan = {
+      mode: 'delegated',
+      steps: [
+        {
+          id: 'api-doc',
+          tool: 'genapi',
+          args: { code, language, format },
+          outputs: [],
+        },
+        {
+          id: 'mock',
+          tool: 'gen_mock',
+          args: {
+            schema: '[根据 API 文档提取的数据结构]',
+            count: 3,
+            format: 'json',
+            locale: 'zh-CN',
+          },
+          outputs: [],
+        },
+        {
+          id: 'tests',
+          tool: 'gentest',
+          args: { code, framework: '[根据项目上下文选择]' },
+          outputs: [],
+        },
+      ],
+    };
+
     // 创建结构化数据对象
     const structuredData: APIWorkflowReport = {
       summary: "API 开发编排",
@@ -93,6 +132,9 @@ ${code}
       ],
       apiDocumentation: {}, // AI 将填充实际的 API 文档
       endpoints: [], // AI 将填充端点列表
+      metadata: {
+        plan,
+      },
     };
 
     return okStructured(message, structuredData, {

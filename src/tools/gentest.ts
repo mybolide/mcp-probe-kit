@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { TestSuite } from "../schemas/output/core-tools.js";
 
 // gentest 工具实现
@@ -24,7 +25,14 @@ export async function gentest(args: any) {
     const code = getString(parsedArgs.code);
     const framework = getString(parsedArgs.framework) || "jest"; // jest, vitest, mocha
 
-    const message = `请为以下代码生成完整的测试用例：
+    const header = renderGuidanceHeader({
+      tool: "gentest",
+      goal: "生成完整可运行的测试用例。",
+      tasks: ["基于代码生成测试用例", "仅输出测试代码"],
+      outputs: [`${framework} 测试代码（含边界与异常用例）`],
+    });
+
+    const message = `${header}请为以下代码生成完整的测试用例：
 
 📝 **代码内容**：
 ${code || "请提供需要测试的代码"}

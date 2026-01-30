@@ -177,9 +177,13 @@
                 <h1 class="page-title">v2.0 迁移指南</h1>
                 <p class="page-description">从 v1.x 平滑迁移到 v2.0，了解重大变更和新特性</p>
                 <div class="page-meta">
-                    <span>📦 v2.3.0</span>
+                    <span>📦 v2.5.0</span>
                     <span>·</span>
                     <span>最后更新：2026-01-27</span>
+                    <span>·</span>
+                    <span>协议：MCP 2025-11-25</span>
+                    <span>·</span>
+                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
                 </div>
                 
                 <!-- Content -->
@@ -199,11 +203,12 @@
                 <p>v1.x: 13 个工具 → v2.0: 39 个核心工具（移除低频工具，保留高价值工具）</p>
                 
                 <h3>2. 新增工作流编排</h3>
-                <p>10 个 <code>start_*</code> 工作流编排工具，提供端到端的自动化开发流程：</p>
+                <p>11 个 <code>start_*</code> 工作流编排工具，提供端到端的自动化开发流程：</p>
                 <ul>
                     <li><code>start_feature</code> - 功能开发工作流</li>
                     <li><code>start_bugfix</code> - Bug 修复工作流</li>
                     <li><code>start_ui</code> - UI 开发工作流</li>
+                    <li><code>start_product</code> - 产品设计工作流</li>
                     <li><code>start_ralph</code> - Ralph Wiggum Loop 自动化开发</li>
                 </ul>
                 
@@ -212,12 +217,13 @@
                 <ul>
                     <li><code>ui_design_system</code> - 智能设计系统生成器</li>
                     <li><code>ui_search</code> - UI/UX 数据库搜索</li>
+                    <li><code>sync_ui_data</code> - UI/UX 数据同步</li>
+                    <li><code>init_component_catalog</code> - 组件目录初始化</li>
                     <li><code>render_ui</code> - UI 渲染引擎</li>
-                    <li><code>design2code</code> - 设计稿转代码</li>
                 </ul>
                 
-                <h3>4. 100% 结构化输出</h3>
-                <p>所有 39 个工具都支持结构化输出，确保输出格式一致、可预测。</p>
+                            <h3>4. 结构化输出覆盖升级</h3>
+                            <p>核心与编排工具优先支持结构化输出，输出格式一致、可预测，便于工具串联与状态追踪。</p>
                 
                 <h2>迁移步骤</h2>
                 

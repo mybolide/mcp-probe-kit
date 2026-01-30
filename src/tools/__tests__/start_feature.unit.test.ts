@@ -26,7 +26,8 @@ describe('start_feature 单元测试', () => {
       throw new Error('structuredContent 缺失');
     }
 
-    const plan = result.structuredContent?.metadata?.plan;
+    const structured = (result as any).structuredContent;
+    const plan = structured?.metadata?.plan;
     expect(plan).toBeTruthy();
     expect(plan.mode).toBe('delegated');
     expect(Array.isArray(plan.steps)).toBe(true);
@@ -52,5 +53,47 @@ describe('start_feature 单元测试', () => {
     expect(text).toMatch(/执行计划/);
     expect(text).toMatch(/add_feature/);
     expect(text).toMatch(/estimate/);
+  });
+
+  test('template_profile 应该透传到 add_feature 计划', async () => {
+    const result = await startFeature({
+      feature_name: 'user-auth',
+      description: '用户认证功能',
+      template_profile: 'strict',
+    });
+
+    expect(result.isError).toBe(false);
+    expect('structuredContent' in result).toBe(true);
+    if (!('structuredContent' in result)) {
+      throw new Error('structuredContent 缺失');
+    }
+    const structured = (result as any).structuredContent;
+    const plan = structured?.metadata?.plan;
+    expect(plan).toBeTruthy();
+
+    const specStep = plan.steps.find((step: any) => step.tool === 'add_feature');
+    expect(specStep.args.template_profile).toBe('strict');
+  });
+
+  test('loop 模式返回需求循环结构', async () => {
+    const result = await startFeature({
+      feature_name: 'user-auth',
+      description: '用户认证功能',
+      requirements_mode: 'loop',
+      loop_question_budget: 3,
+    });
+
+    expect(result.isError).toBe(false);
+    expect('structuredContent' in result).toBe(true);
+    if (!('structuredContent' in result)) {
+      throw new Error('structuredContent 缺失');
+    }
+
+    const loop = (result as any).structuredContent;
+    expect(loop.mode).toBe('loop');
+    expect(loop.round).toBe(1);
+    expect(loop.maxRounds).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(loop.openQuestions)).toBe(true);
+    expect(loop.openQuestions.length).toBeLessThanOrEqual(3);
   });
 });

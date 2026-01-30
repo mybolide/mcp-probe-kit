@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { PerformanceReport } from "../schemas/output/core-tools.js";
 
 // perf 工具实现
@@ -24,7 +25,14 @@ export async function perf(args: any) {
     const code = getString(parsedArgs.code);
     const type = getString(parsedArgs.type) || "all"; // algorithm, memory, react, database
 
-    const message = `请分析以下代码的性能问题并提供优化建议：
+    const header = renderGuidanceHeader({
+      tool: "perf",
+      goal: "输出结构化的性能分析报告。",
+      tasks: ["分析性能瓶颈并给出优化建议", "仅输出分析结果"],
+      outputs: ["结构化性能报告（JSON）"],
+    });
+
+    const message = `${header}请分析以下代码的性能问题并提供优化建议：
 
 📝 **代码内容**：
 ${code || "请提供需要性能分析的代码"}

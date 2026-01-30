@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { SQLQuery } from "../schemas/output/generation-tools.js";
 
 // gensql 工具实现
@@ -24,7 +25,14 @@ export async function gensql(args: any) {
     const description = getString(parsedArgs.description);
     const dialect = getString(parsedArgs.dialect) || "postgres"; // postgres, mysql, sqlite
 
-    const message = `请根据以下需求生成 SQL：
+    const header = renderGuidanceHeader({
+      tool: "gensql",
+      goal: "生成可执行的 SQL 语句。",
+      tasks: ["根据需求生成 SQL", "仅输出 SQL 与必要说明"],
+      outputs: [`${dialect} SQL`],
+    });
+
+    const message = `${header}请根据以下需求生成 SQL：
 
 📝 **需求描述**：
 ${description || "请描述需要查询/操作的数据"}

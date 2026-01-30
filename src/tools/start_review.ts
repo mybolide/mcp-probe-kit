@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { ReviewWorkflowReport } from "../schemas/output/workflow-tools.js";
 
 /**
@@ -33,7 +34,16 @@ export async function startReview(args: any) {
       throw new Error("缺少必填参数: code（需要审查的代码）");
     }
 
-    const message = `# 🔍 代码体检编排
+    const header = renderOrchestrationHeader({
+      tool: 'start_review',
+      goal: '输出代码体检综合报告',
+      tasks: [
+        '按 delegated plan 顺序调用工具',
+        '汇总质量/安全/性能结果并给出优先级',
+      ],
+    });
+
+    const message = header + `# 🔍 代码体检编排
 
 对以下代码进行全面体检：
 
@@ -65,7 +75,31 @@ ${code}
 - 优化建议
 - 修复优先级
 
-**重要**: 请使用结构化输出格式返回结果。`;
+    **重要**: 请使用结构化输出格式返回结果。`;
+
+    const plan = {
+      mode: 'delegated',
+      steps: [
+        {
+          id: 'code-review',
+          tool: 'code_review',
+          args: { code, focus: 'all' },
+          outputs: [],
+        },
+        {
+          id: 'security-scan',
+          tool: 'security_scan',
+          args: { code, language, scan_type: 'all' },
+          outputs: [],
+        },
+        {
+          id: 'perf',
+          tool: 'perf',
+          args: { code, type: 'all' },
+          outputs: [],
+        },
+      ],
+    };
 
     // 创建结构化数据对象
     const structuredData: ReviewWorkflowReport = {
@@ -90,6 +124,9 @@ ${code}
       ],
       reviewResults: {},
       overallScore: 0, // AI 将填充实际评分
+      metadata: {
+        plan,
+      },
     };
 
     return okStructured(message, structuredData, {

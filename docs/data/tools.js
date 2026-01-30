@@ -2,41 +2,6 @@
 const toolsData = {
   workflow: [
     {
-      name: 'start_feature',
-      description: '完整的功能开发工作流编排：检查上下文 → 生成规格 → 估算工作量',
-      schema: 'FeatureReportSchema',
-      params: [
-        { name: 'description', type: 'string', required: true, desc: '功能详细描述，可以是简短描述或详细需求说明' },
-        { name: 'feature_name', type: 'string', required: false, desc: '功能名称（kebab-case格式），不提供会自动提取' },
-        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' }
-      ],
-      usage: '用于启动完整的功能开发流程，自动生成需求文档、设计方案和工作量估算',
-      example: `// 使用示例
-AI: 请使用 start_feature 工具开发用户认证功能
-
-// 工具会自动：
-// 1. 检查项目上下文
-// 2. 生成功能规格文档
-// 3. 估算开发工作量
-// 4. 输出完整报告`
-    },
-    {
-      name: 'start_bugfix',
-      description: 'Bug 修复工作流编排：检查上下文 → 分析定位 → 修复方案 → 生成测试',
-      schema: 'BugFixReportSchema',
-      params: [
-        { name: 'error_message', type: 'string', required: true, desc: '错误信息' },
-        { name: 'stack_trace', type: 'string', required: false, desc: '堆栈跟踪信息' },
-        { name: 'code_context', type: 'string', required: false, desc: '相关代码上下文' }
-      ],
-      usage: '用于系统化修复Bug，提供完整的分析、定位、修复和测试方案',
-      example: `// 使用示例
-AI: 请使用 start_bugfix 工具修复登录失败的问题
-
-error_message: "TypeError: Cannot read property 'token' of undefined"
-stack_trace: "at login.js:45:12"`
-    },
-    {
       name: 'start_onboard',
       description: '项目上手工作流：生成上下文文档，帮助新成员快速了解项目',
       schema: 'OnboardingReportSchema',
@@ -54,80 +19,93 @@ AI: 请使用 start_onboard 工具帮我了解这个项目
 // - 开发规范文档`
     },
     {
+      name: 'start_product',
+      description: '产品设计完整工作流编排：PRD → 原型文档 → 设计系统 → HTML 原型 → 项目上下文更新。生成的 HTML 原型可直接在浏览器中查看',
+      schema: 'WorkflowReportSchema',
+      params: [
+        { name: 'description', type: 'string', required: false, desc: '产品描述，详细描述产品目标、功能和用户需求。如果提供了 requirements_file，此参数可选' },
+        { name: 'requirements_file', type: 'string', required: false, desc: '需求文档文件路径，如 "docs/requirements.md"。工具会读取完整文件内容作为需求' },
+        { name: 'product_name', type: 'string', required: false, desc: '产品名称' },
+        { name: 'product_type', type: 'string', required: false, desc: '产品类型，如 SaaS、E-commerce 等，用于生成设计系统' },
+        { name: 'skip_design_system', type: 'boolean', required: false, desc: '跳过设计系统生成，默认为 false' },
+        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' }
+      ],
+      usage: '一键完成从需求到 HTML 原型的全流程，生成可直接演示的产品原型。支持从文件读取完整需求文档',
+      example: `// 使用示例 1：直接提供描述
+AI: 请使用 start_product 工具完成产品设计
+
+description: "在线教育平台，支持直播课程、录播课程、作业提交和成绩管理"
+product_name: "EduPro"
+product_type: "SaaS"
+
+// 使用示例 2：从文件读取需求（推荐用于长文档）
+AI: 请使用 start_product 工具完成产品设计
+
+requirements_file: "docs/requirements.md"
+product_name: "EduPro"
+product_type: "SaaS"
+
+// 工具会自动：
+// 1. 读取完整需求文档（如果提供了 requirements_file）
+// 2. 生成 PRD 文档
+// 3. 生成原型设计文档
+// 4. 生成设计系统
+// 5. 生成 HTML 可交互原型
+// 6. 更新项目上下文`
+    },
+    {
+      name: 'start_feature',
+      description: '完整的功能开发工作流编排：检查上下文 → 生成规格 → 估算工作量',
+      schema: 'FeatureReportSchema',
+      params: [
+        { name: 'description', type: 'string', required: true, desc: '功能详细描述，可以是简短描述或详细需求说明' },
+        { name: 'feature_name', type: 'string', required: false, desc: '功能名称（kebab-case格式），不提供会自动提取' },
+        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' },
+        { name: 'template_profile', type: 'string', required: false, desc: '模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）' },
+        { name: 'requirements_mode', type: 'string', required: false, desc: '需求模式：steady（默认）或 loop（需求澄清与补全）' },
+        { name: 'loop_max_rounds', type: 'number', required: false, desc: '需求 loop 最大轮次（默认 2）' },
+        { name: 'loop_question_budget', type: 'number', required: false, desc: '每轮最多提问数量（默认 5）' },
+        { name: 'loop_assumption_cap', type: 'number', required: false, desc: '每轮假设上限（默认 3）' }
+      ],
+      usage: '用于启动完整的功能开发流程，自动生成需求文档、设计方案和工作量估算',
+      example: `// 使用示例
+AI: 请使用 start_feature 工具开发用户认证功能
+
+// 默认稳健流程：
+// 1. 检查项目上下文
+// 2. 生成功能规格文档
+// 3. 估算开发工作量
+
+// 若需要需求澄清：
+// requirements_mode: "loop"
+// loop_max_rounds: 2
+// loop_question_budget: 5`
+    },
+    {
       name: 'start_ui',
       description: 'UI 开发统一入口：检查设计系统 → 生成组件目录 → 搜索/生成模板 → 渲染代码',
       schema: 'UIReportSchema',
-      params: [
-        { name: 'description', type: 'string', required: true, desc: 'UI需求描述（如"登录页面"、"用户列表"）' },
-        { name: 'framework', type: 'string', required: false, desc: '目标框架：react、vue、html，默认react' },
-        { name: 'template', type: 'string', required: false, desc: '模板名称，不提供则自动生成' }
+        params: [
+          { name: 'description', type: 'string', required: true, desc: 'UI需求描述（如"登录页面"、"用户列表"）' },
+          { name: 'framework', type: 'string', required: false, desc: '目标框架：react、vue、html，默认react' },
+          { name: 'template', type: 'string', required: false, desc: '模板名称，不提供则自动生成' },
+          { name: 'template_profile', type: 'string', required: false, desc: '模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）' },
+          { name: 'mode', type: 'string', required: false, desc: '执行模式：auto 或 manual（默认）' },
+          { name: 'requirements_mode', type: 'string', required: false, desc: '需求模式：steady（默认）或 loop（需求澄清与补全）' },
+        { name: 'loop_max_rounds', type: 'number', required: false, desc: '需求 loop 最大轮次（默认 2）' },
+        { name: 'loop_question_budget', type: 'number', required: false, desc: '每轮最多提问数量（默认 5）' },
+        { name: 'loop_assumption_cap', type: 'number', required: false, desc: '每轮假设上限（默认 3）' }
       ],
       usage: '一键完成UI开发全流程，从设计系统到最终代码',
       example: `// 使用示例
 AI: 请使用 start_ui 工具创建一个登录页面
 
 description: "登录页面"
-framework: "react"`
-    },
-    {
-      name: 'start_ralph',
-      description: 'Ralph Wiggum Loop 自动化开发，启动循环开发流程，默认启用多重安全保护',
-      schema: 'RalphLoopReportSchema',
-      params: [
-        { name: 'goal', type: 'string', required: true, desc: '要完成的目标/需求描述' },
-        { name: 'mode', type: 'string', required: false, desc: '运行模式：safe（安全模式，默认）、normal（普通模式）' },
-        { name: 'max_iterations', type: 'number', required: false, desc: '最大迭代轮数，safe模式默认8' },
-        { name: 'max_minutes', type: 'number', required: false, desc: '最大运行分钟数，safe模式默认25' }
-      ],
-      usage: '启动自动化循环开发，AI会持续迭代直到完成目标或达到安全限制',
-      example: `// 使用示例
-AI: 请使用 start_ralph 工具实现用户认证功能
+framework: "react"
 
-goal: "实现用户认证功能"
-mode: "safe"  // 启用安全保护`
-    },
-    {
-      name: 'start_review',
-      description: '代码审查工作流：代码审查 + 安全扫描 + 性能分析',
-      schema: 'ReviewWorkflowSchema',
-      params: [
-        { name: 'code', type: 'string', required: true, desc: '要审查的代码' },
-        { name: 'language', type: 'string', required: false, desc: '编程语言，会自动识别' }
-      ],
-      usage: '全面审查代码质量、安全性和性能',
-      example: `// 使用示例
-AI: 请使用 start_review 工具审查这段代码
-
-code: "function login(user) { ... }"`
-    },
-    {
-      name: 'start_release',
-      description: '发布工作流：生成 Changelog → 生成 PR 描述',
-      schema: 'ReleaseWorkflowSchema',
-      params: [
-        { name: 'version', type: 'string', required: true, desc: '版本号（如 v1.2.0）' },
-        { name: 'from_tag', type: 'string', required: false, desc: '起始tag，默认为上一个tag' }
-      ],
-      usage: '自动化版本发布流程，生成完整的发布文档',
-      example: `// 使用示例
-AI: 请使用 start_release 工具准备 v2.0.0 发布
-
-version: "v2.0.0"`
-    },
-    {
-      name: 'start_refactor',
-      description: '重构工作流：审查现状 → 重构建议 → 生成测试',
-      schema: 'RefactorWorkflowSchema',
-      params: [
-        { name: 'code', type: 'string', required: true, desc: '要重构的代码' },
-        { name: 'goal', type: 'string', required: false, desc: '重构目标：improve_readability、reduce_complexity、performance' }
-      ],
-      usage: '系统化重构代码，包含分析、建议和测试',
-      example: `// 使用示例
-AI: 请使用 start_refactor 工具重构这个函数
-
-code: "function processData() { ... }"
-goal: "reduce_complexity"`
+// 若需要需求澄清：
+// requirements_mode: "loop"
+// loop_question_budget: 5`
     },
     {
       name: 'start_api',
@@ -146,6 +124,60 @@ code: "app.post('/api/login', ...)"
 format: "openapi"`
     },
     {
+      name: 'start_review',
+      description: '代码审查工作流：代码审查 + 安全扫描 + 性能分析',
+      schema: 'ReviewWorkflowSchema',
+      params: [
+        { name: 'code', type: 'string', required: true, desc: '要审查的代码' },
+        { name: 'language', type: 'string', required: false, desc: '编程语言，会自动识别' }
+      ],
+      usage: '全面审查代码质量、安全性和性能',
+      example: `// 使用示例
+AI: 请使用 start_review 工具审查这段代码
+
+code: "function login(user) { ... }"`
+    },
+    {
+      name: 'start_refactor',
+      description: '重构工作流：审查现状 → 重构建议 → 生成测试',
+      schema: 'RefactorWorkflowSchema',
+      params: [
+        { name: 'code', type: 'string', required: true, desc: '要重构的代码' },
+        { name: 'goal', type: 'string', required: false, desc: '重构目标：improve_readability、reduce_complexity、performance' }
+      ],
+      usage: '系统化重构代码，包含分析、建议和测试',
+      example: `// 使用示例
+AI: 请使用 start_refactor 工具重构这个函数
+
+code: "function processData() { ... }"
+goal: "reduce_complexity"`
+    },
+    {
+      name: 'start_bugfix',
+      description: 'Bug 修复工作流编排：检查上下文 → 分析定位 → 修复方案 → 生成测试',
+      schema: 'BugFixReportSchema',
+        params: [
+          { name: 'error_message', type: 'string', required: true, desc: '错误信息' },
+          { name: 'stack_trace', type: 'string', required: false, desc: '堆栈跟踪信息' },
+          { name: 'code_context', type: 'string', required: false, desc: '相关代码上下文' },
+          { name: 'template_profile', type: 'string', required: false, desc: '模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）' },
+          { name: 'requirements_mode', type: 'string', required: false, desc: '需求模式：steady（默认）或 loop（需求澄清与补全）' },
+        { name: 'loop_max_rounds', type: 'number', required: false, desc: '需求 loop 最大轮次（默认 2）' },
+        { name: 'loop_question_budget', type: 'number', required: false, desc: '每轮最多提问数量（默认 5）' },
+        { name: 'loop_assumption_cap', type: 'number', required: false, desc: '每轮假设上限（默认 3）' }
+      ],
+      usage: '用于系统化修复Bug，提供完整的分析、定位、修复和测试方案',
+      example: `// 使用示例
+AI: 请使用 start_bugfix 工具修复登录失败的问题
+
+error_message: "TypeError: Cannot read property 'token' of undefined"
+stack_trace: "at login.js:45:12"
+
+// 若需要需求澄清：
+// requirements_mode: "loop"
+// loop_max_rounds: 2`
+    },
+    {
       name: 'start_doc',
       description: '文档工作流：生成注释 → 生成 README → 生成 API 文档',
       schema: 'DocWorkflowSchema',
@@ -159,6 +191,37 @@ format: "openapi"`
 AI: 请使用 start_doc 工具为项目生成文档
 
 code: "整个项目代码"`
+    },
+    {
+      name: 'start_release',
+      description: '发布工作流：生成 Changelog → 生成 PR 描述',
+      schema: 'ReleaseWorkflowSchema',
+      params: [
+        { name: 'version', type: 'string', required: true, desc: '版本号（如 v1.2.0）' },
+        { name: 'from_tag', type: 'string', required: false, desc: '起始tag，默认为上一个tag' }
+      ],
+      usage: '自动化版本发布流程，生成完整的发布文档',
+      example: `// 使用示例
+AI: 请使用 start_release 工具准备 v2.0.0 发布
+
+version: "v2.0.0"`
+    },
+    {
+      name: 'start_ralph',
+      description: 'Ralph Wiggum Loop 自动化开发，启动循环开发流程，默认启用多重安全保护',
+      schema: 'RalphLoopReportSchema',
+      params: [
+        { name: 'goal', type: 'string', required: true, desc: '要完成的目标/需求描述' },
+        { name: 'mode', type: 'string', required: false, desc: '运行模式：safe（安全模式，默认）、normal（普通模式）' },
+        { name: 'max_iterations', type: 'number', required: false, desc: '最大迭代轮数，safe模式默认8' },
+        { name: 'max_minutes', type: 'number', required: false, desc: '最大运行分钟数，safe模式默认25' }
+      ],
+      usage: '启动自动化循环开发，AI会持续迭代直到完成目标或达到安全限制',
+      example: `// 使用示例
+AI: 请使用 start_ralph 工具实现用户认证功能
+
+goal: "实现用户认证功能"
+mode: "safe"  // 启用安全保护`
     }
   ],
   analysis: [
@@ -189,7 +252,7 @@ focus: "security"`
         { name: 'stack_trace', type: 'string', required: false, desc: '堆栈跟踪' },
         { name: 'code_context', type: 'string', required: false, desc: '相关代码' }
       ],
-      usage: '提供完整的 Bug 修复指导，包含根因分析、修复方案、测试计划和预防措施',
+      usage: '提供完整的 Bug 修复指导，包含根因分析、修复方案、测试计划和预防措施（debug 已合并到本工具）',
       example: `// 使用示例
 AI: 请使用 fix_bug 工具修复这个问题
 
@@ -256,22 +319,6 @@ code: "function findUser(users, id) {
   }
 }"
 type: "algorithm"`
-    },
-    {
-      name: 'explain',
-      description: '解释代码逻辑和实现原理，包含执行流程、关键概念',
-      schema: 'CodeExplanationSchema',
-      params: [
-        { name: 'code', type: 'string', required: true, desc: '要解释的代码，可以是代码片段或完整函数' },
-        { name: 'context', type: 'string', required: false, desc: '业务背景或上下文，有助于更好的解释' }
-      ],
-      usage: '解释代码逻辑和实现原理，包含执行流程、关键概念',
-      example: `// 使用示例
-AI: 请使用 explain 工具解释这段代码
-
-code: "const memoized = useMemo(() => 
-  expensiveCalculation(data), [data]);"
-context: "React 性能优化"`
     }
   ],
   git: [
@@ -478,21 +525,6 @@ AI: 请使用 gentest 工具生成测试
 
 code: "function add(a, b) { return a + b; }"
 framework: "jest"`
-    },
-    {
-      name: 'genui',
-      description: '根据描述生成 UI 组件代码（React/Vue/HTML），包含 Props 和样式',
-      schema: 'UIComponentSchema',
-      params: [
-        { name: 'description', type: 'string', required: true, desc: '组件描述，可以是简短描述（如"登录表单组件"）或详细的UI需求' },
-        { name: 'framework', type: 'string', required: false, desc: '前端框架：react、vue、html，默认 react' }
-      ],
-      usage: '根据描述生成 UI 组件代码，包含 Props 和样式',
-      example: `// 使用示例
-AI: 请使用 genui 工具生成一个按钮组件
-
-description: "主按钮组件，支持 primary/secondary 两种样式"
-framework: "react"`
     }
   ],
   project: [
@@ -542,7 +574,8 @@ mode: "modular"
       params: [
         { name: 'description', type: 'string', required: true, desc: '功能详细描述，可以是简短的自然语言（如"添加用户认证功能"）或详细的需求说明' },
         { name: 'feature_name', type: 'string', required: false, desc: '功能名称（kebab-case 格式，如 user-auth），如果不提供会从 description 自动提取' },
-        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' }
+        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' },
+        { name: 'template_profile', type: 'string', required: false, desc: '模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）' }
       ],
       usage: '生成新功能规格文档（需求/设计/任务清单），基于项目上下文',
       example: `// 使用示例
@@ -554,7 +587,7 @@ feature_name: "user-auth"`
     {
       name: 'estimate',
       description: '估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点',
-      schema: 'EstimationSchema',
+      schema: 'EstimateSchema',
       params: [
         { name: 'task_description', type: 'string', required: true, desc: '任务描述，可以是简短的自然语言或详细的任务说明' },
         { name: 'code_context', type: 'string', required: false, desc: '相关代码或文件上下文，有助于更准确的估算' },
@@ -667,7 +700,7 @@ limit: 5`
     {
       name: 'sync_ui_data',
       description: '同步 UI/UX 数据到本地缓存，支持自动检查更新和强制同步',
-      schema: 'SyncResultSchema',
+      schema: 'SyncReportSchema',
       params: [
         { name: 'force', type: 'boolean', required: false, desc: '是否强制同步（忽略版本检查），默认 false' },
         { name: 'verbose', type: 'boolean', required: false, desc: '是否显示详细日志，默认 false' }
@@ -682,7 +715,7 @@ verbose: true`
     {
       name: 'render_ui',
       description: 'UI 渲染引擎，将 JSON 模板渲染为最终代码，自动替换占位符',
-      schema: 'UIRenderResultSchema',
+      schema: 'RenderResultSchema',
       params: [
         { name: 'template', type: 'string', required: true, desc: '模板文件路径（JSON 格式，如 docs/ui/login-form.json）' },
         { name: 'framework', type: 'string', required: false, desc: '目标框架：react、vue、html，默认 react' }
@@ -693,123 +726,9 @@ AI: 请使用 render_ui 工具渲染登录表单
 
 template: "docs/ui/login-form.json"
 framework: "react"`
-    },
-    {
-      name: 'design2code',
-      description: '将设计稿转换为前端代码，1:1 还原布局和样式',
-      schema: 'Design2CodeSchema',
-      params: [
-        { name: 'input', type: 'string', required: true, desc: '设计稿输入：图片 URL、base64 图片、HTML 代码或设计稿描述' },
-        { name: 'framework', type: 'string', required: false, desc: '目标框架：vue、react，默认为 vue' },
-        { name: 'style_solution', type: 'string', required: false, desc: '样式方案：tailwind、css-modules、styled-components，默认为 tailwind' },
-        { name: 'component_type', type: 'string', required: false, desc: '组件类型：page（页面组件）、component（通用组件），默认为 page' }
-      ],
-      usage: '将设计稿（图片URL/base64/HTML）转换为前端代码（React/Vue），1:1 还原布局和样式',
-      example: `// 使用示例
-AI: 请使用 design2code 工具转换设计稿
-
-input: "https://example.com/design.png"
-framework: "react"
-style_solution: "tailwind"
-component_type: "page"`
     }
   ],
-  other: [
-    {
-      name: 'fix',
-      description: '自动修复代码问题（Lint/格式化/类型错误），输出补丁',
-      schema: 'CodeFixSchema',
-      params: [
-        { name: 'code', type: 'string', required: true, desc: '要修复的代码' },
-        { name: 'type', type: 'string', required: false, desc: '修复类型：lint（代码规范）、ts（TypeScript错误）、format（格式化）、import（导入），会自动识别' }
-      ],
-      usage: '自动修复可机械化问题，输出补丁（unified diff）',
-      example: `// 使用示例
-AI: 请使用 fix 工具修复这段代码
 
-code: "const x=1;if(x==1){console.log('test')}"
-type: "format"`
-    },
-    {
-      name: 'convert',
-      description: '转换代码格式或框架（JS→TS/Class→Hooks/Vue2→Vue3），保持逻辑不变',
-      schema: 'CodeConversionSchema',
-      params: [
-        { name: 'code', type: 'string', required: true, desc: '要转换的代码' },
-        { name: 'from', type: 'string', required: false, desc: '源格式：js、class、vue2，会自动识别' },
-        { name: 'to', type: 'string', required: false, desc: '目标格式：ts、hooks、vue3，会自动识别' }
-      ],
-      usage: '转换代码格式或框架，保持逻辑不变',
-      example: `// 使用示例
-AI: 请使用 convert 工具将这段代码转换为 TypeScript
-
-code: "function add(a, b) { return a + b; }"
-from: "js"
-to: "ts"`
-    },
-    {
-      name: 'split',
-      description: '将大文件拆分为小模块，按类型/功能/组件策略拆分',
-      schema: 'FileSplitSchema',
-      params: [
-        { name: 'file', type: 'string', required: true, desc: '要拆分的文件内容' },
-        { name: 'strategy', type: 'string', required: false, desc: '拆分策略：auto（自动）、by-type（按类型）、by-function（按功能），默认 auto' }
-      ],
-      usage: '将大文件拆分为小模块，按类型/功能/组件策略拆分',
-      example: `// 使用示例
-AI: 请使用 split 工具拆分这个大文件
-
-file: "// 1000+ 行的代码..."
-strategy: "by-function"`
-    },
-    {
-      name: 'css_order',
-      description: '重排 CSS 属性顺序，按布局→盒模型→视觉→其他规则整理',
-      schema: 'CSSOrderSchema',
-      params: [
-        { name: 'css', type: 'string', required: false, desc: 'CSS 代码，如果不提供会处理当前文件' }
-      ],
-      usage: '重排 CSS 属性顺序，按布局→盒模型→视觉→其他规则整理',
-      example: `// 使用示例
-AI: 请使用 css_order 工具整理 CSS
-
-css: ".button { 
-  color: blue; 
-  display: flex; 
-  padding: 10px; 
-}"`
-    },
-    {
-      name: 'init_setting',
-      description: '写入推荐的 AI 配置到 .cursor/settings.json',
-      schema: 'SettingInitSchema',
-      params: [
-        { name: 'project_path', type: 'string', required: false, desc: '项目路径，默认为当前工作区路径' }
-      ],
-      usage: '写入推荐的 AI 配置到 .cursor/settings.json',
-      example: `// 使用示例
-AI: 请使用 init_setting 工具初始化 Cursor 配置
-
-// 工具会创建 .cursor/settings.json 并写入推荐配置`
-    },
-    {
-      name: 'gen_skill',
-      description: '为 MCP Probe Kit 工具生成符合开放标准的技能文档',
-      schema: 'SkillDocSchema',
-      params: [
-        { name: 'tool_name', type: 'string', required: false, desc: '工具名称，当 scope 为 single 时必填' },
-        { name: 'scope', type: 'string', required: false, desc: '生成范围：all（所有工具）、single（单个工具），默认 all' },
-        { name: 'lang', type: 'string', required: false, desc: '文档语言：zh（中文）、en（英文），默认 zh' }
-      ],
-      usage: '为 MCP Probe Kit 工具生成符合开放标准的技能文档，输出到 skills/ 目录',
-      example: `// 使用示例
-AI: 请使用 gen_skill 工具生成技能文档
-
-scope: "all"
-lang: "zh"`
-    }
-  ],
-  
   // 产品设计工作流工具
   productDesign: [
     {
@@ -842,41 +761,6 @@ product_name: "EduPro"`
 AI: 请使用 gen_prototype 工具生成原型设计文档
 
 prd_path: "docs/prd/product-requirements.md"`
-    },
-    {
-      name: 'start_product',
-      description: '产品设计完整工作流编排：PRD → 原型文档 → 设计系统 → HTML 原型 → 项目上下文更新。生成的 HTML 原型可直接在浏览器中查看',
-      schema: 'StartProductSchema',
-      params: [
-        { name: 'description', type: 'string', required: false, desc: '产品描述，详细描述产品目标、功能和用户需求。如果提供了 requirements_file，此参数可选' },
-        { name: 'requirements_file', type: 'string', required: false, desc: '需求文档文件路径，如 "docs/requirements.md"。工具会读取完整文件内容作为需求' },
-        { name: 'product_name', type: 'string', required: false, desc: '产品名称' },
-        { name: 'product_type', type: 'string', required: false, desc: '产品类型，如 SaaS、E-commerce 等，用于生成设计系统' },
-        { name: 'skip_design_system', type: 'boolean', required: false, desc: '跳过设计系统生成，默认为 false' },
-        { name: 'docs_dir', type: 'string', required: false, desc: '文档输出目录，默认为 docs' }
-      ],
-      usage: '一键完成从需求到 HTML 原型的全流程，生成可直接演示的产品原型。支持从文件读取完整需求文档',
-      example: `// 使用示例 1：直接提供描述
-AI: 请使用 start_product 工具完成产品设计
-
-description: "在线教育平台，支持直播课程、录播课程、作业提交和成绩管理"
-product_name: "EduPro"
-product_type: "SaaS"
-
-// 使用示例 2：从文件读取需求（推荐用于长文档）
-AI: 请使用 start_product 工具完成产品设计
-
-requirements_file: "docs/requirements.md"
-product_name: "EduPro"
-product_type: "SaaS"
-
-// 工具会自动：
-// 1. 读取完整需求文档（如果提供了 requirements_file）
-// 2. 生成 PRD 文档
-// 3. 生成原型设计文档
-// 4. 生成设计系统
-// 5. 生成 HTML 可交互原型
-// 6. 更新项目上下文`
     }
   ],
 
@@ -900,7 +784,7 @@ product_type: "SaaS"
     generation: {
       icon: '⚡',
       title: '代码生成',
-      description: '自动生成文档、测试、Mock 数据和 UI 组件'
+      description: '自动生成文档、测试、Mock 数据和开发辅助代码'
     },
     project: {
       icon: '📦',
@@ -910,17 +794,12 @@ product_type: "SaaS"
     uiux: {
       icon: '🎨',
       title: 'UI/UX 设计',
-      description: '设计系统、组件库、原型设计和设计稿转代码'
+      description: '设计系统、组件目录、模板搜索与渲染'
     },
     productDesign: {
       icon: '🚀',
       title: '产品设计',
       description: '从需求到原型的完整产品设计工作流'
-    },
-    other: {
-      icon: '🛠️',
-      title: '其他工具',
-      description: '代码修复、格式转换等实用工具'
     }
   }
 };

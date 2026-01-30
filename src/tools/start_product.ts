@@ -1,5 +1,9 @@
 import { parseArgs, getString, getBoolean } from "../utils/parseArgs.js";
 import { promises as fs } from "fs";
+import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
+import { WorkflowReportSchema } from "../schemas/structured-output.js";
+import type { WorkflowReport, WorkflowStep, Artifact } from "../schemas/structured-output.js";
 
 /**
  * start_product - 产品设计完整工作流指导
@@ -77,7 +81,16 @@ export async function startProduct(args: any) {
       };
     }
 
-    const guidanceText = `# 🚀 产品设计工作流执行指导
+    const header = renderOrchestrationHeader({
+      tool: 'start_product',
+      goal: `完成产品设计工作流：${productName}`,
+      tasks: [
+        '按 delegated plan 顺序调用工具',
+        '生成 PRD、原型、设计系统与 HTML 原型',
+      ],
+    });
+
+    const guidanceText = header + `# 🚀 产品设计工作流执行指导
 
 基于${requirementsSource}，请按照以下步骤完成从需求到 HTML 原型的完整产品设计流程。
 
@@ -298,15 +311,189 @@ ${!skipDesignSystem ? `├── design-system.json          # 设计系统配�
 💡 **提示**: 这是一个完整的工作流指导，AI 需要按步骤调用 MCP 工具并创建所有文件。每个步骤都很重要，请确保按顺序执行。
 `;
 
-    return {
-      content: [
+    const includeDesignSystem = !skipDesignSystem;
+    const plan = {
+      mode: 'delegated',
+      steps: [
         {
-          type: "text",
-          text: guidanceText,
+          id: 'context',
+          tool: 'init_project_context',
+          when: `缺少 ${docsDir}/project-context.md`,
+          args: { docs_dir: docsDir },
+          outputs: [`${docsDir}/project-context.md`],
+        },
+        {
+          id: 'prd',
+          tool: 'gen_prd',
+          args: {
+            description,
+            product_name: productName,
+            docs_dir: docsDir,
+          },
+          outputs: [`${docsDir}/prd/product-requirements.md`],
+        },
+        {
+          id: 'prototype',
+          tool: 'gen_prototype',
+          args: {
+            prd_path: `${docsDir}/prd/product-requirements.md`,
+            docs_dir: docsDir,
+          },
+          outputs: [
+            `${docsDir}/prototype/prototype-index.md`,
+            `${docsDir}/prototype/page-*.md`,
+          ],
+        },
+        ...(includeDesignSystem
+          ? [
+              {
+                id: 'design-system',
+                tool: 'ui_design_system',
+                args: {
+                  product_type: productType,
+                  description: productName,
+                  stack: 'html',
+                },
+                outputs: [
+                  `${docsDir}/design-system.json`,
+                  `${docsDir}/design-system.md`,
+                ],
+              },
+              {
+                id: 'html-prototype',
+                tool: 'start_ui',
+                args: {
+                  description: '基于原型文档生成所有页面的 HTML 原型',
+                  framework: 'html',
+                },
+                outputs: [
+                  `${docsDir}/html-prototype/index.html`,
+                  `${docsDir}/html-prototype/page-*.html`,
+                ],
+              },
+            ]
+          : [
+              {
+                id: 'html-prototype',
+                tool: 'manual',
+                action: 'generate_html_prototype',
+                outputs: [
+                  `${docsDir}/html-prototype/index.html`,
+                  `${docsDir}/html-prototype/page-*.html`,
+                ],
+              },
+            ]),
+        {
+          id: 'update-context',
+          tool: 'manual',
+          action: 'update_project_context',
+          outputs: [`${docsDir}/project-context.md`],
         },
       ],
-      isError: false,
     };
+
+    const pendingStatus: WorkflowStep['status'] = 'pending';
+    const steps: WorkflowStep[] = [
+      {
+        name: '检查/生成项目上下文',
+        status: pendingStatus,
+        description: `检查 ${docsDir}/project-context.md，不存在则调用 init_project_context`,
+      },
+      {
+        name: '生成 PRD',
+        status: pendingStatus,
+        description: '调用 gen_prd 生成产品需求文档',
+      },
+      {
+        name: '生成原型文档',
+        status: pendingStatus,
+        description: '调用 gen_prototype 生成原型设计文档',
+      },
+      ...(includeDesignSystem
+        ? [
+            {
+              name: '生成设计系统',
+              status: pendingStatus,
+              description: '调用 ui_design_system 生成设计系统',
+            },
+            {
+              name: '生成 HTML 原型',
+              status: pendingStatus,
+              description: '调用 start_ui 生成 HTML 可交互原型',
+            },
+          ]
+        : [
+            {
+              name: '生成 HTML 原型',
+              status: pendingStatus,
+              description: '基于原型文档手动生成 HTML 文件',
+            },
+          ]),
+      {
+        name: '更新项目上下文',
+        status: pendingStatus,
+        description: `将产品设计文档链接添加到 ${docsDir}/project-context.md`,
+      },
+    ];
+
+    const artifacts: Artifact[] = [
+      {
+        path: `${docsDir}/prd/product-requirements.md`,
+        type: 'doc',
+        purpose: '产品需求文档（PRD）',
+      },
+      {
+        path: `${docsDir}/prototype/prototype-index.md`,
+        type: 'doc',
+        purpose: '原型设计索引',
+      },
+      {
+        path: `${docsDir}/prototype/page-*.md`,
+        type: 'doc',
+        purpose: '页面原型文档',
+      },
+      {
+        path: `${docsDir}/html-prototype/index.html`,
+        type: 'doc',
+        purpose: 'HTML 原型索引',
+      },
+    ];
+
+    if (includeDesignSystem) {
+      artifacts.push(
+        {
+          path: `${docsDir}/design-system.json`,
+          type: 'doc',
+          purpose: '设计系统配置',
+        },
+        {
+          path: `${docsDir}/design-system.md`,
+          type: 'doc',
+          purpose: '设计系统文档',
+        }
+      );
+    }
+
+    const report: WorkflowReport = {
+      summary: `产品设计工作流：${productName}`,
+      status: 'pending',
+      steps,
+      artifacts,
+      nextSteps: [
+        '按顺序执行执行计划中的步骤',
+        `生成并检查 ${docsDir}/prd/product-requirements.md`,
+        `生成并检查 ${docsDir}/prototype/prototype-index.md`,
+        `查看 ${docsDir}/html-prototype/index.html 进行评审`,
+      ],
+      metadata: {
+        plan,
+      },
+    };
+
+    return okStructured(guidanceText, report, {
+      schema: WorkflowReportSchema,
+      note: 'AI 应该严格按照执行计划调用工具并创建文档',
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {

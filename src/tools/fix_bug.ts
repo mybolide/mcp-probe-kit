@@ -297,6 +297,7 @@ describe('[功能描述]', () => {
 `;
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { BugAnalysis } from "../schemas/output/index.js";
 
 /**
@@ -358,11 +359,18 @@ export async function fixBug(args: any) {
         .join("\n\n");
     }
 
-    const guide = PROMPT_TEMPLATE
+    const header = renderGuidanceHeader({
+      tool: "fix_bug",
+      goal: "输出结构化的 Bug 修复方案与验证计划。",
+      tasks: ["基于错误信息分析根因并给出修复方案", "仅输出修复方案"],
+      outputs: ["结构化修复报告（JSON）"],
+    });
+
+    const guide = `${header}${PROMPT_TEMPLATE
       .replace(/{error_message}/g, errorMessage)
       .replace(/{stack_trace_section}/g, stackTraceSection)
       .replace(/{reproduce_section}/g, reproduceSection)
-      .replace(/{behavior_section}/g, behaviorSection);
+      .replace(/{behavior_section}/g, behaviorSection)}`;
 
     // 创建结构化数据
     const structuredData: BugAnalysis = {

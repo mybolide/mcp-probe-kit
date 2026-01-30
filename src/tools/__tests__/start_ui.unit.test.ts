@@ -77,6 +77,45 @@ describe('start_ui 单元测试', () => {
     });
   });
 
+  describe('模板档位', () => {
+    test('auto 模式可自动选择 strict', async () => {
+      const result = await startUi({
+        description: `# 页面目标
+需要一个带筛选和批量操作的管理后台，用于管理订单与用户数据，包含导出与权限控制。
+
+## 关键交互
+1. 支持筛选、排序、分页、导出
+2. 批量启用/禁用、批量标签、批量删除
+
+## 数据来源
+来自订单服务与用户服务接口，刷新频率 30s
+
+## 状态
+空态、加载态、错误态、无权限提示、空筛选结果`,
+        template_profile: 'auto',
+      });
+
+      expect(result.isError).toBe(false);
+      expect(result.content[0].text).toMatch(/模板档位:\s*strict/);
+    });
+
+    test('显式 guided 生效', async () => {
+      const result = await startUi({
+        description: '简单页面',
+        template_profile: 'guided',
+      });
+
+      expect(result.isError).not.toBe(true);
+      expect('structuredContent' in result).toBe(true);
+      if (!('structuredContent' in result)) {
+        throw new Error('structuredContent 缺失');
+      }
+      const structured = (result as any).structuredContent;
+      const template = structured?.metadata?.template;
+      expect(template?.profile).toBe('guided');
+    });
+  });
+
   describe('模式参数', () => {
     test('默认模式为 manual', async () => {
       const result = await startUi({ description: '测试' });
@@ -124,11 +163,14 @@ describe('start_ui 单元测试', () => {
       
       const text = result.content[0].text;
       
-      // 应该包含 4 个步骤
+      // 应该包含 7 个步骤
       expect(text).toMatch(/步骤 1/);
       expect(text).toMatch(/步骤 2/);
       expect(text).toMatch(/步骤 3/);
       expect(text).toMatch(/步骤 4/);
+      expect(text).toMatch(/步骤 5/);
+      expect(text).toMatch(/步骤 6/);
+      expect(text).toMatch(/步骤 7/);
     });
 
     test('包含高级选项部分', async () => {

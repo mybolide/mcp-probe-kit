@@ -1,4 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
+import type { GenPrototypeReport } from "../schemas/output/product-design-tools.js";
 
 /**
  * gen_prototype - 生成原型设计文档指导
@@ -32,18 +35,34 @@ export async function genPrototype(args: any) {
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
 
     if (!prdPath && !description) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: "❌ 缺少必需参数：prd_path 或 description 至少提供一个",
-          },
-        ],
-        isError: true,
+      const errorData: GenPrototypeReport = {
+        summary: "原型设计生成失败",
+        docsDir,
+        source: {},
+        indexPath: `${docsDir}/prototype/prototype-index.md`,
+        pages: [],
+        content: "",
       };
+      return okStructured(
+        "❌ 缺少必需参数：prd_path 或 description 至少提供一个",
+        errorData,
+        {
+          schema: (await import("../schemas/output/product-design-tools.js")).GenPrototypeSchema,
+        }
+      );
     }
 
-    const guidanceText = `# 🎨 生成原型设计文档指导
+    const header = renderGuidanceHeader({
+      tool: "gen_prototype",
+      goal: "生成原型设计文档（索引 + 页面原型）。",
+      tasks: [
+        prdPath ? `读取 ${prdPath} 并提取页面清单` : "根据功能描述设计页面清单",
+        `为每个页面生成原型文档并落盘到 ${docsDir}/prototype/`,
+      ],
+      outputs: ["原型索引 + 页面原型文档（严格按模板结构）"],
+    });
+
+    const guidanceText = `${header}# 🎨 生成原型设计文档指导
 
 ## 📋 输入信息
 
@@ -257,25 +276,33 @@ ${prdPath ? `
 💡 **提示**: 这是一个指导文档，AI 需要根据 PRD 或功能描述智能填充所有内容并创建实际的原型文件。
 `;
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: guidanceText,
-        },
-      ],
-      isError: false,
+    const structuredData: GenPrototypeReport = {
+      summary: "生成原型设计文档",
+      docsDir,
+      source: {
+        ...(prdPath ? { prdPath } : {}),
+        ...(description ? { description } : {}),
+      },
+      indexPath: `${docsDir}/prototype/prototype-index.md`,
+      pages: [],
+      content: "",
     };
+
+    return okStructured(guidanceText, structuredData, {
+      schema: (await import("../schemas/output/product-design-tools.js")).GenPrototypeSchema,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 生成原型设计指导失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
+    const errorData: GenPrototypeReport = {
+      summary: "原型设计生成失败",
+      docsDir: "docs",
+      source: {},
+      indexPath: "docs/prototype/prototype-index.md",
+      pages: [],
+      content: "",
     };
+    return okStructured(`❌ 生成原型设计指导失败: ${errorMessage}`, errorData, {
+      schema: (await import("../schemas/output/product-design-tools.js")).GenPrototypeSchema,
+    });
   }
 }

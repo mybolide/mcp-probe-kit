@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { ConflictResolution } from "../schemas/output/project-tools.js";
 
 // resolve_conflict 工具实现
@@ -20,7 +21,14 @@ export async function resolveConflict(args: any) {
     
     const conflicts = getString(parsedArgs.conflicts);
 
-    const message = `请分析并解决以下 Git 冲突：
+    const header = renderGuidanceHeader({
+      tool: "resolve_conflict",
+      goal: "输出可执行的冲突解决方案。",
+      tasks: ["分析冲突并给出合并方案", "仅输出解决方案与合并后代码"],
+      outputs: ["结构化冲突解决报告（JSON）"],
+    });
+
+    const message = `${header}请分析并解决以下 Git 冲突：
 
 ⚔️ **冲突内容**：
 ${conflicts || "请提供 git diff 或冲突文件内容"}

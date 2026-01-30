@@ -408,11 +408,15 @@
                 
                 <!-- Page Header -->
                 <h1 class="page-title">所有工具</h1>
-                <p class="page-description">MCP Probe Kit 提供 39 个实用工具，100% 支持结构化输出</p>
+                <p class="page-description">MCP Probe Kit 提供 39 个实用工具，核心与编排工具支持结构化输出</p>
                 <div class="page-meta">
-                    <span>📦 v2.3.0</span>
+                    <span>📦 v2.5.0</span>
                     <span>·</span>
                     <span>最后更新：2026-01-27</span>
+                    <span>·</span>
+                    <span>协议：MCP 2025-11-25</span>
+                    <span>·</span>
+                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
                     <span>·</span>
                     <a href="https://github.com/mybolide/mcp-probe-kit/edit/main/docs/pages/all-tools.html" target="_blank" rel="noopener">编辑此页 ↗</a>
                     <span>·</span>
@@ -429,6 +433,32 @@
                         autocomplete="off"
                     />
                     <div id="searchResults" class="search-results"></div>
+                </div>
+
+                <div class="callout info">
+                    <div class="callout-icon">🧭</div>
+                    <div class="callout-content">
+                        <p><strong>委托式编排：</strong>所有 <code>start_*</code> 工具会在 <code>structuredContent.metadata.plan</code> 返回执行计划。AI 需要按步骤调用工具并创建 <code>outputs</code> 指定的文件。</p>
+                        <p><strong>结构化输出关键字段：</strong><code>summary</code>、<code>status</code>、<code>steps</code>、<code>artifacts</code>、<code>metadata.plan</code>、<code>specArtifacts</code>、<code>estimate</code></p>
+                        <p><strong>需求澄清模式：</strong>使用 <code>requirements_mode=loop</code> 先澄清再执行（适用于 start_feature/start_bugfix/start_ui）。</p>
+                        <p><strong>模板档位：</strong><code>template_profile=auto</code> 自动选择 <code>guided</code>/<code>strict</code>。普通模型优先 guided，结构化输入可选 strict。</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-language">Plan 示例</span>
+                            </div>
+                            <pre><code>{
+  "mode": "delegated",
+  "steps": [
+    {
+      "id": "spec",
+      "tool": "add_feature",
+      "args": { "feature_name": "user-auth", "description": "用户认证功能" },
+      "outputs": ["docs/specs/user-auth/requirements.md"]
+    }
+  ]
+}</code></pre>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- 工具列表容器 -->
@@ -516,7 +546,6 @@
             'gensql': '生成SQL',
             'genreadme': '生成说明',
             'gen_mock': '生成数据',
-            'genui': '生成UI',
             
             // 项目管理
             'init_project': '初始化',
@@ -531,22 +560,11 @@
             'sync_ui_data': '同步数据',
             'init_component_catalog': '组件目录',
             'render_ui': '渲染UI',
-            'design2code': '设计转码',
             
             // 产品设计
             'gen_prd': '生成PRD',
             'gen_prototype': '生成原型',
             'start_product': '产品设计',
-            
-            // 其他工具
-            'fix': '修复',
-            'split': '拆分',
-            'convert': '转换',
-            'explain': '解释',
-            'css_order': 'CSS排序',
-            'detect_shell': '检测Shell',
-            'init_setting': '初始设置',
-            'gen_skill': '生成技能'
         };
         
         // 生成侧边栏工具列表

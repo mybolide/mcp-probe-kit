@@ -1,5 +1,6 @@
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderGuidanceHeader } from "../lib/guidance.js";
 import type { Estimate } from "../schemas/output/project-tools.js";
 
 /**
@@ -270,11 +271,18 @@ export async function estimate(args: any) {
       ? `**相关代码/文件**:\n\`\`\`\n${codeContext}\n\`\`\``
       : "";
 
-    const guide = PROMPT_TEMPLATE
+    const header = renderGuidanceHeader({
+      tool: "estimate",
+      goal: "输出结构化的工作量估算结果。",
+      tasks: ["基于任务描述进行估算", "仅输出估算结果"],
+      outputs: ["结构化估算报告（JSON）"],
+    });
+
+    const guide = `${header}${PROMPT_TEMPLATE
       .replace(/{task_description}/g, taskDescription)
       .replace(/{team_size}/g, String(teamSize))
       .replace(/{experience_level}/g, expLevelMap[experienceLevel] || experienceLevel)
-      .replace(/{code_context_section}/g, codeContextSection);
+      .replace(/{code_context_section}/g, codeContextSection)}`;
 
     // 创建结构化数据对象
     const structuredData: Estimate = {

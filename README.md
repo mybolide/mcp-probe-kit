@@ -7,11 +7,13 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **39 个实用工具**，覆盖代码质量、开发效率、项目管理、UI/UX 设计、产品设计全流程，所有工具都支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **39 个实用工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），核心与编排工具支持**结构化输出**。
 
-**🎉 v2.3 特性**：产品设计工作流（PRD → 原型 → HTML）、结构化输出、工作流编排、UI/UX Pro Max、需求访谈
+**🎉 v2.5 特性**：委托式编排协议、需求澄清 Loop、模板档位（auto/guided/strict）、产品设计工作流（PRD → 原型 → HTML）、结构化输出
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
+
+**协议版本**：MCP 2025-11-25 · **SDK**：@modelcontextprotocol/sdk 1.25.3
 
 ---
 
@@ -30,34 +32,116 @@
 
 ### 📦 39 个实用工具
 
-- **🔄 工作流编排** (10个) - 一键完成复杂开发流程
-- **🔍 代码分析** (7个) - 代码审查、调试、性能优化
+- **🔄 工作流编排** (11个) - 一键完成复杂开发流程
+- **🔍 代码分析** (5个) - 代码审查、安全扫描、性能优化
 - **🌿 Git 工具** (4个) - 自动生成 commit、PR、changelog
-- **✨ 生成工具** (7个) - 文档、测试、Mock 数据生成
-- **📋 项目管理** (7个) - 需求分析、工作量估算、项目分析
-- **🎨 UI/UX 工具** (6个) - 设计系统、组件生成、设计稿转代码
-- **🚀 产品设计** (3个) - PRD、原型设计、完整产品工作流
-- **🔧 其他工具** (7个) - 代码修复、格式转换、依赖检查
+- **✨ 生成工具** (6个) - 文档、测试、Mock 数据生成
+- **📋 项目管理** (6个) - 项目上下文、需求访谈、工作量估算
+- **🎨 UI/UX 工具** (5个) - 设计系统、组件目录、模板搜索与渲染
+- **🚀 产品设计** (2个) - PRD、原型设计
 
 ### 🎯 结构化输出
 
-所有工具都支持**结构化输出**，返回机器可读的 JSON 数据，提高 AI 解析准确性，支持工具串联和状态追踪。
+核心与编排工具支持**结构化输出**，返回机器可读的 JSON 数据，提高 AI 解析准确性，支持工具串联和状态追踪。
+
+### 🧭 委托式编排协议（Delegated Plan）
+
+所有 `start_*` 编排工具会在 `structuredContent.metadata.plan` 中返回**执行计划**。  
+AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直接执行。
+
+**Plan Schema（核心字段）**:
+```json
+{
+  "mode": "delegated",
+  "steps": [
+    {
+      "id": "spec",
+      "tool": "add_feature",
+      "args": { "feature_name": "user-auth", "description": "用户认证功能" },
+      "outputs": ["docs/specs/user-auth/requirements.md"]
+    }
+  ]
+}
+```
+
+**字段说明**:
+- `mode`: 固定为 `delegated`
+- `steps`: 执行步骤数组
+- `tool`: 工具名称（如 `add_feature`）
+- `action`: 无工具时的手动动作描述（如 `update_project_context`）
+- `args`: 工具参数
+- `outputs`: 预期产物
+- `when/dependsOn/note`: 可选的条件与说明
+
+### 🧩 结构化输出字段规范（关键字段）
+
+编排与原子工具都会返回 `structuredContent`，常用字段约定如下：
+- `summary`: 一句话摘要
+- `status`: 状态（pending/success/failed/partial）
+- `steps`: 执行步骤（编排工具）
+- `artifacts`: 产物列表（路径 + 用途）
+- `metadata.plan`: 委托式执行计划（仅 start_*）
+- `specArtifacts`: 规格文档产物（start_feature）
+- `estimate`: 估算结果（start_feature / estimate）
+
+### 🧠 需求澄清模式（Requirements Loop）
+
+当需求不够清晰时，可在 `start_feature / start_bugfix / start_ui` 中使用 `requirements_mode=loop`。  
+该模式会先进行 1-2 轮结构化澄清，再进入规格/修复/UI 执行流程。
+
+**示例：**
+```json
+{
+  "feature_name": "user-auth",
+  "description": "用户认证功能",
+  "requirements_mode": "loop",
+  "loop_max_rounds": 2,
+  "loop_question_budget": 5
+}
+```
+
+### 🧩 模板系统（普通模型友好）
+
+`add_feature` 支持模板档位，默认 `auto` 自动选择：需求不完整时偏向 `guided`（包含更详细的填写规则与检查清单），需求较完整时选择 `strict`（结构更紧凑，适合高能力模型或归档场景）。
+
+**示例：**
+```json
+{
+  "description": "添加用户认证功能",
+  "template_profile": "auto"
+}
+```
+
+**适用工具**：
+- `start_feature` 会透传 `template_profile` 给 `add_feature`
+- `start_bugfix` / `start_ui` 也支持 `template_profile`，用于控制指导强度（auto/guided/strict）
+
+**模板档位策略**：
+- `guided`：需求信息少/不完整、普通模型优先
+- `strict`：需求已结构化、希望指引更紧凑
+- `auto`：默认推荐，自动选择 guided/strict
 
 ### 🔄 工作流编排
 
-10 个智能编排工具，自动组合多个基础工具，一键完成复杂开发流程：
+11 个智能编排工具，自动组合多个基础工具，一键完成复杂开发流程：
 - `start_feature` - 新功能开发（需求 → 设计 → 估算）
 - `start_bugfix` - Bug 修复（分析 → 修复 → 测试）
 - `start_review` - 代码体检（质量 → 安全 → 性能）
 - `start_ui` - UI 开发（设计系统 → 组件 → 代码）
+- `start_product` - 产品设计（PRD → 原型 → 设计系统 → HTML）
 - 更多...
 
 ### 🚀 产品设计工作流
 
-3 个产品设计工具，从需求到可交互原型：
+3 个相关工具（2 个原子 + 1 个编排），从需求到可交互原型：
 - `gen_prd` - 生成产品需求文档（PRD）
 - `gen_prototype` - 生成原型设计文档
 - `start_product` - 完整产品设计流程（PRD → 原型 → 设计系统 → HTML 原型）
+
+**结构化输出补充**：
+- `gen_prd.structuredContent.filePath`：PRD 目标路径（默认 `docs/prd/product-requirements.md`）
+- `gen_prototype.structuredContent.indexPath`：原型索引路径（默认 `docs/prototype/prototype-index.md`）
+- `interview.structuredContent.mode`：`usage` / `questions` / `record`
 
 **工作流程：**
 1. **需求分析** - 生成标准 PRD 文档（产品概述、功能需求、页面清单）
@@ -68,13 +152,12 @@
 
 ### 🎨 UI/UX Pro Max
 
-6 个 UI/UX 工具，从设计系统到代码生成：
-- `ui_design_system` - 智能设计系统生成
+5 个 UI/UX 工具，`start_ui` 作为统一入口：
 - `start_ui` - 一键 UI 开发（支持智能模式）
-- `design2code` - 设计稿转代码
+- `ui_design_system` - 智能设计系统生成
 - `ui_search` - UI/UX 数据搜索（BM25 算法）
 - `sync_ui_data` - 同步最新 UI/UX 数据到本地
-- 更多...
+- `init_component_catalog` / `render_ui` - 内部渲染工具（full 模式可用）
 
 **灵感来源：**
 - [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX 设计系统理念
@@ -173,7 +256,7 @@ npm install -g mcp-probe-kit
 
 ---
 
-## � 使用示例
+## 💡 使用示例
 
 ### 日常开发
 ```bash

@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { ReleaseWorkflowReport } from "../schemas/output/workflow-tools.js";
 
 /**
@@ -37,7 +38,16 @@ export async function startRelease(args: any) {
       throw new Error("缺少必填参数: version（版本号，如 v1.2.0）");
     }
 
-    const message = `# 📦 发布准备编排
+    const header = renderOrchestrationHeader({
+      tool: 'start_release',
+      goal: `准备发布 ${version}`,
+      tasks: [
+        '按 delegated plan 顺序调用工具',
+        '生成 Changelog 与 PR 描述',
+      ],
+    });
+
+    const message = header + `# 📦 发布准备编排
 
 准备发布版本：**${version}**
 
@@ -62,6 +72,24 @@ export async function startRelease(args: any) {
 
 **重要**: 请使用结构化输出格式返回结果。`;
 
+    const plan = {
+      mode: 'delegated',
+      steps: [
+        {
+          id: 'changelog',
+          tool: 'genchangelog',
+          args: { version, from: fromTag, to: 'HEAD' },
+          outputs: ['CHANGELOG.md'],
+        },
+        {
+          id: 'pr',
+          tool: 'genpr',
+          args: { branch, commits: '[git log 输出]' },
+          outputs: [],
+        },
+      ],
+    };
+
     // 创建结构化数据对象
     const structuredData: ReleaseWorkflowReport = {
       summary: `发布 ${version} 准备`,
@@ -80,6 +108,9 @@ export async function startRelease(args: any) {
       ],
       version: version,
       changelog: {}, // AI 将填充实际的 Changelog
+      metadata: {
+        plan,
+      },
     };
 
     return okStructured(message, structuredData, {

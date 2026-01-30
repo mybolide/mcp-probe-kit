@@ -134,7 +134,8 @@ export class DesignReasoningEngine {
     
     // Step 4: 选择最佳匹配
     const bestStyle = this.selectBestMatch(styleResults, stylePriority);
-    const bestColor = colorResults[0] || {};
+    const colorDecision = this.applyColorPolicy(colorResults, request);
+    const bestColor = colorDecision.color;
     const bestTypography = typographyResults[0] || {};
     const bestLanding = landingResults[0] || {};
     
@@ -144,6 +145,11 @@ export class DesignReasoningEngine {
     const combinedEffects = styleEffects || reasoningEffects;
     
     // Step 6: 构建最终推荐
+    const avoidBluePurple = this.shouldAvoidBluePurple(request);
+    const fallbackPrimary = avoidBluePurple ? '#16A34A' : '#2563EB';
+    const fallbackSecondary = avoidBluePurple ? '#22C55E' : '#3B82F6';
+    const fallbackText = avoidBluePurple ? '#0F172A' : '#1E293B';
+
     return {
       target: request.productType,
       pattern: {
@@ -161,12 +167,12 @@ export class DesignReasoningEngine {
         accessibility: bestStyle.Accessibility || 'WCAG AA',
       },
       colors: {
-        primary: bestColor['Primary (Hex)'] || '#2563EB',
-        secondary: bestColor['Secondary (Hex)'] || '#3B82F6',
+        primary: bestColor['Primary (Hex)'] || fallbackPrimary,
+        secondary: bestColor['Secondary (Hex)'] || fallbackSecondary,
         cta: bestColor['CTA (Hex)'] || '#F97316',
         background: bestColor['Background (Hex)'] || '#F8FAFC',
-        text: bestColor['Text (Hex)'] || '#1E293B',
-        notes: bestColor.Notes || bestColor.Usage || '',
+        text: bestColor['Text (Hex)'] || fallbackText,
+        notes: [bestColor.Notes || bestColor.Usage || '', colorDecision.note].filter(Boolean).join(' | '),
       },
       typography: {
         heading: bestTypography['Heading Font'] || 'Inter',
@@ -185,6 +191,94 @@ export class DesignReasoningEngine {
       checklist: this.generateChecklist(bestStyle, request),
       reasoning: this.generateReasoningText(productRule, bestStyle, bestColor, bestTypography, reasoning),
     };
+  }
+
+  private applyColorPolicy(colorResults: any[], request: DesignRequest): { color: any; note?: string } {
+    const preferred = colorResults[0] || {};
+    if (!this.shouldAvoidBluePurple(request)) {
+      return { color: preferred };
+    }
+
+    if (preferred && this.isBluePurplePalette(preferred)) {
+      const alternative = colorResults.find((item) => !this.isBluePurplePalette(item));
+      if (alternative) {
+        return { color: alternative, note: 'Color guard applied: avoid blue/purple unless explicitly requested' };
+      }
+    }
+
+    const fallback = this.colorsData.find((item) => !this.isBluePurplePalette(item));
+    if (fallback && this.isBluePurplePalette(preferred)) {
+      return { color: fallback, note: 'Color guard applied: avoid blue/purple unless explicitly requested' };
+    }
+
+    return { color: preferred };
+  }
+
+  private shouldAvoidBluePurple(request: DesignRequest): boolean {
+    const terms = [
+      request.productType,
+      request.description || '',
+      request.targetAudience || '',
+      ...(request.keywords || []),
+    ].join(' ').toLowerCase();
+
+    return !/(blue|indigo|purple|violet|lavender|blueish|bluish|紫|蓝|靛|靛蓝|紫色|蓝色)/i.test(terms);
+  }
+
+  private isBluePurplePalette(color: any): boolean {
+    const primary = color?.['Primary (Hex)'] || '';
+    const secondary = color?.['Secondary (Hex)'] || '';
+    return this.isBluePurpleHex(primary) || this.isBluePurpleHex(secondary);
+  }
+
+  private isBluePurpleHex(hex: string): boolean {
+    const hsl = this.hexToHsl(hex);
+    if (!hsl) {
+      return false;
+    }
+    const hue = hsl.h;
+    return hue >= 200 && hue <= 290;
+  }
+
+  private hexToHsl(hex: string): { h: number; s: number; l: number } | null {
+    const normalized = (hex || '').replace('#', '').trim();
+    if (normalized.length !== 3 && normalized.length !== 6) {
+      return null;
+    }
+    const full = normalized.length === 3
+      ? normalized.split('').map((c) => c + c).join('')
+      : normalized;
+
+    const r = parseInt(full.substring(0, 2), 16) / 255;
+    const g = parseInt(full.substring(2, 4), 16) / 255;
+    const b = parseInt(full.substring(4, 6), 16) / 255;
+    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
+      return null;
+    }
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    let h = 0;
+    let s = 0;
+    const l = (max + min) / 2;
+
+    if (delta !== 0) {
+      s = delta / (1 - Math.abs(2 * l - 1));
+      switch (max) {
+        case r:
+          h = ((g - b) / delta + (g < b ? 6 : 0)) * 60;
+          break;
+        case g:
+          h = ((b - r) / delta + 2) * 60;
+          break;
+        default:
+          h = ((r - g) / delta + 4) * 60;
+          break;
+      }
+    }
+
+    return { h, s, l };
   }
   
   /**
