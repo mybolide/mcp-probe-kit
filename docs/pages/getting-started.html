@@ -473,6 +473,199 @@ npm run build</code></pre>
                     </div>
                 </div>
                 
+                <!-- Troubleshooting Section -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <h3 class="step-title">⚠️ 常见问题与故障排除</h3>
+                    </div>
+                    <div class="step-content">
+                        <h4>问题 1：npx 缓存导致的模块解析错误</h4>
+                        <div class="callout error">
+                            <div class="callout-icon">❌</div>
+                            <div class="callout-content">
+                                <p><strong>错误信息：</strong></p>
+                                <div class="code-block">
+                                    <pre><code>Error: Cannot find package 'yallist' imported from tar/dist/esm/pack.js
+code: 'ERR_MODULE_NOT_FOUND'</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>原因：</strong>npx 缓存损坏或依赖树不完整</p>
+                        
+                        <p><strong>解决方案：</strong></p>
+                        
+                        <div class="tabs" id="fix-tabs">
+                            <div class="tabs-header">
+                                <button class="tab-button active" data-tab="fix-windows">Windows</button>
+                                <button class="tab-button" data-tab="fix-macos">macOS/Linux</button>
+                                <button class="tab-button" data-tab="fix-local">本地开发</button>
+                            </div>
+                            
+                            <div class="tab-content active" id="fix-windows">
+                                <p>清理 npx 缓存：</p>
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-language">CMD</span>
+                                        <button class="copy-button" onclick="copyCode(this, 'fix-windows-cmd')">
+                                            <span>📋</span>
+                                            <span>复制</span>
+                                        </button>
+                                    </div>
+                                    <pre><code id="fix-windows-cmd">rmdir /s /q %LOCALAPPDATA%\npm-cache\_npx</code></pre>
+                                </div>
+                                <p>然后重启 MCP 客户端，让 npx 重新下载干净的依赖。</p>
+                            </div>
+                            
+                            <div class="tab-content" id="fix-macos">
+                                <p>清理 npx 缓存：</p>
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-language">Bash</span>
+                                        <button class="copy-button" onclick="copyCode(this, 'fix-macos-cmd')">
+                                            <span>📋</span>
+                                            <span>复制</span>
+                                        </button>
+                                    </div>
+                                    <pre><code id="fix-macos-cmd">rm -rf ~/.npm/_npx</code></pre>
+                                </div>
+                                <p>然后重启 MCP 客户端，让 npx 重新下载干净的依赖。</p>
+                            </div>
+                            
+                            <div class="tab-content" id="fix-local">
+                                <p>如果你是在本地开发这个项目，改用本地构建版本：</p>
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-language">JSON</span>
+                                        <button class="copy-button" onclick="copyCode(this, 'fix-local-config')">
+                                            <span>📋</span>
+                                            <span>复制</span>
+                                        </button>
+                                    </div>
+                                    <pre><code id="fix-local-config">{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "node",
+      "args": ["build/index.js"]
+    }
+  }
+}</code></pre>
+                                </div>
+                                <p>然后构建项目：</p>
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-language">Bash</span>
+                                        <button class="copy-button" onclick="copyCode(this, 'fix-local-build')">
+                                            <span>📋</span>
+                                            <span>复制</span>
+                                        </button>
+                                    </div>
+                                    <pre><code id="fix-local-build">npm run build</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h4>问题 2：MCP 服务器连接失败</h4>
+                        <div class="callout error">
+                            <div class="callout-icon">❌</div>
+                            <div class="callout-content">
+                                <p><strong>错误信息：</strong></p>
+                                <div class="code-block">
+                                    <pre><code>Error connecting to MCP server: Connection closed</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>可能原因：</strong></p>
+                        <ul>
+                            <li>Node.js 版本过低（需要 >= 16.0.0）</li>
+                            <li>依赖未安装或损坏</li>
+                            <li>配置文件格式错误</li>
+                        </ul>
+                        
+                        <p><strong>解决方案：</strong></p>
+                        <ol>
+                            <li>检查 Node.js 版本：
+                                <div class="code-block">
+                                    <pre><code>node --version</code></pre>
+                                </div>
+                            </li>
+                            <li>如果低于 v16，请升级 Node.js</li>
+                            <li>清理缓存并重新安装：
+                                <div class="code-block">
+                                    <pre><code>npm cache clean --force</code></pre>
+                                </div>
+                            </li>
+                            <li>检查配置文件 JSON 格式是否正确（注意逗号、引号）</li>
+                        </ol>
+                        
+                        <h4>问题 3：工具调用超时</h4>
+                        <div class="callout error">
+                            <div class="callout-icon">❌</div>
+                            <div class="callout-content">
+                                <p><strong>错误信息：</strong></p>
+                                <div class="code-block">
+                                    <pre><code>Tool execution timeout</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>解决方案：</strong>在配置中增加超时时间：</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-language">JSON</span>
+                                <button class="copy-button" onclick="copyCode(this, 'fix-timeout')">
+                                    <span>📋</span>
+                                    <span>复制</span>
+                                </button>
+                            </div>
+                            <pre><code id="fix-timeout">{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MCP_TIMEOUT": "60000"
+      }
+    }
+  }
+}</code></pre>
+                        </div>
+                        
+                        <h4>问题 4：权限错误</h4>
+                        <div class="callout error">
+                            <div class="callout-icon">❌</div>
+                            <div class="callout-content">
+                                <p><strong>错误信息：</strong></p>
+                                <div class="code-block">
+                                    <pre><code>EACCES: permission denied</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>解决方案：</strong></p>
+                        <ul>
+                            <li><strong>Windows：</strong>以管理员身份运行终端</li>
+                            <li><strong>macOS/Linux：</strong>修复 npm 目录权限：
+                                <div class="code-block">
+                                    <pre><code>sudo chown -R $(whoami) ~/.npm
+sudo chown -R $(whoami) ~/.mcp-probe-kit</code></pre>
+                                </div>
+                            </li>
+                        </ul>
+                        
+                        <div class="callout info">
+                            <div class="callout-icon">📚</div>
+                            <div class="callout-content">
+                                <p><strong>更多帮助：</strong></p>
+                                <ul>
+                                    <li>提交 <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener">GitHub Issue</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Next Steps CTA -->
                 <div class="next-cta">
                     <h3>🎉 安装完成！下一步</h3>
