@@ -42,3 +42,6 @@ vitest.config.ts
 test-output.txt
 
 tests/
+
+# AI Agent
+.sisyphus/
