@@ -1,6 +1,7 @@
 import { parseArgs, getString, validateRequired } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { loadTemplate, normalizeTemplateProfile } from "../lib/template-loader.js";
+import { handleToolError } from "../utils/error-handler.js";
 import type { FeatureSpec } from "../schemas/output/project-tools.js";
 
 /**
@@ -379,17 +380,6 @@ ${fenceClose}
       },
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    
-    const errorData: FeatureSpec = {
-      summary: "添加功能失败",
-      featureName: "",
-      requirements: [],
-      tasks: []
-    };
-    
-    return okStructured(`❌ 添加功能失败: ${errorMessage}`, errorData, {
-      schema: (await import("../schemas/output/project-tools.js")).FeatureSpecSchema,
-    });
+    return handleToolError(error, 'add_feature');
   }
 }

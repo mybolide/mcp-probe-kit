@@ -1,6 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
+import { handleToolError } from "../utils/error-handler.js";
 import type { CommitMessage } from "../schemas/structured-output.js";
 
 // gencommit 工具实现
@@ -166,17 +167,7 @@ chore: 🤖 升级依赖版本至 1.2.9
       schema: (await import("../schemas/structured-output.js")).CommitMessageSchema,
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 生成 commit 消息失败: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
+    return handleToolError(error, 'gencommit');
   }
 }
 

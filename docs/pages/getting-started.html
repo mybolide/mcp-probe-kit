@@ -17,7 +17,7 @@
     <meta property="og:type" content="article">
     <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/getting-started.html">
     <meta property="og:title" content="快速开始 - 安装配置指南 | MCP Probe Kit">
-    <meta property="og:description" content="5分钟快速安装 MCP Probe Kit，支持 Cursor、Cline、Claude Desktop。详细配置教程，立即开始使用 39 个 AI 研发工具。">
+    <meta property="og:description" content="5分钟快速安装 MCP Probe Kit，支持 Cursor、Cline、Claude Desktop。详细配置教程，立即开始使用 20 个 AI 研发工具。">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
@@ -53,6 +53,9 @@
     
     <!-- Layout Container -->
     <div class="layout">
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+        
         <!-- C. Sidebar -->
         <aside class="sidebar" id="sidebar">
             <nav class="sidebar-nav">
@@ -178,11 +181,11 @@
                 
                 <!-- Page Header -->
                 <h1 class="page-title">安装配置</h1>
-                <p class="page-description">5 分钟快速上手 MCP Probe Kit v2.0，支持 Cursor、Cline 和 Claude Desktop</p>
+                <p class="page-description">5 分钟快速上手 MCP Probe Kit v3.0，支持 Cursor、Cline 和 Claude Desktop</p>
                 <div class="page-meta">
-                    <span>📦 v2.5.0</span>
+                    <span>📦 v3.0.0</span>
                     <span>·</span>
-                    <span>最后更新：2026-01-27</span>
+                    <span>最后更新：2026-02-02</span>
                     <span>·</span>
                     <span>协议：MCP 2025-11-25</span>
                     <span>·</span>
@@ -715,31 +718,49 @@ sudo chown -R $(whoami) ~/.mcp-probe-kit</code></pre>
             }
         });
         
-        // Sidebar toggle (mobile)
+// Sidebar toggle (mobile)
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            
+            sidebar.classList.toggle('open');
+            
+            if (sidebar.classList.contains('open')) {
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            } else {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
         }
         
-        // Close sidebar when clicking outside (mobile)
-        if (window.innerWidth <= 768) {
-            document.querySelector('.main-content').addEventListener('click', function() {
-                document.getElementById('sidebar').classList.remove('open');
-            });
-        }
-        
-        // Tabs functionality
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', function() {
-                const tabsContainer = this.closest('.tabs');
-                const targetTab = this.getAttribute('data-tab');
-                
-                // Remove active class from all buttons and contents in this tabs container
-                tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-                tabsContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-                
-                // Add active class to clicked button and corresponding content
-                this.classList.add('active');
-                document.getElementById(targetTab).classList.add('active');
+        // Close sidebar when clicking on main content (mobile)
+        document.addEventListener('DOMContentLoaded', function() {
+            const mainContent = document.querySelector('.main-content');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (mainContent && sidebar) {
+                mainContent.addEventListener('click', function(e) {
+                    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            }
+            
+            // Tabs functionality
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabsContainer = this.closest('.tabs');
+                    const targetTab = this.getAttribute('data-tab');
+                    
+                    // Remove active class from all buttons and contents in this tabs container
+                    tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    tabsContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    
+                    // Add active class to clicked button and corresponding content
+                    this.classList.add('active');
+                    document.getElementById(targetTab).classList.add('active');
+                });
             });
         });
         

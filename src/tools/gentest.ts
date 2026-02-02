@@ -1,6 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
+import { handleToolError } from "../utils/error-handler.js";
 import type { TestSuite } from "../schemas/output/core-tools.js";
 
 // gentest 工具实现
@@ -213,20 +214,7 @@ const createUser = (overrides = {}) => ({
       schema: (await import('../schemas/output/core-tools.js')).TestSuiteSchema,
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
-    const errorData: TestSuite = {
-      summary: `生成测试用例失败: ${errorMessage}`,
-      framework: 'jest',
-      testCases: [],
-    };
-    return okStructured(
-      `❌ 生成测试用例失败: ${errorMessage}`,
-      errorData,
-      {
-        schema: (await import('../schemas/output/core-tools.js')).TestSuiteSchema,
-      }
-    );
+    return handleToolError(error, 'gentest');
   }
 }
 

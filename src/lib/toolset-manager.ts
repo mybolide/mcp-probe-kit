@@ -8,73 +8,67 @@ import { allToolSchemas } from '../schemas/index.js';
 export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
 
 /**
- * 工具集定义
+ * 工具集定义 (v3.0 精简版 - 20 个工具)
  * 
- * - core: 核心工具（高频使用）
+ * - core: 核心工具（日常高频）
  * - ui: UI/UX 工具（推荐使用 start_ui 统一入口）
  * - workflow: 工作流工具（包含 core + 编排工具）
  * - full: 所有工具（默认）
  */
 export const TOOLSET_DEFINITIONS = {
-  // 核心工具集 - 最常用的基础工具
+  // 核心工具集 - 日常高频工具（9 个）
   core: [
     'gencommit',
     'code_review',
     'gentest',
-    'gendoc',
     'refactor',
-    'perf',
-    'security_scan',
     'fix_bug',
-    'genapi',
-    'gensql',
-    'genreadme',
-    'gen_mock',
+    'add_feature',
+    'init_project',
+    'init_project_context',
+    'estimate',
   ],
 
-  // UI/UX 工具集 - 对外工具，推荐使用 start_ui 统一入口
+  // UI/UX 工具集 - 包含统一入口（4 个）
   ui: [
     'start_ui',         // ⭐ 统一入口（编排工具）
-    'ui_search',        // 搜索 UI/UX 数据库
     'ui_design_system', // 生成设计系统
+    'ui_search',        // 搜索 UI/UX 数据库
     'sync_ui_data',     // 同步 UI 数据
-    // 注意：不包含内部工具 init_component_catalog 和 render_ui
   ],
 
-  // 工作流工具集 - 包含核心工具 + 编排工具
+  // 工作流工具集 - 包含核心 + 编排 + 交互（20 个）
   workflow: [
-    // 核心工具（复用）
+    // 核心工具（9 个）
     'gencommit',
     'code_review',
     'gentest',
-    'gendoc',
     'refactor',
-    'perf',
-    'security_scan',
     'fix_bug',
-    'genapi',
-    'gensql',
-    'genreadme',
-    'gen_mock',
+    'add_feature',
+    'init_project',
+    'init_project_context',
+    'estimate',
     
-    // 编排工具（10 个）
+    // 编排工具（6 个）
     'start_feature',
     'start_bugfix',
-    'start_review',
-    'start_release',
-    'start_refactor',
     'start_onboard',
-    'start_api',
-    'start_doc',
-    'start_ralph',
     'start_ui',
+    'start_product',
+    'start_ralph',
     
     // 交互工具（2 个）
     'interview',
     'ask_user',
+    
+    // UI/UX 工具（3 个）
+    'ui_design_system',
+    'ui_search',
+    'sync_ui_data',
   ],
 
-  // 完整工具集 - 包含所有工具（包括内部工具）
+  // 完整工具集 - 所有 20 个工具
   full: 'all' as const,
 };
 

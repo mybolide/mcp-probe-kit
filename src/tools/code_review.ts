@@ -1,6 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
+import { handleToolError } from "../utils/error-handler.js";
 import type { CodeReviewReport } from "../schemas/output/index.js";
 
 // code_review 工具实现
@@ -194,20 +195,7 @@ ${code || "请提供需要审查的代码"}
       }
     );
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
-    
-    return okStructured(
-      `❌ 代码审查失败: ${errorMessage}`,
-      {
-        summary: `代码审查失败: ${errorMessage}`,
-        overallScore: 0,
-        issues: [],
-      },
-      {
-        schema: (await import('../schemas/output/core-tools.js')).CodeReviewReportSchema,
-      }
-    );
+    return handleToolError(error, 'code_review');
   }
 }
 

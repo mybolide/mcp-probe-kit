@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Menu Test - Getting Started</title>
+    <link rel="stylesheet" href="../styles/page.css">
+    <style>
+        .test-overlay {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 9999;
+            font-family: monospace;
+        }
+        .test-item {
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-overlay">
+        <div class="test-item">Width: <span id="width">0</span>px</div>
+        <div class="test-item">Btn display: <span id="btnDisplay">none</span></div>
+        <div class="test-item">Sidebar transform: <span id="sidebarTransform">none</span></div>
+        <div class="test-item">≤768px: <span id="isMobile">No</span></div>
+    </div>
+
+    <nav class="topbar" id="topbar">
+        <div class="topbar-container">
+            <a href="#" class="topbar-brand">
+                <span>🚀</span>
+                <span>MCP Probe Kit</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="layout">
+        <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Test</div>
+                    <a href="#" class="nav-item active">
+                        <div class="nav-item-content">
+                            <span class="icon">📖</span>
+                            <span>Test Page</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </aside>
+        <main class="main-content">
+            <div class="content-wrapper">
+                <h1 class="page-title">Mobile Menu Test</h1>
+                <p>Click the ☰ button to open the sidebar</p>
+            </div>
+        </main>
+    </div>
+
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+
+    <script>
+        function updateInfo() {
+            const width = window.innerWidth;
+            const btn = document.querySelector('.mobile-menu-btn');
+            const sidebar = document.getElementById('sidebar');
+            
+            document.getElementById('width').textContent = width;
+            document.getElementById('btnDisplay').textContent = window.getComputedStyle(btn).display;
+            document.getElementById('sidebarTransform').textContent = window.getComputedStyle(sidebar).transform;
+            document.getElementById('isMobile').textContent = width <= 768 ? 'Yes' : 'No';
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            
+            sidebar.classList.toggle('open');
+            
+            if (sidebar.classList.contains('open')) {
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            } else {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+            
+            updateInfo();
+        }
+
+        document.addEventListener('DOMContentLoaded', updateInfo);
+        window.addEventListener('resize', updateInfo);
+    </script>
+</body>
+</html>

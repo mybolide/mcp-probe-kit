@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Probe Kit - AI 驱动的完整研发工具集 | 39个工具覆盖开发全流程</title>
+    <title>MCP Probe Kit - AI 驱动的完整研发工具集 | 20个工具覆盖开发全流程</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="MCP Probe Kit 提供 42 个 AI 驱动的研发工具，覆盖需求分析、代码开发、质量保障、Bug修复、版本发布全流程。支持 Cursor、Cline、Claude Desktop，100% 结构化输出。">
+    <meta name="description" content="MCP Probe Kit 提供 20 个 AI 驱动的研发工具，覆盖需求分析、代码开发、质量保障、Bug修复、版本发布全流程。支持 Cursor、Cline、Claude Desktop，100% 结构化输出。">
     <meta name="keywords" content="MCP Probe Kit, AI开发工具, 代码生成, 代码审查, Git工具, UI开发, 研发效率, Cursor, Cline, Claude, MCP Server">
     <meta name="author" content="小墨 (Kyle) - ByteZoneX">
     <meta name="robots" content="index, follow">
@@ -17,13 +17,13 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/">
     <meta property="og:title" content="MCP Probe Kit - AI 驱动的完整研发工具集">
-    <meta property="og:description" content="42 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。支持 Cursor、Cline、Claude Desktop。">
+    <meta property="og:description" content="20 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。支持 Cursor、Cline、Claude Desktop。">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/">
     <meta property="twitter:title" content="MCP Probe Kit - AI 驱动的完整研发工具集">
-    <meta property="twitter:description" content="42 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。">
+    <meta property="twitter:description" content="20 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。">
     <style>
         * {
             margin: 0;
@@ -356,15 +356,22 @@
         
         @media (max-width: 639px) {
             .navbar-links {
-                gap: 16px;
+                gap: 12px;
+                padding: 4px 0;
             }
-            
+             
             .navbar-link {
                 font-size: 13px;
+                padding: 6px 8px;
             }
-            
+             
             .navbar-link span {
                 display: none;
+            }
+            
+            .navbar-link.external::after {
+                display: inline;
+                margin-left: 2px;
             }
             
             .hero {
@@ -448,7 +455,7 @@
         <div class="hero-container">
             <h1 class="hero-title">🚀 MCP Probe Kit</h1>
             <p class="hero-subtitle">AI 开发增强工具集 · 文档中心</p>
-            <div class="hero-version">v2.5.0</div>
+            <div class="hero-version">v3.0.0</div>
             <div class="hero-cta">
                 <a href="./pages/getting-started.html" class="btn btn-primary">快速开始</a>
                 <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="btn btn-secondary">
@@ -486,12 +493,12 @@
                         <span>工具文档</span>
                     </h2>
                 </div>
-                <p class="card-desc">42 个实用工具的完整参考</p>
+                <p class="card-desc">20 个实用工具的完整参考</p>
                 <nav class="card-links">
                     <a href="./pages/all-tools.html" class="card-link">
                         <div class="link-content">
                             <span>所有工具</span>
-                            <span class="badge">42</span>
+                            <span class="badge">20</span>
                         </div>
                         <span class="link-arrow">→</span>
                     </a>
@@ -509,7 +516,7 @@
                 <p class="card-desc">迁移指南和最佳实践</p>
                 <nav class="card-links">
                     <a href="./pages/migration.html" class="card-link">
-                        <span>v1.x → v2.0 迁移指南</span>
+                        <span>v2.x → v3.0 迁移指南</span>
                         <span class="link-arrow">→</span>
                     </a>
                     <a href="./pages/examples.html" class="card-link">

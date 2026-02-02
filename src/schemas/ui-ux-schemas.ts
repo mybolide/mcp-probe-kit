@@ -33,16 +33,6 @@ export const uiDesignSystemSchema = {
   },
 };
 
-export const initComponentCatalogSchema = {
-  name: "init_component_catalog",
-  description: "初始化组件目录 - 基于设计系统规范（design-system.json）生成组件目录文件。定义可用的 UI 组件及其属性，组件定义包含占位符，渲染时自动替换为设计规范中的实际值，确保样式统一。",
-  inputSchema: {
-    type: "object",
-    properties: {},
-    required: [],
-  },
-};
-
 export const uiSearchSchema = {
   name: "ui_search",
   description: "搜索 UI/UX 数据库，包括颜色、图标、图表、组件、设计模式等。支持三种模式：search（搜索数据）、catalog（查看组件目录）、template（搜索 UI 模板）。使用 BM25 算法进行智能搜索，支持按类别和技术栈过滤。数据来源：uipro-cli npm 包（v2.2.0+）。",
@@ -100,26 +90,6 @@ export const syncUiDataSchema = {
   },
 };
 
-export const renderUiSchema = {
-  name: "render_ui",
-  description: "UI 渲染引擎 - 将 JSON 模板渲染为最终代码。自动读取设计规范（design-system.json）和组件目录（component-catalog.json），替换占位符，生成完整的 React/Vue/HTML 代码。确保所有组件样式统一。",
-  inputSchema: {
-    type: "object",
-    properties: {
-      template: {
-        type: "string",
-        description: "模板文件路径（JSON 格式，如 docs/ui/login-form.json）",
-      },
-      framework: {
-        type: "string",
-        description: "目标框架：react、vue、html（默认 react）",
-        default: "react",
-      },
-    },
-    required: ["template"],
-  },
-};
-
 export const startUiSchema = {
   name: "start_ui",
   description: "统一 UI 开发编排工具 - 一键完成整个 UI 开发流程。自动检查设计系统、生成组件目录、搜索/生成模板、渲染最终代码。适合快速原型开发，保证整个项目样式统一。",
@@ -172,9 +142,7 @@ export const startUiSchema = {
 
 export const uiUxSchemas = [
   uiDesignSystemSchema,
-  initComponentCatalogSchema,
   uiSearchSchema,
   syncUiDataSchema,
-  renderUiSchema,
   startUiSchema,
 ];

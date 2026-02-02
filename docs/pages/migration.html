@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>迁移指南 - 从旧版本升级到最新版 | MCP Probe Kit</title>
+    <title>迁移指南 - 从 v2.x 升级到 v3.0 | MCP Probe Kit</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="MCP Probe Kit 迁移指南：从 v1.x 升级到 v2.x 的完整步骤。了解重大变更、新增功能、配置调整和最佳实践，确保平滑升级。">
-    <meta name="keywords" content="MCP Probe Kit 升级, 版本迁移, v2.x 新特性, 配置迁移, 工具升级指南, 破坏性变更">
+    <meta name="description" content="MCP Probe Kit 迁移指南：从 v2.x 升级到 v3.0 的完整步骤。了解重大变更、新增功能、配置调整和最佳实践，确保平滑升级。">
+    <meta name="keywords" content="MCP Probe Kit 升级, 版本迁移, v3.0 新特性, 配置迁移, 工具升级指南, 破坏性变更">
     <meta name="author" content="小墨 (Kyle) - ByteZoneX">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
@@ -16,13 +16,13 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="article">
     <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
-    <meta property="og:title" content="迁移指南 - 从旧版本升级到最新版 | MCP Probe Kit">
+    <meta property="og:title" content="迁移指南 - 从 v2.x 升级到 v3.0 | MCP Probe Kit">
     <meta property="og:description" content="详细的 MCP Probe Kit 版本升级指南，了解新特性、配置变更和迁移步骤，确保平滑过渡。">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
-    <meta property="twitter:title" content="迁移指南 - 从旧版本升级到最新版 | MCP Probe Kit">
+    <meta property="twitter:title" content="迁移指南 - 从 v2.x 升级到 v3.0 | MCP Probe Kit">
     <meta property="twitter:description" content="详细的版本升级指南，了解新特性和迁移步骤。">
     
     <link rel="stylesheet" href="../styles/page.css">
@@ -174,12 +174,12 @@
                 </nav>
                 
                 <!-- Page Header -->
-                <h1 class="page-title">v2.0 迁移指南</h1>
-                <p class="page-description">从 v1.x 平滑迁移到 v2.0，了解重大变更和新特性</p>
+                <h1 class="page-title">v3.0 迁移指南</h1>
+                <p class="page-description">从 v2.x 平滑迁移到 v3.0，了解重大变更和新特性</p>
                 <div class="page-meta">
-                    <span>📦 v2.5.0</span>
+                    <span>📦 v3.0.0</span>
                     <span>·</span>
-                    <span>最后更新：2026-01-27</span>
+                    <span>最后更新：2026-02-02</span>
                     <span>·</span>
                     <span>协议：MCP 2025-11-25</span>
                     <span>·</span>
@@ -188,19 +188,19 @@
                 
                 <!-- Content -->
                 <h2>概述</h2>
-                <p>MCP Probe Kit v2.0 是一个重大版本更新，精简优化到 39 个核心工具，带来了更强大的功能和更好的开发体验。</p>
+                <p>MCP Probe Kit v3.0 是一个重大版本更新，精简优化到 20 个核心工具，带来了更强大的功能和更好的开发体验。</p>
                 
                 <div class="callout info">
                     <div class="callout-icon">💡</div>
                     <div class="callout-content">
-                        <p><strong>迁移时间：</strong>大多数项目可以在 10-15 分钟内完成迁移，v1.x 的所有工具在 v2.0 中都保持兼容。</p>
+                        <p><strong>迁移时间：</strong>大多数项目可以在 10-15 分钟内完成迁移，v2.x 的核心工具在 v3.0 中都保持兼容。</p>
                     </div>
                 </div>
                 
                 <h2>主要变更</h2>
                 
                 <h3>1. 工具精简优化</h3>
-                <p>v1.x: 13 个工具 → v2.0: 39 个核心工具（移除低频工具，保留高价值工具）</p>
+                <p>v2.x: 39 个工具 → v3.0: 20 个核心工具（移除低频工具，保留高价值工具）</p>
                 
                 <h3>2. 新增工作流编排</h3>
                 <p>11 个 <code>start_*</code> 工作流编排工具，提供端到端的自动化开发流程：</p>
@@ -240,12 +240,12 @@ npm update -g mcp-probe-kit</code></pre>
                 </div>
                 
                 <h3>步骤 2：检查配置文件</h3>
-                <p>v2.0 的配置文件格式与 v1.x 完全兼容，无需修改。</p>
+                <p>v3.0 的配置文件格式与 v2.x 完全兼容，无需修改。</p>
                 
                 <div class="callout success">
                     <div class="callout-icon">✅</div>
                     <div class="callout-content">
-                        <p><strong>向后兼容：</strong>v1.x 的所有工具在 v2.0 中都保持兼容，可以无缝升级。</p>
+                        <p><strong>向后兼容：</strong>v2.x 的核心工具在 v3.0 中都保持兼容，可以无缝升级。</p>
                     </div>
                 </div>
                 
@@ -260,7 +260,7 @@ npm update -g mcp-probe-kit</code></pre>
                 <!-- Next Steps -->
                 <div class="next-cta">
                     <h3>🎉 迁移完成！</h3>
-                    <p>开始探索 v2.0 的强大功能</p>
+                    <p>开始探索 v3.0 的强大功能</p>
                     <div class="next-cta-links">
                         <a href="./all-tools.html" class="next-cta-link">
                             <span>🛠️</span>
@@ -291,6 +291,7 @@ npm update -g mcp-probe-kit</code></pre>
     <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
     
     <script>
+        // Topbar scroll effect
         const topbar = document.getElementById('topbar');
         window.addEventListener('scroll', () => {
             if (window.pageYOffset > 10) {
@@ -300,15 +301,25 @@ npm update -g mcp-probe-kit</code></pre>
             }
         });
         
+        // Sidebar toggle (mobile)
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
         }
         
-        if (window.innerWidth <= 768) {
-            document.querySelector('.main-content').addEventListener('click', function() {
-                document.getElementById('sidebar').classList.remove('open');
-            });
-        }
+        // Close sidebar when clicking on main content (mobile)
+        document.addEventListener('DOMContentLoaded', function() {
+            const mainContent = document.querySelector('.main-content');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (mainContent && sidebar) {
+                mainContent.addEventListener('click', function(e) {
+                    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
