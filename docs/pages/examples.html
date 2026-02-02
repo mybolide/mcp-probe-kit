@@ -5,208 +5,165 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>最佳实践 - 完整研发流程实战指南 | MCP Probe Kit</title>
     
-    <!-- SEO Meta Tags -->
     <meta name="description" content="MCP Probe Kit 最佳实践：从需求分析到版本发布的完整研发流程。涵盖需求规划、功能开发、代码质量、Bug修复、版本发布、项目维护 6 大阶段，以及 Ralph Wiggum Loop 自动化开发实践。">
     <meta name="keywords" content="研发最佳实践, 开发流程, 需求分析, 代码质量, Bug修复, 版本发布, 自动化开发, Ralph Wiggum Loop, CI/CD">
     <meta name="author" content="小墨 (Kyle) - ByteZoneX">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/examples.html">
-    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
     
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="article">
-    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/examples.html">
-    <meta property="og:title" content="最佳实践 - 完整研发流程实战指南 | MCP Probe Kit">
-    <meta property="og:description" content="学习如何使用 MCP Probe Kit 优化完整研发流程，从需求到上线的最佳实践，包含 Ralph Wiggum Loop 自动化开发。">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/pages/examples.html">
-    <meta property="twitter:title" content="最佳实践 - 完整研发流程实战指南 | MCP Probe Kit">
-    <meta property="twitter:description" content="从需求到上线的完整研发流程最佳实践。">
-    
-    <link rel="stylesheet" href="../styles/page.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { DEFAULT: '#2563EB', hover: '#1D4ED8' },
+                        text: { primary: '#0F172A', secondary: '#475569', tertiary: '#64748B' },
+                        bg: { page: '#F8FAFC', card: '#FFFFFF', hover: '#F1F5F9' },
+                        border: '#E2E8F0',
+                    },
+                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        .code-block { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .sidebar-drawer { transition: transform 0.3s ease; }
+        @media (max-width: 767px) {
+            .sidebar-drawer { transform: translateX(-100%); }
+            .sidebar-drawer.open { transform: translateX(0); }
+        }
+        .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .backdrop.active { opacity: 1; pointer-events: auto; }
+    </style>
 </head>
-<body>
-    <!-- Topbar -->
-    <nav class="topbar" id="topbar">
-        <div class="topbar-container">
-            <a href="../index.html" class="topbar-brand">
+<body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
+    <!-- A. 顶部导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50">
+        <div class="h-full px-4 flex items-center justify-between">
+            <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
                 <span>🚀</span>
-                <span>MCP Probe Kit</span>
+                <span class="sm:inline hidden">MCP Probe Kit</span>
             </a>
-            
-            <div class="topbar-actions">
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>ByteZoneX</span>
-                </a>
-                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>GitHub</span>
-                </a>
-                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>npm</span>
-                </a>
-            </div>
+            <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
         </div>
     </nav>
-    
-    <!-- Layout Container -->
-    <div class="layout">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">快速开始</div>
-                    <a href="../index.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🏠</span>
-                            <span>文档首页</span>
-                        </div>
-                    </a>
-                    <a href="./getting-started.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">📖</span>
-                            <span>安装配置</span>
-                        </div>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">工具文档</div>
-                    <a href="./all-tools.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🛠️</span>
-                            <span>所有工具</span>
-                        </div>
-                        <span class="badge">39</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">指南</div>
-                    <a href="./migration.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🚀</span>
-                            <span>迁移指南</span>
-                        </div>
-                    </a>
-                    <a href="./examples.html" class="nav-item active">
-                        <div class="nav-item-content">
-                            <span class="icon">💡</span>
-                            <span>最佳实践</span>
-                        </div>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">资源</div>
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🌐</span>
-                            <span>ByteZoneX 主站</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">💻</span>
-                            <span>GitHub 仓库</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">📦</span>
-                            <span>npm 包</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🐛</span>
-                            <span>问题反馈</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                </div>
-            </nav>
+
+    <!-- 侧边栏遮罩 -->
+    <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+
+    <!-- B. 侧边栏 -->
+    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar">
+        <div class="p-4">
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">快速开始</div>
+                <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🏠</span>
+                    <span>文档首页</span>
+                </a>
+                <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📖</span>
+                    <span>安装配置</span>
+                </a>
+            </div>
             
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <div class="sidebar-footer-title">快速链接</div>
-                <div class="sidebar-footer-links">
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>🌐</span>
-                        <span>ByteZoneX</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>💻</span>
-                        <span>GitHub</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>📦</span>
-                        <span>npm</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                </div>
-                
-                <!-- QR Code -->
-                <div class="sidebar-qrcode">
-                    <div class="sidebar-qrcode-title">关注公众号</div>
-                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" />
-                    <div class="sidebar-qrcode-desc">获取更多技术分享</div>
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">工具文档</div>
+                <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🛠️</span>
+                    <span>所有工具</span>
+                    <span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">20</span>
+                </a>
+            </div>
+            
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">指南</div>
+                <a href="./migration.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🚀</span>
+                    <span>迁移指南</span>
+                </a>
+                <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary">
+                    <span>💡</span>
+                    <span>最佳实践</span>
+                </a>
+            </div>
+            
+            <div class="pt-4 border-t border-border">
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💻</span>
+                    <span>GitHub</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+                <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📦</span>
+                    <span>npm</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+            </div>
+
+            <!-- QR Code -->
+            <div class="mt-4 pt-4 border-t border-border">
+                <div class="text-center">
+                    <div class="text-xs font-semibold text-text-tertiary mb-2">关注公众号</div>
+                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
+                    <div class="text-xs text-text-tertiary mt-2">获取更多技术分享</div>
                 </div>
             </div>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-wrapper">
-                <!-- Breadcrumb -->
-                <nav class="breadcrumb">
-                    <a href="../index.html">文档首页</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <a href="#">指南</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span>最佳实践</span>
-                </nav>
-                
-                <!-- Page Header -->
-                <h1 class="page-title">最佳实践</h1>
-                <p class="page-description">MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南</p>
-                <div class="page-meta">
-                    <span>📦 v3.0.0</span>
-                    <span>·</span>
-                    <span>最后更新：2026-02-02</span>
-                    <span>·</span>
-                    <span>协议：MCP 2025-11-25</span>
-                    <span>·</span>
-                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
+        </div>
+    </aside>
+
+    <!-- C. 主内容区 -->
+    <main class="flex-1 mt-14 min-h-screen md:ml-64">
+        <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+            <!-- 面包屑 -->
+            <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
+                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0">文档首页</a>
+                <span class="text-text-tertiary">/</span>
+                <span class="text-text-primary flex-shrink-0">指南</span>
+                <span class="text-text-tertiary">/</span>
+                <span class="text-text-primary flex-shrink-0">最佳实践</span>
+            </nav>
+
+            <!-- 页面标题 -->
+            <div class="mb-6">
+                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">最佳实践</h1>
+                <p class="text-sm sm:text-base text-text-secondary">MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南</p>
+                <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.1</span>
+                    <span>MCP 2025-11-25</span>
+                    <span>SDK 1.25.3</span>
                 </div>
-                
-                <!-- 研发流程概览 -->
-                <h2>完整研发流程</h2>
-                <p>MCP Probe Kit 的 20 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。</p>
-                
-                <div class="callout info">
-                    <div class="callout-icon">💡</div>
-                    <div class="callout-content">
-                        <p><strong>核心理念：</strong>通过工作流编排工具（start_*）串联整个开发流程，让 AI 成为你的研发助手。</p>
-                    </div>
+            </div>
+
+            <!-- 研发流程概览 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">完整研发流程</h2>
+                <p class="text-text-secondary mb-4 text-sm">MCP Probe Kit 的 20 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。</p>
+                <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm">
+                    <strong>💡 核心理念：</strong>通过工作流编排工具（start_*）串联整个开发流程，让 AI 成为你的研发助手。
                 </div>
+            </section>
+
+            <!-- 阶段 0：产品设计 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">阶段 0：产品设计（从需求到原型）</h2>
                 
-                <!-- 阶段 0：产品设计 -->
-                <h2>阶段 0：产品设计（从需求到原型）</h2>
-                
-                <h3>0.1 完整产品设计流程（推荐）</h3>
-                <p>使用 <code>start_product</code> 工作流编排，一键完成从需求到 HTML 原型的完整产品设计。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>你: 我有一个产品需求文档 project.md，帮我生成完整的产品设计
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🎯</span>
+                        <span>0.1 完整产品设计流程（推荐）</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_product</code> 工作流编排，一键完成从需求到 HTML 原型的完整产品设计。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 我有一个产品需求文档 project.md，帮我生成完整的产品设计
 
 AI: 使用 start_product 工具
 requirements_file: "project.md"
@@ -215,10 +172,10 @@ product_type: "Education"
 
 → 自动执行：
   ✓ 步骤 1: 检查/生成项目上下文
-  ✓ 步骤 2: 生成 PRD 文档（产品需求文档）
-  ✓ 步骤 3: 生成原型设计文档（所有页面）
-  ✓ 步骤 4: 生成设计系统（颜色、字体、组件）
-  ✓ 步骤 5: 生成 HTML 可交互原型
+  ✓ 步骤 2: 生成 PRD 文档
+  ✓ 步骤 3: 生成原型设计文档
+  ✓ 步骤 4: 生成设计系统
+  → 步骤 5: 生成 HTML 可交互原型
   ✓ 步骤 6: 更新项目上下文索引
 
 → 输出文件：
@@ -227,70 +184,47 @@ product_type: "Education"
   - docs/prototype/page-*.md
   - docs/design-system.json
   - docs/html-prototype/index.html</code></pre>
-                </div>
-                
-                <div class="callout info">
-                    <div class="callout-icon">💡</div>
-                    <div class="callout-content">
-                        <p><strong>工具设计理念：</strong>产品设计工具采用"返回指导而非直接创建文件"的模式，AI 根据工具返回的指导文档智能填充内容并创建文件，确保灵活性和可控性。</p>
                     </div>
                 </div>
                 
-                <h3>0.2 单独生成 PRD 文档</h3>
-                <p>使用 <code>gen_prd</code> 工具单独生成产品需求文档。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>你: 生成一个在线教育平台的 PRD
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>📄</span>
+                        <span>0.2 单独生成 PRD 文档</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">gen_prd</code> 工具单独生成产品需求文档。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 生成一个在线教育平台的 PRD
 
 AI: 使用 gen_prd 工具
-description: "在线教育平台，支持课程管理、视频播放、作业提交、互动问答"
+description: "在线教育平台，支持课程管理、视频播放、作业提交"
 product_name: "EduPlatform"
 
-→ 工具返回：PRD 文档模板和创建指导
-→ AI 根据指导创建：docs/prd/product-requirements.md
+→ AI 根据指导创建 docs/prd/product-requirements.md
 
 PRD 包含：
   - 产品概述（愿景、目标用户、核心价值）
   - 功能需求（核心功能、用户故事）
   - 功能优先级（P0/P1/P2）
   - 非功能性需求（性能、安全、兼容性）
-  - 页面清单（所有需要的页面）</code></pre>
+  - 页面清单</code></pre>
+                    </div>
                 </div>
                 
-                <h3>0.3 生成原型设计文档</h3>
-                <p>使用 <code>gen_prototype</code> 工具基于 PRD 生成原型设计文档。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>AI: 使用 gen_prototype 工具
-prd_path: "docs/prd/product-requirements.md"
-
-→ 工具返回：原型文档模板和创建指导
-→ AI 根据指导创建：
-  - docs/prototype/prototype-index.md（原型索引）
-  - docs/prototype/page-首页.md
-  - docs/prototype/page-登录页.md
-  - docs/prototype/page-课程列表.md
-  - ...（所有页面的原型文档）
-
-每个原型文档包含：
-  - 页面信息（名称、路径、类型）
-  - 页面结构（Header、Main Content、Footer）
-  - 交互说明（用户操作和系统响应）
-  - 页面元素清单（所有 UI 元素）
-  - 设计建议（布局、视觉、交互）</code></pre>
-                </div>
-                
-                <h3>0.4 生成 HTML 可交互原型</h3>
-                <p>使用 <code>start_ui</code> 工具基于原型文档生成 HTML 原型。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>AI: 使用 start_ui 工具
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🎨</span>
+                        <span>0.3 生成 HTML 可交互原型</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_ui</code> 工具基于原型文档生成 HTML 原型。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>AI: 使用 start_ui 工具
 description: "基于原型文档生成所有页面的 HTML 原型"
 
 → 自动执行：
@@ -300,60 +234,71 @@ description: "基于原型文档生成所有页面的 HTML 原型"
   ✓ 生成索引页面 index.html
 
 → 输出：
-  - docs/html-prototype/index.html（原型索引）
-  - docs/html-prototype/page-首页.html
-  - docs/html-prototype/page-登录页.html
-  - ...（所有页面的 HTML 文件）
+  - docs/html-prototype/index.html
+  - docs/html-prototype/page-*.html
 
 → 特点：
   - 使用设计系统的颜色和字体
   - 包含页面导航
-  - 响应式设计
-  - 可直接在浏览器中打开查看</code></pre>
+  - 响应式设计</code></pre>
+                    </div>
                 </div>
                 
-                <h3>0.5 产品设计工作流总结</h3>
-                <div class="callout success">
-                    <div class="callout-icon">✅</div>
-                    <div class="callout-content">
-                        <p><strong>推荐流程：</strong></p>
-                        <ul>
-                            <li>✓ 准备需求文档（Markdown 格式）</li>
-                            <li>✓ 使用 <code>start_product</code> 一键生成完整产品设计</li>
-                            <li>✓ 在浏览器中查看 HTML 原型（docs/html-prototype/index.html）</li>
-                            <li>✓ 与团队评审原型，收集反馈</li>
-                            <li>✓ 根据反馈调整原型文档</li>
-                            <li>✓ 使用 <code>start_ui</code> 重新生成 HTML 原型</li>
-                            <li>✓ 确认后进入开发阶段</li>
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>✅</span>
+                        <span>0.4 产品设计工作流总结</span>
+                    </h3>
+                    <div class="ml-7 p-3 bg-green-50 border-l-3 border-green-500 rounded-r text-sm">
+                        <p class="font-medium mb-2"><strong>推荐流程：</strong></p>
+                        <ul class="list-disc list-inside space-y-1 text-sm">
+                            <li>准备需求文档（Markdown 格式）</li>
+                            <li>使用 <code class="bg-gray-200 px-1 rounded text-xs">start_product</code> 一键生成完整产品设计</li>
+                            <li>在浏览器中查看 HTML 原型</li>
+                            <li>与团队评审原型，收集反馈</li>
+                            <li>根据反馈调整原型文档</li>
+                            <li>使用 <code class="bg-gray-200 px-1 rounded text-xs">start_ui</code> 重新生成 HTML 原型</li>
+                            <li>确认后进入开发阶段</li>
                         </ul>
                     </div>
                 </div>
+            </section>
+
+            <!-- 阶段 1：需求阶段 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">阶段 1：需求分析与规划</h2>
                 
-                <!-- 阶段 1：需求阶段 -->
-                <h2>阶段 1：需求分析与规划</h2>
-                
-                <h3>1.1 新项目启动</h3>
-                <p>使用 <code>init_project</code> 按 Spec-Driven Development 方式生成项目文档。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>你: 我要创建一个任务管理系统
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🚀</span>
+                        <span>1.1 新项目启动</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">init_project</code> 按 Spec-Driven Development 方式生成项目文档。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 我要创建一个任务管理系统
 
 AI: 使用 init_project 工具
 input: "任务管理系统，支持任务创建、分配、跟踪、提醒"
 project_name: "TaskManager"
 
 → 生成：需求文档、设计文档、任务清单</code></pre>
+                    </div>
                 </div>
                 
-                <h3>1.2 需求澄清（避免理解偏差）</h3>
-                <p>使用 <code>interview</code> 工具进行结构化需求访谈。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>你: 添加用户登录功能
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>💬</span>
+                        <span>1.2 需求澄清（避免理解偏差）</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">interview</code> 工具进行结构化需求访谈。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 添加用户登录功能
 
 AI: 使用 interview 工具
 description: "实现用户登录功能"
@@ -365,15 +310,20 @@ description: "实现用户登录功能"
   - 是否需要验证码？
 
 → 生成：访谈记录文档</code></pre>
+                    </div>
                 </div>
                 
-                <h3>1.3 工作量估算</h3>
-                <p>使用 <code>estimate</code> 工具估算开发时间和资源。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>AI: 使用 estimate 工具
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>📊</span>
+                        <span>1.3 工作量估算</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">estimate</code> 工具估算开发时间和资源。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>AI: 使用 estimate 工具
 task_description: "实现用户认证功能"
 experience_level: "mid"
 team_size: 2
@@ -382,18 +332,25 @@ team_size: 2
   - 故事点：8 SP
   - 时间范围：乐观 3天 / 正常 5天 / 悲观 8天
   - 风险点：第三方登录集成可能延期</code></pre>
-                </div>
-                
-                <!-- 阶段 2：开发阶段 -->
-                <h2>阶段 2：功能开发</h2>
-                
-                <h3>2.1 完整功能开发流程（推荐）</h3>
-                <p>使用 <code>start_feature</code> 工作流编排，一键完成从规格到估算。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
                     </div>
-                    <pre><code>你: 开发用户认证功能
+                </div>
+            </section>
+
+            <!-- 阶段 2：开发阶段 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">阶段 2：功能开发</h2>
+                
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🛠️</span>
+                        <span>2.1 完整功能开发流程（推荐）</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_feature</code> 工作流编排，一键完成从规格到估算。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 开发用户认证功能
 
 AI: 使用 start_feature 工具
 description: "用户认证功能，支持邮箱登录和 Google 登录"
@@ -404,120 +361,63 @@ feature_name: "user-auth"
   ✓ 生成功能规格文档
   ✓ 估算开发工作量
   ✓ 输出完整开发计划</code></pre>
-                </div>
-
-                <div class="callout info">
-                    <div class="callout-icon">🧭</div>
-                    <div class="callout-content">
-                        <p><strong>委托式编排：</strong><code>start_feature</code> 会在 <code>structuredContent.metadata.plan</code> 中返回执行计划，AI 需要按步骤调用工具并创建文件。</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-language">Plan 示例</span>
-                            </div>
-                            <pre><code>{
-  "mode": "delegated",
-  "steps": [
-    {
-      "id": "spec",
-      "tool": "add_feature",
-      "args": { "feature_name": "user-auth", "description": "用户认证功能" },
-      "outputs": ["docs/specs/user-auth/requirements.md"]
-    }
-  ]
-}</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="callout info">
-                    <div class="callout-icon">🧭</div>
-                    <div class="callout-content">
-                        <p><strong>需求澄清模式：</strong>当需求不够明确时，使用 <code>requirements_mode=loop</code> 先澄清再进入规格生成。</p>
-                        <p><strong>模板档位：</strong><code>template_profile=auto</code> 自动选择指导强度，普通模型优先 guided。</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-language">示例</span>
-                            </div>
-                            <pre><code>AI: 使用 start_feature 工具
-feature_name: "user-auth"
-description: "用户认证功能"
-template_profile: "auto"
-requirements_mode: "loop"
-loop_max_rounds: 2
-loop_question_budget: 5</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="callout info">
-                    <div class="callout-icon">🧩</div>
-                    <div class="callout-content">
-                        <p><strong>模板档位策略：</strong></p>
-                        <ul>
-                            <li><code>guided</code>：需求信息少/不完整，普通模型优先</li>
-                            <li><code>strict</code>：需求已结构化，指引更紧凑</li>
-                            <li><code>auto</code>：默认推荐，自动选择 guided/strict</li>
-                        </ul>
                     </div>
                 </div>
                 
-                <h3>2.2 UI 开发流程</h3>
-                <p>使用 <code>start_ui</code> 工作流，从设计系统到代码一气呵成。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>你: 创建登录页面
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🎨</span>
+                        <span>2.2 UI 开发流程</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_ui</code> 工作流，从设计系统到代码一气呵成。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 创建登录页面
 
 AI: 使用 start_ui 工具
 description: "登录页面，包含邮箱密码输入和 Google 登录按钮"
 framework: "react"
-template_profile: "auto"
 
 → 自动执行：
   ✓ 检查/生成设计系统
   ✓ 初始化组件目录
   ✓ 搜索/生成 UI 模板
   ✓ 渲染最终 React 代码</code></pre>
+                    </div>
                 </div>
+                
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>⚡</span>
+                        <span>2.3 代码生成</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">根据需要使用各种生成工具：</p>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-text-primary ml-7">
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">genapi</code> - 生成 API 文档（OpenAPI/Swagger）</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">gensql</code> - 自然语言生成 SQL 查询</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">gen_mock</code> - 生成测试数据</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">gentest</code> - 生成单元测试</li>
+                    </ul>
+                </div>
+            </section>
 
-                <div class="callout info">
-                    <div class="callout-icon">🧭</div>
-                    <div class="callout-content">
-                        <p><strong>需求澄清模式：</strong>当 UI 需求不清晰时，先澄清再执行 UI 流程。</p>
-                        <p><strong>模板档位：</strong>需要更严格时可设为 <code>template_profile=strict</code>。</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-language">示例</span>
-                            </div>
-                            <pre><code>AI: 使用 start_ui 工具
-description: "登录页面"
-template_profile: "strict"
-requirements_mode: "loop"
-loop_max_rounds: 2</code></pre>
+            <!-- 阶段 3：代码质量 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">阶段 3：代码质量保障</h2>
+                
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🔍</span>
+                        <span>3.1 全面代码审查（推荐）</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_review</code> 工作流，一次性完成代码审查、安全扫描、性能分析。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
                         </div>
-                    </div>
-                </div>
-                
-                <h3>2.3 代码生成</h3>
-                <p>根据需要使用各种生成工具：</p>
-                <ul>
-                    <li><code>genapi</code> - 生成 API 文档（OpenAPI/Swagger）</li>
-                    <li><code>gensql</code> - 自然语言生成 SQL 查询</li>
-                    <li><code>gen_mock</code> - 生成测试数据</li>
-                    <li><code>gentest</code> - 生成单元测试</li>
-                </ul>
-                
-                <!-- 阶段 3：代码质量 -->
-                <h2>阶段 3：代码质量保障</h2>
-                
-                <h3>3.1 全面代码审查（推荐）</h3>
-                <p>使用 <code>start_review</code> 工作流，一次性完成代码审查、安全扫描、性能分析。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>你: 审查这段代码
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 审查这段代码
 
 AI: 使用 start_review 工具
 code: "function login(user, pass) { ... }"
@@ -527,32 +427,43 @@ code: "function login(user, pass) { ... }"
   ✓ 安全扫描（SQL注入、XSS、CSRF）
   ✓ 性能分析（算法、内存、数据库）
   ✓ 输出综合报告</code></pre>
+                    </div>
                 </div>
                 
-                <h3>3.2 单项检查</h3>
-                <p>针对特定问题使用单项工具：</p>
-                <ul>
-                    <li><code>code_review</code> - 代码审查</li>
-                    <li><code>security_scan</code> - 安全扫描</li>
-                    <li><code>perf</code> - 性能分析</li>
-                    <li><code>refactor</code> - 重构建议</li>
-                </ul>
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🎯</span>
+                        <span>3.2 单项检查</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">针对特定问题使用单项工具：</p>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-text-primary ml-7">
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">code_review</code> - 代码审查</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">security_scan</code> - 安全扫描</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">perf</code> - 性能分析</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">refactor</code> - 重构建议</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 阶段 4：Bug 修复 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">阶段 4：Bug 修复</h2>
                 
-                <!-- 阶段 4：Bug 修复 -->
-                <h2>阶段 4：Bug 修复</h2>
-                
-                <h3>4.1 系统化 Bug 修复（推荐）</h3>
-                <p>使用 <code>start_bugfix</code> 工作流，从分析到测试一站式解决。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>你: 登录功能报错了
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🐛</span>
+                        <span>4.1 系统化 Bug 修复（推荐）</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_bugfix</code> 工作流，从分析到测试一站式解决。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 登录功能报错了
 
 AI: 使用 start_bugfix 工具
 error_message: "TypeError: Cannot read property 'token' of undefined"
 stack_trace: "at login.js:45:12"
-template_profile: "auto"
 
 → 自动执行：
   ✓ 检查项目上下文
@@ -560,36 +471,33 @@ template_profile: "auto"
   ✓ 定位问题代码
   ✓ 提供修复方案
   ✓ 生成测试用例</code></pre>
+                    </div>
                 </div>
+                
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>⚠️</span>
+                        <span>4.2 快速 Bug 分析</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7">使用 <code class="bg-gray-200 px-1 rounded text-xs">fix_bug</code> 工具快速分析问题并提供修复方案。</p>
+                </div>
+            </section>
 
-                <div class="callout info">
-                    <div class="callout-icon">🧭</div>
-                    <div class="callout-content">
-                        <p><strong>需求澄清模式：</strong>当 Bug 信息不完整时，先澄清再进入修复。</p>
-                        <p><strong>模板档位：</strong>普通模型可用 <code>template_profile=guided</code>，结构化信息可用 <code>strict</code>。</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-language">示例</span>
-                            </div>
-                            <pre><code>AI: 使用 start_bugfix 工具
-error_message: "TypeError: token is undefined"
-template_profile: "guided"
-requirements_mode: "loop"
-loop_question_budget: 5</code></pre>
+            <!-- 阶段 5：版本发布 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">阶段 5：版本发布</h2>
+                
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🚀</span>
+                        <span>5.1 自动化发布流程（推荐）</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_release</code> 工作流，自动生成 Changelog 和 PR 描述。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- 阶段 5：版本发布 -->
-                <h2>阶段 5：版本发布</h2>
-                
-                <h3>5.1 自动化发布流程（推荐）</h3>
-                <p>使用 <code>start_release</code> 工作流，自动生成 Changelog 和 PR 描述。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>你: 准备发布 v2.0.0
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 准备发布 v2.0.0
 
 AI: 使用 start_release 工具
 version: "v2.0.0"
@@ -597,44 +505,61 @@ from_tag: "v1.9.0"
 
 → 自动执行：
   ✓ 生成 CHANGELOG（按 feat/fix/breaking 分类）
-  ✓ 生成 PR 描述（变更摘要、影响范围、测试说明）
+  ✓ 生成 PR 描述（变更摘要、影响范围）
   ✓ 输出发布检查清单</code></pre>
+                    </div>
                 </div>
                 
-                <h3>5.2 Git 工作流</h3>
-                <p>使用 Git 工具提升协作效率：</p>
-                <ul>
-                    <li><code>gencommit</code> - 生成规范的 commit 消息</li>
-                    <li><code>genchangelog</code> - 生成 CHANGELOG</li>
-                    <li><code>genpr</code> - 生成 PR 描述</li>
-                    <li><code>resolve_conflict</code> - 解决合并冲突</li>
-                </ul>
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🔀</span>
+                        <span>5.2 Git 工作流</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 Git 工具提升协作效率：</p>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-text-primary ml-7">
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">gencommit</code> - 生成规范的 commit 消息</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">genchangelog</code> - 生成 CHANGELOG</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">genpr</code> - 生成 PR 描述</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">resolve_conflict</code> - 解决合并冲突</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 阶段 6：项目维护 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">阶段 6：项目维护</h2>
                 
-                <!-- 阶段 6：项目维护 -->
-                <h2>阶段 6：项目维护</h2>
-                
-                <h3>6.1 新成员上手</h3>
-                <p>使用 <code>start_onboard</code> 工作流，快速了解项目。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>新成员: 我刚加入项目，需要了解项目结构
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>👋</span>
+                        <span>6.1 新成员上手</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_onboard</code> 工作流，快速了解项目。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>新成员: 我刚加入项目，需要了解项目结构
 
 AI: 使用 start_onboard 工具
 
 → 自动执行：
   ✓ 生成上下文文档
   ✓ 输出开发规范</code></pre>
+                    </div>
                 </div>
                 
-                <h3>6.2 文档维护</h3>
-                <p>使用 <code>start_doc</code> 工作流，一键补全项目文档。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">最佳实践</span>
-                    </div>
-                    <pre><code>AI: 使用 start_doc 工具
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>📚</span>
+                        <span>6.2 文档维护</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_doc</code> 工作流，一键补全项目文档。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>AI: 使用 start_doc 工具
 code: "整个项目代码"
 
 → 自动执行：
@@ -642,20 +567,25 @@ code: "整个项目代码"
   ✓ 生成 README 文档
   ✓ 生成 API 文档
   ✓ 输出完整文档集</code></pre>
-                </div>
-                
-                
-                
-                <!-- 高级实践 -->
-                <h2>高级实践：Ralph Wiggum Loop</h2>
-                
-                <h3>自动化循环开发</h3>
-                <p>使用 <code>start_ralph</code> 启动自动化开发循环，AI 持续迭代直到完成目标。</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">高级实践</span>
                     </div>
-                    <pre><code>你: 实现用户认证功能
+                </div>
+            </section>
+
+            <!-- 高级实践 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">高级实践：Ralph Wiggum Loop</h2>
+                
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🔄</span>
+                        <span>自动化循环开发</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">使用 <code class="bg-gray-200 px-1 rounded text-xs">start_ralph</code> 启动自动化开发循环，AI 持续迭代直到完成目标。</p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">高级实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 实现用户认证功能
 
 AI: 使用 start_ralph 工具
 goal: "实现用户认证功能，包含登录、注册、密码重置"
@@ -669,104 +599,76 @@ max_minutes: 25
   第3轮：代码审查 → 优化代码
   ...
   直到：测试通过 + 需求满足</code></pre>
-                </div>
-                
-                <div class="callout warning">
-                    <div class="callout-icon">⚠️</div>
-                    <div class="callout-content">
-                        <p><strong>安全提示：</strong>Ralph Loop 默认启用多重安全保护（最大迭代次数、运行时间、代码变更量限制），防止失控。</p>
                     </div>
                 </div>
                 
-                <!-- 总结 -->
-                <h2>最佳实践总结</h2>
-                
-                <div class="callout success">
-                    <div class="callout-icon">✅</div>
-                    <div class="callout-content">
-                        <p><strong>核心原则：</strong></p>
-                        <ul>
-                            <li>✓ 优先使用工作流编排工具（start_*）- 自动化完整流程</li>
-                            <li>✓ 需求阶段使用 interview - 避免理解偏差</li>
-                            <li>✓ 开发前使用 estimate - 合理规划时间</li>
-                            <li>✓ 提交前使用 start_review - 保证代码质量</li>
-                            <li>✓ 发布前使用 start_release - 规范发布流程</li>
-                        </ul>
-                    </div>
+                <div class="ml-7 p-3 bg-amber-50 border-l-3 border-amber-500 rounded-r text-sm">
+                    <strong>⚠️ 安全提示：</strong>Ralph Loop 默认启用多重安全保护（最大迭代次数、运行时间、代码变更量限制），防止失控。
                 </div>
+            </section>
+
+            <!-- 最佳实践总结 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">最佳实践总结</h2>
                 
-                <!-- 更多资源 -->
-                <h2>更多资源</h2>
-                <ul>
-                    <li><a href="./all-tools.html">完整工具参考</a> - 查看所有 20 个工具的详细说明</li>
-                    <li><a href="./getting-started.html">安装配置</a> - 快速开始使用</li>
-                    <li><a href="./migration.html">迁移指南</a> - 从 v2.x 迁移到 v3.0</li>
-                    <li><a href="https://github.com/mybolide/mcp-probe-kit" target="_blank">GitHub 仓库</a> - 源代码和问题反馈</li>
+                <div class="p-3 bg-green-50 border-l-3 border-green-500 rounded-r text-sm">
+                    <p class="font-medium mb-2"><strong>核心原则：</strong></p>
+                    <ul class="list-disc list-inside space-y-1 text-sm">
+                        <li>优先使用工作流编排工具（start_*）- 自动化完整流程</li>
+                        <li>需求阶段使用 interview - 避免理解偏差</li>
+                        <li>开发前使用 estimate - 合理规划时间</li>
+                        <li>提交前使用 start_review - 保证代码质量</li>
+                        <li>发布前使用 start_release - 规范发布流程</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 更多资源 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">更多资源</h2>
+                <ul class="list-disc list-inside space-y-2 text-sm text-text-primary">
+                    <li><a href="./all-tools.html" class="text-primary hover:underline">完整工具参考</a> - 查看所有 20 个工具的详细说明</li>
+                    <li><a href="./getting-started.html" class="text-primary hover:underline">安装配置</a> - 快速开始使用</li>
+                    <li><a href="./migration.html" class="text-primary hover:underline">迁移指南</a> - 从 v2.x 迁移到 v3.0</li>
+                    <li><a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub 仓库</a> - 源代码和问题反馈</li>
                 </ul>
-                
-                <!-- Next Steps -->
-                <div class="next-cta">
-                    <h3>🚀 开始实践</h3>
-                    <p>将这些最佳实践应用到你的项目中</p>
-                    <div class="next-cta-links">
-                        <a href="./getting-started.html" class="next-cta-link">
-                            <span>📖</span>
-                            <span>安装配置</span>
-                        </a>
-                        <a href="./all-tools.html" class="next-cta-link">
-                            <span>🛠️</span>
-                            <span>查看所有工具</span>
-                        </a>
-                    </div>
+            </section>
+
+            <!-- 开始实践 -->
+            <section class="bg-gradient-to-br from-primary to-primary-hover text-white rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold mb-3">🚀 开始实践</h2>
+                <p class="text-sm opacity-95 mb-4">将这些最佳实践应用到你的项目中</p>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="./getting-started.html" class="bg-white/20 text-white px-4 py-2.5 rounded-md text-sm font-medium text-center hover:bg-white/30 transition-colors no-underline">
+                        📖 安装配置
+                    </a>
+                    <a href="./all-tools.html" class="bg-white/20 text-white px-4 py-2.5 rounded-md text-sm font-medium text-center hover:bg-white/30 transition-colors no-underline">
+                        🛠️ 查看所有工具
+                    </a>
                 </div>
-            </div>
-            
+            </section>
+
             <!-- Footer -->
-            <footer class="footer">
-                <div class="footer-container">
-                    <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
-                    <div>
-                        © 2024-2026 MCP Probe Kit · MIT License · 
-                        <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
-                    </div>
-                </div>
+            <footer class="text-center text-sm text-text-tertiary py-4 border-t border-border">
+                <p>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:underline">小墨 (Kyle)</a></p>
+                <p class="mt-1">© 2024-2026 MCP Probe Kit · <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub ↗</a></p>
             </footer>
-        </main>
-    </div>
-    
-    <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
-    
+        </div>
+    </main>
+
     <script>
-        // Topbar scroll effect
-        const topbar = document.getElementById('topbar');
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 10) {
-                topbar.classList.add('scrolled');
-            } else {
-                topbar.classList.remove('scrolled');
-            }
-        });
-        
-        // Sidebar toggle (mobile)
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('open');
-        }
-        
-        // Close sidebar when clicking on main content (mobile)
-        document.addEventListener('DOMContentLoaded', function() {
-            const mainContent = document.querySelector('.main-content');
-            const sidebar = document.getElementById('sidebar');
-            
-            if (mainContent && sidebar) {
-                mainContent.addEventListener('click', function(e) {
-                    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
-                        sidebar.classList.remove('open');
-                    }
-                });
+            const backdrop = document.getElementById('backdrop');
+            const isOpen = sidebar.classList.contains('open');
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                backdrop.classList.remove('active');
+            } else {
+                sidebar.classList.add('open');
+                backdrop.classList.add('active');
             }
-        });
+        }
     </script>
 </body>
 </html>

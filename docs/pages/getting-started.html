@@ -6,224 +6,180 @@
     <title>快速开始 - 安装配置指南 | MCP Probe Kit</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="MCP Probe Kit 快速开始指南：支持 Cursor、Cline、Claude Desktop 三大平台，5分钟完成安装配置。详细的 npx 和 npm 安装教程，快速接入 AI 研发工具集。">
-    <meta name="keywords" content="MCP Probe Kit 安装, Cursor 配置, Cline 配置, Claude Desktop 配置, MCP Server 安装, AI 开发工具安装, npx 安装">
+    <meta name="description" content="MCP Probe Kit 快速开始指南：支持 Cursor、Cline、Claude Desktop 三大平台，5分钟完成安装配置。">
+    <meta name="keywords" content="MCP Probe Kit 安装, Cursor 配置, Cline 配置, Claude Desktop 配置">
     <meta name="author" content="小墨 (Kyle) - ByteZoneX">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/getting-started.html">
-    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
     
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="article">
-    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/getting-started.html">
-    <meta property="og:title" content="快速开始 - 安装配置指南 | MCP Probe Kit">
-    <meta property="og:description" content="5分钟快速安装 MCP Probe Kit，支持 Cursor、Cline、Claude Desktop。详细配置教程，立即开始使用 20 个 AI 研发工具。">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/pages/getting-started.html">
-    <meta property="twitter:title" content="快速开始 - 安装配置指南 | MCP Probe Kit">
-    <meta property="twitter:description" content="5分钟快速安装 MCP Probe Kit，支持 Cursor、Cline、Claude Desktop。">
-    
-    <link rel="stylesheet" href="../styles/page.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#2563EB',
+                            hover: '#1D4ED8',
+                        },
+                        text: {
+                            primary: '#0F172A',
+                            secondary: '#475569',
+                            tertiary: '#64748B',
+                        },
+                        bg: {
+                            page: '#F8FAFC',
+                            card: '#FFFFFF',
+                        },
+                        border: '#E2E8F0',
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        .code-block { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        /* 移动端抽屉效果 */
+        .sidebar-drawer { transition: transform 0.3s ease; }
+        @media (max-width: 767px) {
+            .sidebar-drawer { transform: translateX(-100%); }
+            .sidebar-drawer.open { transform: translateX(0); }
+        }
+        .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .backdrop.active { opacity: 1; pointer-events: auto; }
+    </style>
 </head>
-<body>
-    <!-- A. Topbar -->
-    <nav class="topbar" id="topbar">
-        <div class="topbar-container">
-            <a href="../index.html" class="topbar-brand">
+<body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
+    <!-- A. 顶部导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50">
+        <div class="h-full px-4 flex items-center justify-between">
+            <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
                 <span>🚀</span>
-                <span>MCP Probe Kit</span>
+                <span class="sm:inline hidden">MCP Probe Kit</span>
             </a>
-            
-            <div class="topbar-actions">
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>ByteZoneX</span>
-                </a>
-                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>GitHub</span>
-                </a>
-                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>npm</span>
-                </a>
-            </div>
+            <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
         </div>
     </nav>
 
-    
-    <!-- Layout Container -->
-    <div class="layout">
-        <!-- Sidebar Overlay -->
-        <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-        
-        <!-- C. Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">快速开始</div>
-                    <a href="../index.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🏠</span>
-                            <span>文档首页</span>
-                        </div>
-                    </a>
-                    <a href="./getting-started.html" class="nav-item active">
-                        <div class="nav-item-content">
-                            <span class="icon">📖</span>
-                            <span>安装配置</span>
-                        </div>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">工具文档</div>
-                    <a href="./all-tools.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🛠️</span>
-                            <span>所有工具</span>
-                        </div>
-                        <span class="badge">39</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">指南</div>
-                    <a href="./migration.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🚀</span>
-                            <span>迁移指南</span>
-                        </div>
-                    </a>
-                    <a href="./examples.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">💡</span>
-                            <span>最佳实践</span>
-                        </div>
-                    </a>
-                </div>
+    <!-- 侧边栏遮罩 -->
+    <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:opacity-100 md:pointer-events-auto md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
 
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">资源</div>
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🌐</span>
-                            <span>ByteZoneX 主站</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">💻</span>
-                            <span>GitHub 仓库</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">📦</span>
-                            <span>npm 包</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🐛</span>
-                            <span>问题反馈</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                </div>
-            </nav>
+    <!-- B. 侧边栏 -->
+    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar">
+        <div class="p-4">
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">快速开始</div>
+                <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🏠</span>
+                    <span>文档首页</span>
+                </a>
+                <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary">
+                    <span>📖</span>
+                    <span>安装配置</span>
+                </a>
+            </div>
             
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <div class="sidebar-footer-title">快速链接</div>
-                <div class="sidebar-footer-links">
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>🌐</span>
-                        <span>ByteZoneX</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>💻</span>
-                        <span>GitHub</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>📦</span>
-                        <span>npm</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                </div>
-                
-                <!-- QR Code -->
-                <div class="sidebar-qrcode">
-                    <div class="sidebar-qrcode-title">关注公众号</div>
-                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" />
-                    <div class="sidebar-qrcode-desc">获取更多技术分享</div>
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">工具文档</div>
+                <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🛠️</span>
+                    <span>所有工具</span>
+                    <span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">20</span>
+                </a>
+            </div>
+            
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">指南</div>
+                <a href="./migration.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🚀</span>
+                    <span>迁移指南</span>
+                </a>
+                <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💡</span>
+                    <span>最佳实践</span>
+                </a>
+            </div>
+            
+            <div class="pt-4 border-t border-border">
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💻</span>
+                    <span>GitHub</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+                <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📦</span>
+                    <span>npm</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+            </div>
+
+            <!-- QR Code -->
+            <div class="mt-4 pt-4 border-t border-border">
+                <div class="text-center">
+                    <div class="text-xs font-semibold text-text-tertiary mb-2">关注公众号</div>
+                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
+                    <div class="text-xs text-text-tertiary mt-2">获取更多技术分享</div>
                 </div>
             </div>
-        </aside>
+        </div>
+    </aside>
 
-        
-        <!-- D. Main Content -->
-        <main class="main-content">
-            <div class="content-wrapper">
-                <!-- Breadcrumb -->
-                <nav class="breadcrumb">
-                    <a href="../index.html">文档首页</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <a href="#">快速开始</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span>安装配置</span>
-                </nav>
-                
-                <!-- Page Header -->
-                <h1 class="page-title">安装配置</h1>
-                <p class="page-description">5 分钟快速上手 MCP Probe Kit v3.0，支持 Cursor、Cline 和 Claude Desktop</p>
-                <div class="page-meta">
-                    <span>📦 v3.0.0</span>
-                    <span>·</span>
-                    <span>最后更新：2026-02-02</span>
-                    <span>·</span>
-                    <span>协议：MCP 2025-11-25</span>
-                    <span>·</span>
-                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
-                    <span>·</span>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/edit/main/docs/pages/getting-started.html" target="_blank" rel="noopener">编辑此页 ↗</a>
-                    <span>·</span>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/issues/new" target="_blank" rel="noopener">反馈问题 ↗</a>
+    <!-- C. 主内容区 -->
+    <main class="flex-1 mt-14 min-h-screen md:ml-64">
+        <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+            
+            <!-- 面包屑 -->
+            <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
+                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0">文档首页</a>
+                <span class="text-text-tertiary">/</span>
+                <span class="text-text-primary flex-shrink-0">快速开始</span>
+                <span class="text-text-tertiary">/</span>
+                <span class="text-text-primary flex-shrink-0">安装配置</span>
+            </nav>
+
+            <!-- 页面标题 -->
+            <div class="mb-6">
+                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">安装配置</h1>
+                    <p class="text-sm sm:text-base text-text-secondary">5 分钟快速上手 MCP Probe Kit v3.0.1，支持 Cursor、Cline 和 Claude Desktop</p>
+                <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.1</span>
+                    <span>MCP 2025-11-25</span>
+                    <span>SDK 1.25.3</span>
+                </div>
+            </div>
+
+            <!-- Step 1: 选择安装方式 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-primary-hover text-white rounded-full flex items-center justify-center font-semibold text-sm sm:text-base flex-shrink-0">1</div>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">选择安装方式</h2>
                 </div>
                 
-                <!-- Step 1: 安装方式 -->
-                <div class="step-card">
-                    <div class="step-header">
-                        <div class="step-number">1</div>
-                        <h3 class="step-title">选择安装方式</h3>
-                    </div>
-                    <div class="step-content">
-                        <div class="tabs" id="install-tabs">
-                            <div class="tabs-header">
-                                <button class="tab-button active" data-tab="npx">
-                                    npx 直接使用
-                                    <span class="recommended">推荐</span>
-                                </button>
-                                <button class="tab-button" data-tab="global">全局安装</button>
-                                <button class="tab-button" data-tab="source">源码编译</button>
+                <!-- 安装方式 Tab -->
+                <div class="space-y-4">
+                    <!-- npx 方式 -->
+                    <div class="border border-border rounded-lg overflow-hidden">
+                        <button onclick="toggleInstall('npx')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">⚡</span>
+                                <span class="font-medium text-text-primary">npx 直接使用</span>
+                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">推荐</span>
                             </div>
-                            
-                            <div class="tab-content active" id="npx">
-                                <p>无需安装，直接使用最新版本（推荐方式）：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">JSON</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'npx-code')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="npx-code">{
+                            <svg class="w-5 h-5 text-text-tertiary transition-transform" id="npx-icon" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                            <div id="npx-content" class="p-4 border-t border-border">
+                            <p class="text-text-secondary mb-3 text-sm">无需安装，直接使用最新版本：</p>
+                            <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                    <span class="text-xs text-slate-300 font-medium">JSON</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
+                                </div>
+                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
@@ -231,92 +187,99 @@
     }
   }
 }</code></pre>
-                                </div>
-                                <div class="callout info">
-                                    <div class="callout-icon">💡</div>
-                                    <div class="callout-content">
-                                        <p><strong>优势：</strong>无需手动更新，每次启动自动使用最新版本，适合快速体验和持续跟进新功能。</p>
-                                    </div>
-                                </div>
                             </div>
+                            <div class="mt-3 p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm text-text-primary">
+                                <strong>优势：</strong>无需手动更新，每次启动自动使用最新版本
+                            </div>
+                        </div>
+                    </div>
 
-                            
-                            <div class="tab-content" id="global">
-                                <p>全局安装到系统，适合稳定使用：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">Bash</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'global-install')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="global-install">npm install -g mcp-probe-kit</code></pre>
+                    <!-- 全局安装 -->
+                    <div class="border border-border rounded-lg overflow-hidden">
+                        <button onclick="toggleInstall('global')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">📦</span>
+                                <span class="font-medium text-text-primary">全局安装</span>
+                            </div>
+                            <svg class="w-5 h-5 text-text-tertiary transition-transform" id="global-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="global-content" class="hidden p-4 border-t border-border">
+                            <p class="text-text-secondary mb-3 text-sm">全局安装到系统：</p>
+                            <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                    <span class="text-xs text-slate-300 font-medium">Bash</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
                                 </div>
-                                <p>配置文件：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">JSON</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'global-config')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="global-config">{
+                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>npm install -g mcp-probe-kit</code></pre>
+                            </div>
+                            <p class="text-text-secondary mt-3 mb-2 text-sm">配置文件：</p>
+                            <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                    <span class="text-xs text-slate-300 font-medium">JSON</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
+                                </div>
+                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "mcp-probe-kit"
     }
   }
 }</code></pre>
-                                </div>
-                                <div class="callout warning">
-                                    <div class="callout-icon">⚠️</div>
-                                    <div class="callout-content">
-                                        <p><strong>注意：</strong>需要手动运行 <code>npm update -g mcp-probe-kit</code> 来更新版本。</p>
-                                    </div>
-                                </div>
                             </div>
+                            <div class="mt-3 p-3 bg-amber-50 border-l-3 border-amber-500 rounded-r text-sm text-text-primary">
+                                <strong>注意：</strong>需要手动运行 <code class="bg-gray-200 px-1 rounded text-xs">npm update -g mcp-probe-kit</code> 更新版本
+                            </div>
+                        </div>
+                    </div>
 
-                            <div class="tab-content" id="source">
-                                <p>从源码编译安装，适合开发者和贡献者：</p>
-                                
-                                <p><strong>1. 克隆仓库</strong></p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">Bash</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'source-clone')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
+                    <!-- 源码编译 -->
+                    <div class="border border-border rounded-lg overflow-hidden">
+                        <button onclick="toggleInstall('source')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🔧</span>
+                                <span class="font-medium text-text-primary">源码编译</span>
+                            </div>
+                            <svg class="w-5 h-5 text-text-tertiary transition-transform" id="source-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="source-content" class="hidden p-4 border-t border-border">
+                            <p class="text-text-secondary mb-3 text-sm">从源码编译安装，适合开发者：</p>
+                            
+                            <div class="mb-4">
+                                <p class="font-medium text-sm mb-2">1. 克隆仓库</p>
+                                <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                    <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                        <span class="text-xs text-slate-300 font-medium">Bash</span>
+                                        <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
                                     </div>
-                                    <pre><code id="source-clone">git clone https://github.com/mybolide/mcp-probe-kit.git
+                                    <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>git clone https://github.com/mybolide/mcp-probe-kit.git
 cd mcp-probe-kit</code></pre>
                                 </div>
-
-                                <p><strong>2. 安装依赖并编译</strong></p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">Bash</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'source-build')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <p class="font-medium text-sm mb-2">2. 安装依赖并编译</p>
+                                <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                    <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                        <span class="text-xs text-slate-300 font-medium">Bash</span>
+                                        <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
                                     </div>
-                                    <pre><code id="source-build">npm install
+                                    <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>npm install
 npm run build</code></pre>
                                 </div>
-
-                                <p><strong>3. 配置文件</strong></p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">JSON</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'source-config')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <p class="font-medium text-sm mb-2">3. 配置文件</p>
+                                <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                    <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                        <span class="text-xs text-slate-300 font-medium">JSON</span>
+                                        <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
                                     </div>
-                                    <pre><code id="source-config">{
+                                    <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "node",
@@ -325,457 +288,289 @@ npm run build</code></pre>
   }
 }</code></pre>
                                 </div>
-
-                                <div class="callout info">
-                                    <div class="callout-icon">💡</div>
-                                    <div class="callout-content">
-                                        <p><strong>提示：</strong>将 <code>/path/to/mcp-probe-kit</code> 替换为实际的项目路径。Windows 用户使用完整路径，如 <code>D:/workspace/mcp-probe-kit/build/index.js</code></p>
-                                    </div>
-                                </div>
-
-                                <div class="callout warning">
-                                    <div class="callout-icon">⚠️</div>
-                                    <div class="callout-content">
-                                        <p><strong>注意：</strong>修改代码后需要重新运行 <code>npm run build</code> 编译，然后重启 MCP 客户端。</p>
-                                    </div>
-                                </div>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm text-text-primary mb-2">
+                                <strong>提示：</strong>Windows 用户使用完整路径，如 <code class="bg-gray-200 px-1 rounded text-xs">D:/workspace/mcp-probe-kit/build/index.js</code>
+                            </div>
+                            <div class="p-3 bg-amber-50 border-l-3 border-amber-500 rounded-r text-sm text-text-primary">
+                                <strong>注意：</strong>修改代码后需要重新运行 <code class="bg-gray-200 px-1 rounded text-xs">npm run build</code> 编译
                             </div>
                         </div>
                     </div>
                 </div>
+            </section>
 
+            <!-- Step 2: 配置文件位置 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-primary-hover text-white rounded-full flex items-center justify-center font-semibold text-sm sm:text-base flex-shrink-0">2</div>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">找到配置文件</h2>
+                </div>
                 
-                <!-- Step 2: 配置文件位置 -->
-                <div class="step-card">
-                    <div class="step-header">
-                        <div class="step-number">2</div>
-                        <h3 class="step-title">找到配置文件</h3>
-                    </div>
-                    <div class="step-content">
-                        <p>根据你使用的 MCP 客户端，找到对应的配置文件：</p>
-                        
-                        <div class="tabs" id="client-tabs">
-                            <div class="tabs-header">
-                                <button class="tab-button active" data-tab="cursor">Cursor / Cline</button>
-                                <button class="tab-button" data-tab="claude-windows">Claude Desktop (Windows)</button>
-                                <button class="tab-button" data-tab="claude-macos">Claude Desktop (macOS)</button>
-                            </div>
-                            
-                            <div class="tab-content active" id="cursor">
-                                <p>在项目根目录创建或编辑 <code>.cursor/mcp.json</code> 或 <code>.cline/mcp.json</code></p>
-                                <div class="callout info">
-                                    <div class="callout-icon">💡</div>
-                                    <div class="callout-content">
-                                        <p>Cursor 和 Cline 使用项目级配置，每个项目可以有独立的 MCP 服务器配置。</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="tab-content" id="claude-windows">
-                                <p>配置文件路径：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">Path</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'windows-path')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="windows-path">%APPDATA%\Claude\claude_desktop_config.json</code></pre>
-                                </div>
-                                <p>完整路径示例：<code>C:\Users\YourName\AppData\Roaming\Claude\claude_desktop_config.json</code></p>
-                            </div>
-                            
-                            <div class="tab-content" id="claude-macos">
-                                <p>配置文件路径：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">Path</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'macos-path')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="macos-path">~/Library/Application Support/Claude/claude_desktop_config.json</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+                <p class="text-text-secondary mb-4 text-sm">根据你使用的 MCP 客户端，找到对应的配置文件：</p>
                 
-                <!-- Step 3: 验证安装 -->
-                <div class="step-card">
-                    <div class="step-header">
-                        <div class="step-number">3</div>
-                        <h3 class="step-title">验证安装</h3>
-                    </div>
-                    <div class="step-content">
-                        <p>完成配置后，按以下步骤验证：</p>
-                        <ol>
-                            <li>重启 MCP 客户端（Cursor / Cline / Claude Desktop）</li>
-                            <li>在聊天窗口中输入测试命令：<code>请使用 gencommit 工具生成一个测试提交消息</code></li>
-                            <li>如果返回符合 Conventional Commits 规范的提交消息，说明安装成功！</li>
-                        </ol>
-                        
-                        <div class="callout success">
-                            <div class="callout-icon">✅</div>
-                            <div class="callout-content">
-                                <p><strong>成功示例：</strong></p>
-                                <p>AI 返回类似 <code>feat: 添加用户认证功能</code> 或 <code>fix: 修复登录页面样式问题</code> 的消息。</p>
+                <!-- 客户端选择 -->
+                <div class="space-y-3">
+                    <!-- Cursor / Cline -->
+                    <div class="border border-border rounded-lg overflow-hidden">
+                        <button onclick="toggleClient('cursor')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">📝</span>
+                                <span class="font-medium text-text-primary">Cursor / Cline</span>
+                            </div>
+                            <svg class="w-5 h-5 text-text-tertiary transition-transform" id="cursor-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="cursor-content" class="hidden p-4 border-t border-border">
+                            <p class="text-text-secondary text-sm mb-3">在项目根目录创建或编辑 <code class="bg-gray-200 px-1 rounded text-xs">.cursor/mcp.json</code> 或 <code class="bg-gray-200 px-1 rounded text-xs">.cline/mcp.json</code></p>
+                            <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm">
+                                <strong>💡 提示：</strong>Cursor 和 Cline 使用项目级配置，每个项目可以有独立的 MCP 服务器配置。
                             </div>
                         </div>
-                        
-                        <div class="callout error">
-                            <div class="callout-icon">❌</div>
-                            <div class="callout-content">
-                                <p><strong>常见问题：</strong></p>
-                                <ul>
-                                    <li>如果提示"找不到工具"，检查配置文件格式是否正确</li>
-                                    <li>如果提示"命令不存在"，确认 Node.js 和 npm 已正确安装</li>
-                                    <li>Windows 用户：确保使用完整路径或 npx 方式</li>
-                                </ul>
+                    </div>
+
+                    <!-- Claude Desktop Windows -->
+                    <div class="border border-border rounded-lg overflow-hidden">
+                        <button onclick="toggleClient('claude-win')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🪟</span>
+                                <span class="font-medium text-text-primary">Claude Desktop (Windows)</span>
+                            </div>
+                            <svg class="w-5 h-5 text-text-tertiary transition-transform" id="claude-win-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="claude-win-content" class="hidden p-4 border-t border-border">
+                            <p class="text-text-secondary text-sm mb-2">配置文件路径：</p>
+                            <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                    <span class="text-xs text-slate-300 font-medium">Path</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
+                                </div>
+                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>%APPDATA%\Claude\claude_desktop_config.json</code></pre>
+                            </div>
+                            <p class="text-text-secondary text-sm mt-2">示例：<code class="bg-gray-200 px-1 rounded text-xs">C:\Users\YourName\AppData\Roaming\Claude\claude_desktop_config.json</code></p>
+                        </div>
+                    </div>
+
+                    <!-- Claude Desktop macOS -->
+                    <div class="border border-border rounded-lg overflow-hidden">
+                        <button onclick="toggleClient('claude-mac')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🍎</span>
+                                <span class="font-medium text-text-primary">Claude Desktop (macOS)</span>
+                            </div>
+                            <svg class="w-5 h-5 text-text-tertiary transition-transform" id="claude-mac-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="claude-mac-content" class="hidden p-4 border-t border-border">
+                            <p class="text-text-secondary text-sm mb-2">配置文件路径：</p>
+                            <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                    <span class="text-xs text-slate-300 font-medium">Path</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
+                                </div>
+                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>~/Library/Application Support/Claude/claude_desktop_config.json</code></pre>
                             </div>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                <!-- Step 4: 委托式编排协议 -->
-                <div class="step-card">
-                    <div class="step-header">
-                        <div class="step-number">4</div>
-                        <h3 class="step-title">了解委托式编排（Delegated Plan）</h3>
+            <!-- Step 3: 验证安装 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-primary-hover text-white rounded-full flex items-center justify-center font-semibold text-sm sm:text-base flex-shrink-0">3</div>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">验证安装</h2>
+                </div>
+                
+                <div class="pl-0 sm:pl-0">
+                    <p class="text-text-secondary mb-3 text-sm">完成配置后，按以下步骤验证：</p>
+                    <ol class="list-decimal list-inside space-y-2 text-sm text-text-primary mb-4">
+                        <li>重启 MCP 客户端（Cursor / Cline / Claude Desktop）</li>
+                        <li>在聊天窗口中输入：<code class="bg-gray-200 px-1 rounded text-xs">请使用 gencommit 工具生成一个测试提交消息</code></li>
+                        <li>如果返回符合 Conventional Commits 规范的提交消息，说明安装成功！</li>
+                    </ol>
+                    
+                    <div class="p-3 bg-green-50 border-l-3 border-green-500 rounded-r text-sm text-text-primary mb-2">
+                        <strong>✅ 成功示例：</strong>AI 返回类似 <code class="bg-gray-200 px-1 rounded text-xs">feat: 添加用户认证功能</code> 的消息
                     </div>
-                    <div class="step-content">
-                        <p><code>start_*</code> 编排工具不会直接执行操作，而是返回一个可执行计划。AI 需要按步骤调用工具并创建文件。</p>
-                        <p><strong>结构化输出关键字段：</strong><code>summary</code>、<code>status</code>、<code>steps</code>、<code>artifacts</code>、<code>metadata.plan</code>、<code>specArtifacts</code>、<code>estimate</code></p>
-                        <p><strong>需求澄清模式：</strong>当需求不完整时，可使用 <code>requirements_mode=loop</code> 先澄清再进入执行。</p>
-                        <p><strong>模板档位：</strong><code>template_profile=auto</code> 会自动选择 <code>guided</code>/<code>strict</code>。普通模型优先 <code>guided</code>，结构化需求可用 <code>strict</code>。</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-language">Plan 示例</span>
-                            </div>
-                            <pre><code>{
+                    <div class="p-3 bg-red-50 border-l-3 border-red-500 rounded-r text-sm">
+                        <strong>❌ 常见问题：</strong>
+                        <ul class="list-disc list-inside mt-1 text-text-primary">
+                            <li>提示"找不到工具" → 检查配置文件格式</li>
+                            <li>提示"命令不存在" → 确认 Node.js 已安装</li>
+                            <li>Windows 用户 → 确保使用 npx 方式</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 4: 委托式编排 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-primary-hover text-white rounded-full flex items-center justify-center font-semibold text-sm sm:text-base flex-shrink-0">4</div>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">委托式编排协议</h2>
+                </div>
+                
+                <div class="pl-0 sm:pl-0 text-sm text-text-primary space-y-3">
+                    <p><code class="bg-gray-200 px-1 rounded text-xs">start_*</code> 编排工具不会直接执行操作，而是返回一个可执行计划。</p>
+                    <p><strong>关键字段：</strong><code class="bg-gray-200 px-1 rounded text-xs">mode: "delegated"</code>、<code class="bg-gray-200 px-1 rounded text-xs">steps[]</code>、<code class="bg-gray-200 px-1 rounded text-xs">outputs[]</code></p>
+                    
+                    <div class="bg-slate-900 rounded-lg overflow-hidden">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">Plan 示例</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
   "mode": "delegated",
   "steps": [
     {
       "id": "spec",
       "tool": "add_feature",
-      "args": { "feature_name": "user-auth", "description": "用户认证功能" },
+      "args": { "feature_name": "user-auth" },
       "outputs": ["docs/specs/user-auth/requirements.md"]
     }
   ]
 }</code></pre>
-                        </div>
-                        <div class="callout info">
-                            <div class="callout-icon">💡</div>
-                            <div class="callout-content">
-                                <p><strong>要点：</strong>按顺序执行 <code>steps</code>，并确保 <code>outputs</code> 所列文件真实落盘。</p>
-                            </div>
-                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm">
+                        <strong>💡 要点：</strong>按顺序执行 <code class="bg-gray-200 px-1 rounded text-xs">steps</code>，并确保 <code class="bg-gray-200 px-1 rounded text-xs">outputs</code> 文件真实落盘
                     </div>
                 </div>
+            </section>
+
+            <!-- 常见问题 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">⚠️ 常见问题</h2>
                 
-                <!-- Troubleshooting Section -->
-                <div class="step-card">
-                    <div class="step-header">
-                        <h3 class="step-title">⚠️ 常见问题与故障排除</h3>
+                <!-- 问题 1 -->
+                <div class="border border-border rounded-lg overflow-hidden mb-4">
+                    <button onclick="toggleFaq('faq1')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                        <span class="font-medium text-text-primary">问题 1：npx 缓存导致的模块解析错误</span>
+                        <svg class="w-5 h-5 text-text-tertiary transition-transform" id="faq1-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div id="faq1-content" class="hidden p-4 border-t border-border">
+                        <div class="p-3 bg-red-50 border-l-3 border-red-500 rounded-r text-sm text-text-primary mb-3">
+                            <strong>错误信息：</strong>
+                            <pre class="code-block mt-2 text-xs text-slate-200 bg-slate-900 p-2 rounded overflow-x-auto"><code>Error: Cannot find package 'yallist'</code></pre>
+                        </div>
+                        <p class="text-sm text-text-primary mb-2"><strong>解决方案：</strong>清理 npx 缓存</p>
+                        <div class="space-y-2">
+                            <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                    <span class="text-xs text-slate-300 font-medium">Windows CMD</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋</button>
+                                </div>
+                                <pre class="code-block p-3 text-sm text-slate-200 overflow-x-auto"><code>rmdir /s /q %LOCALAPPDATA%\npm-cache\_npx</code></pre>
+                            </div>
+                            <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                    <span class="text-xs text-slate-300 font-medium">macOS/Linux</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋</button>
+                                </div>
+                                <pre class="code-block p-3 text-sm text-slate-200 overflow-x-auto"><code>rm -rf ~/.npm/_npx</code></pre>
+                            </div>
+                        </div>
+                        <p class="text-sm text-text-secondary mt-2">然后重启 MCP 客户端</p>
                     </div>
-                    <div class="step-content">
-                        <h4>问题 1：npx 缓存导致的模块解析错误</h4>
-                        <div class="callout error">
-                            <div class="callout-icon">❌</div>
-                            <div class="callout-content">
-                                <p><strong>错误信息：</strong></p>
-                                <div class="code-block">
-                                    <pre><code>Error: Cannot find package 'yallist' imported from tar/dist/esm/pack.js
-code: 'ERR_MODULE_NOT_FOUND'</code></pre>
-                                </div>
-                            </div>
+                </div>
+
+                <!-- 问题 2 -->
+                <div class="border border-border rounded-lg overflow-hidden">
+                    <button onclick="toggleFaq('faq2')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                        <span class="font-medium text-text-primary">问题 2：MCP 服务器连接失败</span>
+                        <svg class="w-5 h-5 text-text-tertiary transition-transform" id="faq2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div id="faq2-content" class="hidden p-4 border-t border-border">
+                        <div class="p-3 bg-red-50 border-l-3 border-red-500 rounded-r text-sm text-text-primary mb-3">
+                            <strong>可能原因：</strong>
+                            <ul class="list-disc list-inside mt-1">
+                                <li>Node.js 版本过低（需要 >= 16.0.0）</li>
+                                <li>依赖未安装或损坏</li>
+                                <li>配置文件格式错误</li>
+                            </ul>
                         </div>
-                        
-                        <p><strong>原因：</strong>npx 缓存损坏或依赖树不完整</p>
-                        
-                        <p><strong>解决方案：</strong></p>
-                        
-                        <div class="tabs" id="fix-tabs">
-                            <div class="tabs-header">
-                                <button class="tab-button active" data-tab="fix-windows">Windows</button>
-                                <button class="tab-button" data-tab="fix-macos">macOS/Linux</button>
-                                <button class="tab-button" data-tab="fix-local">本地开发</button>
-                            </div>
-                            
-                            <div class="tab-content active" id="fix-windows">
-                                <p>清理 npx 缓存：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">CMD</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'fix-windows-cmd')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="fix-windows-cmd">rmdir /s /q %LOCALAPPDATA%\npm-cache\_npx</code></pre>
-                                </div>
-                                <p>然后重启 MCP 客户端，让 npx 重新下载干净的依赖。</p>
-                            </div>
-                            
-                            <div class="tab-content" id="fix-macos">
-                                <p>清理 npx 缓存：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">Bash</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'fix-macos-cmd')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="fix-macos-cmd">rm -rf ~/.npm/_npx</code></pre>
-                                </div>
-                                <p>然后重启 MCP 客户端，让 npx 重新下载干净的依赖。</p>
-                            </div>
-                            
-                            <div class="tab-content" id="fix-local">
-                                <p>如果你是在本地开发这个项目，改用本地构建版本：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">JSON</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'fix-local-config')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="fix-local-config">{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "node",
-      "args": ["build/index.js"]
-    }
-  }
-}</code></pre>
-                                </div>
-                                <p>然后构建项目：</p>
-                                <div class="code-block">
-                                    <div class="code-header">
-                                        <span class="code-language">Bash</span>
-                                        <button class="copy-button" onclick="copyCode(this, 'fix-local-build')">
-                                            <span>📋</span>
-                                            <span>复制</span>
-                                        </button>
-                                    </div>
-                                    <pre><code id="fix-local-build">npm run build</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <h4>问题 2：MCP 服务器连接失败</h4>
-                        <div class="callout error">
-                            <div class="callout-icon">❌</div>
-                            <div class="callout-content">
-                                <p><strong>错误信息：</strong></p>
-                                <div class="code-block">
-                                    <pre><code>Error connecting to MCP server: Connection closed</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <p><strong>可能原因：</strong></p>
-                        <ul>
-                            <li>Node.js 版本过低（需要 >= 16.0.0）</li>
-                            <li>依赖未安装或损坏</li>
-                            <li>配置文件格式错误</li>
-                        </ul>
-                        
-                        <p><strong>解决方案：</strong></p>
-                        <ol>
+                        <p class="text-sm text-text-primary mb-2"><strong>解决方案：</strong></p>
+                        <ol class="list-decimal list-inside space-y-2 text-sm text-text-primary">
                             <li>检查 Node.js 版本：
-                                <div class="code-block">
-                                    <pre><code>node --version</code></pre>
+                                <div class="bg-slate-900 rounded-lg overflow-hidden mt-1">
+                                    <pre class="code-block p-3 text-sm text-slate-200 overflow-x-auto"><code>node --version</code></pre>
                                 </div>
                             </li>
                             <li>如果低于 v16，请升级 Node.js</li>
                             <li>清理缓存并重新安装：
-                                <div class="code-block">
-                                    <pre><code>npm cache clean --force</code></pre>
+                                <div class="bg-slate-900 rounded-lg overflow-hidden mt-1">
+                                    <pre class="code-block p-3 text-sm text-slate-200 overflow-x-auto"><code>npm cache clean --force</code></pre>
                                 </div>
                             </li>
-                            <li>检查配置文件 JSON 格式是否正确（注意逗号、引号）</li>
+                            <li>检查配置文件 JSON 格式是否正确</li>
                         </ol>
-                        
-                        <h4>问题 3：工具调用超时</h4>
-                        <div class="callout error">
-                            <div class="callout-icon">❌</div>
-                            <div class="callout-content">
-                                <p><strong>错误信息：</strong></p>
-                                <div class="code-block">
-                                    <pre><code>Tool execution timeout</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <p><strong>解决方案：</strong>在配置中增加超时时间：</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-language">JSON</span>
-                                <button class="copy-button" onclick="copyCode(this, 'fix-timeout')">
-                                    <span>📋</span>
-                                    <span>复制</span>
-                                </button>
-                            </div>
-                            <pre><code id="fix-timeout">{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
-      "env": {
-        "MCP_TIMEOUT": "60000"
-      }
-    }
-  }
-}</code></pre>
-                        </div>
-                        
-                        <h4>问题 4：权限错误</h4>
-                        <div class="callout error">
-                            <div class="callout-icon">❌</div>
-                            <div class="callout-content">
-                                <p><strong>错误信息：</strong></p>
-                                <div class="code-block">
-                                    <pre><code>EACCES: permission denied</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <p><strong>解决方案：</strong></p>
-                        <ul>
-                            <li><strong>Windows：</strong>以管理员身份运行终端</li>
-                            <li><strong>macOS/Linux：</strong>修复 npm 目录权限：
-                                <div class="code-block">
-                                    <pre><code>sudo chown -R $(whoami) ~/.npm
-sudo chown -R $(whoami) ~/.mcp-probe-kit</code></pre>
-                                </div>
-                            </li>
-                        </ul>
-                        
-                        <div class="callout info">
-                            <div class="callout-icon">📚</div>
-                            <div class="callout-content">
-                                <p><strong>更多帮助：</strong></p>
-                                <ul>
-                                    <li>提交 <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener">GitHub Issue</a></li>
-                                </ul>
-                            </div>
-                        </div>
                     </div>
                 </div>
-                
-                <!-- Next Steps CTA -->
-                <div class="next-cta">
-                    <h3>🎉 安装完成！下一步</h3>
-                    <p>探索 MCP Probe Kit 的强大功能，提升你的开发效率</p>
-                    <div class="next-cta-links">
-                        <a href="./all-tools.html" class="next-cta-link">
-                            <span>🛠️</span>
-                            <span>查看所有工具</span>
-                        </a>
-                        <a href="./examples.html" class="next-cta-link">
-                            <span>💡</span>
-                            <span>学习最佳实践</span>
-                        </a>
-                        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="next-cta-link">
-                            <span>💻</span>
-                            <span>GitHub 仓库</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <footer class="footer">
-                <div class="footer-container">
-                    <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
-                    <div>
-                        © 2024-2026 MCP Probe Kit · MIT License · 
-                        <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
-                    </div>
-                </div>
-            </footer>
-        </main>
-    </div>
+            </section>
 
-    
-    <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
-    
+            <!-- Footer -->
+            <footer class="text-center text-sm text-text-tertiary py-4 border-t border-border">
+                <p>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:underline">小墨 (Kyle)</a></p>
+                <p class="mt-1">© 2024-2026 MCP Probe Kit · <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub ↗</a></p>
+            </footer>
+        </div>
+    </main>
+
     <script>
-        // Topbar scroll effect
-        const topbar = document.getElementById('topbar');
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 10) {
-                topbar.classList.add('scrolled');
-            } else {
-                topbar.classList.remove('scrolled');
-            }
-        });
-        
-// Sidebar toggle (mobile)
+        // 侧边栏切换
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            const overlay = document.querySelector('.sidebar-overlay');
-            
-            sidebar.classList.toggle('open');
-            
-            if (sidebar.classList.contains('open')) {
-                overlay.classList.add('active');
-                document.body.style.overflow = 'hidden';
+            const backdrop = document.getElementById('backdrop');
+            const isOpen = sidebar.classList.contains('open');
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                backdrop.classList.remove('active');
             } else {
-                overlay.classList.remove('active');
-                document.body.style.overflow = '';
+                sidebar.classList.add('open');
+                backdrop.classList.add('active');
             }
         }
-        
-        // Close sidebar when clicking on main content (mobile)
-        document.addEventListener('DOMContentLoaded', function() {
-            const mainContent = document.querySelector('.main-content');
-            const sidebar = document.getElementById('sidebar');
-            
-            if (mainContent && sidebar) {
-                mainContent.addEventListener('click', function(e) {
-                    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
-                        sidebar.classList.remove('open');
-                    }
-                });
-            }
-            
-            // Tabs functionality
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.addEventListener('click', function() {
-                    const tabsContainer = this.closest('.tabs');
-                    const targetTab = this.getAttribute('data-tab');
-                    
-                    // Remove active class from all buttons and contents in this tabs container
-                    tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-                    tabsContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-                    
-                    // Add active class to clicked button and corresponding content
-                    this.classList.add('active');
-                    document.getElementById(targetTab).classList.add('active');
-                });
-            });
-        });
-        
-        // Copy code functionality
-        function copyCode(button, codeId) {
-            const code = document.getElementById(codeId).textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                const originalHTML = button.innerHTML;
-                button.innerHTML = '<span>✓</span><span>已复制</span>';
-                button.classList.add('copied');
-                
-                setTimeout(() => {
-                    button.innerHTML = originalHTML;
-                    button.classList.remove('copied');
-                }, 2000);
+
+        // 安装方式折叠
+        function toggleInstall(type) {
+            const content = document.getElementById(type + '-content');
+            const icon = document.getElementById(type + '-icon');
+            content.classList.toggle('hidden');
+            icon.style.transform = content.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
+
+        // 客户端折叠
+        function toggleClient(type) {
+            const content = document.getElementById(type + '-content');
+            const icon = document.getElementById(type + '-icon');
+            content.classList.toggle('hidden');
+            icon.style.transform = content.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
+
+        // FAQ 折叠
+        function toggleFaq(id) {
+            const content = document.getElementById(id + '-content');
+            const icon = document.getElementById(id + '-icon');
+            content.classList.toggle('hidden');
+            icon.style.transform = content.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
+
+        // 复制代码
+        function copyCode(btn) {
+            const code = btn.closest('.bg-slate-900').querySelector('code');
+            navigator.clipboard.writeText(code.textContent).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = '✅ 已复制';
+                setTimeout(() => btn.textContent = originalText, 2000);
             });
         }
     </script>

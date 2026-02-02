@@ -5,412 +5,222 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>所有工具 - 20个AI研发工具完整列表 | MCP Probe Kit</title>
     
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="MCP Probe Kit 完整工具列表：6个工作流编排工具、3个代码分析工具、1个Git工具、1个生成工具、7个项目管理工具、3个UI/UX工具。每个工具包含详细使用说明、参数定义和代码示例。">
+    <meta name="description" content="MCP Probe Kit 完整工具列表：6个工作流编排工具、3个代码分析工具、1个Git工具、1个生成工具、7个项目管理工具、3个UI/UX工具。">
     <meta name="keywords" content="AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描">
     <meta name="author" content="小墨 (Kyle) - ByteZoneX">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/all-tools.html">
-    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
     
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="article">
-    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/all-tools.html">
-    <meta property="og:title" content="所有工具 - 20个AI研发工具完整列表 | MCP Probe Kit">
-    <meta property="og:description" content="浏览 MCP Probe Kit 全部 20 个工具，覆盖工作流编排、代码分析、Git 自动化、UI 生成等 6 大类别。每个工具都有详细文档和示例。">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/pages/all-tools.html">
-    <meta property="twitter:title" content="所有工具 - 20个AI研发工具完整列表 | MCP Probe Kit">
-    <meta property="twitter:description" content="浏览 MCP Probe Kit 全部 20 个工具，覆盖开发全流程。">
-    
-    <link rel="stylesheet" href="../styles/page.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { DEFAULT: '#2563EB', hover: '#1D4ED8' },
+                        text: { primary: '#0F172A', secondary: '#475569', tertiary: '#64748B' },
+                        bg: { page: '#F8FAFC', card: '#FFFFFF', hover: '#F1F5F9' },
+                        border: '#E2E8F0',
+                    },
+                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
     <style>
-        /* 工具页面专用样式 */
-        
-        .category-section {
-            margin-bottom: var(--spacing-xl);
+        html { scroll-behavior: smooth; }
+        .code-block { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .sidebar-drawer { transition: transform 0.3s ease; }
+        @media (max-width: 767px) {
+            .sidebar-drawer { transform: translateX(-100%); }
+            .sidebar-drawer.open { transform: translateX(0); }
         }
-        
-        .category-header {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-lg);
-            padding-bottom: var(--spacing-md);
-            border-bottom: 2px solid var(--border);
-        }
-        
-        .category-icon {
-            font-size: 28px;
-            line-height: 1;
-        }
-        
-        .category-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-            flex: 1;
-            line-height: 1.2;
-        }
-        
-        .category-count {
-            background: var(--primary);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            line-height: 1;
-        }
-        
-        .search-box {
-            margin-bottom: var(--spacing-xl);
-        }
-        
-        .search-input {
-            width: 100%;
-            padding: 16px 20px;
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            font-size: 16px;
-            transition: all 0.2s;
-        }
-        
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-        
-        .search-input::placeholder {
-            color: var(--text-tertiary);
-        }
-        
-        .search-results {
-            margin-top: var(--spacing-sm);
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        
-        .tools-grid {
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-lg);
-        }
-        
-        .tool-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: var(--spacing-lg);
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-md);
-        }
-        
-        .tool-card:hover {
-            box-shadow: var(--shadow-md);
-            border-color: var(--primary);
-        }
-        
-        .tool-main {
-            flex: 1;
-        }
-        
-        .tool-header {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-sm);
-        }
-        
-        .tool-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            font-family: 'Courier New', monospace;
-        }
-        
-        .tool-badges {
-            display: flex;
-            gap: var(--spacing-sm);
-            flex-wrap: wrap;
-        }
-        
-        .tool-badge {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        
-        .tool-badge.structured {
-            background: #D1FAE5;
-            color: #065F46;
-        }
-        
-        .tool-description {
-            color: var(--text-secondary);
-            font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: var(--spacing-sm);
-        }
-        
-        .tool-meta {
-            font-size: 12px;
-            color: var(--text-tertiary);
-            font-family: 'Courier New', monospace;
-        }
-        
-        .tool-details {
-            display: block;
-            margin-top: var(--spacing-md);
-            padding-top: var(--spacing-md);
-            border-top: 1px solid var(--border);
-        }
-        
-        .tool-section {
-            margin-bottom: var(--spacing-md);
-        }
-        
-        .tool-section:last-child {
-            margin-bottom: 0;
-        }
-        
-        .tool-section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-sm);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-        
-        .tool-section-content {
-            font-size: 14px;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-        
-        .tool-section-content ul {
-            margin: var(--spacing-sm) 0;
-            padding-left: var(--spacing-lg);
-        }
-        
-        .tool-section-content li {
-            margin-bottom: var(--spacing-xs);
-        }
-        
-        .tool-section-content code {
-            background: var(--bg-hover);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            color: #DB2777;
-        }
-        
-        .tool-example {
-            background: #F8FAFC;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: var(--spacing-md);
-            margin-top: var(--spacing-sm);
-        }
-        
-        .tool-example-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-sm);
-        }
-        
-        .tool-example-code {
-            background: #1E293B;
-            color: #E2E8F0;
-            padding: var(--spacing-md);
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-            overflow-x: auto;
-            white-space: pre-wrap;
-        }
-        
-        .no-results {
-            text-align: center;
-            padding: var(--spacing-xl);
-            color: var(--text-secondary);
-        }
-        
-        .no-results-icon {
-            font-size: 48px;
-            margin-bottom: var(--spacing-md);
-        }
+        .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .backdrop.active { opacity: 1; pointer-events: auto; }
     </style>
 </head>
 <body>
-    <!-- Topbar -->
-    <nav class="topbar" id="topbar">
-        <div class="topbar-container">
-            <a href="../index.html" class="topbar-brand">
+    <!-- A. 顶部导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50">
+        <div class="h-full px-4 flex items-center justify-between">
+            <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
                 <span>🚀</span>
-                <span>MCP Probe Kit</span>
+                <span class="sm:inline hidden">MCP Probe Kit</span>
             </a>
-            
-            <div class="topbar-actions">
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>ByteZoneX</span>
-                </a>
-                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>GitHub</span>
-                </a>
-                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>npm</span>
-                </a>
-            </div>
+            <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
         </div>
     </nav>
-    
-    <!-- Layout Container -->
-    <div class="layout">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">快速开始</div>
-                    <a href="../index.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🏠</span>
-                            <span>文档首页</span>
-                        </div>
-                    </a>
-                    <a href="./getting-started.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">📖</span>
-                            <span>安装配置</span>
-                        </div>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">工具文档</div>
-                    <div class="nav-item nav-item-toggle active expanded" onclick="toggleSubmenu(this)">
-                        <div class="nav-item-content">
-                            <span class="icon">🛠️</span>
-                            <span>所有工具</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="badge">20</span>
-                            <span class="toggle-icon">▶</span>
-                        </div>
-                    </div>
-                    <div class="nav-submenu expanded" id="tools-submenu">
-                        <!-- 工具列表将通过 JavaScript 动态生成 -->
-                    </div>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">指南</div>
-                    <a href="./migration.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🚀</span>
-                            <span>迁移指南</span>
-                        </div>
-                    </a>
-                    <a href="./examples.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">💡</span>
-                            <span>最佳实践</span>
-                        </div>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">资源</div>
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🌐</span>
-                            <span>ByteZoneX 主站</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">💻</span>
-                            <span>GitHub 仓库</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">📦</span>
-                            <span>npm 包</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🐛</span>
-                            <span>问题反馈</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                </div>
-            </nav>
+
+    <!-- 侧边栏遮罩 -->
+    <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+
+    <!-- B. 侧边栏 -->
+    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar">
+        <div class="p-4">
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">快速开始</div>
+                <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🏠</span>
+                    <span>文档首页</span>
+                </a>
+                <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📖</span>
+                    <span>安装配置</span>
+                </a>
+            </div>
             
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <div class="sidebar-footer-title">快速链接</div>
-                <div class="sidebar-footer-links">
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>🌐</span>
-                        <span>ByteZoneX</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>💻</span>
-                        <span>GitHub</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>📦</span>
-                        <span>npm</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                </div>
-                
-                <!-- QR Code -->
-                <div class="sidebar-qrcode">
-                    <div class="sidebar-qrcode-title">关注公众号</div>
-                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" />
-                    <div class="sidebar-qrcode-desc">获取更多技术分享</div>
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">工具文档</div>
+                <button onclick="toggleToolsMenu()" class="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary border-l-3 border-primary hover:bg-bg-page transition-colors">
+                    <div class="flex items-center gap-2">
+                        <span>🛠️</span>
+                        <span>所有工具</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-bg-page text-xs px-2 py-0.5 rounded-full">20</span>
+                        <svg class="w-4 h-4 transition-transform" id="tools-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                </button>
+                <div id="tools-submenu" class="hidden mt-1 ml-4 space-y-1">
+                    <!-- 工具列表将通过 JavaScript 动态生成 -->
                 </div>
             </div>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-wrapper">
-                <!-- Breadcrumb -->
-                <nav class="breadcrumb">
-                    <a href="../index.html">文档首页</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <a href="#">工具文档</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span>所有工具</span>
-                </nav>
+            
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">指南</div>
+                <a href="./migration.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🚀</span>
+                    <span>迁移指南</span>
+                </a>
+                <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💡</span>
+                    <span>最佳实践</span>
+                </a>
+            </div>
+            
+            <div class="pt-4 border-t border-border">
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💻</span>
+                    <span>GitHub</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📦</span>
+                    <span>npm</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+            </div>
+
+            <!-- QR Code -->
+            <div class="mt-4 pt-4 border-t border-border">
+                <div class="text-center">
+                    <div class="text-xs font-semibold text-text-tertiary mb-2">关注公众号</div>
+                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
+                    <div class="text-xs text-text-tertiary mt-2">获取更多技术分享</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- C. 主内容区 -->
+    <main class="flex-1 mt-14 min-h-screen md:ml-64">
+        <div class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+            
+            <!-- 面包屑 -->
+            <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
+                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0">文档首页</a>
+                <span class="text-text-tertiary">/</span>
+                <span class="text-text-primary flex-shrink-0">工具文档</span>
+                <span class="text-text-tertiary">/</span>
+                <span class="text-text-primary flex-shrink-0">所有工具</span>
+            </nav>
+
+            <!-- 页面标题 -->
+            <div class="mb-6">
+                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">所有工具</h1>
+                <p class="text-sm sm:text-base text-text-secondary">MCP Probe Kit 提供 20 个实用工具，核心与编排工具支持结构化输出</p>
+                <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.1</span>
+                    <span>MCP 2025-11-25</span>
+                    <span>SDK 1.25.3</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 mt-2 text-xs text-text-tertiary">
+                    <span>📦 v3.0.1</span>
+                    <span>·</span>
+                    <span>最后更新：2026-02-02</span>
+                    <span>·</span>
+                    <span>协议：MCP 2025-11-25</span>
+                    <span>·</span>
+                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
+                    <span>·</span>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/edit/main/docs/pages/all-tools.html" target="_blank" rel="noopener" class="text-primary hover:underline">编辑此页 ↗</a>
+                    <span>·</span>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/issues/new" target="_blank" rel="noopener" class="text-primary hover:underline">反馈问题 ↗</a>
+                </div>
+            </div>
+            
+            <!-- 搜索框 -->
+            <div class="mb-6">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="🔍 搜索工具名称或描述..." 
+                    autocomplete="off"
+                    class="w-full px-4 py-2.5 border border-border rounded-lg text-sm text-text-primary bg-white placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                />
+                <div id="searchResults" class="mt-2 text-sm text-text-tertiary"></div>
+            </div>
+            
+            <!-- 核心概念说明 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🧭</div>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">核心概念说明</h2>
+                </div>
                 
-                <!-- Page Header -->
-                <h1 class="page-title">所有工具</h1>
-                <p class="page-description">MCP Probe Kit 提供 20 个实用工具，核心与编排工具支持结构化输出</p>
-                <div class="page-meta">
-                    <span>📦 v3.0.0</span>
+                <div class="space-y-3 text-sm text-text-secondary">
+                    <p><strong>委托式编排：</strong>所有 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">start_*</code> 工具会在 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">structuredContent.metadata.plan</code> 返回执行计划。</p>
+                    <p><strong>结构化输出关键字段：</strong><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">summary</code>、<code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">status</code>、<code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">steps</code>、<code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">artifacts</code>、<code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">metadata.plan</code></p>
+                    <p><strong>需求澄清模式：</strong>使用 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">requirements_mode=loop</code> 先澄清再执行。</p>
+                    <p><strong>模板档位：</strong><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">template_profile=auto</code> 自动选择 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">guided</code>/<code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">strict</code>。</p>
+                </div>
+                
+                <div class="bg-slate-900 rounded-lg overflow-hidden mt-4">
+                    <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                        <span class="text-xs text-slate-300 font-medium">Plan 示例</span>
+                        <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors">📋 复制</button>
+                    </div>
+                    <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
+  "mode": "delegated",
+  "steps": [
+    {
+      "id": "spec",
+      "tool": "add_feature",
+      "args": { "feature_name": "user-auth" },
+      "outputs": ["docs/specs/user-auth/requirements.md"]
+    }
+  ]
+}</code></pre>
+                </div>
+            </section>
+            
+            <!-- 工具列表容器 -->
+            <div id="tools-container"></div>
+            
+            <!-- Footer -->
+            <footer class="text-center text-sm text-text-tertiary py-4 border-t border-border mt-8">
+                <p>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:underline">小墨 (Kyle)</a></p>
+                <p class="mt-1">© 2024-2026 MCP Probe Kit · <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub ↗</a></p>
+            </footer>
+        </div>
+    </main>
+                </div>
+                    <span>📦 v3.0.1</span>
                     <span>·</span>
                     <span>最后更新：2026-02-02</span>
                     <span>·</span>
@@ -432,7 +242,49 @@
                         placeholder="🔍 搜索工具名称或描述..." 
                         autocomplete="off"
                     />
-                    <div id="searchResults" class="search-results"></div>
+                    <div id="searchResults" class="mt-2 text-sm text-text-tertiary"></div>
+                </div>
+
+                <!-- 重要说明 -->
+                <div class="bg-blue-50 border-l-3 border-blue-500 rounded-r p-4 mb-6">
+                    <h3 class="font-medium text-text-primary mb-3">🧭 核心概念说明</h3>
+                    <div class="space-y-2 text-sm text-text-secondary">
+                        <p><strong>委托式编排：</strong>所有 <code class="bg-gray-200 px-1 rounded text-xs">start_*</code> 工具会在 <code class="bg-gray-200 px-1 rounded text-xs">structuredContent.metadata.plan</code> 返回执行计划。</p>
+                        <p><strong>结构化输出关键字段：</strong><code class="bg-gray-200 px-1 rounded text-xs">summary</code>、<code class="bg-gray-200 px-1 rounded text-xs">status</code>、<code class="bg-gray-200 px-1 rounded text-xs">steps</code>、<code class="bg-gray-200 px-1 rounded text-xs">artifacts</code>、<code class="bg-gray-200 px-1 rounded text-xs">metadata.plan</code></p>
+                        <p><strong>需求澄清模式：</strong>使用 <code class="bg-gray-200 px-1 rounded text-xs">requirements_mode=loop</code> 先澄清再执行。</p>
+                        <p><strong>模板档位：</strong><code class="bg-gray-200 px-1 rounded text-xs">template_profile=auto</code> 自动选择 <code class="bg-gray-200 px-1 rounded text-xs">guided</code>/<code class="bg-gray-200 px-1 rounded text-xs">strict</code>。</p>
+                    </div>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden mt-3">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">Plan 示例</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
+  "mode": "delegated",
+  "steps": [
+    {
+      "id": "spec",
+      "tool": "add_feature",
+      "args": { "feature_name": "user-auth" },
+      "outputs": ["docs/specs/user-auth/requirements.md"]
+    }
+  ]
+}</code></pre>
+                    </div>
+                </div>
+                
+                <!-- 工具列表容器 -->
+                <div id="tools-container"></div>
+                
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="search-input" 
+                        placeholder="🔍 搜索工具名称或描述..." 
+                        autocomplete="off"
+                    />
+                    <div id="searchResults" class="mt-2 text-sm text-text-tertiary"></div>
                 </div>
 
                 <div class="callout info">
@@ -464,351 +316,150 @@
                 <!-- 工具列表容器 -->
                 <div id="tools-container"></div>
                 
-                <!-- Next Steps CTA -->
-                <div class="next-cta">
-                    <h3>🎯 开始使用</h3>
-                    <p>选择你感兴趣的工具，提升开发效率</p>
-                    <div class="next-cta-links">
-                        <a href="./getting-started.html" class="next-cta-link">
-                            <span>📖</span>
-                            <span>安装配置</span>
-                        </a>
-                        <a href="./examples.html" class="next-cta-link">
-                            <span>💡</span>
-                            <span>学习最佳实践</span>
-                        </a>
-                        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="next-cta-link">
-                            <span>💻</span>
-                            <span>GitHub 仓库</span>
-                        </a>
-                    </div>
-                </div>
+                <!-- Footer -->
+                <footer class="text-center text-sm text-text-tertiary py-4 border-t border-border mt-8">
+                    <p>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:underline">小墨 (Kyle)</a></p>
+                    <p class="mt-1">© 2024-2026 MCP Probe Kit · <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub ↗</a></p>
+                </footer>
             </div>
-            
-            <!-- Footer -->
-            <footer class="footer">
-                <div class="footer-container">
-                    <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
-                    <div>
-                        © 2024-2026 MCP Probe Kit · MIT License · 
-                        <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
-                    </div>
-                </div>
-            </footer>
         </main>
     </div>
-    
-    <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
-    
+
     <!-- 引入工具数据 -->
     <script src="../data/tools.js"></script>
     <script>
-        // 切换子菜单展开/收起
-        function toggleSubmenu(element) {
-            element.classList.toggle('expanded');
-            const submenu = document.getElementById('tools-submenu');
-            submenu.classList.toggle('expanded');
+        let toolsMenuExpanded = true;
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const isOpen = sidebar.classList.contains('open');
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                backdrop.classList.remove('active');
+            } else {
+                sidebar.classList.add('open');
+                backdrop.classList.add('active');
+            }
         }
-        
-        // 工具简短描述（最多4个字）
+
+        function toggleToolsMenu() {
+            toolsMenuExpanded = !toolsMenuExpanded;
+            const submenu = document.getElementById('tools-submenu');
+            const icon = document.getElementById('tools-menu-icon');
+            if (toolsMenuExpanded) {
+                submenu.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                submenu.classList.add('hidden');
+                icon.style.transform = '';
+            }
+        }
+
         const toolDescriptions = {
-            // 工作流编排
-            'start_feature': '新功能',
-            'start_bugfix': '修Bug',
-            'start_onboard': '快速上手',
-            'start_ralph': '循环开发',
-            'start_product': '产品设计',
-            'start_ui': 'UI开发',
-            
-            // 代码分析
-            'code_review': '审查代码',
-            'fix_bug': '修复Bug',
-            'refactor': '重构建议',
-            
-            // Git 工具
-            'gencommit': '生成提交',
-            
-            // 生成工具
-            'gentest': '生成测试',
-            
-            // 项目管理
-            'init_project': '初始化',
-            'init_project_context': '项目上下文',
-            'add_feature': '添加功能',
-            'estimate': '工作量',
-            'interview': '需求访谈',
-            'ask_user': '提问用户',
-            
-            // UI/UX 工具
-            'ui_design_system': '设计系统',
-            'ui_search': '搜索UI',
-            'sync_ui_data': '同步数据',
+            'start_feature': '新功能', 'start_bugfix': '修Bug', 'start_onboard': '快速上手',
+            'start_ralph': '循环开发', 'start_product': '产品设计', 'start_ui': 'UI开发',
+            'code_review': '审查代码', 'fix_bug': '修复Bug', 'refactor': '重构建议',
+            'gencommit': '生成提交', 'gentest': '生成测试', 'init_project': '初始化',
+            'init_project_context': '项目上下文', 'add_feature': '添加功能', 'estimate': '工作量',
+            'interview': '需求访谈', 'ask_user': '提问用户', 'ui_design_system': '设计系统',
+            'ui_search': '搜索UI', 'sync_ui_data': '同步数据', 'init_component_catalog': '组件目录',
+            'render_ui': 'UI渲染', 'start_api': 'API文档', 'start_doc': '补全文档',
+            'start_release': '版本发布', 'gen_prototype': '原型设计', 'gen_prd': 'PRD文档',
+            'security_scan': '安全扫描', 'perf': '性能分析', 'genchangelog': '更新日志',
+            'genpr': 'PR描述', 'resolve_conflict': '解决冲突', 'genapi': 'API文档',
+            'gensql': 'SQL生成', 'gen_mock': 'Mock数据',
         };
-        
-        // 生成侧边栏工具列表
+
+        let allTools = [];
+
         function generateSidebarTools() {
             const submenu = document.getElementById('tools-submenu');
             let html = '';
-            
             for (const [categoryKey, categoryInfo] of Object.entries(toolsData.categories)) {
                 const tools = toolsData[categoryKey];
                 if (!tools || tools.length === 0) continue;
-                
-                // 添加分类标题
-                html += `
-                    <div class="nav-category-title">
-                        ${categoryInfo.icon} ${categoryInfo.title}
-                    </div>
-                `;
-                
+                html += `<div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider px-2 py-1 mt-2">${categoryInfo.icon} ${categoryInfo.title}</div>`;
                 tools.forEach(tool => {
                     const toolId = tool.name.replace(/_/g, '-');
                     const desc = toolDescriptions[tool.name] || '';
                     const displayText = desc ? `${tool.name} (${desc})` : tool.name;
-                    
-                    html += `
-                        <a href="javascript:void(0)" class="nav-subitem" onclick="scrollToTool('${toolId}', event)" title="${tool.description}">
-                            ${displayText}
-                        </a>
-                    `;
+                    html += `<a href="javascript:void(0)" onclick="scrollToTool('${toolId}')" class="block px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-page hover:text-primary rounded transition-colors">${displayText}</a>`;
                 });
             }
-            
             submenu.innerHTML = html;
         }
-        
-        // 滚动到指定工具
-        function scrollToTool(toolId, event) {
-            // 阻止默认行为
-            if (event) {
-                event.preventDefault();
-            }
-            
-            // 移除所有选中状态
-            document.querySelectorAll('.nav-subitem').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // 添加当前选中状态
-            if (event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
-            }
-            
+
+        function scrollToTool(toolId) {
             const element = document.getElementById(toolId);
             if (element) {
-                // 计算滚动位置，留出 header 高度 (60px) + 间距 (40px)
                 const headerHeight = 100;
                 const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-                const offsetPosition = elementPosition - headerHeight;
-                
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
-                
-                // 高亮显示
+                window.scrollTo({ top: elementPosition - headerHeight, behavior: 'smooth' });
                 element.style.transition = 'background 0.3s';
                 element.style.background = 'rgba(37, 99, 235, 0.05)';
-                setTimeout(() => {
-                    element.style.background = '';
-                }, 2000);
+                setTimeout(() => { element.style.background = ''; }, 2000);
             }
+            if (window.innerWidth < 768) toggleSidebar();
         }
-        
-        // Topbar scroll effect
-        const topbar = document.getElementById('topbar');
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 10) {
-                topbar.classList.add('scrolled');
-            } else {
-                topbar.classList.remove('scrolled');
-            }
-        });
-        
-        // Sidebar toggle (mobile)
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('open');
-        }
-        
-        // Close sidebar when clicking on main content (mobile)
-        document.addEventListener('DOMContentLoaded', function() {
-            const mainContent = document.querySelector('.main-content');
-            const sidebar = document.getElementById('sidebar');
-            
-            if (mainContent && sidebar) {
-                mainContent.addEventListener('click', function(e) {
-                    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
-                        sidebar.classList.remove('open');
-                    }
-                });
-            }
-        });
-        
-        // 渲染工具列表
-        let allTools = []; // 存储所有工具的扁平数组
-        
+
         function renderTools(filteredTools = null) {
             const container = document.getElementById('tools-container');
             let html = '';
-            
-            // 如果有过滤结果，只渲染过滤后的工具
-            if (filteredTools) {
-                if (filteredTools.length === 0) {
-                    html = `
-                        <div class="no-results">
-                            <div class="no-results-icon">🔍</div>
-                            <p>未找到匹配的工具</p>
-                        </div>
-                    `;
-                } else {
-                    html += '<div class="tools-grid">';
-                    filteredTools.forEach(tool => {
-                        html += renderToolCard(tool);
-                    });
-                    html += '</div>';
-                }
+            if (filteredTools && filteredTools.length === 0) {
+                html = `<div class="text-center py-8 text-text-secondary"><div class="text-4xl mb-2">🔍</div><p>未找到匹配的工具</p></div>`;
+            } else if (filteredTools) {
+                html += '<div class="space-y-6">';
+                filteredTools.forEach(tool => { html += renderToolCard(tool); });
+                html += '</div>';
             } else {
-                // 渲染所有分类
                 for (const [categoryKey, categoryInfo] of Object.entries(toolsData.categories)) {
                     const tools = toolsData[categoryKey];
                     if (!tools || tools.length === 0) continue;
-                    
-                    html += `
-                        <div class="category-section">
-                            <div class="category-header">
-                                <span class="category-icon">${categoryInfo.icon}</span>
-                                <h2 class="category-title">${categoryInfo.title}</h2>
-                                <span class="category-count">${tools.length} 个</span>
-                            </div>
-                            <div class="tools-grid">
-                    `;
-                    
-                    tools.forEach(tool => {
-                        html += renderToolCard({ ...tool, category: categoryKey });
-                    });
-                    
-                    html += `
-                            </div>
-                        </div>
-                    `;
+                    html += `<section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm"><div class="flex items-center gap-3 mb-4 pb-4 border-b border-border"><span class="text-2xl">${categoryInfo.icon}</span><h2 class="text-lg sm:text-xl font-semibold text-text-primary">${categoryInfo.title}</h2><span class="ml-auto bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">${tools.length} 个</span></div><div class="space-y-4">`;
+                    tools.forEach(tool => { html += renderToolCard({ ...tool, category: categoryKey }); });
+                    html += `</div></section>`;
                 }
             }
-            
             container.innerHTML = html;
         }
-        
-        // 渲染单个工具卡片
+
         function renderToolCard(tool) {
             const hasDetails = tool.params || tool.usage || tool.example;
-            
             let detailsHTML = '';
             if (hasDetails) {
-                detailsHTML = `
-                    <div class="tool-details">
-                        ${tool.usage ? `
-                            <div class="tool-section">
-                                <div class="tool-section-title">📖 使用说明</div>
-                                <div class="tool-section-content">${tool.usage}</div>
-                            </div>
-                        ` : ''}
-                        
-                        ${tool.params ? `
-                            <div class="tool-section">
-                                <div class="tool-section-title">⚙️ 参数说明</div>
-                                <div class="tool-section-content">
-                                    <ul>
-                                        ${tool.params.map(p => `
-                                            <li>
-                                                <code>${p.name}</code> 
-                                                <span style="color: var(--text-tertiary);">(${p.type}${p.required ? ', 必填' : ', 可选'})</span>
-                                                - ${p.desc}
-                                            </li>
-                                        `).join('')}
-                                    </ul>
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        ${tool.example ? `
-                            <div class="tool-section">
-                                <div class="tool-section-title">💡 使用示例</div>
-                                <div class="tool-example">
-                                    <div class="tool-example-code">${tool.example.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
+                detailsHTML = `<div class="mt-4 pt-4 border-t border-border">
+                    ${tool.usage ? `<div class="mb-3"><h4 class="text-sm font-medium text-text-primary mb-2">📖 使用说明</h4><p class="text-sm text-text-secondary">${tool.usage}</p></div>` : ''}
+                    ${tool.params ? `<div class="mb-3"><h4 class="text-sm font-medium text-text-primary mb-2">⚙️ 参数说明</h4><ul class="space-y-1 text-sm text-text-secondary">${tool.params.map(p => `<li class="flex items-start gap-2"><code class="bg-gray-200 px-1.5 py-0.5 rounded text-xs flex-shrink-0">${p.name}</code><span class="text-xs text-text-tertiary">(${p.type}${p.required ? ', 必填' : ', 可选'})</span><span class="text-sm text-text-secondary">- ${p.desc}</span></li>`).join('')}</ul></div>` : ''}
+                    ${tool.example ? `<div><h4 class="text-sm font-medium text-text-primary mb-2">💡 使用示例</h4><div class="bg-slate-900 rounded-lg overflow-hidden"><div class="flex items-center justify-between px-3 py-2 bg-slate-800"><span class="text-xs text-slate-300 font-medium">Example</span></div><pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>${tool.example.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre></div></div>` : ''}
+                </div>`;
             }
-            
-            return `
-                <div class="tool-card" id="${tool.name.replace(/_/g, '-')}">
-                    <div class="tool-main">
-                        <div class="tool-header">
-                            <div class="tool-name">${tool.name}</div>
-                            <div class="tool-badges">
-                                <span class="tool-badge structured">✓ 结构化</span>
-                            </div>
-                        </div>
-                        <div class="tool-description">${tool.description}</div>
-                        <div class="tool-meta">Schema: ${tool.schema}</div>
-                    </div>
-                    ${detailsHTML}
-                </div>
-            `;
+            return `<div class="tool-card" id="${tool.name.replace(/_/g, '-')}"><div class="flex items-start gap-3"><div class="flex-1"><div class="flex items-center gap-2 mb-2"><code class="text-sm font-medium text-text-primary bg-gray-100 px-2 py-1 rounded">${tool.name}</code><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">✓ 结构化</span></div><p class="text-sm text-text-secondary mb-2">${tool.description}</p><p class="text-xs text-text-tertiary font-mono">Schema: ${tool.schema}</p></div></div>${detailsHTML}</div>`;
         }
-        
-        // 搜索功能
+
         function searchTools(query) {
             if (!query.trim()) {
                 document.getElementById('searchResults').textContent = '';
                 renderTools();
                 return;
             }
-            
             const lowerQuery = query.toLowerCase();
-            const results = allTools.filter(tool => {
-                return tool.name.toLowerCase().includes(lowerQuery) || 
-                       tool.description.toLowerCase().includes(lowerQuery);
-            });
-            
-            const resultsText = results.length > 0 
-                ? `找到 ${results.length} 个匹配的工具` 
-                : '未找到匹配的工具';
-            document.getElementById('searchResults').textContent = resultsText;
-            
+            const results = allTools.filter(tool => tool.name.toLowerCase().includes(lowerQuery) || tool.description.toLowerCase().includes(lowerQuery));
+            document.getElementById('searchResults').textContent = results.length > 0 ? `找到 ${results.length} 个匹配的工具` : '未找到匹配的工具';
             renderTools(results);
         }
-        
-        // 初始化
+
         function init() {
-            // 构建扁平的工具数组
             allTools = [];
             for (const [categoryKey, tools] of Object.entries(toolsData)) {
-                // 跳过 categories 元数据对象
                 if (categoryKey === 'categories') continue;
-                
-                tools.forEach(tool => {
-                    allTools.push({ ...tool, category: categoryKey });
-                });
+                tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
             }
-            
-            // 生成侧边栏工具列表
             generateSidebarTools();
-            
-            // 渲染所有工具
             renderTools();
-            
-            // 绑定搜索事件
-            const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', (e) => {
-                searchTools(e.target.value);
-            });
+            document.getElementById('searchInput').addEventListener('input', (e) => { searchTools(e.target.value); });
         }
-        
-        // 页面加载完成后初始化
+
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
