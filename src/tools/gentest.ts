@@ -1,8 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
-import { okStructured } from "../lib/response.js";
+import { okText } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
-import type { TestSuite } from "../schemas/output/core-tools.js";
 
 // gentest 工具实现
 export async function gentest(args: any) {
@@ -175,43 +174,41 @@ const createUser = (overrides = {}) => ({
 
 ## 📤 输出格式要求
 
-请严格按以下 JSON 格式输出测试套件：
+请直接输出完整的测试代码文件，包含：
+- import 语句（测试框架和被测试代码）
+- describe 块（测试套件）
+- 多个 test/it 块（各种测试用例）
+- 必要的 mock 和 setup/teardown
 
-\`\`\`json
-{
-  "summary": "测试套件摘要",
-  "framework": "jest|vitest|mocha",
-  "testCases": [
-    {
-      "name": "测试用例名称",
-      "description": "测试用例描述",
-      "type": "unit|integration|e2e",
-      "code": "完整的测试代码",
-      "assertions": ["断言1", "断言2"]
-    }
-  ],
-  "edgeCases": [
-    {
-      "scenario": "边界场景描述",
-      "input": "输入数据",
-      "expectedOutput": "预期输出"
-    }
-  ],
-  "mockData": {
-    "mockName": "mock数据"
-  }
-}
-\`\`\``;
+**示例输出**：
+\`\`\`typescript
+import { functionUnderTest } from '../src/module';
 
-    // 创建结构化数据对象
-    const testSuite: TestSuite = {
-      summary: `为提供的代码生成 ${framework} 测试用例`,
-      framework: framework as any,
-      testCases: [],
-    };
+describe('functionUnderTest', () => {
+  test('应该正常处理有效输入', () => {
+    const result = functionUnderTest('valid input');
+    expect(result).toBe('expected output');
+  });
 
-    return okStructured(message, testSuite, {
+  test('应该处理边界情况：空字符串', () => {
+    const result = functionUnderTest('');
+    expect(result).toBe('');
+  });
+
+  test('应该抛出错误：无效输入', () => {
+    expect(() => functionUnderTest(null)).toThrow('Invalid input');
+  });
+});
+\`\`\`
+
+💡 **提示**：
+- 确保测试代码可以直接运行
+- 包含必要的类型声明（如果使用 TypeScript）
+- 添加适当的注释说明测试意图`;
+
+    return okText(message, {
       schema: (await import('../schemas/output/core-tools.js')).TestSuiteSchema,
+      note: "本工具返回测试生成指南，AI 应根据指南和代码生成完整的测试文件"
     });
   } catch (error) {
     return handleToolError(error, 'gentest');

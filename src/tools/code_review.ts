@@ -1,8 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
-import { okStructured } from "../lib/response.js";
+import { okText } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
-import type { CodeReviewReport } from "../schemas/output/index.js";
 
 // code_review 工具实现
 export async function codeReview(args: any) {
@@ -28,9 +27,9 @@ export async function codeReview(args: any) {
 
     const header = renderGuidanceHeader({
       tool: "code_review",
-      goal: "输出结构化的代码审查报告。",
-      tasks: ["基于代码进行质量/安全/性能检查", "仅输出审查结果"],
-      outputs: ["结构化审查报告（JSON）"],
+      goal: "对代码进行全面审查，发现问题并提供改进建议。",
+      tasks: ["基于代码进行质量/安全/性能检查", "列出发现的问题和建议"],
+      outputs: ["审查报告（包含问题清单、优点、建议）"],
     });
 
     const message = `${header}请对以下代码进行全面审查：
@@ -178,22 +177,10 @@ ${code || "请提供需要审查的代码"}
 
 现在请开始代码审查，生成详细的审查报告。`;
 
-    // 创建结构化数据（示例数据，实际应由 AI 生成）
-    const structuredData: CodeReviewReport = {
-      summary: "代码审查完成，请查看详细报告",
-      overallScore: 0, // AI 会填充实际分数
-      issues: [], // AI 会填充实际问题
-      strengths: [], // AI 会填充优点
-      recommendations: [], // AI 会填充建议
-    };
-
-    return okStructured(
-      message, // 保持向后兼容的文本输出
-      structuredData,
-      {
-        schema: (await import('../schemas/output/core-tools.js')).CodeReviewReportSchema,
-      }
-    );
+    return okText(message, {
+      schema: (await import('../schemas/output/core-tools.js')).CodeReviewReportSchema,
+      note: "本工具返回代码审查指南，AI 应根据指南分析代码并输出审查报告"
+    });
   } catch (error) {
     return handleToolError(error, 'code_review');
   }

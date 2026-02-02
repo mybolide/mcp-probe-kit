@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.1] - 2026-02-02
+
+### 🐛 修复
+
+**工具输出标准化**
+- 修复 6 个指南型工具的输出格式，避免返回空的结构化数据误导 AI：
+  - `fix_bug` - 改为 okText（返回修复指南）
+  - `add_feature` - 改为 okText（返回规格生成指南）
+  - `estimate` - 改为 okText（返回估算指南）
+  - `gentest` - 改为 okText（返回测试生成指南）
+  - `code_review` - 改为 okText（返回审查指南）
+  - `refactor` - 改为 okText（返回重构指南）
+
+**工具分类明确**
+- 新增 `response.okText()` 函数，专门用于指南型工具
+- 工具清晰分为两类：
+  - **指南型工具（6个）**：返回 `okText`，AI 根据指南执行任务
+  - **数据驱动工具（14个）**：返回 `okStructured`，包含真实的执行计划或数据
+- 更新 `tools-manifest.json`，明确标注工具类型和 Schema 用途
+
+### 🎯 影响
+
+- **用户体验提升**：AI 不再误以为指南型工具已完成任务，会正确地根据指南执行
+- **系统更稳定**：所有工具都经过系统化测试和验证
+- **文档更清晰**：工具类型和用途一目了然
+
+---
+
 ## [3.0.0] - 2026-02-02
 
 ### 🚀 重大变更
