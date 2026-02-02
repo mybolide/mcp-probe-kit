@@ -328,7 +328,7 @@
     <!-- 引入工具数据 -->
     <script src="../data/tools.js"></script>
     <script>
-        let toolsMenuExpanded = false;
+        let toolsMenuExpanded = true;
         
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -456,6 +456,8 @@
                 tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
             }
             generateSidebarTools();
+            document.getElementById('tools-submenu').classList.remove('hidden');
+            document.getElementById('tools-menu-icon').style.transform = 'rotate(180deg)';
             renderTools();
             document.getElementById('searchInput').addEventListener('input', (e) => { searchTools(e.target.value); });
         }
