@@ -296,10 +296,9 @@ describe('[功能描述]', () => {
 *工具: MCP Probe Kit - fix_bug*
 `;
 import { parseArgs, getString } from "../utils/parseArgs.js";
-import { okStructured } from "../lib/response.js";
+import { okText } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
-import type { BugAnalysis } from "../schemas/output/index.js";
 
 /**
  * fix_bug 工具实现
@@ -362,9 +361,9 @@ export async function fixBug(args: any) {
 
     const header = renderGuidanceHeader({
       tool: "fix_bug",
-      goal: "输出结构化的 Bug 修复方案与验证计划。",
-      tasks: ["基于错误信息分析根因并给出修复方案", "仅输出修复方案"],
-      outputs: ["结构化修复报告（JSON）"],
+      goal: "分析 Bug 并提供修复指南。AI 应根据指南执行实际修复。",
+      tasks: ["基于错误信息分析根因", "提供修复步骤", "建议验证方案"],
+      outputs: ["修复指南（文本）"],
     });
 
     const guide = `${header}${PROMPT_TEMPLATE
@@ -373,25 +372,10 @@ export async function fixBug(args: any) {
       .replace(/{reproduce_section}/g, reproduceSection)
       .replace(/{behavior_section}/g, behaviorSection)}`;
 
-    // 创建结构化数据
-    const structuredData: BugAnalysis = {
-      summary: "Bug 修复指南已生成",
-      bugType: "functional", // AI 会填充
-      severity: "medium", // AI 会填充
-      rootCause: "", // AI 会填充
-      fixPlan: {
-        steps: [], // AI 会填充
-      },
-      testPlan: {}, // AI 会填充
-    };
-
-    return okStructured(
-      guide,
-      structuredData,
-      {
-        schema: (await import('../schemas/output/core-tools.js')).BugAnalysisSchema,
-      }
-    );
+    return okText(guide, {
+      schema: (await import('../schemas/output/core-tools.js')).BugAnalysisSchema,
+      note: "本工具返回 Bug 修复指南，AI 应根据指南执行问题定位、原因分析、代码修复和验证测试",
+    });
   } catch (error) {
     return handleToolError(error, 'fix_bug');
   }

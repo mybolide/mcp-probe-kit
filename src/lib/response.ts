@@ -54,3 +54,32 @@ export function okStructured(
 
   return response;
 }
+
+/**
+ * 返回纯文本响应（guidance-only 工具）
+ * 用于只返回指南而不返回结构化数据的工具
+ * 
+ * @param text - 人类可读的文本内容（通常是 guidance）
+ * @param meta - 可选的元数据
+ * @returns 标准工具响应
+ */
+export function okText(
+  text: string,
+  meta?: Record<string, any>
+): ToolResponse {
+  const response: ToolResponse = {
+    content: [
+      {
+        type: 'text',
+        text,
+      },
+    ],
+    isError: false,
+  };
+
+  if (meta) {
+    response._meta = meta;
+  }
+
+  return response;
+}

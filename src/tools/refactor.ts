@@ -1,8 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
-import { okStructured } from "../lib/response.js";
+import { okText } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
-import type { RefactorPlan } from "../schemas/output/core-tools.js";
 
 // refactor 工具实现
 export async function refactor(args: any) {
@@ -28,9 +27,9 @@ export async function refactor(args: any) {
 
     const header = renderGuidanceHeader({
       tool: "refactor",
-      goal: "输出结构化的重构计划。",
-      tasks: ["分析代码问题并给出重构步骤", "仅输出重构方案"],
-      outputs: ["结构化重构计划（JSON）"],
+      goal: "分析代码并提供详细的重构建议和实施计划。",
+      tasks: ["识别代码坏味道", "提供重构步骤", "评估风险和收益"],
+      outputs: ["重构计划（包含步骤、风险评估、预期收益）"],
     });
 
     const message = `${header}请为以下代码提供重构建议：
@@ -362,21 +361,28 @@ const result = pipe(
 }
 \`\`\`
 
-现在请分析代码，提供详细的重构建议和实施计划。`;
+现在请分析代码，提供详细的重构建议和实施计划。
 
-    // 创建结构化数据对象
-    const refactorPlan: RefactorPlan = {
-      summary: `代码重构计划 - 目标: ${goal || '全面优化'}`,
-      goal: (goal as any) || 'improve_maintainability',
-      refactoringSteps: [],
-      riskAssessment: {
-        level: 'medium',
-        risks: [],
-      },
-    };
+---
 
-    return okStructured(message, refactorPlan, {
+## 📤 输出格式要求
+
+请输出完整的重构报告，包含：
+
+1. **重构概述**：简要说明重构目标和主要问题
+2. **重构步骤**：详细的步骤列表（每步包含：描述、原因、示例代码）
+3. **风险评估**：风险级别和具体风险点
+4. **预期收益**：重构后的改进点
+5. **实施建议**：优先级和注意事项
+
+💡 **提示**：
+- 提供具体的代码示例（重构前 vs 重构后）
+- 说明每个步骤的必要性和影响
+- 评估风险并提供缓解措施`;
+
+    return okText(message, {
       schema: (await import('../schemas/output/core-tools.js')).RefactorPlanSchema,
+      note: "本工具返回重构指南，AI 应根据指南分析代码并输出重构计划"
     });
   } catch (error) {
     return handleToolError(error, 'refactor');

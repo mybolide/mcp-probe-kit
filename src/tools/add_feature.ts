@@ -1,8 +1,7 @@
 import { parseArgs, getString, validateRequired } from "../utils/parseArgs.js";
-import { okStructured } from "../lib/response.js";
+import { okText } from "../lib/response.js";
 import { loadTemplate, normalizeTemplateProfile } from "../lib/template-loader.js";
 import { handleToolError } from "../utils/error-handler.js";
-import type { FeatureSpec } from "../schemas/output/project-tools.js";
 
 /**
  * add_feature 工具
@@ -330,49 +329,9 @@ ${fenceClose}
 *工具: MCP Probe Kit - add_feature*
 `;
 
-    // 创建结构化数据对象
-    const structuredData: FeatureSpec = {
-      summary: `添加功能：${featureName}`,
-      featureName: featureName,
-      requirements: [
-        "待生成需求文档",
-        "使用 EARS 格式编写验收标准"
-      ],
-      design: {
-        architecture: "待设计",
-        components: [],
-        dataFlow: "待设计"
-      },
-      tasks: [
-        {
-          id: "1",
-          title: "生成需求文档",
-          description: `创建 ${docsDir}/specs/${featureName}/requirements.md`,
-          estimatedHours: 1
-        },
-        {
-          id: "2",
-          title: "生成设计文档",
-          description: `创建 ${docsDir}/specs/${featureName}/design.md`,
-          estimatedHours: 2
-        },
-        {
-          id: "3",
-          title: "生成任务清单",
-          description: `创建 ${docsDir}/specs/${featureName}/tasks.md`,
-          estimatedHours: 1
-        }
-      ],
-      estimate: {
-        storyPoints: 0,
-        optimistic: "待估算",
-        normal: "待估算",
-        pessimistic: "待估算"
-      }
-    };
-
-    return okStructured(guide, structuredData, {
+    return okText(guide, {
       schema: (await import("../schemas/output/project-tools.js")).FeatureSpecSchema,
+      note: "本工具返回功能规格生成指南，AI 应根据指南创建需求、设计和任务文档",
       template: {
         profile: templateProfile,
         requested: profileDecision.requested,

@@ -1,8 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
-import { okStructured } from "../lib/response.js";
+import { okText } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
-import type { CommitMessage } from "../schemas/structured-output.js";
 
 // gencommit 工具实现
 export async function gencommit(args: any) {
@@ -136,35 +135,23 @@ chore: 🤖 升级依赖版本至 1.2.9
 💡 **提示**：
 - 如果暂存区为空，提示用户先使用 \`git add\` 添加文件
 - 如果变更较多，建议分多次提交
-- 确保 commit 消息清晰描述了"做了什么"和"为什么"`;
+- 确保 commit 消息清晰描述了"做了什么"和"为什么"
 
-    const allowedTypes = new Set([
-      "feat",
-      "fix",
-      "docs",
-      "refactor",
-      "test",
-      "chore",
-      "style",
-      "perf",
-      "ci",
-      "build",
-      "revert",
-    ]);
-    const normalizedType = type === "fixed"
-      ? "fix"
-      : type && allowedTypes.has(type)
-        ? type
-        : "chore";
+---
 
-    const structuredData: CommitMessage = {
-      type: normalizedType as CommitMessage["type"],
-      subject: "",
-      fullMessage: "",
-    };
+📝 **输出格式**（供参考）：
+最终生成的 commit 消息应该符合以下格式（直接可用于 git commit）：
+\`\`\`
+<type>: <emoji> <subject>
 
-    return okStructured(textMessage, structuredData, {
+<body>（可选，详细说明）
+
+<footer>（可选，引用 issue）
+\`\`\``;
+
+    return okText(textMessage, {
       schema: (await import("../schemas/structured-output.js")).CommitMessageSchema,
+      note: "本工具返回 commit 消息生成指南，AI 应根据指南和变更内容生成符合规范的 commit 消息",
     });
   } catch (error) {
     return handleToolError(error, 'gencommit');
