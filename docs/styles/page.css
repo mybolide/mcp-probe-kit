@@ -71,7 +71,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-md);
 }
 
 .topbar-brand {
@@ -84,6 +84,7 @@ body {
     text-decoration: none;
     transition: color 0.2s;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .topbar-brand:hover {
@@ -93,7 +94,8 @@ body {
 .topbar-actions {
     display: flex;
     align-items: center;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-md);
+    flex-shrink: 0;
 }
 
 .topbar-link {
@@ -122,6 +124,25 @@ body {
     display: flex;
     flex: 1;
     position: relative;
+}
+
+/* Mobile Overlay for Sidebar */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+    transition: opacity 0.3s ease;
+    opacity: 0;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
 }
 
 /* ========== Sidebar ========== */
@@ -644,9 +665,25 @@ code {
     .content-wrapper {
         padding: var(--spacing-lg) var(--spacing-md);
     }
+    
+    .tabs-header {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    
+    .tabs-header::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 @media (max-width: 768px) {
+    /* Sidebar Overlay */
+    .sidebar-overlay.active {
+        display: block;
+    }
+    
+    /* Sidebar */
     .sidebar {
         transform: translateX(-100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -657,32 +694,266 @@ code {
         transform: translateX(0);
     }
     
+    /* Main Content */
     .main-content {
         margin-left: 0;
     }
     
+    .content-wrapper {
+        padding: var(--spacing-md);
+    }
+    
+    /* Mobile Menu Button */
     .mobile-menu-btn {
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+    
+    /* Topbar */
+    .topbar {
+        height: 56px;
+    }
+    
+    .topbar-container {
+        padding: 0 var(--spacing-md);
+        gap: var(--spacing-sm);
+    }
+    
+    .topbar-brand {
+        font-size: 14px;
+    }
+    
+    .topbar-brand span:first-child {
+        font-size: 18px;
     }
     
     .topbar-actions {
         gap: var(--spacing-sm);
     }
     
+    .topbar-link {
+        font-size: 13px;
+        padding: 6px 8px;
+    }
+    
     .topbar-link span {
         display: none;
     }
     
+    .topbar-link.external::after {
+        content: "↗";
+        font-size: 14px;
+    }
+    
+    /* Typography */
     .page-title {
         font-size: 28px;
     }
     
+    .page-description {
+        font-size: 15px;
+    }
+    
+    h2 {
+        font-size: 20px;
+    }
+    
+    h3 {
+        font-size: 16px;
+    }
+    
+    /* Breadcrumb */
+    .breadcrumb {
+        font-size: 13px;
+    }
+    
+    /* Page Meta */
+    .page-meta {
+        font-size: 12px;
+        gap: var(--spacing-sm);
+    }
+    
+    /* Step Cards */
+    .step-card {
+        padding: var(--spacing-md);
+    }
+    
+    .step-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+    
+    .step-number {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+    
+    .step-title {
+        font-size: 16px;
+    }
+    
+    .step-content {
+        padding-left: 0;
+    }
+    
+    /* Tabs */
+    .tabs-header {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0;
+    }
+    
+    .tabs-header::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .tab-button {
+        padding: 10px 12px;
+        font-size: 13px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    
+    .tab-button .recommended {
+        font-size: 9px;
+        padding: 2px 4px;
+    }
+    
+    /* Code Block */
+    .code-block {
+        margin-left: calc(-1 * var(--spacing-md));
+        margin-right: calc(-1 * var(--spacing-md));
+        border-radius: 0;
+    }
+    
+    .code-header {
+        padding: var(--spacing-sm);
+        border-radius: 0;
+    }
+    
+    .code-language {
+        font-size: 11px;
+    }
+    
+    .copy-button {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+    
+    .copy-button span:last-child {
+        display: none;
+    }
+    
+    pre {
+        padding: var(--spacing-sm);
+        font-size: 13px;
+        border-radius: 0;
+    }
+    
+    pre code {
+        font-size: 13px;
+    }
+    
+    /* Callout */
+    .callout {
+        padding: var(--spacing-sm);
+        gap: var(--spacing-sm);
+    }
+    
+    .callout-icon {
+        font-size: 18px;
+    }
+    
+    /* Next CTA */
+    .next-cta {
+        padding: var(--spacing-md);
+        margin-left: calc(-1 * var(--spacing-md));
+        margin-right: calc(-1 * var(--spacing-md));
+        border-radius: 0;
+    }
+    
+    .next-cta h3 {
+        font-size: 18px;
+    }
+    
+    .next-cta-links {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .next-cta-link {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Footer */
     .footer-container {
         flex-direction: column;
         text-align: center;
         gap: var(--spacing-sm);
+    }
+    
+    /* Lists */
+    ul, ol {
+        padding-left: var(--spacing-md);
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar {
+        height: 52px;
+    }
+    
+    .topbar-container {
+        padding: 0 12px;
+    }
+    
+    .topbar-brand {
+        font-size: 13px;
+    }
+    
+    .topbar-brand span:first-child {
+        font-size: 16px;
+    }
+    
+    .topbar-brand span:last-child {
+        display: none;
+    }
+    
+    .topbar-link {
+        padding: 4px 6px;
+        font-size: 16px;
+    }
+    
+    .topbar-link.external::after {
+        font-size: 16px;
+    }
+    
+    .page-title {
+        font-size: 24px;
+    }
+    
+    .step-card {
+        padding: var(--spacing-sm);
+    }
+    
+    /* Mobile Menu Button for 480px */
+    .mobile-menu-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+        bottom: 12px;
+        right: 12px;
     }
 }
 

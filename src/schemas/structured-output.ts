@@ -1,14 +1,14 @@
 /**
- * 结构化输出 Schema 定义（P0 工具）
+ * 结构化输出 Schema 定义（核心工具）
  * 用于 MCP 2025-11-25 协议的 structuredContent
  * 
- * 注意：其他工具的 Schema 已按功能分类到 src/schemas/output/ 目录：
- * - core-tools.ts: 核心开发工具 (code_review, fix_bug, gentest, refactor, security_scan, perf)
- * - generation-tools.ts: 代码生成工具 (gendoc, genapi, gensql, genreadme, genui, gen_mock, etc.)
- * - workflow-tools.ts: 工作流编排工具 (start_review, start_release, start_refactor, start_api, start_doc)
- * - project-tools.ts: 项目管理工具 (init_project, add_feature, estimate, etc.)
- * - ui-ux-tools.ts: UI/UX 工具 (ui_design_system, ui_search, design2code, etc.)
- * - helper-tools.ts: 辅助工具 (detect_shell, init_setting, gen_skill)
+ * v3.0 - 20 个工具的 Schema 已按功能分类到 src/schemas/output/ 目录：
+ * - core-tools.ts: 核心开发工具 (code_review, fix_bug, gentest, refactor)
+ * - workflow-tools.ts: 工作流编排工具 (start_feature, start_bugfix, start_onboard, start_ui, start_product, start_ralph)
+ * - project-tools.ts: 项目管理工具 (init_project, init_project_context, add_feature, estimate)
+ * - ui-ux-tools.ts: UI/UX 工具 (ui_design_system, ui_search, sync_ui_data)
+ * - product-design-tools.ts: 产品设计工具 (start_product 相关)
+ * - helper-tools.ts: 辅助工具 (interview, ask_user)
  * 
  * 使用方式：
  * import { CodeReviewReportSchema } from '@/schemas/output';

@@ -1,6 +1,7 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
+import { handleToolError } from "../utils/error-handler.js";
 import type { RefactorPlan } from "../schemas/output/core-tools.js";
 
 // refactor 工具实现
@@ -378,24 +379,7 @@ const result = pipe(
       schema: (await import('../schemas/output/core-tools.js')).RefactorPlanSchema,
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
-    const errorData: RefactorPlan = {
-      summary: `重构分析失败: ${errorMessage}`,
-      goal: 'improve_maintainability',
-      refactoringSteps: [],
-      riskAssessment: {
-        level: 'high',
-        risks: [errorMessage],
-      },
-    };
-    return okStructured(
-      `❌ 重构分析失败: ${errorMessage}`,
-      errorData,
-      {
-        schema: (await import('../schemas/output/core-tools.js')).RefactorPlanSchema,
-      }
-    );
+    return handleToolError(error, 'refactor');
   }
 }
 

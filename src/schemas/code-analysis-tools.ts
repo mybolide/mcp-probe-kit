@@ -23,48 +23,6 @@ export const codeAnalysisToolSchemas = [
     },
   },
   {
-    name: "perf",
-    description: "当用户关注代码性能、需要优化性能时使用。分析性能瓶颈（算法/内存/数据库/React渲染），输出瓶颈清单和优化建议",
-    inputSchema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "要分析性能的代码",
-        },
-        type: {
-          type: "string",
-          description: "分析类型：algorithm（算法）、memory（内存）、database（数据库）、react（React渲染）。可选，会自动识别",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
-    name: "security_scan",
-    description: "当用户关注代码安全、需要检查安全漏洞时使用。扫描安全漏洞（注入/认证/加密/敏感数据），输出风险清单和修复建议",
-    inputSchema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "要扫描的代码",
-        },
-        language: {
-          type: "string",
-          description: "编程语言。可选，会自动识别",
-        },
-        scan_type: {
-          type: "string",
-          description: "扫描类型：injection（注入）、auth（认证）、crypto（加密）、all（全部）。可选，默认 all",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
     name: "refactor",
     description: "当用户需要重构代码、改善代码结构时使用。分析代码结构，提供重构建议、重构步骤和风险评估",
     inputSchema: {

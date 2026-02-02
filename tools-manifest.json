@@ -1,25 +1,21 @@
 {
-  "version": "2.3.0-dev",
+  "version": "3.0.0",
   "protocol": "2025-11-25",
-  "totalTools": 39,
+  "totalTools": 20,
   "toolsets": {
     "core": {
-      "description": "13 个核心工具（高频使用）",
-      "count": 13,
+      "description": "9 个核心工具（日常高频）",
+      "count": 9,
       "tools": [
         "gencommit",
         "code_review",
         "gentest",
-        "gendoc",
         "refactor",
-        "perf",
-        "security_scan",
         "fix_bug",
-        "genapi",
-        "gensql",
-        "genreadme",
-        "genchangelog",
-        "genpr"
+        "add_feature",
+        "init_project",
+        "init_project_context",
+        "estimate"
       ]
     },
     "ui": {
@@ -27,174 +23,99 @@
       "count": 4,
       "tools": [
         "start_ui",
-        "ui_search",
         "ui_design_system",
+        "ui_search",
         "sync_ui_data"
-      ],
-      "note": "内部工具 init_component_catalog 和 render_ui 不在此工具集中，但在 full 模式下可用"
+      ]
     },
     "workflow": {
-      "description": "29 个工作流工具（包含 core + 编排工具）",
-      "count": 29,
+      "description": "20 个工作流工具（包含 core + 编排 + 交互 + UI）",
+      "count": 20,
       "tools": [
         "gencommit",
         "code_review",
         "gentest",
-        "gendoc",
         "refactor",
-        "perf",
-        "security_scan",
         "fix_bug",
-        "genapi",
-        "gensql",
-        "genreadme",
-        "genchangelog",
-        "genpr",
+        "add_feature",
+        "init_project",
+        "init_project_context",
+        "estimate",
         "start_feature",
         "start_bugfix",
-        "start_review",
-        "start_release",
-        "start_refactor",
         "start_onboard",
-        "start_api",
-        "start_doc",
-        "start_ralph",
         "start_ui",
-        "ui_search",
-        "ui_design_system",
-        "sync_ui_data",
+        "start_product",
+        "start_ralph",
         "interview",
         "ask_user",
-        "start_product"
+        "ui_design_system",
+        "ui_search",
+        "sync_ui_data"
       ]
     },
     "full": {
-      "description": "所有 39 个工具（包括内部工具）",
-      "count": 39,
+      "description": "所有 20 个工具",
+      "count": 20,
       "note": "默认工具集，包含所有工具"
     }
   },
   "categories": {
-    "basic": {
-      "description": "基础工具（23 个）",
+    "orchestration": {
+      "description": "智能编排工具（6 个）",
       "tools": [
-        "code_review",
-        "fix_bug",
-        "refactor",
-        "security_scan",
-        "perf",
-        "gencommit",
-        "genchangelog",
-        "genpr",
-        "resolve_conflict",
-        "gendoc",
-        "genapi",
-        "gensql",
-        "genreadme",
-        "gen_mock",
-        "gentest",
-        "init_project",
-        "init_project_context",
-        "add_feature",
-        "estimate",
-        "interview",
-        "ask_user",
-        "gen_prd",
-        "gen_prototype"
+        "start_feature",
+        "start_bugfix",
+        "start_onboard",
+        "start_ui",
+        "start_product",
+        "start_ralph"
       ]
     },
-    "orchestration": {
-      "description": "智能编排工具（11 个）",
+    "daily": {
+      "description": "日常工具（9 个）",
       "tools": [
-        "start_onboard",
-        "start_product",
-        "start_feature",
-        "start_ui",
-        "start_api",
-        "start_review",
-        "start_refactor",
-        "start_bugfix",
-        "start_doc",
-        "start_release",
-        "start_ralph"
+        "gencommit",
+        "code_review",
+        "gentest",
+        "refactor",
+        "fix_bug",
+        "add_feature",
+        "init_project",
+        "init_project_context",
+        "estimate"
+      ]
+    },
+    "interactive": {
+      "description": "交互工具（2 个）",
+      "tools": [
+        "interview",
+        "ask_user"
       ]
     },
     "ui-ux": {
-      "description": "UI/UX 工具（6 个，包含内部工具）",
+      "description": "UI/UX 工具（3 个，不含编排工具）",
       "tools": [
-        "start_ui",
         "ui_design_system",
         "ui_search",
-        "sync_ui_data",
-        "init_component_catalog",
-        "render_ui"
-      ],
-      "public": [
-        "start_ui",
-        "ui_search",
-        "ui_design_system",
         "sync_ui_data"
-      ],
-      "internal": [
-        "init_component_catalog",
-        "render_ui"
-      ]
-    }
-  },
-  "priority": {
-    "P0": {
-      "description": "必须保留的核心工具",
-      "tools": [
-        "gencommit",
-        "start_feature",
-        "start_bugfix",
-        "start_onboard",
-        "start_ui",
-        "start_ralph"
-      ]
-    },
-    "P1": {
-      "description": "高价值工具",
-      "tools": [
-        "code_review",
-        "fix_bug",
-        "gentest",
-        "refactor",
-        "security_scan",
-        "perf"
       ]
     }
   },
   "structuredOutput": {
     "description": "支持结构化输出的工具（v2.0+）",
-    "version": "2.0.0",
-    "completedDate": "2026-01-26",
+    "version": "3.0.0",
     "tools": [
-      "start_onboard",
-      "start_product",
       "start_feature",
-      "start_ui",
-      "start_api",
-      "start_review",
-      "start_refactor",
       "start_bugfix",
-      "start_doc",
-      "start_release",
+      "start_onboard",
+      "start_ui",
+      "start_product",
       "start_ralph",
       "code_review",
       "fix_bug",
       "refactor",
-      "security_scan",
-      "perf",
       "gencommit",
-      "genchangelog",
-      "genpr",
-      "resolve_conflict",
-      "gendoc",
-      "genapi",
-      "gensql",
-      "genreadme",
-      "gen_mock",
       "gentest",
       "init_project",
       "init_project_context",
@@ -203,12 +124,8 @@
       "interview",
       "ask_user",
       "ui_design_system",
-      "init_component_catalog",
       "ui_search",
-      "sync_ui_data",
-      "render_ui",
-      "gen_prd",
-      "gen_prototype"
+      "sync_ui_data"
     ],
     "schemas": {
       "gencommit": "CommitMessageSchema",
@@ -217,89 +134,74 @@
       "start_ui": "UIReportSchema",
       "start_onboard": "OnboardingReportSchema",
       "start_ralph": "RalphLoopReportSchema",
+      "start_product": "WorkflowReportSchema",
       "code_review": "CodeReviewReportSchema",
       "fix_bug": "BugAnalysisSchema",
       "gentest": "TestSuiteSchema",
       "refactor": "RefactorPlanSchema",
-      "security_scan": "SecurityScanReportSchema",
-      "perf": "PerformanceReportSchema",
-      "gendoc": "DocumentationSchema",
-      "genapi": "APIDocumentationSchema",
-      "gensql": "SQLQuerySchema",
-      "genreadme": "ReadmeSchema",
-      "gen_mock": "MockDataSchema",
-      "genchangelog": "ChangelogSchema",
-      "genpr": "PullRequestSchema",
-      "start_review": "ReviewWorkflowSchema",
-      "start_release": "ReleaseWorkflowSchema",
-      "start_refactor": "RefactorWorkflowSchema",
-      "start_api": "APIWorkflowSchema",
-      "start_doc": "DocWorkflowSchema",
       "init_project": "ProjectInitSchema",
       "init_project_context": "ProjectContextSchema",
       "add_feature": "FeatureSpecSchema",
       "estimate": "EstimateSchema",
-      "resolve_conflict": "ConflictResolutionSchema",
-      "gen_prd": "GenPrdSchema",
-      "gen_prototype": "GenPrototypeSchema",
-      "start_product": "WorkflowReportSchema",
       "interview": "InterviewReportSchema",
       "ask_user": "UserQuestionSchema",
       "ui_design_system": "DesignSystemSchema",
       "ui_search": "UISearchResultSchema",
-      "sync_ui_data": "SyncReportSchema",
-      "init_component_catalog": "ComponentCatalogSchema",
-      "render_ui": "RenderResultSchema"
+      "sync_ui_data": "SyncReportSchema"
     },
     "coverage": {
-      "total": 39,
-      "completed": 39,
+      "total": 20,
+      "completed": 20,
       "percentage": 100
     }
   },
-  "deletedTools": {
-    "description": "v2.0 中删除的工具及其替代方案",
-    "tools": {
-      "detect_shell": {
-        "reason": "功能过于简单，AI 可自动识别环境",
-        "alternative": "AI 自动识别环境"
-      },
-      "init_setting": {
-        "reason": "不是高频使用的工具",
-        "alternative": "提供文档说明"
-      },
-      "fix": {
-        "reason": "功能与 code_review 重叠，现代 IDE 已有自动修复",
-        "alternative": "使用 code_review 工具"
-      },
-      "convert": {
-        "reason": "功能过于宽泛，每种转换都有专门工具",
-        "alternative": "直接向 AI 描述转换需求"
-      },
-      "explain": {
-        "reason": "AI 的核心能力就是解释代码",
-        "alternative": "直接向 AI 提问"
-      },
-      "split": {
-        "reason": "功能过于简单",
-        "alternative": "直接向 AI 描述拆分需求"
-      },
-      "gen_skill": {
-        "reason": "开发者内部工具，用户不需要",
-        "alternative": "开发者手动维护文档"
-      },
-      "css_order": {
-        "reason": "功能过于简单，现代 IDE 已有插件",
-        "alternative": "使用 ui_design_system 生成的 CSS 编码规范"
-      },
-      "genui": {
-        "reason": "功能与 start_ui 重叠",
-        "alternative": "使用 start_ui"
-      },
-      "design2code": {
-        "reason": "功能与 start_ui 重叠",
-        "alternative": "使用 start_ui"
+  "v3Changes": {
+    "description": "v3.0 重大变更：工具精简 51%",
+    "removed": {
+      "count": 19,
+      "tools": [
+        "start_review",
+        "start_refactor",
+        "start_api",
+        "start_doc",
+        "start_release",
+        "security_scan",
+        "perf",
+        "genchangelog",
+        "genpr",
+        "resolve_conflict",
+        "gendoc",
+        "genapi",
+        "gensql",
+        "genreadme",
+        "gen_mock",
+        "gen_prd",
+        "gen_prototype",
+        "init_component_catalog",
+        "render_ui"
+      ],
+      "reasons": {
+        "start_review": "直接使用 code_review 工具即可",
+        "start_refactor": "直接使用 refactor 工具即可",
+        "start_api": "AI 可直接生成 API",
+        "start_doc": "AI 可直接生成文档",
+        "start_release": "低频操作，手动进行更合适",
+        "security_scan": "功能已集成到 code_review",
+        "perf": "功能已集成到 code_review",
+        "genchangelog": "低频操作，AI 可直接生成",
+        "genpr": "AI 可直接写 PR 描述",
+        "resolve_conflict": "极低频操作",
+        "gendoc": "AI 可直接生成代码注释",
+        "genapi": "AI 可直接生成 API 文档",
+        "gensql": "AI 可直接生成 SQL",
+        "genreadme": "低频操作",
+        "gen_mock": "AI 可直接生成 Mock 数据",
+        "gen_prd": "已集成到 start_product",
+        "gen_prototype": "已集成到 start_product",
+        "init_component_catalog": "start_ui 内部调用",
+        "render_ui": "start_ui 内部调用"
       }
-    }
+    },
+    "philosophy": "专注核心竞争力，减少工具选择困难，让 AI 做更多原生工作"
   }
 }

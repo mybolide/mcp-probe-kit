@@ -298,6 +298,7 @@ describe('[功能描述]', () => {
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
+import { handleToolError } from "../utils/error-handler.js";
 import type { BugAnalysis } from "../schemas/output/index.js";
 
 /**
@@ -392,21 +393,6 @@ export async function fixBug(args: any) {
       }
     );
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    
-    return okStructured(
-      `❌ 生成修复指南失败: ${errorMsg}`,
-      {
-        summary: `生成修复指南失败: ${errorMsg}`,
-        bugType: "functional",
-        severity: "low",
-        rootCause: errorMsg,
-        fixPlan: { steps: [] },
-        testPlan: {},
-      },
-      {
-        schema: (await import('../schemas/output/core-tools.js')).BugAnalysisSchema,
-      }
-    );
+    return handleToolError(error, 'fix_bug');
   }
 }

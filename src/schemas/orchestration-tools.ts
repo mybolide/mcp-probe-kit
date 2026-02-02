@@ -90,63 +90,6 @@ export const orchestrationToolSchemas = [
     },
   },
   {
-    name: "start_review",
-    description: "当用户需要全面审查代码时使用。编排：代码审查+安全扫描+性能分析，输出综合报告。若只需单项请用对应工具",
-    inputSchema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "要审查的代码",
-        },
-        language: {
-          type: "string",
-          description: "编程语言。可选，会自动识别",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
-    name: "start_release",
-    description: "当用户需要准备版本发布时使用。编排：生成 Changelog→生成 PR 描述。若只需单项请用 genchangelog 或 genpr",
-    inputSchema: {
-      type: "object",
-      properties: {
-        version: {
-          type: "string",
-          description: "版本号（如 v1.2.0）",
-        },
-        from_tag: {
-          type: "string",
-          description: "起始 tag。可选",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
-    name: "start_refactor",
-    description: "当用户需要完整的代码重构流程时使用。编排：审查现状→重构建议→生成测试。若只需建议请用 refactor",
-    inputSchema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "要重构的代码",
-        },
-        goal: {
-          type: "string",
-          description: "重构目标。可选",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
     name: "start_onboard",
     description: "当用户需要快速上手新项目时使用。编排：生成上下文文档。",
     inputSchema: {
@@ -159,52 +102,6 @@ export const orchestrationToolSchemas = [
         docs_dir: {
           type: "string",
           description: "文档目录。可选，默认 docs",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
-    name: "start_api",
-    description: "当用户需要完整的 API 开发流程时使用。编排：生成文档→生成 Mock→生成测试。若只需单项请用对应生成工具",
-    inputSchema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "API 代码",
-        },
-        language: {
-          type: "string",
-          description: "编程语言。可选，会自动识别",
-        },
-        format: {
-          type: "string",
-          description: "文档格式。可选，默认 openapi",
-        },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
-    name: "start_doc",
-    description: "当用户需要补全项目文档时使用。编排：注释→README→API 文档。若只需单项文档请用对应生成工具",
-    inputSchema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "代码或项目信息",
-        },
-        project_info: {
-          type: "string",
-          description: "项目信息。可选",
-        },
-        style: {
-          type: "string",
-          description: "文档风格。可选，默认 jsdoc",
         },
       },
       required: [],

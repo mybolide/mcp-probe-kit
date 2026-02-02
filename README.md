@@ -7,9 +7,9 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **39 个实用工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），核心与编排工具支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **20 个精简工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
 
-**🎉 v2.5 特性**：委托式编排协议、需求澄清 Loop、模板档位（auto/guided/strict）、产品设计工作流（PRD → 原型 → HTML）、结构化输出
+**🎉 v3.0 重大更新**：精简工具数量，专注核心竞争力，消除选择困难，让 AI 做更多原生工作
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
@@ -22,23 +22,28 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 39个工具完整列表
+- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 20个工具完整列表
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
-- [迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - 版本升级指南
+- [v3.0 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x → v3.0 升级指南
 
 ---
 
 ## ✨ 核心特性
 
-### 📦 39 个实用工具
+### 📦 20 个精简工具
 
-- **🔄 工作流编排** (11个) - 一键完成复杂开发流程
-- **🔍 代码分析** (5个) - 代码审查、安全扫描、性能优化
-- **🌿 Git 工具** (4个) - 自动生成 commit、PR、changelog
-- **✨ 生成工具** (6个) - 文档、测试、Mock 数据生成
-- **📋 项目管理** (6个) - 项目上下文、需求访谈、工作量估算
-- **🎨 UI/UX 工具** (5个) - 设计系统、组件目录、模板搜索与渲染
-- **🚀 产品设计** (2个) - PRD、原型设计
+- **🔄 工作流编排** (6个) - 一键完成复杂开发流程
+  - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
+- **🔍 代码分析** (3个) - 代码质量与重构
+  - `code_review`, `fix_bug`, `refactor`
+- **� Git 工具** (1个) - 提交消息生成
+  - `gencommit`
+- **⚡ 代码生成** (1个) - 测试生成
+  - `gentest`
+- **📦 项目管理** (7个) - 项目初始化与需求管理
+  - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
+- **🎨 UI/UX 工具** (3个) - 设计系统与数据同步
+  - `ui_design_system`, `ui_search`, `sync_ui_data`
 
 ### 🎯 结构化输出
 
@@ -123,25 +128,17 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
 
 ### 🔄 工作流编排
 
-11 个智能编排工具，自动组合多个基础工具，一键完成复杂开发流程：
+6 个智能编排工具，自动组合多个基础工具，一键完成复杂开发流程：
 - `start_feature` - 新功能开发（需求 → 设计 → 估算）
 - `start_bugfix` - Bug 修复（分析 → 修复 → 测试）
-- `start_review` - 代码体检（质量 → 安全 → 性能）
+- `start_onboard` - 项目上手（生成项目上下文文档）
 - `start_ui` - UI 开发（设计系统 → 组件 → 代码）
 - `start_product` - 产品设计（PRD → 原型 → 设计系统 → HTML）
-- 更多...
+- `start_ralph` - Ralph Loop（循环开发直到目标完成）
 
 ### 🚀 产品设计工作流
 
-3 个相关工具（2 个原子 + 1 个编排），从需求到可交互原型：
-- `gen_prd` - 生成产品需求文档（PRD）
-- `gen_prototype` - 生成原型设计文档
-- `start_product` - 完整产品设计流程（PRD → 原型 → 设计系统 → HTML 原型）
-
-**结构化输出补充**：
-- `gen_prd.structuredContent.filePath`：PRD 目标路径（默认 `docs/prd/product-requirements.md`）
-- `gen_prototype.structuredContent.indexPath`：原型索引路径（默认 `docs/prototype/prototype-index.md`）
-- `interview.structuredContent.mode`：`usage` / `questions` / `record`
+`start_product` 是一个完整的产品设计编排工具，从需求到可交互原型：
 
 **工作流程：**
 1. **需求分析** - 生成标准 PRD 文档（产品概述、功能需求、页面清单）
@@ -150,14 +147,19 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
 4. **HTML 原型** - 生成可直接在浏览器中查看的交互原型
 5. **项目上下文** - 自动更新项目文档
 
+**结构化输出补充**：
+- `start_product.structuredContent.artifacts`：产出物列表（PRD、原型、设计系统等）
+- `interview.structuredContent.mode`：`usage` / `questions` / `record`
+
 ### 🎨 UI/UX Pro Max
 
-5 个 UI/UX 工具，`start_ui` 作为统一入口：
-- `start_ui` - 一键 UI 开发（支持智能模式）
+3 个 UI/UX 工具，`start_ui` 作为统一入口：
+- `start_ui` - 一键 UI 开发（支持智能模式）（编排工具）
 - `ui_design_system` - 智能设计系统生成
 - `ui_search` - UI/UX 数据搜索（BM25 算法）
 - `sync_ui_data` - 同步最新 UI/UX 数据到本地
-- `init_component_catalog` / `render_ui` - 内部渲染工具（full 模式可用）
+
+**注意**：`start_ui` 会自动调用 `ui_design_system` 和 `ui_search`，您无需单独调用它们。
 
 **灵感来源：**
 - [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX 设计系统理念
@@ -184,6 +186,36 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
 2 个访谈工具，在开发前澄清需求：
 - `interview` - 结构化需求访谈
 - `ask_user` - AI 主动提问
+
+---
+
+## 🧭 工具选择指南
+
+### 何时使用编排工具 vs 单独工具？
+
+**使用编排工具（start_*）当：**
+- ✅ 需要完整的工作流程（多个步骤）
+- ✅ 希望自动化执行多个任务
+- ✅ 需要生成多个产物（文档、代码、测试等）
+
+**使用单独工具当：**
+- ✅ 只需要某个特定功能
+- ✅ 已经有了项目上下文文档
+- ✅ 需要更精细的控制
+
+### 常见场景选择
+
+| 场景 | 推荐工具 | 原因 |
+|------|---------|------|
+| 开发新功能（完整流程） | `start_feature` | 自动完成：规格→估算 |
+| 只需要功能规格文档 | `add_feature` | 更轻量，只生成文档 |
+| 修复 Bug（完整流程） | `start_bugfix` | 自动完成：分析→修复→测试 |
+| 只需要 Bug 分析 | `fix_bug` | 更快速，只分析问题 |
+| 生成设计系统 | `ui_design_system` | 直接生成设计规范 |
+| 开发 UI 组件 | `start_ui` | 完整流程：设计→组件→代码 |
+| 产品设计（从需求到原型） | `start_product` | 一键完成：PRD→原型→HTML |
+| 一句话需求分析 | `init_project` | 生成完整项目规格文档 |
+| 项目上手文档 | `init_project_context` | 生成技术栈/架构/规范 |
 
 ---
 
