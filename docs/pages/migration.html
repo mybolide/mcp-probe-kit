@@ -5,321 +5,280 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>迁移指南 - 从 v2.x 升级到 v3.0 | MCP Probe Kit</title>
     
-    <!-- SEO Meta Tags -->
     <meta name="description" content="MCP Probe Kit 迁移指南：从 v2.x 升级到 v3.0 的完整步骤。了解重大变更、新增功能、配置调整和最佳实践，确保平滑升级。">
     <meta name="keywords" content="MCP Probe Kit 升级, 版本迁移, v3.0 新特性, 配置迁移, 工具升级指南, 破坏性变更">
     <meta name="author" content="小墨 (Kyle) - ByteZoneX">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
-    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
     
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="article">
-    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
-    <meta property="og:title" content="迁移指南 - 从 v2.x 升级到 v3.0 | MCP Probe Kit">
-    <meta property="og:description" content="详细的 MCP Probe Kit 版本升级指南，了解新特性、配置变更和迁移步骤，确保平滑过渡。">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/pages/migration.html">
-    <meta property="twitter:title" content="迁移指南 - 从 v2.x 升级到 v3.0 | MCP Probe Kit">
-    <meta property="twitter:description" content="详细的版本升级指南，了解新特性和迁移步骤。">
-    
-    <link rel="stylesheet" href="../styles/page.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { DEFAULT: '#2563EB', hover: '#1D4ED8' },
+                        text: { primary: '#0F172A', secondary: '#475569', tertiary: '#64748B' },
+                        bg: { page: '#F8FAFC', card: '#FFFFFF', hover: '#F1F5F9' },
+                        border: '#E2E8F0',
+                    },
+                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        .code-block { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .sidebar-drawer { transition: transform 0.3s ease; }
+        @media (max-width: 767px) {
+            .sidebar-drawer { transform: translateX(-100%); }
+            .sidebar-drawer.open { transform: translateX(0); }
+        }
+        .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .backdrop.active { opacity: 1; pointer-events: auto; }
+    </style>
 </head>
-<body>
-    <!-- Topbar -->
-    <nav class="topbar" id="topbar">
-        <div class="topbar-container">
-            <a href="../index.html" class="topbar-brand">
+<body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
+    <!-- A. 顶部导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50">
+        <div class="h-full px-4 flex items-center justify-between">
+            <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
                 <span>🚀</span>
-                <span>MCP Probe Kit</span>
+                <span class="sm:inline hidden">MCP Probe Kit</span>
             </a>
-            
-            <div class="topbar-actions">
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>ByteZoneX</span>
-                </a>
-                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>GitHub</span>
-                </a>
-                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="topbar-link external">
-                    <span>npm</span>
-                </a>
-            </div>
+            <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
         </div>
     </nav>
-    
-    <!-- Layout Container -->
-    <div class="layout">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">快速开始</div>
-                    <a href="../index.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🏠</span>
-                            <span>文档首页</span>
-                        </div>
-                    </a>
-                    <a href="./getting-started.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">📖</span>
-                            <span>安装配置</span>
-                        </div>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">工具文档</div>
-                    <a href="./all-tools.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🛠️</span>
-                            <span>所有工具</span>
-                        </div>
-                        <span class="badge">39</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">指南</div>
-                    <a href="./migration.html" class="nav-item active">
-                        <div class="nav-item-content">
-                            <span class="icon">🚀</span>
-                            <span>迁移指南</span>
-                        </div>
-                    </a>
-                    <a href="./examples.html" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">💡</span>
-                            <span>最佳实践</span>
-                        </div>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">资源</div>
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🌐</span>
-                            <span>ByteZoneX 主站</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">💻</span>
-                            <span>GitHub 仓库</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">📦</span>
-                            <span>npm 包</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="nav-item">
-                        <div class="nav-item-content">
-                            <span class="icon">🐛</span>
-                            <span>问题反馈</span>
-                        </div>
-                        <span class="external-icon">↗</span>
-                    </a>
-                </div>
-            </nav>
+
+    <!-- 侧边栏遮罩 -->
+    <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+
+    <!-- B. 侧边栏 -->
+    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar">
+        <div class="p-4">
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">快速开始</div>
+                <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🏠</span>
+                    <span>文档首页</span>
+                </a>
+                <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📖</span>
+                    <span>安装配置</span>
+                </a>
+            </div>
             
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <div class="sidebar-footer-title">快速链接</div>
-                <div class="sidebar-footer-links">
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>🌐</span>
-                        <span>ByteZoneX</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>💻</span>
-                        <span>GitHub</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="sidebar-footer-link">
-                        <span>📦</span>
-                        <span>npm</span>
-                        <span class="external-icon">↗</span>
-                    </a>
-                </div>
-                
-                <!-- QR Code -->
-                <div class="sidebar-qrcode">
-                    <div class="sidebar-qrcode-title">关注公众号</div>
-                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" />
-                    <div class="sidebar-qrcode-desc">获取更多技术分享</div>
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">工具文档</div>
+                <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🛠️</span>
+                    <span>所有工具</span>
+                    <span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">20</span>
+                </a>
+            </div>
+            
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">指南</div>
+                <a href="./migration.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary">
+                    <span>🚀</span>
+                    <span>迁移指南</span>
+                </a>
+                <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💡</span>
+                    <span>最佳实践</span>
+                </a>
+            </div>
+            
+            <div class="pt-4 border-t border-border">
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💻</span>
+                    <span>GitHub</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+                <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📦</span>
+                    <span>npm</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+            </div>
+
+            <!-- QR Code -->
+            <div class="mt-4 pt-4 border-t border-border">
+                <div class="text-center">
+                    <div class="text-xs font-semibold text-text-tertiary mb-2">关注公众号</div>
+                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
+                    <div class="text-xs text-text-tertiary mt-2">获取更多技术分享</div>
                 </div>
             </div>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-wrapper">
-                <!-- Breadcrumb -->
-                <nav class="breadcrumb">
-                    <a href="../index.html">文档首页</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <a href="#">指南</a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span>迁移指南</span>
-                </nav>
+        </div>
+    </aside>
+
+    <!-- C. 主内容区 -->
+    <main class="flex-1 mt-14 min-h-screen md:ml-64">
+        <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+            <!-- 面包屑 -->
+            <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
+                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0">文档首页</a>
+                <span class="text-text-tertiary">/</span>
+                <span class="text-text-primary flex-shrink-0">指南</span>
+                <span class="text-text-tertiary">/</span>
+                <span class="text-text-primary flex-shrink-0">迁移指南</span>
+            </nav>
+
+            <!-- 页面标题 -->
+            <div class="mb-6">
+                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">v3.0 迁移指南</h1>
+                <p class="text-sm sm:text-base text-text-secondary">从 v2.x 平滑迁移到 v3.0，了解重大变更和新特性</p>
+                <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.1</span>
+                    <span>MCP 2025-11-25</span>
+                    <span>SDK 1.25.3</span>
+                </div>
+            </div>
+
+            <!-- 概述 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">概述</h2>
+                <p class="text-text-secondary mb-4 text-sm">MCP Probe Kit v3.0 是一个重大版本更新，精简优化到 20 个核心工具，带来了更强大的功能和更好的开发体验。</p>
+                <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm">
+                    <strong>💡 迁移时间：</strong>大多数项目可以在 10-15 分钟内完成迁移，v2.x 的核心工具在 v3.0 中都保持兼容。
+                </div>
+            </section>
+
+            <!-- 主要变更 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">主要变更</h2>
                 
-                <!-- Page Header -->
-                <h1 class="page-title">v3.0 迁移指南</h1>
-                <p class="page-description">从 v2.x 平滑迁移到 v3.0，了解重大变更和新特性</p>
-                <div class="page-meta">
-                    <span>📦 v3.0.0</span>
-                    <span>·</span>
-                    <span>最后更新：2026-02-02</span>
-                    <span>·</span>
-                    <span>协议：MCP 2025-11-25</span>
-                    <span>·</span>
-                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🛠️</span>
+                        <span>1. 工具精简优化</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7">v2.x: 39 个工具 → v3.0: 20 个核心工具（移除低频工具，保留高价值工具）</p>
                 </div>
                 
-                <!-- Content -->
-                <h2>概述</h2>
-                <p>MCP Probe Kit v3.0 是一个重大版本更新，精简优化到 20 个核心工具，带来了更强大的功能和更好的开发体验。</p>
-                
-                <div class="callout info">
-                    <div class="callout-icon">💡</div>
-                    <div class="callout-content">
-                        <p><strong>迁移时间：</strong>大多数项目可以在 10-15 分钟内完成迁移，v2.x 的核心工具在 v3.0 中都保持兼容。</p>
-                    </div>
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🔄</span>
+                        <span>2. 新增工作流编排</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-2">11 个 <code class="bg-gray-200 px-1 rounded text-xs">start_*</code> 工作流编排工具，提供端到端的自动化开发流程：</p>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-text-primary pl-7">
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_feature</code> - 功能开发工作流</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_bugfix</code> - Bug 修复工作流</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_ui</code> - UI 开发工作流</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_product</code> - 产品设计工作流</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_ralph</code> - Ralph Loop 自动化开发</li>
+                    </ul>
                 </div>
                 
-                <h2>主要变更</h2>
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🎨</span>
+                        <span>3. 新增 UI/UX 工具集</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-2">完整的 UI/UX 工具链：</p>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-text-primary pl-7">
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">ui_design_system</code> - 智能设计系统生成器</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">ui_search</code> - UI/UX 数据库搜索</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">sync_ui_data</code> - UI/UX 数据同步</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">init_component_catalog</code> - 组件目录初始化</li>
+                        <li><code class="bg-gray-200 px-1 rounded text-xs">render_ui</code> - UI 渲染引擎</li>
+                    </ul>
+                </div>
                 
-                <h3>1. 工具精简优化</h3>
-                <p>v2.x: 39 个工具 → v3.0: 20 个核心工具（移除低频工具，保留高价值工具）</p>
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>📊</span>
+                        <span>4. 结构化输出升级</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7">核心与编排工具优先支持结构化输出，输出格式一致、可预测，便于工具串联与状态追踪。</p>
+                </div>
+            </section>
+
+            <!-- 迁移步骤 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">迁移步骤</h2>
                 
-                <h3>2. 新增工作流编排</h3>
-                <p>11 个 <code>start_*</code> 工作流编排工具，提供端到端的自动化开发流程：</p>
-                <ul>
-                    <li><code>start_feature</code> - 功能开发工作流</li>
-                    <li><code>start_bugfix</code> - Bug 修复工作流</li>
-                    <li><code>start_ui</code> - UI 开发工作流</li>
-                    <li><code>start_product</code> - 产品设计工作流</li>
-                    <li><code>start_ralph</code> - Ralph Wiggum Loop 自动化开发</li>
-                </ul>
-                
-                <h3>3. 新增 UI/UX 工具集</h3>
-                <p>完整的 UI/UX 工具链：</p>
-                <ul>
-                    <li><code>ui_design_system</code> - 智能设计系统生成器</li>
-                    <li><code>ui_search</code> - UI/UX 数据库搜索</li>
-                    <li><code>sync_ui_data</code> - UI/UX 数据同步</li>
-                    <li><code>init_component_catalog</code> - 组件目录初始化</li>
-                    <li><code>render_ui</code> - UI 渲染引擎</li>
-                </ul>
-                
-                            <h3>4. 结构化输出覆盖升级</h3>
-                            <p>核心与编排工具优先支持结构化输出，输出格式一致、可预测，便于工具串联与状态追踪。</p>
-                
-                <h2>迁移步骤</h2>
-                
-                <h3>步骤 1：更新版本</h3>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-language">Bash</span>
-                    </div>
-                    <pre><code># 如果使用 npx（推荐）
+                <div class="mb-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>📦</span>
+                        <span>步骤 1：更新版本</span>
+                    </h3>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium">Bash</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code># 如果使用 npx（推荐）
 # 无需操作，自动使用最新版本
 
 # 如果全局安装
 npm update -g mcp-probe-kit</code></pre>
-                </div>
-                
-                <h3>步骤 2：检查配置文件</h3>
-                <p>v3.0 的配置文件格式与 v2.x 完全兼容，无需修改。</p>
-                
-                <div class="callout success">
-                    <div class="callout-icon">✅</div>
-                    <div class="callout-content">
-                        <p><strong>向后兼容：</strong>v2.x 的核心工具在 v3.0 中都保持兼容，可以无缝升级。</p>
                     </div>
                 </div>
                 
-                <h2>获取帮助</h2>
-                <p>如果在迁移过程中遇到问题：</p>
-                <ul>
-                    <li>📖 查看 <a href="./all-tools.html">完整工具参考</a></li>
-                    <li>💬 在 <a href="https://github.com/mybolide/mcp-probe-kit/discussions" target="_blank">GitHub Discussions</a> 提问</li>
-                    <li>🐛 在 <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank">GitHub Issues</a> 报告 Bug</li>
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>📝</span>
+                        <span>步骤 2：检查配置文件</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm ml-7 mb-3">v3.0 的配置文件格式与 v2.x 完全兼容，无需修改。</p>
+                    <div class="ml-7 p-3 bg-green-50 border-l-3 border-green-500 rounded-r text-sm">
+                        <strong>✅ 向后兼容：</strong>v2.x 的核心工具在 v3.0 中都保持兼容，可以无缝升级。
+                    </div>
+                </div>
+            </section>
+
+            <!-- 获取帮助 -->
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">获取帮助</h2>
+                <p class="text-text-secondary text-sm mb-4">如果在迁移过程中遇到问题：</p>
+                <ul class="list-disc list-inside space-y-2 text-sm text-text-primary">
+                    <li>📖 查看 <a href="./all-tools.html" class="text-primary hover:underline">完整工具参考</a></li>
+                    <li>💬 在 <a href="https://github.com/mybolide/mcp-probe-kit/discussions" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub Discussions</a> 提问</li>
+                    <li>🐛 在 <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub Issues</a> 报告 Bug</li>
                 </ul>
-                
-                <!-- Next Steps -->
-                <div class="next-cta">
-                    <h3>🎉 迁移完成！</h3>
-                    <p>开始探索 v3.0 的强大功能</p>
-                    <div class="next-cta-links">
-                        <a href="./all-tools.html" class="next-cta-link">
-                            <span>🛠️</span>
-                            <span>查看所有工具</span>
-                        </a>
-                        <a href="./examples.html" class="next-cta-link">
-                            <span>💡</span>
-                            <span>学习最佳实践</span>
-                        </a>
-                    </div>
+            </section>
+
+            <!-- 迁移完成 -->
+            <section class="bg-gradient-to-br from-primary to-primary-hover text-white rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
+                <h2 class="text-lg sm:text-xl font-semibold mb-3">🎉 迁移完成！</h2>
+                <p class="text-sm opacity-95 mb-4">开始探索 v3.0 的强大功能</p>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="./all-tools.html" class="bg-white/20 text-white px-4 py-2.5 rounded-md text-sm font-medium text-center hover:bg-white/30 transition-colors no-underline">
+                        🛠️ 查看所有工具
+                    </a>
+                    <a href="./examples.html" class="bg-white/20 text-white px-4 py-2.5 rounded-md text-sm font-medium text-center hover:bg-white/30 transition-colors no-underline">
+                        💡 学习最佳实践
+                    </a>
                 </div>
-            </div>
-            
+            </section>
+
             <!-- Footer -->
-            <footer class="footer">
-                <div class="footer-container">
-                    <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
-                    <div>
-                        © 2024-2026 MCP Probe Kit · MIT License · 
-                        <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
-                    </div>
-                </div>
+            <footer class="text-center text-sm text-text-tertiary py-4 border-t border-border">
+                <p>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:underline">小墨 (Kyle)</a></p>
+                <p class="mt-1">© 2024-2026 MCP Probe Kit · <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub ↗</a></p>
             </footer>
-        </main>
-    </div>
-    
-    <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
-    
+        </div>
+    </main>
+
     <script>
-        // Topbar scroll effect
-        const topbar = document.getElementById('topbar');
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 10) {
-                topbar.classList.add('scrolled');
-            } else {
-                topbar.classList.remove('scrolled');
-            }
-        });
-        
-        // Sidebar toggle (mobile)
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('open');
-        }
-        
-        // Close sidebar when clicking on main content (mobile)
-        document.addEventListener('DOMContentLoaded', function() {
-            const mainContent = document.querySelector('.main-content');
-            const sidebar = document.getElementById('sidebar');
-            
-            if (mainContent && sidebar) {
-                mainContent.addEventListener('click', function(e) {
-                    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
-                        sidebar.classList.remove('open');
-                    }
-                });
+            const backdrop = document.getElementById('backdrop');
+            const isOpen = sidebar.classList.contains('open');
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                backdrop.classList.remove('active');
+            } else {
+                sidebar.classList.add('open');
+                backdrop.classList.add('active');
             }
-        });
+        }
     </script>
 </body>
 </html>

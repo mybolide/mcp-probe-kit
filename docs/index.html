@@ -24,545 +24,261 @@
     <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/">
     <meta property="twitter:title" content="MCP Probe Kit - AI 驱动的完整研发工具集">
     <meta property="twitter:description" content="20 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#2563EB',
+                            hover: '#1D4ED8',
+                            light: '#3B82F6',
+                        },
+                        text: {
+                            primary: '#0F172A',
+                            secondary: '#475569',
+                            tertiary: '#64748B',
+                        },
+                        bg: {
+                            page: '#F8FAFC',
+                            card: '#FFFFFF',
+                            hover: '#F1F5F9',
+                        },
+                        border: {
+                            DEFAULT: '#E2E8F0',
+                            hover: '#CBD5E1',
+                        },
+                    },
+                    boxShadow: {
+                        sm: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                        md: '0 4px 6px rgba(0, 0, 0, 0.07)',
+                        lg: '0 10px 15px rgba(0, 0, 0, 0.1)',
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        html { scroll-behavior: smooth; }
+        .card-link:hover .link-arrow { transform: translateX(4px); }
+        .link-arrow { transition: transform 0.2s; }
+        /* 移动端侧边栏 */
+        .sidebar-drawer { transition: transform 0.3s ease; }
+        @media (max-width: 767px) {
+            .sidebar-drawer { transform: translateX(-100%); }
+            .sidebar-drawer.open { transform: translateX(0); }
         }
-        
-        :root {
-            /* Light Mode Colors */
-            --primary: #2563EB;
-            --primary-hover: #1D4ED8;
-            --text-primary: #0F172A;
-            --text-secondary: #475569;
-            --text-tertiary: #64748B;
-            --bg-page: #F8FAFC;
-            --bg-card: #FFFFFF;
-            --bg-hover: #F1F5F9;
-            --border: #E2E8F0;
-            --border-hover: #CBD5E1;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: var(--bg-page);
-            color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* A. 顶部导航栏 */
-        .navbar {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border);
-            height: 60px;
-            transition: box-shadow 0.2s;
-        }
-        
-        .navbar.scrolled {
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .navbar-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 24px;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .navbar-brand {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        
-        .navbar-brand:hover {
-            color: var(--primary);
-        }
-        
-        .navbar-links {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-        }
-        
-        .navbar-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .navbar-link:hover {
-            color: var(--primary);
-        }
-        
-        .navbar-link.external::after {
-            content: "↗";
-            font-size: 12px;
-        }
-        
-        /* B. Hero 首屏 */
-        .hero {
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-            color: white;
-            padding: 64px 24px;
-            text-align: center;
-        }
-        
-        .hero-container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        
-        .hero-title {
-            font-size: 48px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            letter-spacing: -0.02em;
-        }
-        
-        .hero-subtitle {
-            font-size: 18px;
-            opacity: 0.95;
-            margin-bottom: 8px;
-        }
-        
-        .hero-version {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 32px;
-        }
-        
-        .hero-cta {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 15px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            border: none;
-        }
-        
-        .btn-primary {
-            background: white;
-            color: var(--primary);
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.25);
-        }
-        
-        /* C. 主内容区：2×2 卡片网格 */
-        .main-content {
-            flex: 1;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 48px 24px;
-            width: 100%;
-        }
-        
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 24px;
-        }
-        
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 24px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary);
-        }
-        
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .card-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        
-        .card-desc {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-bottom: 16px;
-            line-height: 1.5;
-        }
-        
-        .card-links {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-        }
-        
-        .card-link {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px;
-            margin: 0 -12px;
-            color: var(--text-primary);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-        
-        .card-link:hover {
-            background: var(--bg-hover);
-            color: var(--primary);
-        }
-        
-        .card-link:hover .link-arrow {
-            transform: translateX(4px);
-        }
-        
-        .link-content {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .link-arrow {
-            color: var(--text-tertiary);
-            transition: transform 0.2s;
-            font-size: 16px;
-        }
-        
-        .badge {
-            background: var(--bg-hover);
-            color: var(--text-secondary);
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .external-icon {
-            font-size: 12px;
-            color: var(--text-tertiary);
-        }
-        
-        /* D. Footer */
-        .footer {
-            background: var(--bg-card);
-            border-top: 1px solid var(--border);
-            padding: 24px;
-            margin-top: auto;
-        }
-        
-        .footer-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 16px;
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        
-        .footer a {
-            color: var(--primary);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        
-        .footer a:hover {
-            color: var(--primary-hover);
-        }
-        
-        /* 响应式 */
-        @media (max-width: 1023px) {
-            .cards-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-            }
-            
-            .main-content {
-                padding: 40px 20px;
-            }
-        }
-        
-        @media (max-width: 639px) {
-            .navbar-links {
-                gap: 12px;
-                padding: 4px 0;
-            }
-             
-            .navbar-link {
-                font-size: 13px;
-                padding: 6px 8px;
-            }
-             
-            .navbar-link span {
-                display: none;
-            }
-            
-            .navbar-link.external::after {
-                display: inline;
-                margin-left: 2px;
-            }
-            
-            .hero {
-                padding: 48px 20px;
-            }
-            
-            .hero-title {
-                font-size: 32px;
-            }
-            
-            .hero-subtitle {
-                font-size: 16px;
-            }
-            
-            .hero-cta {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .cards-grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-            
-            .main-content {
-                padding: 32px 16px;
-            }
-            
-            .card {
-                padding: 20px;
-            }
-            
-            .footer-container {
-                flex-direction: column;
-                text-align: center;
-                gap: 8px;
-            }
-        }
-        
-        /* 可访问性 */
-        a:focus, button:focus {
-            outline: 2px solid var(--primary);
-            outline-offset: 2px;
-        }
-        
-        /* 滚动行为 */
-        html {
-            scroll-behavior: smooth;
-        }
+        .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .backdrop.active { opacity: 1; pointer-events: auto; }
     </style>
 </head>
-<body>
+<body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
     <!-- A. 顶部导航栏 -->
-    <nav class="navbar" id="navbar">
-        <div class="navbar-container">
-            <a href="./index.html" class="navbar-brand">
+    <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50">
+        <div class="h-full px-4 flex items-center justify-between max-w-[1200px] mx-auto">
+            <a href="./index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
                 <span>🚀</span>
-                <span>MCP Probe Kit</span>
+                <span class="sm:inline hidden">MCP Probe Kit</span>
             </a>
-            <div class="navbar-links">
-                <a href="./pages/all-tools.html" class="navbar-link">文档</a>
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="navbar-link external">
-                    <span>主站</span> ByteZoneX
-                </a>
-                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="navbar-link external">
-                    GitHub
-                </a>
-                <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="navbar-link external">
-                    npm
-                </a>
+            <div class="flex items-center gap-3">
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="./pages/all-tools.html" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors">文档</a>
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">
+                        <span>主站</span> ByteZoneX<span class="text-xs">↗</span>
+                    </a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">GitHub<span class="text-xs">↗</span></a>
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">npm<span class="text-xs">↗</span></a>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
             </div>
         </div>
     </nav>
-    
+
+    <!-- 侧边栏遮罩 -->
+    <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+
+    <!-- 移动端侧边栏 -->
+    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:hidden" id="sidebar">
+        <div class="p-4">
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">快速开始</div>
+                <a href="./index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary">
+                    <span>🏠</span>
+                    <span>文档首页</span>
+                </a>
+                <a href="./pages/getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📖</span>
+                    <span>安装配置</span>
+                </a>
+            </div>
+            
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">工具文档</div>
+                <a href="./pages/all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🛠️</span>
+                    <span>所有工具</span>
+                    <span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">39</span>
+                </a>
+            </div>
+            
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">指南</div>
+                <a href="./pages/migration.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>🚀</span>
+                    <span>迁移指南</span>
+                </a>
+                <a href="./pages/examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💡</span>
+                    <span>最佳实践</span>
+                </a>
+            </div>
+            
+            <div class="pt-4 border-t border-border">
+                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>💻</span>
+                    <span>GitHub</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+                <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
+                    <span>📦</span>
+                    <span>npm</span>
+                    <span class="ml-auto text-xs">↗</span>
+                </a>
+            </div>
+
+            <!-- QR Code -->
+            <div class="mt-4 pt-4 border-t border-border">
+                <div class="text-center">
+                    <div class="text-xs font-semibold text-text-tertiary mb-2">关注公众号</div>
+                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
+                    <div class="text-xs text-text-tertiary mt-2">获取更多技术分享</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
     <!-- B. Hero 首屏 -->
-    <section class="hero">
-        <div class="hero-container">
-            <h1 class="hero-title">🚀 MCP Probe Kit</h1>
-            <p class="hero-subtitle">AI 开发增强工具集 · 文档中心</p>
-            <div class="hero-version">v3.0.0</div>
-            <div class="hero-cta">
-                <a href="./pages/getting-started.html" class="btn btn-primary">快速开始</a>
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="btn btn-secondary">
+    <section class="bg-gradient-to-br from-primary to-primary-hover text-white py-12 px-6 text-center mt-14">
+        <div class="max-w-[800px] mx-auto">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 tracking-tight">🚀 MCP Probe Kit</h1>
+            <p class="text-base sm:text-lg opacity-95 mb-2">AI 开发增强工具集 · 文档中心</p>
+            <div class="inline-block bg-white/20 px-3 py-1 rounded-full text-sm font-semibold mb-6 md:mb-8">v3.0.1</div>
+            <div class="flex gap-3 md:gap-4 justify-center flex-wrap">
+                <a href="./pages/getting-started.html" class="bg-white text-primary px-5 py-2.5 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 inline-flex items-center gap-1.5 no-underline cursor-pointer border-0">快速开始</a>
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="bg-white/15 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold hover:bg-white/25 transition-all duration-200 inline-flex items-center gap-1.5 no-underline border border-white/30">
                     访问主站 ByteZoneX ↗
                 </a>
             </div>
         </div>
     </section>
     
-    <!-- C. 主内容区：2×2 卡片网格 -->
-    <main class="main-content">
-        <div class="cards-grid">
+    <!-- C. 主内容区 -->
+    <main class="flex-1 max-w-[1200px] mx-auto px-4 sm:px-6 py-8 md:py-12 w-full">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <!-- 1. 快速开始 -->
-            <article class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
+            <article class="bg-bg-card border border-border rounded-lg p-4 sm:p-6 transition-all duration-300 ease-out shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-primary">
+                <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
+                    <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
                         <span>📖</span>
                         <span>快速开始</span>
                     </h2>
                 </div>
-                <p class="card-desc">5 分钟快速上手 MCP Probe Kit v2.0</p>
-                <nav class="card-links">
-                    <a href="./pages/getting-started.html" class="card-link">
+                <p class="text-text-secondary text-sm mb-4 leading-relaxed">5 分钟快速上手 MCP Probe Kit v3.0.1</p>
+                <nav class="flex flex-col gap-0">
+                    <a href="./pages/getting-started.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
                         <span>安装配置</span>
-                        <span class="link-arrow">→</span>
+                        <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                 </nav>
             </article>
-            
+
             <!-- 2. 工具文档 -->
-            <article class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
+            <article class="bg-bg-card border border-border rounded-lg p-4 sm:p-6 transition-all duration-300 ease-out shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-primary">
+                <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
+                    <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
                         <span>🛠️</span>
                         <span>工具文档</span>
                     </h2>
                 </div>
-                <p class="card-desc">20 个实用工具的完整参考</p>
-                <nav class="card-links">
-                    <a href="./pages/all-tools.html" class="card-link">
-                        <div class="link-content">
+                <p class="text-text-secondary text-sm mb-4 leading-relaxed">20 个实用工具的完整参考</p>
+                <nav class="flex flex-col gap-0">
+                    <a href="./pages/all-tools.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
+                        <div class="flex items-center gap-2">
                             <span>所有工具</span>
-                            <span class="badge">20</span>
+                            <span class="bg-bg-hover text-text-secondary px-2 py-0.5 rounded-full text-xs font-semibold">20</span>
                         </div>
-                        <span class="link-arrow">→</span>
+                        <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                 </nav>
             </article>
-            
+
             <!-- 3. 指南 -->
-            <article class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
+            <article class="bg-bg-card border border-border rounded-lg p-4 sm:p-6 transition-all duration-300 ease-out shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-primary">
+                <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
+                    <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
                         <span>📚</span>
                         <span>指南</span>
                     </h2>
                 </div>
-                <p class="card-desc">迁移指南和最佳实践</p>
-                <nav class="card-links">
-                    <a href="./pages/migration.html" class="card-link">
+                <p class="text-text-secondary text-sm mb-4 leading-relaxed">迁移指南和最佳实践</p>
+                <nav class="flex flex-col gap-0">
+                    <a href="./pages/migration.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
                         <span>v2.x → v3.0 迁移指南</span>
-                        <span class="link-arrow">→</span>
+                        <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
-                    <a href="./pages/examples.html" class="card-link">
+                    <a href="./pages/examples.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
                         <span>最佳实践</span>
-                        <span class="link-arrow">→</span>
+                        <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                 </nav>
             </article>
-            
+
             <!-- 4. 资源 -->
-            <article class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
+            <article class="bg-bg-card border border-border rounded-lg p-4 sm:p-6 transition-all duration-300 ease-out shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-primary">
+                <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
+                    <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
                         <span>🔗</span>
                         <span>资源</span>
                     </h2>
                 </div>
-                <p class="card-desc">源代码和社区支持</p>
-                <nav class="card-links">
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="card-link">
-                        <div class="link-content">
+                <p class="text-text-secondary text-sm mb-4 leading-relaxed">源代码和社区支持</p>
+                <nav class="flex flex-col gap-0">
+                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
+                        <div class="flex items-center gap-2">
                             <span>ByteZoneX 主站</span>
-                            <span class="external-icon">↗</span>
+                            <span class="text-xs text-text-tertiary">↗</span>
                         </div>
-                        <span class="link-arrow">→</span>
+                        <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="card-link">
-                        <div class="link-content">
+                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
+                        <div class="flex items-center gap-2">
                             <span>GitHub 仓库</span>
-                            <span class="external-icon">↗</span>
+                            <span class="text-xs text-text-tertiary">↗</span>
                         </div>
-                        <span class="link-arrow">→</span>
+                        <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="card-link">
-                        <div class="link-content">
+                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
+                        <div class="flex items-center gap-2">
                             <span>npm 包</span>
-                            <span class="external-icon">↗</span>
+                            <span class="text-xs text-text-tertiary">↗</span>
                         </div>
-                        <span class="link-arrow">→</span>
+                        <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="card-link">
-                        <div class="link-content">
+                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
+                        <div class="flex items-center gap-2">
                             <span>问题反馈</span>
-                            <span class="external-icon">↗</span>
+                            <span class="text-xs text-text-tertiary">↗</span>
                         </div>
-                        <span class="link-arrow">→</span>
+                        <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                 </nav>
             </article>
@@ -570,32 +286,30 @@
     </main>
     
     <!-- D. Footer -->
-    <footer class="footer">
-        <div class="footer-container">
-            <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">小墨 (Kyle)</a></div>
+    <footer class="bg-bg-card border-t border-border px-4 sm:px-6 py-6 mt-auto">
+        <div class="max-w-[1200px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-text-secondary">
+            <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:text-primary-hover transition-colors duration-200 no-underline">小墨 (Kyle)</a></div>
             <div>
-                © 2024-2026 MCP Probe Kit · MIT License · 
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener">主站 ByteZoneX ↗</a>
+                © 2024-2026 MCP Probe Kit · MIT License ·
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:text-primary-hover transition-colors duration-200 no-underline">主站 ByteZoneX ↗</a>
             </div>
         </div>
     </footer>
     
     <script>
-        // 导航栏滚动效果
-        const navbar = document.getElementById('navbar');
-        let lastScroll = 0;
-        
-        window.addEventListener('scroll', () => {
-            const currentScroll = window.pageYOffset;
-            
-            if (currentScroll > 10) {
-                navbar.classList.add('scrolled');
+        // 侧边栏切换
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const isOpen = sidebar.classList.contains('open');
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                backdrop.classList.remove('active');
             } else {
-                navbar.classList.remove('scrolled');
+                sidebar.classList.add('open');
+                backdrop.classList.add('active');
             }
-            
-            lastScroll = currentScroll;
-        });
+        }
     </script>
 </body>
 </html>
