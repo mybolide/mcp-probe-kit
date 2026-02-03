@@ -247,5 +247,14 @@
       "viewTools": "모든 도구 보기",
       "learnBestPractices": "모범 사례 학습"
     }
+  },
+  "examples": {
+    "breadcrumb": {
+      "home": "문서",
+      "guides": "가이드",
+      "examples": "모범 사례"
+    },
+    "title": "모범 사례",
+    "subtitle": "MCP Probe Kit은 완전한 개발 프로세스를 통합, 요구사항부터 배포까지의 모범 사례 가이드"
   }
 }

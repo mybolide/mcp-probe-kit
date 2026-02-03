@@ -247,5 +247,14 @@
       "viewTools": "View All Tools",
       "learnBestPractices": "Learn Best Practices"
     }
+  },
+  "examples": {
+    "breadcrumb": {
+      "home": "Documentation",
+      "guides": "Guides",
+      "examples": "Best Practices"
+    },
+    "title": "Best Practices",
+    "subtitle": "MCP Probe Kit integrates complete development process, best practices guide from requirements to deployment"
   }
 }

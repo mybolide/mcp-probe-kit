@@ -247,5 +247,14 @@
       "viewTools": "查看所有工具",
       "learnBestPractices": "学习最佳实践"
     }
+  },
+  "examples": {
+    "breadcrumb": {
+      "home": "文档首页",
+      "guides": "指南",
+      "examples": "最佳实践"
+    },
+    "title": "最佳实践",
+    "subtitle": "MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南"
   }
 }
