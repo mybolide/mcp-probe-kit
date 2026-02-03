@@ -405,7 +405,13 @@
       "bugfix": {
         "title": "4.1 Systematic Bug Fix (Recommended)",
         "description": "Use",
-        "description2": "workflow for one-stop solution from analysis to testing."
+        "description2": "workflow for one-stop solution from analysis to testing.",
+        "example1": "You: Login function is throwing an error",
+        "step1": "✓ Check project context",
+        "step2": "✓ Analyze error cause",
+        "step3": "✓ Locate problem code",
+        "step4": "✓ Provide fix solution",
+        "step5": "✓ Generate test cases"
       },
       "quick": {
         "title": "4.2 Quick Bug Analysis",
