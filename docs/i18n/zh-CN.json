@@ -255,6 +255,179 @@
       "examples": "最佳实践"
     },
     "title": "最佳实践",
-    "subtitle": "MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南"
+    "subtitle": "MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南",
+    "overview": {
+      "title": "完整研发流程",
+      "description": "MCP Probe Kit 的 21 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。",
+      "coreIdea": "核心理念：",
+      "coreIdeaText": "通过工作流编排工具（start_*）串联整个开发流程，让 AI 成为你的研发助手。"
+    },
+    "stage0": {
+      "title": "阶段 0：产品设计（从需求到原型）",
+      "workflow": {
+        "title": "0.1 完整产品设计流程（推荐）",
+        "description": "使用",
+        "description2": "工作流编排，一键完成从需求到 HTML 原型的完整产品设计。",
+        "example1": "你: 我有一个产品需求文档 project.md，帮我生成完整的产品设计",
+        "productName": "在线教育平台",
+        "autoExecute": "→ 自动执行：",
+        "step1": "✓ 步骤 1: 检查/生成项目上下文",
+        "step2": "✓ 步骤 2: 生成 PRD 文档",
+        "step3": "✓ 步骤 3: 生成原型设计文档",
+        "step4": "✓ 步骤 4: 生成设计系统",
+        "step5": "→ 步骤 5: 生成 HTML 可交互原型",
+        "step6": "✓ 步骤 6: 更新项目上下文索引",
+        "outputs": "→ 输出文件："
+      },
+      "prd": {
+        "title": "0.2 单独生成 PRD 文档",
+        "description": "使用",
+        "description2": "工具单独生成产品需求文档。",
+        "example1": "你: 生成一个在线教育平台的 PRD",
+        "description3": "在线教育平台，支持课程管理、视频播放、作业提交",
+        "aiCreate": "→ AI 根据指导创建 docs/prd/product-requirements.md",
+        "includes": "PRD 包含：",
+        "item1": "- 产品概述（愿景、目标用户、核心价值）",
+        "item2": "- 功能需求（核心功能、用户故事）",
+        "item3": "- 功能优先级（P0/P1/P2）",
+        "item4": "- 非功能性需求（性能、安全、兼容性）",
+        "item5": "- 页面清单"
+      },
+      "prototype": {
+        "title": "0.3 生成 HTML 可交互原型",
+        "description": "使用",
+        "description2": "工具基于原型文档生成 HTML 原型。",
+        "desc": "基于原型文档生成所有页面的 HTML 原型",
+        "step1": "✓ 读取 docs/prototype/ 下的所有原型文档",
+        "step2": "✓ 读取 docs/design-system.json 获取设计规范",
+        "step3": "✓ 为每个页面生成 HTML 文件",
+        "step4": "✓ 生成索引页面 index.html",
+        "features": "→ 特点：",
+        "feature1": "- 使用设计系统的颜色和字体",
+        "feature2": "- 包含页面导航",
+        "feature3": "- 响应式设计"
+      },
+      "summary": {
+        "title": "0.4 产品设计工作流总结",
+        "recommended": "推荐流程：",
+        "step1": "准备需求文档（Markdown 格式）",
+        "step2": "使用",
+        "step2b": "一键生成完整产品设计",
+        "step3": "在浏览器中查看 HTML 原型",
+        "step4": "与团队评审原型，收集反馈",
+        "step5": "根据反馈调整原型文档",
+        "step6": "使用",
+        "step6b": "重新生成 HTML 原型",
+        "step7": "确认后进入开发阶段"
+      }
+    },
+    "common": {
+      "bestPractice": "最佳实践"
+    },
+    "stage2": {
+      "title": "阶段 2：功能开发",
+      "workflow": {
+        "title": "2.1 完整功能开发流程（推荐）",
+        "description": "使用",
+        "description2": "工作流编排，一键完成从规格到估算。"
+      },
+      "ui": {
+        "title": "2.2 UI 开发流程",
+        "description": "使用",
+        "description2": "工作流，从设计系统到代码一气呵成。"
+      },
+      "codegen": {
+        "title": "2.3 代码生成",
+        "description": "根据需要使用各种生成工具：",
+        "genapi": "生成 API 文档（OpenAPI/Swagger）",
+        "gensql": "自然语言生成 SQL 查询",
+        "genmock": "生成测试数据",
+        "gentest": "生成单元测试"
+      }
+    },
+    "stage3": {
+      "title": "阶段 3：代码质量保障",
+      "review": {
+        "title": "3.1 全面代码审查（推荐）",
+        "description": "使用",
+        "description2": "工作流，一次性完成代码审查、安全扫描、性能分析。"
+      },
+      "single": {
+        "title": "3.2 单项检查",
+        "description": "针对特定问题使用单项工具：",
+        "codeReview": "代码审查",
+        "securityScan": "安全扫描",
+        "perf": "性能分析",
+        "refactor": "重构建议"
+      }
+    },
+    "stage4": {
+      "title": "阶段 4：Bug 修复",
+      "bugfix": {
+        "title": "4.1 系统化 Bug 修复（推荐）",
+        "description": "使用",
+        "description2": "工作流，从分析到测试一站式解决。"
+      },
+      "quick": {
+        "title": "4.2 快速 Bug 分析",
+        "description": "使用",
+        "description2": "工具快速分析问题并提供修复方案。"
+      }
+    },
+    "stage5": {
+      "title": "阶段 5：版本发布",
+      "release": {
+        "title": "5.1 自动化发布流程（推荐）",
+        "description": "使用",
+        "description2": "工作流，自动生成 Changelog 和 PR 描述。"
+      },
+      "git": {
+        "title": "5.2 Git 工作流",
+        "description": "使用 Git 工具提升协作效率：",
+        "gencommit": "生成规范的 commit 消息",
+        "genchangelog": "生成 CHANGELOG",
+        "genpr": "生成 PR 描述",
+        "resolveConflict": "解决合并冲突"
+      }
+    },
+    "stage6": {
+      "title": "阶段 6：项目维护",
+      "onboard": {
+        "title": "6.1 新成员上手",
+        "description": "使用",
+        "description2": "工作流，快速了解项目。"
+      },
+      "doc": {
+        "title": "6.2 文档维护",
+        "description": "使用",
+        "description2": "工作流，一键补全项目文档。"
+      }
+    },
+    "ralph": {
+      "title": "高级实践：Ralph Wiggum Loop",
+      "loop": {
+        "title": "自动化循环开发",
+        "description": "使用",
+        "description2": "启动自动化开发循环，AI 持续迭代直到完成目标。"
+      },
+      "warning": {
+        "title": "⚠️ 安全提示：",
+        "text": "Ralph Loop 默认启用多重安全保护（最大迭代次数、运行时间、代码变更量限制），防止失控。"
+      }
+    },
+    "summary": {
+      "title": "最佳实践总结",
+      "coreTitle": "核心原则：",
+      "principle1": "优先使用工作流编排工具（start_*）- 自动化完整流程",
+      "principle2": "需求阶段使用 interview - 避免理解偏差",
+      "principle3": "开发前使用 estimate - 合理规划时间",
+      "principle4": "提交前使用 start_review - 保证代码质量",
+      "principle5": "发布前使用 start_release - 规范发布流程"
+    },
+    "resources": {
+      "title": "更多资源",
+      "allTools": "完整工具参考",
+      "allToolsDesc": "查看所有 21 个工具的详细说明"
+    }
   }
 }

@@ -255,6 +255,179 @@
       "examples": "ベストプラクティス"
     },
     "title": "ベストプラクティス",
-    "subtitle": "MCP Probe Kitは完全な開発プロセスを統合、要件からデプロイまでのベストプラクティスガイド"
+    "subtitle": "MCP Probe Kitは完全な開発プロセスを統合、要件からデプロイまでのベストプラクティスガイド",
+    "overview": {
+      "title": "完全な開発プロセス",
+      "description": "MCP Probe Kitの21のツールは、要件分析からコードデプロイまでの完全な開発プロセスをカバーしています。以下は推奨されるベストプラクティスです。",
+      "coreIdea": "コア哲学：",
+      "coreIdeaText": "ワークフローオーケストレーションツール（start_*）を通じて開発プロセス全体を連携し、AIを開発アシスタントにします。"
+    },
+    "stage0": {
+      "title": "ステージ0：製品設計（要件からプロトタイプまで）",
+      "workflow": {
+        "title": "0.1 完全な製品設計ワークフロー（推奨）",
+        "description": "使用",
+        "description2": "ワークフローオーケストレーション、ワンクリックで要件からHTMLプロトタイプまでの完全な製品設計を完了。",
+        "example1": "あなた: 製品要件ドキュメント project.md があります、完全な製品設計を生成してください",
+        "productName": "オンライン教育プラットフォーム",
+        "autoExecute": "→ 自動実行：",
+        "step1": "✓ ステップ1: プロジェクトコンテキストの確認/生成",
+        "step2": "✓ ステップ2: PRDドキュメントの生成",
+        "step3": "✓ ステップ3: プロトタイプ設計ドキュメントの生成",
+        "step4": "✓ ステップ4: デザインシステムの生成",
+        "step5": "→ ステップ5: HTMLインタラクティブプロトタイプの生成",
+        "step6": "✓ ステップ6: プロジェクトコンテキストインデックスの更新",
+        "outputs": "→ 出力ファイル："
+      },
+      "prd": {
+        "title": "0.2 PRDドキュメントを個別に生成",
+        "description": "使用",
+        "description2": "ツールで製品要件ドキュメントを個別に生成。",
+        "example1": "あなた: オンライン教育プラットフォームのPRDを生成してください",
+        "description3": "オンライン教育プラットフォーム、コース管理、ビデオ再生、課題提出をサポート",
+        "aiCreate": "→ AIがガイダンスに基づいて docs/prd/product-requirements.md を作成",
+        "includes": "PRDに含まれるもの：",
+        "item1": "- 製品概要（ビジョン、ターゲットユーザー、コア価値）",
+        "item2": "- 機能要件（コア機能、ユーザーストーリー）",
+        "item3": "- 機能優先度（P0/P1/P2）",
+        "item4": "- 非機能要件（パフォーマンス、セキュリティ、互換性）",
+        "item5": "- ページリスト"
+      },
+      "prototype": {
+        "title": "0.3 HTMLインタラクティブプロトタイプの生成",
+        "description": "使用",
+        "description2": "ツールでプロトタイプドキュメントに基づいてHTMLプロトタイプを生成。",
+        "desc": "プロトタイプドキュメントに基づいてすべてのページのHTMLプロトタイプを生成",
+        "step1": "✓ docs/prototype/ 下のすべてのプロトタイプドキュメントを読み取り",
+        "step2": "✓ docs/design-system.json を読み取ってデザイン仕様を取得",
+        "step3": "✓ 各ページのHTMLファイルを生成",
+        "step4": "✓ インデックスページ index.html を生成",
+        "features": "→ 特徴：",
+        "feature1": "- デザインシステムの色とフォントを使用",
+        "feature2": "- ページナビゲーションを含む",
+        "feature3": "- レスポンシブデザイン"
+      },
+      "summary": {
+        "title": "0.4 製品設計ワークフローまとめ",
+        "recommended": "推奨プロセス：",
+        "step1": "要件ドキュメントを準備（Markdown形式）",
+        "step2": "使用",
+        "step2b": "でワンクリックで完全な製品設計を生成",
+        "step3": "ブラウザでHTMLプロトタイプを表示",
+        "step4": "チームでプロトタイプをレビューし、フィードバックを収集",
+        "step5": "フィードバックに基づいてプロトタイプドキュメントを調整",
+        "step6": "使用",
+        "step6b": "でHTMLプロトタイプを再生成",
+        "step7": "確認後、開発フェーズに進む"
+      }
+    },
+    "common": {
+      "bestPractice": "ベストプラクティス"
+    },
+    "stage2": {
+      "title": "ステージ 2：機能開発",
+      "workflow": {
+        "title": "2.1 完全な機能開発ワークフロー（推奨）",
+        "description": "使用",
+        "description2": "ワークフローオーケストレーションで、仕様から見積もりまでワンクリックで完了。"
+      },
+      "ui": {
+        "title": "2.2 UI開発ワークフロー",
+        "description": "使用",
+        "description2": "ワークフローで、デザインシステムからコードまで一気通貫。"
+      },
+      "codegen": {
+        "title": "2.3 コード生成",
+        "description": "必要に応じて各種生成ツールを使用：",
+        "genapi": "APIドキュメント生成（OpenAPI/Swagger）",
+        "gensql": "自然言語からSQLクエリ生成",
+        "genmock": "テストデータ生成",
+        "gentest": "ユニットテスト生成"
+      }
+    },
+    "stage3": {
+      "title": "ステージ 3：コード品質保証",
+      "review": {
+        "title": "3.1 包括的コードレビュー（推奨）",
+        "description": "使用",
+        "description2": "ワークフローで、コードレビュー、セキュリティスキャン、パフォーマンス分析を一度に完了。"
+      },
+      "single": {
+        "title": "3.2 個別チェック",
+        "description": "特定の問題に対して個別ツールを使用：",
+        "codeReview": "コードレビュー",
+        "securityScan": "セキュリティスキャン",
+        "perf": "パフォーマンス分析",
+        "refactor": "リファクタリング提案"
+      }
+    },
+    "stage4": {
+      "title": "ステージ 4：バグ修正",
+      "bugfix": {
+        "title": "4.1 体系的なバグ修正（推奨）",
+        "description": "使用",
+        "description2": "ワークフローで、分析からテストまでワンストップソリューション。"
+      },
+      "quick": {
+        "title": "4.2 クイックバグ分析",
+        "description": "使用",
+        "description2": "ツールで問題を迅速に分析し、修正案を提供。"
+      }
+    },
+    "stage5": {
+      "title": "ステージ 5：リリース管理",
+      "release": {
+        "title": "5.1 自動化リリースプロセス（推奨）",
+        "description": "使用",
+        "description2": "ワークフローで、ChangelogとPR説明を自動生成。"
+      },
+      "git": {
+        "title": "5.2 Gitワークフロー",
+        "description": "Gitツールでコラボレーション効率を向上：",
+        "gencommit": "標準的なコミットメッセージ生成",
+        "genchangelog": "CHANGELOG生成",
+        "genpr": "PR説明生成",
+        "resolveConflict": "マージコンフリクト解決"
+      }
+    },
+    "stage6": {
+      "title": "ステージ 6：プロジェクトメンテナンス",
+      "onboard": {
+        "title": "6.1 新メンバーオンボーディング",
+        "description": "使用",
+        "description2": "ワークフローで、プロジェクトを迅速に理解。"
+      },
+      "doc": {
+        "title": "6.2 ドキュメントメンテナンス",
+        "description": "使用",
+        "description2": "ワークフローで、プロジェクトドキュメントをワンクリックで完成。"
+      }
+    },
+    "ralph": {
+      "title": "高度な実践：Ralph Wiggum Loop",
+      "loop": {
+        "title": "自動化ループ開発",
+        "description": "使用",
+        "description2": "で自動化開発ループを開始、AIが目標達成まで継続的に反復。"
+      },
+      "warning": {
+        "title": "⚠️ 安全性に関する注意：",
+        "text": "Ralph Loopはデフォルトで複数の安全保護（最大反復回数、実行時間、コード変更量制限）を有効にし、暴走を防止します。"
+      }
+    },
+    "summary": {
+      "title": "ベストプラクティスまとめ",
+      "coreTitle": "コア原則：",
+      "principle1": "ワークフローオーケストレーションツール（start_*）を優先 - 完全なプロセスを自動化",
+      "principle2": "要件フェーズでinterviewを使用 - 誤解を回避",
+      "principle3": "開発前にestimateを使用 - 時間を合理的に計画",
+      "principle4": "コミット前にstart_reviewを使用 - コード品質を保証",
+      "principle5": "リリース前にstart_releaseを使用 - リリースプロセスを標準化"
+    },
+    "resources": {
+      "title": "その他のリソース",
+      "allTools": "完全なツールリファレンス",
+      "allToolsDesc": "全21ツールの詳細説明を表示"
+    }
   }
 }
