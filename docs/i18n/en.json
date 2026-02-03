@@ -321,6 +321,40 @@
         "step7": "Proceed to development phase after confirmation"
       }
     },
+    "stage1": {
+      "title": "Stage 1: Requirements Analysis and Planning",
+      "init": {
+        "title": "1.1 New Project Initialization",
+        "description": "Use",
+        "description2": "to generate project documents following Spec-Driven Development approach.",
+        "example1": "You: I want to create a task management system",
+        "input": "Task management system with task creation, assignment, tracking, and reminders",
+        "generate": "→ Generate: Requirements document, design document, task list"
+      },
+      "interview": {
+        "title": "1.2 Requirements Clarification (Avoid Misunderstandings)",
+        "description": "Use",
+        "description2": "tool for structured requirements interviews.",
+        "example1": "You: Add user login functionality",
+        "desc": "Implement user login functionality",
+        "aiAsk": "→ AI will ask:",
+        "q1": "- Which login methods are supported? (Email/Phone/Third-party)",
+        "q2": "- Do you need to remember login status?",
+        "q3": "- What are the password rules?",
+        "q4": "- Do you need verification code?",
+        "generate": "→ Generate: Interview record document"
+      },
+      "estimate": {
+        "title": "1.3 Workload Estimation",
+        "description": "Use",
+        "description2": "tool to estimate development time and resources.",
+        "task": "Implement user authentication functionality",
+        "output": "→ Output:",
+        "sp": "- Story Points: 8 SP",
+        "time": "- Time Range: Optimistic 3 days / Normal 5 days / Pessimistic 8 days",
+        "risk": "- Risk: Third-party login integration may be delayed"
+      }
+    },
     "common": {
       "bestPractice": "Best Practice"
     },
