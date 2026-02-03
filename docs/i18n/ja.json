@@ -171,5 +171,78 @@
       "copy": "コピー",
       "copied": "コピーしました"
     }
+  },
+  "migration": {
+    "breadcrumb": {
+      "home": "ドキュメント",
+      "guides": "ガイド",
+      "migration": "移行ガイド"
+    },
+    "title": "v3.0 移行ガイド",
+    "subtitle": "v2.xからv3.0へスムーズに移行し、重大な変更と新機能を理解する",
+    "overview": {
+      "title": "概要",
+      "description": "MCP Probe Kit v3.0は大規模なバージョンアップデートで、20のコアツールに最適化され、より強力な機能とより良い開発体験をもたらします。",
+      "migrationTime": "移行時間：",
+      "migrationTimeText": "ほとんどのプロジェクトは10〜15分で移行を完了でき、v2.xのコアツールはv3.0で互換性を維持しています。"
+    },
+    "changes": {
+      "title": "主な変更点",
+      "toolsOptimization": {
+        "title": "1. ツールの最適化",
+        "description": "v2.x: 39ツール → v3.0: 20コアツール（低頻度ツールを削除、高価値ツールを保持）"
+      },
+      "workflows": {
+        "title": "2. 新しいワークフローオーケストレーション",
+        "description": "11個の",
+        "description2": "ワークフローオーケストレーションツール、エンドツーエンドの自動化開発プロセスを提供：",
+        "startFeature": "機能開発ワークフロー",
+        "startBugfix": "バグ修正ワークフロー",
+        "startUi": "UI開発ワークフロー",
+        "startProduct": "製品設計ワークフロー",
+        "startRalph": "Ralph Loop自動化開発"
+      },
+      "uiTools": {
+        "title": "3. 新しいUI/UXツールセット",
+        "description": "完全なUI/UXツールチェーン：",
+        "designSystem": "インテリジェントデザインシステムジェネレーター",
+        "uiSearch": "UI/UXデータベース検索",
+        "syncUiData": "UI/UXデータ同期",
+        "componentCatalog": "コンポーネントカタログ初期化",
+        "renderUi": "UIレンダリングエンジン"
+      },
+      "structuredOutput": {
+        "title": "4. 構造化出力のアップグレード",
+        "description": "コアおよびオーケストレーションツールは構造化出力を優先し、一貫性のある予測可能な出力形式で、ツールの連携と状態追跡を容易にします。"
+      }
+    },
+    "steps": {
+      "title": "移行手順",
+      "step1": {
+        "title": "ステップ1：バージョンを更新"
+      },
+      "step2": {
+        "title": "ステップ2：設定ファイルを確認",
+        "description": "v3.0の設定ファイル形式はv2.xと完全に互換性があり、変更は不要です。",
+        "compatible": "後方互換性：",
+        "compatibleText": "v2.xのコアツールはv3.0で互換性を維持し、シームレスなアップグレードが可能です。"
+      }
+    },
+    "help": {
+      "title": "ヘルプを取得",
+      "description": "移行中に問題が発生した場合：",
+      "viewDocs": "表示",
+      "toolsReference": "完全なツールリファレンス",
+      "askIn": "で質問",
+      "askQuestion": "質問する",
+      "reportIn": "で報告",
+      "reportBug": "バグを報告"
+    },
+    "complete": {
+      "title": "🎉 移行完了！",
+      "description": "v3.0の強力な機能を探索開始",
+      "viewTools": "すべてのツールを表示",
+      "learnBestPractices": "ベストプラクティスを学ぶ"
+    }
   }
 }

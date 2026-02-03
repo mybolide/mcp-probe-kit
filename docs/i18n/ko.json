@@ -171,5 +171,78 @@
       "copy": "복사",
       "copied": "복사됨"
     }
+  },
+  "migration": {
+    "breadcrumb": {
+      "home": "문서",
+      "guides": "가이드",
+      "migration": "마이그레이션 가이드"
+    },
+    "title": "v3.0 마이그레이션 가이드",
+    "subtitle": "v2.x에서 v3.0으로 원활하게 마이그레이션하고 주요 변경 사항 및 새로운 기능 이해",
+    "overview": {
+      "title": "개요",
+      "description": "MCP Probe Kit v3.0은 주요 버전 업데이트로, 20개의 핵심 도구로 최적화되어 더 강력한 기능과 더 나은 개발 경험을 제공합니다.",
+      "migrationTime": "마이그레이션 시간：",
+      "migrationTimeText": "대부분의 프로젝트는 10-15분 내에 마이그레이션을 완료할 수 있으며, v2.x의 핵심 도구는 v3.0에서 호환성을 유지합니다."
+    },
+    "changes": {
+      "title": "주요 변경 사항",
+      "toolsOptimization": {
+        "title": "1. 도구 최적화",
+        "description": "v2.x: 39개 도구 → v3.0: 20개 핵심 도구 (저빈도 도구 제거, 고가치 도구 유지)"
+      },
+      "workflows": {
+        "title": "2. 새로운 워크플로 오케스트레이션",
+        "description": "11개의",
+        "description2": "워크플로 오케스트레이션 도구, 엔드투엔드 자동화 개발 프로세스 제공：",
+        "startFeature": "기능 개발 워크플로",
+        "startBugfix": "버그 수정 워크플로",
+        "startUi": "UI 개발 워크플로",
+        "startProduct": "제품 설계 워크플로",
+        "startRalph": "Ralph Loop 자동화 개발"
+      },
+      "uiTools": {
+        "title": "3. 새로운 UI/UX 도구 세트",
+        "description": "완전한 UI/UX 도구 체인：",
+        "designSystem": "지능형 디자인 시스템 생성기",
+        "uiSearch": "UI/UX 데이터베이스 검색",
+        "syncUiData": "UI/UX 데이터 동기화",
+        "componentCatalog": "컴포넌트 카탈로그 초기화",
+        "renderUi": "UI 렌더링 엔진"
+      },
+      "structuredOutput": {
+        "title": "4. 구조화된 출력 업그레이드",
+        "description": "핵심 및 오케스트레이션 도구는 구조화된 출력을 우선시하며, 일관되고 예측 가능한 출력 형식으로 도구 연결 및 상태 추적을 용이하게 합니다."
+      }
+    },
+    "steps": {
+      "title": "마이그레이션 단계",
+      "step1": {
+        "title": "단계 1：버전 업데이트"
+      },
+      "step2": {
+        "title": "단계 2：구성 파일 확인",
+        "description": "v3.0 구성 파일 형식은 v2.x와 완전히 호환되며 수정이 필요하지 않습니다.",
+        "compatible": "하위 호환성：",
+        "compatibleText": "v2.x의 핵심 도구는 v3.0에서 호환성을 유지하며 원활한 업그레이드가 가능합니다."
+      }
+    },
+    "help": {
+      "title": "도움 받기",
+      "description": "마이그레이션 중 문제가 발생하면：",
+      "viewDocs": "보기",
+      "toolsReference": "완전한 도구 참조",
+      "askIn": "에서",
+      "askQuestion": "질문하기",
+      "reportIn": "에서",
+      "reportBug": "버그 보고"
+    },
+    "complete": {
+      "title": "🎉 마이그레이션 완료！",
+      "description": "v3.0의 강력한 기능 탐색 시작",
+      "viewTools": "모든 도구 보기",
+      "learnBestPractices": "모범 사례 학습"
+    }
   }
 }

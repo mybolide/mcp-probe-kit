@@ -171,5 +171,78 @@
       "copy": "Copy",
       "copied": "Copied"
     }
+  },
+  "migration": {
+    "breadcrumb": {
+      "home": "Documentation",
+      "guides": "Guides",
+      "migration": "Migration Guide"
+    },
+    "title": "v3.0 Migration Guide",
+    "subtitle": "Smoothly migrate from v2.x to v3.0, understand breaking changes and new features",
+    "overview": {
+      "title": "Overview",
+      "description": "MCP Probe Kit v3.0 is a major version update, streamlined to 20 core tools, bringing more powerful features and better development experience.",
+      "migrationTime": "Migration Time:",
+      "migrationTimeText": "Most projects can complete migration in 10-15 minutes, v2.x core tools remain compatible in v3.0."
+    },
+    "changes": {
+      "title": "Major Changes",
+      "toolsOptimization": {
+        "title": "1. Tools Streamlining",
+        "description": "v2.x: 39 tools → v3.0: 20 core tools (removed low-frequency tools, kept high-value tools)"
+      },
+      "workflows": {
+        "title": "2. New Workflow Orchestration",
+        "description": "11",
+        "description2": "workflow orchestration tools, providing end-to-end automated development process:",
+        "startFeature": "Feature development workflow",
+        "startBugfix": "Bug fix workflow",
+        "startUi": "UI development workflow",
+        "startProduct": "Product design workflow",
+        "startRalph": "Ralph Loop automated development"
+      },
+      "uiTools": {
+        "title": "3. New UI/UX Toolset",
+        "description": "Complete UI/UX toolchain:",
+        "designSystem": "Intelligent design system generator",
+        "uiSearch": "UI/UX database search",
+        "syncUiData": "UI/UX data synchronization",
+        "componentCatalog": "Component catalog initialization",
+        "renderUi": "UI rendering engine"
+      },
+      "structuredOutput": {
+        "title": "4. Structured Output Upgrade",
+        "description": "Core and orchestration tools prioritize structured output, consistent and predictable output format, facilitating tool chaining and state tracking."
+      }
+    },
+    "steps": {
+      "title": "Migration Steps",
+      "step1": {
+        "title": "Step 1: Update Version"
+      },
+      "step2": {
+        "title": "Step 2: Check Configuration File",
+        "description": "v3.0 configuration file format is fully compatible with v2.x, no modification needed.",
+        "compatible": "Backward Compatible:",
+        "compatibleText": "v2.x core tools remain compatible in v3.0, seamless upgrade possible."
+      }
+    },
+    "help": {
+      "title": "Get Help",
+      "description": "If you encounter problems during migration:",
+      "viewDocs": "View",
+      "toolsReference": "Complete Tools Reference",
+      "askIn": "Ask in",
+      "askQuestion": "ask questions",
+      "reportIn": "Report in",
+      "reportBug": "report bugs"
+    },
+    "complete": {
+      "title": "🎉 Migration Complete!",
+      "description": "Start exploring v3.0's powerful features",
+      "viewTools": "View All Tools",
+      "learnBestPractices": "Learn Best Practices"
+    }
   }
 }
