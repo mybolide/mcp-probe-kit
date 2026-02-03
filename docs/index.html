@@ -76,6 +76,14 @@
         }
         .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
         .backdrop.active { opacity: 1; pointer-events: auto; }
+        
+        /* i18n 加载优化：防止内容闪烁 */
+        body:not(.i18n-ready) [data-i18n] {
+            visibility: hidden;
+        }
+        body.i18n-ready [data-i18n] {
+            visibility: visible;
+        }
     </style>
 </head>
 <body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
@@ -88,12 +96,13 @@
             </a>
             <div class="flex items-center gap-3">
                 <div class="hidden md:flex items-center gap-4">
-                    <a href="./pages/all-tools.html" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors">文档</a>
+                    <a href="./pages/all-tools.html" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors" data-i18n="nav.docs">文档</a>
                     <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">
-                        <span>主站</span> ByteZoneX<span class="text-xs">↗</span>
+                        <span data-i18n="nav.mainSite">主站</span> ByteZoneX<span class="text-xs">↗</span>
                     </a>
                     <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">GitHub<span class="text-xs">↗</span></a>
                     <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">npm<span class="text-xs">↗</span></a>
+                    <div id="lang-switcher-container"></div>
                 </div>
                 <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,12 +179,12 @@
     <!-- B. Hero 首屏 -->
     <section class="bg-gradient-to-br from-primary to-primary-hover text-white py-12 px-6 text-center mt-14">
         <div class="max-w-[800px] mx-auto">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 tracking-tight">🚀 MCP Probe Kit</h1>
-            <p class="text-base sm:text-lg opacity-95 mb-2">AI 开发增强工具集 · 文档中心</p>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 tracking-tight" data-i18n="hero.title">🚀 MCP Probe Kit</h1>
+            <p class="text-base sm:text-lg opacity-95 mb-2" data-i18n="hero.subtitle">AI 开发增强工具集 · 文档中心</p>
             <div class="inline-block bg-white/20 px-3 py-1 rounded-full text-sm font-semibold mb-6 md:mb-8">v3.0.3</div>
             <div class="flex gap-3 md:gap-4 justify-center flex-wrap">
-                <a href="./pages/getting-started.html" class="bg-white text-primary px-5 py-2.5 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 inline-flex items-center gap-1.5 no-underline cursor-pointer border-0">快速开始</a>
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="bg-white/15 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold hover:bg-white/25 transition-all duration-200 inline-flex items-center gap-1.5 no-underline border border-white/30">
+                <a href="./pages/getting-started.html" class="bg-white text-primary px-5 py-2.5 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 inline-flex items-center gap-1.5 no-underline cursor-pointer border-0" data-i18n="hero.quickStart">快速开始</a>
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="bg-white/15 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold hover:bg-white/25 transition-all duration-200 inline-flex items-center gap-1.5 no-underline border border-white/30" data-i18n="hero.visitMainSite">
                     访问主站 ByteZoneX ↗
                 </a>
             </div>
@@ -190,13 +199,13 @@
                 <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
                     <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
                         <span>📖</span>
-                        <span>快速开始</span>
+                        <span data-i18n="sections.quickStart.title">快速开始</span>
                     </h2>
                 </div>
-                <p class="text-text-secondary text-sm mb-4 leading-relaxed">5 分钟快速上手 MCP Probe Kit v3.0.3</p>
+                <p class="text-text-secondary text-sm mb-4 leading-relaxed" data-i18n="sections.quickStart.description">5 分钟快速上手 MCP Probe Kit v3.0.3</p>
                 <nav class="flex flex-col gap-0">
                     <a href="./pages/getting-started.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <span>安装配置</span>
+                        <span data-i18n="sections.quickStart.installConfig">安装配置</span>
                         <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                 </nav>
@@ -207,14 +216,14 @@
                 <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
                     <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
                         <span>🛠️</span>
-                        <span>工具文档</span>
+                        <span data-i18n="sections.tools.title">工具文档</span>
                     </h2>
                 </div>
-                <p class="text-text-secondary text-sm mb-4 leading-relaxed">21 个实用工具的完整参考</p>
+                <p class="text-text-secondary text-sm mb-4 leading-relaxed" data-i18n="sections.tools.description">21 个实用工具的完整参考</p>
                 <nav class="flex flex-col gap-0">
                     <a href="./pages/all-tools.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
                         <div class="flex items-center gap-2">
-                            <span>所有工具</span>
+                            <span data-i18n="sections.tools.allTools">所有工具</span>
                             <span class="bg-bg-hover text-text-secondary px-2 py-0.5 rounded-full text-xs font-semibold">21</span>
                         </div>
                         <span class="link-arrow text-text-tertiary text-base">→</span>
@@ -227,17 +236,17 @@
                 <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
                     <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
                         <span>📚</span>
-                        <span>指南</span>
+                        <span data-i18n="sections.guides.title">指南</span>
                     </h2>
                 </div>
-                <p class="text-text-secondary text-sm mb-4 leading-relaxed">迁移指南和最佳实践</p>
+                <p class="text-text-secondary text-sm mb-4 leading-relaxed" data-i18n="sections.guides.description">迁移指南和最佳实践</p>
                 <nav class="flex flex-col gap-0">
                     <a href="./pages/migration.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <span>v2.x → v3.0 迁移指南</span>
+                        <span data-i18n="sections.guides.migration">v2.x → v3.0 迁移指南</span>
                         <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                     <a href="./pages/examples.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <span>最佳实践</span>
+                        <span data-i18n="sections.guides.bestPractices">最佳实践</span>
                         <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                 </nav>
@@ -248,35 +257,35 @@
                 <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
                     <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
                         <span>🔗</span>
-                        <span>资源</span>
+                        <span data-i18n="sections.resources.title">资源</span>
                     </h2>
                 </div>
-                <p class="text-text-secondary text-sm mb-4 leading-relaxed">源代码和社区支持</p>
+                <p class="text-text-secondary text-sm mb-4 leading-relaxed" data-i18n="sections.resources.description">源代码和社区支持</p>
                 <nav class="flex flex-col gap-0">
                     <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
                         <div class="flex items-center gap-2">
-                            <span>ByteZoneX 主站</span>
+                            <span data-i18n="sections.resources.mainSite">ByteZoneX 主站</span>
                             <span class="text-xs text-text-tertiary">↗</span>
                         </div>
                         <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                     <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
                         <div class="flex items-center gap-2">
-                            <span>GitHub 仓库</span>
+                            <span data-i18n="sections.resources.githubRepo">GitHub 仓库</span>
                             <span class="text-xs text-text-tertiary">↗</span>
                         </div>
                         <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                     <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
                         <div class="flex items-center gap-2">
-                            <span>npm 包</span>
+                            <span data-i18n="sections.resources.npmPackage">npm 包</span>
                             <span class="text-xs text-text-tertiary">↗</span>
                         </div>
                         <span class="link-arrow text-text-tertiary text-base">→</span>
                     </a>
                     <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
                         <div class="flex items-center gap-2">
-                            <span>问题反馈</span>
+                            <span data-i18n="sections.resources.issues">问题反馈</span>
                             <span class="text-xs text-text-tertiary">↗</span>
                         </div>
                         <span class="link-arrow text-text-tertiary text-base">→</span>
@@ -289,10 +298,10 @@
     <!-- D. Footer -->
     <footer class="bg-bg-card border-t border-border px-4 sm:px-6 py-6 mt-auto">
         <div class="max-w-[1200px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-text-secondary">
-            <div>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:text-primary-hover transition-colors duration-200 no-underline">小墨 (Kyle)</a></div>
+            <div><span data-i18n="footer.madeWith">Made with ❤️ by</span> <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:text-primary-hover transition-colors duration-200 no-underline">小墨 (Kyle)</a></div>
             <div>
-                © 2024-2026 MCP Probe Kit · MIT License ·
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:text-primary-hover transition-colors duration-200 no-underline">主站 ByteZoneX ↗</a>
+                © 2024-2026 MCP Probe Kit · <span data-i18n="footer.license">MIT License</span> ·
+                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:text-primary-hover transition-colors duration-200 no-underline"><span data-i18n="footer.mainSite">主站 ByteZoneX</span> ↗</a>
             </div>
         </div>
     </footer>
@@ -312,5 +321,6 @@
             }
         }
     </script>
+    <script src="./assets/js/i18n.js"></script>
 </body>
 </html>

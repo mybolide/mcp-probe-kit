@@ -14,13 +14,12 @@
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:server": "npm run build && node test-server.js",
     "inspector": "npx @modelcontextprotocol/inspector node build/index.js",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "sync-ui-data": "tsx scripts/sync-ui-data.ts",
-    "sync-ui-data:verbose": "tsx scripts/sync-ui-data.ts --verbose",
-    "prebuild": "npm run sync-ui-data"
+    "prebuild": "npm run sync-ui-data",
+    "docs:serve": "npx http-server docs -p 8080 -o"
   },
   "keywords": [
     "mcp",

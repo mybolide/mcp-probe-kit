@@ -1,60 +1,62 @@
 # MCP Probe Kit
 
+**Languages**: [English](README.md) | [简体中文](i18n/README.zh-CN.md) | [日本語](i18n/README.ja-JP.md) | [한국어](i18n/README.ko-KR.md) | [Español](i18n/README.es-ES.md) | [Français](i18n/README.fr-FR.md) | [Deutsch](i18n/README.de-DE.md) | [Português (BR)](i18n/README.pt-BR.md)
+
 [![npm version](https://img.shields.io/npm/v/mcp-probe-kit.svg)](https://www.npmjs.com/package/mcp-probe-kit)
 [![npm downloads](https://img.shields.io/npm/dm/mcp-probe-kit.svg)](https://www.npmjs.com/package/mcp-probe-kit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/mybolide/mcp-probe-kit.svg)](https://github.com/mybolide/mcp-probe-kit/stargazers)
 
-> 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
+> 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **21 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
+A powerful MCP (Model Context Protocol) server providing **21 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
 
-**🎉 v3.0 重大更新**：精简工具数量，专注核心竞争力，消除选择困难，让 AI 做更多原生工作
+**🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
-**支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
+**Supports All MCP Clients**: Cursor, Claude Desktop, Cline, Continue, and more
 
-**协议版本**：MCP 2025-11-25 · **SDK**：@modelcontextprotocol/sdk 1.25.3
+**Protocol Version**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.25.3
 
 ---
 
-## 📚 完整文档
+## 📚 Complete Documentation
 
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
-- [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 20个工具完整列表
-- [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
-- [v3.0 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x → v3.0 升级指南
+- [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 21 tools
+- [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
+- [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
 ---
 
-## ✨ 核心特性
+## ✨ Core Features
 
-### 📦 21 个工具
+### 📦 21 Tools
 
-- **🔄 工作流编排** (6个) - 一键完成复杂开发流程
+- **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 代码分析** (3个) - 代码质量与重构
+- **🔍 Code Analysis** (3 tools) - Code quality and refactoring
   - `code_review`, `fix_bug`, `refactor`
-- **📝 Git 工具** (2个) - Git 提交和工作报告
+- **📝 Git Tools** (2 tools) - Git commits and work reports
   - `gencommit`, `git_work_report`
-- **⚡ 代码生成** (1个) - 测试生成
+- **⚡ Code Generation** (1 tool) - Test generation
   - `gentest`
-- **📦 项目管理** (7个) - 项目初始化与需求管理
+- **📦 Project Management** (7 tools) - Project initialization and requirements management
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
-- **🎨 UI/UX 工具** (3个) - 设计系统与数据同步
+- **🎨 UI/UX Tools** (3 tools) - Design systems and data synchronization
   - `ui_design_system`, `ui_search`, `sync_ui_data`
 
-### 🎯 结构化输出
+### 🎯 Structured Output
 
-核心与编排工具支持**结构化输出**，返回机器可读的 JSON 数据，提高 AI 解析准确性，支持工具串联和状态追踪。
+Core and orchestration tools support **structured output**, returning machine-readable JSON data, improving AI parsing accuracy, supporting tool chaining and state tracking.
 
-### 🧭 委托式编排协议（Delegated Plan）
+### 🧭 Delegated Orchestration Protocol
 
-所有 `start_*` 编排工具会在 `structuredContent.metadata.plan` 中返回**执行计划**。  
-AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直接执行。
+All `start_*` orchestration tools return an **execution plan** in `structuredContent.metadata.plan`.  
+AI needs to **call tools step by step and persist files**, rather than the tool executing internally.
 
-**Plan Schema（核心字段）**:
+**Plan Schema (Core Fields)**:
 ```json
 {
   "mode": "delegated",
@@ -62,177 +64,177 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
     {
       "id": "spec",
       "tool": "add_feature",
-      "args": { "feature_name": "user-auth", "description": "用户认证功能" },
+      "args": { "feature_name": "user-auth", "description": "User authentication feature" },
       "outputs": ["docs/specs/user-auth/requirements.md"]
     }
   ]
 }
 ```
 
-**字段说明**:
-- `mode`: 固定为 `delegated`
-- `steps`: 执行步骤数组
-- `tool`: 工具名称（如 `add_feature`）
-- `action`: 无工具时的手动动作描述（如 `update_project_context`）
-- `args`: 工具参数
-- `outputs`: 预期产物
-- `when/dependsOn/note`: 可选的条件与说明
+**Field Description**:
+- `mode`: Fixed as `delegated`
+- `steps`: Array of execution steps
+- `tool`: Tool name (e.g. `add_feature`)
+- `action`: Manual action description when no tool (e.g. `update_project_context`)
+- `args`: Tool parameters
+- `outputs`: Expected artifacts
+- `when/dependsOn/note`: Optional conditions and notes
 
-### 🧩 结构化输出字段规范（关键字段）
+### 🧩 Structured Output Field Specification (Key Fields)
 
-编排与原子工具都会返回 `structuredContent`，常用字段约定如下：
-- `summary`: 一句话摘要
-- `status`: 状态（pending/success/failed/partial）
-- `steps`: 执行步骤（编排工具）
-- `artifacts`: 产物列表（路径 + 用途）
-- `metadata.plan`: 委托式执行计划（仅 start_*）
-- `specArtifacts`: 规格文档产物（start_feature）
-- `estimate`: 估算结果（start_feature / estimate）
+Both orchestration and atomic tools return `structuredContent`, common fields:
+- `summary`: One-line summary
+- `status`: Status (pending/success/failed/partial)
+- `steps`: Execution steps (orchestration tools)
+- `artifacts`: Artifact list (path + purpose)
+- `metadata.plan`: Delegated execution plan (only start_*)
+- `specArtifacts`: Specification artifacts (start_feature)
+- `estimate`: Estimation results (start_feature / estimate)
 
-### 🧠 需求澄清模式（Requirements Loop）
+### 🧠 Requirements Clarification Mode (Requirements Loop)
 
-当需求不够清晰时，可在 `start_feature / start_bugfix / start_ui` 中使用 `requirements_mode=loop`。  
-该模式会先进行 1-2 轮结构化澄清，再进入规格/修复/UI 执行流程。
+When requirements are unclear, use `requirements_mode=loop` in `start_feature / start_bugfix / start_ui`.  
+This mode performs 1-2 rounds of structured clarification before entering spec/fix/UI execution.
 
-**示例：**
+**Example:**
 ```json
 {
   "feature_name": "user-auth",
-  "description": "用户认证功能",
+  "description": "User authentication feature",
   "requirements_mode": "loop",
   "loop_max_rounds": 2,
   "loop_question_budget": 5
 }
 ```
 
-### 🧩 模板系统（普通模型友好）
+### 🧩 Template System (Regular Model Friendly)
 
-`add_feature` 支持模板档位，默认 `auto` 自动选择：需求不完整时偏向 `guided`（包含更详细的填写规则与检查清单），需求较完整时选择 `strict`（结构更紧凑，适合高能力模型或归档场景）。
+`add_feature` supports template profiles, default `auto` auto-selects: prefers `guided` when requirements are incomplete (includes detailed filling rules and checklists), selects `strict` when requirements are complete (more compact structure, suitable for high-capability models or archival scenarios).
 
-**示例：**
+**Example:**
 ```json
 {
-  "description": "添加用户认证功能",
+  "description": "Add user authentication feature",
   "template_profile": "auto"
 }
 ```
 
-**适用工具**：
-- `start_feature` 会透传 `template_profile` 给 `add_feature`
-- `start_bugfix` / `start_ui` 也支持 `template_profile`，用于控制指导强度（auto/guided/strict）
+**Applicable Tools**:
+- `start_feature` passes `template_profile` to `add_feature`
+- `start_bugfix` / `start_ui` also support `template_profile` for controlling guidance strength (auto/guided/strict)
 
-**模板档位策略**：
-- `guided`：需求信息少/不完整、普通模型优先
-- `strict`：需求已结构化、希望指引更紧凑
-- `auto`：默认推荐，自动选择 guided/strict
+**Template Profile Strategy**:
+- `guided`: Less/incomplete requirements info, regular model priority
+- `strict`: Requirements structured, prefer more compact guidance
+- `auto`: Default recommendation, auto-selects guided/strict
 
-### 🔄 工作流编排
+### 🔄 Workflow Orchestration
 
-6 个智能编排工具，自动组合多个基础工具，一键完成复杂开发流程：
-- `start_feature` - 新功能开发（需求 → 设计 → 估算）
-- `start_bugfix` - Bug 修复（分析 → 修复 → 测试）
-- `start_onboard` - 项目上手（生成项目上下文文档）
-- `start_ui` - UI 开发（设计系统 → 组件 → 代码）
-- `start_product` - 产品设计（PRD → 原型 → 设计系统 → HTML）
-- `start_ralph` - Ralph Loop（循环开发直到目标完成）
+6 intelligent orchestration tools that automatically combine multiple basic tools for one-click complex development workflows:
+- `start_feature` - New feature development (Requirements → Design → Estimation)
+- `start_bugfix` - Bug fixing (Analysis → Fix → Testing)
+- `start_onboard` - Project onboarding (Generate project context docs)
+- `start_ui` - UI development (Design system → Components → Code)
+- `start_product` - Product design (PRD → Prototype → Design system → HTML)
+- `start_ralph` - Ralph Loop (Iterative development until goal completion)
 
-### 🚀 产品设计工作流
+### 🚀 Product Design Workflow
 
-`start_product` 是一个完整的产品设计编排工具，从需求到可交互原型：
+`start_product` is a complete product design orchestration tool, from requirements to interactive prototype:
 
-**工作流程：**
-1. **需求分析** - 生成标准 PRD 文档（产品概述、功能需求、页面清单）
-2. **原型设计** - 为每个页面生成详细的原型文档
-3. **设计系统** - 基于产品类型生成设计规范
-4. **HTML 原型** - 生成可直接在浏览器中查看的交互原型
-5. **项目上下文** - 自动更新项目文档
+**Workflow:**
+1. **Requirements Analysis** - Generate standard PRD (product overview, feature requirements, page list)
+2. **Prototype Design** - Generate detailed prototype docs for each page
+3. **Design System** - Generate design specifications based on product type
+4. **HTML Prototype** - Generate interactive prototype viewable in browser
+5. **Project Context** - Auto-update project documentation
 
-**结构化输出补充**：
-- `start_product.structuredContent.artifacts`：产出物列表（PRD、原型、设计系统等）
-- `interview.structuredContent.mode`：`usage` / `questions` / `record`
+**Structured Output Additions**:
+- `start_product.structuredContent.artifacts`: Artifact list (PRD, prototypes, design system, etc.)
+- `interview.structuredContent.mode`: `usage` / `questions` / `record`
 
 ### 🎨 UI/UX Pro Max
 
-3 个 UI/UX 工具，`start_ui` 作为统一入口：
-- `start_ui` - 一键 UI 开发（支持智能模式）（编排工具）
-- `ui_design_system` - 智能设计系统生成
-- `ui_search` - UI/UX 数据搜索（BM25 算法）
-- `sync_ui_data` - 同步最新 UI/UX 数据到本地
+3 UI/UX tools with `start_ui` as the unified entry point:
+- `start_ui` - One-click UI development (supports intelligent mode) (orchestration tool)
+- `ui_design_system` - Intelligent design system generation
+- `ui_search` - UI/UX data search (BM25 algorithm)
+- `sync_ui_data` - Sync latest UI/UX data locally
 
-**注意**：`start_ui` 会自动调用 `ui_design_system` 和 `ui_search`，您无需单独调用它们。
+**Note**: `start_ui` automatically calls `ui_design_system` and `ui_search`, you don't need to call them separately.
 
-**灵感来源：**
-- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX 设计系统理念
-- [json-render](https://github.com/vercel-labs/json-render) - JSON 模板渲染引擎
+**Inspiration:**
+- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX design system philosophy
+- [json-render](https://github.com/vercel-labs/json-render) - JSON template rendering engine
 
-**为什么使用 `sync_ui_data`？**
+**Why use `sync_ui_data`?**
 
-我们的 `start_ui` 工具依赖丰富的 UI/UX 数据库（颜色、图标、图表、组件、设计模式等）来生成高质量的设计系统和代码。这些数据来自 npm 包 [uipro-cli](https://www.npmjs.com/package/uipro-cli)，包含：
-- 🎨 颜色方案（主流品牌色、配色方案）
-- 🔣 图标库（React Icons、Heroicons 等）
-- 📊 图表组件（Recharts、Chart.js 等）
-- 🎯 落地页模板（SaaS、电商、政府等）
-- 📐 设计规范（间距、字体、阴影等）
+Our `start_ui` tool relies on a rich UI/UX database (colors, icons, charts, components, design patterns, etc.) to generate high-quality design systems and code. This data comes from npm package [uipro-cli](https://www.npmjs.com/package/uipro-cli), including:
+- 🎨 Color schemes (mainstream brand colors, color palettes)
+- 🔣 Icon libraries (React Icons, Heroicons, etc.)
+- 📊 Chart components (Recharts, Chart.js, etc.)
+- 🎯 Landing page templates (SaaS, e-commerce, government, etc.)
+- 📐 Design specifications (spacing, fonts, shadows, etc.)
 
-**数据同步策略：**
-1. **内嵌数据**：构建时同步，离线可用
-2. **缓存数据**：运行时更新到 `~/.mcp-probe-kit/ui-ux-data/`
-3. **手动同步**：使用 `sync_ui_data` 强制更新最新数据
+**Data Sync Strategy:**
+1. **Embedded Data**: Synced at build time, works offline
+2. **Cached Data**: Runtime updates to `~/.mcp-probe-kit/ui-ux-data/`
+3. **Manual Sync**: Use `sync_ui_data` to force update latest data
 
-这确保了即使在离线环境下，`start_ui` 也能生成专业级的 UI 代码。
+This ensures `start_ui` can generate professional-grade UI code even offline.
 
-### 🎤 需求访谈
+### 🎤 Requirements Interview
 
-2 个访谈工具，在开发前澄清需求：
-- `interview` - 结构化需求访谈
-- `ask_user` - AI 主动提问
-
----
-
-## 🧭 工具选择指南
-
-### 何时使用编排工具 vs 单独工具？
-
-**使用编排工具（start_*）当：**
-- ✅ 需要完整的工作流程（多个步骤）
-- ✅ 希望自动化执行多个任务
-- ✅ 需要生成多个产物（文档、代码、测试等）
-
-**使用单独工具当：**
-- ✅ 只需要某个特定功能
-- ✅ 已经有了项目上下文文档
-- ✅ 需要更精细的控制
-
-### 常见场景选择
-
-| 场景 | 推荐工具 | 原因 |
-|------|---------|------|
-| 开发新功能（完整流程） | `start_feature` | 自动完成：规格→估算 |
-| 只需要功能规格文档 | `add_feature` | 更轻量，只生成文档 |
-| 修复 Bug（完整流程） | `start_bugfix` | 自动完成：分析→修复→测试 |
-| 只需要 Bug 分析 | `fix_bug` | 更快速，只分析问题 |
-| 生成设计系统 | `ui_design_system` | 直接生成设计规范 |
-| 开发 UI 组件 | `start_ui` | 完整流程：设计→组件→代码 |
-| 产品设计（从需求到原型） | `start_product` | 一键完成：PRD→原型→HTML |
-| 一句话需求分析 | `init_project` | 生成完整项目规格文档 |
-| 项目上手文档 | `init_project_context` | 生成技术栈/架构/规范 |
+2 interview tools to clarify requirements before development:
+- `interview` - Structured requirements interview
+- `ask_user` - AI proactive questioning
 
 ---
 
-## 🚀 快速开始
+## 🧭 Tool Selection Guide
 
-### 方式一：npx 直接使用（推荐）
+### When to use orchestration tools vs individual tools?
 
-无需安装，直接使用最新版本。
+**Use orchestration tools (start_*) when:**
+- ✅ Need complete workflow (multiple steps)
+- ✅ Want to automate multiple tasks
+- ✅ Need to generate multiple artifacts (docs, code, tests, etc.)
 
-#### Cursor / Cline 配置
+**Use individual tools when:**
+- ✅ Only need specific functionality
+- ✅ Already have project context docs
+- ✅ Need more fine-grained control
 
-**配置文件位置：**
+### Common Scenario Selection
+
+| Scenario | Recommended Tool | Reason |
+|---------|-----------------|--------|
+| Develop new feature (complete flow) | `start_feature` | Auto-complete: spec→estimation |
+| Only need feature spec docs | `add_feature` | More lightweight, only generates docs |
+| Fix bug (complete flow) | `start_bugfix` | Auto-complete: analysis→fix→test |
+| Only need bug analysis | `fix_bug` | Faster, only analyzes problem |
+| Generate design system | `ui_design_system` | Directly generate design specs |
+| Develop UI components | `start_ui` | Complete flow: design→components→code |
+| Product design (requirements to prototype) | `start_product` | One-click: PRD→prototype→HTML |
+| One-sentence requirement analysis | `init_project` | Generate complete project spec docs |
+| Project onboarding docs | `init_project_context` | Generate tech stack/architecture/conventions |
+
+---
+
+## 🚀 Quick Start
+
+### Method 1: Use directly with npx (Recommended)
+
+No installation needed, use the latest version directly.
+
+#### Cursor / Cline Configuration
+
+**Config file location:**
 - Windows: `%APPDATA%\Cursor\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
 - macOS: `~/Library/Application Support/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
 - Linux: `~/.config/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
 
-**配置内容：**
+**Config content:**
 ```json
 {
   "mcpServers": {
@@ -244,14 +246,14 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
 }
 ```
 
-#### Claude Desktop 配置
+#### Claude Desktop Configuration
 
-**配置文件位置：**
+**Config file location:**
 - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Linux: `~/.config/Claude/claude_desktop_config.json`
 
-**配置内容：**
+**Config content:**
 ```json
 {
   "mcpServers": {
@@ -263,13 +265,13 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
 }
 ```
 
-### 方式二：全局安装
+### Method 2: Global Installation
 
 ```bash
 npm install -g mcp-probe-kit
 ```
 
-配置文件中使用：
+Use in config file:
 ```json
 {
   "mcpServers": {
@@ -280,80 +282,81 @@ npm install -g mcp-probe-kit
 }
 ```
 
-### 重启客户端
+### Restart Client
 
-配置完成后，**完全退出并重新打开**你的 MCP 客户端。
+After configuration, **completely quit and reopen** your MCP client.
 
-**👉 [详细安装指南](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html)**
+**👉 [Detailed Installation Guide](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html)**
 
 ---
 
-## 💡 使用示例
+## 💡 Usage Examples
 
-### 日常开发
+### Daily Development
 ```bash
-code_review @feature.ts    # 代码审查
-gentest @feature.ts         # 生成测试
-gencommit                   # 生成提交消息
+code_review @feature.ts    # Code review
+gentest @feature.ts         # Generate tests
+gencommit                   # Generate commit message
 ```
 
-### 新功能开发
+### New Feature Development
 ```bash
-start_feature user-auth "用户认证功能"
-# 自动完成：需求分析 → 设计方案 → 工作量估算
+start_feature user-auth "User authentication feature"
+# Auto-complete: Requirements analysis → Design → Effort estimation
 ```
 
-### Bug 修复
+### Bug Fixing
 ```bash
 start_bugfix
-# 然后粘贴错误信息
-# 自动完成：问题定位 → 修复方案 → 测试代码
+# Then paste error message
+# Auto-complete: Problem location → Fix solution → Test code
 ```
 
-### 产品设计
+### Product Design
 ```bash
-start_product "在线教育平台" --product_type=SaaS
-# 自动完成：PRD → 原型设计 → 设计系统 → HTML 原型
+start_product "Online Education Platform" --product_type=SaaS
+# Auto-complete: PRD → Prototype → Design system → HTML prototype
 ```
 
-### UI 开发
+### UI Development
 ```bash
-start_ui "登录页面" --mode=auto
-# 自动完成：设计系统 → 组件生成 → 代码输出
+start_ui "Login Page" --mode=auto
+# Auto-complete: Design system → Component generation → Code output
 ```
 
-### 项目上下文文档
+### Project Context Documentation
 ```bash
-# 单文件模式（默认）- 生成一个完整的 project-context.md
+# Single file mode (default) - Generate a complete project-context.md
 init_project_context
 
-# 模块化模式 - 生成 6 个分类文档（适合大型项目）
+# Modular mode - Generate 6 category docs (suitable for large projects)
 init_project_context --mode=modular
-# 生成：project-context.md（索引）+ 5 个分类文档
+# Generates: project-context.md (index) + 5 category docs
 ```
 
-### Git 工作报告
+### Git Work Report
 ```bash
-# 生成日报
-git_work_report --date 2026-1-27
+# Generate daily report
+git_work_report --date 2026-02-03
 
-# 生成周报
-git_work_report --start_date 2026-2-1 --end_date 2026-2-6
+# Generate weekly report
+git_work_report --start_date 2026-02-01 --end_date 2026-02-07
 
-# 保存到文件
-git_work_report --date 2026-1-27 --output_file daily-report.md
-# 自动分析 Git diff，生成简洁专业的中文工作报告
+# Save to file
+git_work_report --date 2026-02-03 --output_file daily-report.md
+# Auto-analyze Git diff, generate concise professional report
+# If direct command fails, auto-provides temp script solution (auto-deletes after execution)
 ```
 
-**👉 [更多使用示例](https://mcp-probe-kit.bytezonex.com/pages/examples.html)**
+**👉 [More Usage Examples](https://mcp-probe-kit.bytezonex.com/pages/examples.html)**
 
 ---
 
-## ❓ 常见问题
+## ❓ FAQ
 
-### Q1: 工具无法使用或报错怎么办？
+### Q1: Tool not working or errors?
 
-查看详细日志：
+Check detailed logs:
 
 **Windows (PowerShell):**
 ```powershell
@@ -365,36 +368,36 @@ npx -y mcp-probe-kit@latest 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
 ```
 
-### Q2: 配置后客户端无法识别工具？
+### Q2: Client not recognizing tools after configuration?
 
-1. **重启客户端**（完全退出后重新打开）
-2. 检查配置文件路径是否正确
-3. 确认 JSON 格式正确，没有语法错误
-4. 查看客户端的开发者工具或日志中的错误信息
+1. **Restart client** (completely quit then reopen)
+2. Check config file path is correct
+3. Confirm JSON format is correct, no syntax errors
+4. Check client developer tools or logs for error messages
 
-### Q3: 如何更新到最新版本？
+### Q3: How to update to latest version?
 
-**npx 方式（推荐）:**
-配置中使用 `@latest` 标签，会自动使用最新版本。
+**npx method (Recommended):**
+Use `@latest` tag in config, automatically uses latest version.
 
-**全局安装方式:**
+**Global installation method:**
 ```bash
 npm update -g mcp-probe-kit
 ```
 
-**👉 [更多常见问题](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html)**
+**👉 [More FAQ](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html)**
 
 ---
 
-## 🤝 贡献指南
+## 🤝 Contributing
 
-欢迎提交 Issue 和 Pull Request！
+Issues and Pull Requests welcome!
 
-**改进建议：**
-- 新增实用工具
-- 优化现有工具的提示词
-- 改进文档和示例
-- 修复 Bug
+**Improvement suggestions:**
+- Add useful tools
+- Optimize existing tool prompts
+- Improve documentation and examples
+- Fix bugs
 
 ---
 
@@ -404,19 +407,19 @@ MIT License
 
 ---
 
-## 🔗 相关链接
+## 🔗 Related Links
 
-- **作者**: [小墨 (Kyle)](https://www.bytezonex.com/)
+- **Author**: [Kyle (小墨)](https://www.bytezonex.com/)
 - **GitHub**: [mcp-probe-kit](https://github.com/mybolide/mcp-probe-kit)
 - **npm**: [mcp-probe-kit](https://www.npmjs.com/package/mcp-probe-kit)
-- **文档**: [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)
+- **Documentation**: [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)
 
-**相关项目：**
-- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) - MCP 协议官方文档
-- [GitHub Spec-Kit](https://github.com/github/spec-kit) - GitHub 规格化开发工具
-- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX 设计系统理念来源
-- [json-render](https://github.com/vercel-labs/json-render) - JSON 模板渲染引擎灵感来源
-- [uipro-cli](https://www.npmjs.com/package/uipro-cli) - UI/UX 数据源
+**Related Projects:**
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) - Official MCP protocol docs
+- [GitHub Spec-Kit](https://github.com/github/spec-kit) - GitHub spec-driven development toolkit
+- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX design system philosophy source
+- [json-render](https://github.com/vercel-labs/json-render) - JSON template rendering engine inspiration
+- [uipro-cli](https://www.npmjs.com/package/uipro-cli) - UI/UX data source
 
 ---
 

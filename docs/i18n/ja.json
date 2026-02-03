@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "title": "MCP Probe Kit - AI駆動の完全開発ツールキット | 開発ライフサイクル全体をカバーする21のツール",
+    "description": "MCP Probe Kitは、要件分析、コード開発、品質保証、バグ修正、リリース管理をカバーする21のAI駆動開発ツールを提供します。Cursor、Cline、Claude Desktopをサポートし、100%構造化出力を実現。",
+    "keywords": "MCP Probe Kit, AI開発ツール, コード生成, コードレビュー, Gitツール, UI開発, 開発効率, Cursor, Cline, Claude, MCPサーバー"
+  },
+  "nav": {
+    "home": "ドキュメント",
+    "docs": "ドキュメント",
+    "mainSite": "メインサイト",
+    "github": "GitHub",
+    "npm": "npm"
+  },
+  "hero": {
+    "title": "🚀 MCP Probe Kit",
+    "subtitle": "AI開発強化ツールキット · ドキュメントセンター",
+    "version": "v3.0.3",
+    "quickStart": "クイックスタート",
+    "visitMainSite": "ByteZoneXを訪問"
+  },
+  "sections": {
+    "quickStart": {
+      "title": "クイックスタート",
+      "description": "5分でMCP Probe Kit v3.0.3を始める",
+      "installConfig": "インストールと設定"
+    },
+    "tools": {
+      "title": "ツールドキュメント",
+      "description": "21の実用的なツールの完全なリファレンス",
+      "allTools": "すべてのツール"
+    },
+    "guides": {
+      "title": "ガイド",
+      "description": "移行ガイドとベストプラクティス",
+      "migration": "v2.x → v3.0 移行ガイド",
+      "bestPractices": "ベストプラクティス"
+    },
+    "resources": {
+      "title": "リソース",
+      "description": "ソースコードとコミュニティサポート",
+      "mainSite": "ByteZoneX メインサイト",
+      "githubRepo": "GitHubリポジトリ",
+      "npmPackage": "npmパッケージ",
+      "issues": "問題追跡"
+    }
+  },
+  "footer": {
+    "madeWith": "Made with ❤️ by",
+    "license": "MIT License",
+    "mainSite": "メインサイト ByteZoneX"
+  },
+  "sidebar": {
+    "quickStart": "クイックスタート",
+    "home": "ドキュメントホーム",
+    "installation": "インストールと設定",
+    "toolsDocs": "ツールドキュメント",
+    "allTools": "すべてのツール",
+    "guides": "ガイド",
+    "migration": "移行ガイド",
+    "examples": "ベストプラクティス",
+    "followUs": "フォローする",
+    "getTechSharing": "技術情報を入手"
+  },
+  "gettingStarted": {
+    "title": "インストールと設定",
+    "subtitle": "5分でMCP Probe Kit v3.0.3を始める。Cursor、Cline、Claude Desktopをサポート",
+    "breadcrumb": {
+      "home": "ドキュメント",
+      "quickStart": "クイックスタート",
+      "installation": "インストール"
+    },
+    "step1": {
+      "title": "インストール方法を選択",
+      "npx": {
+        "title": "npxで直接使用",
+        "recommended": "推奨",
+        "description": "インストール不要、最新バージョンを直接使用：",
+        "advantage": "利点：",
+        "advantageText": "手動更新不要、起動時に自動的に最新バージョンを使用",
+        "copy": "コピー"
+      },
+      "global": {
+        "title": "グローバルインストール",
+        "description": "システムにグローバルインストール：",
+        "configFile": "設定ファイル：",
+        "note": "注意：",
+        "noteText": "手動で実行する必要があります",
+        "updateText": "バージョンを更新"
+      },
+      "source": {
+        "title": "ソースからビルド",
+        "description": "ソースコードからビルド、開発者向け：",
+        "step1": "1. リポジトリをクローン",
+        "step2": "2. 依存関係をインストールしてビルド",
+        "step3": "3. 設定ファイル",
+        "tip": "ヒント：",
+        "tipText": "Windowsユーザーはフルパスを使用してください、例：",
+        "note": "注意：",
+        "noteText": "コード変更後は再実行が必要",
+        "compileText": "コンパイル"
+      }
+    },
+    "step2": {
+      "title": "設定ファイルを見つける",
+      "description": "使用しているMCPクライアントに応じて、対応する設定ファイルを見つけます：",
+      "cursor": {
+        "title": "Cursor / Cline",
+        "description": "プロジェクトルートディレクトリに作成または編集",
+        "tip": "ヒント：",
+        "tipText": "CursorとClineはプロジェクトレベルの設定を使用し、各プロジェクトは独立したMCPサーバー設定を持つことができます。"
+      },
+      "claudeWin": {
+        "title": "Claude Desktop (Windows)",
+        "path": "設定ファイルパス：",
+        "example": "例："
+      },
+      "claudeMac": {
+        "title": "Claude Desktop (macOS)",
+        "path": "設定ファイルパス："
+      }
+    },
+    "step3": {
+      "title": "インストールを確認",
+      "description": "設定完了後、以下の手順で確認：",
+      "step1": "MCPクライアントを再起動（Cursor / Cline / Claude Desktop）",
+      "step2": "チャットウィンドウに入力：",
+      "step2Command": "gencommitツールを使用してテストコミットメッセージを生成してください",
+      "step3": "Conventional Commits仕様に従ったコミットメッセージが返されれば、インストール成功！",
+      "success": "成功例：",
+      "successText": "AIが次のようなメッセージを返します",
+      "successExample": "メッセージ",
+      "successCode": "feat: ユーザー認証機能を追加",
+      "issues": "よくある問題：",
+      "issue1": "「ツールが見つかりません」→ 設定ファイルの形式を確認",
+      "issue2": "「コマンドが見つかりません」→ Node.jsがインストールされているか確認",
+      "issue3": "Windowsユーザー → npx方式を使用していることを確認"
+    },
+    "step4": {
+      "title": "委譲オーケストレーションプロトコル",
+      "description": "オーケストレーションツールは操作を直接実行せず、実行可能なプランを返します。",
+      "keyFields": "キーフィールド：",
+      "planExample": "プラン例",
+      "tip": "ポイント：",
+      "tipText": "順番に実行",
+      "tipText2": "し、",
+      "tipText3": "ファイルが実際にディスクに書き込まれることを確認"
+    },
+    "faq": {
+      "title": "⚠️ よくある問題",
+      "q1": {
+        "title": "問題1：npxキャッシュによるモジュール解決エラー",
+        "error": "エラーメッセージ：",
+        "solution": "解決策：",
+        "solutionText": "npxキャッシュをクリア",
+        "restart": "その後MCPクライアントを再起動"
+      },
+      "q2": {
+        "title": "問題2：MCPサーバー接続失敗",
+        "possibleReasons": "考えられる原因：",
+        "reason1": "Node.jsバージョンが低すぎる（>= 16.0.0が必要）",
+        "reason2": "依存関係がインストールされていないか破損している",
+        "reason3": "設定ファイルの形式エラー",
+        "solution": "解決策：",
+        "step1": "Node.jsバージョンを確認：",
+        "step2": "v16未満の場合、Node.jsをアップグレードしてください",
+        "step3": "キャッシュをクリアして再インストール：",
+        "step4": "設定ファイルのJSON形式が正しいか確認"
+      }
+    },
+    "common": {
+      "copy": "コピー",
+      "copied": "コピーしました"
+    }
+  }
+}

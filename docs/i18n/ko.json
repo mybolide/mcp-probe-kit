@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "title": "MCP Probe Kit - AI 기반 완전한 개발 툴킷 | 전체 개발 라이프사이클을 커버하는 21개 도구",
+    "description": "MCP Probe Kit은 요구사항 분석, 코드 개발, 품질 보증, 버그 수정, 릴리스 관리를 커버하는 21개의 AI 기반 개발 도구를 제공합니다. Cursor, Cline, Claude Desktop을 지원하며 100% 구조화된 출력을 제공합니다.",
+    "keywords": "MCP Probe Kit, AI 개발 도구, 코드 생성, 코드 리뷰, Git 도구, UI 개발, 개발 효율성, Cursor, Cline, Claude, MCP 서버"
+  },
+  "nav": {
+    "home": "문서",
+    "docs": "문서",
+    "mainSite": "메인 사이트",
+    "github": "GitHub",
+    "npm": "npm"
+  },
+  "hero": {
+    "title": "🚀 MCP Probe Kit",
+    "subtitle": "AI 개발 강화 툴킷 · 문서 센터",
+    "version": "v3.0.3",
+    "quickStart": "빠른 시작",
+    "visitMainSite": "ByteZoneX 방문"
+  },
+  "sections": {
+    "quickStart": {
+      "title": "빠른 시작",
+      "description": "5분 안에 MCP Probe Kit v3.0.3 시작하기",
+      "installConfig": "설치 및 구성"
+    },
+    "tools": {
+      "title": "도구 문서",
+      "description": "21개 실용 도구의 완전한 참조",
+      "allTools": "모든 도구"
+    },
+    "guides": {
+      "title": "가이드",
+      "description": "마이그레이션 가이드 및 모범 사례",
+      "migration": "v2.x → v3.0 마이그레이션 가이드",
+      "bestPractices": "모범 사례"
+    },
+    "resources": {
+      "title": "리소스",
+      "description": "소스 코드 및 커뮤니티 지원",
+      "mainSite": "ByteZoneX 메인 사이트",
+      "githubRepo": "GitHub 저장소",
+      "npmPackage": "npm 패키지",
+      "issues": "이슈 추적"
+    }
+  },
+  "footer": {
+    "madeWith": "Made with ❤️ by",
+    "license": "MIT License",
+    "mainSite": "메인 사이트 ByteZoneX"
+  },
+  "sidebar": {
+    "quickStart": "빠른 시작",
+    "home": "문서 홈",
+    "installation": "설치 및 구성",
+    "toolsDocs": "도구 문서",
+    "allTools": "모든 도구",
+    "guides": "가이드",
+    "migration": "마이그레이션 가이드",
+    "examples": "모범 사례",
+    "followUs": "팔로우",
+    "getTechSharing": "기술 정보 받기"
+  },
+  "gettingStarted": {
+    "title": "설치 및 구성",
+    "subtitle": "5분 안에 MCP Probe Kit v3.0.3 시작하기. Cursor, Cline, Claude Desktop 지원",
+    "breadcrumb": {
+      "home": "문서",
+      "quickStart": "빠른 시작",
+      "installation": "설치"
+    },
+    "step1": {
+      "title": "설치 방법 선택",
+      "npx": {
+        "title": "npx로 직접 사용",
+        "recommended": "권장",
+        "description": "설치 불필요, 최신 버전 직접 사용：",
+        "advantage": "장점：",
+        "advantageText": "수동 업데이트 불필요, 시작할 때마다 자동으로 최신 버전 사용",
+        "copy": "복사"
+      },
+      "global": {
+        "title": "전역 설치",
+        "description": "시스템에 전역 설치：",
+        "configFile": "구성 파일：",
+        "note": "참고：",
+        "noteText": "수동으로 실행 필요",
+        "updateText": "버전 업데이트"
+      },
+      "source": {
+        "title": "소스에서 빌드",
+        "description": "소스 코드에서 빌드, 개발자용：",
+        "step1": "1. 저장소 복제",
+        "step2": "2. 종속성 설치 및 빌드",
+        "step3": "3. 구성 파일",
+        "tip": "팁：",
+        "tipText": "Windows 사용자는 전체 경로 사용, 예：",
+        "note": "참고：",
+        "noteText": "코드 수정 후 다시 실행 필요",
+        "compileText": "컴파일"
+      }
+    },
+    "step2": {
+      "title": "구성 파일 찾기",
+      "description": "사용 중인 MCP 클라이언트에 따라 해당 구성 파일 찾기：",
+      "cursor": {
+        "title": "Cursor / Cline",
+        "description": "프로젝트 루트 디렉토리에 생성 또는 편집",
+        "tip": "팁：",
+        "tipText": "Cursor와 Cline은 프로젝트 수준 구성을 사용하며, 각 프로젝트는 독립적인 MCP 서버 구성을 가질 수 있습니다."
+      },
+      "claudeWin": {
+        "title": "Claude Desktop (Windows)",
+        "path": "구성 파일 경로：",
+        "example": "예："
+      },
+      "claudeMac": {
+        "title": "Claude Desktop (macOS)",
+        "path": "구성 파일 경로："
+      }
+    },
+    "step3": {
+      "title": "설치 확인",
+      "description": "구성 완료 후 다음 단계로 확인：",
+      "step1": "MCP 클라이언트 재시작 (Cursor / Cline / Claude Desktop)",
+      "step2": "채팅 창에 입력：",
+      "step2Command": "gencommit 도구를 사용하여 테스트 커밋 메시지를 생성해주세요",
+      "step3": "Conventional Commits 사양을 따르는 커밋 메시지가 반환되면 설치 성공！",
+      "success": "성공 예：",
+      "successText": "AI가 다음과 같은 메시지 반환",
+      "successExample": "메시지",
+      "successCode": "feat: 사용자 인증 기능 추가",
+      "issues": "일반적인 문제：",
+      "issue1": "\"도구를 찾을 수 없음\" → 구성 파일 형식 확인",
+      "issue2": "\"명령을 찾을 수 없음\" → Node.js 설치 확인",
+      "issue3": "Windows 사용자 → npx 방식 사용 확인"
+    },
+    "step4": {
+      "title": "위임 오케스트레이션 프로토콜",
+      "description": "오케스트레이션 도구는 작업을 직접 실행하지 않고 실행 가능한 계획을 반환합니다.",
+      "keyFields": "주요 필드：",
+      "planExample": "계획 예",
+      "tip": "핵심：",
+      "tipText": "순서대로 실행",
+      "tipText2": "하고",
+      "tipText3": "파일이 실제로 디스크에 기록되는지 확인"
+    },
+    "faq": {
+      "title": "⚠️ 일반적인 문제",
+      "q1": {
+        "title": "문제 1：npx 캐시로 인한 모듈 해결 오류",
+        "error": "오류 메시지：",
+        "solution": "해결책：",
+        "solutionText": "npx 캐시 지우기",
+        "restart": "그런 다음 MCP 클라이언트 재시작"
+      },
+      "q2": {
+        "title": "문제 2：MCP 서버 연결 실패",
+        "possibleReasons": "가능한 원인：",
+        "reason1": "Node.js 버전이 너무 낮음 (>= 16.0.0 필요)",
+        "reason2": "종속성이 설치되지 않았거나 손상됨",
+        "reason3": "구성 파일 형식 오류",
+        "solution": "해결책：",
+        "step1": "Node.js 버전 확인：",
+        "step2": "v16 미만인 경우 Node.js를 업그레이드하세요",
+        "step3": "캐시 지우기 및 재설치：",
+        "step4": "구성 파일 JSON 형식이 올바른지 확인"
+      }
+    },
+    "common": {
+      "copy": "복사",
+      "copied": "복사됨"
+    }
+  }
+}
