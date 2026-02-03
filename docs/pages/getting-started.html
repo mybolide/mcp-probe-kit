@@ -46,6 +46,14 @@
         }
         .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
         .backdrop.active { opacity: 1; pointer-events: auto; }
+        
+        /* i18n 加载优化：防止内容闪烁 */
+        body:not(.i18n-ready) [data-i18n] {
+            visibility: hidden;
+        }
+        body.i18n-ready [data-i18n] {
+            visibility: visible;
+        }
     </style>
 </head>
 <body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
@@ -56,11 +64,14 @@
                 <span>🚀</span>
                 <span class="sm:inline hidden">MCP Probe Kit</span>
             </a>
-            <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-            </button>
+            <div class="flex items-center gap-3">
+                <div id="lang-switcher-container"></div>
+                <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -71,35 +82,35 @@
     <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar">
         <div class="p-4">
             <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">快速开始</div>
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">快速开始</div>
                 <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
                     <span>🏠</span>
-                    <span>文档首页</span>
+                    <span data-i18n="sidebar.home">文档首页</span>
                 </a>
                 <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary">
                     <span>📖</span>
-                    <span>安装配置</span>
+                    <span data-i18n="sidebar.installation">安装配置</span>
                 </a>
             </div>
             
             <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">工具文档</div>
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
                 <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
                     <span>🛠️</span>
-                    <span>所有工具</span>
+                    <span data-i18n="sidebar.allTools">所有工具</span>
                     <span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">21</span>
                 </a>
             </div>
             
             <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">指南</div>
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
                 <a href="./migration.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
                     <span>🚀</span>
-                    <span>迁移指南</span>
+                    <span data-i18n="sidebar.migration">迁移指南</span>
                 </a>
                 <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
                     <span>💡</span>
-                    <span>最佳实践</span>
+                    <span data-i18n="sidebar.examples">最佳实践</span>
                 </a>
             </div>
             
@@ -119,9 +130,9 @@
             <!-- QR Code -->
             <div class="mt-4 pt-4 border-t border-border">
                 <div class="text-center">
-                    <div class="text-xs font-semibold text-text-tertiary mb-2">关注公众号</div>
+                    <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">关注公众号</div>
                     <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
-                    <div class="text-xs text-text-tertiary mt-2">获取更多技术分享</div>
+                    <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">获取更多技术分享</div>
                 </div>
             </div>
         </div>
@@ -133,17 +144,17 @@
             
             <!-- 面包屑 -->
             <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
-                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0">文档首页</a>
+                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0" data-i18n="gettingStarted.breadcrumb.home">文档首页</a>
                 <span class="text-text-tertiary">/</span>
-                <span class="text-text-primary flex-shrink-0">快速开始</span>
+                <span class="text-text-primary flex-shrink-0" data-i18n="gettingStarted.breadcrumb.quickStart">快速开始</span>
                 <span class="text-text-tertiary">/</span>
-                <span class="text-text-primary flex-shrink-0">安装配置</span>
+                <span class="text-text-primary flex-shrink-0" data-i18n="gettingStarted.breadcrumb.installation">安装配置</span>
             </nav>
 
             <!-- 页面标题 -->
             <div class="mb-6">
-                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">安装配置</h1>
-                    <p class="text-sm sm:text-base text-text-secondary">5 分钟快速上手 MCP Probe Kit v3.0.3，支持 Cursor、Cline 和 Claude Desktop</p>
+                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2" data-i18n="gettingStarted.title">安装配置</h1>
+                    <p class="text-sm sm:text-base text-text-secondary" data-i18n="gettingStarted.subtitle">5 分钟快速上手 MCP Probe Kit v3.0.3，支持 Cursor、Cline 和 Claude Desktop</p>
                 <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
                     <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.3</span>
                     <span>MCP 2025-11-25</span>
@@ -155,7 +166,7 @@
             <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
                 <div class="flex items-start gap-3 mb-4">
                     <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-primary-hover text-white rounded-full flex items-center justify-center font-semibold text-sm sm:text-base flex-shrink-0">1</div>
-                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">选择安装方式</h2>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary" data-i18n="gettingStarted.step1.title">选择安装方式</h2>
                 </div>
                 
                 <!-- 安装方式 Tab -->
@@ -165,15 +176,15 @@
                         <button onclick="toggleInstall('npx')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
                             <div class="flex items-center gap-2">
                                 <span class="text-lg">⚡</span>
-                                <span class="font-medium text-text-primary">npx 直接使用</span>
-                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">推荐</span>
+                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step1.npx.title">npx 直接使用</span>
+                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium" data-i18n="gettingStarted.step1.npx.recommended">推荐</span>
                             </div>
                             <svg class="w-5 h-5 text-text-tertiary transition-transform" id="npx-icon" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
                             <div id="npx-content" class="p-4 border-t border-border">
-                            <p class="text-text-secondary mb-3 text-sm">无需安装，直接使用最新版本：</p>
+                            <p class="text-text-secondary mb-3 text-sm" data-i18n="gettingStarted.step1.npx.description">无需安装，直接使用最新版本：</p>
                             <div class="bg-slate-900 rounded-lg overflow-hidden">
                                 <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                                     <span class="text-xs text-slate-300 font-medium">JSON</span>
@@ -189,7 +200,7 @@
 }</code></pre>
                             </div>
                             <div class="mt-3 p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm text-text-primary">
-                                <strong>优势：</strong>无需手动更新，每次启动自动使用最新版本
+                                <strong data-i18n="gettingStarted.step1.npx.advantage">优势：</strong><span data-i18n="gettingStarted.step1.npx.advantageText">无需手动更新，每次启动自动使用最新版本</span>
                             </div>
                         </div>
                     </div>
@@ -199,14 +210,14 @@
                         <button onclick="toggleInstall('global')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
                             <div class="flex items-center gap-2">
                                 <span class="text-lg">📦</span>
-                                <span class="font-medium text-text-primary">全局安装</span>
+                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step1.global.title">全局安装</span>
                             </div>
                             <svg class="w-5 h-5 text-text-tertiary transition-transform" id="global-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
                         <div id="global-content" class="hidden p-4 border-t border-border">
-                            <p class="text-text-secondary mb-3 text-sm">全局安装到系统：</p>
+                            <p class="text-text-secondary mb-3 text-sm" data-i18n="gettingStarted.step1.global.description">全局安装到系统：</p>
                             <div class="bg-slate-900 rounded-lg overflow-hidden">
                                 <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                                     <span class="text-xs text-slate-300 font-medium">Bash</span>
@@ -214,7 +225,7 @@
                                 </div>
                                 <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>npm install -g mcp-probe-kit</code></pre>
                             </div>
-                            <p class="text-text-secondary mt-3 mb-2 text-sm">配置文件：</p>
+                            <p class="text-text-secondary mt-3 mb-2 text-sm" data-i18n="gettingStarted.step1.global.configFile">配置文件：</p>
                             <div class="bg-slate-900 rounded-lg overflow-hidden">
                                 <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                                     <span class="text-xs text-slate-300 font-medium">JSON</span>
@@ -229,7 +240,7 @@
 }</code></pre>
                             </div>
                             <div class="mt-3 p-3 bg-amber-50 border-l-3 border-amber-500 rounded-r text-sm text-text-primary">
-                                <strong>注意：</strong>需要手动运行 <code class="bg-gray-200 px-1 rounded text-xs">npm update -g mcp-probe-kit</code> 更新版本
+                                <strong data-i18n="gettingStarted.step1.global.note">注意：</strong><span data-i18n="gettingStarted.step1.global.noteText">需要手动运行</span> <code class="bg-gray-200 px-1 rounded text-xs">npm update -g mcp-probe-kit</code> <span data-i18n="gettingStarted.step1.global.updateText">更新版本</span>
                             </div>
                         </div>
                     </div>
@@ -239,17 +250,17 @@
                         <button onclick="toggleInstall('source')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
                             <div class="flex items-center gap-2">
                                 <span class="text-lg">🔧</span>
-                                <span class="font-medium text-text-primary">源码编译</span>
+                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step1.source.title">源码编译</span>
                             </div>
                             <svg class="w-5 h-5 text-text-tertiary transition-transform" id="source-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
                         <div id="source-content" class="hidden p-4 border-t border-border">
-                            <p class="text-text-secondary mb-3 text-sm">从源码编译安装，适合开发者：</p>
+                            <p class="text-text-secondary mb-3 text-sm" data-i18n="gettingStarted.step1.source.description">从源码编译安装，适合开发者：</p>
                             
                             <div class="mb-4">
-                                <p class="font-medium text-sm mb-2">1. 克隆仓库</p>
+                                <p class="font-medium text-sm mb-2" data-i18n="gettingStarted.step1.source.step1">1. 克隆仓库</p>
                                 <div class="bg-slate-900 rounded-lg overflow-hidden">
                                     <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                                         <span class="text-xs text-slate-300 font-medium">Bash</span>
@@ -261,7 +272,7 @@ cd mcp-probe-kit</code></pre>
                             </div>
                             
                             <div class="mb-4">
-                                <p class="font-medium text-sm mb-2">2. 安装依赖并编译</p>
+                                <p class="font-medium text-sm mb-2" data-i18n="gettingStarted.step1.source.step2">2. 安装依赖并编译</p>
                                 <div class="bg-slate-900 rounded-lg overflow-hidden">
                                     <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                                         <span class="text-xs text-slate-300 font-medium">Bash</span>
@@ -273,7 +284,7 @@ npm run build</code></pre>
                             </div>
                             
                             <div class="mb-4">
-                                <p class="font-medium text-sm mb-2">3. 配置文件</p>
+                                <p class="font-medium text-sm mb-2" data-i18n="gettingStarted.step1.source.step3">3. 配置文件</p>
                                 <div class="bg-slate-900 rounded-lg overflow-hidden">
                                     <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                                         <span class="text-xs text-slate-300 font-medium">JSON</span>
@@ -291,10 +302,10 @@ npm run build</code></pre>
                             </div>
                             
                             <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm text-text-primary mb-2">
-                                <strong>提示：</strong>Windows 用户使用完整路径，如 <code class="bg-gray-200 px-1 rounded text-xs">D:/workspace/mcp-probe-kit/build/index.js</code>
+                                <strong data-i18n="gettingStarted.step1.source.tip">提示：</strong><span data-i18n="gettingStarted.step1.source.tipText">Windows 用户使用完整路径，如</span> <code class="bg-gray-200 px-1 rounded text-xs">D:/workspace/mcp-probe-kit/build/index.js</code>
                             </div>
                             <div class="p-3 bg-amber-50 border-l-3 border-amber-500 rounded-r text-sm text-text-primary">
-                                <strong>注意：</strong>修改代码后需要重新运行 <code class="bg-gray-200 px-1 rounded text-xs">npm run build</code> 编译
+                                <strong data-i18n="gettingStarted.step1.source.note">注意：</strong><span data-i18n="gettingStarted.step1.source.noteText">修改代码后需要重新运行</span> <code class="bg-gray-200 px-1 rounded text-xs">npm run build</code> <span data-i18n="gettingStarted.step1.source.compileText">编译</span>
                             </div>
                         </div>
                     </div>
@@ -305,10 +316,10 @@ npm run build</code></pre>
             <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
                 <div class="flex items-start gap-3 mb-4">
                     <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-primary-hover text-white rounded-full flex items-center justify-center font-semibold text-sm sm:text-base flex-shrink-0">2</div>
-                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">找到配置文件</h2>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary" data-i18n="gettingStarted.step2.title">找到配置文件</h2>
                 </div>
                 
-                <p class="text-text-secondary mb-4 text-sm">根据你使用的 MCP 客户端，找到对应的配置文件：</p>
+                <p class="text-text-secondary mb-4 text-sm" data-i18n="gettingStarted.step2.description">根据你使用的 MCP 客户端，找到对应的配置文件：</p>
                 
                 <!-- 客户端选择 -->
                 <div class="space-y-3">
@@ -317,16 +328,16 @@ npm run build</code></pre>
                         <button onclick="toggleClient('cursor')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
                             <div class="flex items-center gap-2">
                                 <span class="text-lg">📝</span>
-                                <span class="font-medium text-text-primary">Cursor / Cline</span>
+                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step2.cursor.title">Cursor / Cline</span>
                             </div>
                             <svg class="w-5 h-5 text-text-tertiary transition-transform" id="cursor-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
                         <div id="cursor-content" class="hidden p-4 border-t border-border">
-                            <p class="text-text-secondary text-sm mb-3">在项目根目录创建或编辑 <code class="bg-gray-200 px-1 rounded text-xs">.cursor/mcp.json</code> 或 <code class="bg-gray-200 px-1 rounded text-xs">.cline/mcp.json</code></p>
+                            <p class="text-text-secondary text-sm mb-3"><span data-i18n="gettingStarted.step2.cursor.description">在项目根目录创建或编辑</span> <code class="bg-gray-200 px-1 rounded text-xs">.cursor/mcp.json</code> 或 <code class="bg-gray-200 px-1 rounded text-xs">.cline/mcp.json</code></p>
                             <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm">
-                                <strong>💡 提示：</strong>Cursor 和 Cline 使用项目级配置，每个项目可以有独立的 MCP 服务器配置。
+                                <strong>💡 <span data-i18n="gettingStarted.step2.cursor.tip">提示：</span></strong><span data-i18n="gettingStarted.step2.cursor.tipText">Cursor 和 Cline 使用项目级配置，每个项目可以有独立的 MCP 服务器配置。</span>
                             </div>
                         </div>
                     </div>
@@ -336,14 +347,14 @@ npm run build</code></pre>
                         <button onclick="toggleClient('claude-win')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
                             <div class="flex items-center gap-2">
                                 <span class="text-lg">🪟</span>
-                                <span class="font-medium text-text-primary">Claude Desktop (Windows)</span>
+                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step2.claudeWin.title">Claude Desktop (Windows)</span>
                             </div>
                             <svg class="w-5 h-5 text-text-tertiary transition-transform" id="claude-win-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
                         <div id="claude-win-content" class="hidden p-4 border-t border-border">
-                            <p class="text-text-secondary text-sm mb-2">配置文件路径：</p>
+                            <p class="text-text-secondary text-sm mb-2" data-i18n="gettingStarted.step2.claudeWin.path">配置文件路径：</p>
                             <div class="bg-slate-900 rounded-lg overflow-hidden">
                                 <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                                     <span class="text-xs text-slate-300 font-medium">Path</span>
@@ -351,7 +362,7 @@ npm run build</code></pre>
                                 </div>
                                 <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>%APPDATA%\Claude\claude_desktop_config.json</code></pre>
                             </div>
-                            <p class="text-text-secondary text-sm mt-2">示例：<code class="bg-gray-200 px-1 rounded text-xs">C:\Users\YourName\AppData\Roaming\Claude\claude_desktop_config.json</code></p>
+                            <p class="text-text-secondary text-sm mt-2"><span data-i18n="gettingStarted.step2.claudeWin.example">示例：</span><code class="bg-gray-200 px-1 rounded text-xs">C:\Users\YourName\AppData\Roaming\Claude\claude_desktop_config.json</code></p>
                         </div>
                     </div>
 
@@ -360,14 +371,14 @@ npm run build</code></pre>
                         <button onclick="toggleClient('claude-mac')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
                             <div class="flex items-center gap-2">
                                 <span class="text-lg">🍎</span>
-                                <span class="font-medium text-text-primary">Claude Desktop (macOS)</span>
+                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step2.claudeMac.title">Claude Desktop (macOS)</span>
                             </div>
                             <svg class="w-5 h-5 text-text-tertiary transition-transform" id="claude-mac-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
                         <div id="claude-mac-content" class="hidden p-4 border-t border-border">
-                            <p class="text-text-secondary text-sm mb-2">配置文件路径：</p>
+                            <p class="text-text-secondary text-sm mb-2" data-i18n="gettingStarted.step2.claudeMac.path">配置文件路径：</p>
                             <div class="bg-slate-900 rounded-lg overflow-hidden">
                                 <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                                     <span class="text-xs text-slate-300 font-medium">Path</span>
@@ -384,26 +395,26 @@ npm run build</code></pre>
             <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
                 <div class="flex items-start gap-3 mb-4">
                     <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-primary-hover text-white rounded-full flex items-center justify-center font-semibold text-sm sm:text-base flex-shrink-0">3</div>
-                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">验证安装</h2>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary" data-i18n="gettingStarted.step3.title">验证安装</h2>
                 </div>
                 
                 <div class="pl-0 sm:pl-0">
-                    <p class="text-text-secondary mb-3 text-sm">完成配置后，按以下步骤验证：</p>
+                    <p class="text-text-secondary mb-3 text-sm" data-i18n="gettingStarted.step3.description">完成配置后，按以下步骤验证：</p>
                     <ol class="list-decimal list-inside space-y-2 text-sm text-text-primary mb-4">
-                        <li>重启 MCP 客户端（Cursor / Cline / Claude Desktop）</li>
-                        <li>在聊天窗口中输入：<code class="bg-gray-200 px-1 rounded text-xs">请使用 gencommit 工具生成一个测试提交消息</code></li>
-                        <li>如果返回符合 Conventional Commits 规范的提交消息，说明安装成功！</li>
+                        <li data-i18n="gettingStarted.step3.step1">重启 MCP 客户端（Cursor / Cline / Claude Desktop）</li>
+                        <li data-i18n="gettingStarted.step3.step2">在聊天窗口中输入：<code class="bg-gray-200 px-1 rounded text-xs">请使用 gencommit 工具生成一个测试提交消息</code></li>
+                        <li data-i18n="gettingStarted.step3.step3">如果返回符合 Conventional Commits 规范的提交消息，说明安装成功！</li>
                     </ol>
                     
                     <div class="p-3 bg-green-50 border-l-3 border-green-500 rounded-r text-sm text-text-primary mb-2">
-                        <strong>✅ 成功示例：</strong>AI 返回类似 <code class="bg-gray-200 px-1 rounded text-xs">feat: 添加用户认证功能</code> 的消息
+                        <strong>✅ <span data-i18n="gettingStarted.step3.success">成功示例：</span></strong><span data-i18n="gettingStarted.step3.successText">AI 返回类似</span> <code class="bg-gray-200 px-1 rounded text-xs" data-i18n="gettingStarted.step3.successCode">feat: 添加用户认证功能</code> <span data-i18n="gettingStarted.step3.successExample">的消息</span>
                     </div>
                     <div class="p-3 bg-red-50 border-l-3 border-red-500 rounded-r text-sm">
-                        <strong>❌ 常见问题：</strong>
+                        <strong>❌ <span data-i18n="gettingStarted.step3.issues">常见问题：</span></strong>
                         <ul class="list-disc list-inside mt-1 text-text-primary">
-                            <li>提示"找不到工具" → 检查配置文件格式</li>
-                            <li>提示"命令不存在" → 确认 Node.js 已安装</li>
-                            <li>Windows 用户 → 确保使用 npx 方式</li>
+                            <li data-i18n="gettingStarted.step3.issue1">提示找不到工具 → 检查配置文件格式</li>
+                            <li data-i18n="gettingStarted.step3.issue2">提示命令不存在 → 确认 Node.js 已安装</li>
+                            <li data-i18n="gettingStarted.step3.issue3">Windows 用户 → 确保使用 npx 方式</li>
                         </ul>
                     </div>
                 </div>
@@ -413,16 +424,16 @@ npm run build</code></pre>
             <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
                 <div class="flex items-start gap-3 mb-4">
                     <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-primary-hover text-white rounded-full flex items-center justify-center font-semibold text-sm sm:text-base flex-shrink-0">4</div>
-                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary">委托式编排协议</h2>
+                    <h2 class="text-lg sm:text-xl font-semibold text-text-primary" data-i18n="gettingStarted.step4.title">委托式编排协议</h2>
                 </div>
                 
                 <div class="pl-0 sm:pl-0 text-sm text-text-primary space-y-3">
-                    <p><code class="bg-gray-200 px-1 rounded text-xs">start_*</code> 编排工具不会直接执行操作，而是返回一个可执行计划。</p>
-                    <p><strong>关键字段：</strong><code class="bg-gray-200 px-1 rounded text-xs">mode: "delegated"</code>、<code class="bg-gray-200 px-1 rounded text-xs">steps[]</code>、<code class="bg-gray-200 px-1 rounded text-xs">outputs[]</code></p>
+                    <p><code class="bg-gray-200 px-1 rounded text-xs">start_*</code> <span data-i18n="gettingStarted.step4.description">编排工具不会直接执行操作，而是返回一个可执行计划。</span></p>
+                    <p><strong data-i18n="gettingStarted.step4.keyFields">关键字段：</strong><code class="bg-gray-200 px-1 rounded text-xs">mode: "delegated"</code>、<code class="bg-gray-200 px-1 rounded text-xs">steps[]</code>、<code class="bg-gray-200 px-1 rounded text-xs">outputs[]</code></p>
                     
                     <div class="bg-slate-900 rounded-lg overflow-hidden">
                         <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
-                            <span class="text-xs text-slate-300 font-medium">Plan 示例</span>
+                            <span class="text-xs text-slate-300 font-medium" data-i18n="gettingStarted.step4.planExample">Plan 示例</span>
                         </div>
                         <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
   "mode": "delegated",
@@ -438,29 +449,29 @@ npm run build</code></pre>
                     </div>
                     
                     <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm">
-                        <strong>💡 要点：</strong>按顺序执行 <code class="bg-gray-200 px-1 rounded text-xs">steps</code>，并确保 <code class="bg-gray-200 px-1 rounded text-xs">outputs</code> 文件真实落盘
+                        <strong>💡 <span data-i18n="gettingStarted.step4.tip">要点：</span></strong><span data-i18n="gettingStarted.step4.tipText">按顺序执行</span> <code class="bg-gray-200 px-1 rounded text-xs">steps</code><span data-i18n="gettingStarted.step4.tipText2">，并确保</span> <code class="bg-gray-200 px-1 rounded text-xs">outputs</code> <span data-i18n="gettingStarted.step4.tipText3">文件真实落盘</span>
                     </div>
                 </div>
             </section>
 
             <!-- 常见问题 -->
             <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
-                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4">⚠️ 常见问题</h2>
+                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4" data-i18n="gettingStarted.faq.title">⚠️ 常见问题</h2>
                 
                 <!-- 问题 1 -->
                 <div class="border border-border rounded-lg overflow-hidden mb-4">
                     <button onclick="toggleFaq('faq1')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
-                        <span class="font-medium text-text-primary">问题 1：npx 缓存导致的模块解析错误</span>
+                        <span class="font-medium text-text-primary" data-i18n="gettingStarted.faq.q1.title">问题 1：npx 缓存导致的模块解析错误</span>
                         <svg class="w-5 h-5 text-text-tertiary transition-transform" id="faq1-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     <div id="faq1-content" class="hidden p-4 border-t border-border">
                         <div class="p-3 bg-red-50 border-l-3 border-red-500 rounded-r text-sm text-text-primary mb-3">
-                            <strong>错误信息：</strong>
+                            <strong data-i18n="gettingStarted.faq.q1.error">错误信息：</strong>
                             <pre class="code-block mt-2 text-xs text-slate-200 bg-slate-900 p-2 rounded overflow-x-auto"><code>Error: Cannot find package 'yallist'</code></pre>
                         </div>
-                        <p class="text-sm text-text-primary mb-2"><strong>解决方案：</strong>清理 npx 缓存</p>
+                        <p class="text-sm text-text-primary mb-2"><strong data-i18n="gettingStarted.faq.q1.solution">解决方案：</strong><span data-i18n="gettingStarted.faq.q1.solutionText">清理 npx 缓存</span></p>
                         <div class="space-y-2">
                             <div class="bg-slate-900 rounded-lg overflow-hidden">
                                 <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
@@ -477,41 +488,41 @@ npm run build</code></pre>
                                 <pre class="code-block p-3 text-sm text-slate-200 overflow-x-auto"><code>rm -rf ~/.npm/_npx</code></pre>
                             </div>
                         </div>
-                        <p class="text-sm text-text-secondary mt-2">然后重启 MCP 客户端</p>
+                        <p class="text-sm text-text-secondary mt-2" data-i18n="gettingStarted.faq.q1.restart">然后重启 MCP 客户端</p>
                     </div>
                 </div>
 
                 <!-- 问题 2 -->
                 <div class="border border-border rounded-lg overflow-hidden">
                     <button onclick="toggleFaq('faq2')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
-                        <span class="font-medium text-text-primary">问题 2：MCP 服务器连接失败</span>
+                        <span class="font-medium text-text-primary" data-i18n="gettingStarted.faq.q2.title">问题 2：MCP 服务器连接失败</span>
                         <svg class="w-5 h-5 text-text-tertiary transition-transform" id="faq2-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     <div id="faq2-content" class="hidden p-4 border-t border-border">
                         <div class="p-3 bg-red-50 border-l-3 border-red-500 rounded-r text-sm text-text-primary mb-3">
-                            <strong>可能原因：</strong>
+                            <strong data-i18n="gettingStarted.faq.q2.possibleReasons">可能原因：</strong>
                             <ul class="list-disc list-inside mt-1">
-                                <li>Node.js 版本过低（需要 >= 16.0.0）</li>
-                                <li>依赖未安装或损坏</li>
-                                <li>配置文件格式错误</li>
+                                <li data-i18n="gettingStarted.faq.q2.reason1">Node.js 版本过低（需要 >= 16.0.0）</li>
+                                <li data-i18n="gettingStarted.faq.q2.reason2">依赖未安装或损坏</li>
+                                <li data-i18n="gettingStarted.faq.q2.reason3">配置文件格式错误</li>
                             </ul>
                         </div>
-                        <p class="text-sm text-text-primary mb-2"><strong>解决方案：</strong></p>
+                        <p class="text-sm text-text-primary mb-2"><strong data-i18n="gettingStarted.faq.q2.solution">解决方案：</strong></p>
                         <ol class="list-decimal list-inside space-y-2 text-sm text-text-primary">
-                            <li>检查 Node.js 版本：
+                            <li><span data-i18n="gettingStarted.faq.q2.step1">检查 Node.js 版本：</span>
                                 <div class="bg-slate-900 rounded-lg overflow-hidden mt-1">
                                     <pre class="code-block p-3 text-sm text-slate-200 overflow-x-auto"><code>node --version</code></pre>
                                 </div>
                             </li>
-                            <li>如果低于 v16，请升级 Node.js</li>
-                            <li>清理缓存并重新安装：
+                            <li data-i18n="gettingStarted.faq.q2.step2">如果低于 v16，请升级 Node.js</li>
+                            <li><span data-i18n="gettingStarted.faq.q2.step3">清理缓存并重新安装：</span>
                                 <div class="bg-slate-900 rounded-lg overflow-hidden mt-1">
                                     <pre class="code-block p-3 text-sm text-slate-200 overflow-x-auto"><code>npm cache clean --force</code></pre>
                                 </div>
                             </li>
-                            <li>检查配置文件 JSON 格式是否正确</li>
+                            <li data-i18n="gettingStarted.faq.q2.step4">检查配置文件 JSON 格式是否正确</li>
                         </ol>
                     </div>
                 </div>
@@ -574,5 +585,6 @@ npm run build</code></pre>
             });
         }
     </script>
+    <script src="../assets/js/i18n.js"></script>
 </body>
 </html>

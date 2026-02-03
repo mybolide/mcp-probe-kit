@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "title": "MCP Probe Kit - AI-Powered Complete Development Toolkit | 21 Tools Covering Entire Development Lifecycle",
+    "description": "MCP Probe Kit provides 21 AI-powered development tools covering requirements analysis, code development, quality assurance, bug fixing, and release management. Supports Cursor, Cline, Claude Desktop with 100% structured output.",
+    "keywords": "MCP Probe Kit, AI development tools, code generation, code review, Git tools, UI development, development efficiency, Cursor, Cline, Claude, MCP Server"
+  },
+  "nav": {
+    "home": "Documentation",
+    "docs": "Docs",
+    "mainSite": "Main Site",
+    "github": "GitHub",
+    "npm": "npm"
+  },
+  "hero": {
+    "title": "🚀 MCP Probe Kit",
+    "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
+    "version": "v3.0.3",
+    "quickStart": "Quick Start",
+    "visitMainSite": "Visit ByteZoneX"
+  },
+  "sections": {
+    "quickStart": {
+      "title": "Quick Start",
+      "description": "Get started with MCP Probe Kit v3.0.3 in 5 minutes",
+      "installConfig": "Installation & Configuration"
+    },
+    "tools": {
+      "title": "Tools Documentation",
+      "description": "Complete reference for 21 practical tools",
+      "allTools": "All Tools"
+    },
+    "guides": {
+      "title": "Guides",
+      "description": "Migration guides and best practices",
+      "migration": "v2.x → v3.0 Migration Guide",
+      "bestPractices": "Best Practices"
+    },
+    "resources": {
+      "title": "Resources",
+      "description": "Source code and community support",
+      "mainSite": "ByteZoneX Main Site",
+      "githubRepo": "GitHub Repository",
+      "npmPackage": "npm Package",
+      "issues": "Issue Tracker"
+    }
+  },
+  "footer": {
+    "madeWith": "Made with ❤️ by",
+    "license": "MIT License",
+    "mainSite": "Main Site ByteZoneX"
+  },
+  "sidebar": {
+    "quickStart": "Quick Start",
+    "home": "Documentation Home",
+    "installation": "Installation & Configuration",
+    "toolsDocs": "Tools Documentation",
+    "allTools": "All Tools",
+    "guides": "Guides",
+    "migration": "Migration Guide",
+    "examples": "Best Practices",
+    "followUs": "Follow Us",
+    "getTechSharing": "Get More Tech Insights"
+  },
+  "gettingStarted": {
+    "title": "Installation & Configuration",
+    "subtitle": "Get started with MCP Probe Kit v3.0.3 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
+    "breadcrumb": {
+      "home": "Documentation",
+      "quickStart": "Quick Start",
+      "installation": "Installation"
+    },
+    "step1": {
+      "title": "Choose Installation Method",
+      "npx": {
+        "title": "Use npx Directly",
+        "recommended": "Recommended",
+        "description": "No installation required, use the latest version directly:",
+        "advantage": "Advantage:",
+        "advantageText": "No manual updates needed, automatically uses the latest version on each startup",
+        "copy": "Copy"
+      },
+      "global": {
+        "title": "Global Installation",
+        "description": "Install globally to system:",
+        "configFile": "Configuration file:",
+        "note": "Note:",
+        "noteText": "Need to manually run",
+        "updateText": "to update version"
+      },
+      "source": {
+        "title": "Build from Source",
+        "description": "Build from source code, suitable for developers:",
+        "step1": "1. Clone repository",
+        "step2": "2. Install dependencies and build",
+        "step3": "3. Configuration file",
+        "tip": "Tip:",
+        "tipText": "Windows users should use full path, e.g.",
+        "note": "Note:",
+        "noteText": "After modifying code, need to re-run",
+        "compileText": "to compile"
+      }
+    },
+    "step2": {
+      "title": "Locate Configuration File",
+      "description": "Find the corresponding configuration file based on your MCP client:",
+      "cursor": {
+        "title": "Cursor / Cline",
+        "description": "Create or edit in project root directory",
+        "tip": "Tip:",
+        "tipText": "Cursor and Cline use project-level configuration, each project can have independent MCP server configuration."
+      },
+      "claudeWin": {
+        "title": "Claude Desktop (Windows)",
+        "path": "Configuration file path:",
+        "example": "Example:"
+      },
+      "claudeMac": {
+        "title": "Claude Desktop (macOS)",
+        "path": "Configuration file path:"
+      }
+    },
+    "step3": {
+      "title": "Verify Installation",
+      "description": "After completing configuration, verify with the following steps:",
+      "step1": "Restart MCP client (Cursor / Cline / Claude Desktop)",
+      "step2": "Type in chat window:",
+      "step2Command": "Please use gencommit tool to generate a test commit message",
+      "step3": "If it returns a commit message following Conventional Commits specification, installation is successful!",
+      "success": "Success example:",
+      "successText": "AI returns something like",
+      "successExample": "message",
+      "successCode": "feat: add user authentication",
+      "issues": "Common issues:",
+      "issue1": "\"Tool not found\" → Check configuration file format",
+      "issue2": "\"Command not found\" → Confirm Node.js is installed",
+      "issue3": "Windows users → Ensure using npx method"
+    },
+    "step4": {
+      "title": "Delegated Orchestration Protocol",
+      "description": "orchestration tools do not execute operations directly, but return an executable plan.",
+      "keyFields": "Key fields:",
+      "planExample": "Plan Example",
+      "tip": "Key point:",
+      "tipText": "Execute",
+      "tipText2": "in order, and ensure",
+      "tipText3": "files are actually written to disk"
+    },
+    "faq": {
+      "title": "⚠️ Common Issues",
+      "q1": {
+        "title": "Issue 1: Module resolution error caused by npx cache",
+        "error": "Error message:",
+        "solution": "Solution:",
+        "solutionText": "Clear npx cache",
+        "restart": "Then restart MCP client"
+      },
+      "q2": {
+        "title": "Issue 2: MCP server connection failed",
+        "possibleReasons": "Possible reasons:",
+        "reason1": "Node.js version too low (requires >= 16.0.0)",
+        "reason2": "Dependencies not installed or corrupted",
+        "reason3": "Configuration file format error",
+        "solution": "Solution:",
+        "step1": "Check Node.js version:",
+        "step2": "If below v16, please upgrade Node.js",
+        "step3": "Clear cache and reinstall:",
+        "step4": "Check if configuration file JSON format is correct"
+      }
+    },
+    "common": {
+      "copy": "Copy",
+      "copied": "Copied"
+    }
+  }
+}
