@@ -247,5 +247,14 @@
       "viewTools": "すべてのツールを表示",
       "learnBestPractices": "ベストプラクティスを学ぶ"
     }
+  },
+  "examples": {
+    "breadcrumb": {
+      "home": "ドキュメント",
+      "guides": "ガイド",
+      "examples": "ベストプラクティス"
+    },
+    "title": "ベストプラクティス",
+    "subtitle": "MCP Probe Kitは完全な開発プロセスを統合、要件からデプロイまでのベストプラクティスガイド"
   }
 }
