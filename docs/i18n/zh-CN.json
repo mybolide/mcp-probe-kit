@@ -219,7 +219,10 @@
     "steps": {
       "title": "迁移步骤",
       "step1": {
-        "title": "步骤 1：更新版本"
+        "title": "步骤 1：更新版本",
+        "npxNote": "# 如果使用 npx（推荐）",
+        "npxDesc": "# 无需操作，自动使用最新版本",
+        "globalNote": "# 如果全局安装"
       },
       "step2": {
         "title": "步骤 2：检查配置文件",

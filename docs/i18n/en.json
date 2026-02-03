@@ -219,7 +219,10 @@
     "steps": {
       "title": "Migration Steps",
       "step1": {
-        "title": "Step 1: Update Version"
+        "title": "Step 1: Update Version",
+        "npxNote": "# If using npx (recommended)",
+        "npxDesc": "# No action needed, automatically uses latest version",
+        "globalNote": "# If globally installed"
       },
       "step2": {
         "title": "Step 2: Check Configuration File",
