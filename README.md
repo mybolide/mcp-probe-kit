@@ -7,7 +7,7 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **20 个精简工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **21 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
 
 **🎉 v3.0 重大更新**：精简工具数量，专注核心竞争力，消除选择困难，让 AI 做更多原生工作
 
@@ -30,14 +30,14 @@
 
 ## ✨ 核心特性
 
-### 📦 20 个精简工具
+### 📦 21 个工具
 
 - **🔄 工作流编排** (6个) - 一键完成复杂开发流程
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
 - **🔍 代码分析** (3个) - 代码质量与重构
   - `code_review`, `fix_bug`, `refactor`
-- **� Git 工具** (1个) - 提交消息生成
-  - `gencommit`
+- **📝 Git 工具** (2个) - Git 提交和工作报告
+  - `gencommit`, `git_work_report`
 - **⚡ 代码生成** (1个) - 测试生成
   - `gentest`
 - **📦 项目管理** (7个) - 项目初始化与需求管理
@@ -330,6 +330,19 @@ init_project_context
 # 模块化模式 - 生成 6 个分类文档（适合大型项目）
 init_project_context --mode=modular
 # 生成：project-context.md（索引）+ 5 个分类文档
+```
+
+### Git 工作报告
+```bash
+# 生成日报
+git_work_report --date 2026-1-27
+
+# 生成周报
+git_work_report --start_date 2026-2-1 --end_date 2026-2-6
+
+# 保存到文件
+git_work_report --date 2026-1-27 --output_file daily-report.md
+# 自动分析 Git diff，生成简洁专业的中文工作报告
 ```
 
 **👉 [更多使用示例](https://mcp-probe-kit.bytezonex.com/pages/examples.html)**

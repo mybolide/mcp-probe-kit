@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.3] - 2026-02-03
+
+### 🔧 改进
+
+**git_work_report 工具重构**
+- 将 `git_work_report` 从数据驱动工具改为指南型工具
+- 工具现在返回指导文本，而不是直接执行 Git 命令
+- AI 根据指导在客户端环境中执行 Git 命令并分析
+- 解决了 MCP 服务器环境限制和跨平台兼容性问题
+- 与其他指南型工具（gencommit、fix_bug 等）保持一致的设计模式
+
+**工作方式**：
+1. 用户调用：`git_work_report --date 2026-2-3`
+2. 工具返回：包含 Git 命令和输出要求的指导文本
+3. AI 执行：根据指导执行 `git log` 和 `git show`，分析 diff 生成报告
+
+---
+
+## [3.0.2] - 2026-02-03
+
+### ✨ 新功能
+
+**Git 工作报告生成工具**
+- 新增 `git_work_report` 工具，基于 Git diff 分析生成工作报告
+- 支持日报模式（单个日期）和周期报模式（日期范围）
+- 自动读取指定日期的所有 Git 提交，执行 `git show` 获取完整 diff
+- 使用 AI 分析 diff 内容，智能提取实际工作内容
+- 输出格式：简洁专业的中文，每条以 `-` 开头，格式为"做了什么 + 改了哪里/达到什么效果"
+- 支持输出到文件（`--output_file` 参数）
+
+**使用示例**：
+```bash
+# 生成日报
+git_work_report --date 2026-1-27
+
+# 生成周报
+git_work_report --start_date 2026-2-1 --end_date 2026-2-6
+
+# 保存到文件
+git_work_report --date 2026-1-27 --output_file daily-report.md
+```
+
+### 📝 文档更新
+- 更新 README.md，工具数量从 20 个增加到 21 个
+- 更新 Git 工具分类，从 1 个增加到 2 个
+- 添加 `git_work_report` 使用示例和说明
+- 更新 `docs/data/tools.js` 工具数据
+- 新增完整的规格文档（requirements.md, design.md, tasks.md）
+
+---
+
 ## [3.0.1] - 2026-02-02
 
 ### 🐛 修复

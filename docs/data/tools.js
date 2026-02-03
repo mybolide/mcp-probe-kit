@@ -188,6 +188,28 @@ goal: "reduce_complexity"`
 AI: 请使用 gencommit 工具生成提交消息
 
 changes: "添加了用户登录功能，包含表单验证和错误处理"`
+    },
+    {
+      name: 'git_work_report',
+      description: '基于 Git diff 分析生成工作报告（日报/周期报），智能提取实际工作内容',
+      schema: 'WorkReportSchema',
+      params: [
+        { name: 'date', type: 'string', required: false, desc: '单个日期，格式 YYYY-MM-DD（日报模式）' },
+        { name: 'start_date', type: 'string', required: false, desc: '起始日期，格式 YYYY-MM-DD（周期报模式）' },
+        { name: 'end_date', type: 'string', required: false, desc: '结束日期，格式 YYYY-MM-DD（周期报模式）' },
+        { name: 'output_file', type: 'string', required: false, desc: '可选，输出文件路径' }
+      ],
+      usage: '自动读取指定日期的 Git 提交，分析 diff 内容，生成简洁专业的中文工作报告。如果直接命令失败，会提供创建临时脚本的方案（执行后自动删除）',
+      example: `// 使用示例 - 生成日报
+AI: 请使用 git_work_report 工具生成 2026-02-03 的日报
+
+date: "2026-02-03"
+
+// 或生成周期报告
+AI: 请使用 git_work_report 工具生成 2026-02-01 至 2026-02-07 的周报
+
+start_date: "2026-02-01"
+end_date: "2026-02-07"`
     }
   ],
   generation: [
