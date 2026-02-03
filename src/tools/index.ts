@@ -20,4 +20,6 @@ export { uiDesignSystem, uiSearch, syncUiData } from "./ui-ux-tools.js";
 export { startUi } from "./start_ui.js";
 // 产品设计工作流
 export { startProduct } from "./start_product.js";
+// Git 工具
+export { gitWorkReport } from "./git_work_report.js";
 

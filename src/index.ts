@@ -15,7 +15,7 @@ import {
   startFeature, startBugfix, startOnboard,
   startRalph, interview, askUser,
   uiDesignSystem, uiSearch, syncUiData, startUi,
-  startProduct
+  startProduct, gitWorkReport
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
@@ -98,6 +98,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // 产品设计工作流
       case "start_product":
         return await startProduct(args || {});
+      // Git 工具
+      case "git_work_report":
+        return await gitWorkReport(args as any);
       default:
         throw new Error(`未知工具: ${name}`);
     }
