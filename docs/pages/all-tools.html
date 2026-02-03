@@ -246,7 +246,7 @@
                     const toolId = tool.name.replace(/_/g, '-');
                     const desc = toolDescriptions[tool.name] || '';
                     const displayText = desc ? `${tool.name} (${desc})` : tool.name;
-                    html += `<a href="javascript:void(0)" onclick="scrollToTool('${toolId}')" class="block px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-page hover:text-primary rounded transition-colors">${displayText}</a>`;
+                    html += `<a href="#${toolId}" class="block px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-page hover:text-primary rounded transition-colors">${displayText}</a>`;
                 });
             }
             submenu.innerHTML = html;
@@ -263,6 +263,13 @@
                 setTimeout(() => { element.style.background = ''; }, 2000);
             }
             if (window.innerWidth < 768) toggleSidebar();
+        }
+
+        function handleHashChange() {
+            const hash = window.location.hash.slice(1);
+            if (hash) {
+                setTimeout(() => scrollToTool(hash), 100);
+            }
         }
 
         function renderTools(filteredTools = null) {
@@ -322,6 +329,12 @@
             document.getElementById('tools-menu-icon').style.transform = 'rotate(180deg)';
             renderTools();
             document.getElementById('searchInput').addEventListener('input', (e) => { searchTools(e.target.value); });
+            
+            // 监听 hash 变化
+            window.addEventListener('hashchange', handleHashChange);
+            
+            // 页面加载时处理 hash
+            handleHashChange();
         }
 
         document.addEventListener('DOMContentLoaded', init);
