@@ -255,6 +255,179 @@
       "examples": "모범 사례"
     },
     "title": "모범 사례",
-    "subtitle": "MCP Probe Kit은 완전한 개발 프로세스를 통합, 요구사항부터 배포까지의 모범 사례 가이드"
+    "subtitle": "MCP Probe Kit은 완전한 개발 프로세스를 통합, 요구사항부터 배포까지의 모범 사례 가이드",
+    "overview": {
+      "title": "완전한 개발 프로세스",
+      "description": "MCP Probe Kit의 21개 도구는 요구사항 분석부터 코드 배포까지의 완전한 개발 프로세스를 커버합니다. 다음은 권장되는 모범 사례입니다.",
+      "coreIdea": "핵심 철학：",
+      "coreIdeaText": "워크플로 오케스트레이션 도구(start_*)를 통해 전체 개발 프로세스를 연결하여 AI를 개발 어시스턴트로 만듭니다."
+    },
+    "stage0": {
+      "title": "단계 0：제품 설계 (요구사항부터 프로토타입까지)",
+      "workflow": {
+        "title": "0.1 완전한 제품 설계 워크플로 (권장)",
+        "description": "사용",
+        "description2": "워크플로 오케스트레이션, 원클릭으로 요구사항부터 HTML 프로토타입까지 완전한 제품 설계 완료.",
+        "example1": "당신: 제품 요구사항 문서 project.md가 있습니다, 완전한 제품 설계를 생성해주세요",
+        "productName": "온라인 교육 플랫폼",
+        "autoExecute": "→ 자동 실행：",
+        "step1": "✓ 단계 1: 프로젝트 컨텍스트 확인/생성",
+        "step2": "✓ 단계 2: PRD 문서 생성",
+        "step3": "✓ 단계 3: 프로토타입 설계 문서 생성",
+        "step4": "✓ 단계 4: 디자인 시스템 생성",
+        "step5": "→ 단계 5: HTML 인터랙티브 프로토타입 생성",
+        "step6": "✓ 단계 6: 프로젝트 컨텍스트 인덱스 업데이트",
+        "outputs": "→ 출력 파일："
+      },
+      "prd": {
+        "title": "0.2 PRD 문서 개별 생성",
+        "description": "사용",
+        "description2": "도구로 제품 요구사항 문서를 개별적으로 생성.",
+        "example1": "당신: 온라인 교육 플랫폼의 PRD를 생성해주세요",
+        "description3": "온라인 교육 플랫폼, 강좌 관리, 비디오 재생, 과제 제출 지원",
+        "aiCreate": "→ AI가 가이드에 따라 docs/prd/product-requirements.md 생성",
+        "includes": "PRD 포함 내용:",
+        "item1": "- 제품 개요 (비전, 대상 사용자, 핵심 가치)",
+        "item2": "- 기능 요구사항 (핵심 기능, 사용자 스토리)",
+        "item3": "- 기능 우선순위 (P0/P1/P2)",
+        "item4": "- 비기능 요구사항 (성능, 보안, 호환성)",
+        "item5": "- 페이지 목록"
+      },
+      "prototype": {
+        "title": "0.3 HTML 인터랙티브 프로토타입 생성",
+        "description": "사용",
+        "description2": "도구로 프로토타입 문서를 기반으로 HTML 프로토타입 생성.",
+        "desc": "프로토타입 문서를 기반으로 모든 페이지의 HTML 프로토타입 생성",
+        "step1": "✓ docs/prototype/ 하위의 모든 프로토타입 문서 읽기",
+        "step2": "✓ docs/design-system.json을 읽어 디자인 사양 가져오기",
+        "step3": "✓ 각 페이지의 HTML 파일 생성",
+        "step4": "✓ 인덱스 페이지 index.html 생성",
+        "features": "→ 특징:",
+        "feature1": "- 디자인 시스템의 색상과 글꼴 사용",
+        "feature2": "- 페이지 네비게이션 포함",
+        "feature3": "- 반응형 디자인"
+      },
+      "summary": {
+        "title": "0.4 제품 설계 워크플로우 요약",
+        "recommended": "권장 프로세스:",
+        "step1": "요구사항 문서 준비 (Markdown 형식)",
+        "step2": "사용",
+        "step2b": "로 원클릭으로 완전한 제품 설계 생성",
+        "step3": "브라우저에서 HTML 프로토타입 확인",
+        "step4": "팀과 프로토타입 검토 및 피드백 수집",
+        "step5": "피드백에 따라 프로토타입 문서 조정",
+        "step6": "사용",
+        "step6b": "로 HTML 프로토타입 재생성",
+        "step7": "확인 후 개발 단계로 진행"
+      }
+    },
+    "common": {
+      "bestPractice": "모범 사례"
+    },
+    "stage2": {
+      "title": "단계 2: 기능 개발",
+      "workflow": {
+        "title": "2.1 완전한 기능 개발 워크플로우 (권장)",
+        "description": "사용",
+        "description2": "워크플로우 오케스트레이션으로 사양에서 추정까지 원클릭 완료."
+      },
+      "ui": {
+        "title": "2.2 UI 개발 워크플로우",
+        "description": "사용",
+        "description2": "워크플로우로 디자인 시스템에서 코드까지 한 번에."
+      },
+      "codegen": {
+        "title": "2.3 코드 생성",
+        "description": "필요에 따라 다양한 생성 도구 사용:",
+        "genapi": "API 문서 생성 (OpenAPI/Swagger)",
+        "gensql": "자연어에서 SQL 쿼리 생성",
+        "genmock": "테스트 데이터 생성",
+        "gentest": "단위 테스트 생성"
+      }
+    },
+    "stage3": {
+      "title": "단계 3: 코드 품질 보증",
+      "review": {
+        "title": "3.1 포괄적 코드 리뷰 (권장)",
+        "description": "사용",
+        "description2": "워크플로우로 코드 리뷰, 보안 스캔, 성능 분석을 한 번에 완료."
+      },
+      "single": {
+        "title": "3.2 개별 검사",
+        "description": "특정 문제에 대해 개별 도구 사용:",
+        "codeReview": "코드 리뷰",
+        "securityScan": "보안 스캔",
+        "perf": "성능 분석",
+        "refactor": "리팩토링 제안"
+      }
+    },
+    "stage4": {
+      "title": "단계 4: 버그 수정",
+      "bugfix": {
+        "title": "4.1 체계적인 버그 수정 (권장)",
+        "description": "사용",
+        "description2": "워크플로우로 분석에서 테스트까지 원스톱 솔루션."
+      },
+      "quick": {
+        "title": "4.2 빠른 버그 분석",
+        "description": "사용",
+        "description2": "도구로 문제를 빠르게 분석하고 수정 방안 제공."
+      }
+    },
+    "stage5": {
+      "title": "단계 5: 릴리스 관리",
+      "release": {
+        "title": "5.1 자동화된 릴리스 프로세스 (권장)",
+        "description": "사용",
+        "description2": "워크플로우로 Changelog 및 PR 설명 자동 생성."
+      },
+      "git": {
+        "title": "5.2 Git 워크플로우",
+        "description": "Git 도구로 협업 효율성 향상:",
+        "gencommit": "표준 커밋 메시지 생성",
+        "genchangelog": "CHANGELOG 생성",
+        "genpr": "PR 설명 생성",
+        "resolveConflict": "병합 충돌 해결"
+      }
+    },
+    "stage6": {
+      "title": "단계 6: 프로젝트 유지보수",
+      "onboard": {
+        "title": "6.1 신규 멤버 온보딩",
+        "description": "사용",
+        "description2": "워크플로우로 프로젝트를 빠르게 이해."
+      },
+      "doc": {
+        "title": "6.2 문서 유지보수",
+        "description": "사용",
+        "description2": "워크플로우로 프로젝트 문서를 원클릭으로 완성."
+      }
+    },
+    "ralph": {
+      "title": "고급 실습: Ralph Wiggum Loop",
+      "loop": {
+        "title": "자동화 루프 개발",
+        "description": "사용",
+        "description2": "로 자동화 개발 루프 시작, AI가 목표 달성까지 지속적으로 반복."
+      },
+      "warning": {
+        "title": "⚠️ 안전 알림:",
+        "text": "Ralph Loop는 기본적으로 여러 안전 보호 기능(최대 반복 횟수, 실행 시간, 코드 변경량 제한)을 활성화하여 폭주를 방지합니다."
+      }
+    },
+    "summary": {
+      "title": "모범 사례 요약",
+      "coreTitle": "핵심 원칙:",
+      "principle1": "워크플로우 오케스트레이션 도구(start_*) 우선 사용 - 완전한 프로세스 자동화",
+      "principle2": "요구사항 단계에서 interview 사용 - 오해 방지",
+      "principle3": "개발 전 estimate 사용 - 시간을 합리적으로 계획",
+      "principle4": "커밋 전 start_review 사용 - 코드 품질 보장",
+      "principle5": "릴리스 전 start_release 사용 - 릴리스 프로세스 표준화"
+    },
+    "resources": {
+      "title": "추가 리소스",
+      "allTools": "완전한 도구 참조",
+      "allToolsDesc": "모든 21개 도구의 자세한 설명 보기"
+    }
   }
 }

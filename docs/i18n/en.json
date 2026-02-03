@@ -255,6 +255,179 @@
       "examples": "Best Practices"
     },
     "title": "Best Practices",
-    "subtitle": "MCP Probe Kit integrates complete development process, best practices guide from requirements to deployment"
+    "subtitle": "MCP Probe Kit integrates complete development process, best practices guide from requirements to deployment",
+    "overview": {
+      "title": "Complete Development Process",
+      "description": "MCP Probe Kit's 21 tools cover the complete development process from requirements analysis to code deployment. Here are the recommended best practices.",
+      "coreIdea": "Core Philosophy:",
+      "coreIdeaText": "Chain the entire development process through workflow orchestration tools (start_*), making AI your development assistant."
+    },
+    "stage0": {
+      "title": "Stage 0: Product Design (From Requirements to Prototype)",
+      "workflow": {
+        "title": "0.1 Complete Product Design Workflow (Recommended)",
+        "description": "Use",
+        "description2": "workflow orchestration to complete the entire product design from requirements to HTML prototype with one click.",
+        "example1": "You: I have a product requirements document project.md, help me generate complete product design",
+        "productName": "Online Education Platform",
+        "autoExecute": "→ Auto Execute:",
+        "step1": "✓ Step 1: Check/Generate Project Context",
+        "step2": "✓ Step 2: Generate PRD Document",
+        "step3": "✓ Step 3: Generate Prototype Design Document",
+        "step4": "✓ Step 4: Generate Design System",
+        "step5": "→ Step 5: Generate HTML Interactive Prototype",
+        "step6": "✓ Step 6: Update Project Context Index",
+        "outputs": "→ Output Files:"
+      },
+      "prd": {
+        "title": "0.2 Generate PRD Document Separately",
+        "description": "Use",
+        "description2": "tool to generate product requirements document separately.",
+        "example1": "You: Generate a PRD for an online education platform",
+        "description3": "Online education platform with course management, video playback, and assignment submission",
+        "aiCreate": "→ AI creates docs/prd/product-requirements.md based on guidance",
+        "includes": "PRD includes:",
+        "item1": "- Product Overview (vision, target users, core value)",
+        "item2": "- Functional Requirements (core features, user stories)",
+        "item3": "- Feature Priority (P0/P1/P2)",
+        "item4": "- Non-functional Requirements (performance, security, compatibility)",
+        "item5": "- Page List"
+      },
+      "prototype": {
+        "title": "0.3 Generate HTML Interactive Prototype",
+        "description": "Use",
+        "description2": "tool to generate HTML prototype based on prototype documents.",
+        "desc": "Generate HTML prototypes for all pages based on prototype documents",
+        "step1": "✓ Read all prototype documents under docs/prototype/",
+        "step2": "✓ Read docs/design-system.json to get design specifications",
+        "step3": "✓ Generate HTML files for each page",
+        "step4": "✓ Generate index page index.html",
+        "features": "→ Features:",
+        "feature1": "- Uses design system colors and fonts",
+        "feature2": "- Includes page navigation",
+        "feature3": "- Responsive design"
+      },
+      "summary": {
+        "title": "0.4 Product Design Workflow Summary",
+        "recommended": "Recommended Process:",
+        "step1": "Prepare requirements document (Markdown format)",
+        "step2": "Use",
+        "step2b": "to generate complete product design with one click",
+        "step3": "View HTML prototype in browser",
+        "step4": "Review prototype with team and collect feedback",
+        "step5": "Adjust prototype documents based on feedback",
+        "step6": "Use",
+        "step6b": "to regenerate HTML prototype",
+        "step7": "Proceed to development phase after confirmation"
+      }
+    },
+    "common": {
+      "bestPractice": "Best Practice"
+    },
+    "stage2": {
+      "title": "Stage 2: Feature Development",
+      "workflow": {
+        "title": "2.1 Complete Feature Development Workflow (Recommended)",
+        "description": "Use",
+        "description2": "workflow orchestration to complete from spec to estimation with one click."
+      },
+      "ui": {
+        "title": "2.2 UI Development Workflow",
+        "description": "Use",
+        "description2": "workflow, from design system to code in one go."
+      },
+      "codegen": {
+        "title": "2.3 Code Generation",
+        "description": "Use various generation tools as needed:",
+        "genapi": "Generate API documentation (OpenAPI/Swagger)",
+        "gensql": "Natural language to SQL queries",
+        "genmock": "Generate test data",
+        "gentest": "Generate unit tests"
+      }
+    },
+    "stage3": {
+      "title": "Stage 3: Code Quality Assurance",
+      "review": {
+        "title": "3.1 Comprehensive Code Review (Recommended)",
+        "description": "Use",
+        "description2": "workflow to complete code review, security scan, and performance analysis at once."
+      },
+      "single": {
+        "title": "3.2 Single Item Check",
+        "description": "Use single tools for specific issues:",
+        "codeReview": "Code review",
+        "securityScan": "Security scan",
+        "perf": "Performance analysis",
+        "refactor": "Refactoring suggestions"
+      }
+    },
+    "stage4": {
+      "title": "Stage 4: Bug Fixing",
+      "bugfix": {
+        "title": "4.1 Systematic Bug Fix (Recommended)",
+        "description": "Use",
+        "description2": "workflow for one-stop solution from analysis to testing."
+      },
+      "quick": {
+        "title": "4.2 Quick Bug Analysis",
+        "description": "Use",
+        "description2": "tool to quickly analyze issues and provide fix solutions."
+      }
+    },
+    "stage5": {
+      "title": "Stage 5: Release Management",
+      "release": {
+        "title": "5.1 Automated Release Process (Recommended)",
+        "description": "Use",
+        "description2": "workflow to automatically generate Changelog and PR descriptions."
+      },
+      "git": {
+        "title": "5.2 Git Workflow",
+        "description": "Use Git tools to improve collaboration efficiency:",
+        "gencommit": "Generate standard commit messages",
+        "genchangelog": "Generate CHANGELOG",
+        "genpr": "Generate PR descriptions",
+        "resolveConflict": "Resolve merge conflicts"
+      }
+    },
+    "stage6": {
+      "title": "Stage 6: Project Maintenance",
+      "onboard": {
+        "title": "6.1 New Member Onboarding",
+        "description": "Use",
+        "description2": "workflow to quickly understand the project."
+      },
+      "doc": {
+        "title": "6.2 Documentation Maintenance",
+        "description": "Use",
+        "description2": "workflow to complete project documentation with one click."
+      }
+    },
+    "ralph": {
+      "title": "Advanced Practice: Ralph Wiggum Loop",
+      "loop": {
+        "title": "Automated Loop Development",
+        "description": "Use",
+        "description2": "to start automated development loop, AI continuously iterates until goal is achieved."
+      },
+      "warning": {
+        "title": "⚠️ Safety Notice:",
+        "text": "Ralph Loop enables multiple safety protections by default (max iterations, runtime, code change limits) to prevent runaway."
+      }
+    },
+    "summary": {
+      "title": "Best Practices Summary",
+      "coreTitle": "Core Principles:",
+      "principle1": "Prioritize workflow orchestration tools (start_*) - automate complete processes",
+      "principle2": "Use interview during requirements phase - avoid misunderstandings",
+      "principle3": "Use estimate before development - plan time reasonably",
+      "principle4": "Use start_review before commit - ensure code quality",
+      "principle5": "Use start_release before release - standardize release process"
+    },
+    "resources": {
+      "title": "More Resources",
+      "allTools": "Complete Tools Reference",
+      "allToolsDesc": "View detailed descriptions of all 21 tools"
+    }
   }
 }
