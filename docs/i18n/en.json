@@ -384,7 +384,12 @@
       "review": {
         "title": "3.1 Comprehensive Code Review (Recommended)",
         "description": "Use",
-        "description2": "workflow to complete code review, security scan, and performance analysis at once."
+        "description2": "workflow to complete code review, security scan, and performance analysis at once.",
+        "example1": "You: Review this code",
+        "step1": "✓ Code Review (quality, style, best practices)",
+        "step2": "✓ Security Scan (SQL injection, XSS, CSRF)",
+        "step3": "✓ Performance Analysis (algorithms, memory, database)",
+        "step4": "✓ Output comprehensive report"
       },
       "single": {
         "title": "3.2 Single Item Check",
