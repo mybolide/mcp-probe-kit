@@ -21,13 +21,20 @@
                         bg: { page: '#F8FAFC', card: '#FFFFFF', hover: '#F1F5F9' },
                         border: '#E2E8F0',
                     },
-                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'] },
+                    fontFamily: { 
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"PingFang SC"', '"Microsoft YaHei"', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"Noto Sans CJK SC"', 'sans-serif'],
+                        mono: ['ui-monospace', '"SF Mono"', '"Cascadia Code"', '"Consolas"', 'Menlo', 'Monaco', '"PingFang SC"', '"Microsoft YaHei"', '"Courier New"', 'monospace']
+                    },
                 }
             }
         }
     </script>
     <style>
-        html { scroll-behavior: smooth; }
+        html { 
+            scroll-behavior: smooth;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans CJK SC", sans-serif;
+        }
+        code, kbd, pre, samp { font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", Menlo, Monaco, "PingFang SC", "Microsoft YaHei", "Courier New", monospace; }
         .code-block { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .sidebar-drawer { transition: transform 0.3s ease; }
         @media (max-width: 767px) {
@@ -80,7 +87,7 @@
                         <span>所有工具</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="bg-bg-page text-xs px-2 py-0.5 rounded-full">20</span>
+                        <span class="bg-bg-page text-xs px-2 py-0.5 rounded-full">21</span>
                         <svg class="w-4 h-4 transition-transform" id="tools-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
@@ -143,16 +150,16 @@
             <!-- 页面标题 -->
             <div class="mb-6">
                 <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">所有工具</h1>
-                <p class="text-sm sm:text-base text-text-secondary">MCP Probe Kit 提供 20 个实用工具，核心与编排工具支持结构化输出</p>
+                <p class="text-sm sm:text-base text-text-secondary">MCP Probe Kit 提供 21 个实用工具，核心与编排工具支持结构化输出</p>
                 <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
-                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.1</span>
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.3</span>
                     <span>MCP 2025-11-25</span>
                     <span>SDK 1.25.3</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 mt-2 text-xs text-text-tertiary">
-                    <span>📦 v3.0.1</span>
+                    <span>📦 v3.0.3</span>
                     <span>·</span>
-                    <span>最后更新：2026-02-02</span>
+                    <span>最后更新：2026-02-03</span>
                     <span>·</span>
                     <span>协议：MCP 2025-11-25</span>
                     <span>·</span>
