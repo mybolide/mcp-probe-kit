@@ -1,8 +1,15 @@
 <div align="center">
-  <img src="../docs/assets/logo.png" alt="MCP Probe Kit Logo" width="200"/>
-  <h1>知时MCP (MCP Probe Kit)</h1>
-  <p><em>知其境，馈其时。</em></p>
+<img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
+<h1>知时MCP | mcp-probe-kit</h1>
+<p><strong>맥락을 알고, 시기를 공급하다.</strong></p>
+<p><code>Introspection</code> · <code>Context Hydration</code> · <code>Delegated Orchestration</code></p>
 </div>
+
+---
+
+**Talk is cheap, show me the Context.**
+
+> Zhishi MCP는 기크를 위해 제작된 프로토콜 수준의 탐지 및 컨텍스트 공급 도구 상자입니다. 단순히 21개 도구의 집합이 아니라, AI가 프로젝트 의도를 진정으로 "이해"할 수 있게 하는 인식 시스템입니다.
 
 **언어**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | **한국어** | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
