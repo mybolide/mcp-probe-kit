@@ -17,7 +17,7 @@ const toolsData = {
       ],
       usage: '用于启动完整的功能开发流程，自动生成需求文档、设计方案和工作量估算',
       example: `// 使用示例
-AI: 请使用 start_feature 工具开发用户认证功能
+你: 请使用 start_feature 工具开发用户认证功能
 
 description: "添加用户认证功能，支持邮箱登录"
 feature_name: "user-auth"`
@@ -38,7 +38,7 @@ feature_name: "user-auth"`
       ],
       usage: '用于系统化修复Bug，提供完整的分析、定位、修复和测试方案',
       example: `// 使用示例
-AI: 请使用 start_bugfix 工具修复登录失败的问题
+你: 请使用 start_bugfix 工具修复登录失败的问题
 
 error_message: "TypeError: Cannot read property 'token' of undefined"
 stack_trace: "at login.js:45:12"`
@@ -53,7 +53,7 @@ stack_trace: "at login.js:45:12"`
       ],
       usage: '帮助新成员快速了解项目结构、技术栈和开发规范',
       example: `// 使用示例
-AI: 请使用 start_onboard 工具帮我了解这个项目`
+你: 请使用 start_onboard 工具帮我了解这个项目`
     },
     {
       name: 'start_ralph',
@@ -67,7 +67,7 @@ AI: 请使用 start_onboard 工具帮我了解这个项目`
       ],
       usage: '启动自动化循环开发，AI会持续迭代直到完成目标或达到安全限制',
       example: `// 使用示例
-AI: 请使用 start_ralph 工具实现用户认证功能
+你: 请使用 start_ralph 工具实现用户认证功能
 
 goal: "实现用户认证功能"
 mode: "safe"`
@@ -86,7 +86,7 @@ mode: "safe"`
       ],
       usage: '一键完成从需求到 HTML 原型的全流程，生成可直接演示的产品原型',
       example: `// 使用示例
-AI: 请使用 start_product 工具完成产品设计
+你: 请使用 start_product 工具完成产品设计
 
 description: "在线教育平台，支持直播课程、录播课程"
 product_name: "EduPro"
@@ -109,7 +109,7 @@ product_type: "SaaS"`
       ],
       usage: '一键完成UI开发全流程，从设计系统到最终代码',
       example: `// 使用示例
-AI: 请使用 start_ui 工具创建一个登录页面
+你: 请使用 start_ui 工具创建一个登录页面
 
 description: "登录页面"
 framework: "react"`
@@ -126,7 +126,7 @@ framework: "react"`
       ],
       usage: '全面审查代码质量，输出结构化问题清单（severity/category/suggestion）',
       example: `// 使用示例
-AI: 请使用 code_review 工具审查这段代码
+你: 请使用 code_review 工具审查这段代码
 
 code: "function login(user, pass) { 
   const query = 'SELECT * FROM users WHERE name=' + user;
@@ -145,7 +145,7 @@ focus: "security"`
       ],
       usage: '提供完整的 Bug 修复指导，包含根因分析、修复方案、测试计划和预防措施',
       example: `// 使用示例
-AI: 请使用 fix_bug 工具修复这个问题
+你: 请使用 fix_bug 工具修复这个问题
 
 error_message: "数据库连接超时"
 code_context: "await db.connect({ timeout: 1000 })"`
@@ -160,7 +160,7 @@ code_context: "await db.connect({ timeout: 1000 })"`
       ],
       usage: '分析代码结构，提供重构建议、重构步骤和风险评估',
       example: `// 使用示例
-AI: 请使用 refactor 工具重构这个函数
+你: 请使用 refactor 工具重构这个函数
 
 code: "function process(data) {
   if (data) {
@@ -185,7 +185,7 @@ goal: "reduce_complexity"`
       ],
       usage: '根据代码变更生成符合 Conventional Commits 规范的提交消息',
       example: `// 使用示例
-AI: 请使用 gencommit 工具生成提交消息
+你: 请使用 gencommit 工具生成提交消息
 
 changes: "添加了用户登录功能，包含表单验证和错误处理"`
     },
@@ -201,12 +201,12 @@ changes: "添加了用户登录功能，包含表单验证和错误处理"`
       ],
       usage: '自动读取指定日期的 Git 提交，分析 diff 内容，生成简洁专业的中文工作报告。如果直接命令失败，会提供创建临时脚本的方案（执行后自动删除）',
       example: `// 使用示例 - 生成日报
-AI: 请使用 git_work_report 工具生成 2026-02-03 的日报
+你: 请使用 git_work_report 工具生成 2026-02-03 的日报
 
 date: "2026-02-03"
 
 // 或生成周期报告
-AI: 请使用 git_work_report 工具生成 2026-02-01 至 2026-02-07 的周报
+你: 请使用 git_work_report 工具生成 2026-02-01 至 2026-02-07 的周报
 
 start_date: "2026-02-01"
 end_date: "2026-02-07"`
@@ -223,7 +223,7 @@ end_date: "2026-02-07"`
       ],
       usage: '生成单元测试代码，包含边界用例和 mock',
       example: `// 使用示例
-AI: 请使用 gentest 工具生成测试
+你: 请使用 gentest 工具生成测试
 
 code: "function add(a, b) { return a + b; }"
 framework: "jest"`
@@ -240,7 +240,7 @@ framework: "jest"`
       ],
       usage: '按 Spec-Driven Development 方式生成需求/设计/任务文档',
       example: `// 使用示例
-AI: 请使用 init_project 工具初始化项目
+你: 请使用 init_project 工具初始化项目
 
 input: "创建一个任务管理系统，支持任务创建、分配、跟踪"
 project_name: "TaskManager"`
@@ -254,7 +254,7 @@ project_name: "TaskManager"`
       ],
       usage: '生成项目上下文文档，帮助团队快速上手',
       example: `// 使用示例
-AI: 请使用 init_project_context 工具生成项目上下文`
+你: 请使用 init_project_context 工具生成项目上下文`
     },
     {
       name: 'add_feature',
@@ -268,7 +268,7 @@ AI: 请使用 init_project_context 工具生成项目上下文`
       ],
       usage: '生成新功能规格文档（需求/设计/任务清单），基于项目上下文',
       example: `// 使用示例
-AI: 请使用 add_feature 工具添加新功能
+你: 请使用 add_feature 工具添加新功能
 
 description: "添加用户认证功能，支持邮箱登录和第三方登录"
 feature_name: "user-auth"`
@@ -285,7 +285,7 @@ feature_name: "user-auth"`
       ],
       usage: '估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点',
       example: `// 使用示例
-AI: 请使用 estimate 工具估算工作量
+你: 请使用 estimate 工具估算工作量
 
 task_description: "实现用户认证功能"
 experience_level: "mid"
@@ -302,7 +302,7 @@ team_size: 2`
       ],
       usage: '需求访谈工具，在开发前通过结构化提问澄清需求',
       example: `// 使用示例
-AI: 请使用 interview 工具进行需求访谈
+你: 请使用 interview 工具进行需求访谈
 
 description: "实现用户登录功能"`
     },
@@ -338,7 +338,7 @@ context: "正在设计支付模块"`
       ],
       usage: '基于产品类型和需求，使用 AI 推理引擎生成完整的设计系统推荐',
       example: `// 使用示例
-AI: 请使用 ui_design_system 工具生成设计系统
+你: 请使用 ui_design_system 工具生成设计系统
 
 product_type: "Government"
 description: "政府类网站，需要权威、可信、易用的设计风格"`
@@ -357,7 +357,7 @@ description: "政府类网站，需要权威、可信、易用的设计风格"`
       ],
       usage: '搜索 UI/UX 数据库，使用 BM25 算法进行智能搜索',
       example: `// 使用示例
-AI: 请使用 ui_search 工具搜索按钮组件
+你: 请使用 ui_search 工具搜索按钮组件
 
 query: "primary button"
 mode: "search"
@@ -373,7 +373,7 @@ stack: "react"`
       ],
       usage: '同步 UI/UX 数据到本地缓存，从 npm 包 uipro-cli 下载最新数据',
       example: `// 使用示例
-AI: 请使用 sync_ui_data 工具同步数据
+你: 请使用 sync_ui_data 工具同步数据
 
 force: false
 verbose: true`
