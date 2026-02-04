@@ -500,7 +500,13 @@
     "resources": {
       "title": "More Resources",
       "allTools": "Complete Tools Reference",
-      "allToolsDesc": "View detailed descriptions of all 21 tools"
+      "allToolsDesc": "View detailed descriptions of all 21 tools",
+      "gettingStarted": "Installation & Configuration",
+      "gettingStartedDesc": "Quick start guide",
+      "migration": "Migration Guide",
+      "migrationDesc": "Migrate from v2.x to v3.0",
+      "github": "GitHub Repository",
+      "githubDesc": "Source code and issue feedback"
     },
     "practice": {
       "title": "🚀 Start Practicing",
