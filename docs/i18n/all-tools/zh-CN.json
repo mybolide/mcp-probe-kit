@@ -1,1 +1,157 @@
-{"meta": {"title": "所有工具 - 21个AI研发工具完整列表 | MCP Probe Kit", "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、3个代码分析工具、2个Git工具、1个生成工具、6个项目管理工具、3个UI/UX工具。", "keywords": "AI开发工具, 代码生成工具, 代码审查工具, Git自动化, UI生成, 代码重构, 性能优化, 安全扫描"}, "page": {"title": "所有工具", "subtitle": "MCP Probe Kit 提供 21 个实用工具，核心与编排工具支持结构化输出", "versionBadge": "v3.0.3", "updateDate": "2026-02-03", "protocol": "MCP 2025-11-25", "sdk": "@modelcontextprotocol/sdk 1.25.3"}, "breadcrumb": {"home": "文档首页", "toolsDocs": "工具文档", "allTools": "所有工具"}, "search": {"placeholder": "🔍 搜索工具名称或描述...", "noResults": "未找到匹配的工具", "found": "找到 {count} 个匹配的工具"}, "sidebar": {"quickStart": "快速开始", "home": "文档首页", "installation": "安装配置", "toolsDocs": "工具文档", "allTools": "所有工具", "allToolsBadge": "21", "guides": "指南", "migration": "迁移指南", "examples": "最佳实践", "followUs": "关注我们", "getTechSharing": "获取更多技术分享", "wechatAccount": "微信公众号", "github": "GitHub", "npm": "npm"}, "footer": {"madeWith": "Made with ❤️ by", "copyright": "© 2024-2026 MCP Probe Kit", "github": "GitHub ↗", "editPage": "编辑此页 ↗", "reportIssue": "反馈问题 ↗"}, "tools": {"structured": "✓ 结构化", "usage": "📖 使用说明", "params": "⚙️ 参数说明", "example": "💡 使用示例"}, "categories": {"workflow": {"icon": "🔄", "title": "工作流编排", "description": "完整的开发工作流自动化，从需求到发布的全流程支持", "count": "6 个"}, "analysis": {"icon": "🔍", "title": "代码分析", "description": "智能代码审查、性能分析和安全扫描", "count": "3 个"}, "git": {"icon": "📝", "title": "Git 工具", "description": "Git 提交消息、变更日志、PR 描述和冲突解决", "count": "2 个"}, "generation": {"icon": "⚡", "title": "代码生成", "description": "自动生成文档、测试、Mock 数据和开发辅助代码", "count": "1 个"}, "project": {"icon": "📦", "title": "项目管理", "description": "项目初始化、功能规划、工作量估算和需求访谈", "count": "6 个"}, "uiux": {"icon": "🎨", "title": "UI/UX 设计", "description": "设计系统、组件目录、模板搜索与渲染", "count": "3 个"}}}
+{
+  "meta": {
+    "title": "所有工具 - 21个AI研发工具完整列表 | MCP Probe Kit",
+    "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、3个代码分析工具、1个Git工具、1个生成工具、7个项目管理工具、3个UI/UX工具。",
+    "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
+  },
+  "page": {
+    "subtitle": "MCP Probe Kit 提供 21 个实用工具，核心与编排工具支持结构化输出"
+  },
+  "search": {
+    "placeholder": "🔍 搜索工具名称或描述...",
+    "found": "找到 {count} 个匹配的工具",
+    "noResults": "未找到匹配的工具"
+  },
+  "footer": {
+    "lastUpdate": "最后更新",
+    "protocol": "协议",
+    "sdk": "SDK",
+    "editPage": "编辑此页",
+    "reportIssue": "反馈问题"
+  },
+  "toolShortDesc": {
+    "start_feature": "新功能",
+    "start_bugfix": "修Bug",
+    "start_onboard": "快速上手",
+    "start_ralph": "循环开发",
+    "start_product": "产品设计",
+    "start_ui": "UI开发",
+    "code_review": "审查代码",
+    "fix_bug": "修复Bug",
+    "refactor": "重构建议",
+    "gencommit": "生成提交",
+    "gentest": "生成测试",
+    "git_work_report": "工作报告",
+    "init_project": "初始化",
+    "init_project_context": "项目上下文",
+    "add_feature": "添加功能",
+    "estimate": "工作量",
+    "interview": "需求访谈",
+    "ask_user": "提问用户",
+    "ui_design_system": "设计系统",
+    "ui_search": "搜索UI",
+    "sync_ui_data": "同步数据"
+  },
+  "categories": {
+    "workflow": {
+      "title": "工作流编排",
+      "count": "6 个"
+    },
+    "analysis": {
+      "title": "代码分析",
+      "count": "3 个"
+    },
+    "git": {
+      "title": "Git 工具",
+      "count": "2 个"
+    },
+    "generation": {
+      "title": "代码生成",
+      "count": "1 个"
+    },
+    "project": {
+      "title": "项目管理",
+      "count": "6 个"
+    },
+    "uiux": {
+      "title": "UI/UX 设计",
+      "count": "3 个"
+    }
+  },
+  "toolsData": {
+    "start_feature": {
+      "description": "完整的功能开发工作流编排：检查上下文 → 生成规格 → 估算工作量",
+      "usage": "用于启动完整的功能开发流程，自动生成需求文档、设计方案和工作量估算"
+    },
+    "start_bugfix": {
+      "description": "Bug 修复工作流编排：检查上下文 → 分析定位 → 修复方案 → 生成测试",
+      "usage": "用于系统化修复Bug，提供完整的分析、定位、修复和测试方案"
+    },
+    "start_onboard": {
+      "description": "项目上手工作流：生成上下文文档，帮助新成员快速了解项目",
+      "usage": "帮助新成员快速了解项目结构、技术栈和开发规范"
+    },
+    "start_ralph": {
+      "description": "Ralph Wiggum Loop 自动化开发，启动循环开发流程，默认启用多重安全保护",
+      "usage": "启动自动化循环开发，AI会持续迭代直到完成目标或达到安全限制"
+    },
+    "start_product": {
+      "description": "产品设计完整工作流编排：PRD → 原型文档 → 设计系统 → HTML 原型 → 项目上下文更新",
+      "usage": "一键完成从需求到 HTML 原型的全流程，生成可直接演示的产品原型"
+    },
+    "start_ui": {
+      "description": "UI 开发统一入口：检查设计系统 → 生成组件目录 → 搜索/生成模板 → 渲染代码",
+      "usage": "一键完成UI开发全流程，从设计系统到最终代码"
+    },
+    "code_review": {
+      "description": "智能代码审查，从安全、性能、质量、风格和最佳实践等多维度分析代码",
+      "usage": "全面审查代码质量，输出结构化问题清单（severity/category/suggestion）"
+    },
+    "fix_bug": {
+      "description": "Bug 修复指导，提供根因分析、修复计划、测试计划和预防措施",
+      "usage": "提供完整的 Bug 修复指导，包含根因分析、修复方案、测试计划和预防措施"
+    },
+    "refactor": {
+      "description": "重构建议工具，分析代码结构，提供重构步骤、风险评估和回滚计划",
+      "usage": "分析代码结构，提供重构建议、重构步骤和风险评估"
+    },
+    "gencommit": {
+      "description": "根据代码变更自动生成符合 Conventional Commits 规范的 Git commit 消息",
+      "usage": "根据代码变更生成符合 Conventional Commits 规范的提交消息"
+    },
+    "git_work_report": {
+      "description": "基于 Git diff 分析生成工作报告（日报/周期报），智能提取实际工作内容",
+      "usage": "自动读取指定日期的 Git 提交，分析 diff 内容，生成简洁专业的中文工作报告。如果直接命令失败，会提供创建临时脚本的方案（执行后自动删除）"
+    },
+    "gentest": {
+      "description": "生成单元测试，支持 Jest/Vitest/Mocha 等框架，包含边界用例和 mock 数据",
+      "usage": "生成单元测试代码，包含边界用例和 mock"
+    },
+    "init_project": {
+      "description": "按 Spec-Driven Development 方式生成需求/设计/任务文档",
+      "usage": "按 Spec-Driven Development 方式生成需求/设计/任务文档"
+    },
+    "init_project_context": {
+      "description": "生成项目上下文文档（技术栈/架构/编码规范）",
+      "usage": "生成项目上下文文档，帮助团队快速上手"
+    },
+    "add_feature": {
+      "description": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文",
+      "usage": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文"
+    },
+    "estimate": {
+      "description": "估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点",
+      "usage": "估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点"
+    },
+    "interview": {
+      "description": "需求访谈工具，通过结构化提问澄清需求，避免理解偏差和返工",
+      "usage": "需求访谈工具，在开发前通过结构化提问澄清需求"
+    },
+    "ask_user": {
+      "description": "AI 主动提问工具，支持单个或多个问题、提供选项、标注重要性",
+      "usage": "AI 主动向用户提问，支持单个或多个问题、提供选项、标注重要性"
+    },
+    "ui_design_system": {
+      "description": "智能设计系统生成器，基于产品类型推理生成完整设计规范",
+      "usage": "基于产品类型和需求，使用 AI 推理引擎生成完整的设计系统推荐"
+    },
+    "ui_search": {
+      "description": "搜索 UI/UX 数据库，包括颜色、图标、图表、组件、设计模式等",
+      "usage": "搜索 UI/UX 数据库，使用 BM25 算法进行智能搜索"
+    },
+    "sync_ui_data": {
+      "description": "同步 UI/UX 数据到本地缓存，支持自动检查更新和强制同步",
+      "usage": "同步 UI/UX 数据到本地缓存，从 npm 包 uipro-cli 下载最新数据"
+    }
+  }
+}

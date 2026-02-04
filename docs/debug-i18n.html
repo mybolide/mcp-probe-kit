@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>i18n 调试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .section h2 { margin-top: 0; color: #333; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔍 all-tools.html i18n 调试工具</h1>
+    
+    <div class="section">
+        <h2>1. 语言切换测试</h2>
+        <button onclick="testLanguage('zh-CN')">测试中文</button>
+        <button onclick="testLanguage('en')">测试英文</button>
+        <button onclick="testLanguage('ja')">测试日文</button>
+        <button onclick="testLanguage('ko')">测试韩文</button>
+        <div id="lang-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>2. 翻译文件检查</h2>
+        <button onclick="checkTranslationFiles()">检查所有翻译文件</button>
+        <div id="file-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>3. 当前状态</h2>
+        <button onclick="showCurrentState()">显示当前状态</button>
+        <button onclick="clearStorage()">清除 localStorage</button>
+        <div id="state-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>4. 打开测试页面</h2>
+        <a href="./pages/all-tools.html" target="_blank">
+            <button>在新标签页打开 all-tools.html</button>
+        </a>
+    </div>
+
+    <script src="./data/tools.js"></script>
+    <script src="./assets/js/i18n.js"></script>
+    <script>
+        async function testLanguage(lang) {
+            const result = document.getElementById('lang-result');
+            result.innerHTML = `<p>正在测试 ${lang}...</p>`;
+            
+            try {
+                // 加载翻译文件
+                const response = await fetch(`./i18n/all-tools/${lang}.json`);
+                if (!response.ok) {
+                    result.innerHTML = `<p class="error">❌ 翻译文件不存在: ./i18n/all-tools/${lang}.json</p>`;
+                    return;
+                }
+                
+                const translations = await response.json();
+                
+                // 显示翻译内容
+                let html = `<p class="success">✅ 翻译文件加载成功</p>`;
+                html += `<h3>翻译内容预览：</h3>`;
+                html += `<pre>${JSON.stringify(translations, null, 2).substring(0, 1000)}...</pre>`;
+                
+                // 检查关键字段
+                html += `<h3>关键字段检查：</h3>`;
+                html += `<ul>`;
+                html += `<li>meta.title: ${translations.meta?.title ? '✅' : '❌'}</li>`;
+                html += `<li>page.subtitle: ${translations.page?.subtitle ? '✅' : '❌'}</li>`;
+                html += `<li>search.placeholder: ${translations.search?.placeholder ? '✅' : '❌'}</li>`;
+                html += `<li>categories: ${translations.categories ? '✅' : '❌'}</li>`;
+                html += `<li>toolsData: ${translations.toolsData ? '✅' : '❌'}</li>`;
+                html += `</ul>`;
+                
+                result.innerHTML = html;
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ 错误: ${error.message}</p>`;
+            }
+        }
+        
+        async function checkTranslationFiles() {
+            const result = document.getElementById('file-result');
+            result.innerHTML = `<p>正在检查翻译文件...</p>`;
+            
+            const languages = ['zh-CN', 'en', 'ja', 'ko'];
+            let html = '<ul>';
+            
+            for (const lang of languages) {
+                try {
+                    const response = await fetch(`./i18n/all-tools/${lang}.json`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const toolCount = Object.keys(data.toolsData || {}).length;
+                        html += `<li class="success">✅ ${lang}.json - ${toolCount} 个工具翻译</li>`;
+                    } else {
+                        html += `<li class="error">❌ ${lang}.json - 文件不存在</li>`;
+                    }
+                } catch (error) {
+                    html += `<li class="error">❌ ${lang}.json - 加载失败: ${error.message}</li>`;
+                }
+            }
+            
+            html += '</ul>';
+            result.innerHTML = html;
+        }
+        
+        function showCurrentState() {
+            const result = document.getElementById('state-result');
+            
+            let html = '<h3>全局变量状态：</h3>';
+            html += `<ul>`;
+            html += `<li>window.currentLang: ${window.currentLang || '未定义'}</li>`;
+            html += `<li>window.translations: ${window.translations ? '已定义' : '未定义'}</li>`;
+            html += `<li>window.LANGUAGES: ${window.LANGUAGES ? '已定义' : '未定义'}</li>`;
+            html += `<li>localStorage.lang: <strong>${localStorage.getItem('lang') || '未设置'}</strong></li>`;
+            html += `</ul>`;
+            
+            html += '<h3>toolsData 状态：</h3>';
+            html += `<ul>`;
+            html += `<li>toolsData: ${typeof toolsData !== 'undefined' ? '已定义' : '未定义'}</li>`;
+            if (typeof toolsData !== 'undefined') {
+                html += `<li>categories: ${toolsData.categories ? '已定义' : '未定义'}</li>`;
+                if (toolsData.categories) {
+                    html += `<li>分类数量: ${Object.keys(toolsData.categories).length}</li>`;
+                    html += `<li>分类列表: ${Object.keys(toolsData.categories).join(', ')}</li>`;
+                }
+            }
+            html += `</ul>`;
+            
+            html += '<h3>已加载的翻译：</h3>';
+            if (window.translations) {
+                html += `<ul>`;
+                for (const lang in window.translations) {
+                    html += `<li>${lang}: ${Object.keys(window.translations[lang]).join(', ')}</li>`;
+                }
+                html += `</ul>`;
+            } else {
+                html += `<p class="warning">⚠️ 没有已加载的翻译</p>`;
+            }
+            
+            result.innerHTML = html;
+        }
+        
+        function clearStorage() {
+            localStorage.removeItem('lang');
+            alert('✅ localStorage 已清除！\n\n请刷新页面测试默认语言检测。');
+            showCurrentState();
+        }
+        
+        // 页面加载时显示当前状态
+        window.addEventListener('load', () => {
+            setTimeout(showCurrentState, 1000);
+        });
+    </script>
+</body>
+</html>
