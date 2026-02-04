@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../docs/assets/logo.png" alt="MCP Probe Kit Logo" width="200"/>
+</div>
+
 # MCP Probe Kit
 
 **Sprachen**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | **Deutsch** | [Português (BR)](README.pt-BR.md)
