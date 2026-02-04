@@ -269,14 +269,18 @@ async function initI18n() {
   applyTranslations();
 }
 
-// 页面加载完成后初始化
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initI18n);
-} else {
-  initI18n();
-}
+  // 页面加载完成后初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initI18n);
+  } else {
+    initI18n();
+  }
 
-// 导出到全局
-window.switchLanguage = switchLanguage;
-window.toggleLangMenu = toggleLangMenu;
-window.t = t;
+  // 导出到全局
+  window.switchLanguage = switchLanguage;
+  window.toggleLangMenu = toggleLangMenu;
+  window.t = t;
+  
+  // 导出 currentLang 以便 all-tools.html 使用
+  window.currentLang = currentLang;
+
