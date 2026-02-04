@@ -1,1 +1,157 @@
-{"meta": {"title": "All Tools - Complete List of 21 AI Development Tools | MCP Probe Kit", "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 3 code analysis tools, 2 Git tools, 1 generation tool, 6 project management tools, 3 UI/UX tools.", "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"}, "page": {"title": "All Tools", "subtitle": "MCP Probe Kit provides 21 practical tools, with core and orchestration tools supporting structured output", "versionBadge": "v3.0.3", "updateDate": "2026-02-03", "protocol": "MCP 2025-11-25", "sdk": "@modelcontextprotocol/sdk 1.25.3"}, "breadcrumb": {"home": "Documentation Home", "toolsDocs": "Tools Documentation", "allTools": "All Tools"}, "search": {"placeholder": "🔍 Search tool names or descriptions...", "noResults": "No matching tools found", "found": "Found {count} matching tools"}, "sidebar": {"quickStart": "Quick Start", "home": "Documentation Home", "installation": "Installation & Configuration", "toolsDocs": "Tools Documentation", "allTools": "All Tools", "allToolsBadge": "21", "guides": "Guides", "migration": "Migration Guide", "examples": "Best Practices", "followUs": "Follow Us", "getTechSharing": "Get More Tech Insights", "wechatAccount": "WeChat Official Account", "github": "GitHub", "npm": "npm"}, "footer": {"madeWith": "Made with ❤️ by", "copyright": "© 2024-2026 MCP Probe Kit", "github": "GitHub ↗", "editPage": "Edit this page ↗", "reportIssue": "Report issue ↗"}, "tools": {"structured": "✓ Structured", "usage": "📖 Usage", "params": "⚙️ Parameters", "example": "💡 Example"}, "categories": {"workflow": {"icon": "🔄", "title": "Workflow Orchestration", "description": "Complete development workflow automation, full process support from requirements to release", "count": "6"}, "analysis": {"icon": "🔍", "title": "Code Analysis", "description": "Intelligent code review, performance analysis, and security scanning", "count": "3"}, "git": {"icon": "📝", "title": "Git Tools", "description": "Git commit messages, changelogs, PR descriptions, and conflict resolution", "count": "2"}, "generation": {"icon": "⚡", "title": "Code Generation", "description": "Automatically generate documentation, tests, mock data, and development assistance code", "count": "1"}, "project": {"icon": "📦", "title": "Project Management", "description": "Project initialization, feature planning, effort estimation, and requirement interviews", "count": "6"}, "uiux": {"icon": "🎨", "title": "UI/UX Design", "description": "Design systems, component catalogs, template search, and rendering", "count": "3"}}, "toolsData": {"start_feature": {"description": "Complete feature development workflow orchestration: check context → generate specs → estimate effort", "usage": "Used to launch complete feature development process, automatically generate requirement documents, design plans, and effort estimates", "params": [{"name": "description", "type": "string", "required": false, "desc": "Detailed feature description"}, {"name": "feature_name", "type": "string", "required": false, "desc": "Feature name (kebab-case format)"}, {"name": "docs_dir", "type": "string", "required": false, "desc": "Documentation output directory, default docs"}, {"name": "template_profile", "type": "string", "required": false, "desc": "Template profile: auto, guided, or strict"}, {"name": "requirements_mode", "type": "string", "required": false, "desc": "Requirements mode: steady or loop"}, {"name": "loop_max_rounds", "type": "number", "required": false, "desc": "Max loop rounds (default 2)"}, {"name": "loop_question_budget", "type": "number", "required": false, "desc": "Max questions per round (default 5)"}, {"name": "loop_assumption_cap", "type": "number", "required": false, "desc": "Max assumptions per round (default 3)"}], "example": "// Example\nYou: Please use start_feature tool to develop user authentication feature\n\ndescription: \"Add user authentication feature, support email login\"\nfeature_name: \"user-auth\""}, "start_bugfix": {"description": "Bug fix workflow orchestration: check context → analyze location → fix plan → generate tests", "usage": "Used to systematically fix bugs, providing complete analysis, location, fix, and test plans", "params": [{"name": "error_message", "type": "string", "required": true, "desc": "Error message"}, {"name": "stack_trace", "type": "string", "required": false, "desc": "Stack trace information"}, {"name": "code_context", "type": "string", "required": false, "desc": "Related code context"}, {"name": "template_profile", "type": "string", "required": false, "desc": "Template profile: auto, guided, or strict"}, {"name": "requirements_mode", "type": "string", "required": false, "desc": "Requirements mode: steady or loop"}, {"name": "loop_max_rounds", "type": "number", "required": false, "desc": "Max loop rounds (default 2)"}, {"name": "loop_question_budget", "type": "number", "required": false, "desc": "Max questions per round (default 5)"}, {"name": "loop_assumption_cap", "type": "number", "required": false, "desc": "Max assumptions per round (default 3)"}], "example": "// Example\nYou: Please use start_bugfix tool to fix login failure issue\n\nerror_message: \"TypeError: Cannot read property 'token' of undefined\"\nstack_trace: \"at login.js:45:12\""}, "start_onboard": {"description": "Project onboarding workflow: generate context documentation, help new members quickly understand the project", "usage": "Help new members quickly understand project structure, tech stack, and development standards", "params": [{"name": "project_path", "type": "string", "required": false, "desc": "Project path, default current directory"}, {"name": "docs_dir", "type": "string", "required": false, "desc": "Documentation directory, default docs"}], "example": "// Example\nYou: Please use start_onboard tool to help me understand this project"}, "start_ralph": {"description": "Ralph Wiggum Loop automated development, start iterative development process with multiple safety protections enabled by default", "usage": "Start automated iterative development, AI will continuously iterate until goal is achieved or safety limits are reached", "params": [{"name": "goal", "type": "string", "required": false, "desc": "Goal/requirement description to complete"}, {"name": "mode", "type": "string", "required": false, "desc": "Run mode: safe (safe mode, default), normal (normal mode)"}, {"name": "max_iterations", "type": "number", "required": false, "desc": "Max iterations, safe mode default 8"}, {"name": "max_minutes", "type": "number", "required": false, "desc": "Max runtime minutes, safe mode default 25"}], "example": "// Example\nYou: Please use start_ralph tool to implement user authentication feature\n\ngoal: \"Implement user authentication feature\"\nmode: \"safe\""}, "start_product": {"description": "Complete product design workflow orchestration: PRD → prototype doc → design system → HTML prototype → project context update", "usage": "One-click complete full process from requirements to HTML prototype, generate product prototype ready for demonstration", "params": [{"name": "description", "type": "string", "required": false, "desc": "Product description, detailed description of product goals, features, and user needs"}, {"name": "requirements_file", "type": "string", "required": false, "desc": "Requirements document file path, like \"docs/requirements.md\""}, {"name": "product_name", "type": "string", "required": false, "desc": "Product name"}, {"name": "product_type", "type": "string", "required": false, "desc": "Product type, like SaaS, E-commerce, etc."}, {"name": "skip_design_system", "type": "boolean", "required": false, "desc": "Skip design system generation, default false"}, {"name": "docs_dir", "type": "string", "required": false, "desc": "Documentation output directory, default docs"}], "example": "// Example\nYou: Please use start_product tool to complete product design\n\ndescription: \"Online education platform, support live courses, recorded courses\"\nproduct_name: \"EduPro\"\nproduct_type: \"SaaS\""}, "start_ui": {"description": "UI development unified entry: check design system → generate component catalog → search/generate template → render code", "usage": "One-click complete UI development full process, from design system to final code", "params": [{"name": "description", "type": "string", "required": true, "desc": "UI requirement description (like \"login page\", \"user list\")"}, {"name": "framework", "type": "string", "required": false, "desc": "Target framework: react, vue, html, default react"}, {"name": "template", "type": "string", "required": false, "desc": "Template name, auto-generate if not provided"}, {"name": "template_profile", "type": "string", "required": false, "desc": "Template profile: auto, guided, or strict"}, {"name": "mode", "type": "string", "required": false, "desc": "Execution mode: auto or manual (default)"}, {"name": "requirements_mode", "type": "string", "required": false, "desc": "Requirements mode: steady or loop"}, {"name": "loop_max_rounds", "type": "number", "required": false, "desc": "Max loop rounds (default 2)"}, {"name": "loop_question_budget", "type": "number", "required": false, "desc": "Max questions per round (default 5)"}, {"name": "loop_assumption_cap", "type": "number", "required": false, "desc": "Max assumptions per round (default 3)"}], "example": "// Example\nYou: Please use start_ui tool to create a login page\n\ndescription: \"Login page\"\nframework: \"react\""}, "code_review": {"description": "Intelligent code review, analyze code from multiple dimensions: security, performance, quality, style, and best practices", "usage": "Comprehensively review code quality, output structured issue list (severity/category/suggestion)", "params": [{"name": "code", "type": "string", "required": true, "desc": "Code to review, can be code snippet, complete file, or git diff output"}, {"name": "focus", "type": "string", "required": false, "desc": "Review focus: security, performance, quality, all, default all"}], "example": "// Example\nYou: Please use code_review tool to review this code\n\ncode: \"function login(user, pass) { \n  const query = 'SELECT * FROM users WHERE name=' + user;\n  db.query(query);\n}\"\nfocus: \"security\""}, "fix_bug": {"description": "Bug fix guidance, provide root cause analysis, fix plan, test plan, and preventive measures", "usage": "Provide complete bug fix guidance, including root cause analysis, fix plan, test plan, and preventive measures", "params": [{"name": "error_message", "type": "string", "required": true, "desc": "Error message"}, {"name": "stack_trace", "type": "string", "required": false, "desc": "Stack trace"}, {"name": "code_context", "type": "string", "required": false, "desc": "Related code"}], "example": "// Example\nYou: Please use fix_bug tool to fix this issue\n\nerror_message: \"Database connection timeout\"\ncode_context: \"await db.connect({ timeout: 1000 })\""}, "refactor": {"description": "Refactoring suggestion tool, analyze code structure, provide refactoring steps, risk assessment, and rollback plan", "usage": "Analyze code structure, provide refactoring suggestions, refactoring steps, and risk assessment", "params": [{"name": "code", "type": "string", "required": true, "desc": "Code to refactor"}, {"name": "goal", "type": "string", "required": false, "desc": "Refactoring goal: improve_readability, reduce_complexity, performance"}], "example": "// Example\nYou: Please use refactor tool to refactor this function\n\ncode: \"function process(data) {\n  if (data) {\n    if (data.length > 0) {\n      for (let i = 0; i < data.length; i++) {\n        // complex logic...\n      }\n    }\n  }\n}\"\ngoal: \"reduce_complexity\""}, "gencommit": {"description": "Automatically generate Git commit messages following Conventional Commits specification based on code changes", "usage": "Generate commit messages following Conventional Commits specification based on code changes", "params": [{"name": "changes", "type": "string", "required": false, "desc": "Code changes content, can be git diff output, change description, or natural language"}, {"name": "type", "type": "string", "required": false, "desc": "Commit type: feat, fix, docs, style, chore, refactor, test, auto-detected"}], "example": "// Example\nYou: Please use gencommit tool to generate commit message\n\nchanges: \"Added user login feature, including form validation and error handling\""}, "git_work_report": {"description": "Generate work report (daily/periodic) based on Git diff analysis, intelligently extract actual work content", "usage": "Automatically read Git commits for specified date, analyze diff content, generate concise professional Chinese work report. If direct command fails, will provide temporary script solution (auto-delete after execution)", "params": [{"name": "date", "type": "string", "required": false, "desc": "Single date, format YYYY-MM-DD (daily report mode)"}, {"name": "start_date", "type": "string", "required": false, "desc": "Start date, format YYYY-MM-DD (periodic report mode)"}, {"name": "end_date", "type": "string", "required": false, "desc": "End date, format YYYY-MM-DD (periodic report mode)"}, {"name": "output_file", "type": "string", "required": false, "desc": "Optional, output file path"}], "example": "// Example - Generate daily report\nYou: Please use git_work_report tool to generate daily report for 2026-02-03\n\ndate: \"2026-02-03\"\n\n// Or generate periodic report\nYou: Please use git_work_report tool to generate weekly report from 2026-02-01 to 2026-02-07\n\nstart_date: \"2026-02-01\"\nend_date: \"2026-02-07\""}, "gentest": {"description": "Generate unit tests, support Jest/Vitest/Mocha frameworks, include edge cases and mock data", "usage": "Generate unit test code, including edge cases and mocks", "params": [{"name": "code", "type": "string", "required": true, "desc": "Code to generate tests for, can be function, class, or module"}, {"name": "framework", "type": "string", "required": false, "desc": "Test framework: jest, vitest, mocha, auto-detect project framework"}], "example": "// Example\nYou: Please use gentest tool to generate tests\n\ncode: \"function add(a, b) { return a + b; }\"\nframework: \"jest\""}, "init_project": {"description": "Generate requirement/design/task documents following Spec-Driven Development approach", "usage": "Generate requirement/design/task documents following Spec-Driven Development approach", "params": [{"name": "input", "type": "string", "required": false, "desc": "Project requirement description, can be brief description or detailed functional requirement document"}, {"name": "project_name", "type": "string", "required": false, "desc": "Project name, default \"New Project\""}], "example": "// Example\nYou: Please use init_project tool to initialize project\n\ninput: \"Create a task management system, support task creation, assignment, tracking\"\nproject_name: \"TaskManager\""}, "init_project_context": {"description": "Generate project context documentation (tech stack/architecture/coding standards)", "usage": "Generate project context documentation, help team quickly get started", "params": [{"name": "docs_dir", "type": "string", "required": false, "desc": "Documentation directory, default docs"}], "example": "// Example\nYou: Please use init_project_context tool to generate project context"}, "add_feature": {"description": "Generate new feature specification document (requirements/design/task list), based on project context", "usage": "Generate new feature specification document (requirements/design/task list), based on project context", "params": [{"name": "description", "type": "string", "required": true, "desc": "Detailed feature description"}, {"name": "feature_name", "type": "string", "required": false, "desc": "Feature name (kebab-case format)"}, {"name": "docs_dir", "type": "string", "required": false, "desc": "Documentation output directory, default docs"}, {"name": "template_profile", "type": "string", "required": false, "desc": "Template profile: auto, guided, or strict"}], "example": "// Example\nYou: Please use add_feature tool to add new feature\n\ndescription: \"Add user authentication feature, support email login and third-party login\"\nfeature_name: \"user-auth\""}, "estimate": {"description": "Estimate development effort, output story points, time range (optimistic/normal/pessimistic), risk points", "usage": "Estimate development effort, output story points, time range (optimistic/normal/pessimistic), risk points", "params": [{"name": "task_description", "type": "string", "required": true, "desc": "Task description"}, {"name": "code_context", "type": "string", "required": false, "desc": "Related code or file context"}, {"name": "experience_level", "type": "string", "required": false, "desc": "Experience level: junior, mid, senior, default mid"}, {"name": "team_size", "type": "number", "required": false, "desc": "Team size (number of people), default 1"}], "example": "// Example\nYou: Please use estimate tool to estimate effort\n\ntask_description: \"Implement user authentication feature\"\nexperience_level: \"mid\"\nteam_size: 2"}, "interview": {"description": "Requirement interview tool, clarify requirements through structured questions to avoid misunderstandings and rework", "usage": "Requirement interview tool, clarify requirements through structured questions before development", "params": [{"name": "description", "type": "string", "required": true, "desc": "Feature description"}, {"name": "feature_name", "type": "string", "required": false, "desc": "Feature name (kebab-case format)"}, {"name": "answers", "type": "object", "required": false, "desc": "Interview question answers"}], "example": "// Example\nYou: Please use interview tool to conduct requirement interview\n\ndescription: \"Implement user login feature\""}, "ask_user": {"description": "AI active question tool, support single or multiple questions, provide options, mark importance", "usage": "AI actively asks user questions, support single or multiple questions, provide options, mark importance", "params": [{"name": "question", "type": "string", "required": false, "desc": "Single question"}, {"name": "questions", "type": "array", "required": false, "desc": "Multiple questions list"}, {"name": "context", "type": "string", "required": false, "desc": "Question background information or context"}, {"name": "reason", "type": "string", "required": false, "desc": "Why ask this question"}], "example": "// Example\nAI: Please use ask_user tool to ask user questions\n\nquestion: \"What payment methods do you want to support?\"\ncontext: \"Designing payment module\""}, "ui_design_system": {"description": "Intelligent design system generator, generate complete design specification based on product type reasoning", "usage": "Based on product type and requirements, use AI reasoning engine to generate complete design system recommendations", "params": [{"name": "product_type", "type": "string", "required": true, "desc": "Product type: SaaS, E-commerce, Healthcare, Fintech, Government, etc."}, {"name": "description", "type": "string", "required": false, "desc": "System description, detailed description of product features, characteristics, usage scenarios"}, {"name": "keywords", "type": "string", "required": false, "desc": "Keywords, comma-separated"}, {"name": "target_audience", "type": "string", "required": false, "desc": "Target users"}, {"name": "stack", "type": "string", "required": false, "desc": "Tech stack: react, vue, nextjs, etc."}], "example": "// Example\nYou: Please use ui_design_system tool to generate design system\n\nproduct_type: \"Government\"\ndescription: \"Government website, needs authoritative, trustworthy, easy-to-use design style\""}, "ui_search": {"description": "Search UI/UX database, including colors, icons, charts, components, design patterns, etc.", "usage": "Search UI/UX database, use BM25 algorithm for intelligent search", "params": [{"name": "query", "type": "string", "required": false, "desc": "Search keyword (supports Chinese and English)"}, {"name": "mode", "type": "string", "required": false, "desc": "Search mode: search, catalog, template"}, {"name": "category", "type": "string", "required": false, "desc": "Data category: colors, icons, charts, etc."}, {"name": "stack", "type": "string", "required": false, "desc": "Tech stack filter"}, {"name": "limit", "type": "number", "required": false, "desc": "Return result count, default 10"}, {"name": "min_score", "type": "number", "required": false, "desc": "Min relevance score, default 0"}], "example": "// Example\nYou: Please use ui_search tool to search button components\n\nquery: \"primary button\"\nmode: \"search\"\nstack: \"react\""}, "sync_ui_data": {"description": "Sync UI/UX data to local cache, support auto check updates and force sync", "usage": "Sync UI/UX data to local cache, download latest data from npm package uipro-cli", "params": [{"name": "force", "type": "boolean", "required": false, "desc": "Force sync, default false"}, {"name": "verbose", "type": "boolean", "required": false, "desc": "Show detailed logs, default false"}], "example": "// Example\nYou: Please use sync_ui_data tool to sync data\n\nforce: false\nverbose: true"}}}
+{
+  "meta": {
+    "title": "All Tools - Complete List of 21 AI Development Tools | MCP Probe Kit",
+    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 3 code analysis tools, 1 Git tool, 1 generation tool, 7 project management tools, 3 UI/UX tools.",
+    "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
+  },
+  "page": {
+    "subtitle": "MCP Probe Kit provides 21 practical tools with structured output support for core and orchestration tools"
+  },
+  "search": {
+    "placeholder": "🔍 Search tool name or description...",
+    "found": "Found {count} matching tools",
+    "noResults": "No matching tools found"
+  },
+  "footer": {
+    "lastUpdate": "Last Update",
+    "protocol": "Protocol",
+    "sdk": "SDK",
+    "editPage": "Edit this page",
+    "reportIssue": "Report Issue"
+  },
+  "toolShortDesc": {
+    "start_feature": "New Feature",
+    "start_bugfix": "Fix Bug",
+    "start_onboard": "Quick Start",
+    "start_ralph": "Loop Dev",
+    "start_product": "Product Design",
+    "start_ui": "UI Dev",
+    "code_review": "Code Review",
+    "fix_bug": "Fix Bug",
+    "refactor": "Refactor",
+    "gencommit": "Gen Commit",
+    "gentest": "Gen Test",
+    "git_work_report": "Work Report",
+    "init_project": "Init Project",
+    "init_project_context": "Project Context",
+    "add_feature": "Add Feature",
+    "estimate": "Estimate",
+    "interview": "Interview",
+    "ask_user": "Ask User",
+    "ui_design_system": "Design System",
+    "ui_search": "Search UI",
+    "sync_ui_data": "Sync Data"
+  },
+  "categories": {
+    "workflow": {
+      "title": "Workflow Orchestration",
+      "count": "6 tools"
+    },
+    "analysis": {
+      "title": "Code Analysis",
+      "count": "3 tools"
+    },
+    "git": {
+      "title": "Git Tools",
+      "count": "2 tools"
+    },
+    "generation": {
+      "title": "Code Generation",
+      "count": "1 tool"
+    },
+    "project": {
+      "title": "Project Management",
+      "count": "6 tools"
+    },
+    "uiux": {
+      "title": "UI/UX Design",
+      "count": "3 tools"
+    }
+  },
+  "toolsData": {
+    "start_feature": {
+      "description": "Complete feature development workflow orchestration: check context → generate specs → estimate workload",
+      "usage": "Used to initiate complete feature development process, automatically generating requirement documents, design plans, and workload estimates"
+    },
+    "start_bugfix": {
+      "description": "Bug fix workflow orchestration: check context → analyze and locate → fix solution → generate tests",
+      "usage": "Used for systematic bug fixing, providing complete analysis, location, fix, and test solutions"
+    },
+    "start_onboard": {
+      "description": "Project onboarding workflow: generate context documentation to help new members quickly understand the project",
+      "usage": "Help new members quickly understand project structure, tech stack, and development standards"
+    },
+    "start_ralph": {
+      "description": "Ralph Wiggum Loop automated development, start loop development process with multiple safety protections enabled by default",
+      "usage": "Start automated loop development, AI will continuously iterate until goal is achieved or safety limits are reached"
+    },
+    "start_product": {
+      "description": "Complete product design workflow orchestration: PRD → prototype docs → design system → HTML prototype → project context update",
+      "usage": "One-click completion from requirements to HTML prototype, generating directly demonstrable product prototypes"
+    },
+    "start_ui": {
+      "description": "Unified UI development entry: check design system → generate component catalog → search/generate templates → render code",
+      "usage": "One-click completion of entire UI development process, from design system to final code"
+    },
+    "code_review": {
+      "description": "Intelligent code review, analyzing code from multiple dimensions including security, performance, quality, style, and best practices",
+      "usage": "Comprehensive code quality review, outputting structured issue list (severity/category/suggestion)"
+    },
+    "fix_bug": {
+      "description": "Bug fix guidance, providing root cause analysis, fix plan, test plan, and prevention measures",
+      "usage": "Provide complete bug fix guidance, including root cause analysis, fix solution, test plan, and prevention measures"
+    },
+    "refactor": {
+      "description": "Refactoring suggestion tool, analyzing code structure, providing refactoring steps, risk assessment, and rollback plan",
+      "usage": "Analyze code structure, provide refactoring suggestions, refactoring steps, and risk assessment"
+    },
+    "gencommit": {
+      "description": "Automatically generate Git commit messages compliant with Conventional Commits specification based on code changes",
+      "usage": "Generate commit messages compliant with Conventional Commits specification based on code changes"
+    },
+    "git_work_report": {
+      "description": "Generate work reports (daily/periodic) based on Git diff analysis, intelligently extracting actual work content",
+      "usage": "Automatically read Git commits for specified dates, analyze diff content, generate concise professional work reports. If direct command fails, provides temporary script solution (auto-deleted after execution)"
+    },
+    "gentest": {
+      "description": "Generate unit tests, supporting Jest/Vitest/Mocha frameworks, including edge cases and mock data",
+      "usage": "Generate unit test code, including edge cases and mocks"
+    },
+    "init_project": {
+      "description": "Generate requirement/design/task documents following Spec-Driven Development approach",
+      "usage": "Generate requirement/design/task documents following Spec-Driven Development approach"
+    },
+    "init_project_context": {
+      "description": "Generate project context documentation (tech stack/architecture/coding standards)",
+      "usage": "Generate project context documentation to help team quickly get started"
+    },
+    "add_feature": {
+      "description": "Generate new feature specification documents (requirements/design/task list) based on project context",
+      "usage": "Generate new feature specification documents (requirements/design/task list) based on project context"
+    },
+    "estimate": {
+      "description": "Estimate development workload, output story points, time range (optimistic/normal/pessimistic), risk points",
+      "usage": "Estimate development workload, output story points, time range (optimistic/normal/pessimistic), risk points"
+    },
+    "interview": {
+      "description": "Requirements interview tool, clarifying requirements through structured questioning to avoid misunderstandings and rework",
+      "usage": "Requirements interview tool, clarifying requirements through structured questioning before development"
+    },
+    "ask_user": {
+      "description": "AI proactive questioning tool, supporting single or multiple questions, providing options, marking importance",
+      "usage": "AI proactively asks users questions, supporting single or multiple questions, providing options, marking importance"
+    },
+    "ui_design_system": {
+      "description": "Intelligent design system generator, generating complete design specifications based on product type reasoning",
+      "usage": "Based on product type and requirements, use AI reasoning engine to generate complete design system recommendations"
+    },
+    "ui_search": {
+      "description": "Search UI/UX database, including colors, icons, charts, components, design patterns, etc.",
+      "usage": "Search UI/UX database using BM25 algorithm for intelligent search"
+    },
+    "sync_ui_data": {
+      "description": "Sync UI/UX data to local cache, supporting automatic update checking and forced sync",
+      "usage": "Sync UI/UX data to local cache, downloading latest data from npm package uipro-cli"
+    }
+  }
+}

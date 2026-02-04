@@ -1,1 +1,157 @@
-{"meta": {"title": "모든 도구 - 21개의 AI 개발 도구 전체 목록 | MCP Probe Kit", "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 3개의 코드 분석 도구, 2개의 Git 도구, 1개의 생성 도구, 6개의 프로젝트 관리 도구, 3개의 UI/UX 도구.", "keywords": "AI 개발 도구, 코드 생성 도구, 코드 리뷰 도구, Git 자동화, UI 생성, 코드 리팩토링, 성능 최적화, 보안 스캔"}, "page": {"title": "모든 도구", "subtitle": "MCP Probe Kit는 21개의 실용 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다", "versionBadge": "v3.0.3", "updateDate": "2026-02-03", "protocol": "MCP 2025-11-25", "sdk": "@modelcontextprotocol/sdk 1.25.3"}, "breadcrumb": {"home": "문서 홈", "toolsDocs": "도구 문서", "allTools": "모든 도구"}, "search": {"placeholder": "🔍 도구 이름 또는 설명 검색...", "noResults": "일치하는 도구를 찾을 수 없습니다", "found": "{count} 개의 일치하는 도구를 찾았습니다"}, "sidebar": {"quickStart": "빠른 시작", "home": "문서 홈", "installation": "설치 및 구성", "toolsDocs": "도구 문서", "allTools": "모든 도구", "allToolsBadge": "21", "guides": "가이드", "migration": "마이그레이션 가이드", "examples": "모범 사례", "followUs": "팔로우", "getTechSharing": "더 많은 기술 정보 받기", "wechatAccount": "WeChat 공식 계정", "github": "GitHub", "npm": "npm"}, "footer": {"madeWith": "Made with ❤️ by", "copyright": "© 2024-2026 MCP Probe Kit", "github": "GitHub ↗", "editPage": "이 페이지 편집 ↗", "reportIssue": "문제 신고 ↗"}, "tools": {"structured": "✓ 구조화", "usage": "📖 사용 설명", "params": "⚙️ 매개변수 설명", "example": "💡 사용 예시"}, "categories": {"workflow": {"icon": "🔄", "title": "워크플로우 오케스트레이션", "description": "완전한 개발 워크플로우 자동화, 요구사항부터 릴리스까지 전체 프로세스 지원", "count": "6 개"}, "analysis": {"icon": "🔍", "title": "코드 분석", "description": "지능형 코드 리뷰, 성능 분석 및 보안 스캔", "count": "3 개"}, "git": {"icon": "📝", "title": "Git 도구", "description": "Git 커밋 메시지, 변경 로그, PR 설명 및 충돌 해결", "count": "2 개"}, "generation": {"icon": "⚡", "title": "코드 생성", "description": "문서, 테스트, Mock 데이터 및 개발 보조 코드 자동 생성", "count": "1 개"}, "project": {"icon": "📦", "title": "프로젝트 관리", "description": "프로젝트 초기화, 기능 계획, 작업량 추정 및 요구사항 인터뷰", "count": "6 개"}, "uiux": {"icon": "🎨", "title": "UI/UX 디자인", "description": "디자인 시스템, 컴포넌트 카탈로그, 템플릿 검색 및 렌더링", "count": "3 개"}}}
+{
+  "meta": {
+    "title": "모든 도구 - 21개 AI 개발 도구 전체 목록 | MCP Probe Kit",
+    "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 3개의 코드 분석 도구, 1개의 Git 도구, 1개의 생성 도구, 7개의 프로젝트 관리 도구, 3개의 UI/UX 도구.",
+    "keywords": "AI 개발 도구, 코드 생성 도구, 코드 리뷰 도구, Git 자동화, UI 생성, 코드 리팩토링, 성능 최적화, 보안 스캔"
+  },
+  "page": {
+    "subtitle": "MCP Probe Kit은 21개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
+  },
+  "search": {
+    "placeholder": "🔍 도구 이름 또는 설명 검색...",
+    "found": "{count}개의 일치하는 도구를 찾았습니다",
+    "noResults": "일치하는 도구를 찾을 수 없습니다"
+  },
+  "footer": {
+    "lastUpdate": "마지막 업데이트",
+    "protocol": "프로토콜",
+    "sdk": "SDK",
+    "editPage": "이 페이지 편집",
+    "reportIssue": "문제 보고"
+  },
+  "toolShortDesc": {
+    "start_feature": "새 기능",
+    "start_bugfix": "버그 수정",
+    "start_onboard": "빠른 시작",
+    "start_ralph": "루프 개발",
+    "start_product": "제품 설계",
+    "start_ui": "UI 개발",
+    "code_review": "코드 리뷰",
+    "fix_bug": "버그 수정",
+    "refactor": "리팩토링",
+    "gencommit": "커밋 생성",
+    "gentest": "테스트 생성",
+    "git_work_report": "작업 보고서",
+    "init_project": "초기화",
+    "init_project_context": "프로젝트 컨텍스트",
+    "add_feature": "기능 추가",
+    "estimate": "추정",
+    "interview": "요구사항 인터뷰",
+    "ask_user": "사용자에게 질문",
+    "ui_design_system": "디자인 시스템",
+    "ui_search": "UI 검색",
+    "sync_ui_data": "데이터 동기화"
+  },
+  "categories": {
+    "workflow": {
+      "title": "워크플로우 오케스트레이션",
+      "count": "6개"
+    },
+    "analysis": {
+      "title": "코드 분석",
+      "count": "3개"
+    },
+    "git": {
+      "title": "Git 도구",
+      "count": "2개"
+    },
+    "generation": {
+      "title": "코드 생성",
+      "count": "1개"
+    },
+    "project": {
+      "title": "프로젝트 관리",
+      "count": "6개"
+    },
+    "uiux": {
+      "title": "UI/UX 디자인",
+      "count": "3개"
+    }
+  },
+  "toolsData": {
+    "start_feature": {
+      "description": "완전한 기능 개발 워크플로우 오케스트레이션: 컨텍스트 확인 → 사양 생성 → 작업량 추정",
+      "usage": "완전한 기능 개발 프로세스를 시작하여 요구사항 문서, 설계 계획 및 작업량 추정을 자동으로 생성합니다"
+    },
+    "start_bugfix": {
+      "description": "버그 수정 워크플로우 오케스트레이션: 컨텍스트 확인 → 분석 및 위치 파악 → 수정 솔루션 → 테스트 생성",
+      "usage": "체계적인 버그 수정에 사용되며 완전한 분석, 위치 파악, 수정 및 테스트 솔루션을 제공합니다"
+    },
+    "start_onboard": {
+      "description": "프로젝트 온보딩 워크플로우: 컨텍스트 문서를 생성하여 새 구성원이 프로젝트를 빠르게 이해할 수 있도록 돕습니다",
+      "usage": "새 구성원이 프로젝트 구조, 기술 스택 및 개발 표준을 빠르게 이해할 수 있도록 돕습니다"
+    },
+    "start_ralph": {
+      "description": "Ralph Wiggum Loop 자동화 개발, 기본적으로 여러 안전 보호 기능이 활성화된 루프 개발 프로세스를 시작합니다",
+      "usage": "자동화된 루프 개발을 시작하며, AI는 목표가 달성되거나 안전 제한에 도달할 때까지 지속적으로 반복합니다"
+    },
+    "start_product": {
+      "description": "완전한 제품 설계 워크플로우 오케스트레이션: PRD → 프로토타입 문서 → 디자인 시스템 → HTML 프로토타입 → 프로젝트 컨텍스트 업데이트",
+      "usage": "요구사항에서 HTML 프로토타입까지 원클릭 완료, 직접 시연 가능한 제품 프로토타입을 생성합니다"
+    },
+    "start_ui": {
+      "description": "통합 UI 개발 진입점: 디자인 시스템 확인 → 컴포넌트 카탈로그 생성 → 템플릿 검색/생성 → 코드 렌더링",
+      "usage": "디자인 시스템에서 최종 코드까지 전체 UI 개발 프로세스를 원클릭으로 완료합니다"
+    },
+    "code_review": {
+      "description": "지능형 코드 리뷰, 보안, 성능, 품질, 스타일 및 모범 사례 등 여러 차원에서 코드를 분석합니다",
+      "usage": "포괄적인 코드 품질 리뷰, 구조화된 문제 목록(severity/category/suggestion)을 출력합니다"
+    },
+    "fix_bug": {
+      "description": "버그 수정 가이드, 근본 원인 분석, 수정 계획, 테스트 계획 및 예방 조치를 제공합니다",
+      "usage": "근본 원인 분석, 수정 솔루션, 테스트 계획 및 예방 조치를 포함한 완전한 버그 수정 가이드를 제공합니다"
+    },
+    "refactor": {
+      "description": "리팩토링 제안 도구, 코드 구조를 분석하고 리팩토링 단계, 위험 평가 및 롤백 계획을 제공합니다",
+      "usage": "코드 구조를 분석하고 리팩토링 제안, 리팩토링 단계 및 위험 평가를 제공합니다"
+    },
+    "gencommit": {
+      "description": "코드 변경 사항을 기반으로 Conventional Commits 사양을 준수하는 Git 커밋 메시지를 자동으로 생성합니다",
+      "usage": "코드 변경 사항을 기반으로 Conventional Commits 사양을 준수하는 커밋 메시지를 생성합니다"
+    },
+    "git_work_report": {
+      "description": "Git diff 분석을 기반으로 작업 보고서(일일/정기)를 생성하고 실제 작업 내용을 지능적으로 추출합니다",
+      "usage": "지정된 날짜의 Git 커밋을 자동으로 읽고 diff 내용을 분석하여 간결하고 전문적인 작업 보고서를 생성합니다. 직접 명령이 실패하면 임시 스크립트 솔루션을 제공합니다(실행 후 자동 삭제)"
+    },
+    "gentest": {
+      "description": "Jest/Vitest/Mocha 프레임워크를 지원하고 엣지 케이스 및 모의 데이터를 포함하는 단위 테스트를 생성합니다",
+      "usage": "엣지 케이스 및 모의를 포함하는 단위 테스트 코드를 생성합니다"
+    },
+    "init_project": {
+      "description": "Spec-Driven Development 접근 방식에 따라 요구사항/설계/작업 문서를 생성합니다",
+      "usage": "Spec-Driven Development 접근 방식에 따라 요구사항/설계/작업 문서를 생성합니다"
+    },
+    "init_project_context": {
+      "description": "프로젝트 컨텍스트 문서(기술 스택/아키텍처/코딩 표준)를 생성합니다",
+      "usage": "팀이 빠르게 시작할 수 있도록 프로젝트 컨텍스트 문서를 생성합니다"
+    },
+    "add_feature": {
+      "description": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다",
+      "usage": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다"
+    },
+    "estimate": {
+      "description": "개발 작업량을 추정하고 스토리 포인트, 시간 범위(낙관적/정상/비관적), 위험 포인트를 출력합니다",
+      "usage": "개발 작업량을 추정하고 스토리 포인트, 시간 범위(낙관적/정상/비관적), 위험 포인트를 출력합니다"
+    },
+    "interview": {
+      "description": "요구사항 인터뷰 도구, 구조화된 질문을 통해 요구사항을 명확히 하여 오해와 재작업을 방지합니다",
+      "usage": "개발 전에 구조화된 질문을 통해 요구사항을 명확히 하는 요구사항 인터뷰 도구"
+    },
+    "ask_user": {
+      "description": "AI 능동적 질문 도구, 단일 또는 여러 질문을 지원하고 옵션을 제공하며 중요도를 표시합니다",
+      "usage": "AI가 사용자에게 능동적으로 질문하며 단일 또는 여러 질문을 지원하고 옵션을 제공하며 중요도를 표시합니다"
+    },
+    "ui_design_system": {
+      "description": "지능형 디자인 시스템 생성기, 제품 유형 추론을 기반으로 완전한 디자인 사양을 생성합니다",
+      "usage": "제품 유형 및 요구사항을 기반으로 AI 추론 엔진을 사용하여 완전한 디자인 시스템 권장 사항을 생성합니다"
+    },
+    "ui_search": {
+      "description": "색상, 아이콘, 차트, 컴포넌트, 디자인 패턴 등을 포함하는 UI/UX 데이터베이스를 검색합니다",
+      "usage": "BM25 알고리즘을 사용하여 지능형 검색을 수행하는 UI/UX 데이터베이스를 검색합니다"
+    },
+    "sync_ui_data": {
+      "description": "UI/UX 데이터를 로컬 캐시에 동기화하고 자동 업데이트 확인 및 강제 동기화를 지원합니다",
+      "usage": "npm 패키지 uipro-cli에서 최신 데이터를 다운로드하여 UI/UX 데이터를 로컬 캐시에 동기화합니다"
+    }
+  }
+}

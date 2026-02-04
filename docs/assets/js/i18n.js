@@ -31,23 +31,93 @@ async function loadTranslations(lang) {
     const isAllToolsPage = window.location.pathname.includes('all-tools.html');
     
     let basePath = isInPages ? '../i18n' : './i18n';
-    let translationPath = `${basePath}/${lang}.json`;
     
-    // 如果是 all-tools 页面，加载页面特定翻译
+    // 如果是 all-tools 页面，需要加载两个翻译文件
     if (isAllToolsPage) {
-      translationPath = `${basePath}/all-tools/${lang}.json`;
+      // 1. 先加载通用翻译（侧边栏等）
+      const commonPath = `${basePath}/${lang}.json`;
+      console.log(`[i18n] Loading common translation: ${lang}, path: ${commonPath}`);
+      
+      let commonTranslations = {};
+      try {
+        const commonResponse = await fetch(commonPath);
+        if (commonResponse.ok) {
+          commonTranslations = await commonResponse.json();
+          console.log(`[i18n] Common translation loaded successfully:`, lang);
+        }
+      } catch (error) {
+        console.warn(`通用翻译文件加载失败: ${commonPath}`, error);
+      }
+      
+      // 2. 再加载页面特定翻译（工具数据）
+      const toolsPath = `${basePath}/all-tools/${lang}.json`;
+      console.log(`[i18n] Loading all-tools translation: ${lang}, path: ${toolsPath}`);
+      
+      const toolsResponse = await fetch(toolsPath);
+      if (!toolsResponse.ok) {
+        console.warn(`工具翻译文件不存在: ${toolsPath}，回退到中文`);
+        // 回退到中文
+        if (lang !== 'zh-CN') {
+          const fallbackCommonPath = `${basePath}/zh-CN.json`;
+          const fallbackToolsPath = `${basePath}/all-tools/zh-CN.json`;
+          
+          const [fallbackCommonRes, fallbackToolsRes] = await Promise.all([
+            fetch(fallbackCommonPath),
+            fetch(fallbackToolsPath)
+          ]);
+          
+          if (fallbackCommonRes.ok && fallbackToolsRes.ok) {
+            const fallbackCommon = await fallbackCommonRes.json();
+            const fallbackTools = await fallbackToolsRes.json();
+            translations[lang] = { ...fallbackCommon, ...fallbackTools };
+            return translations[lang];
+          }
+        }
+        return null;
+      }
+      
+      const toolsTranslations = await toolsResponse.json();
+      
+      console.log(`[i18n] Tools translations loaded, checking toolShortDesc...`);
+      console.log(`[i18n] toolsTranslations keys:`, Object.keys(toolsTranslations));
+      console.log(`[i18n] toolsTranslations full content:`, JSON.stringify(toolsTranslations, null, 2).substring(0, 500));
+      console.log(`[i18n] toolsTranslations.toolShortDesc exists:`, !!toolsTranslations.toolShortDesc);
+      console.log(`[i18n] toolsTranslations.toolShortDesc content:`, toolsTranslations.toolShortDesc);
+      
+      // 3. 合并两个翻译对象
+      // 使用深度合并：commonTranslations 作为基础，toolsTranslations 覆盖同名键
+      // 但保留 toolsTranslations 中独有的键（如 toolShortDesc）
+      translations[lang] = {
+        ...commonTranslations,
+        ...toolsTranslations,
+        // 确保 toolShortDesc 不会被覆盖
+        toolShortDesc: toolsTranslations.toolShortDesc || {}
+      };
+      
+      console.log(`[i18n] All-tools translation loaded and merged successfully:`, lang);
+      console.log(`[i18n] Common translations keys:`, Object.keys(commonTranslations));
+      console.log(`[i18n] Tools translations keys:`, Object.keys(toolsTranslations));
+      console.log(`[i18n] Merged translations keys:`, Object.keys(translations[lang]));
+      console.log(`[i18n] toolShortDesc in tools:`, !!toolsTranslations.toolShortDesc);
+      console.log(`[i18n] toolShortDesc in merged:`, !!translations[lang].toolShortDesc);
+      if (translations[lang].toolShortDesc) {
+        console.log(`[i18n] toolShortDesc content:`, translations[lang].toolShortDesc);
+      }
+      return translations[lang];
+    } else {
+      // 其他页面使用通用翻译文件
+      const translationPath = `${basePath}/${lang}.json`;
+      console.log(`[i18n] Loading translation: ${lang}, path: ${translationPath}`);
+      
+      const response = await fetch(translationPath);
+      if (!response.ok) {
+        console.warn(`翻译文件不存在: ${translationPath}`);
+        return null;
+      }
+      translations[lang] = await response.json();
+      console.log(`[i18n] Translation loaded successfully:`, lang);
+      return translations[lang];
     }
-    
-    console.log(`[i18n] Loading translation: ${lang}, path: ${translationPath}`);
-    
-    const response = await fetch(translationPath);
-    if (!response.ok) {
-      console.warn(`翻译文件不存在: ${translationPath}`);
-      return null;
-    }
-    translations[lang] = await response.json();
-    console.log(`[i18n] Translation loaded successfully:`, lang, translations[lang]);
-    return translations[lang];
   } catch (error) {
     console.error(`加载翻译失败: ${lang}`, error);
     return null;
@@ -132,6 +202,7 @@ async function switchLanguage(lang) {
   }
   
   currentLang = lang;
+  window.currentLang = lang; // 同步更新全局变量
   localStorage.setItem('lang', lang);
   
   // 加载翻译
@@ -153,6 +224,7 @@ async function switchLanguage(lang) {
   
   // 触发自定义事件
   window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+  document.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
 }
 
 /**
@@ -248,8 +320,15 @@ document.addEventListener('click', (e) => {
  * 初始化
  */
 async function initI18n() {
-  // 检测浏览器语言（仅首次访问）
-  if (!localStorage.getItem('lang')) {
+  // 从 localStorage 读取保存的语言，如果没有则检测浏览器语言
+  const savedLang = localStorage.getItem('lang');
+  
+  if (savedLang && LANGUAGES[savedLang]) {
+    // 使用保存的语言
+    currentLang = savedLang;
+    console.log('[i18n] Using saved language:', currentLang);
+  } else {
+    // 检测浏览器语言（仅首次访问）
     const browserLang = navigator.language.toLowerCase();
     if (browserLang.startsWith('zh')) currentLang = 'zh-CN';
     else if (browserLang.startsWith('ja')) currentLang = 'ja';
@@ -257,7 +336,11 @@ async function initI18n() {
     else currentLang = 'en'; // 默认英文
     
     localStorage.setItem('lang', currentLang);
+    console.log('[i18n] Detected browser language:', currentLang);
   }
+  
+  // 同步到全局变量
+  window.currentLang = currentLang;
   
   // 加载当前语言的翻译
   await loadTranslations(currentLang);
@@ -267,6 +350,10 @@ async function initI18n() {
   
   // 应用翻译
   applyTranslations();
+  
+  // 触发 i18n 准备完成事件
+  console.log('[i18n] i18n initialization completed, dispatching i18nReady event');
+  window.dispatchEvent(new CustomEvent('i18nReady', { detail: { lang: currentLang } }));
 }
 
   // 页面加载完成后初始化
@@ -282,5 +369,7 @@ async function initI18n() {
   window.t = t;
   window.currentLang = currentLang;
   window.translations = translations;
+  window.LANGUAGES = LANGUAGES;
+  window.applyTranslations = applyTranslations;
 
 

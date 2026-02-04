@@ -72,23 +72,23 @@
     <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar">
         <div class="p-4">
             <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">快速开始</div>
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">快速开始</div>
                 <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
                     <span>🏠</span>
-                    <span>文档首页</span>
+                    <span data-i18n="sidebar.home">文档首页</span>
                 </a>
                 <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
                     <span>📖</span>
-                    <span>安装配置</span>
+                    <span data-i18n="sidebar.installation">安装配置</span>
                 </a>
             </div>
             
             <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">工具文档</div>
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
                 <button onclick="toggleToolsMenu()" class="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary border-l-3 border-primary hover:bg-bg-page transition-colors">
                     <div class="flex items-center gap-2">
                         <span>🛠️</span>
-                        <span>所有工具</span>
+                        <span data-i18n="sidebar.allTools">所有工具</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="bg-bg-page text-xs px-2 py-0.5 rounded-full">21</span>
@@ -103,14 +103,14 @@
             </div>
             
             <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">指南</div>
+                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
                 <a href="./migration.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
                     <span>🚀</span>
-                    <span>迁移指南</span>
+                    <span data-i18n="sidebar.migration">迁移指南</span>
                 </a>
                 <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
                     <span>💡</span>
-                    <span>最佳实践</span>
+                    <span data-i18n="sidebar.examples">最佳实践</span>
                 </a>
             </div>
             
@@ -130,9 +130,9 @@
             <!-- QR Code -->
             <div class="mt-4 pt-4 border-t border-border">
                 <div class="text-center">
-                    <div class="text-xs font-semibold text-text-tertiary mb-2">关注公众号</div>
+                    <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">关注公众号</div>
                     <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
-                    <div class="text-xs text-text-tertiary mt-2">获取更多技术分享</div>
+                    <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">获取更多技术分享</div>
                 </div>
             </div>
         </div>
@@ -144,17 +144,17 @@
             
             <!-- 面包屑 -->
             <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
-                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0">文档首页</a>
+                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0" data-i18n="sidebar.home">文档首页</a>
                 <span class="text-text-tertiary">/</span>
-                <span class="text-text-primary flex-shrink-0">工具文档</span>
+                <span class="text-text-primary flex-shrink-0" data-i18n="sidebar.toolsDocs">工具文档</span>
                 <span class="text-text-tertiary">/</span>
-                <span class="text-text-primary flex-shrink-0">所有工具</span>
+                <span class="text-text-primary flex-shrink-0" data-i18n="sidebar.allTools">所有工具</span>
             </nav>
 
             <!-- 页面标题 -->
             <div class="mb-6">
-                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">所有工具</h1>
-                <p class="text-sm sm:text-base text-text-secondary">MCP Probe Kit 提供 21 个实用工具，核心与编排工具支持结构化输出</p>
+                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2" data-i18n="sidebar.allTools">所有工具</h1>
+                <p class="text-sm sm:text-base text-text-secondary" id="page-subtitle">MCP Probe Kit 提供 21 个实用工具，核心与编排工具支持结构化输出</p>
                 <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
                     <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.5</span>
                     <span>MCP 2025-11-25</span>
@@ -163,15 +163,15 @@
                 <div class="flex flex-wrap items-center gap-2 mt-2 text-xs text-text-tertiary">
                     <span>📦 v3.0.5</span>
                     <span>·</span>
-                    <span>最后更新：2026-02-04</span>
+                    <span><span data-i18n="footer.lastUpdate">最后更新</span>：2026-02-04</span>
                     <span>·</span>
-                    <span>协议：MCP 2025-11-25</span>
+                    <span><span data-i18n="footer.protocol">协议</span>：MCP 2025-11-25</span>
                     <span>·</span>
-                    <span>SDK：@modelcontextprotocol/sdk 1.25.3</span>
+                    <span><span data-i18n="footer.sdk">SDK</span>：@modelcontextprotocol/sdk 1.25.3</span>
                     <span>·</span>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/edit/main/docs/pages/all-tools.html" target="_blank" rel="noopener" class="text-primary hover:underline">编辑此页 ↗</a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/edit/main/docs/pages/all-tools.html" target="_blank" rel="noopener" class="text-primary hover:underline"><span data-i18n="footer.editPage">编辑此页</span> ↗</a>
                     <span>·</span>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/issues/new" target="_blank" rel="noopener" class="text-primary hover:underline">反馈问题 ↗</a>
+                    <a href="https://github.com/mybolide/mcp-probe-kit/issues/new" target="_blank" rel="noopener" class="text-primary hover:underline"><span data-i18n="footer.reportIssue">反馈问题</span> ↗</a>
                 </div>
             </div>
             
@@ -200,18 +200,20 @@
 
     <!-- 引入工具数据 -->
     <script src="../data/tools.js"></script>
-    <script src="../assets/js/i18n.js"></script>
+    <script src="../assets/js/i18n.js?v=20260204-3"></script>
     <script>
         // 应用翻译到工具数据（使用 i18n.js 加载的翻译）
         function applyTranslationsToTools() {
             const currentLang = window.currentLang || 'zh-CN';
             const translations = window.translations && window.translations[currentLang] || {};
-            const toolsTrans = translations.toolsData || {};
+            
+            console.log('[all-tools] Applying translations for language:', currentLang);
+            console.log('[all-tools] Translations data:', translations);
             
             // 更新页面标题
-            const titleMeta = document.querySelector('meta[name="i18n-title"]');
-            if (titleMeta && translations.meta && translations.meta.title) {
+            if (translations.meta && translations.meta.title) {
                 document.title = translations.meta.title;
+                console.log('[all-tools] Updated title:', translations.meta.title);
             }
             
             // 更新 meta 标签
@@ -222,12 +224,12 @@
                 if (keywordsMeta && translations.meta.keywords) keywordsMeta.content = translations.meta.keywords;
             }
             
-            // 更新页面 UI 文本（面包屑、搜索框、分类标题等）
+            // 更新页面副标题（使用 ID 选择器）
             if (translations.page) {
-                // 更新页面副标题
-                const subtitleEl = document.querySelector('h1 + p');
+                const subtitleEl = document.getElementById('page-subtitle');
                 if (subtitleEl && translations.page.subtitle) {
                     subtitleEl.textContent = translations.page.subtitle;
+                    console.log('[all-tools] Updated subtitle:', translations.page.subtitle);
                 }
             }
             
@@ -237,50 +239,18 @@
                 searchInput.placeholder = translations.search.placeholder;
             }
             
-            // 更新搜索结果文本
-            const searchResults = document.getElementById('searchResults');
-            if (searchResults && translations.search) {
-                if (searchInput && searchInput.value.trim()) {
-                    const results = allTools.filter(tool => 
-                        tool.name.toLowerCase().includes(searchInput.value.toLowerCase()) || 
-                        tool.description.toLowerCase().includes(searchInput.value.toLowerCase())
-                    );
-                    searchResults.textContent = results.length > 0 
-                        ? (translations.search.found || '找到 {count} 个匹配的工具').replace('{count}', results.length)
-                        : (translations.search.noResults || '未找到匹配的工具');
-                } else {
-                    searchResults.textContent = '';
-                }
-            }
-            
             // 更新分类标题
-            const categorySections = document.querySelectorAll('section');
-            categorySections.forEach(section => {
-                const icon = section.querySelector('.text-2xl');
-                const title = section.querySelector('h2');
-                if (title && translations.categories) {
-                    const categoryKey = Object.keys(translations.categories).find(key => 
-                        translations.categories[key].title === title.textContent ||
-                        title.textContent.includes(translations.categories[key]?.title || '')
-                    );
-                    if (categoryKey && translations.categories[categoryKey]) {
-                        title.textContent = translations.categories[categoryKey].title;
-                        const countBadge = section.querySelector('.bg-blue-100');
-                        if (countBadge && translations.categories[categoryKey].count) {
-                            countBadge.textContent = translations.categories[categoryKey].count;
-                        }
+            if (translations.categories) {
+                for (const catKey in toolsData.categories) {
+                    if (translations.categories[catKey]) {
+                        toolsData.categories[catKey].title = translations.categories[catKey].title || toolsData.categories[catKey].title;
+                        console.log(`[all-tools] Updated category ${catKey}:`, toolsData.categories[catKey].title);
                     }
                 }
-            });
-            
-            // 重置 allTools 数组
-            allTools = [];
-            for (const [categoryKey, tools] of Object.entries(toolsData)) {
-                if (categoryKey === 'categories') continue;
-                tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
             }
             
-            // 更新 toolsData 中的工具描述
+            // 更新 toolsData 中的工具描述和参数
+            const toolsTrans = translations.toolsData || {};
             for (const categoryKey in toolsData) {
                 if (categoryKey === 'categories') continue;
                 
@@ -289,9 +259,35 @@
                     if (toolTrans) {
                         tool.description = toolTrans.description || tool.description;
                         if (toolTrans.usage) tool.usage = toolTrans.usage;
+                        if (toolTrans.example) tool.example = toolTrans.example;
+                        
+                        // 更新参数描述
+                        if (toolTrans.params && tool.params) {
+                            tool.params.forEach(param => {
+                                const paramTrans = toolTrans.params.find(p => p.name === param.name);
+                                if (paramTrans && paramTrans.desc) {
+                                    param.desc = paramTrans.desc;
+                                }
+                            });
+                        }
                     }
                 });
             }
+            
+            // 重置 allTools 数组
+            allTools = [];
+            for (const [categoryKey, tools] of Object.entries(toolsData)) {
+                if (categoryKey === 'categories') continue;
+                tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
+            }
+            
+            // 调用 i18n.js 的 applyTranslations() 来处理 data-i18n 属性
+            if (typeof window.applyTranslations === 'function') {
+                window.applyTranslations();
+                console.log('[all-tools] Applied i18n translations to sidebar');
+            }
+            
+            console.log('[all-tools] Translation applied successfully');
         }
         
         let toolsMenuExpanded = true;
@@ -322,33 +318,35 @@
             }
         }
 
-        const toolDescriptions = {
-            'start_feature': '新功能', 'start_bugfix': '修Bug', 'start_onboard': '快速上手',
-            'start_ralph': '循环开发', 'start_product': '产品设计', 'start_ui': 'UI开发',
-            'code_review': '审查代码', 'fix_bug': '修复Bug', 'refactor': '重构建议',
-            'gencommit': '生成提交', 'gentest': '生成测试', 'git_work_report': '工作报告',
-            'init_project': '初始化', 'init_project_context': '项目上下文', 'add_feature': '添加功能',
-            'estimate': '工作量', 'interview': '需求访谈', 'ask_user': '提问用户',
-            'ui_design_system': '设计系统', 'ui_search': '搜索UI', 'sync_ui_data': '同步数据',
-            'init_component_catalog': '组件目录', 'render_ui': 'UI渲染', 'start_api': 'API文档',
-            'start_doc': '补全文档', 'start_release': '版本发布', 'gen_prototype': '原型设计',
-            'gen_prd': 'PRD文档', 'security_scan': '安全扫描', 'perf': '性能分析',
-            'genchangelog': '更新日志', 'genpr': 'PR描述', 'resolve_conflict': '解决冲突',
-            'genapi': 'API文档', 'gensql': 'SQL生成', 'gen_mock': 'Mock数据',
-        };
-
         let allTools = [];
 
         function generateSidebarTools() {
             const submenu = document.getElementById('tools-submenu');
+            const currentLang = window.currentLang || 'zh-CN';
+            
+            // 从 window.translations 读取当前语言的翻译
+            const currentTranslations = window.translations && window.translations[currentLang] || {};
+            const toolShortDesc = currentTranslations.toolShortDesc || {};
+            
+            console.log('[all-tools] Generating sidebar tools');
+            console.log('[all-tools] Current language:', currentLang);
+            console.log('[all-tools] Current translations keys:', Object.keys(currentTranslations));
+            console.log('[all-tools] toolShortDesc:', toolShortDesc);
+            
             let html = '';
             for (const [categoryKey, categoryInfo] of Object.entries(toolsData.categories)) {
                 const tools = toolsData[categoryKey];
                 if (!tools || tools.length === 0) continue;
-                html += `<div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider px-2 py-1 mt-2">${categoryInfo.icon} ${categoryInfo.title}</div>`;
+                
+                // 使用翻译后的分类标题
+                const categoryTitle = categoryInfo.title;
+                html += `<div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider px-2 py-1 mt-2">${categoryInfo.icon} ${categoryTitle}</div>`;
+                
                 tools.forEach(tool => {
                     const toolId = tool.name.replace(/_/g, '-');
-                    const desc = toolDescriptions[tool.name] || '';
+                    // 使用翻译后的工具备注
+                    const desc = toolShortDesc[tool.name] || '';
+                    console.log(`[all-tools] Tool: ${tool.name}, desc: ${desc}`);
                     const displayText = desc ? `${tool.name} (${desc})` : tool.name;
                     html += `<a href="#${toolId}" class="block px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-page hover:text-primary rounded transition-colors">${displayText}</a>`;
                 });
@@ -378,9 +376,14 @@
 
         function renderTools(filteredTools = null) {
             const container = document.getElementById('tools-container');
+            const currentLang = window.currentLang || 'zh-CN';
+            const translations = window.translations && window.translations[currentLang] || {};
+            const searchTrans = translations.search || {};
+            
             let html = '';
             if (filteredTools && filteredTools.length === 0) {
-                html = `<div class="text-center py-8 text-text-secondary"><div class="text-4xl mb-2">🔍</div><p>未找到匹配的工具</p></div>`;
+                const noResultsMsg = searchTrans.noResults || '未找到匹配的工具';
+                html = `<div class="text-center py-8 text-text-secondary"><div class="text-4xl mb-2">🔍</div><p>${noResultsMsg}</p></div>`;
             } else if (filteredTools) {
                 html += '<div class="space-y-6">';
                 filteredTools.forEach(tool => { html += renderToolCard(tool); });
@@ -389,7 +392,11 @@
                 for (const [categoryKey, categoryInfo] of Object.entries(toolsData.categories)) {
                     const tools = toolsData[categoryKey];
                     if (!tools || tools.length === 0) continue;
-                    html += `<section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm"><div class="flex items-center gap-3 mb-4 pb-4 border-b border-border"><span class="text-2xl">${categoryInfo.icon}</span><h2 class="text-lg sm:text-xl font-semibold text-text-primary">${categoryInfo.title}</h2><span class="ml-auto bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">${tools.length} 个</span></div><div class="space-y-4">`;
+                    
+                    // 使用翻译后的分类标题
+                    const categoryTitle = categoryInfo.title;
+                    const countText = currentLang === 'zh-CN' ? '个' : '';
+                    html += `<section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm"><div class="flex items-center gap-3 mb-4 pb-4 border-b border-border"><span class="text-2xl">${categoryInfo.icon}</span><h2 class="text-lg sm:text-xl font-semibold text-text-primary">${categoryTitle}</h2><span class="ml-auto bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">${tools.length}${countText ? ' ' + countText : ''}</span></div><div class="space-y-4">`;
                     tools.forEach(tool => { html += renderToolCard({ ...tool, category: categoryKey }); });
                     html += `</div></section>`;
                 }
@@ -411,30 +418,50 @@
         }
 
         function searchTools(query) {
+            const currentLang = window.currentLang || 'zh-CN';
+            const translations = window.translations && window.translations[currentLang] || {};
+            const searchTrans = translations.search || {};
+            
             if (!query.trim()) {
                 document.getElementById('searchResults').textContent = '';
                 renderTools();
                 return;
             }
+            
             const lowerQuery = query.toLowerCase();
             const results = allTools.filter(tool => tool.name.toLowerCase().includes(lowerQuery) || tool.description.toLowerCase().includes(lowerQuery));
-            document.getElementById('searchResults').textContent = results.length > 0 ? `找到 ${results.length} 个匹配的工具` : '未找到匹配的工具';
+            
+            // 使用翻译后的搜索结果消息
+            const foundMsg = searchTrans.found || '找到 {count} 个匹配的工具';
+            const noResultsMsg = searchTrans.noResults || '未找到匹配的工具';
+            document.getElementById('searchResults').textContent = results.length > 0 
+                ? foundMsg.replace('{count}', results.length)
+                : noResultsMsg;
+            
             renderTools(results);
         }
 
+        let isInitialized = false;
+        
         function init() {
-            // 应用翻译到工具数据
-            applyTranslationsToTools();
+            console.log('[all-tools] Initializing page...');
             
+            // 初始化 allTools 数组
             allTools = [];
             for (const [categoryKey, tools] of Object.entries(toolsData)) {
                 if (categoryKey === 'categories') continue;
                 tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
             }
-            generateSidebarTools();
+            
+            // 设置侧边栏（等待翻译加载后再生成）
+            // generateSidebarTools(); // 移除这里的调用
             document.getElementById('tools-submenu').classList.remove('hidden');
             document.getElementById('tools-menu-icon').style.transform = 'rotate(180deg)';
-            renderTools();
+            
+            // 渲染工具列表（等待翻译加载后再渲染）
+            // renderTools(); // 移除这里的调用
+            
+            // 添加搜索监听
             document.getElementById('searchInput').addEventListener('input', (e) => { searchTools(e.target.value); });
             
             // 监听 hash 变化
@@ -442,12 +469,43 @@
             
             // 页面加载时处理 hash
             handleHashChange();
+            
+            isInitialized = true;
+            console.log('[all-tools] Page initialized (waiting for i18n)');
         }
+        
+        // 监听 i18n 初始化完成事件
+        window.addEventListener('i18nReady', () => {
+            console.log('[all-tools] i18n ready, applying translations...');
+            if (isInitialized) {
+                applyTranslationsToTools();
+                generateSidebarTools();
+                renderTools();
+            }
+        });
         
         // 语言切换时更新工具数据
         document.addEventListener('languageChanged', () => {
+            console.log('[all-tools] Language changed event received');
+            
+            // 保存当前搜索状态
+            const searchInput = document.getElementById('searchInput');
+            const currentSearch = searchInput ? searchInput.value : '';
+            const scrollPosition = window.pageYOffset;
+            
+            // 应用翻译
             applyTranslationsToTools();
-            renderTools();
+            generateSidebarTools();
+            
+            // 恢复搜索状态
+            if (currentSearch) {
+                searchTools(currentSearch);
+            } else {
+                renderTools();
+            }
+            
+            // 恢复滚动位置
+            window.scrollTo(0, scrollPosition);
         });
 
         document.addEventListener('DOMContentLoaded', init);
