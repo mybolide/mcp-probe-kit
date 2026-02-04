@@ -500,7 +500,13 @@
     "resources": {
       "title": "その他のリソース",
       "allTools": "完全なツールリファレンス",
-      "allToolsDesc": "全21ツールの詳細説明を表示"
+      "allToolsDesc": "全21ツールの詳細説明を表示",
+      "gettingStarted": "インストールと設定",
+      "gettingStartedDesc": "クイックスタートガイド",
+      "migration": "移行ガイド",
+      "migrationDesc": "v2.xからv3.0への移行",
+      "github": "GitHubリポジトリ",
+      "githubDesc": "ソースコードと問題報告"
     },
     "practice": {
       "title": "🚀 実践を始める",

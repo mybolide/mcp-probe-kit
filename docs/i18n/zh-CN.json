@@ -500,7 +500,13 @@
     "resources": {
       "title": "更多资源",
       "allTools": "完整工具参考",
-      "allToolsDesc": "查看所有 21 个工具的详细说明"
+      "allToolsDesc": "查看所有 21 个工具的详细说明",
+      "gettingStarted": "安装配置",
+      "gettingStartedDesc": "快速开始使用",
+      "migration": "迁移指南",
+      "migrationDesc": "从 v2.x 迁移到 v3.0",
+      "github": "GitHub 仓库",
+      "githubDesc": "源代码和问题反馈"
     },
     "practice": {
       "title": "🚀 开始实践",

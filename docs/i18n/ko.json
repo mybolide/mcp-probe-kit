@@ -500,7 +500,13 @@
     "resources": {
       "title": "추가 리소스",
       "allTools": "완전한 도구 참조",
-      "allToolsDesc": "모든 21개 도구의 자세한 설명 보기"
+      "allToolsDesc": "모든 21개 도구의 자세한 설명 보기",
+      "gettingStarted": "설치 및 구성",
+      "gettingStartedDesc": "빠른 시작 가이드",
+      "migration": "마이그레이션 가이드",
+      "migrationDesc": "v2.x에서 v3.0으로 마이그레이션",
+      "github": "GitHub 저장소",
+      "githubDesc": "소스 코드 및 이슈 피드백"
     },
     "practice": {
       "title": "🚀 실습 시작",
