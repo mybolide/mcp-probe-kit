@@ -271,6 +271,7 @@
         "example1": "你: 我有一个产品需求文档 project.md，帮我生成完整的产品设计",
         "productName": "在线教育平台",
         "autoExecute": "→ 自动执行：",
+        "autoLoop": "→ AI 自动循环：",
         "step1": "✓ 步骤 1: 检查/生成项目上下文",
         "step2": "✓ 步骤 2: 生成 PRD 文档",
         "step3": "✓ 步骤 3: 生成原型设计文档",
@@ -424,7 +425,11 @@
       "release": {
         "title": "5.1 自动化发布流程（推荐）",
         "description": "使用",
-        "description2": "工作流，自动生成 Changelog 和 PR 描述。"
+        "description2": "工作流，自动生成 Changelog 和 PR 描述。",
+        "example1": "你: 准备发布 v2.0.0",
+        "step1": "✓ 生成 CHANGELOG（按 feat/fix/breaking 分类）",
+        "step2": "✓ 生成 PR 描述（变更摘要、影响范围）",
+        "step3": "✓ 输出发布检查清单"
       },
       "git": {
         "title": "5.2 Git 工作流",
@@ -440,20 +445,33 @@
       "onboard": {
         "title": "6.1 新成员上手",
         "description": "使用",
-        "description2": "工作流，快速了解项目。"
+        "description2": "工作流，快速了解项目。",
+        "example1": "新成员: 我刚加入项目，需要了解项目结构",
+        "step1": "✓ 生成上下文文档",
+        "step2": "✓ 输出开发规范"
       },
       "doc": {
         "title": "6.2 文档维护",
         "description": "使用",
-        "description2": "工作流，一键补全项目文档。"
+        "description2": "工作流，一键补全项目文档。",
+        "step1": "✓ 生成代码注释（JSDoc/TSDoc）",
+        "step2": "✓ 生成 README 文档",
+        "step3": "✓ 生成 API 文档",
+        "step4": "✓ 输出完整文档集"
       }
     },
     "ralph": {
       "title": "高级实践：Ralph Wiggum Loop",
+      "advancedPractice": "高级实践",
       "loop": {
         "title": "自动化循环开发",
         "description": "使用",
-        "description2": "启动自动化开发循环，AI 持续迭代直到完成目标。"
+        "description2": "启动自动化开发循环，AI 持续迭代直到完成目标。",
+        "example1": "你: 实现用户认证功能",
+        "round1": "第1轮：分析需求 → 生成代码",
+        "round2": "第2轮：运行测试 → 修复错误",
+        "round3": "第3轮：代码审查 → 优化代码",
+        "until": "直到：测试通过 + 需求满足"
       },
       "warning": {
         "title": "⚠️ 安全提示：",

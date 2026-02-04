@@ -271,6 +271,7 @@
         "example1": "You: I have a product requirements document project.md, help me generate complete product design",
         "productName": "Online Education Platform",
         "autoExecute": "→ Auto Execute:",
+        "autoLoop": "→ AI Auto Loop:",
         "step1": "✓ Step 1: Check/Generate Project Context",
         "step2": "✓ Step 2: Generate PRD Document",
         "step3": "✓ Step 3: Generate Prototype Design Document",
@@ -424,7 +425,11 @@
       "release": {
         "title": "5.1 Automated Release Process (Recommended)",
         "description": "Use",
-        "description2": "workflow to automatically generate Changelog and PR descriptions."
+        "description2": "workflow to automatically generate Changelog and PR descriptions.",
+        "example1": "You: Prepare to release v2.0.0",
+        "step1": "✓ Generate CHANGELOG (categorized by feat/fix/breaking)",
+        "step2": "✓ Generate PR description (change summary, impact scope)",
+        "step3": "✓ Output release checklist"
       },
       "git": {
         "title": "5.2 Git Workflow",
@@ -440,20 +445,33 @@
       "onboard": {
         "title": "6.1 New Member Onboarding",
         "description": "Use",
-        "description2": "workflow to quickly understand the project."
+        "description2": "workflow to quickly understand the project.",
+        "example1": "New member: I just joined the project, need to understand the project structure",
+        "step1": "✓ Generate context documentation",
+        "step2": "✓ Output development guidelines"
       },
       "doc": {
         "title": "6.2 Documentation Maintenance",
         "description": "Use",
-        "description2": "workflow to complete project documentation with one click."
+        "description2": "workflow to complete project documentation with one click.",
+        "step1": "✓ Generate code comments (JSDoc/TSDoc)",
+        "step2": "✓ Generate README documentation",
+        "step3": "✓ Generate API documentation",
+        "step4": "✓ Output complete documentation set"
       }
     },
     "ralph": {
       "title": "Advanced Practice: Ralph Wiggum Loop",
+      "advancedPractice": "Advanced Practice",
       "loop": {
         "title": "Automated Loop Development",
         "description": "Use",
-        "description2": "to start automated development loop, AI continuously iterates until goal is achieved."
+        "description2": "to start automated development loop, AI continuously iterates until goal is achieved.",
+        "example1": "You: Implement user authentication feature",
+        "round1": "Round 1: Analyze requirements → Generate code",
+        "round2": "Round 2: Run tests → Fix errors",
+        "round3": "Round 3: Code review → Optimize code",
+        "until": "Until: Tests pass + Requirements met"
       },
       "warning": {
         "title": "⚠️ Safety Notice:",

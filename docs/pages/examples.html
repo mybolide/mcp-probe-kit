@@ -509,18 +509,18 @@ stack_trace: "at login.js:45:12"
                     <p class="text-text-secondary text-sm pl-7 mb-3"><span data-i18n="examples.stage5.release.description">使用</span> <code class="bg-gray-200 px-1 rounded text-xs">start_release</code> <span data-i18n="examples.stage5.release.description2">工作流，自动生成 Changelog 和 PR 描述。</span></p>
                     <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
                         <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
-                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                            <span class="text-xs text-slate-300 font-medium" data-i18n="examples.common.bestPractice">最佳实践</span>
                         </div>
-                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 准备发布 v2.0.0
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code><span data-i18n="examples.stage5.release.example1">你: 准备发布 v2.0.0</span>
 
 AI: 使用 start_release 工具
 version: "v2.0.0"
 from_tag: "v1.9.0"
 
-→ 自动执行：
-  ✓ 生成 CHANGELOG（按 feat/fix/breaking 分类）
-  ✓ 生成 PR 描述（变更摘要、影响范围）
-  ✓ 输出发布检查清单</code></pre>
+<span data-i18n="examples.stage0.workflow.autoExecute">→ 自动执行：</span>
+  <span data-i18n="examples.stage5.release.step1">✓ 生成 CHANGELOG（按 feat/fix/breaking 分类）</span>
+  <span data-i18n="examples.stage5.release.step2">✓ 生成 PR 描述（变更摘要、影响范围）</span>
+  <span data-i18n="examples.stage5.release.step3">✓ 输出发布检查清单</span></code></pre>
                     </div>
                 </div>
                 
@@ -551,15 +551,15 @@ from_tag: "v1.9.0"
                     <p class="text-text-secondary text-sm pl-7 mb-3"><span data-i18n="examples.stage6.onboard.description">使用</span> <code class="bg-gray-200 px-1 rounded text-xs">start_onboard</code> <span data-i18n="examples.stage6.onboard.description2">工作流，快速了解项目。</span></p>
                     <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
                         <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
-                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                            <span class="text-xs text-slate-300 font-medium" data-i18n="examples.common.bestPractice">最佳实践</span>
                         </div>
-                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>新成员: 我刚加入项目，需要了解项目结构
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code><span data-i18n="examples.stage6.onboard.example1">新成员: 我刚加入项目，需要了解项目结构</span>
 
 AI: 使用 start_onboard 工具
 
-→ 自动执行：
-  ✓ 生成上下文文档
-  ✓ 输出开发规范</code></pre>
+<span data-i18n="examples.stage0.workflow.autoExecute">→ 自动执行：</span>
+  <span data-i18n="examples.stage6.onboard.step1">✓ 生成上下文文档</span>
+  <span data-i18n="examples.stage6.onboard.step2">✓ 输出开发规范</span></code></pre>
                     </div>
                 </div>
                 
@@ -571,16 +571,16 @@ AI: 使用 start_onboard 工具
                     <p class="text-text-secondary text-sm pl-7 mb-3"><span data-i18n="examples.stage6.doc.description">使用</span> <code class="bg-gray-200 px-1 rounded text-xs">start_doc</code> <span data-i18n="examples.stage6.doc.description2">工作流，一键补全项目文档。</span></p>
                     <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
                         <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
-                            <span class="text-xs text-slate-300 font-medium">最佳实践</span>
+                            <span class="text-xs text-slate-300 font-medium" data-i18n="examples.common.bestPractice">最佳实践</span>
                         </div>
                         <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>AI: 使用 start_doc 工具
 code: "整个项目代码"
 
-→ 自动执行：
-  ✓ 生成代码注释（JSDoc/TSDoc）
-  ✓ 生成 README 文档
-  ✓ 生成 API 文档
-  ✓ 输出完整文档集</code></pre>
+<span data-i18n="examples.stage0.workflow.autoExecute">→ 自动执行：</span>
+  <span data-i18n="examples.stage6.doc.step1">✓ 生成代码注释（JSDoc/TSDoc）</span>
+  <span data-i18n="examples.stage6.doc.step2">✓ 生成 README 文档</span>
+  <span data-i18n="examples.stage6.doc.step3">✓ 生成 API 文档</span>
+  <span data-i18n="examples.stage6.doc.step4">✓ 输出完整文档集</span></code></pre>
                     </div>
                 </div>
             </section>
@@ -597,9 +597,9 @@ code: "整个项目代码"
                     <p class="text-text-secondary text-sm pl-7 mb-3"><span data-i18n="examples.ralph.loop.description">使用</span> <code class="bg-gray-200 px-1 rounded text-xs">start_ralph</code> <span data-i18n="examples.ralph.loop.description2">启动自动化开发循环，AI 持续迭代直到完成目标。</span></p>
                     <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
                         <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
-                            <span class="text-xs text-slate-300 font-medium">高级实践</span>
+                            <span class="text-xs text-slate-300 font-medium" data-i18n="examples.ralph.advancedPractice">高级实践</span>
                         </div>
-                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>你: 实现用户认证功能
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code><span data-i18n="examples.ralph.loop.example1">你: 实现用户认证功能</span>
 
 AI: 使用 start_ralph 工具
 goal: "实现用户认证功能，包含登录、注册、密码重置"
@@ -607,12 +607,12 @@ mode: "safe"  // 启用安全保护
 max_iterations: 8
 max_minutes: 25
 
-→ AI 自动循环：
-  第1轮：分析需求 → 生成代码
-  第2轮：运行测试 → 修复错误
-  第3轮：代码审查 → 优化代码
+<span data-i18n="examples.stage0.workflow.autoLoop">→ AI 自动循环：</span>
+  <span data-i18n="examples.ralph.loop.round1">第1轮：分析需求 → 生成代码</span>
+  <span data-i18n="examples.ralph.loop.round2">第2轮：运行测试 → 修复错误</span>
+  <span data-i18n="examples.ralph.loop.round3">第3轮：代码审查 → 优化代码</span>
   ...
-  直到：测试通过 + 需求满足</code></pre>
+  <span data-i18n="examples.ralph.loop.until">直到：测试通过 + 需求满足</span></code></pre>
                     </div>
                 </div>
                 
