@@ -222,6 +222,57 @@
                 if (keywordsMeta && translations.meta.keywords) keywordsMeta.content = translations.meta.keywords;
             }
             
+            // 更新页面 UI 文本（面包屑、搜索框、分类标题等）
+            if (translations.page) {
+                // 更新页面副标题
+                const subtitleEl = document.querySelector('h1 + p');
+                if (subtitleEl && translations.page.subtitle) {
+                    subtitleEl.textContent = translations.page.subtitle;
+                }
+            }
+            
+            // 更新搜索框占位符
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput && translations.search && translations.search.placeholder) {
+                searchInput.placeholder = translations.search.placeholder;
+            }
+            
+            // 更新搜索结果文本
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults && translations.search) {
+                if (searchInput && searchInput.value.trim()) {
+                    const results = allTools.filter(tool => 
+                        tool.name.toLowerCase().includes(searchInput.value.toLowerCase()) || 
+                        tool.description.toLowerCase().includes(searchInput.value.toLowerCase())
+                    );
+                    searchResults.textContent = results.length > 0 
+                        ? (translations.search.found || '找到 {count} 个匹配的工具').replace('{count}', results.length)
+                        : (translations.search.noResults || '未找到匹配的工具');
+                } else {
+                    searchResults.textContent = '';
+                }
+            }
+            
+            // 更新分类标题
+            const categorySections = document.querySelectorAll('section');
+            categorySections.forEach(section => {
+                const icon = section.querySelector('.text-2xl');
+                const title = section.querySelector('h2');
+                if (title && translations.categories) {
+                    const categoryKey = Object.keys(translations.categories).find(key => 
+                        translations.categories[key].title === title.textContent ||
+                        title.textContent.includes(translations.categories[key]?.title || '')
+                    );
+                    if (categoryKey && translations.categories[categoryKey]) {
+                        title.textContent = translations.categories[categoryKey].title;
+                        const countBadge = section.querySelector('.bg-blue-100');
+                        if (countBadge && translations.categories[categoryKey].count) {
+                            countBadge.textContent = translations.categories[categoryKey].count;
+                        }
+                    }
+                }
+            });
+            
             // 重置 allTools 数组
             allTools = [];
             for (const [categoryKey, tools] of Object.entries(toolsData)) {
