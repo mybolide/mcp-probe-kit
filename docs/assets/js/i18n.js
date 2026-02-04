@@ -28,13 +28,21 @@ async function loadTranslations(lang) {
   try {
     // 根据当前页面路径确定翻译文件路径
     const isInPages = window.location.pathname.includes('/pages/');
-    const basePath = isInPages ? '../i18n' : './i18n';
+    const isAllToolsPage = window.location.pathname.includes('all-tools.html');
     
-    console.log(`[i18n] Loading translation: ${lang}, basePath: ${basePath}`);
+    let basePath = isInPages ? '../i18n' : './i18n';
+    let translationPath = `${basePath}/${lang}.json`;
     
-    const response = await fetch(`${basePath}/${lang}.json`);
+    // 如果是 all-tools 页面，加载页面特定翻译
+    if (isAllToolsPage) {
+      translationPath = `${basePath}/all-tools/${lang}.json`;
+    }
+    
+    console.log(`[i18n] Loading translation: ${lang}, path: ${translationPath}`);
+    
+    const response = await fetch(translationPath);
     if (!response.ok) {
-      console.warn(`翻译文件不存在: ${lang}.json`);
+      console.warn(`翻译文件不存在: ${translationPath}`);
       return null;
     }
     translations[lang] = await response.json();

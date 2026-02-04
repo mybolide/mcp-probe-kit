@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>所有工具 - 20个AI研发工具完整列表 | MCP Probe Kit</title>
+    <meta name="i18n-title" content="所有工具 - 21个AI研发工具完整列表 | MCP Probe Kit">
     
     <meta name="description" content="MCP Probe Kit 完整工具列表：6个工作流编排工具、3个代码分析工具、1个Git工具、1个生成工具、7个项目管理工具、3个UI/UX工具。">
     <meta name="keywords" content="AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描">
@@ -197,7 +198,61 @@
 
     <!-- 引入工具数据 -->
     <script src="../data/tools.js"></script>
+    <script src="../assets/js/i18n.js"></script>
     <script>
+        // 加载 all-tools 页面特定翻译
+        let allToolsTranslations = {};
+        
+        async function loadAllToolsTranslations(lang) {
+            try {
+                const response = await fetch(`../i18n/all-tools/${lang}.json`);
+                if (response.ok) {
+                    allToolsTranslations = await response.json();
+                }
+            } catch (error) {
+                console.warn('Failed to load all-tools translations:', error);
+            }
+        }
+        
+        // 应用翻译到工具数据
+        function applyTranslationsToTools(lang) {
+            const translations = allToolsTranslations[lang] || allToolsTranslations['zh-CN'] || {};
+            const toolsTrans = translations.toolsData || {};
+            
+            // 更新页面标题
+            const titleMeta = document.querySelector('meta[name="i18n-title"]');
+            if (titleMeta && translations.meta && translations.meta.title) {
+                document.title = translations.meta.title;
+            }
+            
+            // 更新 meta 标签
+            if (translations.meta) {
+                const descMeta = document.querySelector('meta[name="description"]');
+                const keywordsMeta = document.querySelector('meta[name="keywords"]');
+                if (descMeta && translations.meta.description) descMeta.content = translations.meta.description;
+                if (keywordsMeta && translations.meta.keywords) keywordsMeta.content = translations.meta.keywords;
+            }
+            
+            // 重置 allTools 数组
+            allTools = [];
+            for (const [categoryKey, tools] of Object.entries(toolsData)) {
+                if (categoryKey === 'categories') continue;
+                tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
+            }
+            
+            // 更新 toolsData 中的工具描述
+            for (const categoryKey in toolsData) {
+                if (categoryKey === 'categories') continue;
+                
+                toolsData[categoryKey].forEach(tool => {
+                    const toolTrans = toolsTrans[tool.name];
+                    if (toolTrans) {
+                        tool.description = toolTrans.description || tool.description;
+                        if (toolTrans.usage) tool.usage = toolTrans.usage;
+                    }
+                });
+            }
+        }
         let toolsMenuExpanded = true;
         
         function toggleSidebar() {
@@ -327,23 +382,37 @@
         }
 
         function init() {
-            allTools = [];
-            for (const [categoryKey, tools] of Object.entries(toolsData)) {
-                if (categoryKey === 'categories') continue;
-                tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
-            }
-            generateSidebarTools();
-            document.getElementById('tools-submenu').classList.remove('hidden');
-            document.getElementById('tools-menu-icon').style.transform = 'rotate(180deg)';
-            renderTools();
-            document.getElementById('searchInput').addEventListener('input', (e) => { searchTools(e.target.value); });
-            
-            // 监听 hash 变化
-            window.addEventListener('hashchange', handleHashChange);
-            
-            // 页面加载时处理 hash
-            handleHashChange();
+            // 加载翻译
+            const currentLang = window.currentLang || 'zh-CN';
+            loadAllToolsTranslations(currentLang).then(() => {
+                applyTranslationsToTools(currentLang);
+                
+                allTools = [];
+                for (const [categoryKey, tools] of Object.entries(toolsData)) {
+                    if (categoryKey === 'categories') continue;
+                    tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
+                }
+                generateSidebarTools();
+                document.getElementById('tools-submenu').classList.remove('hidden');
+                document.getElementById('tools-menu-icon').style.transform = 'rotate(180deg)';
+                renderTools();
+                document.getElementById('searchInput').addEventListener('input', (e) => { searchTools(e.target.value); });
+                
+                // 监听 hash 变化
+                window.addEventListener('hashchange', handleHashChange);
+                
+                // 页面加载时处理 hash
+                handleHashChange();
+            });
         }
+        
+        // 语言切换时更新工具数据
+        document.addEventListener('languageChanged', async (e) => {
+            const newLang = e.detail.lang;
+            await loadAllToolsTranslations(newLang);
+            applyTranslationsToTools(newLang);
+            renderTools();
+        });
 
         document.addEventListener('DOMContentLoaded', init);
     </script>
