@@ -9,6 +9,8 @@
 
 ---
 
+<!-- mcp-name: io.github.mybolide/mcp-probe-kit -->
+
 > **Talk is cheap, show me the Context.**
 > 
 > mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 21 tools—it's a context-aware system that helps AI agents grasp what you're building.
