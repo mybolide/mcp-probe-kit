@@ -271,6 +271,7 @@
         "example1": "당신: 제품 요구사항 문서 project.md가 있습니다, 완전한 제품 설계를 생성해주세요",
         "productName": "온라인 교육 플랫폼",
         "autoExecute": "→ 자동 실행：",
+        "autoLoop": "→ AI 자동 루프：",
         "step1": "✓ 단계 1: 프로젝트 컨텍스트 확인/생성",
         "step2": "✓ 단계 2: PRD 문서 생성",
         "step3": "✓ 단계 3: 프로토타입 설계 문서 생성",
@@ -424,7 +425,11 @@
       "release": {
         "title": "5.1 자동화된 릴리스 프로세스 (권장)",
         "description": "사용",
-        "description2": "워크플로우로 Changelog 및 PR 설명 자동 생성."
+        "description2": "워크플로우로 Changelog 및 PR 설명 자동 생성.",
+        "example1": "당신: v2.0.0 릴리스 준비",
+        "step1": "✓ CHANGELOG 생성 (feat/fix/breaking으로 분류)",
+        "step2": "✓ PR 설명 생성 (변경 요약, 영향 범위)",
+        "step3": "✓ 릴리스 체크리스트 출력"
       },
       "git": {
         "title": "5.2 Git 워크플로우",
@@ -440,20 +445,33 @@
       "onboard": {
         "title": "6.1 신규 멤버 온보딩",
         "description": "사용",
-        "description2": "워크플로우로 프로젝트를 빠르게 이해."
+        "description2": "워크플로우로 프로젝트를 빠르게 이해.",
+        "example1": "새 멤버: 프로젝트에 막 합류했는데, 프로젝트 구조를 이해해야 합니다",
+        "step1": "✓ 컨텍스트 문서 생성",
+        "step2": "✓ 개발 규범 출력"
       },
       "doc": {
         "title": "6.2 문서 유지보수",
         "description": "사용",
-        "description2": "워크플로우로 프로젝트 문서를 원클릭으로 완성."
+        "description2": "워크플로우로 프로젝트 문서를 원클릭으로 완성.",
+        "step1": "✓ 코드 주석 생성 (JSDoc/TSDoc)",
+        "step2": "✓ README 문서 생성",
+        "step3": "✓ API 문서 생성",
+        "step4": "✓ 완전한 문서 세트 출력"
       }
     },
     "ralph": {
       "title": "고급 실습: Ralph Wiggum Loop",
+      "advancedPractice": "고급 실습",
       "loop": {
         "title": "자동화 루프 개발",
         "description": "사용",
-        "description2": "로 자동화 개발 루프 시작, AI가 목표 달성까지 지속적으로 반복."
+        "description2": "로 자동화 개발 루프 시작, AI가 목표 달성까지 지속적으로 반복.",
+        "example1": "당신: 사용자 인증 기능 구현",
+        "round1": "1라운드: 요구사항 분석 → 코드 생성",
+        "round2": "2라운드: 테스트 실행 → 오류 수정",
+        "round3": "3라운드: 코드 리뷰 → 코드 최적화",
+        "until": "까지: 테스트 통과 + 요구사항 충족"
       },
       "warning": {
         "title": "⚠️ 안전 알림:",
