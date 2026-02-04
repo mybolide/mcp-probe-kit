@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.5] - 2026-02-04
+
+### 🔧 改进
+
+**MCP Registry 支持**
+- 在 package.json 中添加 `mcpName` 字段以支持 MCP Registry 发布
+- 更新 server.json 使用最新的 schema (2025-12-11)
+- 优化英文 README 描述，移除中文内容，提升国际化文档质量
+
+---
+
 ## [3.0.3] - 2026-02-03
 
 ### 🔧 改进
