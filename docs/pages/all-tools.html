@@ -54,11 +54,14 @@
                 <span>🚀</span>
                 <span class="sm:inline hidden">MCP Probe Kit</span>
             </a>
-            <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-            </button>
+            <div class="flex items-center gap-3">
+                <div id="lang-switcher-container"></div>
+                <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -190,8 +193,7 @@
             <!-- Footer -->
             <footer class="text-center text-sm text-text-tertiary py-4 border-t border-border mt-8">
                 <p>Made with ❤️ by <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:underline">小墨 (Kyle)</a></p>
-                <p class="mt-1">© 2024-2026 MCP Probe Kit · <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub ↗</a>
-                    <div id="lang-switcher-container"></div></p>
+                <p class="mt-1">© 2024-2026 MCP Probe Kit · <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub ↗</a></p>
             </footer>
         </div>
     </main>
@@ -200,23 +202,10 @@
     <script src="../data/tools.js"></script>
     <script src="../assets/js/i18n.js"></script>
     <script>
-        // 加载 all-tools 页面特定翻译
-        let allToolsTranslations = {};
-        
-        async function loadAllToolsTranslations(lang) {
-            try {
-                const response = await fetch(`../i18n/all-tools/${lang}.json`);
-                if (response.ok) {
-                    allToolsTranslations = await response.json();
-                }
-            } catch (error) {
-                console.warn('Failed to load all-tools translations:', error);
-            }
-        }
-        
-        // 应用翻译到工具数据
-        function applyTranslationsToTools(lang) {
-            const translations = allToolsTranslations[lang] || allToolsTranslations['zh-CN'] || {};
+        // 应用翻译到工具数据（使用 i18n.js 加载的翻译）
+        function applyTranslationsToTools() {
+            const currentLang = window.currentLang || 'zh-CN';
+            const translations = window.translations && window.translations[currentLang] || {};
             const toolsTrans = translations.toolsData || {};
             
             // 更新页面标题
@@ -253,6 +242,7 @@
                 });
             }
         }
+        
         let toolsMenuExpanded = true;
         
         function toggleSidebar() {
@@ -382,35 +372,30 @@
         }
 
         function init() {
-            // 加载翻译
-            const currentLang = window.currentLang || 'zh-CN';
-            loadAllToolsTranslations(currentLang).then(() => {
-                applyTranslationsToTools(currentLang);
-                
-                allTools = [];
-                for (const [categoryKey, tools] of Object.entries(toolsData)) {
-                    if (categoryKey === 'categories') continue;
-                    tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
-                }
-                generateSidebarTools();
-                document.getElementById('tools-submenu').classList.remove('hidden');
-                document.getElementById('tools-menu-icon').style.transform = 'rotate(180deg)';
-                renderTools();
-                document.getElementById('searchInput').addEventListener('input', (e) => { searchTools(e.target.value); });
-                
-                // 监听 hash 变化
-                window.addEventListener('hashchange', handleHashChange);
-                
-                // 页面加载时处理 hash
-                handleHashChange();
-            });
+            // 应用翻译到工具数据
+            applyTranslationsToTools();
+            
+            allTools = [];
+            for (const [categoryKey, tools] of Object.entries(toolsData)) {
+                if (categoryKey === 'categories') continue;
+                tools.forEach(tool => { allTools.push({ ...tool, category: categoryKey }); });
+            }
+            generateSidebarTools();
+            document.getElementById('tools-submenu').classList.remove('hidden');
+            document.getElementById('tools-menu-icon').style.transform = 'rotate(180deg)';
+            renderTools();
+            document.getElementById('searchInput').addEventListener('input', (e) => { searchTools(e.target.value); });
+            
+            // 监听 hash 变化
+            window.addEventListener('hashchange', handleHashChange);
+            
+            // 页面加载时处理 hash
+            handleHashChange();
         }
         
         // 语言切换时更新工具数据
-        document.addEventListener('languageChanged', async (e) => {
-            const newLang = e.detail.lang;
-            await loadAllToolsTranslations(newLang);
-            applyTranslationsToTools(newLang);
+        document.addEventListener('languageChanged', () => {
+            applyTranslationsToTools();
             renderTools();
         });
 
