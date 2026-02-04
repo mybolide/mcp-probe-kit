@@ -1,8 +1,17 @@
-<div align="center">
-  <img src="docs/assets/logo.png" alt="MCP Probe Kit Logo" width="200"/>
-  <h1>知时MCP (MCP Probe Kit)</h1>
-  <p><em>知其境，馈其时。</em></p>
+﻿<div align="center">
+  <img src="docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
+  <h1>知时MCP | mcp-probe-kit</h1>
+  <p><strong>Know the Context, Feed the Moment.</strong></p>
+  <p>
+    <code>Introspection</code> · <code>Context Hydration</code> · <code>Delegated Orchestration</code>
+  </p>
 </div>
+
+---
+
+> **Talk is cheap, show me the Context.**
+> 
+> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 21 tools—it's a context-aware system that helps AI agents grasp what you're building.
 
 **Languages**: [English](README.md) | [简体中文](i18n/README.zh-CN.md) | [日本語](i18n/README.ja-JP.md) | [한국어](i18n/README.ko-KR.md) | [Español](i18n/README.es-ES.md) | [Français](i18n/README.fr-FR.md) | [Deutsch](i18n/README.de-DE.md) | [Português (BR)](i18n/README.pt-BR.md)
 
