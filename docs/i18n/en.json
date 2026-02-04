@@ -364,12 +364,22 @@
       "workflow": {
         "title": "2.1 Complete Feature Development Workflow (Recommended)",
         "description": "Use",
-        "description2": "workflow orchestration to complete from spec to estimation with one click."
+        "description2": "workflow orchestration to complete from spec to estimation with one click.",
+        "example1": "You: Develop user authentication feature",
+        "step1": "✓ Check project context",
+        "step2": "✓ Generate feature specification document",
+        "step3": "✓ Estimate development workload",
+        "step4": "✓ Output complete development plan"
       },
       "ui": {
         "title": "2.2 UI Development Workflow",
         "description": "Use",
-        "description2": "workflow, from design system to code in one go."
+        "description2": "workflow, from design system to code in one go.",
+        "example1": "You: Create login page",
+        "step1": "✓ Check/generate design system",
+        "step2": "✓ Initialize component directory",
+        "step3": "✓ Search/generate UI template",
+        "step4": "✓ Render final React code"
       },
       "codegen": {
         "title": "2.3 Code Generation",
@@ -491,6 +501,12 @@
       "title": "More Resources",
       "allTools": "Complete Tools Reference",
       "allToolsDesc": "View detailed descriptions of all 21 tools"
+    },
+    "practice": {
+      "title": "🚀 Start Practicing",
+      "description": "Apply these best practices to your project",
+      "install": "📖 Installation & Configuration",
+      "allTools": "🛠️ View All Tools"
     }
   }
 }

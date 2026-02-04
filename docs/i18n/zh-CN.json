@@ -364,12 +364,22 @@
       "workflow": {
         "title": "2.1 完整功能开发流程（推荐）",
         "description": "使用",
-        "description2": "工作流编排，一键完成从规格到估算。"
+        "description2": "工作流编排，一键完成从规格到估算。",
+        "example1": "你: 开发用户认证功能",
+        "step1": "✓ 检查项目上下文",
+        "step2": "✓ 生成功能规格文档",
+        "step3": "✓ 估算开发工作量",
+        "step4": "✓ 输出完整开发计划"
       },
       "ui": {
         "title": "2.2 UI 开发流程",
         "description": "使用",
-        "description2": "工作流，从设计系统到代码一气呵成。"
+        "description2": "工作流，从设计系统到代码一气呵成。",
+        "example1": "你: 创建登录页面",
+        "step1": "✓ 检查/生成设计系统",
+        "step2": "✓ 初始化组件目录",
+        "step3": "✓ 搜索/生成 UI 模板",
+        "step4": "✓ 渲染最终 React 代码"
       },
       "codegen": {
         "title": "2.3 代码生成",
@@ -491,6 +501,12 @@
       "title": "更多资源",
       "allTools": "完整工具参考",
       "allToolsDesc": "查看所有 21 个工具的详细说明"
+    },
+    "practice": {
+      "title": "🚀 开始实践",
+      "description": "将这些最佳实践应用到你的项目中",
+      "install": "📖 安装配置",
+      "allTools": "🛠️ 查看所有工具"
     }
   }
 }
