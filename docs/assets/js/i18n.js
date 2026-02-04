@@ -280,7 +280,7 @@ async function initI18n() {
   window.switchLanguage = switchLanguage;
   window.toggleLangMenu = toggleLangMenu;
   window.t = t;
-  
-  // 导出 currentLang 以便 all-tools.html 使用
   window.currentLang = currentLang;
+  window.translations = translations;
+
 
