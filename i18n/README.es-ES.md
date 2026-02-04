@@ -1,8 +1,15 @@
 <div align="center">
-  <img src="../docs/assets/logo.png" alt="MCP Probe Kit Logo" width="200"/>
-  <h1>知时MCP (MCP Probe Kit)</h1>
-  <p><em>知其境，馈其时。</em></p>
+<img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
+<h1>知时MCP | mcp-probe-kit</h1>
+<p><strong>Conoce el Contexto, Alimenta el Momento.</strong></p>
+<p><code>Introspection</code> · <code>Context Hydration</code> · <code>Delegated Orchestration</code></p>
 </div>
+
+---
+
+**Talk is cheap, show me the Context.**
+
+> Zhishi MCP es un kit de herramientas de sondeo a nivel de protocolo y suministro de contexto diseñado para geeks. No es solo una colección de 21 herramientas, sino un sistema de percepción que permite a la IA "comprender" verdaderamente la intención de tu proyecto.
 
 **Idiomas**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | **Español** | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
