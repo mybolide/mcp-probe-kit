@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.6] - 2026-03-11
+
+### ✨ 新功能
+
+**MCP Tasks / Progress / Cancellation 增强**
+- 基于官方 `@modelcontextprotocol/sdk@1.27.1` 启用原生任务能力（`tasks/get|result|list|cancel`）
+- `tools/call` 支持任务化执行：创建任务后后台运行并回填任务结果
+- 长任务增加进度通知（`notifications/progress`）与协作式取消（`AbortSignal`）
+- `start_*` 编排工具和 `sync_ui_data` 接入统一执行上下文（进度 + 取消）
+
+**前向兼容与扩展能力**
+- 透传请求 `_meta.trace` 到工具响应 `_meta`（可配置 trace key）
+- 增加 extensions capability 开关（`MCP_ENABLE_EXTENSIONS_CAPABILITY=1`）
+- 增加可选 MCP Apps UI 资源输出（`ui://...` + `_meta.ui.resourceUri`，`MCP_ENABLE_UI_APPS=1`）
+
+### 🔧 改进
+
+- 重构 `sync_ui_data` 底层同步流程，支持下载/解压/处理阶段进度上报与取消中断
+- 更新 README 与多语言文档中的 SDK 版本与能力说明
+
+---
+
 ## [3.0.5] - 2026-02-04
 
 ### 🔧 改进

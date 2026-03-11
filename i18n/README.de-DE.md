@@ -26,7 +26,7 @@ Ein leistungsstarker MCP (Model Context Protocol) Server, der **21 Tools** berei
 
 **Unterstützt Alle MCP-Clients**: Cursor, Claude Desktop, Cline, Continue und mehr
 
-**Protokollversion**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.25.3
+**Protokollversion**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.27.1
 
 ---
 

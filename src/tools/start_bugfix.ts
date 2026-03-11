@@ -3,6 +3,11 @@ import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { BugFixReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
 import type { BugFixReport, RequirementsLoopReport } from "../schemas/structured-output.js";
+import {
+  reportToolProgress,
+  throwIfAborted,
+  type ToolExecutionContext,
+} from "../lib/tool-execution-context.js";
 
 /**
  * start_bugfix 智能编排工具
@@ -291,8 +296,11 @@ function buildBugfixQuestions(questionBudget: number) {
   return base.slice(0, Math.max(0, questionBudget));
 }
 
-export async function startBugfix(args: any) {
+export async function startBugfix(args: any, context?: ToolExecutionContext) {
   try {
+    throwIfAborted(context?.signal, "start_bugfix 已取消");
+    await reportToolProgress(context, 10, "start_bugfix: 解析参数");
+
     // 智能参数解析，支持自然语言输入
     const parsedArgs = parseArgs<{
       error_message?: string;
@@ -332,6 +340,9 @@ export async function startBugfix(args: any) {
     const questionBudget = getNumber(parsedArgs.loop_question_budget, 5);
     const assumptionCap = getNumber(parsedArgs.loop_assumption_cap, 3);
 
+    throwIfAborted(context?.signal, "start_bugfix 已取消");
+    await reportToolProgress(context, 35, "start_bugfix: 参数解析完成");
+
     if (!errorMessage) {
       throw new Error("缺少必填参数: error_message（错误信息）");
     }
@@ -360,6 +371,9 @@ export async function startBugfix(args: any) {
     }
 
     if (requirementsMode === "loop") {
+      throwIfAborted(context?.signal, "start_bugfix(loop) 已取消");
+      await reportToolProgress(context, 70, "start_bugfix: 生成 loop 计划");
+
       const openQuestions = buildBugfixQuestions(questionBudget).map((q, index) => ({
         id: `Q-${index + 1}`,
         ...q,
@@ -480,6 +494,8 @@ export async function startBugfix(args: any) {
         },
       };
 
+      await reportToolProgress(context, 95, "start_bugfix: loop 输出已生成");
+
       return okStructured(
         guide,
         loopReport,
@@ -581,6 +597,8 @@ export async function startBugfix(args: any) {
         template: templateMeta,
       },
     };
+
+    await reportToolProgress(context, 95, "start_bugfix: 执行计划输出已生成");
 
     return okStructured(
       guide,

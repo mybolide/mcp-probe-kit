@@ -3,6 +3,11 @@ import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { OnboardingReportSchema } from "../schemas/structured-output.js";
 import type { OnboardingReport } from "../schemas/structured-output.js";
+import {
+  reportToolProgress,
+  throwIfAborted,
+  type ToolExecutionContext,
+} from "../lib/tool-execution-context.js";
 
 /**
  * start_onboard 智能编排工具
@@ -96,8 +101,11 @@ const PROMPT_TEMPLATE = `# 📚 快速上手编排指南
 *编排工具: MCP Probe Kit - start_onboard*
 `;
 
-export async function startOnboard(args: any) {
+export async function startOnboard(args: any, context?: ToolExecutionContext) {
   try {
+    throwIfAborted(context?.signal, "start_onboard 已取消");
+    await reportToolProgress(context, 10, "start_onboard: 解析参数");
+
     // 智能参数解析，支持自然语言输入
     const parsedArgs = parseArgs<{
       project_path?: string;
@@ -116,6 +124,9 @@ export async function startOnboard(args: any) {
 
     const projectPath = getString(parsedArgs.project_path) || ".";
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
+
+    throwIfAborted(context?.signal, "start_onboard 已取消");
+    await reportToolProgress(context, 85, "start_onboard: 生成执行计划");
 
     const header = renderOrchestrationHeader({
       tool: 'start_onboard',
@@ -177,6 +188,8 @@ export async function startOnboard(args: any) {
         plan,
       },
     };
+
+    await reportToolProgress(context, 95, "start_onboard: 输出已生成");
 
     return okStructured(
       guide,

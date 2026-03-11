@@ -19,30 +19,80 @@ interface PackageMetadata {
   format: 'csv' | 'json';
 }
 
+export interface SyncRuntimeOptions {
+  signal?: AbortSignal;
+  onProgress?: (progress: number, message: string) => Promise<void> | void;
+}
+
+function throwIfAborted(signal: AbortSignal | undefined, message: string): void {
+  if (!signal?.aborted) {
+    return;
+  }
+  const err = new Error(message);
+  err.name = 'AbortError';
+  throw err;
+}
+
+async function emitProgress(
+  options: SyncRuntimeOptions | undefined,
+  progress: number,
+  message: string
+): Promise<void> {
+  if (!options?.onProgress) {
+    return;
+  }
+  await options.onProgress(progress, message);
+}
+
 /**
  * 获取 npm 包的最新版本号
  */
-async function getLatestVersion(packageName: string): Promise<string> {
+async function getLatestVersion(
+  packageName: string,
+  signal?: AbortSignal
+): Promise<string> {
+  throwIfAborted(signal, 'Sync cancelled before fetching latest version');
+
   return new Promise((resolve, reject) => {
     const url = `https://registry.npmjs.org/${packageName}/latest`;
-    
-    https.get(url, (res) => {
+    const req = https.get(url, (res) => {
       let data = '';
-      
+
       res.on('data', (chunk) => {
+        if (signal?.aborted) {
+          req.destroy(new Error('Sync cancelled while reading package metadata'));
+          return;
+        }
         data += chunk;
       });
-      
+
       res.on('end', () => {
         try {
+          throwIfAborted(signal, 'Sync cancelled after reading package metadata');
           const pkg = JSON.parse(data);
           resolve(pkg.version);
         } catch (error) {
           reject(new Error(`Failed to parse package metadata: ${error}`));
         }
       });
-    }).on('error', (error) => {
+    });
+
+    const onAbort = () => req.destroy(new Error('Sync cancelled'));
+    signal?.addEventListener('abort', onAbort, { once: true });
+
+    req.on('error', (error) => {
+      signal?.removeEventListener('abort', onAbort);
+      if (signal?.aborted) {
+        const abortError = new Error('Sync cancelled');
+        abortError.name = 'AbortError';
+        reject(abortError);
+        return;
+      }
       reject(new Error(`Failed to fetch package metadata: ${error}`));
+    });
+
+    req.on('close', () => {
+      signal?.removeEventListener('abort', onAbort);
     });
   });
 }
@@ -50,12 +100,18 @@ async function getLatestVersion(packageName: string): Promise<string> {
 /**
  * 下载文件
  */
-async function downloadFile(url: string, outputPath: string): Promise<void> {
+async function downloadFile(
+  url: string,
+  outputPath: string,
+  signal?: AbortSignal
+): Promise<void> {
+  throwIfAborted(signal, 'Sync cancelled before download');
+
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const req = https.get(url, (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {
         if (res.headers.location) {
-          downloadFile(res.headers.location, outputPath).then(resolve).catch(reject);
+          downloadFile(res.headers.location, outputPath, signal).then(resolve).catch(reject);
           return;
         }
       }
@@ -69,6 +125,7 @@ async function downloadFile(url: string, outputPath: string): Promise<void> {
       res.pipe(fileStream);
       
       fileStream.on('finish', () => {
+        throwIfAborted(signal, 'Sync cancelled during download');
         fileStream.close();
         resolve();
       });
@@ -77,8 +134,31 @@ async function downloadFile(url: string, outputPath: string): Promise<void> {
         fs.unlinkSync(outputPath);
         reject(error);
       });
-    }).on('error', (error) => {
+    });
+
+    const onAbort = () => req.destroy(new Error('Sync cancelled'));
+    signal?.addEventListener('abort', onAbort, { once: true });
+
+    req.on('error', (error) => {
+      signal?.removeEventListener('abort', onAbort);
+      if (signal?.aborted) {
+        try {
+          if (fs.existsSync(outputPath)) {
+            fs.unlinkSync(outputPath);
+          }
+        } catch {
+          // ignore cleanup error
+        }
+        const abortError = new Error('Sync cancelled');
+        abortError.name = 'AbortError';
+        reject(abortError);
+        return;
+      }
       reject(error);
+    });
+
+    req.on('close', () => {
+      signal?.removeEventListener('abort', onAbort);
     });
   });
 }
@@ -89,8 +169,11 @@ async function downloadFile(url: string, outputPath: string): Promise<void> {
 async function extractTarball(
   tarballPath: string,
   extractPath: string,
-  targetDir: string
+  targetDir: string,
+  signal?: AbortSignal
 ): Promise<string> {
+  throwIfAborted(signal, 'Sync cancelled before extract');
+
   const tempDir = path.join(extractPath, '.temp');
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
@@ -100,6 +183,8 @@ async function extractTarball(
     file: tarballPath,
     cwd: tempDir,
   });
+
+  throwIfAborted(signal, 'Sync cancelled after extract');
   
   const sourceDir = path.join(tempDir, targetDir);
   if (!fs.existsSync(sourceDir)) {
@@ -132,32 +217,52 @@ function convertCSVToJSON(csvContent: string, filename: string): any[] {
 }
 
 /**
+ * 收集目录下所有 CSV 文件（递归）
+ */
+function collectCsvFiles(rootDir: string): string[] {
+  const files: string[] = [];
+  const entries = fs.readdirSync(rootDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(rootDir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectCsvFiles(fullPath));
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith('.csv')) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+/**
  * 处理数据文件
  */
 async function processDataFiles(
   sourceDir: string,
   outputDir: string,
-  verbose: boolean
+  verbose: boolean,
+  options?: SyncRuntimeOptions
 ): Promise<void> {
+  throwIfAborted(options?.signal, 'Sync cancelled before processing files');
+
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
-  
-  const files = fs.readdirSync(sourceDir);
-  
-  for (const file of files) {
-    const sourcePath = path.join(sourceDir, file);
-    const stat = fs.statSync(sourcePath);
-    
-    if (stat.isDirectory()) {
-      const subOutputDir = path.join(outputDir, file);
-      await processDataFiles(sourcePath, subOutputDir, verbose);
-      continue;
-    }
-    
-    if (!file.endsWith('.csv')) {
-      continue;
-    }
+
+  const csvFiles = collectCsvFiles(sourceDir);
+  if (csvFiles.length === 0) {
+    await emitProgress(options, 100, 'No CSV files found');
+    return;
+  }
+
+  for (let index = 0; index < csvFiles.length; index++) {
+    throwIfAborted(options?.signal, 'Sync cancelled while processing data files');
+
+    const sourcePath = csvFiles[index];
+    const file = path.basename(sourcePath);
     
     if (verbose) {
       console.log(`Processing: ${file}`);
@@ -174,13 +279,28 @@ async function processDataFiles(
     }
     
     const outputFile = file.replace('.csv', '.json');
-    const outputPath = path.join(outputDir, outputFile);
+    const relativePath = path.relative(sourceDir, sourcePath);
+    const relativeDir = path.dirname(relativePath);
+    const outputSubDir = relativeDir === '.' ? outputDir : path.join(outputDir, relativeDir);
+
+    if (!fs.existsSync(outputSubDir)) {
+      fs.mkdirSync(outputSubDir, { recursive: true });
+    }
+
+    const outputPath = path.join(outputSubDir, outputFile);
     
     fs.writeFileSync(outputPath, JSON.stringify(jsonData, null, 2), 'utf-8');
     
     if (verbose) {
       console.log(`  → ${outputFile} (${jsonData.length} records)`);
     }
+
+    const fileProgress = Math.round(((index + 1) / csvFiles.length) * 100);
+    await emitProgress(
+      options,
+      fileProgress,
+      `Processed ${index + 1}/${csvFiles.length}: ${relativePath}`
+    );
   }
 }
 
@@ -204,8 +324,14 @@ function cleanup(tempDir: string): void {
 /**
  * 同步 UI/UX 数据到指定目录（通用函数）
  */
-export async function syncUIDataTo(outputDir: string, verbose: boolean = false): Promise<void> {
+export async function syncUIDataTo(
+  outputDir: string,
+  verbose: boolean = false,
+  options?: SyncRuntimeOptions
+): Promise<void> {
   const packageName = 'uipro-cli';
+  throwIfAborted(options?.signal, 'Sync cancelled before start');
+  await emitProgress(options, 5, 'Initializing sync');
   
   if (verbose) {
     console.log('🚀 Starting UI/UX data sync...\n');
@@ -216,7 +342,8 @@ export async function syncUIDataTo(outputDir: string, verbose: boolean = false):
     if (verbose) {
       console.log(`Fetching latest version of ${packageName}...`);
     }
-    const latestVersion = await getLatestVersion(packageName);
+    const latestVersion = await getLatestVersion(packageName, options?.signal);
+    await emitProgress(options, 15, `Fetched latest version: ${latestVersion}`);
     if (verbose) {
       console.log(`✓ Latest version: ${latestVersion}\n`);
     }
@@ -233,7 +360,8 @@ export async function syncUIDataTo(outputDir: string, verbose: boolean = false):
     if (verbose) {
       console.log(`Downloading tarball...`);
     }
-    await downloadFile(tarballUrl, tarballPath);
+    await downloadFile(tarballUrl, tarballPath, options?.signal);
+    await emitProgress(options, 35, 'Downloaded package tarball');
     if (verbose) {
       console.log('✓ Downloaded tarball\n');
     }
@@ -245,8 +373,10 @@ export async function syncUIDataTo(outputDir: string, verbose: boolean = false):
     const extractedDataDir = await extractTarball(
       tarballPath,
       tempDir,
-      'package/assets/data'
+      'package/assets/data',
+      options?.signal
     );
+    await emitProgress(options, 50, 'Extracted package data files');
     if (verbose) {
       console.log('✓ Extracted data files\n');
     }
@@ -255,7 +385,13 @@ export async function syncUIDataTo(outputDir: string, verbose: boolean = false):
     if (verbose) {
       console.log('Processing data files...');
     }
-    await processDataFiles(extractedDataDir, outputDir, verbose);
+    await processDataFiles(extractedDataDir, outputDir, verbose, {
+      signal: options?.signal,
+      onProgress: async (progress, message) => {
+        const normalized = 50 + Math.round(progress * 0.35);
+        await emitProgress(options, normalized, message);
+      },
+    });
     if (verbose) {
       console.log('✓ Processed all data files\n');
     }
@@ -268,12 +404,14 @@ export async function syncUIDataTo(outputDir: string, verbose: boolean = false):
       format: 'json',
     };
     writeMetadata(outputDir, metadata);
+    await emitProgress(options, 90, 'Wrote metadata');
     if (verbose) {
       console.log('✓ Written metadata\n');
     }
     
     // 6. 清理临时文件
     cleanup(tempDir);
+    await emitProgress(options, 100, 'Sync completed');
     if (verbose) {
       console.log('✓ Cleaned up temporary files\n');
       console.log('✅ Sync completed successfully!');
@@ -291,7 +429,12 @@ export async function syncUIDataTo(outputDir: string, verbose: boolean = false):
 /**
  * 同步 UI/UX 数据到缓存
  */
-export async function syncUIDataToCache(force: boolean = false, verbose: boolean = false): Promise<void> {
+export async function syncUIDataToCache(
+  force: boolean = false,
+  verbose: boolean = false,
+  options?: SyncRuntimeOptions
+): Promise<void> {
   const cacheDir = path.join(os.homedir(), '.mcp-probe-kit', 'ui-ux-data');
-  await syncUIDataTo(cacheDir, verbose);
+  void force;
+  await syncUIDataTo(cacheDir, verbose, options);
 }

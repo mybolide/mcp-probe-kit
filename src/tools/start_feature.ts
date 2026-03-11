@@ -3,6 +3,11 @@ import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { FeatureReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
 import type { FeatureReport, RequirementsLoopReport } from "../schemas/structured-output.js";
+import {
+  reportToolProgress,
+  throwIfAborted,
+  type ToolExecutionContext,
+} from "../lib/tool-execution-context.js";
 
 /**
  * start_feature 智能编排工具
@@ -176,8 +181,11 @@ function buildOpenQuestions(questionBudget: number) {
   return base.slice(0, Math.max(0, questionBudget));
 }
 
-export async function startFeature(args: any) {
+export async function startFeature(args: any, context?: ToolExecutionContext) {
   try {
+    throwIfAborted(context?.signal, "start_feature 已取消");
+    await reportToolProgress(context, 10, "start_feature: 解析参数");
+
     // 智能参数解析，支持自然语言输入
     const parsedArgs = parseArgs<{
       feature_name?: string;
@@ -222,6 +230,9 @@ export async function startFeature(args: any) {
     const questionBudget = getNumber(parsedArgs.loop_question_budget, 5);
     const assumptionCap = getNumber(parsedArgs.loop_assumption_cap, 3);
 
+    throwIfAborted(context?.signal, "start_feature 已取消");
+    await reportToolProgress(context, 35, "start_feature: 参数解析完成");
+
     // 如果是纯自然语言输入（input 字段有值但 feature_name 和 description 为空）
     const input = getString(parsedArgs.input);
     if (input && !featureName && !description) {
@@ -251,6 +262,9 @@ export async function startFeature(args: any) {
     }
 
     if (requirementsMode === "loop") {
+      throwIfAborted(context?.signal, "start_feature(loop) 已取消");
+      await reportToolProgress(context, 70, "start_feature: 生成 loop 计划");
+
       const openQuestions = buildOpenQuestions(questionBudget).map((q, index) => ({
         id: `Q-${index + 1}`,
         ...q,
@@ -360,6 +374,8 @@ export async function startFeature(args: any) {
           plan,
         },
       };
+
+      await reportToolProgress(context, 95, "start_feature: loop 输出已生成");
 
       return okStructured(
         guide,
@@ -471,6 +487,8 @@ export async function startFeature(args: any) {
         plan,
       },
     };
+
+    await reportToolProgress(context, 95, "start_feature: 执行计划输出已生成");
 
     return okStructured(
       guide,

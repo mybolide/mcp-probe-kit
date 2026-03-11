@@ -3,6 +3,11 @@ import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { RalphLoopReportSchema } from "../schemas/structured-output.js";
 import type { RalphLoopReport } from "../schemas/structured-output.js";
+import {
+  reportToolProgress,
+  throwIfAborted,
+  type ToolExecutionContext,
+} from "../lib/tool-execution-context.js";
 
 /**
  * start_ralph 智能编排工具
@@ -701,8 +706,11 @@ cat .ralph/last_output_*.txt
 /**
  * start_ralph 主函数
  */
-export async function startRalph(args: any) {
+export async function startRalph(args: any, context?: ToolExecutionContext) {
   try {
+    throwIfAborted(context?.signal, "start_ralph 已取消");
+    await reportToolProgress(context, 10, "start_ralph: 解析参数");
+
     const parsedArgs = parseArgs<RalphArgs>(args, {
       defaultValues: DEFAULTS,
       primaryField: "goal",
@@ -745,6 +753,9 @@ export async function startRalph(args: any) {
 
     // 检测操作系统
     const isWindows = process.platform === "win32";
+
+    throwIfAborted(context?.signal, "start_ralph 已取消");
+    await reportToolProgress(context, 60, "start_ralph: 生成脚本模板");
 
     // 生成所有文件内容
     const promptMd = generatePromptTemplate(params.goal, params.completion_promise, params.test_command);
@@ -944,6 +955,8 @@ ${normalScript}
         plan,
       },
     };
+
+    await reportToolProgress(context, 95, "start_ralph: 输出已生成");
 
     return okStructured(
       output,
