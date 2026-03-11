@@ -135,6 +135,26 @@ code: "function login(user, pass) {
 focus: "security"`
     },
     {
+      name: 'code_insight',
+      description: '代码图谱洞察工具，桥接 GitNexus 分析调用链、上下文和影响面（不可用时自动降级）',
+      schema: 'CodeInsightSchema',
+      params: [
+        { name: 'mode', type: 'string', required: false, desc: '模式：auto（默认）、query、context、impact' },
+        { name: 'query', type: 'string', required: false, desc: '查询文本（query 模式推荐）' },
+        { name: 'target', type: 'string', required: false, desc: '目标符号（context/impact 模式推荐）' },
+        { name: 'repo', type: 'string', required: false, desc: '仓库名称（多仓库场景可选）' },
+        { name: 'direction', type: 'string', required: false, desc: 'impact 方向：upstream 或 downstream' },
+        { name: 'max_depth', type: 'number', required: false, desc: 'impact 最大深度，默认 3' },
+        { name: 'include_tests', type: 'boolean', required: false, desc: 'impact 是否包含测试文件，默认 false' }
+      ],
+      usage: '用于快速获取代码图谱线索，并为 start_feature/start_bugfix 提供可选增强',
+      example: `// 使用示例
+你: 请使用 code_insight 工具分析登录相关调用链
+
+mode: "query"
+query: "authentication middleware"`
+    },
+    {
       name: 'fix_bug',
       description: 'Bug 修复指导，提供根因分析、修复计划、测试计划和预防措施',
       schema: 'BugAnalysisSchema',
@@ -390,7 +410,7 @@ verbose: true`
     analysis: {
       icon: '🔍',
       title: '代码分析',
-      description: '智能代码审查、性能分析和安全扫描'
+      description: '智能代码审查、重构建议与代码图谱洞察'
     },
     git: {
       icon: '📝',

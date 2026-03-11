@@ -13,7 +13,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 21 tools—it's a context-aware system that helps AI agents grasp what you're building.
+> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 22 tools—it's a context-aware system that helps AI agents grasp what you're building.
 
 **Languages**: [English](README.md) | [简体中文](i18n/README.zh-CN.md) | [日本語](i18n/README.ja-JP.md) | [한국어](i18n/README.ko-KR.md) | [Español](i18n/README.es-ES.md) | [Français](i18n/README.fr-FR.md) | [Deutsch](i18n/README.de-DE.md) | [Português (BR)](i18n/README.pt-BR.md)
 
@@ -24,7 +24,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server providing **21 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
+A powerful MCP (Model Context Protocol) server providing **22 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
 
 **🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
@@ -39,7 +39,7 @@ A powerful MCP (Model Context Protocol) server providing **21 tools** covering t
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 21 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 22 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -47,20 +47,29 @@ A powerful MCP (Model Context Protocol) server providing **21 tools** covering t
 
 ## ✨ Core Features
 
-### 📦 21 Tools
+### 📦 22 Tools
 
 - **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 Code Analysis** (3 tools) - Code quality and refactoring
-  - `code_review`, `fix_bug`, `refactor`
+- **🔍 Code Analysis** (4 tools) - Code quality, refactoring, and graph insight
+  - `code_review`, `code_insight`, `fix_bug`, `refactor`
 - **📝 Git Tools** (2 tools) - Git commits and work reports
   - `gencommit`, `git_work_report`
 - **⚡ Code Generation** (1 tool) - Test generation
   - `gentest`
-- **📦 Project Management** (7 tools) - Project initialization and requirements management
+- **📦 Project Management** (6 tools) - Project initialization and requirements management
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX Tools** (3 tools) - Design systems and data synchronization
   - `ui_design_system`, `ui_search`, `sync_ui_data`
+
+### 🧠 Code Graph Bridge (GitNexus)
+
+- `code_insight` bridges GitNexus by default for query/context/impact analysis
+- `start_feature` and `start_bugfix` automatically enrich plans with graph context when available
+- If GitNexus is unavailable, the server falls back automatically without breaking orchestration
+- Graph snapshots are exposed as resources (`probe://graph/latest`, `probe://graph/history`, `probe://graph/latest.md`)
+- Graph snapshots are also persisted to readable files in `.mcp-probe-kit/graph-snapshots` (customizable via `MCP_GRAPH_SNAPSHOT_DIR`)
+- Tool responses include `_meta.graph` with snapshot URI and local JSON/Markdown file paths
 
 ### 🎯 Structured Output
 
