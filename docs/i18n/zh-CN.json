@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 开发增强工具集 · 文档中心",
-    "version": "v3.0.7",
+    "version": "v3.0.8",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v3.0.7",
+      "description": "5 分钟快速上手 MCP Probe Kit v3.0.8",
       "installConfig": "安装配置"
     },
     "tools": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.0.7，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.0.8，支持 Cursor、Cline 和 Claude Desktop",
     "breadcrumb": {
       "home": "文档首页",
       "quickStart": "快速开始",
