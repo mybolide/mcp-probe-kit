@@ -8,6 +8,7 @@ import {
   throwIfAborted,
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
+import { buildFeatureGraphContext } from "../lib/gitnexus-bridge.js";
 
 /**
  * start_feature 智能编排工具
@@ -261,6 +262,39 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       );
     }
 
+    throwIfAborted(context?.signal, "start_feature 已取消");
+    await reportToolProgress(context, 55, "start_feature: 获取代码图谱上下文");
+    const graphContext = await buildFeatureGraphContext({
+      featureName,
+      description,
+      signal: context?.signal,
+    });
+
+    const graphStatusNote = graphContext.available
+      ? `图谱增强: 可用（${graphContext.mode}）`
+      : "图谱增强: 已降级（自动回退）";
+    const graphGuideSection = `
+
+## 🧠 代码图谱上下文（可选增强）
+- 状态: ${graphContext.available ? "可用" : "降级"}
+- 摘要: ${graphContext.summary}
+${graphContext.highlights.length > 0
+    ? `- 线索:\n${graphContext.highlights.slice(0, 3).map((item) => `  - ${item}`).join("\n")}`
+    : "- 线索: 无"}
+`;
+
+    const estimateCodeContext = [
+      `参考生成的 ${docsDir}/specs/${featureName}/tasks.md`,
+      ...(graphContext.available
+        ? [
+            graphContext.summary ? `图谱摘要: ${graphContext.summary}` : "",
+            ...graphContext.highlights.slice(0, 2).map((item) => `图谱线索: ${item}`),
+          ]
+        : []),
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     if (requirementsMode === "loop") {
       throwIfAborted(context?.signal, "start_feature(loop) 已取消");
       await reportToolProgress(context, 70, "start_feature: 生成 loop 计划");
@@ -324,7 +358,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
             when: 'stopConditions.ready=true',
             args: {
               task_description: `实现 ${featureName} 功能：${description}`,
-              code_context: `参考生成的 ${docsDir}/specs/${featureName}/tasks.md`,
+              code_context: estimateCodeContext,
             },
             outputs: [],
           },
@@ -338,14 +372,15 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
           '按 Requirements Loop 规则提问并更新结构化输出',
           '满足结束条件后生成规格并完成估算',
         ],
-        notes: [`模板档位: ${templateProfile}`],
+        notes: [`模板档位: ${templateProfile}`, graphStatusNote],
       });
 
-      const guide = header + LOOP_PROMPT_TEMPLATE
+      const guide = (header + LOOP_PROMPT_TEMPLATE
         .replace(/{feature_name}/g, featureName)
         .replace(/{description}/g, description)
         .replace(/{question_budget}/g, String(questionBudget))
-        .replace(/{assumption_cap}/g, String(assumptionCap));
+        .replace(/{assumption_cap}/g, String(assumptionCap)))
+        + graphGuideSection;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -372,6 +407,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         },
         metadata: {
           plan,
+          graphContext,
         },
       };
 
@@ -394,14 +430,15 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         '按 delegated plan 顺序调用工具',
         '生成规格文档并完成工作量估算',
       ],
-      notes: [`模板档位: ${templateProfile}`],
+      notes: [`模板档位: ${templateProfile}`, graphStatusNote],
     });
 
-    const guide = header + PROMPT_TEMPLATE
+    const guide = (header + PROMPT_TEMPLATE
       .replace(/{feature_name}/g, featureName)
       .replace(/{description}/g, description)
       .replace(/{docs_dir}/g, docsDir)
-      .replace(/{template_profile}/g, templateProfile);
+      .replace(/{template_profile}/g, templateProfile))
+      + graphGuideSection;
 
     const plan = {
       mode: 'delegated',
@@ -428,7 +465,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
           tool: 'estimate',
           args: {
             task_description: `实现 ${featureName} 功能：${description}`,
-            code_context: `参考生成的 ${docsDir}/specs/${featureName}/tasks.md`,
+            code_context: estimateCodeContext,
           },
           outputs: [],
         },
@@ -485,6 +522,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       dependencies: [],
       metadata: {
         plan,
+        graphContext,
       },
     };
 

@@ -13,9 +13,11 @@ import {
   ProgressNotificationSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { 
   initProject, gencommit,
-  codeReview, gentest, refactor,
+  codeReview, codeInsight, gentest, refactor,
   initProjectContext, addFeature, fixBug, estimate,
   startFeature, startBugfix, startOnboard,
   startRalph, interview, askUser,
@@ -47,10 +49,30 @@ interface UiAppResource {
   createdAt: string;
 }
 
+interface GraphSnapshot {
+  id: string;
+  uri: string;
+  toolName: string;
+  createdAt: string;
+  status: string;
+  summary: string;
+  payload: unknown;
+  jsonFilePath?: string;
+  markdownFilePath?: string;
+}
+
 const EXTENSIONS_CAPABILITY_KEY = "io.github.mybolide/extensions";
 const MAX_UI_APP_RESOURCES = 30;
+const MAX_GRAPH_SNAPSHOTS = 20;
+const DEFAULT_GRAPH_SNAPSHOT_DIR = path.resolve(
+  process.cwd(),
+  ".mcp-probe-kit",
+  "graph-snapshots"
+);
 const uiAppResources = new Map<string, UiAppResource>();
 const uiAppResourceOrder: string[] = [];
+const graphSnapshots = new Map<string, GraphSnapshot>();
+const graphSnapshotOrder: string[] = [];
 
 function isEnvEnabled(name: string, fallback: boolean = false): boolean {
   const raw = process.env[name];
@@ -60,9 +82,18 @@ function isEnvEnabled(name: string, fallback: boolean = false): boolean {
   return /^(1|true|yes|on)$/i.test(raw.trim());
 }
 
+function resolveGraphSnapshotDir(): string {
+  const raw = process.env.MCP_GRAPH_SNAPSHOT_DIR?.trim();
+  if (!raw) {
+    return DEFAULT_GRAPH_SNAPSHOT_DIR;
+  }
+  return path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+}
+
 const extensionsCapabilityEnabled = isEnvEnabled("MCP_ENABLE_EXTENSIONS_CAPABILITY", false);
 const uiAppsEnabled = isEnvEnabled("MCP_ENABLE_UI_APPS", false);
 const traceMetaKey = process.env.MCP_TRACE_META_KEY || "trace";
+const graphSnapshotDir = resolveGraphSnapshotDir();
 
 const serverCapabilities: Record<string, unknown> = {
   tools: {},
@@ -244,6 +275,231 @@ function withUiResourceMeta(result: ToolResult, resourceUri: string): ToolResult
   };
 }
 
+function withGraphSnapshotMeta(result: ToolResult, snapshot: GraphSnapshot): ToolResult {
+  const currentGraphMeta = result._meta?.graph;
+  const currentGraphMetaRecord =
+    currentGraphMeta && typeof currentGraphMeta === "object"
+      ? (currentGraphMeta as Record<string, unknown>)
+      : {};
+
+  return {
+    ...result,
+    _meta: {
+      ...(result._meta ?? {}),
+      graph: {
+        ...currentGraphMetaRecord,
+        snapshotUri: snapshot.uri,
+        snapshotId: snapshot.id,
+        status: snapshot.status,
+        createdAt: snapshot.createdAt,
+        jsonFilePath: snapshot.jsonFilePath ?? null,
+        markdownFilePath: snapshot.markdownFilePath ?? null,
+      },
+    },
+  };
+}
+
+function trimText(value: string, maxLen: number): string {
+  if (value.length <= maxLen) {
+    return value;
+  }
+  return `${value.slice(0, maxLen - 3)}...`;
+}
+
+function toPosixPath(value: string): string {
+  return value.replace(/\\/g, "/");
+}
+
+function makeSafeFileSegment(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48) || "snapshot";
+}
+
+function ensureGraphSnapshotDir(): void {
+  if (!fs.existsSync(graphSnapshotDir)) {
+    fs.mkdirSync(graphSnapshotDir, { recursive: true });
+  }
+}
+
+function renderGraphSnapshotMarkdown(snapshot: GraphSnapshot): string {
+  return [
+    "# Graph Snapshot",
+    "",
+    `- id: ${snapshot.id}`,
+    `- tool: ${snapshot.toolName}`,
+    `- status: ${snapshot.status}`,
+    `- createdAt: ${snapshot.createdAt}`,
+    `- summary: ${snapshot.summary}`,
+    "",
+    "## Payload",
+    "```json",
+    JSON.stringify(snapshot.payload, null, 2),
+    "```",
+    "",
+  ].join("\n");
+}
+
+function persistGraphSnapshot(snapshot: GraphSnapshot): GraphSnapshot {
+  try {
+    ensureGraphSnapshotDir();
+    const safeTool = makeSafeFileSegment(snapshot.toolName);
+    const baseName = `${snapshot.id}-${safeTool}`;
+    const jsonPath = path.join(graphSnapshotDir, `${baseName}.json`);
+    const markdownPath = path.join(graphSnapshotDir, `${baseName}.md`);
+
+    const jsonText = JSON.stringify(
+      {
+        id: snapshot.id,
+        uri: snapshot.uri,
+        toolName: snapshot.toolName,
+        createdAt: snapshot.createdAt,
+        status: snapshot.status,
+        summary: snapshot.summary,
+        payload: snapshot.payload,
+      },
+      null,
+      2
+    );
+
+    fs.writeFileSync(jsonPath, jsonText, "utf-8");
+    fs.writeFileSync(markdownPath, renderGraphSnapshotMarkdown(snapshot), "utf-8");
+
+    return {
+      ...snapshot,
+      jsonFilePath: toPosixPath(jsonPath),
+      markdownFilePath: toPosixPath(markdownPath),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[MCP Probe Kit] graph snapshot persist failed: ${message}`);
+    return snapshot;
+  }
+}
+
+function sanitizeGraphPayload(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") {
+    return payload;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload.slice(0, 20).map((item) => sanitizeGraphPayload(item));
+  }
+
+  const record = payload as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (typeof value === "string") {
+      next[key] = trimText(value, 6000);
+      continue;
+    }
+    if (key === "executions" && Array.isArray(value)) {
+      next[key] = value.slice(0, 8).map((item) => {
+        if (!item || typeof item !== "object") {
+          return item;
+        }
+        const exec = item as Record<string, unknown>;
+        return {
+          ...exec,
+          text: typeof exec.text === "string" ? trimText(exec.text, 6000) : exec.text,
+        };
+      });
+      continue;
+    }
+    next[key] = sanitizeGraphPayload(value);
+  }
+  return next;
+}
+
+function readGraphPayload(toolName: string, result: ToolResult): {
+  status: string;
+  summary: string;
+  payload: unknown;
+} | null {
+  if (result.isError) {
+    return null;
+  }
+
+  if (toolName === "code_insight" && result.structuredContent && typeof result.structuredContent === "object") {
+    const structured = result.structuredContent as Record<string, unknown>;
+    const status = typeof structured.status === "string" ? structured.status : "ok";
+    const summary = typeof structured.summary === "string"
+      ? structured.summary
+      : "code_insight 图谱结果";
+    return {
+      status,
+      summary,
+      payload: sanitizeGraphPayload(structured),
+    };
+  }
+
+  if ((toolName === "start_feature" || toolName === "start_bugfix")
+    && result.structuredContent
+    && typeof result.structuredContent === "object") {
+    const structured = result.structuredContent as Record<string, unknown>;
+    const metadata = structured.metadata;
+    if (!metadata || typeof metadata !== "object") {
+      return null;
+    }
+    const graphContext = (metadata as Record<string, unknown>).graphContext;
+    if (!graphContext || typeof graphContext !== "object") {
+      return null;
+    }
+    const graphRecord = graphContext as Record<string, unknown>;
+    const status = graphRecord.available === false ? "degraded" : "ok";
+    const summary = typeof graphRecord.summary === "string"
+      ? graphRecord.summary
+      : `${toolName} 图谱上下文`;
+    return {
+      status,
+      summary,
+      payload: sanitizeGraphPayload({
+        graphContext,
+        plan: (metadata as Record<string, unknown>).plan ?? null,
+      }),
+    };
+  }
+
+  return null;
+}
+
+function rememberGraphSnapshot(
+  toolName: string,
+  result: ToolResult
+): GraphSnapshot | null {
+  const graph = readGraphPayload(toolName, result);
+  if (!graph) {
+    return null;
+  }
+
+  const id = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  const uri = `probe://graph/${id}`;
+  const snapshot = persistGraphSnapshot({
+    id,
+    uri,
+    toolName,
+    createdAt: new Date().toISOString(),
+    status: graph.status,
+    summary: graph.summary,
+    payload: graph.payload,
+  });
+
+  graphSnapshots.set(id, snapshot);
+  graphSnapshotOrder.push(id);
+
+  while (graphSnapshotOrder.length > MAX_GRAPH_SNAPSHOTS) {
+    const oldest = graphSnapshotOrder.shift();
+    if (oldest) {
+      graphSnapshots.delete(oldest);
+    }
+  }
+
+  return snapshot;
+}
+
 function decorateResult(
   toolName: string,
   args: unknown,
@@ -251,6 +507,11 @@ function decorateResult(
   traceMeta: unknown
 ): ToolResult {
   let result = withTraceMeta(raw, traceMeta);
+
+  const snapshot = rememberGraphSnapshot(toolName, result);
+  if (snapshot) {
+    result = withGraphSnapshotMeta(result, snapshot);
+  }
 
   if (uiAppsEnabled && isUiTool(toolName) && !result.isError) {
     const resourceUri = putUiAppResource(toolName, args, result);
@@ -297,6 +558,8 @@ async function executeTool(
       return await gencommit(args as any);
     case "code_review":
       return await codeReview(args as any);
+    case "code_insight":
+      return await codeInsight(args as any, context);
     case "gentest":
       return await gentest(args as any);
     case "refactor":
@@ -548,7 +811,44 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
       description: "MCP Probe Kit 服务器当前状态",
       mimeType: "application/json",
     },
+    {
+      uri: "probe://graph/latest",
+      name: "图谱快照（最新）",
+      description: "最近一次 code_insight 或 start_* 生成的图谱快照",
+      mimeType: "application/json",
+    },
+    {
+      uri: "probe://graph/history",
+      name: "图谱快照（历史）",
+      description: `最近 ${graphSnapshotOrder.length} 条图谱快照摘要`,
+      mimeType: "application/json",
+    },
+    {
+      uri: "probe://graph/latest.md",
+      name: "图谱快照（最新 Markdown）",
+      description: "最近一次图谱快照的 Markdown 视图",
+      mimeType: "text/markdown",
+    },
+    {
+      uri: "probe://graph/files",
+      name: "图谱快照（文件索引）",
+      description: `图谱快照落盘目录: ${toPosixPath(graphSnapshotDir)}`,
+      mimeType: "application/json",
+    },
   ];
+
+  for (const id of graphSnapshotOrder.slice().reverse().slice(0, 10)) {
+    const snapshot = graphSnapshots.get(id);
+    if (!snapshot) {
+      continue;
+    }
+    resources.push({
+      uri: snapshot.uri,
+      name: `图谱快照 · ${snapshot.toolName}`,
+      description: `${snapshot.status} · ${trimText(snapshot.summary, 120)} (${snapshot.createdAt})`,
+      mimeType: "application/json",
+    });
+  }
 
   if (uiAppsEnabled) {
     for (const uri of uiAppResourceOrder.slice().reverse()) {
@@ -599,6 +899,30 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 createMessageStream: typeof server.experimental.tasks.createMessageStream === "function",
                 elicitInputStream: typeof server.experimental.tasks.elicitInputStream === "function",
               },
+              graphSnapshots: {
+                count: graphSnapshotOrder.length,
+                snapshotDir: toPosixPath(graphSnapshotDir),
+                latest: (() => {
+                  const latestId = graphSnapshotOrder[graphSnapshotOrder.length - 1];
+                  if (!latestId) {
+                    return null;
+                  }
+                  const latest = graphSnapshots.get(latestId);
+                  if (!latest) {
+                    return null;
+                  }
+                  return {
+                    id: latest.id,
+                    uri: latest.uri,
+                    toolName: latest.toolName,
+                    status: latest.status,
+                    summary: trimText(latest.summary, 140),
+                    createdAt: latest.createdAt,
+                    jsonFilePath: latest.jsonFilePath ?? null,
+                    markdownFilePath: latest.markdownFilePath ?? null,
+                  };
+                })(),
+              },
               toolCount: allToolSchemas.length,
             },
             null,
@@ -621,6 +945,206 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
           uri: entry.uri,
           mimeType: entry.mimeType,
           text: entry.text,
+        },
+      ],
+    };
+  }
+
+  if (uri === "probe://graph/latest") {
+    const latestId = graphSnapshotOrder[graphSnapshotOrder.length - 1];
+    if (!latestId) {
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(
+              {
+                status: "empty",
+                message: "暂无图谱快照，请先调用 code_insight 或 start_feature/start_bugfix。",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+    const snapshot = graphSnapshots.get(latestId);
+    if (!snapshot) {
+      throw new Error(`图谱快照不存在: ${latestId}`);
+    }
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              id: snapshot.id,
+              uri: snapshot.uri,
+              toolName: snapshot.toolName,
+              createdAt: snapshot.createdAt,
+              status: snapshot.status,
+              summary: snapshot.summary,
+              payload: snapshot.payload,
+              files: {
+                json: snapshot.jsonFilePath ?? null,
+                markdown: snapshot.markdownFilePath ?? null,
+              },
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+
+  if (uri === "probe://graph/latest.md") {
+    const latestId = graphSnapshotOrder[graphSnapshotOrder.length - 1];
+    if (!latestId) {
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "text/markdown",
+            text: "# Graph Snapshot\n\n暂无图谱快照，请先调用 code_insight 或 start_feature/start_bugfix。",
+          },
+        ],
+      };
+    }
+
+    const snapshot = graphSnapshots.get(latestId);
+    if (!snapshot) {
+      throw new Error(`图谱快照不存在: ${latestId}`);
+    }
+
+    const markdown =
+      snapshot.markdownFilePath && fs.existsSync(snapshot.markdownFilePath)
+        ? fs.readFileSync(snapshot.markdownFilePath, "utf-8")
+        : renderGraphSnapshotMarkdown(snapshot);
+
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "text/markdown",
+          text: markdown,
+        },
+      ],
+    };
+  }
+
+  if (uri === "probe://graph/history") {
+    const history = graphSnapshotOrder
+      .slice()
+      .reverse()
+      .map((id) => graphSnapshots.get(id))
+      .filter((item): item is GraphSnapshot => Boolean(item))
+      .map((item) => ({
+        id: item.id,
+        uri: item.uri,
+        toolName: item.toolName,
+        createdAt: item.createdAt,
+        status: item.status,
+        summary: trimText(item.summary, 200),
+        files: {
+          json: item.jsonFilePath ?? null,
+          markdown: item.markdownFilePath ?? null,
+        },
+      }));
+
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              count: history.length,
+              items: history,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+
+  if (uri === "probe://graph/files") {
+    const latestId = graphSnapshotOrder[graphSnapshotOrder.length - 1];
+    const latest = latestId ? graphSnapshots.get(latestId) ?? null : null;
+    const hasDir = fs.existsSync(graphSnapshotDir);
+    const files = hasDir
+      ? fs
+          .readdirSync(graphSnapshotDir, { withFileTypes: true })
+          .filter((entry) => entry.isFile() && /\.(json|md)$/i.test(entry.name))
+          .map((entry) => toPosixPath(path.join(graphSnapshotDir, entry.name)))
+          .sort((a, b) => b.localeCompare(a))
+          .slice(0, 40)
+      : [];
+
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              snapshotDir: toPosixPath(graphSnapshotDir),
+              exists: hasDir,
+              latest: latest
+                ? {
+                    id: latest.id,
+                    uri: latest.uri,
+                    toolName: latest.toolName,
+                    jsonFilePath: latest.jsonFilePath ?? null,
+                    markdownFilePath: latest.markdownFilePath ?? null,
+                  }
+                : null,
+              files,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+
+  if (uri.startsWith("probe://graph/")) {
+    const id = uri.slice("probe://graph/".length);
+    if (!id || id === "latest" || id === "history" || id === "files" || id === "latest.md") {
+      throw new Error(`未知图谱资源: ${uri}`);
+    }
+    const snapshot = graphSnapshots.get(id);
+    if (!snapshot) {
+      throw new Error(`图谱快照不存在: ${id}`);
+    }
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              id: snapshot.id,
+              uri: snapshot.uri,
+              toolName: snapshot.toolName,
+              createdAt: snapshot.createdAt,
+              status: snapshot.status,
+              summary: snapshot.summary,
+              payload: snapshot.payload,
+              files: {
+                json: snapshot.jsonFilePath ?? null,
+                markdown: snapshot.markdownFilePath ?? null,
+              },
+            },
+            null,
+            2
+          ),
         },
       ],
     };

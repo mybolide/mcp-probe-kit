@@ -8,6 +8,7 @@ import {
   throwIfAborted,
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
+import { buildBugfixGraphContext } from "../lib/gitnexus-bridge.js";
 
 /**
  * start_bugfix 智能编排工具
@@ -370,6 +371,38 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
       headerNotes.push(profileDecision.warning);
     }
 
+    throwIfAborted(context?.signal, "start_bugfix 已取消");
+    await reportToolProgress(context, 55, "start_bugfix: 获取代码图谱上下文");
+    const graphContext = await buildBugfixGraphContext({
+      errorMessage,
+      stackTrace,
+      signal: context?.signal,
+    });
+
+    const graphStatusNote = graphContext.available
+      ? `图谱增强: 可用（${graphContext.mode}）`
+      : "图谱增强: 已降级（自动回退）";
+    headerNotes.push(graphStatusNote);
+
+    const graphCodeContext = graphContext.available
+      ? [
+          `图谱摘要: ${graphContext.summary}`,
+          ...graphContext.highlights.slice(0, 3).map((item) => `图谱线索: ${item}`),
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
+    const graphGuideSection = `
+
+## 🧠 代码图谱上下文（可选增强）
+- 状态: ${graphContext.available ? "可用" : "降级"}
+- 摘要: ${graphContext.summary}
+${graphContext.highlights.length > 0
+    ? `- 线索:\n${graphContext.highlights.slice(0, 3).map((item) => `  - ${item}`).join("\n")}`
+    : "- 线索: 无"}
+`;
+
     if (requirementsMode === "loop") {
       throwIfAborted(context?.signal, "start_bugfix(loop) 已取消");
       await reportToolProgress(context, 70, "start_bugfix: 生成 loop 计划");
@@ -430,6 +463,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
             args: {
               error_message: errorMessage,
               ...(stackTrace ? { stack_trace: stackTrace } : {}),
+              ...(graphCodeContext ? { code_context: graphCodeContext } : {}),
             },
             outputs: [],
           },
@@ -460,10 +494,11 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         ? LOOP_PROMPT_TEMPLATE_STRICT
         : LOOP_PROMPT_TEMPLATE_GUIDED;
 
-      const guide = header + loopTemplate
+      const guide = (header + loopTemplate
         .replace(/{error_message}/g, errorMessage)
         .replace(/{question_budget}/g, String(questionBudget))
-        .replace(/{assumption_cap}/g, String(assumptionCap));
+        .replace(/{assumption_cap}/g, String(assumptionCap)))
+        + graphGuideSection;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -491,6 +526,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         metadata: {
           plan,
           template: templateMeta,
+          graphContext,
         },
       };
 
@@ -524,10 +560,11 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
       ? PROMPT_TEMPLATE_STRICT
       : PROMPT_TEMPLATE_GUIDED;
 
-    const guide = header + promptTemplate
+    const guide = (header + promptTemplate
       .replace(/{error_message}/g, errorMessage)
       .replace(/{stack_trace}/g, stackTrace)
-      .replace(/{stack_trace_section}/g, stackTraceSection);
+      .replace(/{stack_trace_section}/g, stackTraceSection))
+      + graphGuideSection;
 
     const plan = {
       mode: 'delegated',
@@ -545,6 +582,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
           args: {
             error_message: errorMessage,
             ...(stackTrace ? { stack_trace: stackTrace } : {}),
+            ...(graphCodeContext ? { code_context: graphCodeContext } : {}),
           },
           outputs: [],
         },
@@ -595,6 +633,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
       metadata: {
         plan,
         template: templateMeta,
+        graphContext,
       },
     };
 

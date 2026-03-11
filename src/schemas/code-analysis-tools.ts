@@ -23,6 +23,53 @@ export const codeAnalysisToolSchemas = [
     },
   },
   {
+    name: "code_insight",
+    description: "当用户需要基于代码图谱分析调用链、上下文和影响面时使用。默认桥接 GitNexus，支持 query/context/impact 模式；不可用时自动降级并返回原因",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mode: {
+          type: "string",
+          description: "分析模式：auto（默认）、query、context、impact",
+        },
+        query: {
+          type: "string",
+          description: "查询文本（query 模式推荐）",
+        },
+        target: {
+          type: "string",
+          description: "目标符号（context/impact 模式推荐）",
+        },
+        repo: {
+          type: "string",
+          description: "仓库名称（多仓库场景可选）",
+        },
+        goal: {
+          type: "string",
+          description: "分析目标（可选）",
+        },
+        task_context: {
+          type: "string",
+          description: "任务上下文（可选）",
+        },
+        direction: {
+          type: "string",
+          description: "impact 方向：upstream / downstream",
+        },
+        max_depth: {
+          type: "number",
+          description: "impact 最大深度（可选，默认 3）",
+        },
+        include_tests: {
+          type: "boolean",
+          description: "impact 是否包含测试文件（可选，默认 false）",
+        },
+      },
+      required: [],
+      additionalProperties: true,
+    },
+  },
+  {
     name: "refactor",
     description: "当用户需要重构代码、改善代码结构时使用。分析代码结构，提供重构建议、重构步骤和风险评估",
     inputSchema: {

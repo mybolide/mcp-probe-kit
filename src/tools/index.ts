@@ -1,6 +1,7 @@
 export { initProject } from "./init_project.js";
 export { gencommit } from "./gencommit.js";
 export { codeReview } from "./code_review.js";
+export { codeInsight } from "./code_insight.js";
 export { gentest } from "./gentest.js";
 export { refactor } from "./refactor.js";
 export { initProjectContext } from "./init_project_context.js";

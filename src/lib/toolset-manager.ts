@@ -8,7 +8,7 @@ import { allToolSchemas } from '../schemas/index.js';
 export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
 
 /**
- * 工具集定义 (v3.0 精简版 - 20 个工具)
+ * 工具集定义 (v3.0 精简版)
  * 
  * - core: 核心工具（日常高频）
  * - ui: UI/UX 工具（推荐使用 start_ui 统一入口）
@@ -16,10 +16,11 @@ export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
  * - full: 所有工具（默认）
  */
 export const TOOLSET_DEFINITIONS = {
-  // 核心工具集 - 日常高频工具（9 个）
+  // 核心工具集 - 日常高频工具
   core: [
     'gencommit',
     'code_review',
+    'code_insight',
     'gentest',
     'refactor',
     'fix_bug',
@@ -37,11 +38,12 @@ export const TOOLSET_DEFINITIONS = {
     'sync_ui_data',     // 同步 UI 数据
   ],
 
-  // 工作流工具集 - 包含核心 + 编排 + 交互（20 个）
+  // 工作流工具集 - 包含核心 + 编排 + 交互
   workflow: [
-    // 核心工具（9 个）
+    // 核心工具
     'gencommit',
     'code_review',
+    'code_insight',
     'gentest',
     'refactor',
     'fix_bug',
@@ -68,7 +70,7 @@ export const TOOLSET_DEFINITIONS = {
     'sync_ui_data',
   ],
 
-  // 完整工具集 - 所有 20 个工具
+  // 完整工具集 - 所有工具
   full: 'all' as const,
 };
 
