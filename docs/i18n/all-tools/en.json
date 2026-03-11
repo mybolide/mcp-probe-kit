@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "All Tools - Complete List of 21 AI Development Tools | MCP Probe Kit",
-    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 3 code analysis tools, 1 Git tool, 1 generation tool, 7 project management tools, 3 UI/UX tools.",
+    "title": "All Tools - Complete List of 22 AI Development Tools | MCP Probe Kit",
+    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 4 code analysis tools, 2 Git tools, 1 generation tool, 6 project management tools, 3 UI/UX tools.",
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "MCP Probe Kit provides 21 practical tools with structured output support for core and orchestration tools"
+    "subtitle": "MCP Probe Kit provides 22 practical tools with structured output support for core and orchestration tools"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -40,7 +40,8 @@
     "ask_user": "Ask User",
     "ui_design_system": "Design System",
     "ui_search": "Search UI",
-    "sync_ui_data": "Sync Data"
+    "sync_ui_data": "Sync Data",
+    "code_insight": "Code Insight"
   },
   "categories": {
     "workflow": {
@@ -49,7 +50,7 @@
     },
     "analysis": {
       "title": "Code Analysis",
-      "count": "3 tools"
+      "count": "4 tools"
     },
     "git": {
       "title": "Git Tools",
@@ -152,6 +153,10 @@
     "sync_ui_data": {
       "description": "Sync UI/UX data to local cache, supporting automatic update checking and forced sync",
       "usage": "Sync UI/UX data to local cache, downloading latest data from npm package uipro-cli"
+    },
+    "code_insight": {
+      "description": "Code graph insight tool, bridging GitNexus to analyze call chains, context, and impact (auto-degrades when unavailable)",
+      "usage": "Quickly obtain graph insights and enhance start_feature/start_bugfix planning"
     }
   }
 }

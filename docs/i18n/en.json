@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "MCP Probe Kit - AI-Powered Complete Development Toolkit | 21 Tools Covering Entire Development Lifecycle",
-    "description": "MCP Probe Kit provides 21 AI-powered development tools covering requirements analysis, code development, quality assurance, bug fixing, and release management. Supports Cursor, Cline, Claude Desktop with 100% structured output.",
+    "title": "MCP Probe Kit - AI-Powered Complete Development Toolkit | 22 Tools Covering Entire Development Lifecycle",
+    "description": "MCP Probe Kit provides 22 AI-powered development tools covering requirements analysis, code development, quality assurance, bug fixing, and release management. Supports Cursor, Cline, Claude Desktop with 100% structured output.",
     "keywords": "MCP Probe Kit, AI development tools, code generation, code review, Git tools, UI development, development efficiency, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {
@@ -14,19 +14,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
-    "version": "v3.0.3",
+    "version": "v3.0.7",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "Quick Start",
-      "description": "Get started with MCP Probe Kit v3.0.3 in 5 minutes",
+      "description": "Get started with MCP Probe Kit v3.0.7 in 5 minutes",
       "installConfig": "Installation & Configuration"
     },
     "tools": {
       "title": "Tools Documentation",
-      "description": "Complete reference for 21 practical tools",
+      "description": "Complete reference for 22 practical tools",
       "allTools": "All Tools"
     },
     "guides": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "Installation & Configuration",
-    "subtitle": "Get started with MCP Probe Kit v3.0.3 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
+    "subtitle": "Get started with MCP Probe Kit v3.0.7 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
     "breadcrumb": {
       "home": "Documentation",
       "quickStart": "Quick Start",
@@ -182,7 +182,7 @@
     "subtitle": "Smoothly migrate from v2.x to v3.0, understand breaking changes and new features",
     "overview": {
       "title": "Overview",
-      "description": "MCP Probe Kit v3.0 is a major version update, streamlined to 20 core tools, bringing more powerful features and better development experience.",
+      "description": "MCP Probe Kit v3.0 is a major version update, streamlined to 22 tools, bringing more powerful features and better development experience.",
       "migrationTime": "Migration Time:",
       "migrationTimeText": "Most projects can complete migration in 10-15 minutes, v2.x core tools remain compatible in v3.0."
     },
@@ -190,7 +190,7 @@
       "title": "Major Changes",
       "toolsOptimization": {
         "title": "1. Tools Streamlining",
-        "description": "v2.x: 39 tools → v3.0: 20 core tools (removed low-frequency tools, kept high-value tools)"
+        "description": "v2.x: 39 tools → v3.x: 22 tools (removed low-frequency tools, kept high-value tools)"
       },
       "workflows": {
         "title": "2. New Workflow Orchestration",
@@ -258,7 +258,7 @@
     "subtitle": "MCP Probe Kit integrates complete development process, best practices guide from requirements to deployment",
     "overview": {
       "title": "Complete Development Process",
-      "description": "MCP Probe Kit's 21 tools cover the complete development process from requirements analysis to code deployment. Here are the recommended best practices.",
+      "description": "MCP Probe Kit's 22 tools cover the complete development process from requirements analysis to code deployment. Here are the recommended best practices.",
       "coreIdea": "Core Philosophy:",
       "coreIdeaText": "Chain the entire development process through workflow orchestration tools (start_*), making AI your development assistant."
     },
@@ -500,7 +500,7 @@
     "resources": {
       "title": "More Resources",
       "allTools": "Complete Tools Reference",
-      "allToolsDesc": "View detailed descriptions of all 21 tools",
+      "allToolsDesc": "View detailed descriptions of all 22 tools",
       "gettingStarted": "Installation & Configuration",
       "gettingStartedDesc": "Quick start guide",
       "migration": "Migration Guide",

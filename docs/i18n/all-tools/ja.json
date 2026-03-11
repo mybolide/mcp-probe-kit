@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "すべてのツール - 21個のAI開発ツール完全リスト | MCP Probe Kit",
-    "description": "MCP Probe Kit 完全ツールリスト：6個のワークフローオーケストレーションツール、3個のコード分析ツール、1個のGitツール、1個の生成ツール、7個のプロジェクト管理ツール、3個のUI/UXツール。",
+    "title": "すべてのツール - 22個のAI開発ツール完全リスト | MCP Probe Kit",
+    "description": "MCP Probe Kit 完全ツールリスト：6個のワークフローオーケストレーションツール、4個のコード分析ツール、2個のGitツール、1個の生成ツール、6個のプロジェクト管理ツール、3個のUI/UXツール。",
     "keywords": "AI開発ツール, コード生成ツール, コードレビューツール, Git自動化, UI生成, コードリファクタリング, パフォーマンス最適化, セキュリティスキャン"
   },
   "page": {
-    "subtitle": "MCP Probe Kitは21個の実用的なツールを提供し、コアおよびオーケストレーションツールは構造化出力をサポートします"
+    "subtitle": "MCP Probe Kitは22個の実用的なツールを提供し、コアおよびオーケストレーションツールは構造化出力をサポートします"
   },
   "search": {
     "placeholder": "🔍 ツール名または説明を検索...",
@@ -40,7 +40,8 @@
     "ask_user": "ユーザーに質問",
     "ui_design_system": "デザインシステム",
     "ui_search": "UI検索",
-    "sync_ui_data": "データ同期"
+    "sync_ui_data": "データ同期",
+    "code_insight": "コード洞察"
   },
   "categories": {
     "workflow": {
@@ -49,7 +50,7 @@
     },
     "analysis": {
       "title": "コード分析",
-      "count": "3個"
+      "count": "4個"
     },
     "git": {
       "title": "Gitツール",
@@ -152,6 +153,10 @@
     "sync_ui_data": {
       "description": "UI/UXデータをローカルキャッシュに同期し、自動更新チェックと強制同期をサポートします",
       "usage": "npmパッケージuipro-cliから最新データをダウンロードし、UI/UXデータをローカルキャッシュに同期します"
+    },
+    "code_insight": {
+      "description": "コードグラフ洞察ツール。GitNexus をブリッジして呼び出し連鎖、コンテキスト、影響範囲を分析（利用不可時は自動で劣化）",
+      "usage": "コードグラフの手がかりを素早く取得し、start_feature/start_bugfix の計画を強化します"
     }
   }
 }

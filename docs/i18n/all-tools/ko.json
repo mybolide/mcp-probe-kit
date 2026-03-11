@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "모든 도구 - 21개 AI 개발 도구 전체 목록 | MCP Probe Kit",
-    "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 3개의 코드 분석 도구, 1개의 Git 도구, 1개의 생성 도구, 7개의 프로젝트 관리 도구, 3개의 UI/UX 도구.",
+    "title": "모든 도구 - 22개 AI 개발 도구 전체 목록 | MCP Probe Kit",
+    "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 4개의 코드 분석 도구, 2개의 Git 도구, 1개의 생성 도구, 6개의 프로젝트 관리 도구, 3개의 UI/UX 도구.",
     "keywords": "AI 개발 도구, 코드 생성 도구, 코드 리뷰 도구, Git 자동화, UI 생성, 코드 리팩토링, 성능 최적화, 보안 스캔"
   },
   "page": {
-    "subtitle": "MCP Probe Kit은 21개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
+    "subtitle": "MCP Probe Kit은 22개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
   },
   "search": {
     "placeholder": "🔍 도구 이름 또는 설명 검색...",
@@ -40,7 +40,8 @@
     "ask_user": "사용자에게 질문",
     "ui_design_system": "디자인 시스템",
     "ui_search": "UI 검색",
-    "sync_ui_data": "데이터 동기화"
+    "sync_ui_data": "데이터 동기화",
+    "code_insight": "코드 인사이트"
   },
   "categories": {
     "workflow": {
@@ -49,7 +50,7 @@
     },
     "analysis": {
       "title": "코드 분석",
-      "count": "3개"
+      "count": "4개"
     },
     "git": {
       "title": "Git 도구",
@@ -152,6 +153,10 @@
     "sync_ui_data": {
       "description": "UI/UX 데이터를 로컬 캐시에 동기화하고 자동 업데이트 확인 및 강제 동기화를 지원합니다",
       "usage": "npm 패키지 uipro-cli에서 최신 데이터를 다운로드하여 UI/UX 데이터를 로컬 캐시에 동기화합니다"
+    },
+    "code_insight": {
+      "description": "코드 그래프 인사이트 도구로 GitNexus를 브리지하여 호출 체인, 컨텍스트, 영향 범위를 분석합니다(사용 불가 시 자동 강등)",
+      "usage": "코드 그래프 단서를 빠르게 확보하고 start_feature/start_bugfix 계획을 강화합니다"
     }
   }
 }

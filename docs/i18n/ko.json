@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "MCP Probe Kit - AI 기반 완전한 개발 툴킷 | 전체 개발 라이프사이클을 커버하는 21개 도구",
-    "description": "MCP Probe Kit은 요구사항 분석, 코드 개발, 품질 보증, 버그 수정, 릴리스 관리를 커버하는 21개의 AI 기반 개발 도구를 제공합니다. Cursor, Cline, Claude Desktop을 지원하며 100% 구조화된 출력을 제공합니다.",
+    "title": "MCP Probe Kit - AI 기반 완전한 개발 툴킷 | 전체 개발 라이프사이클을 커버하는 22개 도구",
+    "description": "MCP Probe Kit은 요구사항 분석, 코드 개발, 품질 보증, 버그 수정, 릴리스 관리를 커버하는 22개의 AI 기반 개발 도구를 제공합니다. Cursor, Cline, Claude Desktop을 지원하며 100% 구조화된 출력을 제공합니다.",
     "keywords": "MCP Probe Kit, AI 개발 도구, 코드 생성, 코드 리뷰, Git 도구, UI 개발, 개발 효율성, Cursor, Cline, Claude, MCP 서버"
   },
   "nav": {
@@ -14,19 +14,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 개발 강화 툴킷 · 문서 센터",
-    "version": "v3.0.3",
+    "version": "v3.0.7",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
   },
   "sections": {
     "quickStart": {
       "title": "빠른 시작",
-      "description": "5분 안에 MCP Probe Kit v3.0.3 시작하기",
+      "description": "5분 안에 MCP Probe Kit v3.0.7 시작하기",
       "installConfig": "설치 및 구성"
     },
     "tools": {
       "title": "도구 문서",
-      "description": "21개 실용 도구의 완전한 참조",
+      "description": "22개 실용 도구의 완전한 참조",
       "allTools": "모든 도구"
     },
     "guides": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "설치 및 구성",
-    "subtitle": "5분 안에 MCP Probe Kit v3.0.3 시작하기. Cursor, Cline, Claude Desktop 지원",
+    "subtitle": "5분 안에 MCP Probe Kit v3.0.7 시작하기. Cursor, Cline, Claude Desktop 지원",
     "breadcrumb": {
       "home": "문서",
       "quickStart": "빠른 시작",
@@ -182,7 +182,7 @@
     "subtitle": "v2.x에서 v3.0으로 원활하게 마이그레이션하고 주요 변경 사항 및 새로운 기능 이해",
     "overview": {
       "title": "개요",
-      "description": "MCP Probe Kit v3.0은 주요 버전 업데이트로, 20개의 핵심 도구로 최적화되어 더 강력한 기능과 더 나은 개발 경험을 제공합니다.",
+      "description": "MCP Probe Kit v3.0은 주요 버전 업데이트로, 22개 도구로 최적화되어 더 강력한 기능과 더 나은 개발 경험을 제공합니다.",
       "migrationTime": "마이그레이션 시간：",
       "migrationTimeText": "대부분의 프로젝트는 10-15분 내에 마이그레이션을 완료할 수 있으며, v2.x의 핵심 도구는 v3.0에서 호환성을 유지합니다."
     },
@@ -190,7 +190,7 @@
       "title": "주요 변경 사항",
       "toolsOptimization": {
         "title": "1. 도구 최적화",
-        "description": "v2.x: 39개 도구 → v3.0: 20개 핵심 도구 (저빈도 도구 제거, 고가치 도구 유지)"
+        "description": "v2.x: 39개 도구 → v3.x: 22개 도구 (저빈도 도구 제거, 고가치 도구 유지)"
       },
       "workflows": {
         "title": "2. 새로운 워크플로 오케스트레이션",
@@ -258,7 +258,7 @@
     "subtitle": "MCP Probe Kit은 완전한 개발 프로세스를 통합, 요구사항부터 배포까지의 모범 사례 가이드",
     "overview": {
       "title": "완전한 개발 프로세스",
-      "description": "MCP Probe Kit의 21개 도구는 요구사항 분석부터 코드 배포까지의 완전한 개발 프로세스를 커버합니다. 다음은 권장되는 모범 사례입니다.",
+      "description": "MCP Probe Kit의 22개 도구는 요구사항 분석부터 코드 배포까지의 완전한 개발 프로세스를 커버합니다. 다음은 권장되는 모범 사례입니다.",
       "coreIdea": "핵심 철학：",
       "coreIdeaText": "워크플로 오케스트레이션 도구(start_*)를 통해 전체 개발 프로세스를 연결하여 AI를 개발 어시스턴트로 만듭니다."
     },
@@ -500,7 +500,7 @@
     "resources": {
       "title": "추가 리소스",
       "allTools": "완전한 도구 참조",
-      "allToolsDesc": "모든 21개 도구의 자세한 설명 보기",
+      "allToolsDesc": "모든 22개 도구의 자세한 설명 보기",
       "gettingStarted": "설치 및 구성",
       "gettingStartedDesc": "빠른 시작 가이드",
       "migration": "마이그레이션 가이드",
