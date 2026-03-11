@@ -26,7 +26,7 @@
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
-**协议版本**：MCP 2025-11-25 · **SDK**：@modelcontextprotocol/sdk 1.25.3
+**协议版本**：MCP 2025-11-25 · **SDK**：@modelcontextprotocol/sdk 1.27.1
 
 ---
 

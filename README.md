@@ -30,7 +30,7 @@ A powerful MCP (Model Context Protocol) server providing **21 tools** covering t
 
 **Supports All MCP Clients**: Cursor, Claude Desktop, Cline, Continue, and more
 
-**Protocol Version**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.25.3
+**Protocol Version**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.27.1
 
 ---
 
@@ -65,6 +65,22 @@ A powerful MCP (Model Context Protocol) server providing **21 tools** covering t
 ### 🎯 Structured Output
 
 Core and orchestration tools support **structured output**, returning machine-readable JSON data, improving AI parsing accuracy, supporting tool chaining and state tracking.
+
+### ⏱️ Native Tasks, Progress, and Cancellation
+
+- Built on MCP SDK native task support (`taskStore` + `taskMessageQueue`)
+- Supports task lifecycle endpoints: `tasks/get`, `tasks/result`, `tasks/list`, `tasks/cancel`
+- Advertises `capabilities.tasks.requests.tools.call` so clients can create tasks for `tools/call`
+- Emits `notifications/progress` when client provides `_meta.progressToken`
+- Handles request cancellation via `AbortSignal` and returns a clear cancellation error
+- Long-running orchestration tools (`start_*`) and `sync_ui_data` support cooperative cancellation/progress callbacks
+
+### 🔌 Extensions & UI Apps (Optional)
+
+- Trace metadata passthrough: request `_meta.trace` is preserved in tool responses (`_meta.trace`)
+- Optional extensions capability switch: enable with `MCP_ENABLE_EXTENSIONS_CAPABILITY=1`
+- Optional MCP Apps resource output for UI tools: enable with `MCP_ENABLE_UI_APPS=1`
+- UI tools can expose preview resources via `ui://...` and response `_meta.ui.resourceUri`
 
 ### 🧭 Delegated Orchestration Protocol
 

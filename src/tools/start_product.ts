@@ -4,6 +4,11 @@ import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { WorkflowReportSchema } from "../schemas/structured-output.js";
 import type { WorkflowReport, WorkflowStep, Artifact } from "../schemas/structured-output.js";
+import {
+  reportToolProgress,
+  throwIfAborted,
+  type ToolExecutionContext,
+} from "../lib/tool-execution-context.js";
 
 /**
  * start_product - 产品设计完整工作流指导
@@ -11,8 +16,11 @@ import type { WorkflowReport, WorkflowStep, Artifact } from "../schemas/structur
  * 返回从需求到 HTML 原型的完整工作流执行指导，由 AI 按步骤调用工具并创建文件
  */
 
-export async function startProduct(args: any) {
+export async function startProduct(args: any, context?: ToolExecutionContext) {
   try {
+    throwIfAborted(context?.signal, "start_product 已取消");
+    await reportToolProgress(context, 10, "start_product: 解析参数");
+
     // 使用智能参数解析
     const parsedArgs = parseArgs<{
       description?: string;
@@ -48,9 +56,15 @@ export async function startProduct(args: any) {
     const skipDesignSystem = getBoolean(parsedArgs.skip_design_system);
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
 
+    throwIfAborted(context?.signal, "start_product 已取消");
+    await reportToolProgress(context, 35, "start_product: 参数解析完成");
+
     // 如果提供了需求文件，读取文件内容
     let requirementsSource = '';
     if (requirementsFile) {
+      throwIfAborted(context?.signal, "start_product 已取消");
+      await reportToolProgress(context, 55, "start_product: 读取需求文档");
+
       try {
         description = await fs.readFile(requirementsFile, 'utf-8');
         requirementsSource = `需求文档文件: ${requirementsFile}`;
@@ -489,6 +503,8 @@ ${!skipDesignSystem ? `├── design-system.json          # 设计系统配�
         plan,
       },
     };
+
+    await reportToolProgress(context, 95, "start_product: 工作流输出已生成");
 
     return okStructured(guidanceText, report, {
       schema: WorkflowReportSchema,

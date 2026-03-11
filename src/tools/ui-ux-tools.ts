@@ -13,6 +13,11 @@ import { syncUIDataToCache } from '../utils/ui-sync.js';
 import { formatDesignSystemJson } from '../utils/design-system-json-formatter.js';
 import { okStructured } from '../lib/response.js';
 import type { DesignSystem, UISearchResult, SyncReport } from '../schemas/output/ui-ux-tools.js';
+import {
+  reportToolProgress,
+  throwIfAborted,
+  type ToolExecutionContext,
+} from '../lib/tool-execution-context.js';
 
 /**
  * 文件索引接口
@@ -852,13 +857,19 @@ ${formattedResults}
 /**
  * UI 数据同步工具
  */
-export async function syncUiData(args: any) {
+export async function syncUiData(args: any, context?: ToolExecutionContext) {
   try {
+    throwIfAborted(context?.signal, 'sync_ui_data 已取消');
+    await reportToolProgress(context, 5, 'sync_ui_data: 开始同步流程');
+
     const force = args.force || false;
     const verbose = args.verbose || false;
 
     // 检查是否需要更新
     if (!force) {
+      throwIfAborted(context?.signal, 'sync_ui_data 已取消');
+      await reportToolProgress(context, 15, 'sync_ui_data: 检查上游版本');
+
       const loader = await getDataLoader();
       const cacheManager = loader.getCacheManager();
 
@@ -866,6 +877,8 @@ export async function syncUiData(args: any) {
         const updateInfo = await cacheManager.checkUpdate();
 
         if (!updateInfo.hasUpdate) {
+          await reportToolProgress(context, 100, 'sync_ui_data: 数据已是最新');
+
           const upToDateData: SyncReport = {
             summary: "UI/UX 数据已是最新版本",
             status: 'success',
@@ -892,9 +905,20 @@ export async function syncUiData(args: any) {
     }
 
     // 执行同步
-    await syncUIDataToCache(force, verbose);
+    throwIfAborted(context?.signal, 'sync_ui_data 已取消');
+    await reportToolProgress(context, 30, 'sync_ui_data: 下载并处理数据');
+
+    await syncUIDataToCache(force, verbose, {
+      signal: context?.signal,
+      onProgress: async (progress, message) => {
+        await reportToolProgress(context, 30 + Math.round(progress * 0.6), `sync_ui_data: ${message}`);
+      },
+    });
 
     // 重新加载数据
+    throwIfAborted(context?.signal, 'sync_ui_data 已取消');
+    await reportToolProgress(context, 92, 'sync_ui_data: 重载本地缓存');
+
     if (dataLoader) {
       await dataLoader.reload();
     }
@@ -916,6 +940,8 @@ export async function syncUiData(args: any) {
       },
       timestamp: new Date().toISOString(),
     };
+
+    await reportToolProgress(context, 100, 'sync_ui_data: 同步完成');
 
     return okStructured(`✅ UI/UX 数据同步成功
 

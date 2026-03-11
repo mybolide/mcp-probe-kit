@@ -16,6 +16,11 @@ import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { UIReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
 import type { UIReport, RequirementsLoopReport } from "../schemas/structured-output.js";
 import { detectProjectType } from "../lib/project-detector.js";
+import {
+  reportToolProgress,
+  throwIfAborted,
+  type ToolExecutionContext,
+} from "../lib/tool-execution-context.js";
 
 type TemplateProfileResolved = 'guided' | 'strict';
 type TemplateProfileRequest = 'guided' | 'strict' | 'auto';
@@ -440,8 +445,11 @@ function getFrameworkFromContext(projectRoot: string): string | null {
 /**
  * 统一 UI 开发编排工具
  */
-export async function startUi(args: any) {
+export async function startUi(args: any, context?: ToolExecutionContext) {
   try {
+    throwIfAborted(context?.signal, "start_ui 已取消");
+    await reportToolProgress(context, 10, "start_ui: 解析参数与检测项目框架");
+
     const projectRoot = process.cwd();
     
     // 优先从 project-context.md 读取框架信息
@@ -522,6 +530,9 @@ export async function startUi(args: any) {
     let templateName = getString(parsedArgs.template);
     templateName = normalizeTemplateName(templateName || description || 'ui-template', 'ui-template');
 
+    throwIfAborted(context?.signal, "start_ui 已取消");
+    await reportToolProgress(context, 35, "start_ui: 参数解析完成");
+
     const profileDecision = resolveTemplateProfile(rawProfile, description || "");
     const templateMeta: Record<string, string> = {
       profile: profileDecision.resolved,
@@ -569,6 +580,9 @@ start_ui "用户列表" --mode=auto
 
     // requirements loop 模式
     if (requirementsMode === "loop") {
+      throwIfAborted(context?.signal, "start_ui(loop) 已取消");
+      await reportToolProgress(context, 70, "start_ui: 生成 loop 计划");
+
       if (!description) {
         return {
           content: [
@@ -731,6 +745,8 @@ start_ui <描述> --requirements_mode=loop
         },
       };
 
+      await reportToolProgress(context, 95, "start_ui: loop 输出已生成");
+
       return okStructured(
         guide,
         loopReport,
@@ -743,6 +759,9 @@ start_ui <描述> --requirements_mode=loop
 
     // 自动模式实现
     if (mode === "auto") {
+      throwIfAborted(context?.signal, "start_ui(auto) 已取消");
+      await reportToolProgress(context, 55, "start_ui: 生成智能推荐");
+
       // 1. 获取推理引擎
       const engine = await getReasoningEngine();
 
@@ -755,6 +774,9 @@ start_ui <描述> --requirements_mode=loop
 
       // 3. 生成推荐
       const recommendation = engine.generateRecommendation(request);
+
+      throwIfAborted(context?.signal, "start_ui(auto) 已取消");
+      await reportToolProgress(context, 80, "start_ui: 智能计划已生成");
 
       // 4. 提取推理结果
       const inferredProductType = recommendation.target;
@@ -986,6 +1008,8 @@ ${recommendation.reasoning}
         },
       };
 
+      await reportToolProgress(context, 95, "start_ui: auto 输出已生成");
+
       return okStructured(
         smartPlan,
         uiReport,
@@ -1188,6 +1212,8 @@ start_ui "设置页面" --framework=react
         template: templateMeta,
       },
     };
+
+    await reportToolProgress(context, 95, "start_ui: manual 输出已生成");
 
     return okStructured(
       guide,

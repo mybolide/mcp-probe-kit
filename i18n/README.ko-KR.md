@@ -26,7 +26,7 @@
 
 **모든 MCP 클라이언트 지원**: Cursor, Claude Desktop, Cline, Continue 등
 
-**프로토콜 버전**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.25.3
+**프로토콜 버전**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.27.1
 
 ---
 
