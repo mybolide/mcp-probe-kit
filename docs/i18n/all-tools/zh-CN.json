@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "所有工具 - 21个AI研发工具完整列表 | MCP Probe Kit",
-    "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、3个代码分析工具、1个Git工具、1个生成工具、7个项目管理工具、3个UI/UX工具。",
+    "title": "所有工具 - 22个AI研发工具完整列表 | MCP Probe Kit",
+    "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、4个代码分析工具、2个Git工具、1个生成工具、6个项目管理工具、3个UI/UX工具。",
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "MCP Probe Kit 提供 21 个实用工具，核心与编排工具支持结构化输出"
+    "subtitle": "MCP Probe Kit 提供 22 个实用工具，核心与编排工具支持结构化输出"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -40,7 +40,8 @@
     "ask_user": "提问用户",
     "ui_design_system": "设计系统",
     "ui_search": "搜索UI",
-    "sync_ui_data": "同步数据"
+    "sync_ui_data": "同步数据",
+    "code_insight": "图谱洞察"
   },
   "categories": {
     "workflow": {
@@ -49,7 +50,7 @@
     },
     "analysis": {
       "title": "代码分析",
-      "count": "3 个"
+      "count": "4 个"
     },
     "git": {
       "title": "Git 工具",
@@ -152,6 +153,10 @@
     "sync_ui_data": {
       "description": "同步 UI/UX 数据到本地缓存，支持自动检查更新和强制同步",
       "usage": "同步 UI/UX 数据到本地缓存，从 npm 包 uipro-cli 下载最新数据"
+    },
+    "code_insight": {
+      "description": "代码图谱洞察工具，桥接 GitNexus 分析调用链、上下文和影响面（不可用时自动降级）",
+      "usage": "用于快速获取代码图谱线索，并为 start_feature/start_bugfix 提供可选增强"
     }
   }
 }

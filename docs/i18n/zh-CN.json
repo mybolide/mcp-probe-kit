@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "MCP Probe Kit - AI 驱动的完整研发工具集 | 21个工具覆盖开发全流程",
-    "description": "MCP Probe Kit 提供 21 个 AI 驱动的研发工具，覆盖需求分析、代码开发、质量保障、Bug修复、版本发布全流程。支持 Cursor、Cline、Claude Desktop，100% 结构化输出。",
+    "title": "MCP Probe Kit - AI 驱动的完整研发工具集 | 22个工具覆盖开发全流程",
+    "description": "MCP Probe Kit 提供 22 个 AI 驱动的研发工具，覆盖需求分析、代码开发、质量保障、Bug修复、版本发布全流程。支持 Cursor、Cline、Claude Desktop，100% 结构化输出。",
     "keywords": "MCP Probe Kit, AI开发工具, 代码生成, 代码审查, Git工具, UI开发, 研发效率, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {
@@ -14,19 +14,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 开发增强工具集 · 文档中心",
-    "version": "v3.0.3",
+    "version": "v3.0.7",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v3.0.3",
+      "description": "5 分钟快速上手 MCP Probe Kit v3.0.7",
       "installConfig": "安装配置"
     },
     "tools": {
       "title": "工具文档",
-      "description": "21 个实用工具的完整参考",
+      "description": "22 个实用工具的完整参考",
       "allTools": "所有工具"
     },
     "guides": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.0.3，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.0.7，支持 Cursor、Cline 和 Claude Desktop",
     "breadcrumb": {
       "home": "文档首页",
       "quickStart": "快速开始",
@@ -182,7 +182,7 @@
     "subtitle": "从 v2.x 平滑迁移到 v3.0，了解重大变更和新特性",
     "overview": {
       "title": "概述",
-      "description": "MCP Probe Kit v3.0 是一个重大版本更新，精简优化到 20 个核心工具，带来了更强大的功能和更好的开发体验。",
+      "description": "MCP Probe Kit v3.0 是一个重大版本更新，精简优化到 22 个工具，带来了更强大的功能和更好的开发体验。",
       "migrationTime": "迁移时间：",
       "migrationTimeText": "大多数项目可以在 10-15 分钟内完成迁移，v2.x 的核心工具在 v3.0 中都保持兼容。"
     },
@@ -190,7 +190,7 @@
       "title": "主要变更",
       "toolsOptimization": {
         "title": "1. 工具精简优化",
-        "description": "v2.x: 39 个工具 → v3.0: 20 个核心工具（移除低频工具，保留高价值工具）"
+        "description": "v2.x: 39 个工具 → v3.x: 22 个工具（移除低频工具，保留高价值工具）"
       },
       "workflows": {
         "title": "2. 新增工作流编排",
@@ -258,7 +258,7 @@
     "subtitle": "MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南",
     "overview": {
       "title": "完整研发流程",
-      "description": "MCP Probe Kit 的 21 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。",
+      "description": "MCP Probe Kit 的 22 个工具覆盖了从需求分析到代码上线的完整研发流程。以下是推荐的最佳实践。",
       "coreIdea": "核心理念：",
       "coreIdeaText": "通过工作流编排工具（start_*）串联整个开发流程，让 AI 成为你的研发助手。"
     },
@@ -500,7 +500,7 @@
     "resources": {
       "title": "更多资源",
       "allTools": "完整工具参考",
-      "allToolsDesc": "查看所有 21 个工具的详细说明",
+      "allToolsDesc": "查看所有 22 个工具的详细说明",
       "gettingStarted": "安装配置",
       "gettingStartedDesc": "快速开始使用",
       "migration": "迁移指南",
