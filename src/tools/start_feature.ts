@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
@@ -77,10 +79,13 @@ const PROMPT_TEMPLATE = `# 🚀 新功能开发编排（委托式）
 ## ✅ 执行计划（按顺序）
 
 ### 0) 项目上下文（如缺失）
-**检查**: \`{docs_dir}/project-context.md\`  
+**检查**:
+- \`{docs_dir}/project-context.md\`
+- \`{docs_dir}/graph-insights/latest.md\`
+- \`{docs_dir}/graph-insights/latest.json\`
 **缺失则调用**: \`init_project_context\`
 \`\`\`json
-{ "docs_dir": "{docs_dir}" }
+{ "docs_dir": "{docs_dir}", "project_root": "{project_root}" }
 \`\`\`
 
 ### 1) 生成功能规格
@@ -111,9 +116,10 @@ const PROMPT_TEMPLATE = `# 🚀 新功能开发编排（委托式）
 
 ## ✅ 输出汇总（执行完成后）
 1. 规格文档位置: \`{docs_dir}/specs/{feature_name}/\`
-2. 估算结果: 故事点 + 时间区间
-3. 主要风险（如有）
-4. 下一步: 按 tasks.md 开始开发
+2. 图谱入口: \`{docs_dir}/graph-insights/latest.md\`
+3. 估算结果: 故事点 + 时间区间
+4. 主要风险（如有）
+5. 下一步: 按 tasks.md 开始开发
 
 ---
 
@@ -192,6 +198,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       feature_name?: string;
       description?: string;
       docs_dir?: string;
+      project_root?: string;
       template_profile?: string;
       requirements_mode?: string;
       loop_max_rounds?: number;
@@ -214,6 +221,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         feature_name: ["name", "feature", "功能名", "功能名称"],
         description: ["desc", "requirement", "描述", "需求"],
         docs_dir: ["dir", "output", "目录", "文档目录"],
+        project_root: ["projectRoot", "project_path", "projectPath", "root", "project_root", "项目路径", "项目根目录"],
         template_profile: ["profile", "template_profile", "模板档位", "模板模式"],
         requirements_mode: ["mode", "requirements_mode", "loop", "需求模式"],
         loop_max_rounds: ["max_rounds", "rounds", "最大轮次"],
@@ -225,6 +233,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
     let featureName = getString(parsedArgs.feature_name);
     let description = getString(parsedArgs.description);
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
+    const projectRoot = getString(parsedArgs.project_root);
     const templateProfile = getString(parsedArgs.template_profile) || "auto";
     const requirementsMode = getString(parsedArgs.requirements_mode) || "steady";
     const maxRounds = getNumber(parsedArgs.loop_max_rounds, 2);
@@ -263,32 +272,48 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
     }
 
     throwIfAborted(context?.signal, "start_feature 已取消");
-    await reportToolProgress(context, 55, "start_feature: 获取代码图谱上下文");
+    await reportToolProgress(context, 55, "start_feature: 刷新图谱并收敛需求范围");
+    const graphDocs = {
+      latestMarkdownPath: `${docsDir}/graph-insights/latest.md`,
+      latestJsonPath: `${docsDir}/graph-insights/latest.json`,
+    };
+    const resolvedProjectRoot = path.resolve(projectRoot || process.cwd());
+    const bootstrapState = {
+      projectContextExists: fs.existsSync(path.join(resolvedProjectRoot, docsDir, "project-context.md")),
+      latestMarkdownExists: fs.existsSync(path.join(resolvedProjectRoot, docsDir, "graph-insights", "latest.md")),
+      latestJsonExists: fs.existsSync(path.join(resolvedProjectRoot, docsDir, "graph-insights", "latest.json")),
+    };
+    const graphDocsMissing = !bootstrapState.latestMarkdownExists || !bootstrapState.latestJsonExists;
     const graphContext = await buildFeatureGraphContext({
       featureName,
       description,
+      projectRoot: projectRoot || undefined,
       signal: context?.signal,
     });
-
     const graphStatusNote = graphContext.available
-      ? `图谱增强: 可用（${graphContext.mode}）`
-      : "图谱增强: 已降级（自动回退）";
+      ? `任务图谱收敛: 可用（${graphContext.mode}）`
+      : "任务图谱收敛: 已降级（自动回退）";
     const graphGuideSection = `
 
-## 🧠 代码图谱上下文（可选增强）
-- 状态: ${graphContext.available ? "可用" : "降级"}
-- 摘要: ${graphContext.summary}
+## 🧠 代码图谱上下文
+- 基线入口: ${graphDocs.latestMarkdownPath}
+- 基线结构化副本: ${graphDocs.latestJsonPath}
+- 基线状态: ${graphDocsMissing ? "缺失（需要补初始化）" : "可用"}
+- 任务级收敛: ${graphContext.available ? "可用" : "降级"}
+- 任务级摘要: ${graphContext.summary}
 ${graphContext.highlights.length > 0
-    ? `- 线索:\n${graphContext.highlights.slice(0, 3).map((item) => `  - ${item}`).join("\n")}`
-    : "- 线索: 无"}
+    ? `- 任务级线索:\n${graphContext.highlights.slice(0, 3).map((item) => `  - ${item}`).join("\n")}`
+    : "- 任务级线索: 无"}
+- 使用方式: 先参考基线图谱，再使用本次任务图谱线索约束模块边界和改动范围
 `;
 
     const estimateCodeContext = [
       `参考生成的 ${docsDir}/specs/${featureName}/tasks.md`,
+      `如存在 ${graphDocs.latestMarkdownPath}，请一并参考其中的模块依赖和调用链摘要`,
       ...(graphContext.available
         ? [
-            graphContext.summary ? `图谱摘要: ${graphContext.summary}` : "",
-            ...graphContext.highlights.slice(0, 2).map((item) => `图谱线索: ${item}`),
+            graphContext.summary ? `任务图谱摘要: ${graphContext.summary}` : "",
+            ...graphContext.highlights.slice(0, 2).map((item) => `任务图谱线索: ${item}`),
           ]
         : []),
     ]
@@ -324,6 +349,17 @@ ${graphContext.highlights.length > 0
       const plan = {
         mode: 'delegated',
         steps: [
+          {
+            id: 'context',
+            tool: 'init_project_context',
+            when: `缺少 ${docsDir}/project-context.md 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
+            args: {
+              docs_dir: docsDir,
+              ...(projectRoot ? { project_root: projectRoot } : {}),
+            },
+            outputs: [`${docsDir}/project-context.md`, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
+            note: `兼容老项目：即使已有旧版 project-context，只要缺少图谱文档，也要先补齐 ${graphDocs.latestMarkdownPath}`,
+          },
           {
             id: 'loop-1',
             tool: 'ask_user',
@@ -378,6 +414,7 @@ ${graphContext.highlights.length > 0
       const guide = (header + LOOP_PROMPT_TEMPLATE
         .replace(/{feature_name}/g, featureName)
         .replace(/{description}/g, description)
+        .replace(/{project_root}/g, (projectRoot || process.cwd()).replace(/\\/g, "/"))
         .replace(/{question_budget}/g, String(questionBudget))
         .replace(/{assumption_cap}/g, String(assumptionCap)))
         + graphGuideSection;
@@ -407,6 +444,11 @@ ${graphContext.highlights.length > 0
         },
         metadata: {
           plan,
+          graphDocs,
+          bootstrapState: {
+            ...bootstrapState,
+            graphDocsMissing,
+          },
           graphContext,
         },
       };
@@ -430,13 +472,14 @@ ${graphContext.highlights.length > 0
         '按 delegated plan 顺序调用工具',
         '生成规格文档并完成工作量估算',
       ],
-      notes: [`模板档位: ${templateProfile}`, graphStatusNote],
+        notes: [`模板档位: ${templateProfile}`, graphStatusNote],
     });
 
     const guide = (header + PROMPT_TEMPLATE
       .replace(/{feature_name}/g, featureName)
       .replace(/{description}/g, description)
       .replace(/{docs_dir}/g, docsDir)
+      .replace(/{project_root}/g, (projectRoot || process.cwd()).replace(/\\/g, "/"))
       .replace(/{template_profile}/g, templateProfile))
       + graphGuideSection;
 
@@ -446,9 +489,13 @@ ${graphContext.highlights.length > 0
         {
           id: 'context',
           tool: 'init_project_context',
-          when: `缺少 ${docsDir}/project-context.md`,
-          args: { docs_dir: docsDir },
-          outputs: [`${docsDir}/project-context.md`],
+          when: `缺少 ${docsDir}/project-context.md 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
+          args: {
+            docs_dir: docsDir,
+            ...(projectRoot ? { project_root: projectRoot } : {}),
+          },
+          outputs: [`${docsDir}/project-context.md`, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
+          note: `兼容老项目：即使已有旧版 project-context，只要缺少图谱文档，也要先补齐 ${graphDocs.latestMarkdownPath}`,
         },
         {
           id: 'spec',
@@ -480,7 +527,7 @@ ${graphContext.highlights.length > 0
         {
           name: '检查项目上下文',
           status: 'pending',
-          description: `检查 ${docsDir}/project-context.md 是否存在，如不存在则调用 init_project_context`,
+          description: `检查 ${docsDir}/project-context.md 与 graph-insights/latest.* 是否存在，缺失则调用 init_project_context`,
         },
         {
           name: '生成功能规格',
@@ -496,6 +543,8 @@ ${graphContext.highlights.length > 0
       artifacts: [],
       nextSteps: [
         '检查并读取项目上下文文档',
+        `如果缺少 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}，先调用 init_project_context 补齐图谱初始化`,
+        `优先读取 ${graphDocs.latestMarkdownPath} 获取模块依赖与调用链摘要`,
         '调用 add_feature 工具生成功能规格文档',
         '调用 estimate 工具进行工作量估算',
         '按照 tasks.md 开始开发',
@@ -522,6 +571,11 @@ ${graphContext.highlights.length > 0
       dependencies: [],
       metadata: {
         plan,
+        graphDocs,
+        bootstrapState: {
+          ...bootstrapState,
+          graphDocsMissing,
+        },
         graphContext,
       },
     };

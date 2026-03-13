@@ -1,6 +1,8 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { execFileSync, spawn } from "node:child_process";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import {
   isAbortError,
@@ -15,6 +17,7 @@ export interface CodeInsightRequest {
   query?: string;
   target?: string;
   repo?: string;
+  projectRoot?: string;
   goal?: string;
   taskContext?: string;
   direction?: CodeInsightDirection;
@@ -44,6 +47,10 @@ export interface CodeInsightBridgeResult {
   executions: CodeInsightExecution[];
   warnings: string[];
   repo?: string;
+  workspaceMode: "direct" | "temp-repo";
+  sourceRoot: string;
+  analysisRoot: string;
+  pathMapped: boolean;
 }
 
 export interface EmbeddedGraphContext {
@@ -61,6 +68,33 @@ const DEFAULT_CONNECT_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_CONNECT_TIMEOUT_MS",
 const DEFAULT_CALL_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_TIMEOUT_MS", 20000);
 const DEFAULT_GITNEXUS_ARGS = ["-y", "gitnexus@latest", "mcp"];
 const FAILURE_CACHE_TTL_MS = readIntEnv("MCP_GITNEXUS_FAILURE_CACHE_TTL_MS", 30000);
+const DEFAULT_IGNORED_DIRS = new Set([
+  ".git",
+  ".gitnexus",
+  ".mcp-probe-kit",
+  ".playwright-cli",
+  ".turbo",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".idea",
+  ".vscode",
+  ".gradle",
+  ".npm",
+  ".pnpm-store",
+  ".yarn",
+  ".cache",
+  ".cargo",
+  ".rustup",
+  "node_modules",
+  "dist",
+  "build",
+  "coverage",
+  "output",
+  "temp",
+  "tmp",
+]);
+const DEFAULT_IGNORED_FILES = [/^\.env(\..+)?$/i];
 
 let bridgeFailureUntil = 0;
 let bridgeFailureReason = "";
@@ -100,33 +134,253 @@ function splitArgs(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function inferDefaultRepoName(): string | undefined {
+function resolvePreferredRepoName(requestedRepo?: string): string | undefined {
+  const requested = requestedRepo?.trim();
+  if (requested) {
+    return requested;
+  }
+
   const explicit = process.env.MCP_GITNEXUS_REPO?.trim();
   if (explicit) {
     return explicit;
   }
 
-  const pkgPath = path.join(process.cwd(), "package.json");
+  return undefined;
+}
+
+function resolveRequestedProjectRoot(projectRoot?: string): string {
+  const requested = projectRoot?.trim();
+  if (requested) {
+    return path.resolve(requested);
+  }
+  return path.resolve(process.cwd());
+}
+
+function inferCandidateRepoNames(baseDir: string = process.cwd()): string[] {
+  const candidates: string[] = [];
+
+  const pkgPath = path.join(baseDir, "package.json");
   try {
     if (fs.existsSync(pkgPath)) {
       const parsed = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as Record<string, unknown>;
       const pkgName = typeof parsed.name === "string" ? parsed.name.trim() : "";
       if (pkgName) {
-        return pkgName;
+        candidates.push(pkgName);
       }
     }
   } catch {
     // ignore parse failure
   }
 
-  const base = path.basename(process.cwd()).trim();
-  return base || undefined;
+  const base = path.basename(baseDir).trim();
+  if (base) {
+    candidates.push(base);
+  }
+
+  return Array.from(new Set(candidates.filter(Boolean)));
+}
+
+function parseAvailableReposFromError(text: string): string[] {
+  const match = text.match(/Available:\s*(.+)$/i);
+  if (!match) {
+    return [];
+  }
+  return match[1]
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function resolveBridgeCommand() {
   const command = (process.env.MCP_GITNEXUS_COMMAND || "npx").trim() || "npx";
   const args = splitArgs(process.env.MCP_GITNEXUS_ARGS);
-  return { command, args };
+  return resolveSpawnCommand(command, args);
+}
+
+function resolveGitNexusCliCommand(subcommand: string) {
+  const command = (process.env.MCP_GITNEXUS_COMMAND || "npx").trim() || "npx";
+  const bridgeArgs = splitArgs(process.env.MCP_GITNEXUS_ARGS);
+  const flags: string[] = [];
+  let packageSpec = "gitnexus@latest";
+
+  for (const arg of bridgeArgs) {
+    if (arg === "mcp") {
+      break;
+    }
+    if (arg.startsWith("-")) {
+      flags.push(arg);
+      continue;
+    }
+    packageSpec = arg;
+    break;
+  }
+
+  return resolveSpawnCommand(command, [...flags, packageSpec, subcommand]);
+}
+
+export function resolveExecutableCommand(command: string, platform: NodeJS.Platform = process.platform): string {
+  const normalized = (command || "").trim();
+  if (!normalized) {
+    return resolveExecutableCommand("npx", platform);
+  }
+
+  if (path.isAbsolute(normalized) && fs.existsSync(normalized)) {
+    return normalized;
+  }
+
+  const found = findExecutablePath(normalized, platform);
+  if (found) {
+    return found;
+  }
+
+  if (platform !== "win32") {
+    return normalized;
+  }
+
+  const lower = normalized.toLowerCase();
+  if (lower.endsWith(".cmd") || lower.endsWith(".exe") || lower.endsWith(".bat")) {
+    return normalized;
+  }
+
+  if (lower === "npx" || lower === "npm" || lower === "git") {
+    return `${normalized}.cmd`;
+  }
+
+  return normalized;
+}
+
+function findExecutablePath(command: string, platform: NodeJS.Platform = process.platform): string | undefined {
+  const trimmed = (command || "").trim();
+  if (!trimmed || path.isAbsolute(trimmed)) {
+    return undefined;
+  }
+
+  const preferredPath = (candidates: string[]): string | undefined => {
+    const existing = candidates.filter((candidate) => candidate && fs.existsSync(candidate));
+    if (existing.length === 0) {
+      return undefined;
+    }
+
+    if (platform !== "win32") {
+      return existing[0];
+    }
+
+    const lower = trimmed.toLowerCase();
+    const preferredExts =
+      lower === "npx" || lower === "npm"
+        ? [".cmd", ".exe", ".bat", ""]
+        : lower === "git"
+          ? [".exe", ".cmd", ".bat", ""]
+          : [".exe", ".cmd", ".bat", ""];
+
+    for (const ext of preferredExts) {
+      const match = existing.find((candidate) => path.extname(candidate).toLowerCase() === ext);
+      if (match) {
+        return match;
+      }
+    }
+
+    return existing[0];
+  };
+
+  if (platform === "win32") {
+    try {
+      const output = execFileSync("where.exe", [trimmed], {
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "ignore"],
+        windowsHide: true,
+      }).trim();
+      const candidates = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const preferred = preferredPath(candidates);
+      if (preferred) {
+        return preferred;
+      }
+    } catch {
+      // fall back to PATH scan
+    }
+  }
+
+  const pathEntries = (process.env.PATH || "")
+    .split(path.delimiter)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const lower = trimmed.toLowerCase();
+  const extensions =
+    platform === "win32"
+      ? lower === "npx" || lower === "npm"
+        ? [".cmd", ".exe", ".bat", ""]
+        : lower === "git"
+          ? [".exe", ".cmd", ".bat", ""]
+          : [".exe", ".cmd", ".bat", ""]
+      : [""];
+
+  for (const entry of pathEntries) {
+    for (const ext of extensions) {
+      const candidate = path.join(entry, `${trimmed}${ext}`);
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  if (platform === "win32" && trimmed.toLowerCase() === "git") {
+    const commonCandidates = [
+      path.join(process.env["ProgramFiles"] || "C:\\Program Files", "Git", "cmd", "git.exe"),
+      path.join(process.env["ProgramFiles"] || "C:\\Program Files", "Git", "bin", "git.exe"),
+      path.join(process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "Git", "cmd", "git.exe"),
+    ];
+    return preferredPath(commonCandidates);
+  }
+
+  return undefined;
+}
+
+function shouldWrapWithCmd(
+  rawCommand: string,
+  executable: string,
+  platform: NodeJS.Platform = process.platform
+): boolean {
+  if (platform !== "win32") {
+    return false;
+  }
+
+  const rawLower = (rawCommand || "").trim().toLowerCase();
+  const executableLower = (executable || "").trim().toLowerCase();
+  const ext = path.extname(executableLower);
+
+  if (!rawLower && !executableLower) {
+    return true;
+  }
+
+  if (ext === ".cmd" || ext === ".bat") {
+    return true;
+  }
+
+  if (ext === ".exe") {
+    return false;
+  }
+
+  return rawLower === "npx" || rawLower === "npm";
+}
+
+export function resolveSpawnCommand(
+  command: string,
+  args: string[],
+  platform: NodeJS.Platform = process.platform
+): { command: string; args: string[] } {
+  const executable = resolveExecutableCommand(command, platform);
+
+  if (!shouldWrapWithCmd(command, executable, platform)) {
+    return {
+      command: executable,
+      args,
+    };
+  }
+
+  return {
+    command: process.env.ComSpec || "cmd.exe",
+    args: ["/d", "/s", "/c", executable, ...args],
+  };
 }
 
 function extractText(result: unknown): string {
@@ -169,6 +423,281 @@ function normalizeError(error: unknown): string {
   return String(error);
 }
 
+function findGitRoot(startDir: string): string | undefined {
+  let current = path.resolve(startDir);
+
+  while (true) {
+    const gitPath = path.join(current, ".git");
+    if (fs.existsSync(gitPath)) {
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return undefined;
+    }
+    current = parent;
+  }
+}
+
+function createWorkspaceId(sourceRoot: string): string {
+  const base = path.basename(sourceRoot).replace(/[^a-zA-Z0-9._-]+/g, "-") || "workspace";
+  return `${base}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function shouldIgnoreForTempWorkspace(sourceRoot: string, entryPath: string): boolean {
+  const relative = path.relative(sourceRoot, entryPath);
+  if (!relative || relative.startsWith("..")) {
+    return false;
+  }
+
+  const parts = relative.split(path.sep).filter(Boolean);
+  if (parts.some((part) => DEFAULT_IGNORED_DIRS.has(part))) {
+    return true;
+  }
+
+  const name = parts[parts.length - 1] || "";
+  return DEFAULT_IGNORED_FILES.some((pattern) => pattern.test(name));
+}
+
+async function runProcess(
+  command: string,
+  args: string[],
+  cwd: string,
+  signal?: AbortSignal
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+      signal,
+      windowsHide: true,
+    });
+
+    let stderr = "";
+
+    child.stderr?.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(stderr.trim() || `${command} ${args.join(" ")} 退出码 ${code ?? "unknown"}`));
+    });
+  });
+}
+
+async function removePathWithRetry(targetPath: string, attempts: number = 6): Promise<void> {
+  let lastError: unknown;
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      fs.rmSync(targetPath, { recursive: true, force: true });
+      if (!fs.existsSync(targetPath)) {
+        return;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150 * (index + 1)));
+  }
+
+  if (fs.existsSync(targetPath)) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error(`无法删除临时目录: ${targetPath}`);
+  }
+}
+
+async function cleanupStaleTempWorkspaces(tempWorkspaceRoot: string, keepPath?: string): Promise<void> {
+  if (!fs.existsSync(tempWorkspaceRoot)) {
+    return;
+  }
+
+  const entries = fs.readdirSync(tempWorkspaceRoot, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const fullPath = path.join(tempWorkspaceRoot, entry.name);
+    if (keepPath && path.resolve(fullPath) === path.resolve(keepPath)) {
+      continue;
+    }
+
+    try {
+      await removePathWithRetry(fullPath, 3);
+    } catch {
+      // keep best-effort cleanup silent; current run should not fail because of stale dirs
+    }
+  }
+}
+
+function copyIntoAnalysisWorkspace(sourceRoot: string, analysisRoot: string) {
+  fs.mkdirSync(analysisRoot, { recursive: true });
+
+  const walk = (fromDir: string, toDir: string) => {
+    fs.mkdirSync(toDir, { recursive: true });
+    const entries = fs.readdirSync(fromDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fromPath = path.join(fromDir, entry.name);
+      if (shouldIgnoreForTempWorkspace(sourceRoot, fromPath)) {
+        continue;
+      }
+
+      const toPath = path.join(toDir, entry.name);
+      if (entry.isDirectory()) {
+        walk(fromPath, toPath);
+        continue;
+      }
+      if (entry.isFile()) {
+        fs.copyFileSync(fromPath, toPath);
+      }
+    }
+  };
+
+  walk(sourceRoot, analysisRoot);
+}
+
+async function createTempAnalysisWorkspace(
+  sourceRoot: string,
+  signal?: AbortSignal,
+  options?: { bootstrap?: boolean }
+) {
+  const tempWorkspaceRoot = path.join(sourceRoot, ".mcp-probe-kit", "gitnexus-temp");
+  const workspaceId = createWorkspaceId(sourceRoot);
+  const analysisRoot = path.join(tempWorkspaceRoot, workspaceId);
+
+  fs.mkdirSync(tempWorkspaceRoot, { recursive: true });
+  await cleanupStaleTempWorkspaces(tempWorkspaceRoot);
+  copyIntoAnalysisWorkspace(sourceRoot, analysisRoot);
+
+  throwIfAborted(signal, "GitNexus 临时工作区创建已取消");
+
+  if (options?.bootstrap !== false) {
+    const gitInit = resolveSpawnCommand("git", ["init", "-q"]);
+    await runProcess(gitInit.command, gitInit.args, analysisRoot, signal);
+
+    const analyzeCli = resolveGitNexusCliCommand("analyze");
+    await runProcess(analyzeCli.command, analyzeCli.args, analysisRoot, signal);
+  }
+
+  return {
+    workspaceMode: "temp-repo" as const,
+    sourceRoot,
+    analysisRoot,
+    repoName: path.basename(analysisRoot),
+    pathMapped: true,
+    cleanup: async () => {
+      if (options?.bootstrap !== false) {
+        try {
+          const cleanCli = resolveGitNexusCliCommand("clean");
+          await runProcess(cleanCli.command, cleanCli.args, analysisRoot, undefined);
+        } catch {
+          // best effort cleanup only
+        }
+      }
+      await removePathWithRetry(analysisRoot);
+      try {
+        const remaining = fs.existsSync(tempWorkspaceRoot)
+          ? fs.readdirSync(tempWorkspaceRoot).filter(Boolean)
+          : [];
+        if (remaining.length === 0) {
+          fs.rmSync(tempWorkspaceRoot, { recursive: true, force: true });
+        }
+      } catch {
+        // best effort only
+      }
+    },
+  };
+}
+
+export interface BridgeWorkspace {
+  workspaceMode: "direct" | "temp-repo";
+  sourceRoot: string;
+  analysisRoot: string;
+  repoName?: string;
+  pathMapped: boolean;
+  cleanup?: () => Promise<void>;
+}
+
+export async function prepareBridgeWorkspace(
+  cwd: string = process.cwd(),
+  signal?: AbortSignal,
+  options?: { bootstrap?: boolean }
+): Promise<BridgeWorkspace> {
+  const resolvedCwd = path.resolve(cwd);
+  const gitRoot = findGitRoot(resolvedCwd);
+  if (gitRoot) {
+    return {
+      workspaceMode: "direct",
+      sourceRoot: gitRoot,
+      analysisRoot: gitRoot,
+      repoName: inferCandidateRepoNames(gitRoot)[0],
+      pathMapped: false,
+    };
+  }
+
+  return createTempAnalysisWorkspace(resolvedCwd, signal, options);
+}
+
+async function ensureWorkspaceIndexed(workspace: BridgeWorkspace, signal?: AbortSignal): Promise<void> {
+  if (workspace.workspaceMode !== "direct") {
+    return;
+  }
+
+  const analyzeCli = resolveGitNexusCliCommand("analyze");
+  await runProcess(analyzeCli.command, analyzeCli.args, workspace.analysisRoot, signal);
+}
+
+function isUnsafeHomeRoot(sourceRoot: string): boolean {
+  return path.resolve(sourceRoot) === path.resolve(os.homedir());
+}
+
+function mapStringToSourceRoot(value: string, workspace: BridgeWorkspace): string {
+  if (!workspace.pathMapped || !value) {
+    return value;
+  }
+
+  const candidates: Array<[string, string]> = [
+    [workspace.analysisRoot, workspace.sourceRoot],
+    [workspace.analysisRoot.replace(/\\/g, "/"), workspace.sourceRoot.replace(/\\/g, "/")],
+    [workspace.analysisRoot.replace(/\//g, "\\"), workspace.sourceRoot.replace(/\//g, "\\")],
+  ];
+
+  let mapped = value;
+  for (const [from, to] of candidates) {
+    if (from && mapped.includes(from)) {
+      mapped = mapped.replaceAll(from, to);
+    }
+  }
+  return mapped;
+}
+
+function mapValueToSourceRoot<T>(value: T, workspace: BridgeWorkspace): T {
+  if (!workspace.pathMapped) {
+    return value;
+  }
+  if (typeof value === "string") {
+    return mapStringToSourceRoot(value, workspace) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => mapValueToSourceRoot(item, workspace)) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        mapValueToSourceRoot(item, workspace),
+      ])
+    ) as T;
+  }
+  return value;
+}
+
 function resolveMode(request: CodeInsightRequest): "query" | "context" | "impact" {
   const mode = request.mode || "auto";
   if (mode === "query" || mode === "context" || mode === "impact") {
@@ -188,7 +717,8 @@ async function callBridgeTool(
   client: Client,
   tool: string,
   args: Record<string, unknown>,
-  signal: AbortSignal | undefined
+  signal: AbortSignal | undefined,
+  workspace?: BridgeWorkspace
 ): Promise<CodeInsightExecution> {
   const startedAt = Date.now();
   try {
@@ -213,9 +743,13 @@ async function callBridgeTool(
         args,
         ok: false,
         durationMs,
-        text,
-        structuredContent: (result as Record<string, unknown>).structuredContent,
-        error: text || `GitNexus 工具 ${tool} 返回错误`,
+        text: workspace ? mapValueToSourceRoot(text, workspace) : text,
+        structuredContent: workspace
+          ? mapValueToSourceRoot((result as Record<string, unknown>).structuredContent, workspace)
+          : (result as Record<string, unknown>).structuredContent,
+        error: workspace
+          ? mapValueToSourceRoot(text || `GitNexus 工具 ${tool} 返回错误`, workspace)
+          : text || `GitNexus 工具 ${tool} 返回错误`,
       };
     }
 
@@ -224,8 +758,10 @@ async function callBridgeTool(
       args,
       ok: true,
       durationMs,
-      text,
-      structuredContent: (result as Record<string, unknown>).structuredContent,
+      text: workspace ? mapValueToSourceRoot(text, workspace) : text,
+      structuredContent: workspace
+        ? mapValueToSourceRoot((result as Record<string, unknown>).structuredContent, workspace)
+        : (result as Record<string, unknown>).structuredContent,
     };
   } catch (error) {
     if (isAbortError(error)) {
@@ -246,9 +782,10 @@ export async function runCodeInsightBridge(
 ): Promise<CodeInsightBridgeResult> {
   const modeRequested = request.mode || "auto";
   const modeResolved = resolveMode(request);
-  const effectiveRepo = request.repo || inferDefaultRepoName();
+  const requestedProjectRoot = resolveRequestedProjectRoot(request.projectRoot);
 
   if (!isBridgeEnabled() || isEnvDisabled("MCP_ENABLE_GITNEXUS_BRIDGE")) {
+    const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
     return {
       provider: "gitnexus",
       enabled: false,
@@ -259,11 +796,16 @@ export async function runCodeInsightBridge(
       summary: "GitNexus bridge 已禁用（MCP_ENABLE_GITNEXUS_BRIDGE=0）。",
       executions: [],
       warnings: ["bridge_disabled"],
-      repo: effectiveRepo,
+      repo: resolvePreferredRepoName(request.repo),
+      workspaceMode: "direct",
+      sourceRoot,
+      analysisRoot: sourceRoot,
+      pathMapped: false,
     };
   }
 
   if (Date.now() < bridgeFailureUntil) {
+    const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
     return {
       provider: "gitnexus",
       enabled: true,
@@ -274,20 +816,52 @@ export async function runCodeInsightBridge(
       summary: `GitNexus bridge 暂不可用（缓存中）: ${bridgeFailureReason || "请稍后重试"}`,
       executions: [],
       warnings: ["bridge_failure_cached"],
-      repo: effectiveRepo,
+      repo: resolvePreferredRepoName(request.repo),
+      workspaceMode: "direct",
+      sourceRoot,
+      analysisRoot: sourceRoot,
+      pathMapped: false,
     };
   }
 
   throwIfAborted(request.signal, "GitNexus bridge 已取消");
+  if (isUnsafeHomeRoot(requestedProjectRoot) && !findGitRoot(requestedProjectRoot)) {
+    return {
+      provider: "gitnexus",
+      enabled: true,
+      available: false,
+      degraded: true,
+      modeRequested,
+      modeResolved,
+      summary: "GitNexus bridge 已降级：当前工作目录看起来是用户家目录。请显式传入 project_root 指向实际项目目录，避免复制 .gradle/.npm 等本地缓存。",
+      executions: [],
+      warnings: ["project_root_required", "unsafe_home_directory"],
+      repo: resolvePreferredRepoName(request.repo),
+      workspaceMode: "direct",
+      sourceRoot: requestedProjectRoot,
+      analysisRoot: requestedProjectRoot,
+      pathMapped: false,
+    };
+  }
+
+  const workspace = await prepareBridgeWorkspace(requestedProjectRoot, request.signal);
+  await ensureWorkspaceIndexed(workspace, request.signal);
+  const effectiveRepo =
+    workspace.workspaceMode === "temp-repo"
+      ? workspace.repoName
+      : resolvePreferredRepoName(request.repo) || workspace.repoName;
   const { command, args } = resolveBridgeCommand();
   const warnings: string[] = [];
+  if (workspace.workspaceMode === "temp-repo") {
+    warnings.push("temp_repo_workspace");
+  }
   const executions: CodeInsightExecution[] = [];
   const stderrLogs: string[] = [];
 
   const transport = new StdioClientTransport({
     command,
     args,
-    cwd: process.cwd(),
+    cwd: workspace.analysisRoot,
     stderr: "pipe",
   });
 
@@ -328,7 +902,8 @@ export async function runCodeInsightBridge(
             ...(request.taskContext ? { task_context: request.taskContext } : {}),
             ...(effectiveRepo ? { repo: effectiveRepo } : {}),
           },
-          request.signal
+          request.signal,
+          workspace
         )
       );
     };
@@ -346,7 +921,8 @@ export async function runCodeInsightBridge(
             name: request.target,
             ...(effectiveRepo ? { repo: effectiveRepo } : {}),
           },
-          request.signal
+          request.signal,
+          workspace
         )
       );
     };
@@ -369,7 +945,8 @@ export async function runCodeInsightBridge(
               : {}),
             ...(effectiveRepo ? { repo: effectiveRepo } : {}),
           },
-          request.signal
+          request.signal,
+          workspace
         )
       );
     };
@@ -410,13 +987,38 @@ export async function runCodeInsightBridge(
       executions: [],
       warnings: ["bridge_unavailable", ...warnings],
       repo: effectiveRepo,
+      workspaceMode: workspace.workspaceMode,
+      sourceRoot: workspace.sourceRoot,
+      analysisRoot: workspace.analysisRoot,
+      pathMapped: workspace.pathMapped,
     };
   } finally {
     await client.close().catch(() => undefined);
+    await transport.close().catch(() => undefined);
+    await workspace.cleanup?.().catch(() => undefined);
   }
 
   const successful = executions.filter((item) => item.ok);
   const failed = executions.filter((item) => !item.ok);
+
+  if (
+    successful.length === 0
+    && !effectiveRepo
+    && failed.length > 0
+    && failed.every((item) => (item.error || item.text || "").includes("Multiple repositories indexed"))
+  ) {
+    const availableRepos = parseAvailableReposFromError(
+      failed.map((item) => item.error || item.text || "").join(" | ")
+    );
+    const retryRepo = inferCandidateRepoNames(workspace.sourceRoot).find((candidate) => availableRepos.includes(candidate));
+
+    if (retryRepo) {
+      return runCodeInsightBridge({
+        ...request,
+        repo: retryRepo,
+      });
+    }
+  }
 
   bridgeFailureUntil = 0;
   bridgeFailureReason = "";
@@ -437,6 +1039,10 @@ export async function runCodeInsightBridge(
       executions,
       warnings: ["bridge_call_failed", ...warnings],
       repo: effectiveRepo,
+      workspaceMode: workspace.workspaceMode,
+      sourceRoot: workspace.sourceRoot,
+      analysisRoot: workspace.analysisRoot,
+      pathMapped: workspace.pathMapped,
     };
   }
 
@@ -456,6 +1062,10 @@ export async function runCodeInsightBridge(
     executions,
     warnings,
     repo: effectiveRepo,
+    workspaceMode: workspace.workspaceMode,
+    sourceRoot: workspace.sourceRoot,
+    analysisRoot: workspace.analysisRoot,
+    pathMapped: workspace.pathMapped,
   };
 }
 
@@ -481,13 +1091,17 @@ export async function buildFeatureGraphContext(input: {
   description: string;
   signal?: AbortSignal;
   repo?: string;
+  projectRoot?: string;
 }): Promise<EmbeddedGraphContext> {
   const bridge = await runCodeInsightBridge({
-    mode: "query",
+    mode: "auto",
     query: `${input.featureName} ${input.description}`,
+    target: input.featureName,
+    direction: "upstream",
     goal: "Find related modules and execution flows for feature planning",
-    taskContext: "start_feature planning",
+    taskContext: "start_feature planning with query/context/impact narrowing",
     repo: input.repo,
+    projectRoot: input.projectRoot,
     signal: input.signal,
   });
   return toEmbeddedGraphContext(bridge);
@@ -498,6 +1112,7 @@ export async function buildBugfixGraphContext(input: {
   stackTrace?: string;
   signal?: AbortSignal;
   repo?: string;
+  projectRoot?: string;
 }): Promise<EmbeddedGraphContext> {
   const query = [input.errorMessage, input.stackTrace].filter(Boolean).join("\n");
   const bridge = await runCodeInsightBridge({
@@ -506,6 +1121,7 @@ export async function buildBugfixGraphContext(input: {
     goal: "Find likely root-cause symbols and impacted flows for bug fixing",
     taskContext: "start_bugfix diagnosis",
     repo: input.repo,
+    projectRoot: input.projectRoot,
     signal: input.signal,
   });
   return toEmbeddedGraphContext(bridge);

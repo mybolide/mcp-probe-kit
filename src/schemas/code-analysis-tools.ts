@@ -44,6 +44,10 @@ export const codeAnalysisToolSchemas = [
           type: "string",
           description: "仓库名称（多仓库场景可选）",
         },
+        project_root: {
+          type: "string",
+          description: "项目根目录。当前客户端未把工作区作为进程 cwd 传进来时，建议显式指定",
+        },
         goal: {
           type: "string",
           description: "分析目标（可选）",
@@ -90,7 +94,7 @@ export const codeAnalysisToolSchemas = [
   },
   {
     name: "fix_bug",
-    description: "当用户需要修复 Bug、获取修复指导时使用。提供 Bug 修复流程指导，包含根因分析、修复方案、验证步骤",
+    description: "当用户需要找问题、修 bug、排查异常、定位回归、分析失败原因、分析为什么没生效、先分析再修时使用。默认采用 TBP 8 步法做真因分析，并输出修复方案与验证步骤",
     inputSchema: {
       type: "object",
       properties: {
@@ -105,6 +109,10 @@ export const codeAnalysisToolSchemas = [
         code_context: {
           type: "string",
           description: "相关代码。可选",
+        },
+        analysis_mode: {
+          type: "string",
+          description: "分析方法。默认 tbp8（丰田问题分析 8 步法）",
         },
       },
       required: [],

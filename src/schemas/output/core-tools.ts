@@ -68,6 +68,72 @@ export const CodeReviewReportSchema = {
   required: ['summary', 'overallScore', 'issues'],
 } as const;
 
+const TbpTimelineEventSchema = {
+  type: 'object',
+  properties: {
+    order: { type: 'number', description: '时间线顺序' },
+    event: { type: 'string', description: '事件描述' },
+    evidence: { type: 'string', description: '对应证据' },
+  },
+  required: ['order', 'event'],
+} as const;
+
+const TbpEvidenceItemSchema = {
+  type: 'object',
+  properties: {
+    type: {
+      type: 'string',
+      enum: ['symptom', 'timeline', 'stack', 'code', 'comparison', 'environment', 'graph'],
+      description: '证据类型',
+    },
+    detail: { type: 'string', description: '证据内容' },
+    source: { type: 'string', description: '证据来源' },
+  },
+  required: ['type', 'detail'],
+} as const;
+
+const TbpRepairItemSchema = {
+  type: 'object',
+  properties: {
+    layer: { type: 'string', description: '修复层' },
+    action: { type: 'string', description: '修复动作' },
+    risk: { type: 'string', description: '潜在风险' },
+    verification: { type: 'string', description: '验证方法' },
+  },
+  required: ['layer', 'action', 'verification'],
+} as const;
+
+const TbpAnalysisSchema = {
+  type: 'object',
+  properties: {
+    phenomenon: { type: 'string', description: 'TBP-1 现象' },
+    timeline: {
+      type: 'array',
+      description: 'TBP-2 时间线',
+      items: TbpTimelineEventSchema,
+    },
+    ruledOut: {
+      type: 'array',
+      description: 'TBP-3 已排除方向',
+      items: { type: 'string' },
+    },
+    commonPattern: { type: 'string', description: 'TBP-4 共同模式' },
+    boundary: { type: 'string', description: 'TBP-5 问题边界' },
+    rootCauseStatement: { type: 'string', description: 'TBP-6 真因因果句' },
+    evidence: {
+      type: 'array',
+      description: 'TBP-7 证据链',
+      items: TbpEvidenceItemSchema,
+    },
+    repair: {
+      type: 'array',
+      description: 'TBP-8 修复设计',
+      items: TbpRepairItemSchema,
+    },
+  },
+  required: ['phenomenon', 'timeline', 'ruledOut', 'commonPattern', 'boundary', 'rootCauseStatement', 'evidence', 'repair'],
+} as const;
+
 /**
  * Bug Analysis Schema
  * 用于 fix_bug 工具的结构化输出
@@ -83,6 +149,10 @@ export const BugAnalysisSchema = {
     severity: {
       type: 'string',
       enum: ['critical', 'high', 'medium', 'low'],
+    },
+    analysisMode: {
+      type: 'string',
+      enum: ['tbp8'],
     },
     rootCause: { type: 'string' },
     affectedComponents: {
@@ -114,8 +184,12 @@ export const BugAnalysisSchema = {
       type: 'array',
       items: { type: 'string' },
     },
+    tbp: {
+      ...TbpAnalysisSchema,
+      description: 'TBP 8 步法分析结果',
+    },
   },
-  required: ['summary', 'bugType', 'severity', 'rootCause', 'fixPlan', 'testPlan'],
+  required: ['summary', 'bugType', 'severity', 'analysisMode', 'rootCause', 'fixPlan', 'testPlan', 'tbp'],
 } as const;
 
 /**
@@ -393,6 +467,7 @@ export interface BugAnalysis {
   summary: string;
   bugType: 'functional' | 'performance' | 'security' | 'ui' | 'data' | 'integration';
   severity: 'critical' | 'high' | 'medium' | 'low';
+  analysisMode: 'tbp8';
   rootCause: string;
   affectedComponents?: string[];
   affectedFiles?: string[];
@@ -407,6 +482,29 @@ export interface BugAnalysis {
     manualTests?: string[];
   };
   preventionMeasures?: string[];
+  tbp: {
+    phenomenon: string;
+    timeline: Array<{
+      order: number;
+      event: string;
+      evidence?: string;
+    }>;
+    ruledOut: string[];
+    commonPattern: string;
+    boundary: string;
+    rootCauseStatement: string;
+    evidence: Array<{
+      type: 'symptom' | 'timeline' | 'stack' | 'code' | 'comparison' | 'environment' | 'graph';
+      detail: string;
+      source?: string;
+    }>;
+    repair: Array<{
+      layer: string;
+      action: string;
+      risk?: string;
+      verification: string;
+    }>;
+  };
 }
 
 export interface TestSuite {

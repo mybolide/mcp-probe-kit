@@ -71,12 +71,12 @@
   },
   "toolsData": {
     "start_feature": {
-      "description": "Complete feature development workflow orchestration: check context → generate specs → estimate workload",
-      "usage": "Used to initiate complete feature development process, automatically generating requirement documents, design plans, and workload estimates"
+      "description": "Complete feature development workflow orchestration: bootstrap graph baseline → refresh GitNexus index → narrow scope → generate specs → estimate workload",
+      "usage": "Used to start the full feature flow, backfill graph-insights when missing, then use GitNexus query/context/impact analysis to narrow scope before spec and estimation"
     },
     "start_bugfix": {
-      "description": "Bug fix workflow orchestration: check context → analyze and locate → fix solution → generate tests",
-      "usage": "Used for systematic bug fixing, providing complete analysis, location, fix, and test solutions"
+      "description": "Bug fix workflow orchestration: bootstrap graph baseline → refresh GitNexus index → narrow failure boundary → TBP 8-step root-cause analysis → fix plan → generate tests",
+      "usage": "Use it for bugs, regressions, and anomalies; it backfills graph-insights first and uses GitNexus to constrain boundary and impact before TBP RCA"
     },
     "start_onboard": {
       "description": "Project onboarding workflow: generate context documentation to help new members quickly understand the project",
@@ -99,8 +99,8 @@
       "usage": "Comprehensive code quality review, outputting structured issue list (severity/category/suggestion)"
     },
     "fix_bug": {
-      "description": "Bug fix guidance, providing root cause analysis, fix plan, test plan, and prevention measures",
-      "usage": "Provide complete bug fix guidance, including root cause analysis, fix solution, test plan, and prevention measures"
+      "description": "TBP 8-step bug RCA and repair guidance with evidence chain, fix plan, test plan, and prevention measures",
+      "usage": "Use it when you need to find the true cause first and close the chain from symptom and boundary to repair"
     },
     "refactor": {
       "description": "Refactoring suggestion tool, analyzing code structure, providing refactoring steps, risk assessment, and rollback plan",
@@ -123,8 +123,8 @@
       "usage": "Generate requirement/design/task documents following Spec-Driven Development approach"
     },
     "init_project_context": {
-      "description": "Generate project context documentation (tech stack/architecture/coding standards)",
-      "usage": "Generate project context documentation to help team quickly get started"
+      "description": "Generate or maintain project context documentation and bootstrap graph-insights entry points",
+      "usage": "Creates context docs for new projects; if project-context.md already exists, it preserves the old docs and only backfills graph-insights plus the index entry"
     },
     "add_feature": {
       "description": "Generate new feature specification documents (requirements/design/task list) based on project context",
@@ -156,7 +156,7 @@
     },
     "code_insight": {
       "description": "Code graph insight tool, bridging GitNexus to analyze call chains, context, and impact (auto-degrades when unavailable)",
-      "usage": "Quickly obtain graph insights and enhance start_feature/start_bugfix planning"
+      "usage": "Refresh the GitNexus index, perform task-level call-chain/context/impact analysis, and persist results to docs/graph-insights plus the project-context index"
     }
   }
 }

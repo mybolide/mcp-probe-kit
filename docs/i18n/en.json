@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
-    "version": "v3.0.9",
+    "version": "v3.0.10",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "Quick Start",
-      "description": "Get started with MCP Probe Kit v3.0.9 in 5 minutes",
+      "description": "Get started with MCP Probe Kit v3.0.10 in 5 minutes",
       "installConfig": "Installation & Configuration"
     },
     "tools": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "Installation & Configuration",
-    "subtitle": "Get started with MCP Probe Kit v3.0.9 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
+    "subtitle": "Get started with MCP Probe Kit v3.0.10 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
     "breadcrumb": {
       "home": "Documentation",
       "quickStart": "Quick Start",
@@ -213,7 +213,7 @@
       },
       "codeInsight": {
         "title": "4. New Code Graph Insight",
-        "description": "Use code_insight to bridge GitNexus for call-chain, context, and impact analysis, and feed graphContext into start_feature/start_bugfix."
+        "description": "code_insight maintains baseline graph docs under docs/graph-insights, while start_feature/start_bugfix refresh the GitNexus index and run task-level narrowing before planning."
       },
       "structuredOutput": {
         "title": "5. Structured Output Upgrade",
@@ -362,7 +362,7 @@
       "codeInsight": {
         "title": "1.4 Existing Code Graph Insight",
         "description": "Use",
-        "description2": "to quickly analyze call chains, context, and impact, then carry graph context into start_feature/start_bugfix.",
+        "description2": "to refresh the GitNexus index, persist baseline graph docs, and produce task-level call-chain/context/impact analysis.",
         "example1": "You: Analyze the login and token refresh call chain and tell me which modules will be affected",
         "goal": "Find the existing login and token refresh flow",
         "taskContext": "Preparing to modify the auth module",
@@ -370,7 +370,7 @@
         "item1": "- Related execution flows / call chains",
         "item2": "- Key symbols and file locations",
         "item3": "- _meta.graph.snapshotUri / markdownFilePath",
-        "item4": "- graphContext that can be passed into start_feature / start_bugfix"
+        "item4": "- docs/graph-insights/latest.* and project-context index entries for downstream workflows"
       }
     },
     "common": {
@@ -383,7 +383,7 @@
         "description": "Use",
         "description2": "workflow orchestration to complete from spec to estimation with one click.",
         "example1": "You: Develop user authentication feature",
-        "step1": "✓ Check project context and available graph snapshots",
+        "step1": "✓ Check project context, bootstrap missing graph docs, and refresh the GitNexus index",
         "step2": "✓ Generate feature specification document",
         "step3": "✓ Estimate development workload",
         "step4": "✓ Output complete development plan"
@@ -433,18 +433,18 @@
       "bugfix": {
         "title": "4.1 Systematic Bug Fix (Recommended)",
         "description": "Use",
-        "description2": "workflow for one-stop solution from analysis to testing.",
+        "description2": "workflow to run TBP 8-step root-cause analysis before repair and testing.",
         "example1": "You: Login function is throwing an error",
-        "step1": "✓ Check project context and available graph snapshots",
-        "step2": "✓ Analyze error cause",
-        "step3": "✓ Locate problem code",
-        "step4": "✓ Provide fix solution",
-        "step5": "✓ Generate test cases"
+        "step1": "✓ Check project context, backfill missing graph docs, and refresh the GitNexus index",
+        "step2": "✓ Use TBP-1~TBP-4 to define the symptom, timeline, and common pattern",
+        "step3": "✓ Use TBP-5/6 to lock the failure boundary and causal root cause",
+        "step4": "✓ Produce repair options and risks from the evidence chain",
+        "step5": "✓ Generate validation steps and regression tests"
       },
       "quick": {
         "title": "4.2 Quick Bug Analysis",
         "description": "Use",
-        "description2": "tool to quickly analyze issues and provide fix solutions."
+        "description2": "tool for fast TBP 8-step RCA with repair and validation guidance."
       }
     },
     "stage5": {
@@ -533,4 +533,3 @@
     }
   }
 }
-

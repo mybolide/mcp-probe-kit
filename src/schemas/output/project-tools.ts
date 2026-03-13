@@ -87,6 +87,15 @@ export const ProjectContextSchema = {
         },
       },
     },
+    nextSteps: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    metadata: {
+      type: 'object',
+      description: '额外元数据（如 delegated plan、图谱文档路径）',
+      additionalProperties: true,
+    },
   },
   required: ['summary', 'projectOverview'],
 } as const;
@@ -280,6 +289,8 @@ export interface ProjectContext {
     path?: string;
     purpose?: string;
   }>;
+  nextSteps?: string[];
+  metadata?: Record<string, any>;
 }
 
 export interface FeatureSpec {

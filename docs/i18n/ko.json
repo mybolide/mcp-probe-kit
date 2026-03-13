@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 개발 강화 툴킷 · 문서 센터",
-    "version": "v3.0.9",
+    "version": "v3.0.10",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
   },
   "sections": {
     "quickStart": {
       "title": "빠른 시작",
-      "description": "5분 안에 MCP Probe Kit v3.0.9 시작하기",
+      "description": "5분 안에 MCP Probe Kit v3.0.10 시작하기",
       "installConfig": "설치 및 구성"
     },
     "tools": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "설치 및 구성",
-    "subtitle": "5분 안에 MCP Probe Kit v3.0.9 시작하기. Cursor, Cline, Claude Desktop 지원",
+    "subtitle": "5분 안에 MCP Probe Kit v3.0.10 시작하기. Cursor, Cline, Claude Desktop 지원",
     "breadcrumb": {
       "home": "문서",
       "quickStart": "빠른 시작",
@@ -213,7 +213,7 @@
       },
       "codeInsight": {
         "title": "4. 새로운 코드 그래프 인사이트",
-        "description": "code_insight 로 GitNexus 를 브리지하여 호출 체인, 컨텍스트, 영향 범위를 분석하고 graphContext 를 start_feature/start_bugfix 에 넘길 수 있습니다."
+        "description": "code_insight 가 docs/graph-insights 아래의 베이스라인 그래프 문서를 유지하고, start_feature/start_bugfix 는 계획 전에 GitNexus 인덱스를 갱신해 작업 단위 범위 수렴을 수행합니다."
       },
       "structuredOutput": {
         "title": "5. 구조화된 출력 업그레이드",
@@ -362,7 +362,7 @@
       "codeInsight": {
         "title": "1.4 기존 코드 그래프 인사이트",
         "description": "사용",
-        "description2": "호출 체인, 컨텍스트, 영향 범위를 빠르게 분석하고 그 결과를 start_feature/start_bugfix 에 전달합니다.",
+        "description2": "GitNexus 인덱스를 갱신하고 baseline graph-insights 문서를 저장한 뒤 작업 단위 호출 체인, 컨텍스트, 영향 범위를 분석합니다.",
         "example1": "당신: 로그인과 토큰 갱신 호출 체인을 분석해서 어떤 모듈이 영향받는지 알려주세요",
         "goal": "기존 로그인 및 토큰 갱신 흐름 찾기",
         "taskContext": "인증 모듈 수정 준비",
@@ -370,7 +370,7 @@
         "item1": "- 관련 실행 흐름 / 호출 체인",
         "item2": "- 핵심 심볼과 파일 위치",
         "item3": "- _meta.graph.snapshotUri / markdownFilePath",
-        "item4": "- start_feature / start_bugfix 에 전달 가능한 graphContext"
+        "item4": "- 후속 워크플로우가 재사용할 docs/graph-insights/latest.* 및 project-context 인덱스 진입점"
       }
     },
     "common": {
@@ -383,7 +383,7 @@
         "description": "사용",
         "description2": "워크플로우 오케스트레이션으로 사양에서 추정까지 원클릭 완료.",
         "example1": "당신: 사용자 인증 기능 개발",
-        "step1": "✓ 프로젝트 컨텍스트와 사용 가능한 그래프 스냅샷 확인",
+        "step1": "✓ 프로젝트 컨텍스트를 확인하고 누락된 graph-insights 를 보강한 뒤 GitNexus 인덱스를 갱신",
         "step2": "✓ 기능 사양 문서 생성",
         "step3": "✓ 개발 작업량 추정",
         "step4": "✓ 완전한 개발 계획 출력"
@@ -433,18 +433,18 @@
       "bugfix": {
         "title": "4.1 체계적인 버그 수정 (권장)",
         "description": "사용",
-        "description2": "워크플로우로 분석에서 테스트까지 원스톱 솔루션.",
+        "description2": "워크플로우로 기본적으로 TBP 8단계 근본원인 분석을 먼저 수행한 뒤 수정과 테스트로 진행합니다.",
         "example1": "당신: 로그인 기능에서 오류가 발생했습니다",
-        "step1": "✓ 프로젝트 컨텍스트와 사용 가능한 그래프 스냅샷 확인",
-        "step2": "✓ 오류 원인 분석",
-        "step3": "✓ 문제 코드 위치 파악",
-        "step4": "✓ 수정 방안 제공",
-        "step5": "✓ 테스트 케이스 생성"
+        "step1": "✓ 프로젝트 컨텍스트를 확인하고 누락된 graph-insights 를 보강한 뒤 GitNexus 인덱스를 갱신",
+        "step2": "✓ TBP-1~4로 현상, 타임라인, 공통 패턴을 정리",
+        "step3": "✓ TBP-5/6으로 실패 경계와 인과적 근본원인을 확정",
+        "step4": "✓ 증거 사슬을 바탕으로 수정안과 위험을 제시",
+        "step5": "✓ 검증 절차와 회귀 테스트를 생성"
       },
       "quick": {
         "title": "4.2 빠른 버그 분석",
         "description": "사용",
-        "description2": "도구로 문제를 빠르게 분석하고 수정 방안 제공."
+        "description2": "도구로 TBP 8단계 빠른 RCA를 수행하고 수정 및 검증 가이드를 제공합니다."
       }
     },
     "stage5": {
@@ -533,4 +533,3 @@
     }
   }
 }
-

@@ -30,10 +30,20 @@ describe('start_bugfix 单元测试', () => {
     expect(plan).toBeTruthy();
     expect(plan.mode).toBe('delegated');
     expect(Array.isArray(plan.steps)).toBe(true);
+    expect(structured.analysisMode).toBe('tbp8');
+    expect(structured.tbp.rootCauseStatement).toMatch(/A \+ B|因果句|待形成/);
 
     const fixStep = plan.steps.find((step: any) => step.tool === 'fix_bug');
     expect(fixStep).toBeTruthy();
     expect(fixStep.args.error_message).toBe('TypeError: Cannot read property');
+    expect(fixStep.args.analysis_mode).toBe('tbp8');
+    const contextStep = plan.steps.find((step: any) => step.tool === 'init_project_context');
+    expect(contextStep.outputs).toContain('docs/graph-insights/latest.md');
+    expect(contextStep.outputs).toContain('docs/graph-insights/latest.json');
+    expect(contextStep.when).toMatch(/graph-insights\/latest\.md/);
+    expect(contextStep.note).toMatch(/兼容老项目|补齐/);
+    expect(structured?.metadata?.graphDocs?.latestMarkdownPath).toBe('docs/graph-insights/latest.md');
+    expect(structured?.metadata?.graphContext?.summary).toMatch(/GitNexus|图谱|降级/);
   });
 
   test('loop 模式返回需求循环结构', async () => {
