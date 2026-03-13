@@ -16,15 +16,20 @@
 
 /**
  * Commit Message Schema
- * 用于 gencommit 工具的结构化输出
+ * 用于提交草稿（保留给其他场景复用）
  */
 export const CommitMessageSchema = {
   type: 'object',
   properties: {
+    status: {
+      type: 'string',
+      description: '生成状态：ready 表示已生成提交草稿；needs_changes 表示需要补充变更内容',
+      enum: ['ready', 'needs_changes'],
+    },
     type: {
       type: 'string',
       description: 'Commit 类型：feat/fix/docs/refactor/test/chore/style/perf',
-      enum: ['feat', 'fix', 'docs', 'refactor', 'test', 'chore', 'style', 'perf', 'ci', 'build', 'revert'],
+      enum: ['feat', 'fix', 'fixed', 'docs', 'refactor', 'test', 'chore', 'style', 'perf', 'ci', 'build', 'revert'],
     },
     scope: {
       type: 'string',
@@ -50,8 +55,88 @@ export const CommitMessageSchema = {
       type: 'string',
       description: 'Emoji 前缀（如果使用 conventional+emoji 风格）',
     },
+    guidance: {
+      type: 'string',
+      description: '当 status=needs_changes 时，提示需要补充的信息',
+    },
+    nextAction: {
+      type: 'string',
+      description: '下一步建议动作',
+    },
   },
-  required: ['type', 'subject', 'fullMessage'],
+  required: ['status'],
+} as const;
+
+/**
+ * Commit Guidance Schema
+ * 用于 gencommit 工具的结构化输出
+ */
+export const CommitGuidanceSchema = {
+  type: 'object',
+  properties: {
+    mode: {
+      type: 'string',
+      enum: ['guidance'],
+      description: 'gencommit 当前只返回指导文档，不直接生成最终提交消息',
+    },
+    status: {
+      type: 'string',
+      enum: ['ready', 'needs_changes'],
+      description: 'ready 表示可直接按规则生成；needs_changes 表示还缺变更信息',
+    },
+    hasChanges: {
+      type: 'boolean',
+      description: '是否已拿到变更内容',
+    },
+    inputSummary: {
+      type: 'string',
+      description: '对输入变更的简要摘要',
+    },
+    steps: {
+      type: 'array',
+      description: 'AI 接下来要执行的步骤',
+      items: { type: 'string' },
+    },
+    rules: {
+      type: 'array',
+      description: '生成 commit message 时必须遵守的规则',
+      items: { type: 'string' },
+    },
+    allowedTypes: {
+      type: 'array',
+      description: '允许使用的 type 及对应 emoji',
+      items: {
+        type: 'object',
+        properties: {
+          type: { type: 'string' },
+          emoji: { type: 'string' },
+          when: { type: 'string' },
+        },
+        required: ['type', 'emoji', 'when'],
+      },
+    },
+    outputTemplate: {
+      type: 'string',
+      description: '最终 commit message 的模板',
+    },
+    examples: {
+      type: 'array',
+      description: '参考示例',
+      items: {
+        type: 'object',
+        properties: {
+          type: { type: 'string' },
+          fullMessage: { type: 'string' },
+        },
+        required: ['type', 'fullMessage'],
+      },
+    },
+    nextAction: {
+      type: 'string',
+      description: 'AI 下一步该做什么',
+    },
+  },
+  required: ['mode', 'status', 'hasChanges', 'steps', 'rules', 'allowedTypes', 'outputTemplate', 'examples', 'nextAction'],
 } as const;
 
 /**
@@ -189,6 +274,72 @@ export const ExecutionPlanSchema = {
   required: ['mode', 'steps'],
 } as const;
 
+const TbpTimelineEventSchema = {
+  type: 'object',
+  properties: {
+    order: { type: 'number', description: '时间线顺序' },
+    event: { type: 'string', description: '事件描述' },
+    evidence: { type: 'string', description: '对应证据' },
+  },
+  required: ['order', 'event'],
+} as const;
+
+const TbpEvidenceItemSchema = {
+  type: 'object',
+  properties: {
+    type: {
+      type: 'string',
+      enum: ['symptom', 'timeline', 'stack', 'code', 'comparison', 'environment', 'graph'],
+      description: '证据类型',
+    },
+    detail: { type: 'string', description: '证据内容' },
+    source: { type: 'string', description: '证据来源' },
+  },
+  required: ['type', 'detail'],
+} as const;
+
+const TbpRepairItemSchema = {
+  type: 'object',
+  properties: {
+    layer: { type: 'string', description: '修复层' },
+    action: { type: 'string', description: '修复动作' },
+    risk: { type: 'string', description: '潜在风险' },
+    verification: { type: 'string', description: '验证方法' },
+  },
+  required: ['layer', 'action', 'verification'],
+} as const;
+
+const TbpAnalysisSchema = {
+  type: 'object',
+  properties: {
+    phenomenon: { type: 'string', description: 'TBP-1 现象' },
+    timeline: {
+      type: 'array',
+      description: 'TBP-2 时间线',
+      items: TbpTimelineEventSchema,
+    },
+    ruledOut: {
+      type: 'array',
+      description: 'TBP-3 已排除方向',
+      items: { type: 'string' },
+    },
+    commonPattern: { type: 'string', description: 'TBP-4 共同模式' },
+    boundary: { type: 'string', description: 'TBP-5 问题边界' },
+    rootCauseStatement: { type: 'string', description: 'TBP-6 真因因果句' },
+    evidence: {
+      type: 'array',
+      description: 'TBP-7 证据链',
+      items: TbpEvidenceItemSchema,
+    },
+    repair: {
+      type: 'array',
+      description: 'TBP-8 修复设计',
+      items: TbpRepairItemSchema,
+    },
+  },
+  required: ['phenomenon', 'timeline', 'ruledOut', 'commonPattern', 'boundary', 'rootCauseStatement', 'evidence', 'repair'],
+} as const;
+
 /**
  * Bug Fix Report Schema
  * 用于 start_bugfix 的特定字段
@@ -199,6 +350,11 @@ export const BugFixReportSchema = {
     { $ref: '#/definitions/WorkflowReport' },
   ],
   properties: {
+    analysisMode: {
+      type: 'string',
+      enum: ['tbp8'],
+      description: '分析方法',
+    },
     rootCause: {
       type: 'string',
       description: '根本原因分析',
@@ -222,8 +378,12 @@ export const BugFixReportSchema = {
         type: 'string',
       },
     },
+    tbp: {
+      ...TbpAnalysisSchema,
+      description: 'TBP 8 步法分析骨架',
+    },
   },
-  required: ['rootCause', 'fixPlan', 'testPlan'],
+  required: ['analysisMode', 'rootCause', 'fixPlan', 'testPlan', 'tbp'],
 } as const;
 
 /**
@@ -683,6 +843,26 @@ export interface CommitMessage {
   emoji?: string;
 }
 
+export interface CommitGuidance {
+  mode: 'guidance';
+  status: 'ready' | 'needs_changes';
+  hasChanges: boolean;
+  inputSummary?: string;
+  steps: string[];
+  rules: string[];
+  allowedTypes: Array<{
+    type: string;
+    emoji: string;
+    when: string;
+  }>;
+  outputTemplate: string;
+  examples: Array<{
+    type: string;
+    fullMessage: string;
+  }>;
+  nextAction: string;
+}
+
 export interface WorkflowStep {
   name: string;
   status: 'completed' | 'skipped' | 'failed' | 'pending';
@@ -724,11 +904,35 @@ export interface ExecutionPlan {
 }
 
 export interface BugFixReport extends WorkflowReport {
+  analysisMode: 'tbp8';
   rootCause: string;
   fixPlan: string;
   testPlan: string;
   commitDraft?: CommitMessage;
   affectedFiles?: string[];
+  tbp: {
+    phenomenon: string;
+    timeline: Array<{
+      order: number;
+      event: string;
+      evidence?: string;
+    }>;
+    ruledOut: string[];
+    commonPattern: string;
+    boundary: string;
+    rootCauseStatement: string;
+    evidence: Array<{
+      type: 'symptom' | 'timeline' | 'stack' | 'code' | 'comparison' | 'environment' | 'graph';
+      detail: string;
+      source?: string;
+    }>;
+    repair: Array<{
+      layer: string;
+      action: string;
+      risk?: string;
+      verification: string;
+    }>;
+  };
 }
 
 export interface FeatureReport extends WorkflowReport {
@@ -968,6 +1172,11 @@ export const BugAnalysisSchema = {
       enum: ['critical', 'high', 'medium', 'low'],
       description: '严重程度',
     },
+    analysisMode: {
+      type: 'string',
+      enum: ['tbp8'],
+      description: '分析方法',
+    },
     rootCause: {
       type: 'string',
       description: '根本原因',
@@ -1021,8 +1230,12 @@ export const BugAnalysisSchema = {
       description: '预防措施',
       items: { type: 'string' },
     },
+    tbp: {
+      ...TbpAnalysisSchema,
+      description: 'TBP 8 步法分析结果',
+    },
   },
-  required: ['summary', 'bugType', 'severity', 'rootCause', 'fixPlan', 'testPlan'],
+  required: ['summary', 'bugType', 'severity', 'analysisMode', 'rootCause', 'fixPlan', 'testPlan', 'tbp'],
 } as const;
 
 /**

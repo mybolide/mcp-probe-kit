@@ -21,6 +21,10 @@ export const orchestrationToolSchemas = [
           type: "string",
           description: "文档输出目录，默认为 docs",
         },
+        project_root: {
+          type: "string",
+          description: "项目根目录。当前客户端未把工作区作为进程 cwd 传进来时，建议显式指定",
+        },
         template_profile: {
           type: "string",
           description: "模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）",
@@ -48,7 +52,7 @@ export const orchestrationToolSchemas = [
   },
   {
     name: "start_bugfix",
-    description: "当用户需要完整的 Bug 修复流程时使用。编排：检查上下文→分析定位→修复方案→生成测试。",
+    description: "当用户需要找问题、修 bug、排查异常、定位回归、分析失败原因、分析为什么没生效、先分析再修时使用。默认按 TBP 8 步法编排：取证澄清→分析定位→修复方案→生成测试。",
     inputSchema: {
       type: "object",
       properties: {
@@ -63,6 +67,14 @@ export const orchestrationToolSchemas = [
         code_context: {
           type: "string",
           description: "相关代码。可选",
+        },
+        project_root: {
+          type: "string",
+          description: "项目根目录。当前客户端未把工作区作为进程 cwd 传进来时，建议显式指定",
+        },
+        analysis_mode: {
+          type: "string",
+          description: "分析方法。默认 tbp8（丰田问题分析 8 步法）",
         },
         template_profile: {
           type: "string",

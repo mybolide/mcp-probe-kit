@@ -71,12 +71,12 @@
   },
   "toolsData": {
     "start_feature": {
-      "description": "完整的功能开发工作流编排：检查上下文 → 生成规格 → 估算工作量",
-      "usage": "用于启动完整的功能开发流程，自动生成需求文档、设计方案和工作量估算"
+      "description": "完整的功能开发工作流编排：补齐图谱基线 → 刷新 GitNexus 图谱 → 收敛需求范围 → 生成规格 → 估算工作量",
+      "usage": "用于启动完整的功能开发流程，自动补齐 graph-insights，并通过 GitNexus 的 query/context/impact 收敛需求范围后生成规格与估算"
     },
     "start_bugfix": {
-      "description": "Bug 修复工作流编排：检查上下文 → 分析定位 → 修复方案 → 生成测试",
-      "usage": "用于系统化修复Bug，提供完整的分析、定位、修复和测试方案"
+      "description": "Bug 修复工作流编排：补齐图谱基线 → 刷新 GitNexus 图谱 → 收敛故障边界 → TBP 8 步真因分析 → 修复方案 → 生成测试",
+      "usage": "适用于找问题、修 bug、排查异常、定位回归；会先补齐 graph-insights 并用 GitNexus 收敛边界，再按 TBP 8 步法闭合真因后修复"
     },
     "start_onboard": {
       "description": "项目上手工作流：生成上下文文档，帮助新成员快速了解项目",
@@ -99,8 +99,8 @@
       "usage": "全面审查代码质量，输出结构化问题清单（severity/category/suggestion）"
     },
     "fix_bug": {
-      "description": "Bug 修复指导，提供根因分析、修复计划、测试计划和预防措施",
-      "usage": "提供完整的 Bug 修复指导，包含根因分析、修复方案、测试计划和预防措施"
+      "description": "基于 TBP 8 步法的 Bug 真因分析与修复指导，输出证据链、修复计划、测试计划和预防措施",
+      "usage": "适用于先找真因再修，帮助闭合现象、时间线、边界、真因和修复之间的因果链"
     },
     "refactor": {
       "description": "重构建议工具，分析代码结构，提供重构步骤、风险评估和回滚计划",
@@ -123,8 +123,8 @@
       "usage": "按 Spec-Driven Development 方式生成需求/设计/任务文档"
     },
     "init_project_context": {
-      "description": "生成项目上下文文档（技术栈/架构/编码规范）",
-      "usage": "生成项目上下文文档，帮助团队快速上手"
+      "description": "生成或维护项目上下文文档，并补齐 graph-insights 图谱基线入口",
+      "usage": "新项目生成上下文骨架；老项目若已有 project-context.md，则保留旧文档，仅补 graph-insights 图谱文档与索引入口"
     },
     "add_feature": {
       "description": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文",
@@ -156,7 +156,7 @@
     },
     "code_insight": {
       "description": "代码图谱洞察工具，桥接 GitNexus 分析调用链、上下文和影响面（不可用时自动降级）",
-      "usage": "用于快速获取代码图谱线索，并为 start_feature/start_bugfix 提供可选增强"
+      "usage": "用于刷新 GitNexus 图谱、获取任务级调用链/上下文/影响面，并把结果保存到 docs/graph-insights 与 project-context 索引"
     }
   }
 }

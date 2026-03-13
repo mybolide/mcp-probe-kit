@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
@@ -19,6 +21,7 @@ import { buildBugfixGraphContext } from "../lib/gitnexus-bridge.js";
 
 type TemplateProfileResolved = 'guided' | 'strict';
 type TemplateProfileRequest = 'guided' | 'strict' | 'auto';
+type AnalysisMode = 'tbp8';
 
 function decideTemplateProfile(description: string): TemplateProfileResolved {
   const text = description || '';
@@ -68,7 +71,7 @@ function resolveTemplateProfile(rawProfile: string, description: string): {
   };
 }
 
-const PROMPT_TEMPLATE_GUIDED = `# 🐛 Bug 修复编排指南
+const PROMPT_TEMPLATE_GUIDED = `# 🐛 Bug 修复编排指南（TBP 8 步真因分析）
 
 ## 🎯 目标
 
@@ -83,20 +86,21 @@ const PROMPT_TEMPLATE_GUIDED = `# 🐛 Bug 修复编排指南
 
 ---
 
-## 📋 步骤 0: 项目上下文（自动处理）
+## 📋 步骤 0: 项目上下文与取证基线（自动处理）
 
 **操作**:
 1. 检查 \`docs/project-context.md\` 是否存在
-2. **如果不存在**：
+2. 检查 \`docs/graph-insights/latest.md\` 和 \`docs/graph-insights/latest.json\` 是否存在
+3. **如果任一缺失**：
    - 调用 \`init_project_context\` 工具
    - 等待生成完成
-3. **读取** \`docs/project-context.md\` 内容
-4. 了解项目的技术栈、架构、测试框架
-5. 后续步骤参考此上下文
+4. **读取** \`docs/project-context.md\` 与图谱文档
+5. 了解项目的技术栈、架构、测试框架和调用链
+6. 后续步骤参考此上下文
 
 ---
 
-## 🔍 步骤 1: Bug 分析与修复
+## 🔍 步骤 1: 先做 TBP 1-7，再决定修复
 
 **调用工具**: \`fix_bug\`
 
@@ -109,10 +113,14 @@ const PROMPT_TEMPLATE_GUIDED = `# 🐛 Bug 修复编排指南
 \`\`\`
 
 **执行要点**:
-1. 按指南完成问题定位
-2. 使用 5 Whys 分析根本原因
-3. 设计修复方案
-4. 实施代码修复
+1. 先定义现象，不能泛化
+2. 复盘时间线，尽量带时间/步骤/状态
+3. 明确排除错误方向，并说明为什么不是
+4. 对比成功/失败样本，找分叉点
+5. 定位问题边界（模型 / 状态机 / 工具 / 文件 / 环境）
+6. 用因果句陈述真因：A + B 在条件 D 下导致 C
+7. 闭合证据链后，才进入修复设计
+8. 修复必须说明风险与验证方式
 
 **产出**: 修复后的代码
 
@@ -142,8 +150,8 @@ const PROMPT_TEMPLATE_GUIDED = `# 🐛 Bug 修复编排指南
 ## ✅ 完成检查
 
 - [ ] 项目上下文已读取
-- [ ] Bug 已定位
-- [ ] 根本原因已分析
+- [ ] TBP-1~TBP-7 已闭合
+- [ ] 真因已写成因果句
 - [ ] 代码已修复
 - [ ] 测试已添加
 - [ ] 测试已通过
@@ -154,17 +162,21 @@ const PROMPT_TEMPLATE_GUIDED = `# 🐛 Bug 修复编排指南
 
 完成后，向用户汇总：
 
-1. **Bug 原因**: [根本原因]
-2. **修复方案**: [修复说明]
-3. **修改文件**: [文件列表]
-4. **测试覆盖**: [测试情况]
+1. **TBP 现象**: [精确定义的问题]
+2. **TBP 时间线**: [关键事件顺序]
+3. **已排除方向**: [不是哪些原因]
+4. **问题边界**: [失控发生在哪一层]
+5. **Bug 真因**: [根本原因]
+6. **修复方案**: [修复说明]
+7. **修改文件**: [文件列表]
+8. **测试覆盖**: [测试情况]
 
 ---
 
 *编排工具: MCP Probe Kit - start_bugfix*
 `;
 
-const PROMPT_TEMPLATE_STRICT = `# 🐛 Bug 修复编排（严格）
+const PROMPT_TEMPLATE_STRICT = `# 🐛 Bug 修复编排（严格 | TBP 8 步）
 
 ## 🎯 目标
 修复 Bug：{error_message}
@@ -175,12 +187,13 @@ const PROMPT_TEMPLATE_STRICT = `# 🐛 Bug 修复编排（严格）
 
 ## ✅ 执行计划（按顺序）
 
-1) 检查 \`docs/project-context.md\`，缺失则调用 \`init_project_context\`
+1) 检查 \`docs/project-context.md\` 与 \`docs/graph-insights/latest.*\`，任一缺失则调用 \`init_project_context\`
 2) 调用 \`fix_bug\`
 \`\`\`json
 {
   "error_message": "{error_message}",
-  "stack_trace": "{stack_trace}"
+  "stack_trace": "{stack_trace}",
+  "analysis_mode": "{analysis_mode}"
 }
 \`\`\`
 3) 调用 \`gentest\`
@@ -194,19 +207,23 @@ const PROMPT_TEMPLATE_STRICT = `# 🐛 Bug 修复编排（严格）
 ---
 
 ## ✅ 输出汇总
-1. Bug 原因
-2. 修复方案
-3. 修改文件
-4. 测试覆盖
+1. TBP 现象
+2. TBP 时间线
+3. 已排除方向
+4. 问题边界
+5. Bug 真因
+6. 修复方案
+7. 修改文件
+8. 测试覆盖
 
 ---
 
 *编排工具: MCP Probe Kit - start_bugfix*
 `;
 
-const LOOP_PROMPT_TEMPLATE_GUIDED = `# 🧭 Bug 需求澄清与补全（Requirements Loop）
+const LOOP_PROMPT_TEMPLATE_GUIDED = `# 🧭 Bug 需求澄清与补全（TBP RCA Loop）
 
-本模式用于**生产级稳健补全**：在不改变用户意图的前提下补齐 Bug 修复所需关键信息。
+本模式用于**生产级稳健补全**：在不改变用户意图的前提下补齐 TBP 8 步真因分析所需证据。
 
 ## 🎯 目标
 修复 Bug：{error_message}
@@ -222,7 +239,7 @@ const LOOP_PROMPT_TEMPLATE_GUIDED = `# 🧭 Bug 需求澄清与补全（Requirem
 ## 🔁 执行步骤（每轮）
 
 ### 1) 生成待确认问题
-使用 \`ask_user\` 提问，问题来源于 Bug 修复补全清单（复现/环境/期望/影响/验证）。
+使用 \`ask_user\` 提问，问题来源于 TBP 清单（现象/时间线/对比样本/边界/验证）。
 
 **调用示例**:
 \`\`\`json
@@ -241,13 +258,13 @@ const LOOP_PROMPT_TEMPLATE_GUIDED = `# 🧭 Bug 需求澄清与补全（Requirem
 - Assumption：无法确认但补全（需确认）
 
 ### 3) 自检与结束
-若 \`openQuestions\` 为空且无高风险假设，则结束 loop，进入修复流程。
+若 \`openQuestions\` 为空且无高风险假设，则结束 loop，进入 TBP-6/7/8 修复流程。
 
 ---
 
 ## ✅ 结束后继续
 当满足结束条件时，执行：
-1. 调用 \`fix_bug\` 进行定位与修复
+1. 调用 \`fix_bug\` 完成 TBP 8 步分析与修复方案
 2. 调用 \`gentest\` 生成回归测试
 
 ---
@@ -255,7 +272,7 @@ const LOOP_PROMPT_TEMPLATE_GUIDED = `# 🧭 Bug 需求澄清与补全（Requirem
 *编排工具: MCP Probe Kit - start_bugfix (requirements loop)*
 `;
 
-const LOOP_PROMPT_TEMPLATE_STRICT = `# 🧭 Bug 需求澄清与补全（Requirements Loop | 严格）
+const LOOP_PROMPT_TEMPLATE_STRICT = `# 🧭 Bug 需求澄清与补全（TBP RCA Loop | 严格）
 
 本模式用于稳健补全关键信息，不改变用户意图。
 
@@ -287,12 +304,12 @@ const LOOP_PROMPT_TEMPLATE_STRICT = `# 🧭 Bug 需求澄清与补全（Requirem
 
 function buildBugfixQuestions(questionBudget: number) {
   const base = [
-    { question: "复现步骤是什么？", context: "复现步骤", required: true },
-    { question: "环境/版本信息是什么？", context: "环境信息", required: true },
-    { question: "期望行为是什么？", context: "期望行为", required: true },
-    { question: "实际表现是什么？", context: "实际表现", required: true },
-    { question: "影响范围与严重级别如何？", context: "影响范围", required: true },
-    { question: "是否有相关日志/错误栈？", context: "日志信息", required: false },
+    { question: "请精确定义现象：用户可见的问题是什么？", context: "现象", required: true },
+    { question: "问题发生的关键时间线是什么？开始、过程中、最后停在什么状态？", context: "时间线", required: true },
+    { question: "期望行为与实际行为分别是什么？", context: "期望与实际", required: true },
+    { question: "有没有成功样本或不出问题的对照场景？", context: "对比样本", required: false },
+    { question: "环境/版本/配置差异是什么？", context: "环境信息", required: true },
+    { question: "是否有日志、堆栈、run id、session id、trace 等证据？", context: "证据标识", required: false },
   ];
   return base.slice(0, Math.max(0, questionBudget));
 }
@@ -306,6 +323,9 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
     const parsedArgs = parseArgs<{
       error_message?: string;
       stack_trace?: string;
+      code_context?: string;
+      project_root?: string;
+      analysis_mode?: string;
       template_profile?: string;
       requirements_mode?: string;
       loop_max_rounds?: number;
@@ -315,6 +335,8 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
       defaultValues: {
         error_message: "",
         stack_trace: "",
+        code_context: "",
+        analysis_mode: "tbp8",
         template_profile: "auto",
         requirements_mode: "steady",
         loop_max_rounds: 2,
@@ -325,6 +347,9 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
       fieldAliases: {
         error_message: ["error", "err", "message", "错误", "错误信息"],
         stack_trace: ["stack", "trace", "堆栈", "调用栈"],
+        code_context: ["code_context", "code", "context", "相关代码", "代码上下文"],
+        project_root: ["projectRoot", "project_path", "projectPath", "root", "project_root", "项目路径", "项目根目录"],
+        analysis_mode: ["analysis_mode", "methodology", "rca", "tbp", "分析方法"],
         template_profile: ["profile", "template_profile", "模板档位", "模板模式"],
         requirements_mode: ["mode", "requirements_mode", "loop", "需求模式"],
         loop_max_rounds: ["max_rounds", "rounds", "最大轮次"],
@@ -335,6 +360,11 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
 
     const errorMessage = getString(parsedArgs.error_message);
     const stackTrace = getString(parsedArgs.stack_trace);
+    const codeContext = getString(parsedArgs.code_context);
+    const projectRoot = getString(parsedArgs.project_root);
+    const analysisMode = ((getString(parsedArgs.analysis_mode) || "tbp8").toLowerCase() === "tbp8"
+      ? "tbp8"
+      : "tbp8") as AnalysisMode;
     const rawProfile = getString(parsedArgs.template_profile);
     const requirementsMode = getString(parsedArgs.requirements_mode) || "steady";
     const maxRounds = getNumber(parsedArgs.loop_max_rounds, 2);
@@ -353,6 +383,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
     const templateMeta: Record<string, string> = {
       profile: profileDecision.resolved,
       requested: profileDecision.requested,
+      analysisMode,
     };
     if (profileDecision.reason) {
       templateMeta.reason = profileDecision.reason;
@@ -363,6 +394,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
 
     const headerNotes = [
       `模板档位: ${profileDecision.resolved}${profileDecision.requested === 'auto' ? '（自动）' : ''}`,
+      `分析方法: ${analysisMode}`,
     ];
     if (profileDecision.reason) {
       headerNotes.push(`选择理由: ${profileDecision.reason}`);
@@ -372,35 +404,54 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
     }
 
     throwIfAborted(context?.signal, "start_bugfix 已取消");
-    await reportToolProgress(context, 55, "start_bugfix: 获取代码图谱上下文");
+    await reportToolProgress(context, 55, "start_bugfix: 刷新图谱并收敛问题范围");
+    const graphDocs = {
+      latestMarkdownPath: "docs/graph-insights/latest.md",
+      latestJsonPath: "docs/graph-insights/latest.json",
+    };
+    const resolvedProjectRoot = path.resolve(projectRoot || process.cwd());
+    const bootstrapState = {
+      projectContextExists: fs.existsSync(path.join(resolvedProjectRoot, "docs", "project-context.md")),
+      latestMarkdownExists: fs.existsSync(path.join(resolvedProjectRoot, "docs", "graph-insights", "latest.md")),
+      latestJsonExists: fs.existsSync(path.join(resolvedProjectRoot, "docs", "graph-insights", "latest.json")),
+    };
+    const graphDocsMissing = !bootstrapState.latestMarkdownExists || !bootstrapState.latestJsonExists;
     const graphContext = await buildBugfixGraphContext({
       errorMessage,
       stackTrace,
+      projectRoot: projectRoot || undefined,
       signal: context?.signal,
     });
-
     const graphStatusNote = graphContext.available
-      ? `图谱增强: 可用（${graphContext.mode}）`
-      : "图谱增强: 已降级（自动回退）";
+      ? `任务图谱收敛: 可用（${graphContext.mode}）`
+      : "任务图谱收敛: 已降级（自动回退）";
     headerNotes.push(graphStatusNote);
 
-    const graphCodeContext = graphContext.available
-      ? [
-          `图谱摘要: ${graphContext.summary}`,
-          ...graphContext.highlights.slice(0, 3).map((item) => `图谱线索: ${item}`),
-        ]
-          .filter(Boolean)
-          .join("\n")
-      : "";
+    const graphCodeContext = [
+      codeContext,
+      `如存在 ${graphDocs.latestMarkdownPath}，请一并参考其中的调用链、依赖关系和影响面摘要`,
+      ...(graphContext.available
+        ? [
+            graphContext.summary ? `任务图谱摘要: ${graphContext.summary}` : "",
+            ...graphContext.highlights.slice(0, 3).map((item) => `任务图谱线索: ${item}`),
+          ]
+        : []),
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const graphGuideSection = `
 
-## 🧠 代码图谱上下文（可选增强）
-- 状态: ${graphContext.available ? "可用" : "降级"}
-- 摘要: ${graphContext.summary}
+## 🧠 代码图谱上下文
+- 基线入口: ${graphDocs.latestMarkdownPath}
+- 基线结构化副本: ${graphDocs.latestJsonPath}
+- 基线状态: ${graphDocsMissing ? "缺失（需要补初始化）" : "可用"}
+- 任务级收敛: ${graphContext.available ? "可用" : "降级"}
+- 任务级摘要: ${graphContext.summary}
 ${graphContext.highlights.length > 0
-    ? `- 线索:\n${graphContext.highlights.slice(0, 3).map((item) => `  - ${item}`).join("\n")}`
-    : "- 线索: 无"}
+    ? `- 任务级线索:\n${graphContext.highlights.slice(0, 3).map((item) => `  - ${item}`).join("\n")}`
+    : "- 任务级线索: 无"}
+- 使用方式: 先读取基线图谱，再用本次任务图谱做 TBP-4 / TBP-5 / TBP-6 的边界与真因收敛
 `;
 
     if (requirementsMode === "loop") {
@@ -435,9 +486,13 @@ ${graphContext.highlights.length > 0
           {
             id: 'context',
             tool: 'init_project_context',
-            when: '缺少 docs/project-context.md',
-            args: { docs_dir: 'docs' },
-            outputs: ['docs/project-context.md'],
+            when: `缺少 docs/project-context.md 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
+            args: {
+              docs_dir: 'docs',
+              ...(projectRoot ? { project_root: projectRoot } : {}),
+            },
+            outputs: ['docs/project-context.md', graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
+            note: `兼容老项目：如果旧项目没有 graph-insights/latest.*，先补齐图谱初始化再进入 bug 收敛`,
           },
           {
             id: 'loop-1',
@@ -463,6 +518,7 @@ ${graphContext.highlights.length > 0
             args: {
               error_message: errorMessage,
               ...(stackTrace ? { stack_trace: stackTrace } : {}),
+              analysis_mode: analysisMode,
               ...(graphCodeContext ? { code_context: graphCodeContext } : {}),
             },
             outputs: [],
@@ -496,6 +552,7 @@ ${graphContext.highlights.length > 0
 
       const guide = (header + loopTemplate
         .replace(/{error_message}/g, errorMessage)
+        .replace(/{analysis_mode}/g, analysisMode)
         .replace(/{question_budget}/g, String(questionBudget))
         .replace(/{assumption_cap}/g, String(assumptionCap)))
         + graphGuideSection;
@@ -526,6 +583,11 @@ ${graphContext.highlights.length > 0
         metadata: {
           plan,
           template: templateMeta,
+          graphDocs,
+          bootstrapState: {
+            ...bootstrapState,
+            graphDocsMissing,
+          },
           graphContext,
         },
       };
@@ -563,6 +625,7 @@ ${graphContext.highlights.length > 0
     const guide = (header + promptTemplate
       .replace(/{error_message}/g, errorMessage)
       .replace(/{stack_trace}/g, stackTrace)
+      .replace(/{analysis_mode}/g, analysisMode)
       .replace(/{stack_trace_section}/g, stackTraceSection))
       + graphGuideSection;
 
@@ -572,9 +635,13 @@ ${graphContext.highlights.length > 0
         {
           id: 'context',
           tool: 'init_project_context',
-          when: '缺少 docs/project-context.md',
-          args: { docs_dir: 'docs' },
-          outputs: ['docs/project-context.md'],
+          when: `缺少 docs/project-context.md 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
+          args: {
+            docs_dir: 'docs',
+            ...(projectRoot ? { project_root: projectRoot } : {}),
+          },
+          outputs: ['docs/project-context.md', graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
+          note: `兼容老项目：如果旧项目没有 graph-insights/latest.*，先补齐图谱初始化再进入 bug 收敛`,
         },
         {
           id: 'fix',
@@ -582,6 +649,7 @@ ${graphContext.highlights.length > 0
           args: {
             error_message: errorMessage,
             ...(stackTrace ? { stack_trace: stackTrace } : {}),
+            analysis_mode: analysisMode,
             ...(graphCodeContext ? { code_context: graphCodeContext } : {}),
           },
           outputs: [],
@@ -602,11 +670,12 @@ ${graphContext.highlights.length > 0
     const bugfixReport: BugFixReport = {
       summary: `Bug 修复工作流：${errorMessage.substring(0, 50)}${errorMessage.length > 50 ? '...' : ''}`,
       status: 'pending',
+      analysisMode,
       steps: [
         {
           name: '检查项目上下文',
           status: 'pending',
-          description: '检查 docs/project-context.md 是否存在，如不存在则调用 init_project_context',
+          description: '检查 docs/project-context.md 与 graph-insights/latest.* 是否存在，缺失则调用 init_project_context',
         },
         {
           name: 'Bug 分析与修复',
@@ -622,7 +691,11 @@ ${graphContext.highlights.length > 0
       artifacts: [],
       nextSteps: [
         '检查并读取项目上下文文档',
-        '调用 fix_bug 工具分析和修复问题',
+        `如果缺少 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}，先调用 init_project_context 补齐图谱初始化`,
+        `优先读取 ${graphDocs.latestMarkdownPath} 获取调用链、依赖和影响面摘要`,
+        '结合本次任务图谱线索收敛问题边界，避免扩大改动面',
+        '按 TBP-1~TBP-7 完成真因分析',
+        '调用 fix_bug 工具分析问题并形成因果句真因',
         '调用 gentest 工具生成回归测试',
         '运行测试验证修复',
       ],
@@ -630,9 +703,39 @@ ${graphContext.highlights.length > 0
       fixPlan: '待制定（需要调用 fix_bug 工具）',
       testPlan: '待生成（需要调用 gentest 工具）',
       affectedFiles: [],
+      tbp: {
+        phenomenon: `待确认：${errorMessage}`,
+        timeline: [
+          { order: 1, event: '收到用户错误描述', evidence: errorMessage },
+          ...(stackTrace ? [{ order: 2, event: '收到堆栈信息', evidence: stackTrace }] : []),
+        ],
+        ruledOut: [],
+        commonPattern: '待通过成功/失败样本对比确认分叉点',
+        boundary: '待定位（优先检查状态机、工具执行层、文件系统、环境配置）',
+        rootCauseStatement: '待形成 “A + B 在条件 D 下导致 C” 的因果句',
+        evidence: [
+          { type: 'symptom', detail: errorMessage, source: 'error_message' },
+          ...(stackTrace ? [{ type: 'stack' as const, detail: stackTrace, source: 'stack_trace' }] : []),
+          ...(graphCodeContext ? [{ type: 'graph' as const, detail: graphCodeContext, source: 'graph_context' }] : []),
+        ],
+        repair: [
+          {
+            layer: 'analysis',
+            action: '先完成 TBP 1-7 取证与真因闭合，再进入修复',
+            risk: '若直接改代码，容易补症状而非修真因',
+            verification: '检查真因是否能解释全部关键现象并排除竞争假设',
+          },
+        ],
+      },
       metadata: {
         plan,
         template: templateMeta,
+        analysisMode,
+        graphDocs,
+        bootstrapState: {
+          ...bootstrapState,
+          graphDocsMissing,
+        },
         graphContext,
       },
     };

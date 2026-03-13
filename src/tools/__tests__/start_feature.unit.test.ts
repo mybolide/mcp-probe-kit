@@ -38,9 +38,17 @@ describe('start_feature 单元测试', () => {
     expect(tools).toContain('add_feature');
     expect(tools).toContain('estimate');
 
+    const contextStep = plan.steps.find((step: any) => step.tool === 'init_project_context');
+    expect(contextStep.outputs).toContain('docs/graph-insights/latest.md');
+    expect(contextStep.outputs).toContain('docs/graph-insights/latest.json');
+    expect(contextStep.when).toMatch(/graph-insights\/latest\.md/);
+    expect(contextStep.note).toMatch(/兼容老项目|补齐/);
+
     const specStep = plan.steps.find((step: any) => step.tool === 'add_feature');
     expect(specStep.args.feature_name).toBe('user-auth');
     expect(specStep.outputs).toContain('docs/specs/user-auth/requirements.md');
+    expect(structured?.metadata?.graphDocs?.latestMarkdownPath).toBe('docs/graph-insights/latest.md');
+    expect(structured?.metadata?.graphContext?.summary).toMatch(/GitNexus|图谱|降级/);
   });
 
   test('输出文本包含执行计划与关键工具名', async () => {
@@ -53,6 +61,9 @@ describe('start_feature 单元测试', () => {
     expect(text).toMatch(/执行计划/);
     expect(text).toMatch(/add_feature/);
     expect(text).toMatch(/estimate/);
+    expect(text).toMatch(/graph-insights\/latest\.md/);
+    expect(text).toMatch(/任务级收敛/);
+    expect(text).toMatch(/project-context\.md/);
   });
 
   test('template_profile 应该透传到 add_feature 计划', async () => {

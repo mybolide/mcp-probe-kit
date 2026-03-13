@@ -3,7 +3,7 @@ const toolsData = {
   workflow: [
     {
       name: 'start_feature',
-      description: '完整的功能开发工作流编排：检查上下文 → 生成规格 → 估算工作量',
+      description: '完整的功能开发工作流编排：补齐图谱基线 → 刷新 GitNexus 图谱 → 收敛需求范围 → 生成规格 → 估算工作量',
       schema: 'FeatureReportSchema',
       params: [
         { name: 'description', type: 'string', required: false, desc: '功能详细描述' },
@@ -15,7 +15,7 @@ const toolsData = {
         { name: 'loop_question_budget', type: 'number', required: false, desc: '每轮最多提问数量（默认 5）' },
         { name: 'loop_assumption_cap', type: 'number', required: false, desc: '每轮假设上限（默认 3）' }
       ],
-      usage: '用于启动完整的功能开发流程，自动生成需求文档、设计方案和工作量估算',
+      usage: '用于启动完整的功能开发流程，自动补齐 graph-insights，并通过 GitNexus 的 query/context/impact 收敛需求范围后生成规格与估算',
       example: `// 使用示例
 你: 请使用 start_feature 工具开发用户认证功能
 
@@ -24,19 +24,20 @@ feature_name: "user-auth"`
     },
     {
       name: 'start_bugfix',
-      description: 'Bug 修复工作流编排：检查上下文 → 分析定位 → 修复方案 → 生成测试',
+      description: 'Bug 修复工作流编排：补齐图谱基线 → 刷新 GitNexus 图谱 → 收敛故障边界 → TBP 8 步真因分析 → 修复方案 → 生成测试',
       schema: 'BugFixReportSchema',
       params: [
         { name: 'error_message', type: 'string', required: true, desc: '错误信息' },
         { name: 'stack_trace', type: 'string', required: false, desc: '堆栈跟踪信息' },
         { name: 'code_context', type: 'string', required: false, desc: '相关代码上下文' },
+        { name: 'analysis_mode', type: 'string', required: false, desc: '分析方法，默认 tbp8（先分析再修）' },
         { name: 'template_profile', type: 'string', required: false, desc: '模板档位：auto、guided 或 strict' },
         { name: 'requirements_mode', type: 'string', required: false, desc: '需求模式：steady 或 loop' },
         { name: 'loop_max_rounds', type: 'number', required: false, desc: '需求 loop 最大轮次（默认 2）' },
         { name: 'loop_question_budget', type: 'number', required: false, desc: '每轮最多提问数量（默认 5）' },
         { name: 'loop_assumption_cap', type: 'number', required: false, desc: '每轮假设上限（默认 3）' }
       ],
-      usage: '用于系统化修复Bug，提供完整的分析、定位、修复和测试方案',
+      usage: '适用于找问题、修 bug、排查异常、定位回归；会先补齐 graph-insights 并用 GitNexus 收敛边界，再按 TBP 8 步法闭合真因后修复',
       example: `// 使用示例
 你: 请使用 start_bugfix 工具修复登录失败的问题
 
@@ -147,7 +148,7 @@ focus: "security"`
         { name: 'max_depth', type: 'number', required: false, desc: 'impact 最大深度，默认 3' },
         { name: 'include_tests', type: 'boolean', required: false, desc: 'impact 是否包含测试文件，默认 false' }
       ],
-      usage: '用于快速获取代码图谱线索，并为 start_feature/start_bugfix 提供可选增强',
+      usage: '用于刷新 GitNexus 图谱、获取任务级调用链/上下文/影响面，并把结果保存到 docs/graph-insights 与 project-context 索引',
       example: `// 使用示例
 你: 请使用 code_insight 工具分析登录相关调用链
 
@@ -156,14 +157,15 @@ query: "authentication middleware"`
     },
     {
       name: 'fix_bug',
-      description: 'Bug 修复指导，提供根因分析、修复计划、测试计划和预防措施',
+      description: '基于 TBP 8 步法的 Bug 真因分析与修复指导，输出证据链、修复计划、测试计划和预防措施',
       schema: 'BugAnalysisSchema',
       params: [
         { name: 'error_message', type: 'string', required: true, desc: '错误信息' },
         { name: 'stack_trace', type: 'string', required: false, desc: '堆栈跟踪' },
-        { name: 'code_context', type: 'string', required: false, desc: '相关代码' }
+        { name: 'code_context', type: 'string', required: false, desc: '相关代码' },
+        { name: 'analysis_mode', type: 'string', required: false, desc: '分析方法，默认 tbp8（先分析再修）' }
       ],
-      usage: '提供完整的 Bug 修复指导，包含根因分析、修复方案、测试计划和预防措施',
+      usage: '适用于先找真因再修，帮助闭合现象、时间线、边界、真因和修复之间的因果链',
       example: `// 使用示例
 你: 请使用 fix_bug 工具修复这个问题
 
@@ -198,7 +200,7 @@ goal: "reduce_complexity"`
     {
       name: 'gencommit',
       description: '根据代码变更自动生成符合 Conventional Commits 规范的 Git commit 消息',
-      schema: 'CommitMessageSchema',
+      schema: 'CommitGuidanceSchema',
       params: [
         { name: 'changes', type: 'string', required: false, desc: '代码变更内容，可以是 git diff 输出、变更描述或自然语言' },
         { name: 'type', type: 'string', required: false, desc: 'Commit 类型：feat、fix、docs、style、chore、refactor、test，会自动识别' }
@@ -267,12 +269,12 @@ project_name: "TaskManager"`
     },
     {
       name: 'init_project_context',
-      description: '生成项目上下文文档（技术栈/架构/编码规范）',
+      description: '生成或维护项目上下文文档，并补齐 graph-insights 图谱基线入口',
       schema: 'ProjectContextSchema',
       params: [
         { name: 'docs_dir', type: 'string', required: false, desc: '文档目录，默认 docs' }
       ],
-      usage: '生成项目上下文文档，帮助团队快速上手',
+      usage: '新项目生成上下文骨架；老项目若已有 project-context.md，则保留旧文档，仅补 graph-insights 图谱文档与索引入口',
       example: `// 使用示例
 你: 请使用 init_project_context 工具生成项目上下文`
     },

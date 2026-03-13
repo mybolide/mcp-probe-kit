@@ -24,6 +24,7 @@ export * from './helper-tools.js';
 // 从主 Schema 文件导出基础 Schema（P0 工具）
 export {
   CommitMessageSchema,
+  CommitGuidanceSchema,
   WorkflowReportSchema,
   BugFixReportSchema,
   FeatureReportSchema,
@@ -33,6 +34,7 @@ export {
   RequirementsLoopSchema,
   // 类型定义
   CommitMessage,
+  CommitGuidance,
   WorkflowStep,
   Artifact,
   WorkflowReport,
@@ -58,7 +60,7 @@ export const SCHEMA_MAP = {
   start_ralph: 'RalphLoopReportSchema',
   
   // 日常工具（9 个）
-  gencommit: 'CommitMessageSchema',
+  gencommit: 'CommitGuidanceSchema',
   code_review: 'CodeReviewReportSchema',
   gentest: 'TestSuiteSchema',
   refactor: 'RefactorPlanSchema',

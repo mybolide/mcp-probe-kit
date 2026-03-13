@@ -71,12 +71,12 @@
   },
   "toolsData": {
     "start_feature": {
-      "description": "완전한 기능 개발 워크플로우 오케스트레이션: 컨텍스트 확인 → 사양 생성 → 작업량 추정",
-      "usage": "완전한 기능 개발 프로세스를 시작하여 요구사항 문서, 설계 계획 및 작업량 추정을 자동으로 생성합니다"
+      "description": "완전한 기능 개발 워크플로우 오케스트레이션: 그래프 베이스라인 보강 → GitNexus 갱신 → 범위 수렴 → 사양 생성 → 작업량 추정",
+      "usage": "누락된 graph-insights 를 먼저 보강하고 GitNexus query/context/impact 로 범위를 수렴시킨 뒤 사양과 추정을 생성합니다"
     },
     "start_bugfix": {
-      "description": "버그 수정 워크플로우 오케스트레이션: 컨텍스트 확인 → 분석 및 위치 파악 → 수정 솔루션 → 테스트 생성",
-      "usage": "체계적인 버그 수정에 사용되며 완전한 분석, 위치 파악, 수정 및 테스트 솔루션을 제공합니다"
+      "description": "버그 수정 워크플로우 오케스트레이션: 그래프 베이스라인 보강 → GitNexus 갱신 → 장애 경계 수렴 → TBP 8단계 근본원인 분석 → 수정 방안 → 테스트 생성",
+      "usage": "버그, 회귀, 이상 분석용. 먼저 graph-insights 를 보강하고 GitNexus 로 경계와 영향면을 좁힌 뒤 TBP RCA 를 진행합니다"
     },
     "start_onboard": {
       "description": "프로젝트 온보딩 워크플로우: 컨텍스트 문서를 생성하여 새 구성원이 프로젝트를 빠르게 이해할 수 있도록 돕습니다",
@@ -99,8 +99,8 @@
       "usage": "포괄적인 코드 품질 리뷰, 구조화된 문제 목록(severity/category/suggestion)을 출력합니다"
     },
     "fix_bug": {
-      "description": "버그 수정 가이드, 근본 원인 분석, 수정 계획, 테스트 계획 및 예방 조치를 제공합니다",
-      "usage": "근본 원인 분석, 수정 솔루션, 테스트 계획 및 예방 조치를 포함한 완전한 버그 수정 가이드를 제공합니다"
+      "description": "TBP 8단계 기반 버그 RCA 및 수정 가이드로 증거 사슬, 수정 계획, 테스트 계획, 예방 조치를 제공합니다",
+      "usage": "먼저 진짜 원인을 찾고 싶을 때 사용하며 현상, 경계, 진짜 원인, 수정까지의 인과 사슬을 닫아줍니다"
     },
     "refactor": {
       "description": "리팩토링 제안 도구, 코드 구조를 분석하고 리팩토링 단계, 위험 평가 및 롤백 계획을 제공합니다",
@@ -123,8 +123,8 @@
       "usage": "Spec-Driven Development 접근 방식에 따라 요구사항/설계/작업 문서를 생성합니다"
     },
     "init_project_context": {
-      "description": "프로젝트 컨텍스트 문서(기술 스택/아키텍처/코딩 표준)를 생성합니다",
-      "usage": "팀이 빠르게 시작할 수 있도록 프로젝트 컨텍스트 문서를 생성합니다"
+      "description": "프로젝트 컨텍스트 문서를 생성 또는 유지하고 graph-insights 베이스라인 진입점을 보강합니다",
+      "usage": "신규 프로젝트는 컨텍스트 골격을 생성하고, 기존 project-context.md 가 있으면 덮어쓰지 않고 graph-insights 와 인덱스 진입점만 보강합니다"
     },
     "add_feature": {
       "description": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다",
@@ -156,7 +156,7 @@
     },
     "code_insight": {
       "description": "코드 그래프 인사이트 도구로 GitNexus를 브리지하여 호출 체인, 컨텍스트, 영향 범위를 분석합니다(사용 불가 시 자동 강등)",
-      "usage": "코드 그래프 단서를 빠르게 확보하고 start_feature/start_bugfix 계획을 강화합니다"
+      "usage": "GitNexus 인덱스를 갱신하고 작업 단위 호출 체인/컨텍스트/영향 범위를 분석한 뒤 결과를 docs/graph-insights 와 project-context 인덱스에 저장합니다"
     }
   }
 }

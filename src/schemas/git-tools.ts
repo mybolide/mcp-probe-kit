@@ -5,7 +5,7 @@
 export const gitToolSchemas = [
   {
     name: "gencommit",
-    description: "当用户需要生成 Git commit 消息时使用。返回 Conventional Commits 规范指南，AI 根据指南和变更内容生成符合规范的提交消息",
+    description: "当用户需要生成 Git commit 消息时使用。返回 Conventional Commits 规范说明、步骤、输出模板和示例，供 AI 根据变更内容生成最终 commit message。它不直接代写最终消息，也不应被判定为空结果",
     inputSchema: {
       type: "object",
       properties: {

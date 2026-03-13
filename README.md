@@ -66,11 +66,21 @@ A powerful MCP (Model Context Protocol) server providing **22 tools** covering t
 
 - `code_insight` bridges GitNexus by default for query/context/impact analysis
 - The bridge launches `npx -y gitnexus@latest mcp` by default to reduce stale package risk
-- `start_feature` and `start_bugfix` automatically enrich plans with graph context when available
+- `init_project_context` bootstraps baseline graph docs under `docs/graph-insights/`; if `docs/project-context.md` already exists, it preserves the old context docs and only backfills graph docs plus the index entry
+- `start_feature` refreshes the GitNexus index and runs task-level `query/context/impact` narrowing before spec generation to reduce over-scoping
+- `start_bugfix` refreshes the GitNexus index and runs task-level graph analysis before TBP RCA to constrain failure boundary and blast radius
+- Older projects that already have `project-context.md` but no graph docs are bootstrapped automatically through the `init_project_context` step
 - If GitNexus is unavailable, the server falls back automatically without breaking orchestration
+- Real graph queries read the `.gitnexus` index; `docs/graph-insights/latest.md|json` are readable snapshots for humans and AI agents
 - Graph snapshots are exposed as resources (`probe://graph/latest`, `probe://graph/history`, `probe://graph/latest.md`)
 - Graph snapshots are also persisted to readable files in `.mcp-probe-kit/graph-snapshots` (customizable via `MCP_GRAPH_SNAPSHOT_DIR`)
 - Tool responses include `_meta.graph` with snapshot URI and local JSON/Markdown file paths
+
+### 🐛 TBP 8-Step RCA for Bug Workflows
+
+- `start_bugfix` defaults to Toyota-style TBP 8-step root-cause analysis before repair
+- `fix_bug` returns a structured TBP skeleton covering phenomenon, timeline, ruled-out paths, boundary, root cause, evidence, and repair plan
+- This makes bug, regression, anomaly, and "why didn't it work" investigations follow analyze-first discipline instead of patching symptoms
 
 ### 🎯 Structured Output
 
@@ -173,7 +183,7 @@ This mode performs 1-2 rounds of structured clarification before entering spec/f
 
 6 intelligent orchestration tools that automatically combine multiple basic tools for one-click complex development workflows:
 - `start_feature` - New feature development (Requirements → Design → Estimation)
-- `start_bugfix` - Bug fixing (Analysis → Fix → Testing)
+- `start_bugfix` - Bug fixing (TBP 8-step RCA → Fix → Testing)
 - `start_onboard` - Project onboarding (Generate project context docs)
 - `start_ui` - UI development (Design system → Components → Code)
 - `start_product` - Product design (PRD → Prototype → Design system → HTML)
@@ -252,8 +262,8 @@ This ensures `start_ui` can generate professional-grade UI code even offline.
 |---------|-----------------|--------|
 | Develop new feature (complete flow) | `start_feature` | Auto-complete: spec→estimation |
 | Only need feature spec docs | `add_feature` | More lightweight, only generates docs |
-| Fix bug (complete flow) | `start_bugfix` | Auto-complete: analysis→fix→test |
-| Only need bug analysis | `fix_bug` | Faster, only analyzes problem |
+| Fix bug (complete flow) | `start_bugfix` | Root-cause-first flow: TBP RCA → fix → test |
+| Only need bug analysis | `fix_bug` | TBP 8-step RCA only, without full orchestration |
 | Generate design system | `ui_design_system` | Directly generate design specs |
 | Develop UI components | `start_ui` | Complete flow: design→components→code |
 | Product design (requirements to prototype) | `start_product` | One-click: PRD→prototype→HTML |

@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { ProjectContext } from "../schemas/output/project-tools.js";
 import { detectProjectType } from "../lib/project-detector.js";
 import * as fs from 'fs';
@@ -19,6 +20,25 @@ import * as path from 'path';
 
 // 默认文档目录
 const DEFAULT_DOCS_DIR = "docs";
+
+function toPosixPath(value: string) {
+  return value.replace(/\\/g, "/");
+}
+
+function renderPlanSteps(steps: Array<{ id: string; action: string; outputs?: string[]; note?: string }>): string {
+  return steps
+    .map((step, index) => {
+      const lines = [`${index + 1}. ${step.action}`];
+      if (step.outputs?.length) {
+        lines.push(`   输出: ${step.outputs.join(", ")}`);
+      }
+      if (step.note) {
+        lines.push(`   说明: ${step.note}`);
+      }
+      return lines.join("\n");
+    })
+    .join("\n");
+}
 
 /**
  * 获取项目基本信息
@@ -131,6 +151,10 @@ function generateDevGuide(docs: Array<{ file: string; title: string; purpose: st
     }
   }
 
+  result += `\n### 理解代码图谱
+- **代码图谱洞察**: [latest.md](./graph-insights/latest.md) - 需要快速理解模块依赖、调用链、影响面时优先查看
+`;
+
   return result || '\n### 开发指南\n查看上面的文档导航，根据需要选择对应的文档。\n';
 }
 
@@ -144,12 +168,84 @@ async function generateProjectContext(docsDir: string, projectRoot: string = pro
     const projectInfo = getProjectInfo(projectRoot);
     const docs = getDocumentList(detection.category);
     
+    const resolvedRoot = path.resolve(projectRoot);
+    const projectContextPath = toPosixPath(path.join(resolvedRoot, docsDir, 'project-context.md'));
+    const projectContextExists = fs.existsSync(path.join(resolvedRoot, docsDir, 'project-context.md'));
+    const graphDocsRoot = toPosixPath(path.join(resolvedRoot, docsDir, 'graph-insights'));
+    const graphDocs = {
+      latestMarkdownFilePath: `${graphDocsRoot}/latest.md`,
+      latestJsonFilePath: `${graphDocsRoot}/latest.json`,
+    };
+    const plan = {
+      mode: 'delegated' as const,
+      steps: projectContextExists
+        ? [
+            {
+              id: 'bootstrap-code-insight',
+              action: `检测到现有 ${projectContextPath}，跳过重写上下文文档，直接调用 code_insight 补齐图谱文档`,
+              outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
+              note: `调用参数建议: {"mode":"auto","project_root":"${toPosixPath(resolvedRoot)}","docs_dir":"${docsDir}"}`,
+            },
+            {
+              id: 'persist-graph-docs',
+              action: `严格执行 code_insight 返回的 delegated plan，将图谱结果写入 ${docsDir}/graph-insights/ 并仅更新 ${projectContextPath} 中的图谱入口`,
+              outputs: [projectContextPath, graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
+              note: '保留现有 project-context 内容，只补 graph-insights 入口，避免覆盖老文档。',
+            },
+          ]
+        : [
+            {
+              id: 'write-project-context',
+              action: `按下方模板创建 ${projectContextPath} 以及 ${docsDir}/project-context/ 下的分类文档`,
+              outputs: [
+                projectContextPath,
+                ...docs.map((doc) => toPosixPath(path.join(resolvedRoot, docsDir, 'project-context', doc.file))),
+              ],
+              note: '先完成项目上下文骨架，再启动图谱分析，这样后续入口才稳定。',
+            },
+            {
+              id: 'bootstrap-code-insight',
+              action: `调用 code_insight 对项目做一次整体图谱分析，生成首份图谱文档`,
+              outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
+              note: `调用参数建议: {"mode":"auto","project_root":"${toPosixPath(resolvedRoot)}","docs_dir":"${docsDir}"}`,
+            },
+            {
+              id: 'persist-graph-docs',
+              action: `严格执行 code_insight 返回的 delegated plan，将图谱结果写入 ${docsDir}/graph-insights/ 并刷新索引`,
+              outputs: [projectContextPath, graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
+              note: '后续 feature / bugfix 编排直接读取这份图谱文档，不再各自重新触发 code_insight。',
+            },
+          ],
+    };
+
     // 生成指导文本
-    const guide = generateGuideText(detection, projectInfo, docs, docsDir);
+    const guide = generateGuideText(detection, projectInfo, docs, docsDir, resolvedRoot, {
+      projectContextExists,
+    });
+    const header = renderOrchestrationHeader({
+      tool: 'init_project_context',
+      goal: projectContextExists
+        ? '检测到现有项目上下文，仅补齐代码图谱入口'
+        : '生成项目上下文文档，并为后续编排预置代码图谱入口',
+      tasks: projectContextExists
+        ? [
+            '保留现有 project-context.md',
+            '调用 code_insight 生成或刷新图谱文档',
+            '仅补 graph-insights 索引入口',
+          ]
+        : [
+            '先写 project-context 文档骨架',
+            '再调用 code_insight 生成首份图谱文档',
+            '将 graph-insights 挂回 project-context.md 索引',
+          ],
+      notes: [`项目根目录: ${toPosixPath(resolvedRoot)}`, `文档目录: ${docsDir}`],
+    });
     
     // 构建结构化数据
     const structuredData: ProjectContext = {
-      summary: `生成 ${detection.category} 项目的上下文文档（${docs.length + 1} 个文件）`,
+      summary: projectContextExists
+        ? `检测到现有项目上下文，仅补齐 ${detection.category} 项目的图谱分析入口`
+        : `生成 ${detection.category} 项目的上下文文档，并初始化图谱分析入口`,
       mode: "modular",
       projectOverview: {
         name: projectInfo.name,
@@ -165,11 +261,34 @@ async function generateProjectContext(docsDir: string, projectRoot: string = pro
         ...docs.map(doc => ({
           path: `${docsDir}/project-context/${doc.file}`,
           purpose: doc.purpose
-        }))
-      ]
+        })),
+        {
+          path: `${docsDir}/graph-insights/latest.md`,
+          purpose: '最新代码图谱洞察（由 code_insight 维护）',
+        },
+        {
+          path: `${docsDir}/graph-insights/latest.json`,
+          purpose: '最新代码图谱结构化结果（由 code_insight 维护）',
+        },
+      ],
+      nextSteps: [
+        ...(projectContextExists ? ['保留现有 project-context.md，不重写已有分类文档'] : [`按模板生成 ${docsDir}/project-context.md 和分类文档`]),
+        '调用 code_insight 完成项目整体图谱分析',
+        `将图谱文档保存到 ${docsDir}/graph-insights/ 并更新 project-context.md 索引`,
+      ],
+      metadata: {
+        plan,
+        graphDocs,
+        projectContextFilePath: projectContextPath,
+        projectContextExists,
+      },
     };
     
-    return okStructured(guide, structuredData, {
+    return okStructured(`${header}${guide}
+
+## delegated plan
+${renderPlanSteps(plan.steps)}
+`, structuredData, {
       schema: (await import("../schemas/output/project-tools.js")).ProjectContextSchema,
     });
   } catch (error) {
@@ -185,9 +304,12 @@ function generateGuideText(
   detection: any,
   projectInfo: any,
   docs: Array<{ file: string; title: string; purpose: string }>,
-  docsDir: string
+  docsDir: string,
+  projectRoot: string,
+  options?: { projectContextExists?: boolean }
 ): string {
   const timestamp = new Date().toISOString();
+  const projectContextExists = options?.projectContextExists === true;
   
   return `# 项目上下文文档生成指导
 
@@ -200,20 +322,42 @@ function generateGuideText(
 - **类型**: ${detection.category}
 - **置信度**: ${detection.confidence}%
 
+## 🔎 当前状态
+
+- **project-context.md**: ${projectContextExists ? '已存在（将保留，不覆盖）' : '不存在（需要生成）'}
+- **图谱文档**: 需要确保 ${docsDir}/graph-insights/latest.md 与 latest.json 可用
+
 ## 📋 需要生成的文档
 
-请按照以下结构生成 **${docs.length + 1}** 个文档：
+请按照以下结构生成 **${docs.length + 1}** 个上下文文档，并为图谱文档预留入口：
 
 \`\`\`
 ${docsDir}/
 ├── project-context.md          # 索引文件（必须首先生成）
 └── project-context/            # 分类文档目录
 ${docs.map(doc => `    ├── ${doc.file.padEnd(28)} # ${doc.title}`).join('\n')}
+\n${docsDir}/graph-insights/
+    ├── latest.md               # 最近一次 code_insight 的 Markdown 摘要
+    └── latest.json             # 最近一次 code_insight 的结构化结果
 \`\`\`
 
 ---
 
 ## 🎯 生成步骤
+
+${projectContextExists
+    ? `### 已存在项目上下文（仅补图谱）
+
+检测到 \`${docsDir}/project-context.md\` 已存在：
+
+- **不要重写** 现有 \`${docsDir}/project-context.md\`
+- **不要重写** \`${docsDir}/project-context/\` 下已有分类文档
+- 直接调用 \`code_insight\` 补齐 \`${docsDir}/graph-insights/latest.md\` 与 \`${docsDir}/graph-insights/latest.json\`
+- 仅在 \`project-context.md\` 中补充或刷新图谱入口
+
+---
+`
+    : ''}
 
 ### 第一步：生成索引文件（最重要！）
 
@@ -244,12 +388,15 @@ ${docs.map(doc => `    ├── ${doc.file.padEnd(28)} # ${doc.title}`).join('\
 ${docs.map(doc => `### [${doc.title}](./project-context/${doc.file})
 ${doc.purpose}
 `).join('\n')}
+### [代码图谱洞察](./graph-insights/latest.md)
+最近一次 code_insight 分析结果，包含模块依赖、调用链和影响面摘要
 
 ## 🚀 快速开始
 
 1. 阅读 [技术栈](./project-context/tech-stack.md) 了解项目使用的技术
 2. 阅读 [架构设计](./project-context/architecture.md) 了解项目结构
-3. 根据需要查看具体的操作指南
+3. 阅读 [代码图谱洞察](./graph-insights/latest.md) 快速理解模块依赖与调用链
+4. 根据需要查看具体的操作指南
 
 ## 💡 开发时查看对应文档
 
@@ -262,7 +409,7 @@ ${generateDevGuide(docs)}
 *生成工具: MCP Probe Kit - init_project_context v2.1*
 \`\`\`
 
-**使用 fsWrite 创建此文件**
+${projectContextExists ? '**如果该文件已存在，跳过此步骤，不要覆盖**' : '**使用 fsWrite 创建此文件**'}
 
 ---
 
@@ -276,12 +423,29 @@ ${docs.map((doc, index) => generateDocTemplate(doc, index + 2, projectInfo, dete
 
 请确认：
 
-- [ ] 已使用 fsWrite 创建 **${docs.length + 1}** 个文件
-- [ ] 索引文件 \`project-context.md\` 已创建（最重要！）
+- [ ] ${projectContextExists ? '保留现有 project-context 及分类文档，不做覆盖' : `已使用 fsWrite 创建 **${docs.length + 1}** 个文件`}
+- [ ] 索引文件 \`project-context.md\` ${projectContextExists ? '已存在并保留' : '已创建（最重要！）'}
+- [ ] 索引文件已包含 \`graph-insights/latest.md\` 的入口
 - [ ] 所有文档都包含**真实的文件路径**（不是 [xxx] 占位符）
 - [ ] 所有文档都包含**实际的代码示例**（从项目中复制）
 - [ ] 所有步骤都具体可操作
 - [ ] 所有示例都来自项目实际代码
+
+---
+
+## 🔄 完成文档骨架后立即执行
+
+1. 调用 \`code_insight\`
+\`\`\`json
+{
+  "mode": "auto",
+  "project_root": "${toPosixPath(projectRoot)}",
+  "docs_dir": "${docsDir}"
+}
+\`\`\`
+2. 严格执行 \`code_insight\` 返回的 delegated plan
+3. 确保 \`${docsDir}/graph-insights/latest.md\` 和 \`${docsDir}/graph-insights/latest.json\` 已写入
+4. 若已有旧图谱，按 delegated plan 归档时间戳版本
 
 ---
 

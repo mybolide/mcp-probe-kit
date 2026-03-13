@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 开发增强工具集 · 文档中心",
-    "version": "v3.0.9",
+    "version": "v3.0.10",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v3.0.9",
+      "description": "5 分钟快速上手 MCP Probe Kit v3.0.10",
       "installConfig": "安装配置"
     },
     "tools": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.0.9，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.0.10，支持 Cursor、Cline 和 Claude Desktop",
     "breadcrumb": {
       "home": "文档首页",
       "quickStart": "快速开始",
@@ -213,7 +213,7 @@
       },
       "codeInsight": {
         "title": "4. 新增代码图谱洞察",
-        "description": "通过 code_insight 桥接 GitNexus，分析调用链、上下文和影响范围，并为 start_feature/start_bugfix 提供 graphContext 增强。"
+        "description": "code_insight 负责维护 docs/graph-insights 下的基线图谱文档，start_feature/start_bugfix 会在规划前刷新 GitNexus 索引并执行任务级范围收敛。"
       },
       "structuredOutput": {
         "title": "5. 结构化输出升级",
@@ -362,7 +362,7 @@
       "codeInsight": {
         "title": "1.4 现有代码图谱洞察",
         "description": "使用",
-        "description2": "快速分析调用链、上下文和影响范围，并为后续 start_feature/start_bugfix 提供图谱上下文。",
+        "description2": "用于刷新 GitNexus 图谱、落盘基线 graph-insights 文档，并生成任务级调用链、上下文和影响面分析。",
         "example1": "你: 请分析登录与 token 刷新相关的调用链，看看改动会影响哪些模块",
         "goal": "找出现有登录与 token 刷新流程",
         "taskContext": "准备修改认证模块",
@@ -370,7 +370,7 @@
         "item1": "- 相关执行流 / 调用链",
         "item2": "- 关键符号与文件位置",
         "item3": "- _meta.graph.snapshotUri / markdownFilePath",
-        "item4": "- 可继续用于 start_feature / start_bugfix 的 graphContext"
+        "item4": "- 供后续编排复用的 docs/graph-insights/latest.* 与 project-context 索引入口"
       }
     },
     "common": {
@@ -383,7 +383,7 @@
         "description": "使用",
         "description2": "工作流编排，一键完成从规格到估算。",
         "example1": "你: 开发用户认证功能",
-        "step1": "✓ 检查项目上下文与可用图谱快照",
+        "step1": "✓ 检查项目上下文，补齐缺失的 graph-insights，并刷新 GitNexus 索引",
         "step2": "✓ 生成功能规格文档",
         "step3": "✓ 估算开发工作量",
         "step4": "✓ 输出完整开发计划"
@@ -433,18 +433,18 @@
       "bugfix": {
         "title": "4.1 系统化 Bug 修复（推荐）",
         "description": "使用",
-        "description2": "工作流，从分析到测试一站式解决。",
+        "description2": "工作流，默认按 TBP 8 步法先做真因分析，再进入修复与测试。",
         "example1": "你: 登录功能报错了",
-        "step1": "✓ 检查项目上下文与可用图谱快照",
-        "step2": "✓ 分析错误原因",
-        "step3": "✓ 定位问题代码",
-        "step4": "✓ 提供修复方案",
-        "step5": "✓ 生成测试用例"
+        "step1": "✓ 检查项目上下文，补齐缺失的 graph-insights，并刷新 GitNexus 索引",
+        "step2": "✓ 用 TBP-1~TBP-4 建立现象、时间线和共同模式",
+        "step3": "✓ 用 TBP-5/6 锁定问题边界与因果真因",
+        "step4": "✓ 基于证据链输出修复方案与风险",
+        "step5": "✓ 生成验证步骤与回归测试用例"
       },
       "quick": {
         "title": "4.2 快速 Bug 分析",
         "description": "使用",
-        "description2": "工具快速分析问题并提供修复方案。"
+        "description2": "工具按 TBP 8 步法做快速真因分析，并给出修复与验证建议。"
       }
     },
     "stage5": {
@@ -533,4 +533,3 @@
     }
   }
 }
-
