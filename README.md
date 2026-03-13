@@ -65,6 +65,7 @@ A powerful MCP (Model Context Protocol) server providing **22 tools** covering t
 ### 🧠 Code Graph Bridge (GitNexus)
 
 - `code_insight` bridges GitNexus by default for query/context/impact analysis
+- The bridge launches `npx -y gitnexus@latest mcp` by default to reduce stale package risk
 - `start_feature` and `start_bugfix` automatically enrich plans with graph context when available
 - If GitNexus is unavailable, the server falls back automatically without breaking orchestration
 - Graph snapshots are exposed as resources (`probe://graph/latest`, `probe://graph/history`, `probe://graph/latest.md`)

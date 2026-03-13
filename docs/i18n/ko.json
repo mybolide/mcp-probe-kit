@@ -14,19 +14,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 개발 강화 툴킷 · 문서 센터",
-    "version": "v3.0.8",
+    "version": "v3.0.9",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
   },
   "sections": {
     "quickStart": {
       "title": "빠른 시작",
-      "description": "5분 안에 MCP Probe Kit v3.0.8 시작하기",
+      "description": "5분 안에 MCP Probe Kit v3.0.9 시작하기",
       "installConfig": "설치 및 구성"
     },
     "tools": {
       "title": "도구 문서",
-      "description": "22개 실용 도구의 완전한 참조",
+      "description": "22개 실용 도구의 완전한 참조. 코드 그래프 인사이트와 오케스트레이션 포함",
       "allTools": "모든 도구"
     },
     "guides": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "설치 및 구성",
-    "subtitle": "5분 안에 MCP Probe Kit v3.0.8 시작하기. Cursor, Cline, Claude Desktop 지원",
+    "subtitle": "5분 안에 MCP Probe Kit v3.0.9 시작하기. Cursor, Cline, Claude Desktop 지원",
     "breadcrumb": {
       "home": "문서",
       "quickStart": "빠른 시작",
@@ -211,8 +211,12 @@
         "componentCatalog": "컴포넌트 카탈로그 초기화",
         "renderUi": "UI 렌더링 엔진"
       },
+      "codeInsight": {
+        "title": "4. 새로운 코드 그래프 인사이트",
+        "description": "code_insight 로 GitNexus 를 브리지하여 호출 체인, 컨텍스트, 영향 범위를 분석하고 graphContext 를 start_feature/start_bugfix 에 넘길 수 있습니다."
+      },
       "structuredOutput": {
-        "title": "4. 구조화된 출력 업그레이드",
+        "title": "5. 구조화된 출력 업그레이드",
         "description": "핵심 및 오케스트레이션 도구는 구조화된 출력을 우선시하며, 일관되고 예측 가능한 출력 형식으로 도구 연결 및 상태 추적을 용이하게 합니다."
       }
     },
@@ -354,6 +358,19 @@
         "sp": "- 스토리 포인트: 8 SP",
         "time": "- 시간 범위: 낙관적 3일 / 정상 5일 / 비관적 8일",
         "risk": "- 위험: 제3자 로그인 통합이 지연될 수 있음"
+      },
+      "codeInsight": {
+        "title": "1.4 기존 코드 그래프 인사이트",
+        "description": "사용",
+        "description2": "호출 체인, 컨텍스트, 영향 범위를 빠르게 분석하고 그 결과를 start_feature/start_bugfix 에 전달합니다.",
+        "example1": "당신: 로그인과 토큰 갱신 호출 체인을 분석해서 어떤 모듈이 영향받는지 알려주세요",
+        "goal": "기존 로그인 및 토큰 갱신 흐름 찾기",
+        "taskContext": "인증 모듈 수정 준비",
+        "output": "→ 출력:",
+        "item1": "- 관련 실행 흐름 / 호출 체인",
+        "item2": "- 핵심 심볼과 파일 위치",
+        "item3": "- _meta.graph.snapshotUri / markdownFilePath",
+        "item4": "- start_feature / start_bugfix 에 전달 가능한 graphContext"
       }
     },
     "common": {
@@ -366,7 +383,7 @@
         "description": "사용",
         "description2": "워크플로우 오케스트레이션으로 사양에서 추정까지 원클릭 완료.",
         "example1": "당신: 사용자 인증 기능 개발",
-        "step1": "✓ 프로젝트 컨텍스트 확인",
+        "step1": "✓ 프로젝트 컨텍스트와 사용 가능한 그래프 스냅샷 확인",
         "step2": "✓ 기능 사양 문서 생성",
         "step3": "✓ 개발 작업량 추정",
         "step4": "✓ 완전한 개발 계획 출력"
@@ -418,7 +435,7 @@
         "description": "사용",
         "description2": "워크플로우로 분석에서 테스트까지 원스톱 솔루션.",
         "example1": "당신: 로그인 기능에서 오류가 발생했습니다",
-        "step1": "✓ 프로젝트 컨텍스트 확인",
+        "step1": "✓ 프로젝트 컨텍스트와 사용 가능한 그래프 스냅샷 확인",
         "step2": "✓ 오류 원인 분석",
         "step3": "✓ 문제 코드 위치 파악",
         "step4": "✓ 수정 방안 제공",
@@ -516,3 +533,4 @@
     }
   }
 }
+

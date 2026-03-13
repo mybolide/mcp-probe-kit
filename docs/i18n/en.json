@@ -14,19 +14,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
-    "version": "v3.0.8",
+    "version": "v3.0.9",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "Quick Start",
-      "description": "Get started with MCP Probe Kit v3.0.8 in 5 minutes",
+      "description": "Get started with MCP Probe Kit v3.0.9 in 5 minutes",
       "installConfig": "Installation & Configuration"
     },
     "tools": {
       "title": "Tools Documentation",
-      "description": "Complete reference for 22 practical tools",
+      "description": "Complete reference for 22 practical tools, including code graph insight and orchestration workflows",
       "allTools": "All Tools"
     },
     "guides": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "Installation & Configuration",
-    "subtitle": "Get started with MCP Probe Kit v3.0.8 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
+    "subtitle": "Get started with MCP Probe Kit v3.0.9 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
     "breadcrumb": {
       "home": "Documentation",
       "quickStart": "Quick Start",
@@ -211,8 +211,12 @@
         "componentCatalog": "Component catalog initialization",
         "renderUi": "UI rendering engine"
       },
+      "codeInsight": {
+        "title": "4. New Code Graph Insight",
+        "description": "Use code_insight to bridge GitNexus for call-chain, context, and impact analysis, and feed graphContext into start_feature/start_bugfix."
+      },
       "structuredOutput": {
-        "title": "4. Structured Output Upgrade",
+        "title": "5. Structured Output Upgrade",
         "description": "Core and orchestration tools prioritize structured output, consistent and predictable output format, facilitating tool chaining and state tracking."
       }
     },
@@ -354,6 +358,19 @@
         "sp": "- Story Points: 8 SP",
         "time": "- Time Range: Optimistic 3 days / Normal 5 days / Pessimistic 8 days",
         "risk": "- Risk: Third-party login integration may be delayed"
+      },
+      "codeInsight": {
+        "title": "1.4 Existing Code Graph Insight",
+        "description": "Use",
+        "description2": "to quickly analyze call chains, context, and impact, then carry graph context into start_feature/start_bugfix.",
+        "example1": "You: Analyze the login and token refresh call chain and tell me which modules will be affected",
+        "goal": "Find the existing login and token refresh flow",
+        "taskContext": "Preparing to modify the auth module",
+        "output": "→ Output:",
+        "item1": "- Related execution flows / call chains",
+        "item2": "- Key symbols and file locations",
+        "item3": "- _meta.graph.snapshotUri / markdownFilePath",
+        "item4": "- graphContext that can be passed into start_feature / start_bugfix"
       }
     },
     "common": {
@@ -366,7 +383,7 @@
         "description": "Use",
         "description2": "workflow orchestration to complete from spec to estimation with one click.",
         "example1": "You: Develop user authentication feature",
-        "step1": "✓ Check project context",
+        "step1": "✓ Check project context and available graph snapshots",
         "step2": "✓ Generate feature specification document",
         "step3": "✓ Estimate development workload",
         "step4": "✓ Output complete development plan"
@@ -418,7 +435,7 @@
         "description": "Use",
         "description2": "workflow for one-stop solution from analysis to testing.",
         "example1": "You: Login function is throwing an error",
-        "step1": "✓ Check project context",
+        "step1": "✓ Check project context and available graph snapshots",
         "step2": "✓ Analyze error cause",
         "step3": "✓ Locate problem code",
         "step4": "✓ Provide fix solution",
@@ -516,3 +533,4 @@
     }
   }
 }
+

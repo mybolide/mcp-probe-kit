@@ -59,7 +59,7 @@ export interface EmbeddedGraphContext {
 
 const DEFAULT_CONNECT_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_CONNECT_TIMEOUT_MS", 12000);
 const DEFAULT_CALL_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_TIMEOUT_MS", 20000);
-const DEFAULT_GITNEXUS_ARGS = ["-y", "gitnexus", "mcp"];
+const DEFAULT_GITNEXUS_ARGS = ["-y", "gitnexus@latest", "mcp"];
 const FAILURE_CACHE_TTL_MS = readIntEnv("MCP_GITNEXUS_FAILURE_CACHE_TTL_MS", 30000);
 
 let bridgeFailureUntil = 0;
