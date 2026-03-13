@@ -14,19 +14,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 开发增强工具集 · 文档中心",
-    "version": "v3.0.8",
+    "version": "v3.0.9",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v3.0.8",
+      "description": "5 分钟快速上手 MCP Probe Kit v3.0.9",
       "installConfig": "安装配置"
     },
     "tools": {
       "title": "工具文档",
-      "description": "22 个实用工具的完整参考",
+      "description": "22 个实用工具的完整参考，含图谱洞察与编排工作流",
       "allTools": "所有工具"
     },
     "guides": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.0.8，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.0.9，支持 Cursor、Cline 和 Claude Desktop",
     "breadcrumb": {
       "home": "文档首页",
       "quickStart": "快速开始",
@@ -211,8 +211,12 @@
         "componentCatalog": "组件目录初始化",
         "renderUi": "UI 渲染引擎"
       },
+      "codeInsight": {
+        "title": "4. 新增代码图谱洞察",
+        "description": "通过 code_insight 桥接 GitNexus，分析调用链、上下文和影响范围，并为 start_feature/start_bugfix 提供 graphContext 增强。"
+      },
       "structuredOutput": {
-        "title": "4. 结构化输出升级",
+        "title": "5. 结构化输出升级",
         "description": "核心与编排工具优先支持结构化输出，输出格式一致、可预测，便于工具串联与状态追踪。"
       }
     },
@@ -354,6 +358,19 @@
         "sp": "- 故事点：8 SP",
         "time": "- 时间范围：乐观 3天 / 正常 5天 / 悲观 8天",
         "risk": "- 风险点：第三方登录集成可能延期"
+      },
+      "codeInsight": {
+        "title": "1.4 现有代码图谱洞察",
+        "description": "使用",
+        "description2": "快速分析调用链、上下文和影响范围，并为后续 start_feature/start_bugfix 提供图谱上下文。",
+        "example1": "你: 请分析登录与 token 刷新相关的调用链，看看改动会影响哪些模块",
+        "goal": "找出现有登录与 token 刷新流程",
+        "taskContext": "准备修改认证模块",
+        "output": "→ 输出：",
+        "item1": "- 相关执行流 / 调用链",
+        "item2": "- 关键符号与文件位置",
+        "item3": "- _meta.graph.snapshotUri / markdownFilePath",
+        "item4": "- 可继续用于 start_feature / start_bugfix 的 graphContext"
       }
     },
     "common": {
@@ -366,7 +383,7 @@
         "description": "使用",
         "description2": "工作流编排，一键完成从规格到估算。",
         "example1": "你: 开发用户认证功能",
-        "step1": "✓ 检查项目上下文",
+        "step1": "✓ 检查项目上下文与可用图谱快照",
         "step2": "✓ 生成功能规格文档",
         "step3": "✓ 估算开发工作量",
         "step4": "✓ 输出完整开发计划"
@@ -418,7 +435,7 @@
         "description": "使用",
         "description2": "工作流，从分析到测试一站式解决。",
         "example1": "你: 登录功能报错了",
-        "step1": "✓ 检查项目上下文",
+        "step1": "✓ 检查项目上下文与可用图谱快照",
         "step2": "✓ 分析错误原因",
         "step3": "✓ 定位问题代码",
         "step4": "✓ 提供修复方案",
@@ -516,3 +533,4 @@
     }
   }
 }
+

@@ -14,19 +14,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI開発強化ツールキット · ドキュメントセンター",
-    "version": "v3.0.8",
+    "version": "v3.0.9",
     "quickStart": "クイックスタート",
     "visitMainSite": "ByteZoneXを訪問"
   },
   "sections": {
     "quickStart": {
       "title": "クイックスタート",
-      "description": "5分でMCP Probe Kit v3.0.8を始める",
+      "description": "5分でMCP Probe Kit v3.0.9を始める",
       "installConfig": "インストールと設定"
     },
     "tools": {
       "title": "ツールドキュメント",
-      "description": "22の実用的なツールの完全なリファレンス",
+      "description": "22の実用的なツールの完全なリファレンス。コードグラフ洞察とオーケストレーションを含む",
       "allTools": "すべてのツール"
     },
     "guides": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "インストールと設定",
-    "subtitle": "5分でMCP Probe Kit v3.0.8を始める。Cursor、Cline、Claude Desktopをサポート",
+    "subtitle": "5分でMCP Probe Kit v3.0.9を始める。Cursor、Cline、Claude Desktopをサポート",
     "breadcrumb": {
       "home": "ドキュメント",
       "quickStart": "クイックスタート",
@@ -211,8 +211,12 @@
         "componentCatalog": "コンポーネントカタログ初期化",
         "renderUi": "UIレンダリングエンジン"
       },
+      "codeInsight": {
+        "title": "4. 新しいコードグラフ洞察",
+        "description": "code_insight で GitNexus をブリッジし、呼び出し連鎖・コンテキスト・影響範囲を分析し、graphContext を start_feature/start_bugfix に渡せます。"
+      },
       "structuredOutput": {
-        "title": "4. 構造化出力のアップグレード",
+        "title": "5. 構造化出力のアップグレード",
         "description": "コアおよびオーケストレーションツールは構造化出力を優先し、一貫性のある予測可能な出力形式で、ツールの連携と状態追跡を容易にします。"
       }
     },
@@ -354,6 +358,19 @@
         "sp": "- ストーリーポイント：8 SP",
         "time": "- 時間範囲：楽観的 3日 / 通常 5日 / 悲観的 8日",
         "risk": "- リスク：サードパーティログイン統合が遅延する可能性"
+      },
+      "codeInsight": {
+        "title": "1.4 既存コードグラフの洞察",
+        "description": "使用",
+        "description2": "呼び出し連鎖、コンテキスト、影響範囲を素早く分析し、その結果を start_feature/start_bugfix に渡します。",
+        "example1": "あなた: ログインとトークン更新の呼び出し連鎖を分析し、どのモジュールに影響するか教えてください",
+        "goal": "既存のログインとトークン更新フローを見つける",
+        "taskContext": "認証モジュールを変更する準備",
+        "output": "→ 出力：",
+        "item1": "- 関連する実行フロー / 呼び出し連鎖",
+        "item2": "- 重要なシンボルとファイル位置",
+        "item3": "- _meta.graph.snapshotUri / markdownFilePath",
+        "item4": "- start_feature / start_bugfix に渡せる graphContext"
       }
     },
     "common": {
@@ -366,7 +383,7 @@
         "description": "使用",
         "description2": "ワークフローオーケストレーションで、仕様から見積もりまでワンクリックで完了。",
         "example1": "あなた: ユーザー認証機能を開発",
-        "step1": "✓ プロジェクトコンテキストを確認",
+        "step1": "✓ プロジェクトコンテキストと利用可能なグラフスナップショットを確認",
         "step2": "✓ 機能仕様ドキュメント生成",
         "step3": "✓ 開発作業量を見積もり",
         "step4": "✓ 完全な開発計画を出力"
@@ -418,7 +435,7 @@
         "description": "使用",
         "description2": "ワークフローで、分析からテストまでワンストップソリューション。",
         "example1": "あなた: ログイン機能がエラーを出しています",
-        "step1": "✓ プロジェクトコンテキストを確認",
+        "step1": "✓ プロジェクトコンテキストと利用可能なグラフスナップショットを確認",
         "step2": "✓ エラー原因を分析",
         "step3": "✓ 問題コードを特定",
         "step4": "✓ 修正案を提供",
@@ -516,3 +533,4 @@
     }
   }
 }
+

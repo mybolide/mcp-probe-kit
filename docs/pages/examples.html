@@ -148,7 +148,7 @@
                 <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2" data-i18n="examples.title">最佳实践</h1>
                 <p class="text-sm sm:text-base text-text-secondary" data-i18n="examples.subtitle">MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南</p>
                 <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
-                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.8</span>
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.9</span>
                     <span>MCP 2025-11-25</span>
                     <span>SDK 1.27.1</span>
                 </div>
@@ -348,6 +348,32 @@ team_size: 2
   <span data-i18n="examples.stage1.estimate.risk">- 风险点：第三方登录集成可能延期</span></code></pre>
                     </div>
                 </div>
+
+                <div class="mt-4">
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🕸️</span>
+                        <span data-i18n="examples.stage1.codeInsight.title">1.4 现有代码图谱洞察</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7 mb-3"><span data-i18n="examples.stage1.codeInsight.description">使用</span> <code class="bg-gray-200 px-1 rounded text-xs">code_insight</code> <span data-i18n="examples.stage1.codeInsight.description2">快速分析调用链、上下文和影响范围，并为后续 start_feature/start_bugfix 提供图谱上下文。</span></p>
+                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                            <span class="text-xs text-slate-300 font-medium" data-i18n="examples.common.bestPractice">最佳实践</span>
+                        </div>
+                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code><span data-i18n="examples.stage1.codeInsight.example1">你: 请分析登录与 token 刷新相关的调用链，看看改动会影响哪些模块</span>
+
+AI: 使用 code_insight 工具
+mode: "query"
+query: "login token refresh auth flow"
+goal: "<span data-i18n="examples.stage1.codeInsight.goal">找出现有登录与 token 刷新流程</span>"
+task_context: "<span data-i18n="examples.stage1.codeInsight.taskContext">准备修改认证模块</span>"
+
+<span data-i18n="examples.stage1.codeInsight.output">→ 输出：</span>
+  <span data-i18n="examples.stage1.codeInsight.item1">- 相关执行流 / 调用链</span>
+  <span data-i18n="examples.stage1.codeInsight.item2">- 关键符号与文件位置</span>
+  <span data-i18n="examples.stage1.codeInsight.item3">- _meta.graph.snapshotUri / markdownFilePath</span>
+  <span data-i18n="examples.stage1.codeInsight.item4">- 可继续用于 start_feature / start_bugfix 的 graphContext</span></code></pre>
+                    </div>
+                </div>
             </section>
 
             <!-- 阶段 2：开发阶段 -->
@@ -371,7 +397,7 @@ description: "用户认证功能，支持邮箱登录和 Google 登录"
 feature_name: "user-auth"
 
 <span data-i18n="examples.stage0.workflow.autoExecute">→ 自动执行：</span>
-  <span data-i18n="examples.stage2.workflow.step1">✓ 检查项目上下文</span>
+  <span data-i18n="examples.stage2.workflow.step1">✓ 检查项目上下文与可用图谱快照</span>
   <span data-i18n="examples.stage2.workflow.step2">✓ 生成功能规格文档</span>
   <span data-i18n="examples.stage2.workflow.step3">✓ 估算开发工作量</span>
   <span data-i18n="examples.stage2.workflow.step4">✓ 输出完整开发计划</span></code></pre>
@@ -480,7 +506,7 @@ error_message: "TypeError: Cannot read property 'token' of undefined"
 stack_trace: "at login.js:45:12"
 
 <span data-i18n="examples.stage0.workflow.autoExecute">→ 自动执行：</span>
-  <span data-i18n="examples.stage4.bugfix.step1">✓ 检查项目上下文</span>
+  <span data-i18n="examples.stage4.bugfix.step1">✓ 检查项目上下文与可用图谱快照</span>
   <span data-i18n="examples.stage4.bugfix.step2">✓ 分析错误原因</span>
   <span data-i18n="examples.stage4.bugfix.step3">✓ 定位问题代码</span>
   <span data-i18n="examples.stage4.bugfix.step4">✓ 提供修复方案</span>
@@ -688,3 +714,4 @@ max_minutes: 25
     <script src="../assets/js/i18n.js"></script>
 </body>
 </html>
+

@@ -148,7 +148,7 @@
                 <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2" data-i18n="migration.title">v3.0 迁移指南</h1>
                 <p class="text-sm sm:text-base text-text-secondary" data-i18n="migration.subtitle">从 v2.x 平滑迁移到 v3.0，了解重大变更和新特性</p>
                 <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
-                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.8</span>
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.0.9</span>
                     <span>MCP 2025-11-25</span>
                     <span>SDK 1.27.1</span>
                 </div>
@@ -208,7 +208,15 @@
                 <div>
                     <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
                         <span>📊</span>
-                        <span data-i18n="migration.changes.structuredOutput.title">4. 结构化输出升级</span>
+                        <span data-i18n="migration.changes.codeInsight.title">4. 新增代码图谱洞察</span>
+                    </h3>
+                    <p class="text-text-secondary text-sm pl-7" data-i18n="migration.changes.codeInsight.description">通过 code_insight 桥接 GitNexus，分析调用链、上下文和影响范围，并为 start_feature/start_bugfix 提供 graphContext 增强。</p>
+                </div>
+
+                <div>
+                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <span>🧩</span>
+                        <span data-i18n="migration.changes.structuredOutput.title">5. 结构化输出升级</span>
                     </h3>
                     <p class="text-text-secondary text-sm pl-7" data-i18n="migration.changes.structuredOutput.description">核心与编排工具优先支持结构化输出，输出格式一致、可预测，便于工具串联与状态追踪。</p>
                 </div>
@@ -297,3 +305,4 @@ npm update -g mcp-probe-kit</code></pre>
     <script src="../assets/js/i18n.js"></script>
 </body>
 </html>
+
