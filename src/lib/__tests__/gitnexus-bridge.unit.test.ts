@@ -39,6 +39,19 @@ describe("gitnexus-bridge workspace preparation", () => {
     expect(String(wrapped.args[3]).toLowerCase()).toContain("npx");
   });
 
+  test("Windows 下带空格路径的 cmd 可执行文件会被正确加引号", () => {
+    const root = makeTempDir("gitnexus-space-");
+    const executable = path.join(root, "Program Files", "nodejs", "npx.cmd");
+    fs.mkdirSync(path.dirname(executable), { recursive: true });
+    fs.writeFileSync(executable, "@echo off\r\n", "utf-8");
+
+    const wrapped = resolveSpawnCommand(executable, ["-y", "gitnexus@latest", "mcp"], "win32");
+
+    expect(wrapped.command.toLowerCase()).toContain("cmd");
+    expect(wrapped.args.slice(0, 3)).toEqual(["/d", "/s", "/c"]);
+    expect(wrapped.args[3]).toBe(`"${executable}"`);
+  });
+
   test("Windows 下 git.exe 直接启动，不走 git.cmd 壳层", () => {
     const resolved = resolveExecutableCommand("git", "win32").toLowerCase();
     const spawned = resolveSpawnCommand("git", ["init", "-q"], "win32");
