@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.11] - 2026-03-14
+
+### 🐛 修复
+
+**Windows 下 GitNexus Bridge 命令路径带空格时执行失败**
+- 修复 `code_insight` 桥接 GitNexus 时，`cmd.exe /d /s /c` 包装 `.cmd/.bat` 可执行文件未加引号的问题
+- 当 Node.js 安装在 `C:\Program Files\nodejs\` 等带空格目录时，`npx.cmd` 现在会被正确引用，不再触发 `'C:\Program' 不是内部或外部命令`
+- 补充 Windows 回归测试，覆盖带空格绝对路径的 `.cmd` 启动场景
+
+### 🔍 兼容性检查
+
+- 检查项目内其它 Windows 命令拼装入口，未发现同类未加引号的 `cmd.exe` 包装问题
+
+---
+
 ## [3.0.6] - 2026-03-11
 
 ### ✨ 新功能

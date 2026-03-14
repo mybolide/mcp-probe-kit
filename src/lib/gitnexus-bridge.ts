@@ -363,6 +363,18 @@ function shouldWrapWithCmd(
   return rawLower === "npx" || rawLower === "npm";
 }
 
+function quoteForCmd(executable: string): string {
+  if (!executable.includes(" ")) {
+    return executable;
+  }
+
+  if (executable.startsWith("\"") && executable.endsWith("\"")) {
+    return executable;
+  }
+
+  return `"${executable}"`;
+}
+
 export function resolveSpawnCommand(
   command: string,
   args: string[],
@@ -379,7 +391,7 @@ export function resolveSpawnCommand(
 
   return {
     command: process.env.ComSpec || "cmd.exe",
-    args: ["/d", "/s", "/c", executable, ...args],
+    args: ["/d", "/s", "/c", quoteForCmd(executable), ...args],
   };
 }
 
