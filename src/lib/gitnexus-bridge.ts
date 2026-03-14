@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
+import spawn from "cross-spawn";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -335,46 +336,6 @@ function findExecutablePath(command: string, platform: NodeJS.Platform = process
   return undefined;
 }
 
-function shouldWrapWithCmd(
-  rawCommand: string,
-  executable: string,
-  platform: NodeJS.Platform = process.platform
-): boolean {
-  if (platform !== "win32") {
-    return false;
-  }
-
-  const rawLower = (rawCommand || "").trim().toLowerCase();
-  const executableLower = (executable || "").trim().toLowerCase();
-  const ext = path.extname(executableLower);
-
-  if (!rawLower && !executableLower) {
-    return true;
-  }
-
-  if (ext === ".cmd" || ext === ".bat") {
-    return true;
-  }
-
-  if (ext === ".exe") {
-    return false;
-  }
-
-  return rawLower === "npx" || rawLower === "npm";
-}
-
-function quoteForCmd(executable: string): string {
-  if (!executable.includes(" ")) {
-    return executable;
-  }
-
-  if (executable.startsWith("\"") && executable.endsWith("\"")) {
-    return executable;
-  }
-
-  return `"${executable}"`;
-}
-
 export function resolveSpawnCommand(
   command: string,
   args: string[],
@@ -382,16 +343,9 @@ export function resolveSpawnCommand(
 ): { command: string; args: string[] } {
   const executable = resolveExecutableCommand(command, platform);
 
-  if (!shouldWrapWithCmd(command, executable, platform)) {
-    return {
-      command: executable,
-      args,
-    };
-  }
-
   return {
-    command: process.env.ComSpec || "cmd.exe",
-    args: ["/d", "/s", "/c", quoteForCmd(executable), ...args],
+    command: executable,
+    args,
   };
 }
 
@@ -488,12 +442,12 @@ async function runProcess(
 
     let stderr = "";
 
-    child.stderr?.on("data", (chunk) => {
+    child.stderr?.on("data", (chunk: Buffer | string) => {
       stderr += String(chunk);
     });
 
     child.on("error", reject);
-    child.on("close", (code) => {
+    child.on("close", (code: number | null) => {
       if (code === 0) {
         resolve();
         return;

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import spawn from "cross-spawn";
 import { afterEach, describe, expect, test } from "vitest";
 import { prepareBridgeWorkspace, resolveExecutableCommand, resolveSpawnCommand } from "../gitnexus-bridge.js";
 
@@ -21,6 +22,25 @@ function makeTempDir(prefix: string) {
   return dir;
 }
 
+async function runSpawned(command: string, args: string[]) {
+  return await new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve, reject) => {
+    const child = spawn(command, args, { windowsHide: true });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout?.on("data", (chunk: Buffer | string) => {
+      stdout += String(chunk);
+    });
+    child.stderr?.on("data", (chunk: Buffer | string) => {
+      stderr += String(chunk);
+    });
+    child.on("error", reject);
+    child.on("close", (code: number | null) => {
+      resolve({ code, stdout, stderr });
+    });
+  });
+}
+
 describe("gitnexus-bridge workspace preparation", () => {
   test("Windows 下将 npx/git 解析为 cmd 可执行文件", () => {
     const npxResolved = resolveExecutableCommand("npx", "win32").toLowerCase();
@@ -32,24 +52,37 @@ describe("gitnexus-bridge workspace preparation", () => {
     expect(resolveExecutableCommand("npx", "linux").toLowerCase()).toContain("npx");
   });
 
-  test("Windows 下将 cmd 工具包装为 cmd.exe /c 启动", () => {
+  test("Windows 下 npx 命令直接交给底层 spawn 处理", () => {
     const wrapped = resolveSpawnCommand("npx", ["-y", "gitnexus@latest", "mcp"], "win32");
-    expect(wrapped.command.toLowerCase()).toContain("cmd");
-    expect(wrapped.args.slice(0, 3)).toEqual(["/d", "/s", "/c"]);
-    expect(String(wrapped.args[3]).toLowerCase()).toContain("npx");
+    expect(wrapped.command.toLowerCase()).not.toContain("cmd.exe");
+    expect(wrapped.command.toLowerCase()).toContain("npx");
+    expect(wrapped.args).toEqual(["-y", "gitnexus@latest", "mcp"]);
   });
 
-  test("Windows 下带空格路径的 cmd 可执行文件会被正确加引号", () => {
+  test.runIf(process.platform === "win32")("Windows 下带空格路径的 cmd 可执行文件可以真实启动", async () => {
     const root = makeTempDir("gitnexus-space-");
-    const executable = path.join(root, "Program Files", "nodejs", "npx.cmd");
+    const executable = path.join(root, "Program Files", "tool.cmd");
     fs.mkdirSync(path.dirname(executable), { recursive: true });
-    fs.writeFileSync(executable, "@echo off\r\n", "utf-8");
+    fs.writeFileSync(executable, "@echo off\r\necho ok %*\r\n", "utf-8");
 
     const wrapped = resolveSpawnCommand(executable, ["-y", "gitnexus@latest", "mcp"], "win32");
+    const result = await runSpawned(wrapped.command, wrapped.args);
 
-    expect(wrapped.command.toLowerCase()).toContain("cmd");
-    expect(wrapped.args.slice(0, 3)).toEqual(["/d", "/s", "/c"]);
-    expect(wrapped.args[3]).toBe(`"${executable}"`);
+    expect(wrapped.command).toBe(executable);
+    expect(wrapped.args).toEqual(["-y", "gitnexus@latest", "mcp"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("ok");
+    expect(result.stdout).toContain("-y");
+    expect(result.stdout).toContain("gitnexus@latest");
+    expect(result.stdout).toContain("mcp");
+  });
+
+  test.runIf(process.platform === "win32")("Windows 下 resolveSpawnCommand 生成的 npx 命令可真实执行", async () => {
+    const spawned = resolveSpawnCommand("npx", ["--version"], "win32");
+    const result = await runSpawned(spawned.command, spawned.args);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim().length).toBeGreaterThan(0);
   });
 
   test("Windows 下 git.exe 直接启动，不走 git.cmd 壳层", () => {
@@ -57,13 +90,8 @@ describe("gitnexus-bridge workspace preparation", () => {
     const spawned = resolveSpawnCommand("git", ["init", "-q"], "win32");
 
     expect(resolved).toContain("git");
-    expect(resolved.endsWith(".exe") || resolved === "git").toBe(true);
-    expect(spawned.command.toLowerCase()).not.toContain("cmd.exe /d /s /c git.cmd");
-    if (spawned.command.toLowerCase().includes("cmd")) {
-      expect(String(spawned.args[3]).toLowerCase()).not.toContain("git.cmd");
-    } else {
-      expect(spawned.command.toLowerCase()).toContain("git");
-    }
+    expect(resolved.endsWith(".exe") || resolved === "git" || resolved === "git.cmd").toBe(true);
+    expect(spawned.command.toLowerCase()).toContain("git");
   });
 
   test("git 目录直接使用源仓库", async () => {

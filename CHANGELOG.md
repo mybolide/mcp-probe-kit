@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.12] - 2026-03-14
+
+### 🐛 修复
+
+**修复 3.0.11 在 Windows 下的二次回归**
+- 移除手工 `cmd.exe /d /s /c` 包装，改为统一使用 `cross-spawn` 处理 Windows 的 `.cmd/.bat` 可执行文件
+- 修复 `3.0.11` 中引号被 Node `spawn` 二次转义后变成 `\"...\"`，导致 `code_insight` 仍然无法启动 GitNexus 的问题
+- 保持 `npx`、`npm`、以及带空格绝对路径的 `.cmd` 可执行文件都能在 Windows 上正常启动
+
+### ✅ 测试
+
+- 新增 Windows 真实执行级测试，不再只检查参数拼装结果
+- 覆盖 `npx --version` 实际启动验证
+- 覆盖带空格绝对路径的 `.cmd` 脚本实际启动验证
+
+---
+
 ## [3.0.11] - 2026-03-14
 
 ### 🐛 修复
