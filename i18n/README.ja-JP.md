@@ -307,6 +307,12 @@ Windows での推奨事項:
 2. MCP クライアントが `env` をサポートしている場合は、プリインストール済みの `gitnexus` CLI を優先してください。
 3. 初回起動が遅い環境では、GitNexus の接続/呼び出しタイムアウトを引き上げてください。
 
+クイックインストール（Windows）:
+
+```powershell
+winget install Microsoft.VisualStudio.2022.BuildTools
+```
+
 ### クライアントを再起動
 
 設定後、MCPクライアントを**完全に終了して再度開いて**ください。

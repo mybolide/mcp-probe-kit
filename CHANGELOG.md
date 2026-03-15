@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.15] - 2026-03-15
+
+### 🐛 修复
+
+**impact 模式中 `file_path` 生效问题**
+- 修复 `code_insight` 的 `impact` 流程：当通过 `context + file_path` 已解析到具体符号时，`impact.target` 现在会优先使用解析后的 `uid/id`
+- 避免仍使用原始字符串 `target` 导致误命中同名非目标符号
+- 新增回归测试覆盖 `context` 解析结果向 `impact` 目标的复用
+
+### 📝 文档
+
+**Windows Notes for Graph Tools 多语言补齐**
+- 站点文档（en/zh-CN/ja/ko）补充 Build Tools 快速安装说明与命令
+- README 多语言文档补齐 Windows 图谱工具说明，确保 de/es/fr/ja/ko/pt-BR/zh-CN 与英文主 README 一致覆盖
+- 统一补充快速安装命令：`winget install Microsoft.VisualStudio.2022.BuildTools`
+
+---
+
 ## [3.0.14] - 2026-03-15
 
 ### ✨ 改进

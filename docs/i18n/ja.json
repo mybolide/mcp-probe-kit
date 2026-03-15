@@ -93,6 +93,8 @@
         "item1": "初回のコールドスタートでは、npx が依存関係を確認またはダウンロードするため 20 秒以上かかることがあります。",
         "item2": "GitNexus の一部依存関係は tree-sitter ネイティブモジュールを使用しており、Windows では Visual Studio Build Tools が必要になる場合があります。",
         "item3": "MCP クライアントが env をサポートしている場合は、プリインストール済みの gitnexus CLI を優先し、GitNexus のタイムアウトを引き上げてください。",
+        "item4": "Windows では winget で Build Tools をすばやくインストールできます：winget install Microsoft.VisualStudio.2022.BuildTools",
+        "quickInstallTitle": "クイックインストールコマンド：",
         "exampleTitle": "プリインストール済み gitnexus CLI を使う設定例："
       },
       "source": {

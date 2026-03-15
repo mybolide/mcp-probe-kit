@@ -93,6 +93,8 @@
         "item1": "The first cold start may take 20+ seconds while npx checks or downloads dependencies.",
         "item2": "Some GitNexus dependencies use tree-sitter native modules and may require Visual Studio Build Tools.",
         "item3": "If your MCP client supports env, prefer a preinstalled gitnexus CLI and raise GitNexus timeouts.",
+        "item4": "Quick install Build Tools on Windows: winget install Microsoft.VisualStudio.2022.BuildTools",
+        "quickInstallTitle": "Quick install command:",
         "exampleTitle": "Example using a preinstalled gitnexus CLI:"
       },
       "source": {

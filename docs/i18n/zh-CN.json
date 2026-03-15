@@ -93,6 +93,8 @@
         "item1": "首次冷启动时，npx 可能检查或下载依赖，耗时可能超过 20 秒。",
         "item2": "GitNexus 的部分依赖使用 tree-sitter 原生模块，在 Windows 上可能需要 Visual Studio Build Tools。",
         "item3": "如果 MCP 客户端支持 env，优先使用预装的 gitnexus CLI，并适当增大 GitNexus 超时。",
+        "item4": "Windows 下可用 winget 快速安装 Build Tools：winget install Microsoft.VisualStudio.2022.BuildTools",
+        "quickInstallTitle": "快速安装命令：",
         "exampleTitle": "使用预装 gitnexus CLI 的配置示例："
       },
       "source": {

@@ -538,6 +538,33 @@ function isNonCallableSymbolKind(kind: string | undefined): boolean {
     || normalized.includes("package");
 }
 
+export function extractResolvedSymbolIdFromContext(value: unknown): string | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const direct = [record.uid, record.id, record.targetUid, record.targetId]
+    .find((item) => typeof item === "string" && item.trim());
+  if (typeof direct === "string") {
+    return direct.trim();
+  }
+
+  for (const key of ["target", "symbol", "node", "element"]) {
+    const nested = toRecord(record[key]);
+    if (!nested) {
+      continue;
+    }
+    const candidate = [nested.uid, nested.id]
+      .find((item) => typeof item === "string" && item.trim());
+    if (typeof candidate === "string") {
+      return candidate.trim();
+    }
+  }
+
+  return undefined;
+}
+
 function normalizeImpactTargetByContext(
   contextExecution: CodeInsightExecution,
   originalTarget: string
@@ -1333,6 +1360,8 @@ export async function runCodeInsightBridge(
         return;
       }
 
+      let impactTarget = request.uid || request.target;
+
       if (!request.uid && request.target) {
         let contextExecution = getLastExecutionByTool(executions, "context");
 
@@ -1362,6 +1391,11 @@ export async function runCodeInsightBridge(
             warnings.push("impact_target_non_callable");
             return;
           }
+
+          const resolvedTargetId = extractResolvedSymbolIdFromContext(contextExecution.structuredContent);
+          if (resolvedTargetId) {
+            impactTarget = resolvedTargetId;
+          }
         }
       }
 
@@ -1370,7 +1404,7 @@ export async function runCodeInsightBridge(
           client,
           "impact",
           {
-            target: request.uid || request.target,
+            target: impactTarget,
             direction: request.direction || "upstream",
             ...(request.maxDepth ? { maxDepth: request.maxDepth } : {}),
             ...(typeof request.includeTests === "boolean"
