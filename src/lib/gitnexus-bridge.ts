@@ -495,6 +495,71 @@ function buildAmbiguities(executions: CodeInsightExecution[]): CodeInsightAmbigu
     });
 }
 
+function getLastExecutionByTool(executions: CodeInsightExecution[], tool: string): CodeInsightExecution | undefined {
+  for (let index = executions.length - 1; index >= 0; index -= 1) {
+    if (executions[index]?.tool === tool) {
+      return executions[index];
+    }
+  }
+  return undefined;
+}
+
+function inferSymbolKind(value: unknown): string | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  for (const key of ["kind", "type", "symbolType"]) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  const id = record.id;
+  if (typeof id === "string" && id.includes(":")) {
+    return id.split(":")[0];
+  }
+
+  return undefined;
+}
+
+function isNonCallableSymbolKind(kind: string | undefined): boolean {
+  if (!kind) {
+    return false;
+  }
+  const normalized = kind.toLowerCase();
+  return normalized.includes("folder")
+    || normalized.includes("file")
+    || normalized.includes("module")
+    || normalized.includes("community")
+    || normalized.includes("process")
+    || normalized.includes("package");
+}
+
+function normalizeImpactTargetByContext(
+  contextExecution: CodeInsightExecution,
+  originalTarget: string
+): CodeInsightExecution {
+  const target = toRecord(contextExecution.structuredContent)?.target;
+  const kind = inferSymbolKind(target);
+  if (!isNonCallableSymbolKind(kind)) {
+    return contextExecution;
+  }
+
+  const message = `impact 目标 "${originalTarget}" 被解析为 ${kind}，请改用函数/方法 uid 或补充 file_path 再重试。`;
+  contextExecution.status = "ambiguous";
+  contextExecution.text = message;
+  contextExecution.structuredContent = {
+    status: "ambiguous",
+    message,
+    suggestion: "For impact analysis, prefer Method/Function over Folder/File.",
+    candidates: target ? [target] : [],
+  };
+  return contextExecution;
+}
+
 const QUERY_STOP_WORDS = new Set([
   "the", "and", "for", "with", "from", "into", "that", "this", "user", "flow",
   "sign", "code", "project", "module",
@@ -554,22 +619,37 @@ function scoreQueryCandidate(candidate: unknown, terms: string[]): number {
     return 0;
   }
 
-  let score = 0;
+  let score = -30;
   let matchedTerms = 0;
   for (const term of terms) {
     let matched = false;
     for (const field of fields) {
-      if (!field.value.includes(term)) {
+      const value = field.value;
+      const key = field.key;
+      const exact = value === term;
+      const wholeWord = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(value);
+      const partial = value.includes(term);
+
+      if (!partial) {
         continue;
       }
 
       matched = true;
-      if (field.key.includes("name") || field.key.includes("title") || field.key.includes("label")) {
-        score += field.value === term ? 24 : 16;
-      } else if (field.key.includes("path") || field.key.includes("file") || field.key.includes("module")) {
-        score += 10;
+      const inName = key.includes("name") || key.includes("title") || key.includes("label") || key.includes("symbol");
+      const inPath = key.includes("path") || key.includes("file") || key.includes("module");
+      const inDocs = key.includes("comment") || key.includes("doc") || key.includes("description") || key.includes("summary");
+      const inCode = key.includes("content") || key.includes("source") || key.includes("body") || key.includes("code");
+
+      if (inName) {
+        score += exact ? 120 : wholeWord ? 90 : 55;
+      } else if (inPath) {
+        score += wholeWord ? 70 : 45;
+      } else if (inDocs) {
+        score += wholeWord ? 26 : 16;
+      } else if (inCode) {
+        score += wholeWord ? 18 : 10;
       } else {
-        score += 4;
+        score += wholeWord ? 24 : 12;
       }
     }
     if (matched) {
@@ -578,16 +658,18 @@ function scoreQueryCandidate(candidate: unknown, terms: string[]): number {
   }
 
   if (matchedTerms > 0) {
-    score += matchedTerms * 5;
+    score += matchedTerms * 14;
+  } else {
+    score -= 60;
   }
   if (matchedTerms === terms.length) {
-    score += 12;
+    score += 35;
   }
 
   const candidateRecord = toRecord(candidate);
   const priority = candidateRecord?.priority;
   if (typeof priority === "number" && Number.isFinite(priority)) {
-    score += priority;
+    score += matchedTerms > 0 ? (priority * 5) : (priority * 0.5);
   }
 
   return score;
@@ -1250,6 +1332,39 @@ export async function runCodeInsightBridge(
         warnings.push("缺少 target/uid 参数，已跳过 impact");
         return;
       }
+
+      if (!request.uid && request.target) {
+        let contextExecution = getLastExecutionByTool(executions, "context");
+
+        if (!contextExecution) {
+          contextExecution = await callBridgeTool(
+            client,
+            "context",
+            {
+              name: request.target,
+              ...(request.filePath ? { file_path: request.filePath } : {}),
+              ...(effectiveRepo ? { repo: effectiveRepo } : {}),
+            },
+            request.signal,
+            workspace
+          );
+          executions.push(contextExecution);
+        }
+
+        if (contextExecution.ok && contextExecution.status === "ambiguous") {
+          warnings.push("impact_target_ambiguous");
+          return;
+        }
+
+        if (contextExecution.ok) {
+          normalizeImpactTargetByContext(contextExecution, request.target);
+          if (contextExecution.status === "ambiguous") {
+            warnings.push("impact_target_non_callable");
+            return;
+          }
+        }
+      }
+
       executions.push(
         await callBridgeTool(
           client,

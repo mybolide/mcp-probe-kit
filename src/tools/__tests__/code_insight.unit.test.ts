@@ -114,6 +114,7 @@ describe("code_insight 单元测试", () => {
 
     expect(status).toBe("ambiguous");
     expect(plan?.kind).toBe("ambiguity");
+    expect(plan?.steps).toHaveLength(2);
     expect(plan?.steps[1].action).toMatch(/uid 或 file_path/);
   });
 
@@ -129,7 +130,8 @@ describe("code_insight 单元测试", () => {
       expect(result.isError).toBe(false);
       const text = String((result as any).content?.[0]?.text || "");
       const structured = (result as any).structuredContent;
-      expect(text).not.toMatch(/delegated plan/);
+      expect(text).not.toMatch(/## delegated plan/);
+      expect(text).toMatch(/使用场景指南/);
       expect(structured.plan).toBeUndefined();
       expect(structured.projectDocs).toBeUndefined();
     } finally {
@@ -158,15 +160,16 @@ describe("code_insight 单元测试", () => {
       expect(text).toMatch(/delegated plan/);
       expect(text).toMatch(/不要只口头总结而不写文件/);
       expect(text).toMatch(/docs\/graph-insights\/latest\.md/);
-      expect(text).toMatch(/docs\/project-context\.md/);
+      expect(text).toMatch(/使用场景指南/);
       expect(structured.projectDocs.latestMarkdownFilePath).toContain("/docs/graph-insights/latest.md");
       expect(structured.projectDocs.archiveMarkdownFilePath).toContain("/docs/graph-insights/");
       expect(structured.projectDocs.projectContextFilePath).toContain("/docs/project-context.md");
       expect(structured.projectDocs.navigationSnippet).toMatch(/代码图谱洞察/);
       expect(structured.plan.mode).toBe("delegated");
-      expect(structured.plan.steps[0].outputs[0]).toContain("/docs/project-context.md");
-      const updateIndexStep = structured.plan.steps.find((step: any) => step.id === "update-project-context-index");
-      expect(updateIndexStep.note).toMatch(/代码图谱洞察/);
+      expect(structured.plan.steps).toHaveLength(2);
+      expect(structured.plan.steps[0].id).toBe("consume-result");
+      expect(structured.plan.steps[1].id).toBe("optional-save");
+      expect(structured.plan.steps[1].outputs[0]).toContain("/docs/graph-insights/latest.md");
       expect(fs.existsSync(path.join(projectRoot, "docs", "graph-insights", "latest.md"))).toBe(false);
     } finally {
       fs.rmSync(projectRoot, { recursive: true, force: true });

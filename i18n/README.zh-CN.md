@@ -307,6 +307,12 @@ Windows 环境建议：
 2. 如果 MCP 客户端支持 `env`，优先改为使用已安装好的本地或全局 `gitnexus` CLI。
 3. 在首次启动较慢或机器较慢时，适当增大 GitNexus 的连接和调用超时。
 
+快速安装命令（Windows）：
+
+```powershell
+winget install Microsoft.VisualStudio.2022.BuildTools
+```
+
 如果已经预装 `gitnexus` CLI，可参考：
 
 ```json

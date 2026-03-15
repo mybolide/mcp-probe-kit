@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.14] - 2026-03-15
+
+### ✨ 改进
+
+**code_insight 排序、歧义与使用引导优化**
+- 强化 `query` 结果重排策略：提高函数名精确/部分匹配与文件路径关键词权重，降低无匹配流程的排序优先级
+- `impact` 模式新增目标预检查：当目标被解析为 `Folder/File/Module` 等不可调用符号时，直接返回歧义提示并建议改用 `uid` 或 `file_path`
+- 简化 delegated plan：从固定多步落盘流程调整为“先消费结果 + 按需保存”
+- 在 `code_insight` 返回中增加“使用场景指南 / 下一步建议”，明确 `goal`、`uid`、`file_path`、`include_content`、`save_to_docs` 的使用方式
+
+### 📝 文档
+
+- README（中英）补充 Windows Build Tools 快速安装命令：`winget install Microsoft.VisualStudio.2022.BuildTools`
+
+### ✅ 测试
+
+- 更新 `code_insight` 单测覆盖简化后的 delegated plan 和使用指南输出
+- 保持 `gitnexus-bridge` 重排测试通过
+
+---
+
 ## [3.0.13] - 2026-03-15
 
 ### ✨ 改进
