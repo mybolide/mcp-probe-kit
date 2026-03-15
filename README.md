@@ -333,6 +333,38 @@ Use in config file:
 }
 ```
 
+### Windows Notes for Graph Tools
+
+Applies to `code_insight`, `start_feature`, `start_bugfix`, and `init_project_context`.
+
+- The GitNexus bridge uses `npx -y gitnexus@latest mcp` by default.
+- On Windows, the first cold start can take 20+ seconds because `npx` may check/download packages.
+- Some GitNexus dependencies use `tree-sitter-*` native modules. If your machine lacks Visual Studio Build Tools, the first install may fail with errors like `gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use`.
+
+Recommended on Windows:
+
+1. Install Visual Studio Build Tools with the C++ workload if you use graph-aware tools regularly.
+2. Prefer stable local/global CLI usage for GitNexus when your MCP client supports `env`.
+3. Increase GitNexus connect/call timeouts on slower or first-run environments.
+
+Example config using a preinstalled `gitnexus` CLI:
+
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "mcp-probe-kit",
+      "env": {
+        "MCP_GITNEXUS_COMMAND": "gitnexus",
+        "MCP_GITNEXUS_ARGS": "mcp",
+        "MCP_GITNEXUS_CONNECT_TIMEOUT_MS": "30000",
+        "MCP_GITNEXUS_TIMEOUT_MS": "45000"
+      }
+    }
+  }
+}
+```
+
 ### Restart Client
 
 After configuration, **completely quit and reopen** your MCP client.
@@ -435,6 +467,30 @@ Use `@latest` tag in config, automatically uses latest version.
 ```bash
 npm update -g mcp-probe-kit
 ```
+
+### Q4: Why are graph-aware tools slow or timing out on Windows the first time?
+
+This usually affects `code_insight`, `start_feature`, `start_bugfix`, and `init_project_context`.
+
+Common causes:
+
+1. `npx -y gitnexus@latest mcp` performs a cold start and may spend 20+ seconds checking/downloading packages.
+2. GitNexus may need native `tree-sitter-*` modules, which can require Visual Studio Build Tools on Windows.
+
+If you see logs like:
+
+```text
+gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use
+gyp ERR! find VS - missing any VC++ toolset
+```
+
+Try this:
+
+1. Install Visual Studio Build Tools with the C++ workload.
+2. Retry once after dependencies finish installing.
+3. If your client supports `env`, switch the bridge to a preinstalled `gitnexus` CLI and raise:
+   `MCP_GITNEXUS_CONNECT_TIMEOUT_MS`
+   `MCP_GITNEXUS_TIMEOUT_MS`
 
 **👉 [More FAQ](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html)**
 

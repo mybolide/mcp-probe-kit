@@ -87,6 +87,14 @@
         "noteText": "수동으로 실행 필요",
         "updateText": "버전 업데이트"
       },
+      "windowsGraph": {
+        "title": "Windows 그래프 도구 안내",
+        "description": "그래프 관련 도구는 기본적으로 GitNexus 를 npx 로 시작하므로 Windows 에서 첫 실행이 느릴 수 있습니다.",
+        "item1": "첫 콜드 스타트에서는 npx 가 의존성을 확인하거나 다운로드하므로 20초 이상 걸릴 수 있습니다.",
+        "item2": "GitNexus 의 일부 의존성은 tree-sitter 네이티브 모듈을 사용하며 Windows 에서는 Visual Studio Build Tools 가 필요할 수 있습니다.",
+        "item3": "MCP 클라이언트가 env 를 지원하면, 미리 설치한 gitnexus CLI 를 우선 사용하고 GitNexus 타임아웃을 늘리세요.",
+        "exampleTitle": "미리 설치한 gitnexus CLI 를 사용하는 구성 예시:"
+      },
       "source": {
         "title": "소스에서 빌드",
         "description": "소스 코드에서 빌드, 개발자용：",
@@ -165,6 +173,18 @@
         "step2": "v16 미만인 경우 Node.js를 업그레이드하세요",
         "step3": "캐시 지우기 및 재설치：",
         "step4": "구성 파일 JSON 형식이 올바른지 확인"
+      },
+      "q3": {
+        "title": "문제 3：Windows 에서 그래프 도구의 첫 실행이 느리거나 시간 초과됨",
+        "affected": "영향받는 도구：",
+        "error": "대표 오류：",
+        "reasons": "주요 원인：",
+        "reason1": "`npx -y gitnexus@latest mcp` 는 콜드 스타트이므로 첫 실행 시 의존성 확인 또는 다운로드에 20초 이상 걸릴 수 있습니다.",
+        "reason2": "GitNexus 가 의존하는 tree-sitter 네이티브 모듈은 Windows 에서 Visual Studio Build Tools 가 필요할 수 있습니다.",
+        "solution": "권장 조치：",
+        "step1": "C++ 워크로드가 포함된 Visual Studio Build Tools 를 설치하세요.",
+        "step2": "의존성 설치가 끝난 뒤 다시 한 번 실행해서 첫 콜드 스타트를 정상 지연과 구분하세요.",
+        "step3": "클라이언트가 env 를 지원하면 미리 설치한 gitnexus CLI 를 우선 사용하고 MCP_GITNEXUS_CONNECT_TIMEOUT_MS 와 MCP_GITNEXUS_TIMEOUT_MS 를 늘리세요."
       }
     },
     "common": {

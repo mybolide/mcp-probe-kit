@@ -293,6 +293,20 @@ npm install -g mcp-probe-kit
 }
 ```
 
+### Windows 그래프 도구 안내
+
+대상: `code_insight`, `start_feature`, `start_bugfix`, `init_project_context`
+
+- GitNexus Bridge 는 기본적으로 `npx -y gitnexus@latest mcp` 를 사용합니다.
+- Windows 에서는 첫 콜드 스타트에 20초 이상 걸릴 수 있습니다.
+- GitNexus 의 일부 의존성은 `tree-sitter-*` 네이티브 모듈을 사용하며, Visual Studio Build Tools 가 필요할 수 있습니다.
+
+Windows 권장 사항:
+
+1. 그래프 도구를 자주 사용한다면 C++ 워크로드가 포함된 Visual Studio Build Tools 를 설치하세요.
+2. MCP 클라이언트가 `env` 를 지원하면 미리 설치한 `gitnexus` CLI 를 우선 사용하세요.
+3. 첫 실행이 느린 환경에서는 GitNexus 연결/호출 타임아웃을 늘리세요.
+
 ### 클라이언트 재시작
 
 설정 후 MCP 클라이언트를 **완전히 종료하고 다시 열어주세요**.
@@ -395,6 +409,28 @@ npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
 ```bash
 npm update -g mcp-probe-kit
 ```
+
+### Q4: Windows 에서 그래프 도구의 첫 실행이 느리거나 시간 초과되는 이유는 무엇인가요?
+
+주로 `code_insight`, `start_feature`, `start_bugfix`, `init_project_context` 에 영향을 줍니다.
+
+주요 원인:
+
+1. `npx -y gitnexus@latest mcp` 는 콜드 스타트이므로 의존성 확인 또는 다운로드에 20초 이상 걸릴 수 있습니다.
+2. GitNexus 가 의존하는 `tree-sitter-*` 네이티브 모듈은 Windows 에서 Visual Studio Build Tools 가 필요할 수 있습니다.
+
+다음과 같은 로그가 보인다면:
+
+```text
+gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use
+gyp ERR! find VS - missing any VC++ toolset
+```
+
+권장 조치:
+
+1. C++ 워크로드가 포함된 Visual Studio Build Tools 를 설치하세요.
+2. 의존성 설치가 끝난 뒤 다시 한 번 실행해 보세요.
+3. 클라이언트가 `env` 를 지원하면 미리 설치한 `gitnexus` CLI 를 사용하고 `MCP_GITNEXUS_CONNECT_TIMEOUT_MS`, `MCP_GITNEXUS_TIMEOUT_MS` 를 늘리세요.
 
 **👉 [더 많은 FAQ](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html)**
 

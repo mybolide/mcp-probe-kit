@@ -12,11 +12,28 @@ import {
 
 export type CodeInsightMode = "auto" | "query" | "context" | "impact";
 export type CodeInsightDirection = "upstream" | "downstream";
+export type GitNexusLaunchStrategy = "local" | "npx" | "env";
+
+export interface CodeInsightCandidate {
+  uid?: string;
+  name?: string;
+  file_path?: string;
+  kind?: string;
+  [key: string]: unknown;
+}
+
+export interface CodeInsightAmbiguity {
+  tool: string;
+  message?: string;
+  candidates: CodeInsightCandidate[];
+}
 
 export interface CodeInsightRequest {
   mode?: CodeInsightMode;
   query?: string;
   target?: string;
+  uid?: string;
+  filePath?: string;
   repo?: string;
   projectRoot?: string;
   goal?: string;
@@ -24,6 +41,7 @@ export interface CodeInsightRequest {
   direction?: CodeInsightDirection;
   maxDepth?: number;
   includeTests?: boolean;
+  includeContent?: boolean;
   signal?: AbortSignal;
 }
 
@@ -34,6 +52,7 @@ export interface CodeInsightExecution {
   args: Record<string, unknown>;
   text?: string;
   structuredContent?: unknown;
+  status?: string;
   error?: string;
 }
 
@@ -48,6 +67,8 @@ export interface CodeInsightBridgeResult {
   executions: CodeInsightExecution[];
   warnings: string[];
   repo?: string;
+  launcherStrategy: GitNexusLaunchStrategy;
+  ambiguities: CodeInsightAmbiguity[];
   workspaceMode: "direct" | "temp-repo";
   sourceRoot: string;
   analysisRoot: string;
@@ -125,9 +146,9 @@ function isBridgeEnabled(): boolean {
   return !/^(0|false|no|off)$/i.test(raw.trim());
 }
 
-function splitArgs(raw: string | undefined): string[] {
+function splitArgs(raw: string | undefined, fallback: string[] = DEFAULT_GITNEXUS_ARGS): string[] {
   if (!raw) {
-    return [...DEFAULT_GITNEXUS_ARGS];
+    return [...fallback];
   }
   return raw
     .trim()
@@ -192,15 +213,15 @@ function parseAvailableReposFromError(text: string): string[] {
     .filter(Boolean);
 }
 
-function resolveBridgeCommand() {
-  const command = (process.env.MCP_GITNEXUS_COMMAND || "npx").trim() || "npx";
-  const args = splitArgs(process.env.MCP_GITNEXUS_ARGS);
-  return resolveSpawnCommand(command, args);
+function isGitNexusCliCommand(command: string): boolean {
+  const normalized = path.basename((command || "").trim()).toLowerCase();
+  return normalized === "gitnexus"
+    || normalized === "gitnexus.cmd"
+    || normalized === "gitnexus.exe"
+    || normalized === "gitnexus.bat";
 }
 
-function resolveGitNexusCliCommand(subcommand: string) {
-  const command = (process.env.MCP_GITNEXUS_COMMAND || "npx").trim() || "npx";
-  const bridgeArgs = splitArgs(process.env.MCP_GITNEXUS_ARGS);
+function resolveNpxPackageArgs(bridgeArgs: string[]): string[] {
   const flags: string[] = [];
   let packageSpec = "gitnexus@latest";
 
@@ -216,20 +237,87 @@ function resolveGitNexusCliCommand(subcommand: string) {
     break;
   }
 
-  return resolveSpawnCommand(command, [...flags, packageSpec, subcommand]);
+  return [...flags, packageSpec];
 }
 
-export function resolveExecutableCommand(command: string, platform: NodeJS.Platform = process.platform): string {
+export function resolveGitNexusBridgeCommand(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+): { command: string; args: string[]; strategy: GitNexusLaunchStrategy } {
+  const explicitCommand = env.MCP_GITNEXUS_COMMAND?.trim();
+  if (explicitCommand) {
+    const args = splitArgs(
+      env.MCP_GITNEXUS_ARGS,
+      isGitNexusCliCommand(explicitCommand) ? ["mcp"] : DEFAULT_GITNEXUS_ARGS
+    );
+    return {
+      ...resolveSpawnCommand(explicitCommand, args, platform, env),
+      strategy: "env",
+    };
+  }
+
+  const localCli = findExecutablePath("gitnexus", platform, env);
+  if (localCli) {
+    return {
+      command: localCli,
+      args: ["mcp"],
+      strategy: "local",
+    };
+  }
+
+  return {
+    ...resolveSpawnCommand("npx", splitArgs(env.MCP_GITNEXUS_ARGS), platform, env),
+    strategy: "npx",
+  };
+}
+
+function resolveGitNexusCliCommand(
+  subcommand: string,
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+) {
+  const explicitCommand = env.MCP_GITNEXUS_COMMAND?.trim();
+  if (explicitCommand) {
+    if (isGitNexusCliCommand(explicitCommand)) {
+      return resolveSpawnCommand(explicitCommand, [subcommand], platform, env);
+    }
+
+    const bridgeArgs = splitArgs(env.MCP_GITNEXUS_ARGS);
+    return resolveSpawnCommand(
+      explicitCommand,
+      [...resolveNpxPackageArgs(bridgeArgs), subcommand],
+      platform,
+      env
+    );
+  }
+
+  const localCli = findExecutablePath("gitnexus", platform, env);
+  if (localCli) {
+    return {
+      command: localCli,
+      args: [subcommand],
+    };
+  }
+
+  const bridgeArgs = splitArgs(env.MCP_GITNEXUS_ARGS);
+  return resolveSpawnCommand("npx", [...resolveNpxPackageArgs(bridgeArgs), subcommand], platform, env);
+}
+
+export function resolveExecutableCommand(
+  command: string,
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env
+): string {
   const normalized = (command || "").trim();
   if (!normalized) {
-    return resolveExecutableCommand("npx", platform);
+    return resolveExecutableCommand("npx", platform, env);
   }
 
   if (path.isAbsolute(normalized) && fs.existsSync(normalized)) {
     return normalized;
   }
 
-  const found = findExecutablePath(normalized, platform);
+  const found = findExecutablePath(normalized, platform, env);
   if (found) {
     return found;
   }
@@ -250,7 +338,11 @@ export function resolveExecutableCommand(command: string, platform: NodeJS.Platf
   return normalized;
 }
 
-function findExecutablePath(command: string, platform: NodeJS.Platform = process.platform): string | undefined {
+function findExecutablePath(
+  command: string,
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env
+): string | undefined {
   const trimmed = (command || "").trim();
   if (!trimmed || path.isAbsolute(trimmed)) {
     return undefined;
@@ -288,6 +380,7 @@ function findExecutablePath(command: string, platform: NodeJS.Platform = process
     try {
       const output = execFileSync("where.exe", [trimmed], {
         encoding: "utf-8",
+        env,
         stdio: ["ignore", "pipe", "ignore"],
         windowsHide: true,
       }).trim();
@@ -301,7 +394,7 @@ function findExecutablePath(command: string, platform: NodeJS.Platform = process
     }
   }
 
-  const pathEntries = (process.env.PATH || "")
+  const pathEntries = (env.PATH || "")
     .split(path.delimiter)
     .map((entry) => entry.trim())
     .filter(Boolean);
@@ -326,9 +419,9 @@ function findExecutablePath(command: string, platform: NodeJS.Platform = process
 
   if (platform === "win32" && trimmed.toLowerCase() === "git") {
     const commonCandidates = [
-      path.join(process.env["ProgramFiles"] || "C:\\Program Files", "Git", "cmd", "git.exe"),
-      path.join(process.env["ProgramFiles"] || "C:\\Program Files", "Git", "bin", "git.exe"),
-      path.join(process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "Git", "cmd", "git.exe"),
+      path.join(env["ProgramFiles"] || "C:\\Program Files", "Git", "cmd", "git.exe"),
+      path.join(env["ProgramFiles"] || "C:\\Program Files", "Git", "bin", "git.exe"),
+      path.join(env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "Git", "cmd", "git.exe"),
     ];
     return preferredPath(commonCandidates);
   }
@@ -339,14 +432,244 @@ function findExecutablePath(command: string, platform: NodeJS.Platform = process
 export function resolveSpawnCommand(
   command: string,
   args: string[],
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env
 ): { command: string; args: string[] } {
-  const executable = resolveExecutableCommand(command, platform);
+  const executable = resolveExecutableCommand(command, platform, env);
 
   return {
     command: executable,
     args,
   };
+}
+
+function toRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function extractStructuredStatus(value: unknown): string | undefined {
+  const status = toRecord(value)?.status;
+  return typeof status === "string" ? status : undefined;
+}
+
+function extractStructuredMessage(value: unknown): string | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  for (const key of ["message", "summary", "explanation", "detail"]) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function extractStructuredCandidates(value: unknown): CodeInsightCandidate[] {
+  const candidates = toRecord(value)?.candidates;
+  if (!Array.isArray(candidates)) {
+    return [];
+  }
+
+  return candidates
+    .filter((item) => item && typeof item === "object" && !Array.isArray(item))
+    .map((item) => ({ ...(item as Record<string, unknown>) }));
+}
+
+function buildAmbiguities(executions: CodeInsightExecution[]): CodeInsightAmbiguity[] {
+  return executions
+    .filter((item) => item.ok && item.status === "ambiguous")
+    .map((item) => {
+      const candidates = extractStructuredCandidates(item.structuredContent);
+      const message = extractStructuredMessage(item.structuredContent) || item.text;
+      return {
+        tool: item.tool,
+        message: message ? shorten(message, 220) : undefined,
+        candidates,
+      };
+    });
+}
+
+const QUERY_STOP_WORDS = new Set([
+  "the", "and", "for", "with", "from", "into", "that", "this", "user", "flow",
+  "sign", "code", "project", "module",
+  "理解", "分析", "流程", "模块", "项目", "代码", "查询", "相关", "功能",
+]);
+
+function tokenizeQueryHints(...values: Array<string | undefined>): string[] {
+  const tokens = new Set<string>();
+  for (const value of values) {
+    for (const token of (value || "").toLowerCase().split(/[^a-z0-9_\u4e00-\u9fa5]+/)) {
+      const normalized = token.trim();
+      if (!normalized || QUERY_STOP_WORDS.has(normalized)) {
+        continue;
+      }
+      if (normalized.length < 3 && !/[\u4e00-\u9fa5]/.test(normalized)) {
+        continue;
+      }
+      tokens.add(normalized);
+    }
+  }
+  return [...tokens];
+}
+
+function collectStringFields(
+  value: unknown,
+  depth: number = 0,
+  bag: Array<{ key: string; value: string }> = [],
+  currentKey: string = ""
+): Array<{ key: string; value: string }> {
+  if (depth > 3 || value == null) {
+    return bag;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized) {
+      bag.push({ key: currentKey.toLowerCase(), value: normalized });
+    }
+    return bag;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 12)) {
+      collectStringFields(item, depth + 1, bag, currentKey);
+    }
+    return bag;
+  }
+  if (typeof value === "object") {
+    for (const [key, item] of Object.entries(value as Record<string, unknown>).slice(0, 20)) {
+      collectStringFields(item, depth + 1, bag, key);
+    }
+  }
+  return bag;
+}
+
+function scoreQueryCandidate(candidate: unknown, terms: string[]): number {
+  const fields = collectStringFields(candidate);
+  if (fields.length === 0 || terms.length === 0) {
+    return 0;
+  }
+
+  let score = 0;
+  let matchedTerms = 0;
+  for (const term of terms) {
+    let matched = false;
+    for (const field of fields) {
+      if (!field.value.includes(term)) {
+        continue;
+      }
+
+      matched = true;
+      if (field.key.includes("name") || field.key.includes("title") || field.key.includes("label")) {
+        score += field.value === term ? 24 : 16;
+      } else if (field.key.includes("path") || field.key.includes("file") || field.key.includes("module")) {
+        score += 10;
+      } else {
+        score += 4;
+      }
+    }
+    if (matched) {
+      matchedTerms += 1;
+    }
+  }
+
+  if (matchedTerms > 0) {
+    score += matchedTerms * 5;
+  }
+  if (matchedTerms === terms.length) {
+    score += 12;
+  }
+
+  const candidateRecord = toRecord(candidate);
+  const priority = candidateRecord?.priority;
+  if (typeof priority === "number" && Number.isFinite(priority)) {
+    score += priority;
+  }
+
+  return score;
+}
+
+function describeQueryTopMatches(structuredContent: unknown): string | undefined {
+  const processes = toRecord(structuredContent)?.processes;
+  if (!Array.isArray(processes) || processes.length === 0) {
+    return undefined;
+  }
+
+  const labels = processes
+    .slice(0, 3)
+    .map((item) => {
+      const record = toRecord(item);
+      return [
+        record?.heuristicLabel,
+        record?.title,
+        record?.name,
+        record?.processName,
+      ].find((value) => typeof value === "string" && value.trim());
+    })
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+  return labels.length > 0 ? `Top matches: ${labels.join(" | ")}` : undefined;
+}
+
+export function rerankQueryStructuredContent(
+  structuredContent: unknown,
+  hints: { query?: string; goal?: string; taskContext?: string }
+): { structuredContent: unknown; changed: boolean; note?: string } {
+  const record = toRecord(structuredContent);
+  if (!record) {
+    return { structuredContent, changed: false };
+  }
+
+  const terms = tokenizeQueryHints(hints.query, hints.goal, hints.taskContext);
+  if (terms.length === 0) {
+    return { structuredContent, changed: false };
+  }
+
+  let changed = false;
+  const next = { ...record };
+
+  for (const key of ["processes", "definitions"] as const) {
+    const value = next[key];
+    if (!Array.isArray(value) || value.length < 2) {
+      continue;
+    }
+
+    const reranked = value
+      .map((item, index) => ({
+        item,
+        index,
+        score: scoreQueryCandidate(item, terms),
+      }))
+      .sort((a, b) => (b.score - a.score) || (a.index - b.index))
+      .map((entry) => entry.item);
+
+    const orderChanged = reranked.some((item, index) => item !== value[index]);
+    if (orderChanged) {
+      next[key] = reranked;
+      changed = true;
+    }
+  }
+
+  return {
+    structuredContent: next,
+    changed,
+    note: changed ? describeQueryTopMatches(next) : undefined,
+  };
+}
+
+function describeExecutionSummary(item: CodeInsightExecution): string {
+  if (item.tool === "query") {
+    const rerankedTopMatches = describeQueryTopMatches(item.structuredContent);
+    if (rerankedTopMatches) {
+      return shorten(rerankedTopMatches, 110);
+    }
+  }
+
+  return shorten(item.text || "已返回结构化结果", 110);
 }
 
 function extractText(result: unknown): string {
@@ -670,10 +993,10 @@ function resolveMode(request: CodeInsightRequest): "query" | "context" | "impact
     return mode;
   }
 
-  if (request.target && request.direction) {
+  if ((request.target || request.uid) && request.direction) {
     return "impact";
   }
-  if (request.target && !request.query) {
+  if ((request.target || request.uid) && !request.query) {
     return "context";
   }
   return "query";
@@ -702,6 +1025,10 @@ async function callBridgeTool(
     const durationMs = Date.now() - startedAt;
     const text = extractText(result);
     const isError = Boolean((result as Record<string, unknown>).isError);
+    const structuredContent = workspace
+      ? mapValueToSourceRoot((result as Record<string, unknown>).structuredContent, workspace)
+      : (result as Record<string, unknown>).structuredContent;
+    const status = extractStructuredStatus(structuredContent);
 
     if (isError) {
       return {
@@ -710,9 +1037,8 @@ async function callBridgeTool(
         ok: false,
         durationMs,
         text: workspace ? mapValueToSourceRoot(text, workspace) : text,
-        structuredContent: workspace
-          ? mapValueToSourceRoot((result as Record<string, unknown>).structuredContent, workspace)
-          : (result as Record<string, unknown>).structuredContent,
+        structuredContent,
+        status,
         error: workspace
           ? mapValueToSourceRoot(text || `GitNexus 工具 ${tool} 返回错误`, workspace)
           : text || `GitNexus 工具 ${tool} 返回错误`,
@@ -725,9 +1051,8 @@ async function callBridgeTool(
       ok: true,
       durationMs,
       text: workspace ? mapValueToSourceRoot(text, workspace) : text,
-      structuredContent: workspace
-        ? mapValueToSourceRoot((result as Record<string, unknown>).structuredContent, workspace)
-        : (result as Record<string, unknown>).structuredContent,
+      structuredContent,
+      status,
     };
   } catch (error) {
     if (isAbortError(error)) {
@@ -749,6 +1074,7 @@ export async function runCodeInsightBridge(
   const modeRequested = request.mode || "auto";
   const modeResolved = resolveMode(request);
   const requestedProjectRoot = resolveRequestedProjectRoot(request.projectRoot);
+  const launcher = resolveGitNexusBridgeCommand();
 
   if (!isBridgeEnabled() || isEnvDisabled("MCP_ENABLE_GITNEXUS_BRIDGE")) {
     const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
@@ -763,6 +1089,8 @@ export async function runCodeInsightBridge(
       executions: [],
       warnings: ["bridge_disabled"],
       repo: resolvePreferredRepoName(request.repo),
+      launcherStrategy: launcher.strategy,
+      ambiguities: [],
       workspaceMode: "direct",
       sourceRoot,
       analysisRoot: sourceRoot,
@@ -783,6 +1111,8 @@ export async function runCodeInsightBridge(
       executions: [],
       warnings: ["bridge_failure_cached"],
       repo: resolvePreferredRepoName(request.repo),
+      launcherStrategy: launcher.strategy,
+      ambiguities: [],
       workspaceMode: "direct",
       sourceRoot,
       analysisRoot: sourceRoot,
@@ -803,6 +1133,8 @@ export async function runCodeInsightBridge(
       executions: [],
       warnings: ["project_root_required", "unsafe_home_directory"],
       repo: resolvePreferredRepoName(request.repo),
+      launcherStrategy: launcher.strategy,
+      ambiguities: [],
       workspaceMode: "direct",
       sourceRoot: requestedProjectRoot,
       analysisRoot: requestedProjectRoot,
@@ -816,7 +1148,7 @@ export async function runCodeInsightBridge(
     workspace.workspaceMode === "temp-repo"
       ? workspace.repoName
       : resolvePreferredRepoName(request.repo) || workspace.repoName;
-  const { command, args } = resolveBridgeCommand();
+  const { command, args } = launcher;
   const warnings: string[] = [];
   if (workspace.workspaceMode === "temp-repo") {
     warnings.push("temp_repo_workspace");
@@ -858,25 +1190,43 @@ export async function runCodeInsightBridge(
         warnings.push("缺少 query 参数，已跳过 query");
         return;
       }
-      executions.push(
-        await callBridgeTool(
-          client,
-          "query",
-          {
-            query: queryText,
-            ...(request.goal ? { goal: request.goal } : {}),
-            ...(request.taskContext ? { task_context: request.taskContext } : {}),
-            ...(effectiveRepo ? { repo: effectiveRepo } : {}),
-          },
-          request.signal,
-          workspace
-        )
+      const execution = await callBridgeTool(
+        client,
+        "query",
+        {
+          query: queryText,
+          ...(request.goal ? { goal: request.goal } : {}),
+          ...(request.taskContext ? { task_context: request.taskContext } : {}),
+          ...(request.includeContent ? { include_content: true } : {}),
+          ...(effectiveRepo ? { repo: effectiveRepo } : {}),
+        },
+        request.signal,
+        workspace
       );
+
+      if (execution.ok) {
+        const reranked = rerankQueryStructuredContent(execution.structuredContent, {
+          query: queryText,
+          goal: request.goal,
+          taskContext: request.taskContext,
+        });
+        execution.structuredContent = reranked.structuredContent;
+        if (reranked.changed) {
+          warnings.push("query_results_reranked");
+          if (reranked.note) {
+            execution.text = execution.text
+              ? `${reranked.note}\n\n${execution.text}`
+              : reranked.note;
+          }
+        }
+      }
+
+      executions.push(execution);
     };
 
     const runContext = async () => {
-      if (!request.target) {
-        warnings.push("缺少 target 参数，已跳过 context");
+      if (!request.target && !request.uid) {
+        warnings.push("缺少 target/uid 参数，已跳过 context");
         return;
       }
       executions.push(
@@ -884,7 +1234,9 @@ export async function runCodeInsightBridge(
           client,
           "context",
           {
-            name: request.target,
+            ...(request.uid ? { uid: request.uid } : { name: request.target }),
+            ...(request.filePath ? { file_path: request.filePath } : {}),
+            ...(request.includeContent ? { include_content: true } : {}),
             ...(effectiveRepo ? { repo: effectiveRepo } : {}),
           },
           request.signal,
@@ -894,8 +1246,8 @@ export async function runCodeInsightBridge(
     };
 
     const runImpact = async () => {
-      if (!request.target) {
-        warnings.push("缺少 target 参数，已跳过 impact");
+      if (!request.target && !request.uid) {
+        warnings.push("缺少 target/uid 参数，已跳过 impact");
         return;
       }
       executions.push(
@@ -903,7 +1255,7 @@ export async function runCodeInsightBridge(
           client,
           "impact",
           {
-            target: request.target,
+            target: request.uid || request.target,
             direction: request.direction || "upstream",
             ...(request.maxDepth ? { maxDepth: request.maxDepth } : {}),
             ...(typeof request.includeTests === "boolean"
@@ -919,10 +1271,10 @@ export async function runCodeInsightBridge(
 
     if (modeRequested === "auto") {
       await runQuery();
-      if (request.target) {
+      if (request.target || request.uid) {
         await runContext();
       }
-      if (request.target && request.direction) {
+      if ((request.target || request.uid) && request.direction) {
         await runImpact();
       }
     } else if (modeResolved === "query") {
@@ -953,6 +1305,8 @@ export async function runCodeInsightBridge(
       executions: [],
       warnings: ["bridge_unavailable", ...warnings],
       repo: effectiveRepo,
+      launcherStrategy: launcher.strategy,
+      ambiguities: [],
       workspaceMode: workspace.workspaceMode,
       sourceRoot: workspace.sourceRoot,
       analysisRoot: workspace.analysisRoot,
@@ -988,6 +1342,7 @@ export async function runCodeInsightBridge(
 
   bridgeFailureUntil = 0;
   bridgeFailureReason = "";
+  const ambiguities = buildAmbiguities(successful);
 
   if (successful.length === 0) {
     const fallbackError =
@@ -1005,6 +1360,8 @@ export async function runCodeInsightBridge(
       executions,
       warnings: ["bridge_call_failed", ...warnings],
       repo: effectiveRepo,
+      launcherStrategy: launcher.strategy,
+      ambiguities,
       workspaceMode: workspace.workspaceMode,
       sourceRoot: workspace.sourceRoot,
       analysisRoot: workspace.analysisRoot,
@@ -1012,10 +1369,11 @@ export async function runCodeInsightBridge(
     };
   }
 
-  const summaryParts = successful.map(
-    (item) => `${item.tool}: ${shorten(item.text || "已返回结构化结果", 110)}`
-  );
-  const summary = `GitNexus 图谱增强已启用（${successful.length}/${executions.length} 成功）: ${summaryParts.join(" | ")}`;
+  const summary = ambiguities.length > 0
+    ? `GitNexus 返回了 ${ambiguities.length} 个歧义结果，请指定 uid 或 file_path 后重试。`
+    : `GitNexus 图谱增强已启用（${successful.length}/${executions.length} 成功）: ${successful
+      .map((item) => `${item.tool}: ${describeExecutionSummary(item)}`)
+      .join(" | ")}`;
 
   return {
     provider: "gitnexus",
@@ -1028,6 +1386,8 @@ export async function runCodeInsightBridge(
     executions,
     warnings,
     repo: effectiveRepo,
+    launcherStrategy: launcher.strategy,
+    ambiguities,
     workspaceMode: workspace.workspaceMode,
     sourceRoot: workspace.sourceRoot,
     analysisRoot: workspace.analysisRoot,

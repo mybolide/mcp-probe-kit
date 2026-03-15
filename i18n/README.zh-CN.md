@@ -293,6 +293,38 @@ npm install -g mcp-probe-kit
 }
 ```
 
+### Windows 图谱工具特别说明
+
+适用于 `code_insight`、`start_feature`、`start_bugfix`、`init_project_context`。
+
+- GitNexus Bridge 默认通过 `npx -y gitnexus@latest mcp` 启动。
+- 在 Windows 上，首次冷启动可能需要 20 秒以上，因为 `npx` 可能会检查或下载依赖。
+- GitNexus 的部分依赖使用 `tree-sitter-*` 原生模块；如果系统没有 Visual Studio Build Tools，首次安装可能失败，并出现 `gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use` 之类的错误。
+
+Windows 环境建议：
+
+1. 如果会经常使用图谱相关工具，先安装包含 C++ 工作负载的 Visual Studio Build Tools。
+2. 如果 MCP 客户端支持 `env`，优先改为使用已安装好的本地或全局 `gitnexus` CLI。
+3. 在首次启动较慢或机器较慢时，适当增大 GitNexus 的连接和调用超时。
+
+如果已经预装 `gitnexus` CLI，可参考：
+
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "mcp-probe-kit",
+      "env": {
+        "MCP_GITNEXUS_COMMAND": "gitnexus",
+        "MCP_GITNEXUS_ARGS": "mcp",
+        "MCP_GITNEXUS_CONNECT_TIMEOUT_MS": "30000",
+        "MCP_GITNEXUS_TIMEOUT_MS": "45000"
+      }
+    }
+  }
+}
+```
+
 ### 重启客户端
 
 配置完成后，**完全退出并重新打开**你的 MCP 客户端。
@@ -395,6 +427,30 @@ npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
 ```bash
 npm update -g mcp-probe-kit
 ```
+
+### Q4: 为什么 Windows 下图谱工具首次启动很慢，甚至超时？
+
+这类问题通常影响 `code_insight`、`start_feature`、`start_bugfix`、`init_project_context`。
+
+常见原因：
+
+1. `npx -y gitnexus@latest mcp` 属于冷启动，可能花 20 秒以上检查或下载依赖。
+2. GitNexus 依赖的 `tree-sitter-*` 原生模块在 Windows 上可能需要 Visual Studio Build Tools。
+
+如果日志里看到：
+
+```text
+gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use
+gyp ERR! find VS - missing any VC++ toolset
+```
+
+建议按下面排查：
+
+1. 安装带 C++ 工作负载的 Visual Studio Build Tools。
+2. 等依赖安装完成后重试一次。
+3. 如果客户端支持 `env`，优先切换为已安装的 `gitnexus` CLI，并增大：
+   `MCP_GITNEXUS_CONNECT_TIMEOUT_MS`
+   `MCP_GITNEXUS_TIMEOUT_MS`
 
 **👉 [更多常见问题](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html)**
 

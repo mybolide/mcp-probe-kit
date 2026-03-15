@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.13] - 2026-03-15
+
+### ✨ 改进
+
+**GitNexus bridge 启动与 code_insight 可用性增强**
+- GitNexus bridge 改为优先使用本地已安装的 `gitnexus` CLI，找不到时再回退到 `npx`
+- 支持通过 `MCP_GITNEXUS_COMMAND` / `MCP_GITNEXUS_ARGS` 显式覆盖启动命令
+- `code_insight` 暴露 `include_content`、`uid`、`file_path` 参数，减少二次调用成本
+- 透传 GitNexus 的歧义状态和候选列表，并生成按场景动态变化的 delegated plan
+- 新增对 `query` 结果的轻量关键词重排，优先提升与查询词更贴近的流程结果
+
+### 📝 文档
+
+- 在 README、getting-started 页面及多语言文档中补充 Windows 下图谱工具冷启动、Build Tools 依赖和超时配置说明
+
+### ✅ 测试
+
+- 新增本地 `gitnexus` CLI 优先启动测试
+- 新增 query 结果重排测试
+- 新增歧义 delegated plan 与非默认 docs 落盘行为测试
+
+---
+
 ## [3.0.12] - 2026-03-14
 
 ### 🐛 修复

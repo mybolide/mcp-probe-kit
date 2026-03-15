@@ -96,6 +96,16 @@ Für weitere Details zu Funktionen, Installation und Verwendung lesen Sie bitte 
 npm install -g mcp-probe-kit
 ```
 
+### Windows-Hinweis für Graph-Tools
+
+Gilt für `code_insight`, `start_feature`, `start_bugfix` und `init_project_context`.
+
+- Die GitNexus-Bridge verwendet standardmäßig `npx -y gitnexus@latest mcp`.
+- Unter Windows kann der erste Kaltstart mehr als 20 Sekunden dauern.
+- Einige GitNexus-Abhängigkeiten verwenden native `tree-sitter-*`-Module und können Visual Studio Build Tools benötigen.
+
+Wenn du Graph-Tools unter Windows regelmäßig nutzt, lies bitte auch den Installationsleitfaden und die FAQ in der vollständigen Dokumentation.
+
 ---
 
 ## 💡 Verwendungsbeispiele
