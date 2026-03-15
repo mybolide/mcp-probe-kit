@@ -87,6 +87,14 @@
         "noteText": "需要手动运行",
         "updateText": "更新版本"
       },
+      "windowsGraph": {
+        "title": "Windows 图谱工具特别说明",
+        "description": "图谱相关工具在 Windows 上首次运行可能更慢，因为 GitNexus 默认通过 npx 启动。",
+        "item1": "首次冷启动时，npx 可能检查或下载依赖，耗时可能超过 20 秒。",
+        "item2": "GitNexus 的部分依赖使用 tree-sitter 原生模块，在 Windows 上可能需要 Visual Studio Build Tools。",
+        "item3": "如果 MCP 客户端支持 env，优先使用预装的 gitnexus CLI，并适当增大 GitNexus 超时。",
+        "exampleTitle": "使用预装 gitnexus CLI 的配置示例："
+      },
       "source": {
         "title": "源码编译",
         "description": "从源码编译安装，适合开发者：",
@@ -165,6 +173,18 @@
         "step2": "如果低于 v16，请升级 Node.js",
         "step3": "清理缓存并重新安装：",
         "step4": "检查配置文件 JSON 格式是否正确"
+      },
+      "q3": {
+        "title": "问题 3：Windows 下图谱工具首次启动很慢或超时",
+        "affected": "受影响工具：",
+        "error": "典型错误：",
+        "reasons": "常见原因：",
+        "reason1": "`npx -y gitnexus@latest mcp` 冷启动时可能花 20 秒以上检查或下载依赖。",
+        "reason2": "GitNexus 依赖的 tree-sitter 原生模块在 Windows 上可能需要 Visual Studio Build Tools。",
+        "solution": "建议处理：",
+        "step1": "安装带 C++ 工作负载的 Visual Studio Build Tools。",
+        "step2": "依赖安装完成后重试一次，避免把首次冷启动误判为稳定耗时。",
+        "step3": "如果客户端支持 env，优先使用预装的 gitnexus CLI，并增大 MCP_GITNEXUS_CONNECT_TIMEOUT_MS 与 MCP_GITNEXUS_TIMEOUT_MS。"
       }
     },
     "common": {

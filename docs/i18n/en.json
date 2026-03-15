@@ -87,6 +87,14 @@
         "noteText": "Need to manually run",
         "updateText": "to update version"
       },
+      "windowsGraph": {
+        "title": "Windows Notes for Graph Tools",
+        "description": "Graph-aware tools may have a slower first run on Windows because GitNexus is started through npx by default.",
+        "item1": "The first cold start may take 20+ seconds while npx checks or downloads dependencies.",
+        "item2": "Some GitNexus dependencies use tree-sitter native modules and may require Visual Studio Build Tools.",
+        "item3": "If your MCP client supports env, prefer a preinstalled gitnexus CLI and raise GitNexus timeouts.",
+        "exampleTitle": "Example using a preinstalled gitnexus CLI:"
+      },
       "source": {
         "title": "Build from Source",
         "description": "Build from source code, suitable for developers:",
@@ -165,6 +173,18 @@
         "step2": "If below v16, please upgrade Node.js",
         "step3": "Clear cache and reinstall:",
         "step4": "Check if configuration file JSON format is correct"
+      },
+      "q3": {
+        "title": "Issue 3: Graph-aware tools are slow or time out on first run on Windows",
+        "affected": "Affected tools:",
+        "error": "Typical error:",
+        "reasons": "Common causes:",
+        "reason1": "`npx -y gitnexus@latest mcp` may spend 20+ seconds checking or downloading dependencies on cold start.",
+        "reason2": "GitNexus depends on tree-sitter native modules, which may require Visual Studio Build Tools on Windows.",
+        "solution": "Recommended actions:",
+        "step1": "Install Visual Studio Build Tools with the C++ workload.",
+        "step2": "Retry once after dependencies finish installing so the first cold start is not mistaken for steady-state latency.",
+        "step3": "If your client supports env, prefer a preinstalled gitnexus CLI and raise MCP_GITNEXUS_CONNECT_TIMEOUT_MS plus MCP_GITNEXUS_TIMEOUT_MS."
       }
     },
     "common": {

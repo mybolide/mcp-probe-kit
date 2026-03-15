@@ -3,7 +3,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import spawn from "cross-spawn";
 import { afterEach, describe, expect, test } from "vitest";
-import { prepareBridgeWorkspace, resolveExecutableCommand, resolveSpawnCommand } from "../gitnexus-bridge.js";
+import {
+  prepareBridgeWorkspace,
+  resolveExecutableCommand,
+  resolveGitNexusBridgeCommand,
+  resolveSpawnCommand,
+  rerankQueryStructuredContent,
+} from "../gitnexus-bridge.js";
 
 const tempRoots: string[] = [];
 
@@ -57,6 +63,49 @@ describe("gitnexus-bridge workspace preparation", () => {
     expect(wrapped.command.toLowerCase()).not.toContain("cmd.exe");
     expect(wrapped.command.toLowerCase()).toContain("npx");
     expect(wrapped.args).toEqual(["-y", "gitnexus@latest", "mcp"]);
+  });
+
+  test("优先使用本地 gitnexus CLI 启动 bridge", () => {
+    const root = makeTempDir("gitnexus-cli-");
+    const executable = path.join(root, "gitnexus.cmd");
+    fs.writeFileSync(executable, "@echo off\r\necho gitnexus %*\r\n", "utf-8");
+
+    const resolved = resolveGitNexusBridgeCommand({
+      PATH: root,
+      PATHEXT: ".CMD;.EXE;.BAT",
+    }, "win32");
+
+    expect(resolved.strategy).toBe("local");
+    expect(resolved.command).toBe(executable);
+    expect(resolved.args).toEqual(["mcp"]);
+  });
+
+  test("显式 MCP_GITNEXUS_COMMAND 配置优先于本地 CLI 自动发现", () => {
+    const resolved = resolveGitNexusBridgeCommand({
+      MCP_GITNEXUS_COMMAND: "npx",
+      MCP_GITNEXUS_ARGS: "-y gitnexus@1.4.1 mcp",
+      PATH: "",
+    }, "win32");
+
+    expect(resolved.strategy).toBe("env");
+    expect(resolved.command.toLowerCase()).toContain("npx");
+    expect(resolved.args).toEqual(["-y", "gitnexus@1.4.1", "mcp"]);
+  });
+
+  test("query 结果会按关键词对流程做轻量重排", () => {
+    const reranked = rerankQueryStructuredContent({
+      processes: [
+        { heuristicLabel: "Main -> Sleep", priority: 0.12, summary: "background idle loop" },
+        { heuristicLabel: "Login -> GenerateToken", priority: 0.08, filePath: "src/auth/login.ts" },
+      ],
+    }, {
+      query: "login authentication user signin auth",
+      goal: "理解登录流程",
+    });
+
+    expect(reranked.changed).toBe(true);
+    expect((reranked.structuredContent as any).processes[0].heuristicLabel).toBe("Login -> GenerateToken");
+    expect(reranked.note).toMatch(/Top matches/i);
   });
 
   test.runIf(process.platform === "win32")("Windows 下带空格路径的 cmd 可执行文件可以真实启动", async () => {

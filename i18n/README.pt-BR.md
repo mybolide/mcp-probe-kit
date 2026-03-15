@@ -96,6 +96,16 @@ Para mais detalhes sobre recursos, instalação e uso, consulte a [documentaçã
 npm install -g mcp-probe-kit
 ```
 
+### Nota do Windows para ferramentas de grafo
+
+Aplica-se a `code_insight`, `start_feature`, `start_bugfix` e `init_project_context`.
+
+- A ponte do GitNexus usa `npx -y gitnexus@latest mcp` por padrão.
+- No Windows, a primeira inicialização a frio pode levar mais de 20 segundos.
+- Algumas dependências do GitNexus usam módulos nativos `tree-sitter-*` e podem exigir Visual Studio Build Tools.
+
+Se você usa ferramentas de grafo com frequência no Windows, consulte também o guia de instalação e a FAQ na documentação completa.
+
 ---
 
 ## 💡 Exemplos de Uso

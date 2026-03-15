@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { codeInsight, resolveCodeInsightQuery } from "../code_insight.js";
+import {
+  buildCodeInsightDelegatedPlan,
+  codeInsight,
+  deriveCodeInsightStatus,
+  resolveCodeInsightQuery,
+} from "../code_insight.js";
 import * as os from "node:os";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -80,6 +85,60 @@ describe("code_insight 单元测试", () => {
     expect(resolved.finalTarget).toBe("");
     expect(resolved.finalQuery).toMatch(/核心流程/);
     expect(resolved.finalQuery).toMatch(/依赖关系/);
+  });
+
+  test("歧义结果会生成候选选择 delegated plan", () => {
+    const status = deriveCodeInsightStatus({
+      available: true,
+      ambiguities: [
+        {
+          tool: "context",
+          message: "找到多个 login 符号",
+          candidates: [{ uid: "Method:auth.ts:login:12", file_path: "/repo/src/auth.ts" }],
+        },
+      ],
+      executions: [{ tool: "context", ok: true, durationMs: 10, args: {}, status: "ambiguous" }],
+    } as any);
+
+    const plan = buildCodeInsightDelegatedPlan({
+      status,
+      ambiguities: [
+        {
+          tool: "context",
+          message: "找到多个 login 符号",
+          candidates: [{ uid: "Method:auth.ts:login:12", file_path: "/repo/src/auth.ts" }],
+        },
+      ],
+      showPlan: true,
+    });
+
+    expect(status).toBe("ambiguous");
+    expect(plan?.kind).toBe("ambiguity");
+    expect(plan?.steps[1].action).toMatch(/uid 或 file_path/);
+  });
+
+  test("未显式要求保存时不生成 docs delegated plan", async () => {
+    const prev = process.env.MCP_ENABLE_GITNEXUS_BRIDGE;
+    process.env.MCP_ENABLE_GITNEXUS_BRIDGE = "0";
+
+    try {
+      const result = await codeInsight({
+        mode: "auto",
+      });
+
+      expect(result.isError).toBe(false);
+      const text = String((result as any).content?.[0]?.text || "");
+      const structured = (result as any).structuredContent;
+      expect(text).not.toMatch(/delegated plan/);
+      expect(structured.plan).toBeUndefined();
+      expect(structured.projectDocs).toBeUndefined();
+    } finally {
+      if (prev === undefined) {
+        delete process.env.MCP_ENABLE_GITNEXUS_BRIDGE;
+      } else {
+        process.env.MCP_ENABLE_GITNEXUS_BRIDGE = prev;
+      }
+    }
   });
 
   test("返回 docs 保存指引而不直接代写文件", async () => {
