@@ -93,6 +93,8 @@
         "item1": "첫 콜드 스타트에서는 npx 가 의존성을 확인하거나 다운로드하므로 20초 이상 걸릴 수 있습니다.",
         "item2": "GitNexus 의 일부 의존성은 tree-sitter 네이티브 모듈을 사용하며 Windows 에서는 Visual Studio Build Tools 가 필요할 수 있습니다.",
         "item3": "MCP 클라이언트가 env 를 지원하면, 미리 설치한 gitnexus CLI 를 우선 사용하고 GitNexus 타임아웃을 늘리세요.",
+        "item4": "Windows 에서 Build Tools 빠른 설치: winget install Microsoft.VisualStudio.2022.BuildTools",
+        "quickInstallTitle": "빠른 설치 명령:",
         "exampleTitle": "미리 설치한 gitnexus CLI 를 사용하는 구성 예시:"
       },
       "source": {

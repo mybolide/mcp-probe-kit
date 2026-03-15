@@ -4,6 +4,7 @@ import * as path from "node:path";
 import spawn from "cross-spawn";
 import { afterEach, describe, expect, test } from "vitest";
 import {
+  extractResolvedSymbolIdFromContext,
   prepareBridgeWorkspace,
   resolveExecutableCommand,
   resolveGitNexusBridgeCommand,
@@ -106,6 +107,20 @@ describe("gitnexus-bridge workspace preparation", () => {
     expect(reranked.changed).toBe(true);
     expect((reranked.structuredContent as any).processes[0].heuristicLabel).toBe("Login -> GenerateToken");
     expect(reranked.note).toMatch(/Top matches/i);
+  });
+
+  test("impact 可复用 context 解析出的 symbol id", () => {
+    expect(
+      extractResolvedSymbolIdFromContext({
+        target: { id: "Method:sysAuthController.js:login:18", name: "login" },
+      })
+    ).toBe("Method:sysAuthController.js:login:18");
+
+    expect(
+      extractResolvedSymbolIdFromContext({
+        symbol: { uid: "Function:src/auth.ts:login" },
+      })
+    ).toBe("Function:src/auth.ts:login");
   });
 
   test.runIf(process.platform === "win32")("Windows 下带空格路径的 cmd 可执行文件可以真实启动", async () => {

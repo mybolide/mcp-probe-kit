@@ -104,7 +104,17 @@ Concerne `code_insight`, `start_feature`, `start_bugfix` et `init_project_contex
 - Sous Windows, le premier démarrage à froid peut prendre plus de 20 secondes.
 - Certaines dépendances GitNexus utilisent des modules natifs `tree-sitter-*` et peuvent nécessiter Visual Studio Build Tools.
 
-Si vous utilisez souvent les outils de graphe sous Windows, consultez aussi le guide d'installation et la FAQ de la documentation complète.
+Recommandations sous Windows :
+
+1. Installez Visual Studio Build Tools avec la charge de travail C++.
+2. Si votre client MCP prend en charge `env`, privilégiez une CLI `gitnexus` préinstallée.
+3. Sur les environnements lents, augmentez les timeouts de connexion/appel GitNexus.
+
+Installation rapide (Windows) :
+
+```powershell
+winget install Microsoft.VisualStudio.2022.BuildTools
+```
 
 ---
 
