@@ -218,17 +218,12 @@ export function buildCodeInsightDelegatedPlan(input: {
       kind: "ambiguity",
       steps: [
         {
-          id: "inspect-candidates",
-          action: "阅读本次返回的 candidates，确认目标符号对应的 uid 或 file_path",
-          note: "若存在同名符号，优先使用 uid；需要限定文件时使用 file_path",
+          id: "consume-candidates",
+          action: "消费本次 candidates 列表，确认唯一目标符号（优先 uid，其次 file_path）",
         },
         {
           id: "rerun-with-disambiguate",
-          action: "重新调用 code_insight，并显式传入 uid 或 file_path 完成消歧",
-        },
-        {
-          id: "resume-analysis",
-          action: "消歧后再继续 context/impact 分析，必要时再决定是否保存到 docs/graph-insights",
+          action: "重新调用 code_insight，并传入 uid 或 file_path 后继续 context/impact 分析",
         },
       ],
     };
@@ -244,44 +239,32 @@ export function buildCodeInsightDelegatedPlan(input: {
     kind: "docs",
     steps: [
       {
-        id: "ensure-project-context",
-        action: projectContextExists
-          ? `确认 ${input.projectDocs.projectContextFilePath} 已存在并可更新`
-          : `检查 ${input.projectDocs.projectContextFilePath} 是否存在；若不存在，先调用 init_project_context 生成项目上下文索引`,
-        outputs: [input.projectDocs.projectContextFilePath],
+        id: "consume-result",
+        action: "先消费本次分析结果（processes/symbols/impact），确认是否满足当前问题",
+      },
+      {
+        id: "optional-save",
+        action: `如需保存，再写入 ${input.projectDocs.latestMarkdownFilePath}（文本）和 ${input.projectDocs.latestJsonFilePath}（结构化）`,
+        outputs: [input.projectDocs.latestMarkdownFilePath, input.projectDocs.latestJsonFilePath],
         note: projectContextExists
-          ? "已有项目上下文，可直接补充图谱入口"
-          : "只有 project-context.md 存在，后续图谱文档入口才可持续复用",
-      },
-      {
-        id: "save-latest-md",
-        action: `将本次 code_insight 的文本分析结果写入 ${input.projectDocs.latestMarkdownFilePath}`,
-        outputs: [input.projectDocs.latestMarkdownFilePath],
-      },
-      {
-        id: "save-archive-md",
-        action: `将本次 code_insight 的文本分析结果归档到 ${input.projectDocs.archiveMarkdownFilePath}`,
-        outputs: [input.projectDocs.archiveMarkdownFilePath],
-      },
-      {
-        id: "save-latest-json",
-        action: `将本次 code_insight 的 structuredContent 写入 ${input.projectDocs.latestJsonFilePath}`,
-        outputs: [input.projectDocs.latestJsonFilePath],
-        note: "建议保留完整结构化结果，便于后续 AI 继续读取",
-      },
-      {
-        id: "save-archive-json",
-        action: `将本次 code_insight 的 structuredContent 归档到 ${input.projectDocs.archiveJsonFilePath}`,
-        outputs: [input.projectDocs.archiveJsonFilePath],
-      },
-      {
-        id: "update-project-context-index",
-        action: `更新 ${input.projectDocs.projectContextFilePath}，在“## 📚 文档导航”加入图谱文档入口，并在“## 💡 开发时查看对应文档”加入代码图谱洞察链接`,
-        outputs: [input.projectDocs.projectContextFilePath],
-        note: `建议插入内容:\n${input.projectDocs.navigationSnippet}\n${input.projectDocs.devGuideSnippet}`,
+          ? `可选同步更新 ${input.projectDocs.projectContextFilePath} 的图谱入口`
+          : "若后续要持续沉淀，建议先补 init_project_context",
       },
     ],
   };
+}
+
+function renderUsageGuide(): string {
+  return `## 使用场景指南
+- 探索调用链: \`{ mode: "query", query: "login", goal: "理解登录认证流程" }\`
+- 深入函数上下文: \`{ mode: "context", target: "login", file_path: "src/auth/login.ts" }\`
+- 评估影响范围: \`{ mode: "impact", target: "login", direction: "upstream", file_path: "..." }\`
+- 查看代码内容: \`{ mode: "context", target: "login", include_content: true }\`
+
+## 下一步建议
+- 查询不精确: 增加 \`goal\`（例如“理解登录认证流程”）
+- 出现歧义: 传入 \`uid\` 或 \`file_path\` 重新执行
+- 需要落盘: 传 \`save_to_docs: true\`，再按 delegated plan 写入 docs/graph-insights`;
 }
 
 export function resolveCodeInsightQuery(input: {
@@ -432,6 +415,7 @@ ${executionSummary}
 
 ${ambiguityText ? `歧义候选:\n${ambiguityText}\n\n` : ""}\
 ${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}`.trim();
+    const usageGuide = renderUsageGuide();
 
     const structured = {
       status,
@@ -509,13 +493,15 @@ ${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}`.tr
 ${renderPlanSteps(delegatedPlan.steps)}
 
 ${delegatedPlan.kind === "docs" && projectDocs ? `后续操作:
-- 请先确保 ${projectDocs.projectContextFilePath} 可用，并把图谱入口挂到该索引中
-- 请将本次分析保存到 ${projectDocs.latestMarkdownFilePath}
-- 如需归档，请额外保存到 ${projectDocs.archiveMarkdownFilePath}
-- 如需结构化副本，请保存 JSON 到 ${projectDocs.latestJsonFilePath} 或 ${projectDocs.archiveJsonFilePath}` : `后续操作:
+- 如需落盘，写入 ${projectDocs.latestMarkdownFilePath} 与 ${projectDocs.latestJsonFilePath}
+- 如需长期沉淀，可再补充 ${projectDocs.projectContextFilePath} 的图谱入口` : `后续操作:
 - 请先从 candidates 中选定唯一符号
-- 重新传入 uid 或 file_path 后再继续 context / impact 分析`}`
-        : message,
+- 重新传入 uid 或 file_path 后再继续 context / impact 分析`}
+
+${usageGuide}`
+        : `${message}
+
+${usageGuide}`,
       structured
     );
   } catch (error) {

@@ -347,6 +347,12 @@ Recommended on Windows:
 2. Prefer stable local/global CLI usage for GitNexus when your MCP client supports `env`.
 3. Increase GitNexus connect/call timeouts on slower or first-run environments.
 
+Quick install command (Windows):
+
+```powershell
+winget install Microsoft.VisualStudio.2022.BuildTools
+```
+
 Example config using a preinstalled `gitnexus` CLI:
 
 ```json
