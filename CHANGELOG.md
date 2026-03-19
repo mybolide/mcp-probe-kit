@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.16] - 2026-03-19
+
+### ✨ 新功能
+
+**UI / PRD Skill Bridge 接入**
+- 新增 `skill-bridge` 模块，统一检测并桥接 `ui-ux-pro-max`、`interaction-design`、`frontend-design`
+- `start_ui` / `start_product` 输出中新增 Skill Bridge 指南区块
+- `start_ui` / `start_product` 的 `structuredContent.metadata` 新增 `skills` 状态信息
+- `start_ui` / `start_product` 的 delegated plan 新增 `skill-bridge` 步骤，明确技能调用顺序与缺失回退
+
+### 🔧 改进
+
+**UI 数据版本生效策略升级**
+- 引入会话内版本锁：当前进程不热切换 UI 数据版本，避免同会话输出漂移
+- 后台自动检查并下载最新 UI 数据，标记为“下次启动生效”
+- `sync_ui_data` 输出新增会话状态与“下次启动生效版本”说明
+
+**发布产物内嵌数据修复**
+- 新增 `postbuild` 复制步骤，将 `src/resources/ui-ux-data` 复制到 `build/resources/ui-ux-data`
+- 确保 npm 包内包含内嵌 UI 数据，离线与首启场景可直接使用
+
+### 📝 文档
+
+- README 新增 UI/PRD 工作流 Skill Bridge 说明与调用顺序
+- README 的 Data Sync Strategy 更新为“后台下载 + 下次启动生效”
+- docs i18n 版本标记更新至 `v3.0.16`
+
+---
+
 ## [3.0.15] - 2026-03-15
 
 ### 🐛 修复

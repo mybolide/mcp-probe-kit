@@ -72,7 +72,7 @@ export const uiSearchSchema = {
 
 export const syncUiDataSchema = {
   name: "sync_ui_data",
-  description: "同步 UI/UX 数据到本地缓存。从 npm 包 uipro-cli 下载最新数据，支持自动检查更新和强制同步。数据存储在 ~/.mcp-probe-kit/ui-ux-data/。",
+  description: "同步 UI/UX 数据到本地缓存。从 npm 包 uipro-cli 下载最新数据，支持自动检查更新和强制同步。数据存储在 ~/.mcp-probe-kit/ui-ux-data/，默认在下次启动时生效以保证当前会话一致性。",
   inputSchema: {
     type: "object",
     properties: {

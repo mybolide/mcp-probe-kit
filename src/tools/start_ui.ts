@@ -13,6 +13,12 @@ import { getReasoningEngine } from "./ui-ux-tools.js";
 import { DesignRequest } from "../utils/design-reasoning-engine.js";
 import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
+import {
+  buildSkillBridgePlanStep,
+  buildSkillHeaderNote,
+  detectSkillBridge,
+  renderSkillBridgeSection,
+} from "../lib/skill-bridge.js";
 import { UIReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
 import type { UIReport, RequirementsLoopReport } from "../schemas/structured-output.js";
 import { detectProjectType } from "../lib/project-detector.js";
@@ -554,6 +560,10 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
     if (profileDecision.warning) {
       headerNotes.push(profileDecision.warning);
     }
+    const skillBridge = detectSkillBridge('start_ui');
+    const skillBridgeStep = buildSkillBridgePlanStep(skillBridge);
+    const skillBridgeSection = renderSkillBridgeSection(skillBridge);
+    headerNotes.push(buildSkillHeaderNote(skillBridge));
 
     // 验证 mode 参数
     const validModes = ["auto", "manual"];
@@ -625,6 +635,7 @@ start_ui <描述> --requirements_mode=loop
       const plan = {
         mode: 'delegated',
         steps: [
+          skillBridgeStep,
           {
             id: 'loop-1',
             tool: 'ask_user',
@@ -711,7 +722,7 @@ start_ui <描述> --requirements_mode=loop
         ? LOOP_PROMPT_TEMPLATE_STRICT
         : LOOP_PROMPT_TEMPLATE_GUIDED;
 
-      const guide = header + loopTemplate
+      const guide = header + skillBridgeSection + loopTemplate
         .replace(/{description}/g, description)
         .replace(/{question_budget}/g, String(questionBudget))
         .replace(/{assumption_cap}/g, String(assumptionCap));
@@ -742,6 +753,7 @@ start_ui <描述> --requirements_mode=loop
         metadata: {
           plan,
           template: templateMeta,
+          skills: skillBridge,
         },
       };
 
@@ -869,6 +881,7 @@ ${recommendation.reasoning}
       const plan = {
         mode: 'delegated',
         steps: [
+          skillBridgeStep,
           {
             id: 'context',
             tool: 'init_project_context',
@@ -935,7 +948,7 @@ ${recommendation.reasoning}
         notes: headerNotes,
       });
 
-      const smartPlan = header + (profileDecision.resolved === 'strict' ? smartPlanStrict : smartPlanGuided);
+      const smartPlan = header + skillBridgeSection + (profileDecision.resolved === 'strict' ? smartPlanStrict : smartPlanGuided);
 
       // Create structured UI report for auto mode
       const uiReport: UIReport = {
@@ -1005,6 +1018,7 @@ ${recommendation.reasoning}
         metadata: {
           plan,
           template: templateMeta,
+          skills: skillBridge,
         },
       };
 
@@ -1078,7 +1092,7 @@ start_ui "设置页面" --framework=react
       ? PROMPT_TEMPLATE_STRICT
       : PROMPT_TEMPLATE_GUIDED;
 
-    let guide = header + baseTemplate;
+    let guide = header + skillBridgeSection + baseTemplate;
     guide = safeReplace(guide, '{description}', escapeJson(description));
     guide = safeReplace(guide, '{productType}', productType);
     guide = safeReplace(guide, '{framework}', framework);
@@ -1087,6 +1101,7 @@ start_ui "设置页面" --framework=react
     const plan = {
       mode: 'delegated',
       steps: [
+        skillBridgeStep,
         {
           id: 'context',
           tool: 'init_project_context',
@@ -1210,6 +1225,7 @@ start_ui "设置页面" --framework=react
       metadata: {
         plan,
         template: templateMeta,
+        skills: skillBridge,
       },
     };
 
