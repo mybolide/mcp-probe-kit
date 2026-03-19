@@ -218,6 +218,11 @@ This mode performs 1-2 rounds of structured clarification before entering spec/f
 - [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - UI/UX design system philosophy
 - [json-render](https://github.com/vercel-labs/json-render) - JSON template rendering engine
 
+**Skill Bridge for UI/PRD workflows:**
+- `start_ui` and `start_product` now include a Skill Bridge section in guidance and `structuredContent.metadata.skills`.
+- Recommended skill call order: `ui-ux-pro-max` → `interaction-design` → `frontend-design`.
+- If some skills are missing, workflow continues with MCP main plan and marks unavailable skills in metadata.
+
 **Why use `sync_ui_data`?**
 
 Our `start_ui` tool relies on a rich UI/UX database (colors, icons, charts, components, design patterns, etc.) to generate high-quality design systems and code. This data comes from npm package [uipro-cli](https://www.npmjs.com/package/uipro-cli), including:
@@ -229,8 +234,9 @@ Our `start_ui` tool relies on a rich UI/UX database (colors, icons, charts, comp
 
 **Data Sync Strategy:**
 1. **Embedded Data**: Synced at build time, works offline
-2. **Cached Data**: Runtime updates to `~/.mcp-probe-kit/ui-ux-data/`
-3. **Manual Sync**: Use `sync_ui_data` to force update latest data
+2. **Background Auto Sync**: Downloads latest data to `~/.mcp-probe-kit/ui-ux-data/` without changing current session output
+3. **Next-Start Activation**: Newly downloaded data is applied on next process start (keeps current session deterministic)
+4. **Manual Sync**: Use `sync_ui_data` to force refresh cache immediately (still applies next start by default)
 
 This ensures `start_ui` can generate professional-grade UI code even offline.
 

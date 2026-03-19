@@ -904,7 +904,7 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
       }
     }
 
-    // 执行同步
+    // 执行同步（下载并写入缓存，当前会话不热切换）
     throwIfAborted(context?.signal, 'sync_ui_data 已取消');
     await reportToolProgress(context, 30, 'sync_ui_data: 下载并处理数据');
 
@@ -915,19 +915,15 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
       },
     });
 
-    // 重新加载数据
     throwIfAborted(context?.signal, 'sync_ui_data 已取消');
-    await reportToolProgress(context, 92, 'sync_ui_data: 重载本地缓存');
+    await reportToolProgress(context, 92, 'sync_ui_data: 记录会话状态');
 
-    if (dataLoader) {
-      await dataLoader.reload();
-    }
-
-    const cacheDir = dataLoader?.getCacheManager().getCacheDir() || '';
-    
     // 获取同步的数据统计
     const loader = await getDataLoader();
+    const cacheDir = loader.getCacheManager().getCacheDir() || '';
+    const metadata = loader.getCacheManager().getMetadata();
     const searchEngine = loader.getSearchEngine();
+    const sessionInfo = loader.getSessionInfo();
     
     const syncedData: SyncReport = {
       summary: "UI/UX 数据同步成功",
@@ -938,6 +934,7 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
         components: (searchEngine.getCategoryData('products') || []).length,
         patterns: (searchEngine.getCategoryData('landing') || []).length,
       },
+      version: metadata?.version,
       timestamp: new Date().toISOString(),
     };
 
@@ -946,6 +943,7 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
     return okStructured(`✅ UI/UX 数据同步成功
 
 数据已更新到缓存目录: ${cacheDir}
+下载版本: ${metadata?.version || 'unknown'}
 
 **同步统计:**
 - 颜色: ${syncedData.synced.colors} 条
@@ -953,7 +951,11 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
 - 组件: ${syncedData.synced.components} 条
 - 模式: ${syncedData.synced.patterns} 条
 
-**提示:** 数据已自动重新加载，可以立即使用最新数据。
+**会话状态:**
+- 当前会话使用版本: ${sessionInfo.activeVersion || 'unknown'}（source: ${sessionInfo.source}）
+- 下次启动生效版本: ${sessionInfo.pendingVersion || metadata?.version || 'unknown'}
+
+**提示:** 为保证会话内结果一致，新数据将在下次启动后生效。
 `, syncedData, {
       schema: (await import('../schemas/output/ui-ux-tools.js')).SyncReportSchema,
     });

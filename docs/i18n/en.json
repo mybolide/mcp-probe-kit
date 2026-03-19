@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
-    "version": "v3.0.10",
+    "version": "v3.0.16",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "Quick Start",
-      "description": "Get started with MCP Probe Kit v3.0.10 in 5 minutes",
+      "description": "Get started with MCP Probe Kit v3.0.16 in 5 minutes",
       "installConfig": "Installation & Configuration"
     },
     "tools": {

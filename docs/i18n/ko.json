@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 개발 강화 툴킷 · 문서 센터",
-    "version": "v3.0.10",
+    "version": "v3.0.16",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
   },
   "sections": {
     "quickStart": {
       "title": "빠른 시작",
-      "description": "5분 안에 MCP Probe Kit v3.0.10 시작하기",
+      "description": "5분 안에 MCP Probe Kit v3.0.16 시작하기",
       "installConfig": "설치 및 구성"
     },
     "tools": {

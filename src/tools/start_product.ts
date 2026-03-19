@@ -2,6 +2,12 @@ import { parseArgs, getString, getBoolean } from "../utils/parseArgs.js";
 import { promises as fs } from "fs";
 import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
+import {
+  buildSkillBridgePlanStep,
+  buildSkillHeaderNote,
+  detectSkillBridge,
+  renderSkillBridgeSection,
+} from "../lib/skill-bridge.js";
 import { WorkflowReportSchema } from "../schemas/structured-output.js";
 import type { WorkflowReport, WorkflowStep, Artifact } from "../schemas/structured-output.js";
 import {
@@ -95,6 +101,10 @@ export async function startProduct(args: any, context?: ToolExecutionContext) {
       };
     }
 
+    const skillBridge = detectSkillBridge('start_product');
+    const skillBridgeStep = buildSkillBridgePlanStep(skillBridge);
+    const skillBridgeSection = renderSkillBridgeSection(skillBridge);
+
     const header = renderOrchestrationHeader({
       tool: 'start_product',
       goal: `完成产品设计工作流：${productName}`,
@@ -102,9 +112,10 @@ export async function startProduct(args: any, context?: ToolExecutionContext) {
         '按 delegated plan 顺序调用工具',
         '生成 PRD、原型、设计系统与 HTML 原型',
       ],
+      notes: [buildSkillHeaderNote(skillBridge)],
     });
 
-    const guidanceText = header + `# 🚀 产品设计工作流执行指导
+    const guidanceText = header + skillBridgeSection + `# 🚀 产品设计工作流执行指导
 
 基于${requirementsSource}，请按照以下步骤完成从需求到 HTML 原型的完整产品设计流程。
 
@@ -329,6 +340,7 @@ ${!skipDesignSystem ? `├── design-system.json          # 设计系统配�
     const plan = {
       mode: 'delegated',
       steps: [
+        skillBridgeStep,
         {
           id: 'context',
           tool: 'init_project_context',
@@ -501,6 +513,7 @@ ${!skipDesignSystem ? `├── design-system.json          # 设计系统配�
       ],
       metadata: {
         plan,
+        skills: skillBridge,
       },
     };
 
