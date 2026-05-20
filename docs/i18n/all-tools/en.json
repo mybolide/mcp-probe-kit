@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "All Tools - Complete List of 22 AI Development Tools | MCP Probe Kit",
-    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 4 code analysis tools, 2 Git tools, 1 generation tool, 6 project management tools, 3 UI/UX tools.",
+    "title": "All Tools - Complete List of 28 AI Development Tools | MCP Probe Kit",
+    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 4 code analysis tools, 2 Git tools, 1 generation tool, 6 project management tools, 3 UI/UX tools, and 6 memory/Cursor history tools.",
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "MCP Probe Kit provides 22 practical tools with structured output support for core and orchestration tools"
+    "subtitle": "MCP Probe Kit provides 28 practical tools with structured output support for core and orchestration tools"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -40,8 +40,13 @@
     "ask_user": "Ask User",
     "ui_design_system": "Design System",
     "ui_search": "Search UI",
-    "sync_ui_data": "Sync Data",
-    "code_insight": "Code Insight"
+    "code_insight": "Code Insight",
+    "read_memory_asset": "Read Memory",
+    "memorize_asset": "Store Memory",
+    "scan_and_extract_patterns": "Extract Patterns",
+    "cursor_list_conversations": "List Chats",
+    "cursor_search_conversations": "Search Chats",
+    "cursor_read_conversation": "Read Chat"
   },
   "categories": {
     "workflow": {
@@ -67,6 +72,10 @@
     "uiux": {
       "title": "UI/UX Design",
       "count": "3 tools"
+    },
+    "memory": {
+      "title": "Memory & Cursor History",
+      "count": "6 tools"
     }
   },
   "toolsData": {
@@ -157,6 +166,30 @@
     "code_insight": {
       "description": "Code graph insight tool, bridging GitNexus to analyze call chains, context, and impact (auto-degrades when unavailable)",
       "usage": "Refresh the GitNexus index, perform task-level call-chain/context/impact analysis, and persist results to docs/graph-insights plus the project-context index"
+    },
+    "read_memory_asset": {
+      "description": "Read the full content and metadata of a stored memory asset by asset ID",
+      "usage": "Use this after a workflow or search result already found a memory summary and you need the full reusable artifact"
+    },
+    "memorize_asset": {
+      "description": "Persist high-value code, spec, or pattern assets into the vector memory system for later reuse",
+      "usage": "Use after implementation to store reusable assets into the Qdrant + embedding memory backend"
+    },
+    "scan_and_extract_patterns": {
+      "description": "Extract reusable patterns from a code snippet, file, or directory before deciding whether to store them into memory",
+      "usage": "Use for pattern mining first, then optionally follow with memorize_asset to persist the best candidates"
+    },
+    "cursor_list_conversations": {
+      "description": "Read local Cursor conversation summaries, with optional filtering by title or workspace",
+      "usage": "Useful for resuming previous work and locating recent conversations in a specific workspace"
+    },
+    "cursor_search_conversations": {
+      "description": "Search local Cursor history messages by keyword or request id",
+      "usage": "Useful for tracing prior evidence by log snippet, issue keyword, or request id"
+    },
+    "cursor_read_conversation": {
+      "description": "Read the full local Cursor conversation timeline for a single composer_id",
+      "usage": "Useful for precisely resuming a specific historical conversation and reviewing message order and context"
     }
   }
 }

@@ -1,0 +1,48 @@
+export interface MemoryConfig {
+  qdrantUrl: string;
+  qdrantApiKey: string;
+  qdrantCollection: string;
+  embeddingUrl: string;
+  embeddingApiKey: string;
+  embeddingModel: string;
+  embeddingProvider: 'ollama' | 'openai-compatible';
+  searchLimit: number;
+  summaryMaxChars: number;
+}
+
+function normalizeBaseUrl(value: string | undefined): string {
+  return (value || '').trim().replace(/\/+$/, '');
+}
+
+function getNumberEnv(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return fallback;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function getMemoryConfig(): MemoryConfig {
+  const provider = (process.env.MEMORY_EMBEDDING_PROVIDER || 'ollama').trim().toLowerCase();
+
+  return {
+    qdrantUrl: normalizeBaseUrl(process.env.MEMORY_QDRANT_URL),
+    qdrantApiKey: (process.env.MEMORY_QDRANT_API_KEY || '').trim(),
+    qdrantCollection: (process.env.MEMORY_QDRANT_COLLECTION || 'mcp_probe_memory').trim(),
+    embeddingUrl: normalizeBaseUrl(process.env.MEMORY_EMBEDDING_URL),
+    embeddingApiKey: (process.env.MEMORY_EMBEDDING_API_KEY || '').trim(),
+    embeddingModel: (process.env.MEMORY_EMBEDDING_MODEL || 'nomic-embed-text').trim(),
+    embeddingProvider: provider === 'openai-compatible' ? 'openai-compatible' : 'ollama',
+    searchLimit: getNumberEnv('MEMORY_SEARCH_LIMIT', 3),
+    summaryMaxChars: getNumberEnv('MEMORY_SUMMARY_MAX_CHARS', 280),
+  };
+}
+
+export function isMemoryEnabled(config: MemoryConfig = getMemoryConfig()): boolean {
+  return Boolean(config.qdrantUrl && config.embeddingUrl && config.embeddingModel);
+}
+
+export function isMemoryReadEnabled(config: MemoryConfig = getMemoryConfig()): boolean {
+  return Boolean(config.qdrantUrl);
+}

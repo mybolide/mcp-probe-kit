@@ -11,6 +11,12 @@ import {
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
 import { buildBugfixGraphContext } from "../lib/gitnexus-bridge.js";
+import {
+  buildMemoryPlanStep,
+  loadMemoryInjectionContext,
+  renderMemoryGuideSection,
+} from "../lib/memory-orchestration.js";
+import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
 
 /**
  * start_bugfix 智能编排工具
@@ -362,6 +368,20 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
     const stackTrace = getString(parsedArgs.stack_trace);
     const codeContext = getString(parsedArgs.code_context);
     const projectRoot = getString(parsedArgs.project_root);
+    if (isLikelyProjectNamedRelativePath(projectRoot)) {
+      return {
+        content: [{
+          type: "text",
+          text: `拒绝执行 bugfix 编排：project_root 不能传带项目名的半相对路径，例如 ${projectRoot}。请改为传项目根目录绝对路径。`,
+        }],
+        isError: true,
+        structuredContent: {
+          error_code: "INVALID_PROJECT_ROOT",
+          rejected_project_root: projectRoot,
+          retry_hint: buildProjectRootRetryHint(projectRoot),
+        },
+      };
+    }
     const analysisMode = ((getString(parsedArgs.analysis_mode) || "tbp8").toLowerCase() === "tbp8"
       ? "tbp8"
       : "tbp8") as AnalysisMode;
@@ -409,7 +429,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
       latestMarkdownPath: "docs/graph-insights/latest.md",
       latestJsonPath: "docs/graph-insights/latest.json",
     };
-    const resolvedProjectRoot = path.resolve(projectRoot || process.cwd());
+    const resolvedProjectRoot = resolveWorkspaceRoot(projectRoot);
     const bootstrapState = {
       projectContextExists: fs.existsSync(path.join(resolvedProjectRoot, "docs", "project-context.md")),
       latestMarkdownExists: fs.existsSync(path.join(resolvedProjectRoot, "docs", "graph-insights", "latest.md")),
@@ -453,6 +473,9 @@ ${graphContext.highlights.length > 0
     : "- 任务级线索: 无"}
 - 使用方式: 先读取基线图谱，再用本次任务图谱做 TBP-4 / TBP-5 / TBP-6 的边界与真因收敛
 `;
+
+    const memoryContext = await loadMemoryInjectionContext([errorMessage, stackTrace, codeContext].filter(Boolean).join("\n"));
+    const memoryGuideSection = renderMemoryGuideSection(memoryContext);
 
     if (requirementsMode === "loop") {
       throwIfAborted(context?.signal, "start_bugfix(loop) 已取消");
@@ -533,6 +556,7 @@ ${graphContext.highlights.length > 0
             },
             outputs: [],
           },
+          ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
         ],
       };
 
@@ -543,7 +567,10 @@ ${graphContext.highlights.length > 0
           '按 Requirements Loop 规则提问并更新结构化输出',
           '满足结束条件后按 delegated plan 执行修复与测试',
         ],
-        notes: headerNotes,
+        notes: [
+          ...headerNotes,
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，优先复用历史修复经验并在结束后评估沉淀'] : []),
+        ],
       });
 
       const loopTemplate = profileDecision.resolved === 'strict'
@@ -555,7 +582,8 @@ ${graphContext.highlights.length > 0
         .replace(/{analysis_mode}/g, analysisMode)
         .replace(/{question_budget}/g, String(questionBudget))
         .replace(/{assumption_cap}/g, String(assumptionCap)))
-        + graphGuideSection;
+        + graphGuideSection
+        + memoryGuideSection;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -615,7 +643,10 @@ ${graphContext.highlights.length > 0
         '按 delegated plan 顺序调用工具',
         '完成修复并生成回归测试',
       ],
-      notes: headerNotes,
+      notes: [
+        ...headerNotes,
+        ...(memoryContext.enabled ? ['记忆系统: 已启用，必要时先读取相似历史资产'] : []),
+      ],
     });
 
     const promptTemplate = profileDecision.resolved === 'strict'
@@ -627,7 +658,8 @@ ${graphContext.highlights.length > 0
       .replace(/{stack_trace}/g, stackTrace)
       .replace(/{analysis_mode}/g, analysisMode)
       .replace(/{stack_trace_section}/g, stackTraceSection))
-      + graphGuideSection;
+      + graphGuideSection
+      + memoryGuideSection;
 
     const plan = {
       mode: 'delegated',
@@ -663,6 +695,7 @@ ${graphContext.highlights.length > 0
           },
           outputs: [],
         },
+        ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
       ],
     };
 

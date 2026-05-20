@@ -19,6 +19,13 @@ export { askUser } from "./ask_user.js";
 // UI/UX Pro Max 工具
 export { uiDesignSystem, uiSearch, syncUiData } from "./ui-ux-tools.js";
 export { startUi } from "./start_ui.js";
+// 记忆工具
+export { readMemoryAsset } from "./read_memory_asset.js";
+export { memorizeAsset } from "./memorize_asset.js";
+export { scanAndExtractPatterns } from "./scan_and_extract_patterns.js";
+export { cursorListConversations } from "./cursor_list_conversations.js";
+export { cursorSearchConversations } from "./cursor_search_conversations.js";
+export { cursorReadConversation } from "./cursor_read_conversation.js";
 // 产品设计工作流
 export { startProduct } from "./start_product.js";
 // Git 工具

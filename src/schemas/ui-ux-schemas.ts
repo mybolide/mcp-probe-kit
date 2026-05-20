@@ -109,6 +109,10 @@ export const startUiSchema = {
         type: "string",
         description: "模板名称（可选，不提供则自动生成）",
       },
+      project_root: {
+        type: "string",
+        description: "项目根目录绝对路径。建议显式传入；如果存在 docs 或模板等相对路径解析，应统一相对该项目根目录处理，避免依赖客户端 cwd。",
+      },
       template_profile: {
         type: "string",
         description: "模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）",

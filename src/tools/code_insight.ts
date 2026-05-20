@@ -14,6 +14,7 @@ import {
   throwIfAborted,
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
+import { isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
 
 const ALLOWED_MODES = new Set<CodeInsightMode>(["auto", "query", "context", "impact"]);
 const ALLOWED_DIRECTIONS = new Set<CodeInsightDirection>(["upstream", "downstream"]);
@@ -348,6 +349,20 @@ export async function codeInsight(args: any, context?: ToolExecutionContext) {
     const filePath = getString(parsedArgs.file_path);
     const repo = getString(parsedArgs.repo);
     const projectRoot = getString(parsedArgs.project_root);
+    if (isLikelyProjectNamedRelativePath(projectRoot)) {
+      return {
+        content: [{
+          type: "text",
+          text: `拒绝执行 code_insight：project_root 不能传带项目名的半相对路径，例如 ${projectRoot}。请改为传项目根目录绝对路径。`,
+        }],
+        isError: true,
+        structuredContent: {
+          error_code: "INVALID_PROJECT_ROOT",
+          rejected_project_root: projectRoot,
+          retry_hint: buildProjectRootRetryHint(projectRoot),
+        },
+      };
+    }
     const docsDirName = getString(parsedArgs.docs_dir) || "docs";
     const goal = getString(parsedArgs.goal);
     const taskContext = getString(parsedArgs.task_context);

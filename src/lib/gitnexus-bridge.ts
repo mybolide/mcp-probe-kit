@@ -5,6 +5,7 @@ import spawn from "cross-spawn";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { resolveWorkspaceRoot } from "./workspace-root.js";
 import {
   isAbortError,
   throwIfAborted,
@@ -171,17 +172,14 @@ function resolvePreferredRepoName(requestedRepo?: string): string | undefined {
 }
 
 function resolveRequestedProjectRoot(projectRoot?: string): string {
-  const requested = projectRoot?.trim();
-  if (requested) {
-    return path.resolve(requested);
-  }
-  return path.resolve(process.cwd());
+  return resolveWorkspaceRoot(projectRoot);
 }
 
-function inferCandidateRepoNames(baseDir: string = process.cwd()): string[] {
+function inferCandidateRepoNames(baseDir?: string): string[] {
+  const resolvedBaseDir = resolveWorkspaceRoot(baseDir);
   const candidates: string[] = [];
 
-  const pkgPath = path.join(baseDir, "package.json");
+  const pkgPath = path.join(resolvedBaseDir, "package.json");
   try {
     if (fs.existsSync(pkgPath)) {
       const parsed = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as Record<string, unknown>;
@@ -194,7 +192,7 @@ function inferCandidateRepoNames(baseDir: string = process.cwd()): string[] {
     // ignore parse failure
   }
 
-  const base = path.basename(baseDir).trim();
+  const base = path.basename(resolvedBaseDir).trim();
   if (base) {
     candidates.push(base);
   }

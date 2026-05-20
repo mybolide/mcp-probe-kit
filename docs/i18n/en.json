@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "MCP Probe Kit - AI-Powered Complete Development Toolkit | 22 Tools Covering Entire Development Lifecycle",
-    "description": "MCP Probe Kit provides 22 AI-powered development tools covering requirements analysis, code development, quality assurance, bug fixing, and release management. Supports Cursor, Cline, Claude Desktop with 100% structured output.",
+    "title": "MCP Probe Kit - AI-Powered Complete Development Toolkit | 28 Tools Covering Entire Development Lifecycle",
+    "description": "MCP Probe Kit provides 28 AI-powered development tools covering requirements analysis, code development, quality assurance, bug fixing, and release management. Supports Cursor, Cline, Claude Desktop with 100% structured output.",
     "keywords": "MCP Probe Kit, AI development tools, code generation, code review, Git tools, UI development, development efficiency, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {
@@ -26,7 +26,7 @@
     },
     "tools": {
       "title": "Tools Documentation",
-      "description": "Complete reference for 22 practical tools, including code graph insight and orchestration workflows",
+      "description": "Complete reference for 28 practical tools, including code graph insight and orchestration workflows",
       "allTools": "All Tools"
     },
     "guides": {
@@ -63,7 +63,7 @@
   },
   "gettingStarted": {
     "title": "Installation & Configuration",
-    "subtitle": "Get started with MCP Probe Kit v3.0.10 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
+    "subtitle": "Get started with MCP Probe Kit v3.0.16 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
     "breadcrumb": {
       "home": "Documentation",
       "quickStart": "Quick Start",
@@ -86,6 +86,44 @@
         "note": "Note:",
         "noteText": "Need to manually run",
         "updateText": "to update version"
+      },
+      "memory": {
+        "title": "Memory System Setup (Qdrant + Embedding)",
+        "descriptionPrefix": "If you want to use",
+        "descriptionSuffix": ", you need to configure both a vector database and an embedding service.",
+        "optionA": {
+          "title": "Option A: Qdrant + Ollama (recommended)"
+        },
+        "optionB": {
+          "title": "Option B: Qdrant + OpenAI-Compatible Embedding API"
+        },
+        "env": {
+          "title": "Environment Variables",
+          "item1": ": Qdrant endpoint, required by all memory features",
+          "item2": ": Optional Qdrant API key",
+          "item3": ": Collection name, default ",
+          "item4Prefix": ": ",
+          "item4Middle": " or ",
+          "item5": ": Embedding API endpoint",
+          "item6": ": Embedding API key, usually empty for Ollama",
+          "item7Prefix": ": Embedding model name, default ",
+          "item8Prefix": ": Default search result limit, default ",
+          "item9Prefix": ": Summary max characters, default "
+        },
+        "behavior": {
+          "title": "Behavior Notes",
+          "item1Prefix": "Memory writes require ",
+          "item1Middle": " and ",
+          "item2Prefix": "Read-only memory access (such as read by ID) only requires ",
+          "item3Prefix": "The first write auto-creates the Qdrant collection and uses ",
+          "item4": "Vector dimension is inferred automatically from the first embedding response"
+        },
+        "cursor": {
+          "title": "Cursor History Tools",
+          "item1": " do not depend on Qdrant or embeddings",
+          "item2": "Supports local Cursor installations on Windows / macOS / Linux",
+          "item3Prefix": "Reads the local Cursor database from "
+        }
       },
       "windowsGraph": {
         "title": "Windows Notes for Graph Tools",
@@ -204,7 +242,7 @@
     "subtitle": "Smoothly migrate from v2.x to v3.0, understand breaking changes and new features",
     "overview": {
       "title": "Overview",
-      "description": "MCP Probe Kit v3.0 is a major version update, streamlined to 22 tools, bringing more powerful features and better development experience.",
+      "description": "MCP Probe Kit v3.0 is a major version update, streamlined to 28 tools, bringing more powerful features and better development experience.",
       "migrationTime": "Migration Time:",
       "migrationTimeText": "Most projects can complete migration in 10-15 minutes, v2.x core tools remain compatible in v3.0."
     },
@@ -212,7 +250,7 @@
       "title": "Major Changes",
       "toolsOptimization": {
         "title": "1. Tools Streamlining",
-        "description": "v2.x: 39 tools → v3.x: 22 tools (removed low-frequency tools, kept high-value tools)"
+        "description": "v2.x: 39 tools → v3.x: 28 tools (removed low-frequency tools, kept high-value tools)"
       },
       "workflows": {
         "title": "2. New Workflow Orchestration",
@@ -284,7 +322,7 @@
     "subtitle": "MCP Probe Kit integrates complete development process, best practices guide from requirements to deployment",
     "overview": {
       "title": "Complete Development Process",
-      "description": "MCP Probe Kit's 22 tools cover the complete development process from requirements analysis to code deployment. Here are the recommended best practices.",
+      "description": "MCP Probe Kit's 28 tools cover the complete development process from requirements analysis to code deployment. Here are the recommended best practices.",
       "coreIdea": "Core Philosophy:",
       "coreIdeaText": "Chain the entire development process through workflow orchestration tools (start_*), making AI your development assistant."
     },
@@ -539,7 +577,7 @@
     "resources": {
       "title": "More Resources",
       "allTools": "Complete Tools Reference",
-      "allToolsDesc": "View detailed descriptions of all 22 tools",
+      "allToolsDesc": "View detailed descriptions of all 28 tools",
       "gettingStarted": "Installation & Configuration",
       "gettingStartedDesc": "Quick start guide",
       "migration": "Migration Guide",

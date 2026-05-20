@@ -11,6 +11,12 @@ import {
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
 import { buildFeatureGraphContext } from "../lib/gitnexus-bridge.js";
+import {
+  buildMemoryPlanStep,
+  loadMemoryInjectionContext,
+  renderMemoryGuideSection,
+} from "../lib/memory-orchestration.js";
+import { resolveWorkspaceRoot, toWorkspacePath, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
 
 /**
  * start_feature 智能编排工具
@@ -234,6 +240,20 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
     let description = getString(parsedArgs.description);
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
     const projectRoot = getString(parsedArgs.project_root);
+    if (isLikelyProjectNamedRelativePath(projectRoot)) {
+      return {
+        content: [{
+          type: "text",
+          text: `拒绝执行 feature 编排：project_root 不能传带项目名的半相对路径，例如 ${projectRoot}。请改为传项目根目录绝对路径。`,
+        }],
+        isError: true,
+        structuredContent: {
+          error_code: "INVALID_PROJECT_ROOT",
+          rejected_project_root: projectRoot,
+          retry_hint: buildProjectRootRetryHint(projectRoot),
+        },
+      };
+    }
     const templateProfile = getString(parsedArgs.template_profile) || "auto";
     const requirementsMode = getString(parsedArgs.requirements_mode) || "steady";
     const maxRounds = getNumber(parsedArgs.loop_max_rounds, 2);
@@ -277,7 +297,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       latestMarkdownPath: `${docsDir}/graph-insights/latest.md`,
       latestJsonPath: `${docsDir}/graph-insights/latest.json`,
     };
-    const resolvedProjectRoot = path.resolve(projectRoot || process.cwd());
+    const resolvedProjectRoot = resolveWorkspaceRoot(projectRoot);
     const bootstrapState = {
       projectContextExists: fs.existsSync(path.join(resolvedProjectRoot, docsDir, "project-context.md")),
       latestMarkdownExists: fs.existsSync(path.join(resolvedProjectRoot, docsDir, "graph-insights", "latest.md")),
@@ -319,6 +339,9 @@ ${graphContext.highlights.length > 0
     ]
       .filter(Boolean)
       .join("\n");
+
+    const memoryContext = await loadMemoryInjectionContext(`${featureName}\n${description}`);
+    const memoryGuideSection = renderMemoryGuideSection(memoryContext);
 
     if (requirementsMode === "loop") {
       throwIfAborted(context?.signal, "start_feature(loop) 已取消");
@@ -398,6 +421,7 @@ ${graphContext.highlights.length > 0
             },
             outputs: [],
           },
+          ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
         ],
       };
 
@@ -408,16 +432,21 @@ ${graphContext.highlights.length > 0
           '按 Requirements Loop 规则提问并更新结构化输出',
           '满足结束条件后生成规格并完成估算',
         ],
-        notes: [`模板档位: ${templateProfile}`, graphStatusNote],
+        notes: [
+          `模板档位: ${templateProfile}`,
+          graphStatusNote,
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，按需读取历史资产并在结束后评估是否沉淀'] : []),
+        ],
       });
 
       const guide = (header + LOOP_PROMPT_TEMPLATE
         .replace(/{feature_name}/g, featureName)
         .replace(/{description}/g, description)
-        .replace(/{project_root}/g, (projectRoot || process.cwd()).replace(/\\/g, "/"))
+        .replace(/{project_root}/g, toWorkspacePath(projectRoot))
         .replace(/{question_budget}/g, String(questionBudget))
         .replace(/{assumption_cap}/g, String(assumptionCap)))
-        + graphGuideSection;
+        + graphGuideSection
+        + memoryGuideSection;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -472,7 +501,11 @@ ${graphContext.highlights.length > 0
         '按 delegated plan 顺序调用工具',
         '生成规格文档并完成工作量估算',
       ],
-        notes: [`模板档位: ${templateProfile}`, graphStatusNote],
+        notes: [
+          `模板档位: ${templateProfile}`,
+          graphStatusNote,
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，先复用摘要资产，必要时读取详情'] : []),
+        ],
     });
 
     const guide = (header + PROMPT_TEMPLATE
@@ -481,7 +514,8 @@ ${graphContext.highlights.length > 0
       .replace(/{docs_dir}/g, docsDir)
       .replace(/{project_root}/g, (projectRoot || process.cwd()).replace(/\\/g, "/"))
       .replace(/{template_profile}/g, templateProfile))
-      + graphGuideSection;
+      + graphGuideSection
+      + memoryGuideSection;
 
     const plan = {
       mode: 'delegated',
@@ -516,6 +550,7 @@ ${graphContext.highlights.length > 0
           },
           outputs: [],
         },
+        ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
       ],
     };
 

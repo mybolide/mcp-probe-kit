@@ -9,6 +9,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveWorkspaceRoot } from './workspace-root.js';
 
 export interface ProjectDetectionResult {
   language: string;           // 'javascript', 'python', 'java', 'go', 'rust', 'cpp', 'php', 'ruby', 'csharp', 'unknown'
@@ -153,7 +154,8 @@ const detectionRules: Record<string, DetectionRule> = {
 /**
  * 检测项目类型
  */
-export function detectProjectType(projectRoot: string = process.cwd()): ProjectDetectionResult {
+export function detectProjectType(projectRoot?: string): ProjectDetectionResult {
+  const resolvedProjectRoot = resolveWorkspaceRoot(projectRoot);
   const indicators: string[] = [];
   let detectedLanguage = 'unknown';
   let detectedFramework: string | undefined;
@@ -164,7 +166,7 @@ export function detectProjectType(projectRoot: string = process.cwd()): ProjectD
   for (const [language, rule] of Object.entries(detectionRules)) {
     // 检查语言特征文件是否存在
     const languageIndicator = rule.indicators.find(indicator => {
-      const filePath = path.join(projectRoot, indicator);
+      const filePath = path.join(resolvedProjectRoot, indicator);
       return fs.existsSync(filePath);
     });
     
@@ -174,7 +176,7 @@ export function detectProjectType(projectRoot: string = process.cwd()): ProjectD
       confidence = 50; // 基础置信度
       
       // 检测框架
-      const frameworkResult = detectFramework(projectRoot, language, rule);
+      const frameworkResult = detectFramework(resolvedProjectRoot, language, rule);
       if (frameworkResult) {
         detectedFramework = frameworkResult.framework;
         detectedCategory = frameworkResult.category;
@@ -188,7 +190,7 @@ export function detectProjectType(projectRoot: string = process.cwd()): ProjectD
   
   // 如果没有检测到语言，尝试通过文件扩展名判断
   if (detectedLanguage === 'unknown') {
-    const languageByExtension = detectLanguageByExtension(projectRoot);
+    const languageByExtension = detectLanguageByExtension(resolvedProjectRoot);
     if (languageByExtension) {
       detectedLanguage = languageByExtension.language;
       confidence = languageByExtension.confidence;

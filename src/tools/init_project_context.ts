@@ -3,6 +3,7 @@ import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { ProjectContext } from "../schemas/output/project-tools.js";
 import { detectProjectType } from "../lib/project-detector.js";
+import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -161,14 +162,13 @@ function generateDevGuide(docs: Array<{ file: string; title: string; purpose: st
 /**
  * 生成项目上下文文档指导
  */
-async function generateProjectContext(docsDir: string, projectRoot: string = process.cwd()) {
+async function generateProjectContext(docsDir: string, projectRoot?: string) {
   try {
     // 检测项目类型
-    const detection = detectProjectType(projectRoot);
-    const projectInfo = getProjectInfo(projectRoot);
+    const resolvedRoot = resolveWorkspaceRoot(projectRoot);
+    const detection = detectProjectType(resolvedRoot);
+    const projectInfo = getProjectInfo(resolvedRoot);
     const docs = getDocumentList(detection.category);
-    
-    const resolvedRoot = path.resolve(projectRoot);
     const projectContextPath = toPosixPath(path.join(resolvedRoot, docsDir, 'project-context.md'));
     const projectContextExists = fs.existsSync(path.join(resolvedRoot, docsDir, 'project-context.md'));
     const graphDocsRoot = toPosixPath(path.join(resolvedRoot, docsDir, 'graph-insights'));
@@ -774,7 +774,7 @@ ${template}
  */
 export async function initProjectContext(args: any) {
   let docsDir: string = DEFAULT_DOCS_DIR;
-  let projectRoot: string = process.cwd();
+  let projectRoot: string = resolveWorkspaceRoot();
   
   try {
     // 智能参数解析，支持自然语言输入
@@ -784,7 +784,7 @@ export async function initProjectContext(args: any) {
     }>(args, {
       defaultValues: {
         docs_dir: DEFAULT_DOCS_DIR,
-        project_root: process.cwd()
+        project_root: resolveWorkspaceRoot()
       },
       primaryField: "docs_dir",
       fieldAliases: {
@@ -794,7 +794,21 @@ export async function initProjectContext(args: any) {
     });
 
     docsDir = getString(parsedArgs.docs_dir) || DEFAULT_DOCS_DIR;
-    projectRoot = getString(parsedArgs.project_root) || process.cwd();
+    projectRoot = getString(parsedArgs.project_root) || resolveWorkspaceRoot();
+    if (isLikelyProjectNamedRelativePath(projectRoot)) {
+      return {
+        content: [{
+          type: "text",
+          text: `拒绝执行项目上下文初始化：project_root 不能传带项目名的半相对路径，例如 ${projectRoot}。请改为传项目根目录绝对路径。`,
+        }],
+        isError: true,
+        structuredContent: {
+          error_code: "INVALID_PROJECT_ROOT",
+          rejected_project_root: projectRoot,
+          retry_hint: buildProjectRootRetryHint(projectRoot),
+        },
+      };
+    }
 
     // 生成项目上下文
     return await generateProjectContext(docsDir, projectRoot);

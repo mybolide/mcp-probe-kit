@@ -401,6 +401,100 @@ force: false
 verbose: true`
     }
   ],
+  memory: [
+    {
+      name: 'read_memory_asset',
+      description: '按 asset_id 读取已存储 memory 资产的完整内容和元数据',
+      schema: 'ReadMemoryAssetSchema',
+      params: [
+        { name: 'asset_id', type: 'string', required: true, desc: '资产唯一 ID' }
+      ],
+      usage: '当工作流或搜索结果已经找到 memory 摘要后，用它读取完整可复用资产',
+      example: `// 使用示例
+你: 请使用 read_memory_asset 工具读取资产
+
+asset_id: "auth-pattern-001"`
+    },
+    {
+      name: 'memorize_asset',
+      description: '将高价值代码、规格或模式资产写入向量 memory 系统，便于后续复用',
+      schema: 'MemorizeAssetSchema',
+      params: [
+        { name: 'title', type: 'string', required: true, desc: '资产标题' },
+        { name: 'content', type: 'string', required: true, desc: '资产正文内容' },
+        { name: 'kind', type: 'string', required: false, desc: '资产类型：code、spec、pattern、doc 等' },
+        { name: 'tags', type: 'array', required: false, desc: '资产标签列表' }
+      ],
+      usage: '在实现完成后，把可复用资产写入 Qdrant + embedding memory 后端',
+      example: `// 使用示例
+你: 请使用 memorize_asset 工具保存认证模式
+
+title: "JWT auth middleware pattern"
+content: "中间件实现与使用约定..."
+kind: "pattern"`
+    },
+    {
+      name: 'scan_and_extract_patterns',
+      description: '从代码片段、文件或目录中提取可复用模式，再决定是否写入 memory',
+      schema: 'PatternExtractionSchema',
+      params: [
+        { name: 'input', type: 'string', required: false, desc: '代码片段、文件路径或目录路径' },
+        { name: 'path', type: 'string', required: false, desc: '待扫描的文件或目录路径' },
+        { name: 'max_patterns', type: 'number', required: false, desc: '最多提取的模式数量，默认 10' }
+      ],
+      usage: '先做模式挖掘，再按需配合 memorize_asset 持久化最有价值的候选项',
+      example: `// 使用示例
+你: 请使用 scan_and_extract_patterns 工具分析 src/auth
+
+path: "src/auth"
+max_patterns: 5`
+    },
+    {
+      name: 'cursor_list_conversations',
+      description: '读取本地 Cursor 对话摘要，支持按标题或工作区过滤',
+      schema: 'CursorConversationListSchema',
+      params: [
+        { name: 'workspace', type: 'string', required: false, desc: '工作区路径过滤' },
+        { name: 'query', type: 'string', required: false, desc: '标题或摘要关键词' },
+        { name: 'limit', type: 'number', required: false, desc: '返回数量，默认 20' }
+      ],
+      usage: '用于恢复历史工作，快速定位某个工作区下最近的 Cursor 对话',
+      example: `// 使用示例
+你: 请使用 cursor_list_conversations 工具列出最近对话
+
+workspace: "e:/workspace/github/mcp-probe-kit"
+limit: 10`
+    },
+    {
+      name: 'cursor_search_conversations',
+      description: '按关键词或 request id 搜索本地 Cursor 历史消息',
+      schema: 'CursorConversationSearchSchema',
+      params: [
+        { name: 'query', type: 'string', required: true, desc: '关键词、日志片段或 request id' },
+        { name: 'workspace', type: 'string', required: false, desc: '工作区路径过滤' },
+        { name: 'limit', type: 'number', required: false, desc: '返回数量，默认 20' }
+      ],
+      usage: '适合按日志片段、问题关键词或 request id 追溯历史证据',
+      example: `// 使用示例
+你: 请使用 cursor_search_conversations 工具搜索历史记录
+
+query: "GitNexus"
+limit: 10`
+    },
+    {
+      name: 'cursor_read_conversation',
+      description: '读取单个 composer_id 对应的完整本地 Cursor 对话时间线',
+      schema: 'CursorConversationReadSchema',
+      params: [
+        { name: 'composer_id', type: 'string', required: true, desc: 'Cursor 对话 composer_id' }
+      ],
+      usage: '用于精确恢复某个历史对话，并查看完整消息顺序与上下文',
+      example: `// 使用示例
+你: 请使用 cursor_read_conversation 工具读取完整对话
+
+composer_id: "composer-123"`
+    }
+  ],
 
   // 工具分类元数据
   categories: {
@@ -433,6 +527,11 @@ verbose: true`
       icon: '🎨',
       title: 'UI/UX 设计',
       description: '设计系统、组件目录、模板搜索与渲染'
+    },
+    memory: {
+      icon: '🧠',
+      title: 'Memory 与 Cursor History',
+      description: '可复用资产记忆、模式抽取与本地 Cursor 对话读取'
     }
   }
 };

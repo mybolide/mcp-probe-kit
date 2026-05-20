@@ -22,7 +22,9 @@ import {
   startFeature, startBugfix, startOnboard,
   startRalph, interview, askUser,
   uiDesignSystem, uiSearch, syncUiData, startUi,
-  startProduct, gitWorkReport
+  startProduct, gitWorkReport,
+  readMemoryAsset, memorizeAsset, scanAndExtractPatterns,
+  cursorListConversations, cursorSearchConversations, cursorReadConversation
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
@@ -596,6 +598,18 @@ async function executeTool(
       return await startProduct((args ?? {}) as any, context);
     case "git_work_report":
       return await gitWorkReport(args as any);
+    case "read_memory_asset":
+      return await readMemoryAsset(args as any);
+    case "memorize_asset":
+      return await memorizeAsset(args as any);
+    case "scan_and_extract_patterns":
+      return await scanAndExtractPatterns(args as any);
+    case "cursor_list_conversations":
+      return await cursorListConversations(args as any);
+    case "cursor_search_conversations":
+      return await cursorSearchConversations(args as any);
+    case "cursor_read_conversation":
+      return await cursorReadConversation(args as any);
     default:
       throw new Error(`未知工具: ${name}`);
   }

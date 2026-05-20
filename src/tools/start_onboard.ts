@@ -8,6 +8,7 @@ import {
   throwIfAborted,
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
+import { isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
 
 /**
  * start_onboard 智能编排工具
@@ -124,6 +125,20 @@ export async function startOnboard(args: any, context?: ToolExecutionContext) {
 
     const projectPath = getString(parsedArgs.project_path) || ".";
     const docsDir = getString(parsedArgs.docs_dir) || "docs";
+    if (isLikelyProjectNamedRelativePath(projectPath)) {
+      return {
+        content: [{
+          type: "text",
+          text: `拒绝执行项目上手编排：project_path 不能传带项目名的半相对路径，例如 ${projectPath}。请改为传项目根目录绝对路径。`,
+        }],
+        isError: true,
+        structuredContent: {
+          error_code: "INVALID_PROJECT_ROOT",
+          rejected_project_root: projectPath,
+          retry_hint: buildProjectRootRetryHint(projectPath),
+        },
+      };
+    }
 
     throwIfAborted(context?.signal, "start_onboard 已取消");
     await reportToolProgress(context, 85, "start_onboard: 生成执行计划");

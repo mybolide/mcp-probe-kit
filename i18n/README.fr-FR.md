@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP est une boîte à outils de sondage au niveau du protocole et d'approvisionnement en contexte conçue pour les geeks. Ce n'est pas seulement une collection de 21 outils, mais un système de perception qui permet à l'IA de vraiment "comprendre" l'intention de votre projet.
+> Zhishi MCP est une boîte à outils de sondage au niveau du protocole et d'approvisionnement en contexte conçue pour les geeks. Ce n'est pas seulement une collection de 28 outils, mais un système de perception qui permet à l'IA de vraiment "comprendre" l'intention de votre projet.
 
 **Langues**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | **Français** | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 Boîte à Outils de Développement Complète Alimentée par l'IA - Couvrant l'Ensemble du Cycle de Vie du Développement
 
-Un puissant serveur MCP (Model Context Protocol) fournissant **21 outils** couvrant le flux de travail complet de l'analyse produit au lancement final (Exigences → Conception → Développement → Qualité → Lancement), tous les outils supportent la **sortie structurée**.
+Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvrant le flux de travail complet de l'analyse produit au lancement final (Exigences → Conception → Développement → Qualité → Lancement), tous les outils supportent la **sortie structurée**.
 
 **🎉 Mise à Jour Majeure v3.0**: Nombre d'outils simplifié, focus sur les compétences clés, élimination de la paralysie du choix, permettant à l'IA de faire plus de travail natif
 
@@ -35,7 +35,7 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **21 outils** couvr
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Démarrage Rapide](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Configuration en 5 minutes
-- [Tous les Outils](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Liste complète de 21 outils
+- [Tous les Outils](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Liste complète de 28 outils
 - [Meilleures Pratiques](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Guide complet du flux de travail de développement
 - [Guide de Migration v3.0](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Mise à niveau de v2.x vers v3.0
 
@@ -43,22 +43,61 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **21 outils** couvr
 
 ## ✨ Fonctionnalités Principales
 
-### 📦 21 Outils
+### 📦 28 Outils
 
 - **🔄 Orchestration de Flux de Travail** (6 outils) - Flux de travail de développement complexes en un clic
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 Analyse de Code** (3 outils) - Qualité du code et refactorisation
-  - `code_review`, `fix_bug`, `refactor`
+- **🔍 Analyse de Code** (4 outils) - Qualité du code, refactorisation et graph insight
+  - `code_review`, `code_insight`, `fix_bug`, `refactor`
 - **📝 Outils Git** (2 outils) - Commits Git et rapports de travail
   - `gencommit`, `git_work_report`
 - **⚡ Génération de Code** (1 outil) - Génération de tests
   - `gentest`
-- **📦 Gestion de Projet** (7 outils) - Initialisation de projet et gestion des exigences
+- **📦 Gestion de Projet** (6 outils) - Initialisation de projet et gestion des exigences
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
-- **🎨 Outils UI/UX** (3 outils) - Systèmes de conception et synchronisation de données
+- **🎨 Outils UI/UX** (3 outils) - Systèmes de conception et synchronisation des données UI
   - `ui_design_system`, `ui_search`, `sync_ui_data`
+- **🧠 Memory & Cursor History** (6 outils) - Mémoire d’actifs réutilisables et lecture locale des conversations Cursor
+  - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
 
-Pour plus de détails sur les fonctionnalités, l'installation et l'utilisation, veuillez consulter la [documentation complète en anglais](../README.md) ou visiter [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/).
+### 🧠 Pont de graphe de code (GitNexus)
+
+- `code_insight` utilise GitNexus par défaut pour l’analyse query/context/impact
+- Le bridge lance par défaut `npx -y gitnexus@latest mcp` afin de limiter le risque de paquets obsolètes
+- `init_project_context` génère des documents de graphe de base sous `docs/graph-insights/`
+- `start_feature` et `start_bugfix` rafraîchissent l’index GitNexus et exploitent des indices de graphe par tâche
+- Si GitNexus est indisponible, le serveur applique un fallback automatique sans casser l’orchestration
+
+### 🐛 RCA TBP en 8 étapes pour les workflows de bug
+
+- `start_bugfix` applique par défaut une analyse de cause racine TBP en 8 étapes avant la réparation
+- `fix_bug` renvoie une structure TBP couvrant phénomène, timeline, pistes exclues, frontière, cause racine, preuves et plan de correction
+
+### 🧠 Récupération mémoire et Cursor History
+
+- Les outils mémoire utilisent **Qdrant** comme base de données vectorielle
+- Modes d’embedding supportés :
+  - `ollama`
+  - `openai-compatible`
+- Les outils Cursor history lisent directement la base locale de Cursor via Node.js
+- Cursor history prend actuellement en charge Windows, macOS et Linux
+
+**Outils mémoire :**
+- `memorize_asset` - Persister des actifs réutilisables de code/spec/pattern dans la mémoire vectorielle
+- `read_memory_asset` - Lire le contenu complet d’un actif via `asset_id`
+- `scan_and_extract_patterns` - Extraire des patterns réutilisables depuis du code/un fichier/un dossier
+
+**Variables d’environnement clés pour la mémoire :**
+- `MEMORY_QDRANT_URL`
+- `MEMORY_EMBEDDING_URL`
+- `MEMORY_EMBEDDING_MODEL`
+- optionnelles : `MEMORY_QDRANT_API_KEY`, `MEMORY_QDRANT_COLLECTION`, `MEMORY_EMBEDDING_API_KEY`, `MEMORY_EMBEDDING_PROVIDER`
+
+### 🎯 Sortie structurée
+
+Les outils cœur et d’orchestration supportent la **sortie structurée** et renvoient du JSON lisible par machine pour améliorer le chaînage des outils et le suivi d’état.
+
+Pour les détails complets sur l’installation, GitNexus, la configuration mémoire et tous les workflows, consultez la [documentation anglaise complète](../README.md) ou visitez [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/).
 
 ---
 

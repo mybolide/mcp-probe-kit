@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "すべてのツール - 22個のAI開発ツール完全リスト | MCP Probe Kit",
-    "description": "MCP Probe Kit 完全ツールリスト：6個のワークフローオーケストレーションツール、4個のコード分析ツール、2個のGitツール、1個の生成ツール、6個のプロジェクト管理ツール、3個のUI/UXツール。",
+    "title": "すべてのツール - 28個のAI開発ツール完全リスト | MCP Probe Kit",
+    "description": "MCP Probe Kit 完全ツールリスト：6個のワークフローオーケストレーションツール、4個のコード分析ツール、2個のGitツール、1個の生成ツール、6個のプロジェクト管理ツール、3個のUI/UXツール、6個の Memory / Cursor History ツール。",
     "keywords": "AI開発ツール, コード生成ツール, コードレビューツール, Git自動化, UI生成, コードリファクタリング, パフォーマンス最適化, セキュリティスキャン"
   },
   "page": {
-    "subtitle": "MCP Probe Kitは22個の実用的なツールを提供し、コアおよびオーケストレーションツールは構造化出力をサポートします"
+    "subtitle": "MCP Probe Kitは28個の実用的なツールを提供し、コアおよびオーケストレーションツールは構造化出力をサポートします"
   },
   "search": {
     "placeholder": "🔍 ツール名または説明を検索...",
@@ -41,7 +41,13 @@
     "ui_design_system": "デザインシステム",
     "ui_search": "UI検索",
     "sync_ui_data": "データ同期",
-    "code_insight": "コード洞察"
+    "code_insight": "コード洞察",
+    "read_memory_asset": "メモリ読取",
+    "memorize_asset": "メモリ保存",
+    "scan_and_extract_patterns": "パターン抽出",
+    "cursor_list_conversations": "会話一覧",
+    "cursor_search_conversations": "会話検索",
+    "cursor_read_conversation": "会話読取"
   },
   "categories": {
     "workflow": {
@@ -67,6 +73,10 @@
     "uiux": {
       "title": "UI/UXデザイン",
       "count": "3個"
+    },
+    "memory": {
+      "title": "Memory と Cursor History",
+      "count": "6個"
     }
   },
   "toolsData": {
