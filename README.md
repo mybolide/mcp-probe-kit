@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <img src="docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
   <h1>知时MCP | mcp-probe-kit</h1>
   <p><strong>Know the Context, Feed the Moment.</strong></p>
@@ -13,7 +13,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 22 tools—it's a context-aware system that helps AI agents grasp what you're building.
+> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 28 tools—it's a context-aware system that helps AI agents grasp what you're building.
 
 **Languages**: [English](README.md) | [简体中文](i18n/README.zh-CN.md) | [日本語](i18n/README.ja-JP.md) | [한국어](i18n/README.ko-KR.md) | [Español](i18n/README.es-ES.md) | [Français](i18n/README.fr-FR.md) | [Deutsch](i18n/README.de-DE.md) | [Português (BR)](i18n/README.pt-BR.md)
 
@@ -24,7 +24,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server providing **22 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
+A powerful MCP (Model Context Protocol) server providing **28 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
 
 **🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
@@ -39,7 +39,7 @@ A powerful MCP (Model Context Protocol) server providing **22 tools** covering t
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 22 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 28 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -47,7 +47,7 @@ A powerful MCP (Model Context Protocol) server providing **22 tools** covering t
 
 ## ✨ Core Features
 
-### 📦 22 Tools
+### 📦 28 Tools
 
 - **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -59,8 +59,10 @@ A powerful MCP (Model Context Protocol) server providing **22 tools** covering t
   - `gentest`
 - **📦 Project Management** (6 tools) - Project initialization and requirements management
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
-- **🎨 UI/UX Tools** (3 tools) - Design systems and data synchronization
+- **🎨 UI/UX Utilities** (3 tools) - Design systems and UI data synchronization
   - `ui_design_system`, `ui_search`, `sync_ui_data`
+- **🧠 Memory & Cursor History** (6 tools) - Reusable asset memory and local Cursor conversation retrieval
+  - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
 
 ### 🧠 Code Graph Bridge (GitNexus)
 
@@ -81,6 +83,96 @@ A powerful MCP (Model Context Protocol) server providing **22 tools** covering t
 - `start_bugfix` defaults to Toyota-style TBP 8-step root-cause analysis before repair
 - `fix_bug` returns a structured TBP skeleton covering phenomenon, timeline, ruled-out paths, boundary, root cause, evidence, and repair plan
 - This makes bug, regression, anomaly, and "why didn't it work" investigations follow analyze-first discipline instead of patching symptoms
+
+### 🧠 Memory Retrieval and Cursor History
+
+- Memory tools use **Qdrant** as the vector database backend
+- Embedding service supports two modes:
+  - `ollama`
+  - `openai-compatible`
+- Cursor history tools read the local Cursor database directly through Node.js, without Python bridge
+- Cursor history currently supports:
+  - Windows: `%APPDATA%\\Cursor\\User\\globalStorage\\state.vscdb`
+  - macOS: `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`
+  - Linux: `~/.config/Cursor/User/globalStorage/state.vscdb`
+
+**Memory tools:**
+- `memorize_asset` - Persist reusable code/spec/pattern assets into vector memory
+- `read_memory_asset` - Read full asset content by `asset_id`
+- `scan_and_extract_patterns` - Extract reusable patterns from code/file/directory before deciding whether to persist
+
+**Memory backend and embedding configuration:**
+- Vector database: **Qdrant**
+- Recommended local setup: `Qdrant + Ollama`
+- Supported embedding providers:
+  - `ollama`
+  - `openai-compatible`
+- Required environment variables for memory write/search:
+  - `MEMORY_QDRANT_URL`
+  - `MEMORY_EMBEDDING_URL`
+  - `MEMORY_EMBEDDING_MODEL`
+- Optional environment variables:
+  - `MEMORY_QDRANT_API_KEY`
+  - `MEMORY_QDRANT_COLLECTION` (default: `mcp_probe_memory`)
+  - `MEMORY_EMBEDDING_API_KEY`
+  - `MEMORY_EMBEDDING_PROVIDER` (`ollama` by default)
+  - `MEMORY_SEARCH_LIMIT` (default: `3`)
+  - `MEMORY_SUMMARY_MAX_CHARS` (default: `280`)
+- Behavior notes:
+  - Read-only memory access only requires `MEMORY_QDRANT_URL`
+  - Memory write is enabled only when `MEMORY_QDRANT_URL`, `MEMORY_EMBEDDING_URL`, and `MEMORY_EMBEDDING_MODEL` are all configured
+  - The Qdrant collection is auto-created on first write, and vector dimension is inferred from the first embedding response
+
+**Recommended local memory setup (Qdrant + Ollama):**
+```bash
+docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
+ollama pull nomic-embed-text
+```
+
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "ollama",
+        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
+        "MEMORY_EMBEDDING_MODEL": "nomic-embed-text",
+        "MEMORY_SEARCH_LIMIT": "3",
+        "MEMORY_SUMMARY_MAX_CHARS": "280"
+      }
+    }
+  }
+}
+```
+
+**OpenAI-compatible embedding setup:**
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+        "MEMORY_EMBEDDING_URL": "https://your-embedding-endpoint/v1/embeddings",
+        "MEMORY_EMBEDDING_API_KEY": "your-api-key",
+        "MEMORY_EMBEDDING_MODEL": "text-embedding-3-small"
+      }
+    }
+  }
+}
+```
+
+**Cursor history tools:**
+- `cursor_list_conversations` - List recent local Cursor conversations by title/workspace
+- `cursor_search_conversations` - Search local Cursor history by keyword or request id
+- `cursor_read_conversation` - Read a single local Cursor conversation timeline by `composer_id`
 
 ### 🎯 Structured Output
 
@@ -206,7 +298,7 @@ This mode performs 1-2 rounds of structured clarification before entering spec/f
 
 ### 🎨 UI/UX Pro Max
 
-3 UI/UX tools with `start_ui` as the unified entry point:
+4 UI/UX tools with `start_ui` as the unified entry point:
 - `start_ui` - One-click UI development (supports intelligent mode) (orchestration tool)
 - `ui_design_system` - Intelligent design system generation
 - `ui_search` - UI/UX data search (BM25 algorithm)
@@ -338,6 +430,116 @@ Use in config file:
   }
 }
 ```
+
+### Optional Memory System Setup
+
+If you want to use `memorize_asset`, `read_memory_asset`, and `scan_and_extract_patterns`, you need both:
+
+1. A **Qdrant** vector database
+2. An **embedding service** in either `ollama` or `openai-compatible` mode
+
+#### Option A: Qdrant + Ollama
+
+Start Qdrant with Docker:
+
+```bash
+docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
+```
+
+Start Ollama and pull the default embedding model:
+
+```bash
+ollama pull nomic-embed-text
+```
+
+Recommended MCP config env:
+
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "ollama",
+        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
+        "MEMORY_EMBEDDING_MODEL": "nomic-embed-text",
+        "MEMORY_SEARCH_LIMIT": "3",
+        "MEMORY_SUMMARY_MAX_CHARS": "280"
+      }
+    }
+  }
+}
+```
+
+#### Option B: Qdrant + OpenAI-Compatible Embedding API
+
+Start Qdrant with Docker:
+
+```bash
+docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
+```
+
+Then point the embedding config to an OpenAI-compatible `/embeddings` endpoint:
+
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_QDRANT_API_KEY": "",
+        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+        "MEMORY_EMBEDDING_URL": "https://your-embedding-endpoint/v1/embeddings",
+        "MEMORY_EMBEDDING_API_KEY": "your-api-key",
+        "MEMORY_EMBEDDING_MODEL": "text-embedding-3-small",
+        "MEMORY_SEARCH_LIMIT": "3",
+        "MEMORY_SUMMARY_MAX_CHARS": "280"
+      }
+    }
+  }
+}
+```
+
+#### Memory Environment Variables
+
+- `MEMORY_QDRANT_URL`: Qdrant base URL, required for all memory features
+- `MEMORY_QDRANT_API_KEY`: Optional Qdrant API key
+- `MEMORY_QDRANT_COLLECTION`: Collection name, default `mcp_probe_memory`
+- `MEMORY_EMBEDDING_PROVIDER`: `ollama` or `openai-compatible`
+- `MEMORY_EMBEDDING_URL`: Embedding endpoint URL
+- `MEMORY_EMBEDDING_API_KEY`: Optional for Ollama, usually required for hosted OpenAI-compatible providers
+- `MEMORY_EMBEDDING_MODEL`: Default is `nomic-embed-text`
+- `MEMORY_SEARCH_LIMIT`: Default search result count is `3`
+- `MEMORY_SUMMARY_MAX_CHARS`: Default summary truncation length is `280`
+
+#### Notes
+
+- Memory write capability is enabled only when `MEMORY_QDRANT_URL`, `MEMORY_EMBEDDING_URL`, and `MEMORY_EMBEDDING_MODEL` are configured
+- Memory read capability only requires `MEMORY_QDRANT_URL`
+- Qdrant collections are auto-created on first write with `Cosine` distance
+- Vector size is inferred from the first embedding response
+
+### Cursor History Support
+
+Cursor local history tools do not require Qdrant or embedding configuration.
+
+Supported platforms:
+
+- Windows
+- macOS
+- Linux
+
+Requirements:
+
+- Cursor must be installed locally
+- Cursor local database must exist under `User/globalStorage/state.vscdb`
+- Compatibility depends on Cursor's current local database schema
 
 ### Windows Notes for Graph Tools
 

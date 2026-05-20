@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP는 기크를 위해 제작된 프로토콜 수준의 탐지 및 컨텍스트 공급 도구 상자입니다. 단순히 21개 도구의 집합이 아니라, AI가 프로젝트 의도를 진정으로 "이해"할 수 있게 하는 인식 시스템입니다.
+> Zhishi MCP는 기크를 위해 제작된 프로토콜 수준의 탐지 및 컨텍스트 공급 도구 상자입니다. 단순히 28개 도구의 집합이 아니라, AI가 프로젝트 의도를 진정으로 "이해"할 수 있게 하는 인식 시스템입니다.
 
 **언어**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | **한국어** | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI 기반 완전한 개발 툴킷 - 전체 개발 라이프사이클 커버
 
-제품 분석부터 최종 릴리스까지 전체 워크플로우(요구사항 → 설계 → 개발 → 품질 → 릴리스)를 커버하는 **21개 도구**를 제공하는 강력한 MCP (Model Context Protocol) 서버입니다. 모든 도구가 **구조화된 출력**을 지원합니다.
+제품 분석부터 최종 릴리스까지 전체 워크플로우(요구사항 → 설계 → 개발 → 품질 → 릴리스)를 커버하는 **28개 도구**를 제공하는 강력한 MCP (Model Context Protocol) 서버입니다. 모든 도구가 **구조화된 출력**을 지원합니다.
 
 **🎉 v3.0 주요 업데이트**: 도구 수 간소화, 핵심 역량에 집중, 선택 혼란 제거, AI가 더 많은 네이티브 작업 수행
 
@@ -35,7 +35,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [빠른 시작](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5분 안에 설정
-- [모든 도구](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 21개 도구 전체 목록
+- [모든 도구](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 28개 도구 전체 목록
 - [모범 사례](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 완전한 개발 워크플로우 가이드
 - [v3.0 마이그레이션 가이드](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x에서 v3.0으로 업그레이드
 
@@ -43,20 +43,55 @@
 
 ## ✨ 핵심 기능
 
-### 📦 21개 도구
+### 📦 28개 도구
 
 - **🔄 워크플로우 오케스트레이션** (6개) - 원클릭 복잡한 개발 워크플로우
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 코드 분석** (3개) - 코드 품질 및 리팩토링
-  - `code_review`, `fix_bug`, `refactor`
+- **🔍 코드 분석** (4개) - 코드 품질, 리팩토링, 그래프 인사이트
+  - `code_review`, `code_insight`, `fix_bug`, `refactor`
 - **📝 Git 도구** (2개) - Git 커밋 및 작업 보고서
   - `gencommit`, `git_work_report`
 - **⚡ 코드 생성** (1개) - 테스트 생성
   - `gentest`
-- **📦 프로젝트 관리** (7개) - 프로젝트 초기화 및 요구사항 관리
+- **📦 프로젝트 관리** (6개) - 프로젝트 초기화 및 요구사항 관리
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
-- **🎨 UI/UX 도구** (3개) - 디자인 시스템 및 데이터 동기화
+- **🎨 UI/UX 도구** (3개) - 디자인 시스템 및 UI 데이터 동기화
   - `ui_design_system`, `ui_search`, `sync_ui_data`
+- **🧠 Memory 및 Cursor History** (6개) - 재사용 가능한 자산 메모리와 로컬 Cursor 대화 읽기
+  - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
+
+### 🧠 코드 그래프 브리지 (GitNexus)
+
+- `code_insight` 는 기본적으로 GitNexus 를 사용해 query/context/impact 분석을 수행합니다
+- 브리지는 기본적으로 `npx -y gitnexus@latest mcp` 를 실행해 오래된 패키지 위험을 줄입니다
+- `init_project_context` 는 `docs/graph-insights/` 아래에 베이스라인 그래프 문서를 생성합니다
+- `start_feature` 와 `start_bugfix` 는 GitNexus 인덱스를 새로고침하고 작업 단위 그래프 힌트를 사용합니다
+- GitNexus 를 사용할 수 없더라도 오케스트레이션을 깨지 않고 자동으로 폴백합니다
+
+### 🐛 버그 워크플로우용 TBP 8단계 RCA
+
+- `start_bugfix` 는 기본적으로 수정 전에 TBP 8단계 근본 원인 분석을 수행합니다
+- `fix_bug` 는 현상, 타임라인, 제외한 경로, 경계, 근본 원인, 증거, 수정 계획을 담은 TBP 구조를 반환합니다
+
+### 🧠 Memory Retrieval 및 Cursor History
+
+- 메모리 도구는 **Qdrant** 를 벡터 데이터베이스로 사용합니다
+- 지원하는 임베딩 모드:
+  - `ollama`
+  - `openai-compatible`
+- Cursor history 도구는 Node.js 로 로컬 Cursor 데이터베이스를 직접 읽습니다
+- Cursor history 는 현재 Windows, macOS, Linux 를 지원합니다
+
+**메모리 도구:**
+- `memorize_asset` - 재사용 가능한 코드/명세/패턴 자산을 벡터 메모리에 저장
+- `read_memory_asset` - `asset_id` 로 자산의 전체 내용을 읽기
+- `scan_and_extract_patterns` - 코드/파일/디렉터리에서 재사용 가능한 패턴 추출
+
+**메모리용 핵심 환경 변수:**
+- `MEMORY_QDRANT_URL`
+- `MEMORY_EMBEDDING_URL`
+- `MEMORY_EMBEDDING_MODEL`
+- 선택 항목: `MEMORY_QDRANT_API_KEY`, `MEMORY_QDRANT_COLLECTION`, `MEMORY_EMBEDDING_API_KEY`, `MEMORY_EMBEDDING_PROVIDER`
 
 ### 🎯 구조화된 출력
 

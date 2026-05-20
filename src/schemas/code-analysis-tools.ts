@@ -46,7 +46,7 @@ export const codeAnalysisToolSchemas = [
         },
         project_root: {
           type: "string",
-          description: "项目根目录。当前客户端未把工作区作为进程 cwd 传进来时，建议显式指定",
+          description: "项目根目录绝对路径。建议显式传入；当调用里还包含相对路径参数时，应统一相对该项目根目录解析，避免依赖客户端 cwd。",
         },
         goal: {
           type: "string",

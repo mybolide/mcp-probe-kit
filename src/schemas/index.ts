@@ -12,6 +12,7 @@ import { orchestrationToolSchemas } from "./orchestration-tools.js";
 import { interviewToolSchemas } from "./interview-tools.js";
 import { uiUxSchemas } from "./ui-ux-schemas.js";
 import { productDesignSchemas } from "./product-design-schemas.js";
+import { memoryToolSchemas } from "./memory-tools.js";
 
 // 合并所有工具 schemas
 export const allToolSchemas = [
@@ -25,4 +26,5 @@ export const allToolSchemas = [
   ...interviewToolSchemas,
   ...uiUxSchemas,
   ...productDesignSchemas,
+  ...memoryToolSchemas,
 ];

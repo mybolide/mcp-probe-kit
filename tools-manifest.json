@@ -1,10 +1,10 @@
 {
-  "version": "3.0.5",
+  "version": "3.0.16",
   "protocol": "2025-11-25",
-  "totalTools": 20,
+  "totalTools": 28,
   "toolsets": {
     "core": {
-      "description": "9 个核心工具（日常高频）",
+      "description": "9 core tools (daily high-frequency)",
       "count": 9,
       "tools": [
         "gencommit",
@@ -18,8 +18,20 @@
         "estimate"
       ]
     },
+    "memory": {
+      "description": "6 memory & cursor history tools",
+      "count": 6,
+      "tools": [
+        "read_memory_asset",
+        "memorize_asset",
+        "scan_and_extract_patterns",
+        "cursor_list_conversations",
+        "cursor_search_conversations",
+        "cursor_read_conversation"
+      ]
+    },
     "ui": {
-      "description": "4 个 UI/UX 工具（推荐使用 start_ui 统一入口）",
+      "description": "4 UI/UX tools (recommend using start_ui unified entry)",
       "count": 4,
       "tools": [
         "start_ui",
@@ -29,11 +41,12 @@
       ]
     },
     "workflow": {
-      "description": "20 个工作流工具（包含 core + 编排 + 交互 + UI）",
-      "count": 20,
+      "description": "28 workflow tools (includes core + orchestration + interactive + UI + memory)",
+      "count": 28,
       "tools": [
         "gencommit",
         "code_review",
+        "code_insight",
         "gentest",
         "refactor",
         "fix_bug",
@@ -41,6 +54,7 @@
         "init_project",
         "init_project_context",
         "estimate",
+        "git_work_report",
         "start_feature",
         "start_bugfix",
         "start_onboard",
@@ -51,18 +65,55 @@
         "ask_user",
         "ui_design_system",
         "ui_search",
-        "sync_ui_data"
+        "sync_ui_data",
+        "read_memory_asset",
+        "memorize_asset",
+        "scan_and_extract_patterns",
+        "cursor_list_conversations",
+        "cursor_search_conversations",
+        "cursor_read_conversation"
       ]
     },
     "full": {
-      "description": "所有 20 个工具",
-      "count": 20,
-      "note": "默认工具集，包含所有工具"
+      "description": "All 28 tools",
+      "count": 28,
+      "note": "Default toolset, includes all tools"
     }
   },
   "categories": {
+    "code-analysis": {
+      "description": "Code analysis tools (4)",
+      "tools": [
+        "code_review",
+        "code_insight",
+        "gentest",
+        "refactor"
+      ]
+    },
+    "project-management": {
+      "description": "Project management tools (6)",
+      "tools": [
+        "init_project",
+        "init_project_context",
+        "add_feature",
+        "fix_bug",
+        "estimate",
+        "git_work_report"
+      ]
+    },
+    "memory-cursor-history": {
+      "description": "Memory & Cursor History tools (6)",
+      "tools": [
+        "read_memory_asset",
+        "memorize_asset",
+        "scan_and_extract_patterns",
+        "cursor_list_conversations",
+        "cursor_search_conversations",
+        "cursor_read_conversation"
+      ]
+    },
     "orchestration": {
-      "description": "智能编排工具（6 个）",
+      "description": "Intelligent orchestration tools (6)",
       "tools": [
         "start_feature",
         "start_bugfix",
@@ -72,29 +123,21 @@
         "start_ralph"
       ]
     },
-    "daily": {
-      "description": "日常工具（9 个）",
+    "git": {
+      "description": "Git tools (1)",
       "tools": [
-        "gencommit",
-        "code_review",
-        "gentest",
-        "refactor",
-        "fix_bug",
-        "add_feature",
-        "init_project",
-        "init_project_context",
-        "estimate"
+        "gencommit"
       ]
     },
     "interactive": {
-      "description": "交互工具（2 个）",
+      "description": "Interactive tools (2)",
       "tools": [
         "interview",
         "ask_user"
       ]
     },
     "ui-ux": {
-      "description": "UI/UX 工具（3 个，不含编排工具）",
+      "description": "UI/UX tools (3, excluding orchestration tools)",
       "tools": [
         "ui_design_system",
         "ui_search",
@@ -103,10 +146,10 @@
     }
   },
   "structuredOutput": {
-    "description": "支持结构化输出的工具（v2.0+）",
-    "version": "3.0.0",
+    "description": "Tools supporting structured output (v2.0+)",
+    "version": "3.0.16",
     "guidanceOnly": {
-      "description": "指南型工具（返回 okText）- AI 应根据指南执行任务，Schema 供参考",
+      "description": "Guidance-type tools (return okText) - AI should execute tasks according to guidance, Schema for reference",
       "count": 6,
       "tools": [
         "fix_bug",
@@ -118,10 +161,11 @@
       ]
     },
     "dataDriven": {
-      "description": "数据驱动工具（返回 okStructured）- 返回真实的执行计划或数据",
-      "count": 14,
+      "description": "Data-driven tools (return okStructured) - Return actual execution plans or data",
+      "count": 22,
       "tools": [
         "gencommit",
+        "code_insight",
         "start_feature",
         "start_bugfix",
         "start_onboard",
@@ -134,11 +178,19 @@
         "ask_user",
         "ui_design_system",
         "ui_search",
-        "sync_ui_data"
+        "sync_ui_data",
+        "git_work_report",
+        "read_memory_asset",
+        "memorize_asset",
+        "scan_and_extract_patterns",
+        "cursor_list_conversations",
+        "cursor_search_conversations",
+        "cursor_read_conversation"
       ]
     },
     "schemas": {
-      "gencommit": "CommitMessageSchema (reference only)",
+      "gencommit": "CommitMessageSchema",
+      "code_insight": "CodeInsightSchema",
       "fix_bug": "BugAnalysisSchema (reference only)",
       "add_feature": "FeatureSpecSchema (reference only)",
       "estimate": "EstimateSchema (reference only)",
@@ -157,16 +209,23 @@
       "ask_user": "UserQuestionSchema",
       "ui_design_system": "DesignSystemSchema",
       "ui_search": "UISearchResultSchema",
-      "sync_ui_data": "SyncReportSchema"
+      "sync_ui_data": "SyncReportSchema",
+      "git_work_report": "GitWorkReportSchema",
+      "read_memory_asset": "MemoryAssetSchema",
+      "memorize_asset": "MemorizeResultSchema",
+      "scan_and_extract_patterns": "PatternExtractionSchema",
+      "cursor_list_conversations": "ConversationListSchema",
+      "cursor_search_conversations": "ConversationSearchSchema",
+      "cursor_read_conversation": "ConversationDetailSchema"
     },
     "coverage": {
-      "total": 20,
-      "completed": 20,
+      "total": 28,
+      "completed": 28,
       "percentage": 100
     }
   },
   "v3Changes": {
-    "description": "v3.0 重大变更：工具精简 51%",
+    "description": "v3.0 major changes: 51% tool reduction",
     "removed": {
       "count": 19,
       "tools": [
@@ -191,27 +250,50 @@
         "render_ui"
       ],
       "reasons": {
-        "start_review": "直接使用 code_review 工具即可",
-        "start_refactor": "直接使用 refactor 工具即可",
-        "start_api": "AI 可直接生成 API",
-        "start_doc": "AI 可直接生成文档",
-        "start_release": "低频操作，手动进行更合适",
-        "security_scan": "功能已集成到 code_review",
-        "perf": "功能已集成到 code_review",
-        "genchangelog": "低频操作，AI 可直接生成",
-        "genpr": "AI 可直接写 PR 描述",
-        "resolve_conflict": "极低频操作",
-        "gendoc": "AI 可直接生成代码注释",
-        "genapi": "AI 可直接生成 API 文档",
-        "gensql": "AI 可直接生成 SQL",
-        "genreadme": "低频操作",
-        "gen_mock": "AI 可直接生成 Mock 数据",
-        "gen_prd": "已集成到 start_product",
-        "gen_prototype": "已集成到 start_product",
-        "init_component_catalog": "start_ui 内部调用",
-        "render_ui": "start_ui 内部调用"
+        "start_review": "Use code_review tool directly",
+        "start_refactor": "Use refactor tool directly",
+        "start_api": "AI can generate API directly",
+        "start_doc": "AI can generate documentation directly",
+        "start_release": "Low-frequency operation, manual is more appropriate",
+        "security_scan": "Functionality integrated into code_review",
+        "perf": "Functionality integrated into code_review",
+        "genchangelog": "Low-frequency operation, AI can generate directly",
+        "genpr": "AI can write PR description directly",
+        "resolve_conflict": "Extremely low-frequency operation",
+        "gendoc": "AI can generate code comments directly",
+        "genapi": "AI can generate API documentation directly",
+        "gensql": "AI can generate SQL directly",
+        "genreadme": "Low-frequency operation",
+        "gen_mock": "AI can generate Mock data directly",
+        "gen_prd": "Integrated into start_product",
+        "gen_prototype": "Integrated into start_product",
+        "init_component_catalog": "Called internally by start_ui",
+        "render_ui": "Called internally by start_ui"
       }
     },
-    "philosophy": "专注核心竞争力，减少工具选择困难，让 AI 做更多原生工作"
+    "added": {
+      "count": 8,
+      "tools": [
+        "code_insight",
+        "git_work_report",
+        "read_memory_asset",
+        "memorize_asset",
+        "scan_and_extract_patterns",
+        "cursor_list_conversations",
+        "cursor_search_conversations",
+        "cursor_read_conversation"
+      ],
+      "reasons": {
+        "code_insight": "GitNexus bridge for graph-aware code analysis",
+        "git_work_report": "Generate work reports from git history",
+        "read_memory_asset": "Read stored memory assets from Qdrant",
+        "memorize_asset": "Store memory assets to Qdrant with embeddings",
+        "scan_and_extract_patterns": "Extract and memorize patterns from codebase",
+        "cursor_list_conversations": "List Cursor conversation history",
+        "cursor_search_conversations": "Search Cursor conversations by keyword",
+        "cursor_read_conversation": "Read full Cursor conversation content"
+      }
+    },
+    "philosophy": "Focus on core competencies, reduce tool selection difficulty, let AI do more native work"
   }
 }

@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP は、ギーク向けに作られたプロトコルレベルの探査とコンテキスト供給ツールキットです。単なる21個のツールの集まりではなく、AIがプロジェクトの意図を本当に「理解」できるようにする知覚システムです。
+> Zhishi MCP は、ギーク向けに作られたプロトコルレベルの探査とコンテキスト供給ツールキットです。単なる28個のツールの集まりではなく、AIがプロジェクトの意図を本当に「理解」できるようにする知覚システムです.
 
 **言語**: [English](../README.md) | [简体中文](README.zh-CN.md) | **日本語** | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI駆動の完全開発ツールキット - 開発ライフサイクル全体をカバー
 
-強力な MCP (Model Context Protocol) サーバーで、製品分析から最終リリースまでの完全なワークフロー（要件 → 設計 → 開発 → 品質 → リリース）をカバーする **21のツール** を提供します。すべてのツールが**構造化出力**をサポートしています。
+強力な MCP (Model Context Protocol) サーバーで、製品分析から最終リリースまでの完全なワークフロー（要件 → 設計 → 開発 → 品質 → リリース）をカバーする **28のツール** を提供します。すべてのツールが**構造化出力**をサポートしています。
 
 **🎉 v3.0 メジャーアップデート**: ツール数を整理し、コア機能に集中、選択の迷いを解消し、AIにより多くのネイティブ作業を実行させます
 
@@ -35,7 +35,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [クイックスタート](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分でセットアップ
-- [全ツール](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 21ツールの完全リスト
+- [全ツール](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 28ツールの完全リスト
 - [ベストプラクティス](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完全な開発ワークフローガイド
 - [v3.0 移行ガイド](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.xからv3.0へのアップグレード
 
@@ -43,20 +43,55 @@
 
 ## ✨ コア機能
 
-### 📦 21のツール
+### 📦 28のツール
 
 - **🔄 ワークフローオーケストレーション** (6ツール) - ワンクリックで複雑な開発ワークフロー
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 コード分析** (3ツール) - コード品質とリファクタリング
-  - `code_review`, `fix_bug`, `refactor`
+- **🔍 コード分析** (4ツール) - コード品質、リファクタリング、グラフインサイト
+  - `code_review`, `code_insight`, `fix_bug`, `refactor`
 - **📝 Gitツール** (2ツール) - Gitコミットと作業レポート
   - `gencommit`, `git_work_report`
 - **⚡ コード生成** (1ツール) - テスト生成
   - `gentest`
-- **📦 プロジェクト管理** (7ツール) - プロジェクト初期化と要件管理
+- **📦 プロジェクト管理** (6ツール) - プロジェクト初期化と要件管理
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
-- **🎨 UI/UXツール** (3ツール) - デザインシステムとデータ同期
+- **🎨 UI/UXツール** (3ツール) - デザインシステムとUIデータ同期
   - `ui_design_system`, `ui_search`, `sync_ui_data`
+- **🧠 Memory と Cursor History** (6ツール) - 再利用可能な資産メモリとローカル Cursor 会話の読み取り
+  - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
+
+### 🧠 コードグラフブリッジ (GitNexus)
+
+- `code_insight` は既定で GitNexus を使用し、query/context/impact 分析を実行します
+- ブリッジは既定で `npx -y gitnexus@latest mcp` を起動し、古いパッケージを掴むリスクを下げます
+- `init_project_context` は `docs/graph-insights/` にベースラインのグラフ文書を生成します
+- `start_feature` と `start_bugfix` は GitNexus インデックスを更新し、タスク単位のグラフ手掛かりを利用します
+- GitNexus が使えない場合でも、オーケストレーションを壊さず自動でフォールバックします
+
+### 🐛 バグフロー向け TBP 8 ステップ RCA
+
+- `start_bugfix` は既定で修正前に TBP 8 ステップの根本原因分析を行います
+- `fix_bug` は現象、タイムライン、除外した経路、境界、根本原因、証拠、修正計画を含む TBP 構造を返します
+
+### 🧠 Memory Retrieval と Cursor History
+
+- メモリツールは **Qdrant** をベクターデータベースとして使用します
+- サポートする埋め込みモード:
+  - `ollama`
+  - `openai-compatible`
+- Cursor history ツールは Node.js でローカル Cursor データベースを直接読み取ります
+- Cursor history は現在 Windows、macOS、Linux をサポートします
+
+**メモリツール:**
+- `memorize_asset` - 再利用可能なコード/仕様/パターン資産をベクターメモリへ保存
+- `read_memory_asset` - `asset_id` で資産の完全な内容を読む
+- `scan_and_extract_patterns` - コード/ファイル/ディレクトリから再利用可能なパターンを抽出
+
+**メモリ用の主要環境変数:**
+- `MEMORY_QDRANT_URL`
+- `MEMORY_EMBEDDING_URL`
+- `MEMORY_EMBEDDING_MODEL`
+- オプション: `MEMORY_QDRANT_API_KEY`, `MEMORY_QDRANT_COLLECTION`, `MEMORY_EMBEDDING_API_KEY`, `MEMORY_EMBEDDING_PROVIDER`
 
 ### 🎯 構造化出力
 

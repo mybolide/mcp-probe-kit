@@ -23,7 +23,7 @@ export const orchestrationToolSchemas = [
         },
         project_root: {
           type: "string",
-          description: "项目根目录。当前客户端未把工作区作为进程 cwd 传进来时，建议显式指定",
+          description: "项目根目录绝对路径。建议显式传入；docs_dir 等相对路径参数应统一相对该项目根目录解析，避免依赖客户端 cwd。",
         },
         template_profile: {
           type: "string",
@@ -70,7 +70,7 @@ export const orchestrationToolSchemas = [
         },
         project_root: {
           type: "string",
-          description: "项目根目录。当前客户端未把工作区作为进程 cwd 传进来时，建议显式指定",
+          description: "项目根目录绝对路径。建议显式传入；docs_dir 等相对路径参数应统一相对该项目根目录解析，避免依赖客户端 cwd。",
         },
         analysis_mode: {
           type: "string",
@@ -109,7 +109,7 @@ export const orchestrationToolSchemas = [
       properties: {
         project_path: {
           type: "string",
-          description: "项目路径。可选，默认当前目录",
+          description: "项目根目录绝对路径。建议显式传入；如果还传 docs_dir 等相对路径，应统一相对该项目根目录解析。",
         },
         docs_dir: {
           type: "string",

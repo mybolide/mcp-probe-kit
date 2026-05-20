@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ 新功能
 
+**Memory & Cursor History 工具集（6 个新工具）**
+- 新增 `read_memory_asset`：从 Qdrant 读取已存储的记忆资产
+- 新增 `memorize_asset`：将记忆资产存储到 Qdrant，支持 Ollama / OpenAI-compatible embedding
+- 新增 `scan_and_extract_patterns`：扫描代码库并提取模式到记忆系统
+- 新增 `cursor_list_conversations`：列出本地 Cursor 对话历史
+- 新增 `cursor_search_conversations`：按关键词搜索 Cursor 对话
+- 新增 `cursor_read_conversation`：读取完整 Cursor 对话内容
+- 支持 Qdrant 向量存储与自动 collection 创建
+- 支持 Windows / macOS / Linux 本地 Cursor 数据库读取
+- 环境变量配置：`MEMORY_QDRANT_URL`、`MEMORY_EMBEDDING_PROVIDER`、`MEMORY_EMBEDDING_URL` 等
+
+**Git 工作报告工具**
+- 新增 `git_work_report`：从 git 历史生成工作报告，支持按作者、时间范围、分支筛选
+
 **UI / PRD Skill Bridge 接入**
 - 新增 `skill-bridge` 模块，统一检测并桥接 `ui-ux-pro-max`、`interaction-design`、`frontend-design`
 - `start_ui` / `start_product` 输出中新增 Skill Bridge 指南区块
@@ -18,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `start_ui` / `start_product` 的 delegated plan 新增 `skill-bridge` 步骤，明确技能调用顺序与缺失回退
 
 ### 🔧 改进
+
+**工具清单更新**
+- 工具总数从 20 增至 **28**
+- 新增分类：Memory & Cursor History (6)
+- 更新分类：Code Analysis (3 → 4)、Project Management (7 → 6)
+- `tools-manifest.json` 同步更新至 v3.0.16
 
 **UI 数据版本生效策略升级**
 - 引入会话内版本锁：当前进程不热切换 UI 数据版本，避免同会话输出漂移
@@ -33,6 +53,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README 新增 UI/PRD 工作流 Skill Bridge 说明与调用顺序
 - README 的 Data Sync Strategy 更新为“后台下载 + 下次启动生效”
 - docs i18n 版本标记更新至 `v3.0.16`
+
+**多语言 README 全面同步**
+- 德文/西班牙文/法文/葡语 README 从旧版短文档升级到与英文主 README 同级的信息密度
+- 日文/韩文 README 补齐缺失的新章节与配置说明
+- 所有语言 README 统一更新至 28 工具、新分类、Memory & Cursor History、GitNexus bridge、TBP workflow、Qdrant 配置等核心章节
+- 覆盖语言：de-DE、es-ES、fr-FR、pt-BR、ja-JP、ko-KR、zh-CN
+
+**文档站点 i18n 完善**
+- `docs/pages/getting-started.html` 清理所有中文 fallback，统一使用英文默认文案 + i18n 键
+- `docs/i18n/*.json` 补齐 Memory、Cursor History、GitNexus 相关翻译键
+- 站点四语言（en/zh-CN/ja/ko）翻译覆盖率达到 100%
+
+**元数据文件更新**
+- README 新增 Memory & Cursor History 工具使用说明与配置示例
+- `tools-manifest.json` 补充 v3.0 新增工具说明与移除工具原因
 
 ---
 

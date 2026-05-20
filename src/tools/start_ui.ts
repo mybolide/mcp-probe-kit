@@ -22,11 +22,17 @@ import {
 import { UIReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
 import type { UIReport, RequirementsLoopReport } from "../schemas/structured-output.js";
 import { detectProjectType } from "../lib/project-detector.js";
+import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
 import {
   reportToolProgress,
   throwIfAborted,
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
+import {
+  buildMemoryPlanStep,
+  loadMemoryInjectionContext,
+  renderMemoryGuideSection,
+} from "../lib/memory-orchestration.js";
 
 type TemplateProfileResolved = 'guided' | 'strict';
 type TemplateProfileRequest = 'guided' | 'strict' | 'auto';
@@ -456,12 +462,67 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
     throwIfAborted(context?.signal, "start_ui 已取消");
     await reportToolProgress(context, 10, "start_ui: 解析参数与检测项目框架");
 
-    const projectRoot = process.cwd();
-    
+    // 智能参数解析
+    const parsedArgs = parseArgs<{
+      description?: string;
+      framework?: string;
+      template?: string;
+      project_root?: string;
+      mode?: string;
+      template_profile?: string;
+      requirements_mode?: string;
+      loop_max_rounds?: number;
+      loop_question_budget?: number;
+      loop_assumption_cap?: number;
+    }>(args, {
+      defaultValues: {
+        description: "",
+        framework: "html",
+        template: "",
+        mode: "manual",
+        template_profile: "auto",
+        requirements_mode: "steady",
+        loop_max_rounds: 2,
+        loop_question_budget: 5,
+        loop_assumption_cap: 3,
+      },
+      primaryField: "description",
+      fieldAliases: {
+        description: ["desc", "ui", "page", "需求", "描述"],
+        framework: ["stack", "lib", "框架"],
+        template: ["name", "模板名"],
+        project_root: ["projectRoot", "project_path", "projectPath", "root", "project_root", "path", "dir", "directory", "项目路径", "项目根目录"],
+        mode: ["模式"],
+        template_profile: ["profile", "template_profile", "模板档位", "模板模式"],
+        requirements_mode: ["requirements_mode", "loop", "需求模式"],
+        loop_max_rounds: ["max_rounds", "rounds", "最大轮次"],
+        loop_question_budget: ["question_budget", "问题数量", "问题预算"],
+        loop_assumption_cap: ["assumption_cap", "假设上限"],
+      },
+    });
+
+    const explicitProjectRoot = getString(parsedArgs.project_root);
+    if (isLikelyProjectNamedRelativePath(explicitProjectRoot)) {
+      return {
+        content: [{
+          type: "text",
+          text: `拒绝执行 UI 编排：project_root 不能传带项目名的半相对路径，例如 ${explicitProjectRoot}。请改为传项目根目录绝对路径。`,
+        }],
+        isError: true,
+        structuredContent: {
+          error_code: "INVALID_PROJECT_ROOT",
+          rejected_project_root: explicitProjectRoot,
+          retry_hint: buildProjectRootRetryHint(explicitProjectRoot),
+        },
+      };
+    }
+
+    const projectRoot = resolveWorkspaceRoot(explicitProjectRoot);
+
     // 优先从 project-context.md 读取框架信息
     let detectedFramework = 'html'; // 默认值
     const contextFramework = getFrameworkFromContext(projectRoot);
-    
+
     if (contextFramework) {
       // 从 project-context.md 中读取到了框架信息
       const fw = contextFramework.toLowerCase();
@@ -486,43 +547,6 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
         }
       }
     }
-    
-    // 智能参数解析
-    const parsedArgs = parseArgs<{
-      description?: string;
-      framework?: string;
-      template?: string;
-      mode?: string;
-      template_profile?: string;
-      requirements_mode?: string;
-      loop_max_rounds?: number;
-      loop_question_budget?: number;
-      loop_assumption_cap?: number;
-    }>(args, {
-      defaultValues: {
-        description: "",
-        framework: detectedFramework, // 使用检测到的框架
-        template: "",
-        mode: "manual",
-        template_profile: "auto",
-        requirements_mode: "steady",
-        loop_max_rounds: 2,
-        loop_question_budget: 5,
-        loop_assumption_cap: 3,
-      },
-      primaryField: "description",
-      fieldAliases: {
-        description: ["desc", "ui", "page", "需求", "描述"],
-        framework: ["stack", "lib", "框架"],
-        template: ["name", "模板名"],
-        mode: ["模式"],
-        template_profile: ["profile", "template_profile", "模板档位", "模板模式"],
-        requirements_mode: ["requirements_mode", "loop", "需求模式"],
-        loop_max_rounds: ["max_rounds", "rounds", "最大轮次"],
-        loop_question_budget: ["question_budget", "问题数量", "问题预算"],
-        loop_assumption_cap: ["assumption_cap", "假设上限"],
-      },
-    });
 
     const description = getString(parsedArgs.description);
     const productType = inferProductType(description);
@@ -564,6 +588,9 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
     const skillBridgeStep = buildSkillBridgePlanStep(skillBridge);
     const skillBridgeSection = renderSkillBridgeSection(skillBridge);
     headerNotes.push(buildSkillHeaderNote(skillBridge));
+
+    const memoryContext = await loadMemoryInjectionContext(description || templateName);
+    const memoryGuideSection = renderMemoryGuideSection(memoryContext);
 
     // 验证 mode 参数
     const validModes = ["auto", "manual"];
@@ -705,6 +732,7 @@ start_ui <描述> --requirements_mode=loop
             action: 'update_project_context',
             outputs: ['docs/project-context.md'],
           },
+          ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
         ],
       };
 
@@ -715,7 +743,10 @@ start_ui <描述> --requirements_mode=loop
           '按 Requirements Loop 规则提问并更新结构化输出',
           '满足结束条件后按 delegated plan 执行 UI 计划',
         ],
-        notes: headerNotes,
+        notes: [
+          ...headerNotes,
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，先复用历史 UI 资产，再决定是否沉淀本次结果'] : []),
+        ],
       });
 
       const loopTemplate = profileDecision.resolved === 'strict'
@@ -725,7 +756,8 @@ start_ui <描述> --requirements_mode=loop
       const guide = header + skillBridgeSection + loopTemplate
         .replace(/{description}/g, description)
         .replace(/{question_budget}/g, String(questionBudget))
-        .replace(/{assumption_cap}/g, String(assumptionCap));
+        .replace(/{assumption_cap}/g, String(assumptionCap))
+        + memoryGuideSection;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -935,6 +967,7 @@ ${recommendation.reasoning}
             action: 'update_project_context',
             outputs: ['docs/project-context.md'],
           },
+          ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
         ],
       };
 
@@ -945,10 +978,13 @@ ${recommendation.reasoning}
           '按 delegated plan 顺序调用工具',
           '生成设计系统、模板并渲染 UI 代码',
         ],
-        notes: headerNotes,
+        notes: [
+          ...headerNotes,
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，必要时先读取相似历史 UI 资产'] : []),
+        ],
       });
 
-      const smartPlan = header + skillBridgeSection + (profileDecision.resolved === 'strict' ? smartPlanStrict : smartPlanGuided);
+      const smartPlan = header + skillBridgeSection + (profileDecision.resolved === 'strict' ? smartPlanStrict : smartPlanGuided) + memoryGuideSection;
 
       // Create structured UI report for auto mode
       const uiReport: UIReport = {
@@ -1085,7 +1121,10 @@ start_ui "设置页面" --framework=react
         '按 delegated plan 顺序调用工具',
         '生成设计系统、模板并渲染 UI 代码',
       ],
-      notes: headerNotes,
+      notes: [
+        ...headerNotes,
+        ...(memoryContext.enabled ? ['记忆系统: 已启用，必要时先读取相似历史 UI 资产'] : []),
+      ],
     });
 
     const baseTemplate = profileDecision.resolved === 'strict'
@@ -1097,6 +1136,7 @@ start_ui "设置页面" --framework=react
     guide = safeReplace(guide, '{productType}', productType);
     guide = safeReplace(guide, '{framework}', framework);
     guide = safeReplace(guide, '{templateName}', templateName);
+    guide += memoryGuideSection;
 
     const plan = {
       mode: 'delegated',
@@ -1154,6 +1194,7 @@ start_ui "设置页面" --framework=react
           action: 'update_project_context',
           outputs: ['docs/project-context.md'],
         },
+        ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
       ],
     };
 
