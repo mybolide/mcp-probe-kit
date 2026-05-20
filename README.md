@@ -1,3 +1,5 @@
+# mcp-probe-kit — Know the Context, Feed the Moment
+
 <div align="center">
   <img src="docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
   <h1>知时MCP | mcp-probe-kit</h1>
