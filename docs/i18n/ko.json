@@ -165,6 +165,13 @@
       "claudeMac": {
         "title": "Claude Desktop (macOS)",
         "path": "구성 파일 경로："
+      },
+      "opencode": {
+        "title": "OpenCode",
+        "description": "프로젝트 루트에서 생성 또는 편집",
+        "description2": ", 또는 전역 경로：",
+        "note": "참고：",
+        "noteText": "OpenCode는 <code>\"environment\"</code>（<code>\"env\"</code>가 아님）로 환경 변수를 지정하고, <code>\"mcp\"</code>（<code>\"mcpServers\"</code>가 아님）, <code>\"command\"</code>는 배열이며 <code>\"type\": \"local\"</code>이 필수입니다. 자세한 내용은 <a href=\"https://opencode.ai/docs/mcp\" target=\"_blank\" rel=\"noopener\" class=\"text-primary hover:underline\">OpenCode MCP 문서</a>를 참조하세요."
       }
     },
     "step3": {

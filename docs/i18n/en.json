@@ -165,6 +165,13 @@
       "claudeMac": {
         "title": "Claude Desktop (macOS)",
         "path": "Configuration file path:"
+      },
+      "opencode": {
+        "title": "OpenCode",
+        "description": "Create or edit",
+        "description2": "in project root, or globally at",
+        "note": "Note:",
+        "noteText": "OpenCode uses <code>\"environment\"</code> (not <code>\"env\"</code>) for env vars, <code>\"mcp\"</code> (not <code>\"mcpServers\"</code>), and <code>\"command\"</code> as an array with <code>\"type\": \"local\"</code> required. See <a href=\"https://opencode.ai/docs/mcp\" target=\"_blank\" rel=\"noopener\" class=\"text-primary hover:underline\">OpenCode MCP docs</a>."
       }
     },
     "step3": {

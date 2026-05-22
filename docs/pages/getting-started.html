@@ -511,6 +511,40 @@ npm run build</code></pre>
                             </div>
                         </div>
                     </div>
+
+                    <!-- OpenCode -->
+                    <div class="border border-border rounded-lg overflow-hidden">
+                        <button onclick="toggleClient('opencode')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🤖</span>
+                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step2.opencode.title">OpenCode</span>
+                            </div>
+                            <svg class="w-5 h-5 text-text-tertiary transition-transform" id="opencode-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="opencode-content" class="hidden p-4 border-t border-border">
+                            <p class="text-text-secondary text-sm mb-3"><span data-i18n="gettingStarted.step2.opencode.description">Create or edit</span> <code class="bg-gray-200 px-1 rounded text-xs">opencode.json</code> <span data-i18n="gettingStarted.step2.opencode.description2">in project root, or globally at</span> <code class="bg-gray-200 px-1 rounded text-xs">~/.config/opencode/opencode.json</code></p>
+                            <div class="bg-slate-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                    <span class="text-xs text-slate-300 font-medium">opencode.json</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                                </div>
+                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
+  "mcp": {
+    "mcp-probe-kit": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "enabled": true
+    }
+  }
+}</code></pre>
+                            </div>
+                            <div class="p-3 mt-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm text-text-primary">
+                                <strong>💡 <span data-i18n="gettingStarted.step2.opencode.note">Note:</span></strong><span data-i18n="gettingStarted.step2.opencode.noteText">OpenCode uses <code>"environment"</code> (not <code>"env"</code>) for env vars, <code>"mcp"</code> (not <code>"mcpServers"</code>), and <code>"command"</code> as an array with <code>"type": "local"</code> required. See <a href="https://opencode.ai/docs/mcp" target="_blank" rel="noopener" class="text-primary hover:underline">OpenCode MCP docs</a>.</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 

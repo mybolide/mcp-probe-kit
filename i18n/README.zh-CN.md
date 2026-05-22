@@ -437,6 +437,27 @@ ollama pull nomic-embed-text
 }
 ```
 
+#### OpenCode 配置
+
+**配置文件位置：**
+- 项目级：`opencode.json`（项目根目录）
+- 全局：`~/.config/opencode/opencode.json`
+
+**配置内容：**
+```json
+{
+  "mcp": {
+    "mcp-probe-kit": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "enabled": true
+    }
+  }
+}
+```
+
+> **注意：** OpenCode 使用 `opencode.json`，格式与 Cursor/Claude Desktop 不同。用 `mcp` 替代 `mcpServers`，`command` 为数组，需指定 `"type": "local"`，环境变量用 `environment` 而非 `env`。详见 [OpenCode MCP 文档](https://opencode.ai/docs/mcp)。
+
 ### 方式二：全局安装
 
 ```bash

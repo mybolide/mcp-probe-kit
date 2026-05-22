@@ -416,6 +416,27 @@ No installation needed, use the latest version directly.
 }
 ```
 
+#### OpenCode Configuration
+
+**Config file location:**
+- Project-level: `opencode.json` (in project root)
+- Global: `~/.config/opencode/opencode.json`
+
+**Config content:**
+```json
+{
+  "mcp": {
+    "mcp-probe-kit": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "enabled": true
+    }
+  }
+}
+```
+
+> **Note:** OpenCode uses `opencode.json` with a different schema from Cursor/Claude Desktop. The key `mcp` replaces `mcpServers`, `command` is an array, `type: "local"` is required, and environment variables use `environment` instead of `env`. See [OpenCode MCP docs](https://opencode.ai/docs/mcp) for details.
+
 ### Method 2: Global Installation
 
 ```bash
