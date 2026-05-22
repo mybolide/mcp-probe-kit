@@ -165,6 +165,13 @@
       "claudeMac": {
         "title": "Claude Desktop (macOS)",
         "path": "設定ファイルパス："
+      },
+      "opencode": {
+        "title": "OpenCode",
+        "description": "プロジェクトルートに作成・編集",
+        "description2": "、またはグローバルパス：",
+        "note": "注意：",
+        "noteText": "OpenCode は <code>\"environment\"</code>（<code>\"env\"</code> ではありません）で環境変数を指定し、<code>\"mcp\"</code>（<code>\"mcpServers\"</code> ではありません）、<code>\"command\"</code> は配列で <code>\"type\": \"local\"</code> が必須です。詳しくは <a href=\"https://opencode.ai/docs/mcp\" target=\"_blank\" rel=\"noopener\" class=\"text-primary hover:underline\">OpenCode MCP ドキュメント</a> を参照。"
       }
     },
     "step3": {
