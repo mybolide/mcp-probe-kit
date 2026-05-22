@@ -1,15 +1,21 @@
+# mcp-probe-kit — Connaître le Contexte, Nourrir le Moment
+
 <div align="center">
-<img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
-<h1>知时MCP | mcp-probe-kit</h1>
-<p><strong>Connaître le Contexte, Nourrir le Moment.</strong></p>
-<p><code>Introspection</code> · <code>Context Hydration</code> · <code>Delegated Orchestration</code></p>
+  <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
+  <h1>知时MCP | mcp-probe-kit</h1>
+  <p><strong>Know the Context, Feed the Moment.</strong></p>
+  <p>
+    <code>Introspection</code> · <code>Context Hydration</code> · <code>Delegated Orchestration</code>
+  </p>
 </div>
 
 ---
 
-**Talk is cheap, show me the Context.**
+<!-- mcp-name: io.github.mybolide/mcp-probe-kit -->
 
-> Zhishi MCP est une boîte à outils de sondage au niveau du protocole et d'approvisionnement en contexte conçue pour les geeks. Ce n'est pas seulement une collection de 28 outils, mais un système de perception qui permet à l'IA de vraiment "comprendre" l'intention de votre projet.
+> **Talk is cheap, show me the Context.**
+> 
+> mcp-probe-kit est une boîte à outils au niveau protocole conçue pour les développeurs qui veulent que l'IA comprenne vraiment l'intention de leur projet. Ce n'est pas seulement une collection de 28 outils — c'est un système conscient du contexte qui aide les agents IA à saisir ce que vous construisez.
 
 **Langues**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | **Français** | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -22,11 +28,11 @@
 
 Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvrant le flux de travail complet de l'analyse produit au lancement final (Exigences → Conception → Développement → Qualité → Lancement), tous les outils supportent la **sortie structurée**.
 
-**🎉 Mise à Jour Majeure v3.0**: Nombre d'outils simplifié, focus sur les compétences clés, élimination de la paralysie du choix, permettant à l'IA de faire plus de travail natif
+**🎉 Mise à Jour Majeure v3.0** : Nombre d'outils simplifié, focus sur les compétences clés, élimination de la paralysie du choix, permettant à l'IA de faire plus de travail natif
 
-**Supporte Tous les Clients MCP**: Cursor, Claude Desktop, Cline, Continue et plus
+**Supporte Tous les Clients MCP** : Cursor, Claude Desktop, Cline, Continue, et plus
 
-**Version du Protocole**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.27.1
+**Version du Protocole** : MCP 2025-11-25 · **SDK** : @modelcontextprotocol/sdk 1.27.1
 
 ---
 
@@ -45,9 +51,9 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvr
 
 ### 📦 28 Outils
 
-- **🔄 Orchestration de Flux de Travail** (6 outils) - Flux de travail de développement complexes en un clic
+- **🔄 Orchestration des Flux de Travail** (6 outils) - Flux de travail de développement complexes en un clic
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 Analyse de Code** (4 outils) - Qualité du code, refactorisation et graph insight
+- **🔍 Analyse de Code** (4 outils) - Qualité du code, refactorisation et insight de graphe
   - `code_review`, `code_insight`, `fix_bug`, `refactor`
 - **📝 Outils Git** (2 outils) - Commits Git et rapports de travail
   - `gencommit`, `git_work_report`
@@ -55,57 +61,227 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvr
   - `gentest`
 - **📦 Gestion de Projet** (6 outils) - Initialisation de projet et gestion des exigences
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
-- **🎨 Outils UI/UX** (3 outils) - Systèmes de conception et synchronisation des données UI
+- **🎨 Utilitaires UI/UX** (3 outils) - Systèmes de conception et synchronisation des données UI
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory & Cursor History** (6 outils) - Mémoire d’actifs réutilisables et lecture locale des conversations Cursor
+- **🧠 Mémoire et Historique Cursor** (6 outils) - Mémoire d'actifs réutilisables et récupération locale des conversations Cursor
   - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
 
-### 🧠 Pont de graphe de code (GitNexus)
+### 🧠 Pont de Graphe de Code (GitNexus)
 
-- `code_insight` utilise GitNexus par défaut pour l’analyse query/context/impact
-- Le bridge lance par défaut `npx -y gitnexus@latest mcp` afin de limiter le risque de paquets obsolètes
-- `init_project_context` génère des documents de graphe de base sous `docs/graph-insights/`
-- `start_feature` et `start_bugfix` rafraîchissent l’index GitNexus et exploitent des indices de graphe par tâche
-- Si GitNexus est indisponible, le serveur applique un fallback automatique sans casser l’orchestration
+- `code_insight` fait le pont avec GitNexus par défaut pour l'analyse query/context/impact
+- Le pont lance `npx -y gitnexus@latest mcp` par défaut pour réduire le risque de paquets obsolètes
+- `init_project_context` initialise les documents de graphe de base sous `docs/graph-insights/` ; si `docs/project-context.md` existe déjà, il préserve les anciens documents de contexte et ne remplit que les documents de graphe plus l'entrée d'index
+- `start_feature` rafraîchit l'index GitNexus et exécute le resserrement query/context/impact au niveau tâche avant la génération de spec
+- `start_bugfix` rafraîchit l'index GitNexus et exécute l'analyse de graphe au niveau tâche avant le RCA TBP
+- Les anciens projets qui ont déjà `project-context.md` mais pas de documents de graphe sont initialisés automatiquement via `init_project_context`
+- Si GitNexus est indisponible, le serveur bascule automatiquement sans interrompre l'orchestration
+- Les requêtes de graphe réelles lisent l'index `.gitnexus` ; `docs/graph-insights/latest.md|json` sont des snapshots lisibles
+- Les snapshots de graphe sont exposés en tant que ressources (`probe://graph/latest`, `probe://graph/history`, `probe://graph/latest.md`)
+- Les snapshots sont persistés dans `.mcp-probe-kit/graph-snapshots` (personnalisable via `MCP_GRAPH_SNAPSHOT_DIR`)
+- Les réponses des outils incluent `_meta.graph` avec l'URI du snapshot et les chemins locaux
 
-### 🐛 RCA TBP en 8 étapes pour les workflows de bug
+### 🐛 RCA TBP en 8 Étapes pour les Workflows de Bug
 
-- `start_bugfix` applique par défaut une analyse de cause racine TBP en 8 étapes avant la réparation
-- `fix_bug` renvoie une structure TBP couvrant phénomène, timeline, pistes exclues, frontière, cause racine, preuves et plan de correction
+- `start_bugfix` applique par défaut une analyse de cause racine Toyota TBP en 8 étapes avant la réparation
+- `fix_bug` retourne un squelette TBP structuré couvrant le phénomène, la chronologie, les chemins exclus, la frontière, la cause racine, les preuves et le plan de réparation
+- Cela impose une discipline d'analyse préalable plutôt que de corriger les symptômes
 
-### 🧠 Récupération mémoire et Cursor History
+### 🧠 Récupération Mémoire et Historique Cursor
 
-- Les outils mémoire utilisent **Qdrant** comme base de données vectorielle
-- Modes d’embedding supportés :
-  - `ollama`
-  - `openai-compatible`
-- Les outils Cursor history lisent directement la base locale de Cursor via Node.js
-- Cursor history prend actuellement en charge Windows, macOS et Linux
+- Les outils mémoire utilisent **Qdrant** comme backend de base de données vectorielle
+- Le service d'embedding supporte deux modes : `ollama` et `openai-compatible`
+- Les outils d'historique Cursor lisent directement la base de données locale de Cursor via Node.js, sans pont Python
+- L'historique Cursor supporte Windows, macOS et Linux
 
 **Outils mémoire :**
 - `memorize_asset` - Persister des actifs réutilisables de code/spec/pattern dans la mémoire vectorielle
-- `read_memory_asset` - Lire le contenu complet d’un actif via `asset_id`
-- `scan_and_extract_patterns` - Extraire des patterns réutilisables depuis du code/un fichier/un dossier
+- `read_memory_asset` - Lire le contenu complet d'un actif par `asset_id`
+- `scan_and_extract_patterns` - Extraire des patterns réutilisables du code/fichier/répertoire
 
-**Variables d’environnement clés pour la mémoire :**
-- `MEMORY_QDRANT_URL`
-- `MEMORY_EMBEDDING_URL`
-- `MEMORY_EMBEDDING_MODEL`
-- optionnelles : `MEMORY_QDRANT_API_KEY`, `MEMORY_QDRANT_COLLECTION`, `MEMORY_EMBEDDING_API_KEY`, `MEMORY_EMBEDDING_PROVIDER`
+**Configuration mémoire locale recommandée (Qdrant + Ollama) :**
+```bash
+docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
+ollama pull nomic-embed-text
+```
 
-### 🎯 Sortie structurée
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "ollama",
+        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
+        "MEMORY_EMBEDDING_MODEL": "nomic-embed-text",
+        "MEMORY_SEARCH_LIMIT": "3",
+        "MEMORY_SUMMARY_MAX_CHARS": "280"
+      }
+    }
+  }
+}
+```
 
-Les outils cœur et d’orchestration supportent la **sortie structurée** et renvoient du JSON lisible par machine pour améliorer le chaînage des outils et le suivi d’état.
+**Configuration d'embedding compatible OpenAI :**
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+        "MEMORY_EMBEDDING_URL": "https://your-embedding-endpoint/v1/embeddings",
+        "MEMORY_EMBEDDING_API_KEY": "your-api-key",
+        "MEMORY_EMBEDDING_MODEL": "text-embedding-3-small"
+      }
+    }
+  }
+}
+```
 
-Pour les détails complets sur l’installation, GitNexus, la configuration mémoire et tous les workflows, consultez la [documentation anglaise complète](../README.md) ou visitez [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/).
+**Outils d'historique Cursor :**
+- `cursor_list_conversations` - Lister les conversations Cursor locales récentes
+- `cursor_search_conversations` - Rechercher par mot-clé ou request id
+- `cursor_read_conversation` - Lire la chronologie d'une conversation par `composer_id`
+
+### 🎯 Sortie Structurée
+
+Les outils cœur et d'orchestration supportent la **sortie structurée**, retournant des données JSON lisibles par machine.
+
+### ⏱️ Tâches Natives, Progression et Annulation
+
+- Basé sur le support de tâches natif du SDK MCP (`taskStore` + `taskMessageQueue`)
+- Supporte les endpoints : `tasks/get`, `tasks/result`, `tasks/list`, `tasks/cancel`
+- Annonce `capabilities.tasks.requests.tools.call`
+- Émet `notifications/progress` quand le client fournit `_meta.progressToken`
+- Gère l'annulation via `AbortSignal`
+- Les outils longue durée (`start_*`) et `sync_ui_data` supportent l'annulation coopérative
+
+### 🔌 Extensions et UI Apps (Optionnel)
+
+- Trace metadata passthrough : `_meta.trace` préservé dans les réponses
+- Interrupteur d'extensions : `MCP_ENABLE_EXTENSIONS_CAPABILITY=1`
+- Sortie UI Apps : `MCP_ENABLE_UI_APPS=1`
+- Les outils UI exposent des ressources via `ui://...` et `_meta.ui.resourceUri`
+
+### 🧭 Protocole d'Orchestration Déléguée
+
+Tous les outils `start_*` retournent un **plan d'exécution** dans `structuredContent.metadata.plan`. L'IA doit **appeler les outils étape par étape et persister les fichiers**.
+
+**Schéma du Plan :**
+```json
+{
+  "mode": "delegated",
+  "steps": [
+    {
+      "id": "spec",
+      "tool": "add_feature",
+      "args": { "feature_name": "user-auth", "description": "Fonctionnalité d'authentification" },
+      "outputs": ["docs/specs/user-auth/requirements.md"]
+    }
+  ]
+}
+```
+
+### 🧩 Spécification des Champs de Sortie Structurée
+
+- `summary` : Résumé en une ligne
+- `status` : État (pending/success/failed/partial)
+- `steps` : Étapes d'exécution (outils d'orchestration)
+- `artifacts` : Liste d'artifacts
+- `metadata.plan` : Plan d'exécution déléguée (start_* uniquement)
+- `specArtifacts` : Artifacts de spécification (start_feature)
+- `estimate` : Résultats d'estimation (start_feature / estimate)
+
+### 🧠 Mode de Clarification des Exigences (Requirements Loop)
+
+Utilisez `requirements_mode=loop` dans `start_feature / start_bugfix / start_ui` pour 1-2 tours de clarification structurée avant l'exécution.
+
+```json
+{
+  "feature_name": "user-auth",
+  "description": "Fonctionnalité d'authentification utilisateur",
+  "requirements_mode": "loop",
+  "loop_max_rounds": 2,
+  "loop_question_budget": 5
+}
+```
+
+### 🧩 Système de Templates
+
+`add_feature` supporte les profils de template : `guided` (exigences incomplètes), `strict` (exigences complètes), `auto` (sélection automatique).
+
+```json
+{
+  "description": "Ajouter l'authentification utilisateur",
+  "template_profile": "auto"
+}
+```
+
+### 🔄 Orchestration des Flux de Travail
+
+6 outils d'orchestration :
+- `start_feature` - Nouvelle fonctionnalité (Exigences → Conception → Estimation)
+- `start_bugfix` - Correction de bug (RCA TBP 8 étapes → Correction → Tests)
+- `start_onboard` - Intégration projet
+- `start_ui` - Développement UI (Système de conception → Composants → Code)
+- `start_product` - Conception produit (PRD → Prototype → HTML)
+- `start_ralph` - Ralph Loop (Développement itératif)
+
+### 🚀 Flux de Conception Produit
+
+`start_product` : des exigences au prototype interactif. Étapes : Analyse des Exigences → Prototype → Système de Conception → HTML → Contexte Projet.
+
+### 🎨 UI/UX Pro Max
+
+Outils UI/UX avec `start_ui` comme entrée unifiée :
+- `start_ui` - Développement UI en un clic
+- `ui_design_system` - Génération de système de conception
+- `ui_search` - Recherche de données UI/UX (BM25)
+- `sync_ui_data` - Synchroniser les données UI/UX
+
+**Skill Bridge pour les flux UI/PRD :**
+- `start_ui` et `start_product` incluent désormais une section Skill Bridge
+- Ordre recommandé : `ui-ux-pro-max` → `interaction-design` → `frontend-design`
+
+**Inspiration :**
+- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
+- [json-render](https://github.com/vercel-labs/json-render)
+
+### 🎤 Interview des Exigences
+
+- `interview` - Interview structurée des exigences
+- `ask_user` - Question proactive de l'IA
 
 ---
 
-## 🚀 Installation Rapide
+## 🧭 Guide de Sélection des Outils
 
-### Méthode 1: Utilisation directe avec npx (Recommandé)
+| Scénario | Outil Recommandé | Raison |
+|---------|-----------------|--------|
+| Nouvelle fonctionnalité (flux complet) | `start_feature` | Auto-complète : spec → estimation |
+| Seulement docs de spec | `add_feature` | Plus léger |
+| Correction de bug (flux complet) | `start_bugfix` | RCA TBP → correction → test |
+| Seulement analyse de bug | `fix_bug` | RCA TBP 8 étapes uniquement |
+| Générer système de conception | `ui_design_system` | Génération directe |
+| Développer composants UI | `start_ui` | Flux complet |
+| Conception produit | `start_product` | PRD → prototype → HTML |
+| Analyse d'exigence | `init_project` | Docs de spec complets |
+| Docs d'intégration projet | `init_project_context` | Stack technique/architecture |
 
-**Configuration Cursor / Cline:**
+---
+
+## 🚀 Démarrage Rapide
+
+### Méthode 1 : npx (Recommandé)
+
+#### Configuration Cursor / Cline
+
 ```json
 {
   "mcpServers": {
@@ -117,7 +293,8 @@ Pour les détails complets sur l’installation, GitNexus, la configuration mém
 }
 ```
 
-**Configuration Claude Desktop:**
+#### Configuration Claude Desktop
+
 ```json
 {
   "mcpServers": {
@@ -129,31 +306,126 @@ Pour les détails complets sur l’installation, GitNexus, la configuration mém
 }
 ```
 
-### Méthode 2: Installation Globale
+#### Configuration OpenCode
+
+**Emplacement :** `opencode.json` (projet) ou `~/.config/opencode/opencode.json` (global)
+
+```json
+{
+  "mcp": {
+    "mcp-probe-kit": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "enabled": true
+    }
+  }
+}
+```
+
+> **Note :** OpenCode utilise `opencode.json` avec un schéma différent. `mcp` remplace `mcpServers`, `command` est un tableau, `type: "local"` requis, variables d'environnement via `environment`. Voir [OpenCode MCP docs](https://opencode.ai/docs/mcp).
+
+### Méthode 2 : Installation Globale
 
 ```bash
 npm install -g mcp-probe-kit
 ```
 
-### Note Windows pour les outils de graphe
+### Configuration Optionnelle du Système de Mémoire
 
-Concerne `code_insight`, `start_feature`, `start_bugfix` et `init_project_context`.
+#### Option A : Qdrant + Ollama
 
-- Le bridge GitNexus utilise `npx -y gitnexus@latest mcp` par défaut.
-- Sous Windows, le premier démarrage à froid peut prendre plus de 20 secondes.
-- Certaines dépendances GitNexus utilisent des modules natifs `tree-sitter-*` et peuvent nécessiter Visual Studio Build Tools.
+```bash
+docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
+ollama pull nomic-embed-text
+```
 
-Recommandations sous Windows :
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "ollama",
+        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
+        "MEMORY_EMBEDDING_MODEL": "nomic-embed-text",
+        "MEMORY_SEARCH_LIMIT": "3",
+        "MEMORY_SUMMARY_MAX_CHARS": "280"
+      }
+    }
+  }
+}
+```
 
-1. Installez Visual Studio Build Tools avec la charge de travail C++.
-2. Si votre client MCP prend en charge `env`, privilégiez une CLI `gitnexus` préinstallée.
-3. Sur les environnements lents, augmentez les timeouts de connexion/appel GitNexus.
+#### Option B : Qdrant + OpenAI-Compatible
 
-Installation rapide (Windows) :
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+        "MEMORY_EMBEDDING_URL": "https://your-embedding-endpoint/v1/embeddings",
+        "MEMORY_EMBEDDING_API_KEY": "your-api-key",
+        "MEMORY_EMBEDDING_MODEL": "text-embedding-3-small"
+      }
+    }
+  }
+}
+```
+
+### Variables d'Environnement de Mémoire
+
+- `MEMORY_QDRANT_URL` : URL Qdrant (requis)
+- `MEMORY_QDRANT_API_KEY` : Clé API Qdrant (optionnel)
+- `MEMORY_QDRANT_COLLECTION` : Nom de collection (défaut `mcp_probe_memory`)
+- `MEMORY_EMBEDDING_PROVIDER` : `ollama` ou `openai-compatible`
+- `MEMORY_EMBEDDING_URL` : URL de l'endpoint d'embedding
+- `MEMORY_EMBEDDING_API_KEY` : Clé API embedding
+- `MEMORY_EMBEDDING_MODEL` : Modèle (défaut `nomic-embed-text`)
+- `MEMORY_SEARCH_LIMIT` : Résultats (défaut `3`)
+- `MEMORY_SUMMARY_MAX_CHARS` : Troncation (défaut `280`)
+
+### Support de l'Historique Cursor
+
+Plateformes supportées : Windows, macOS, Linux. Cursor doit être installé localement.
+
+### Notes Windows pour les Outils de Graphe
+
+- GitNexus utilise `npx -y gitnexus@latest mcp` par défaut. Premier démarrage à froid : 20+ secondes.
+- Certaines dépendances (`tree-sitter-*`) nécessitent Visual Studio Build Tools.
 
 ```powershell
 winget install Microsoft.VisualStudio.2022.BuildTools
 ```
+
+Exemple avec gitnexus préinstallé :
+
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "mcp-probe-kit",
+      "env": {
+        "MCP_GITNEXUS_COMMAND": "gitnexus",
+        "MCP_GITNEXUS_ARGS": "mcp",
+        "MCP_GITNEXUS_CONNECT_TIMEOUT_MS": "30000",
+        "MCP_GITNEXUS_TIMEOUT_MS": "45000"
+      }
+    }
+  }
+}
+```
+
+### Redémarrer le Client
+
+Après configuration, **quittez complètement et rouvrez** votre client MCP.
 
 ---
 
@@ -165,24 +437,64 @@ code_review @feature.ts
 gentest @feature.ts
 gencommit
 
-# Développement de nouvelles fonctionnalités
-start_feature user-auth "Fonctionnalité d'authentification utilisateur"
+# Nouvelle fonctionnalité
+start_feature user-auth "Authentification utilisateur"
 
-# Correction de bugs
+# Correction de bug
 start_bugfix
 
-# Conception de produit
+# Conception produit
 start_product "Plateforme d'éducation en ligne" --product_type=SaaS
 
 # Développement UI
 start_ui "Page de connexion" --mode=auto
+
+# Contexte projet (module unique)
+init_project_context
+
+# Contexte projet (modulaire)
+init_project_context --mode=modular
+
+# Rapport Git quotidien
+git_work_report --date 2026-02-03
+
+# Rapport Git hebdomadaire
+git_work_report --start_date 2026-02-01 --end_date 2026-02-07
 ```
+
+---
+
+## ❓ FAQ
+
+### Q1 : L'outil ne fonctionne pas ?
+
+```bash
+npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
+```
+
+### Q2 : Client ne reconnaît pas les outils ?
+
+1. Redémarrez le client
+2. Vérifiez le chemin du fichier de configuration
+3. Vérifiez la syntaxe JSON
+
+### Q3 : Comment mettre à jour ?
+
+**npx :** utilisez `@latest`. **Global :** `npm update -g mcp-probe-kit`
+
+### Q4 : Pourquoi les outils de graphe sont lents sous Windows ?
+
+Cause : `npx -y gitnexus@latest mcp` (démarrage à froid) + modules natifs `tree-sitter-*`.
+
+Solution :
+1. Installez Visual Studio Build Tools avec C++
+2. Si le client supporte `env`, utilisez une CLI `gitnexus` préinstallée et augmentez `MCP_GITNEXUS_CONNECT_TIMEOUT_MS` / `MCP_GITNEXUS_TIMEOUT_MS`
 
 ---
 
 ## 🤝 Contribution
 
-Les Issues et Pull Requests sont les bienvenues!
+Issues et Pull Requests sont les bienvenus !
 
 ---
 
@@ -194,10 +506,17 @@ MIT License
 
 ## 🔗 Liens
 
-- **Auteur**: [Kyle (小墨)](https://www.bytezonex.com/)
-- **GitHub**: [mcp-probe-kit](https://github.com/mybolide/mcp-probe-kit)
-- **npm**: [mcp-probe-kit](https://www.npmjs.com/package/mcp-probe-kit)
-- **Documentation**: [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)
+- **Auteur** : [Kyle (小墨)](https://www.bytezonex.com/)
+- **GitHub** : [mcp-probe-kit](https://github.com/mybolide/mcp-probe-kit)
+- **npm** : [mcp-probe-kit](https://www.npmjs.com/package/mcp-probe-kit)
+- **Documentation** : [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)
+
+**Projets connexes :**
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
+- [GitHub Spec-Kit](https://github.com/github/spec-kit)
+- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
+- [json-render](https://github.com/vercel-labs/json-render)
+- [uipro-cli](https://www.npmjs.com/package/uipro-cli)
 
 ---
 
