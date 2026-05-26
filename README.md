@@ -41,6 +41,7 @@ A powerful MCP (Model Context Protocol) server providing **28 tools** covering t
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
+- [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
 - [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 28 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
@@ -105,10 +106,10 @@ A powerful MCP (Model Context Protocol) server providing **28 tools** covering t
 
 **Memory backend and embedding configuration:**
 - Vector database: **Qdrant**
-- Recommended local setup: `Qdrant + Ollama`
+- **Recommended local setup:** `Qdrant (port 50008) + Infinity / nomic-embed (port 50012)` — lighter than Ollama; see **[Local Memory Stack guide](docs/memory-local-setup.md)** (中文: [memory-local-setup.zh-CN.md](docs/memory-local-setup.zh-CN.md))
 - Supported embedding providers:
   - `ollama`
-  - `openai-compatible`
+  - `openai-compatible` (Infinity, OpenAI, etc.)
 - Required environment variables for memory write/search:
   - `MEMORY_QDRANT_URL`
   - `MEMORY_EMBEDDING_URL`
@@ -125,11 +126,9 @@ A powerful MCP (Model Context Protocol) server providing **28 tools** covering t
   - Memory write is enabled only when `MEMORY_QDRANT_URL`, `MEMORY_EMBEDDING_URL`, and `MEMORY_EMBEDDING_MODEL` are all configured
   - The Qdrant collection is auto-created on first write, and vector dimension is inferred from the first embedding response
 
-**Recommended local memory setup (Qdrant + Ollama):**
-```bash
-docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
-ollama pull nomic-embed-text
-```
+**Recommended local memory setup (Qdrant + Nomic Embed / Infinity):**
+
+Full Docker Compose, ports, and troubleshooting: **[docs/memory-local-setup.md](docs/memory-local-setup.md)**
 
 ```json
 {
@@ -138,11 +137,13 @@ ollama pull nomic-embed-text
       "command": "npx",
       "args": ["-y", "mcp-probe-kit@latest"],
       "env": {
-        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
+        "MEMORY_QDRANT_API_KEY": "your-qdrant-api-key",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
-        "MEMORY_EMBEDDING_PROVIDER": "ollama",
-        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
-        "MEMORY_EMBEDDING_MODEL": "nomic-embed-text",
+        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:50012/embeddings",
+        "MEMORY_EMBEDDING_MODEL": "nomic-ai/nomic-embed-text-v1.5",
+        "MEMORY_EMBEDDING_API_KEY": "your-infinity-api-key",
         "MEMORY_SEARCH_LIMIT": "3",
         "MEMORY_SUMMARY_MAX_CHARS": "280"
       }
@@ -151,7 +152,21 @@ ollama pull nomic-embed-text
 }
 ```
 
-**OpenAI-compatible embedding setup:**
+**Alternative: Qdrant + Ollama** (if you already run Ollama):
+
+```bash
+docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
+ollama pull nomic-embed-text
+```
+
+```json
+"MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+"MEMORY_EMBEDDING_PROVIDER": "ollama",
+"MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
+"MEMORY_EMBEDDING_MODEL": "nomic-embed-text"
+```
+
+**OpenAI-compatible embedding (hosted API):**
 ```json
 {
   "mcpServers": {
@@ -461,72 +476,61 @@ If you want to use `memorize_asset`, `read_memory_asset`, and `scan_and_extract_
 1. A **Qdrant** vector database
 2. An **embedding service** in either `ollama` or `openai-compatible` mode
 
-#### Option A: Qdrant + Ollama
+**Full guide (Docker Compose for Qdrant + Infinity, ports `50008` / `50012`, MCP env, smoke tests):**
 
-Start Qdrant with Docker:
+- English: [docs/memory-local-setup.md](docs/memory-local-setup.md)
+- 中文: [docs/memory-local-setup.zh-CN.md](docs/memory-local-setup.zh-CN.md)
+
+#### Option A: Qdrant + Nomic Embed / Infinity (recommended)
+
+Lightweight local stack; no Ollama. Deploy Qdrant and `nomic-embed` via Docker Compose (see guide), then:
+
+```json
+{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
+        "MEMORY_QDRANT_API_KEY": "your-qdrant-api-key",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:50012/embeddings",
+        "MEMORY_EMBEDDING_MODEL": "nomic-ai/nomic-embed-text-v1.5",
+        "MEMORY_EMBEDDING_API_KEY": "your-infinity-api-key",
+        "MEMORY_SEARCH_LIMIT": "3",
+        "MEMORY_SUMMARY_MAX_CHARS": "280"
+      }
+    }
+  }
+}
+```
+
+> Embedding URL must be `/embeddings` (not `/v1/embeddings`). Qdrant requires `api-key` when `QDRANT__SERVICE__API_KEY` is set.
+
+#### Option B: Qdrant + Ollama
 
 ```bash
 docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
-```
-
-Start Ollama and pull the default embedding model:
-
-```bash
 ollama pull nomic-embed-text
 ```
 
-Recommended MCP config env:
-
 ```json
-{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
-      "env": {
-        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
-        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
-        "MEMORY_EMBEDDING_PROVIDER": "ollama",
-        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
-        "MEMORY_EMBEDDING_MODEL": "nomic-embed-text",
-        "MEMORY_SEARCH_LIMIT": "3",
-        "MEMORY_SUMMARY_MAX_CHARS": "280"
-      }
-    }
-  }
-}
+"MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+"MEMORY_EMBEDDING_PROVIDER": "ollama",
+"MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
+"MEMORY_EMBEDDING_MODEL": "nomic-embed-text"
 ```
 
-#### Option B: Qdrant + OpenAI-Compatible Embedding API
-
-Start Qdrant with Docker:
-
-```bash
-docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
-```
-
-Then point the embedding config to an OpenAI-compatible `/embeddings` endpoint:
+#### Option C: Qdrant + hosted OpenAI-compatible API
 
 ```json
-{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
-      "env": {
-        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
-        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
-        "MEMORY_QDRANT_API_KEY": "",
-        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
-        "MEMORY_EMBEDDING_URL": "https://your-embedding-endpoint/v1/embeddings",
-        "MEMORY_EMBEDDING_API_KEY": "your-api-key",
-        "MEMORY_EMBEDDING_MODEL": "text-embedding-3-small",
-        "MEMORY_SEARCH_LIMIT": "3",
-        "MEMORY_SUMMARY_MAX_CHARS": "280"
-      }
-    }
-  }
-}
+"MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
+"MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+"MEMORY_EMBEDDING_URL": "https://your-embedding-endpoint/v1/embeddings",
+"MEMORY_EMBEDDING_API_KEY": "your-api-key",
+"MEMORY_EMBEDDING_MODEL": "text-embedding-3-small"
 ```
 
 #### Memory Environment Variables

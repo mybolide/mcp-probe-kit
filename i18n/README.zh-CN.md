@@ -35,6 +35,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
+- [本地记忆栈（Qdrant + Nomic Embed）](../docs/memory-local-setup.zh-CN.md) - Docker Compose、端口 50008/50012、MCP 配置
 - [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 28个工具完整列表
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
 - [v3.0 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x → v3.0 升级指南
@@ -99,10 +100,10 @@
 
 **向量库与 embedding 配置：**
 - 向量数据库：**Qdrant**
-- 本地推荐组合：`Qdrant + Ollama`
+- **本地推荐组合：** `Qdrant（50008）+ Infinity / nomic-embed（50012）`，比 Ollama 更轻；详见 **[本地记忆栈指南](../docs/memory-local-setup.zh-CN.md)**（英文：[memory-local-setup.md](../docs/memory-local-setup.md)）
 - 支持的 embedding provider：
   - `ollama`
-  - `openai-compatible`
+  - `openai-compatible`（Infinity、OpenAI 等）
 - 记忆写入/检索必填环境变量：
   - `MEMORY_QDRANT_URL`
   - `MEMORY_EMBEDDING_URL`
@@ -119,11 +120,9 @@
   - 写入记忆要求同时配置 `MEMORY_QDRANT_URL`、`MEMORY_EMBEDDING_URL`、`MEMORY_EMBEDDING_MODEL`
   - 首次写入会自动创建 Qdrant collection，向量维度按第一次 embedding 返回结果自动推断
 
-**推荐本地配置（Qdrant + Ollama）：**
-```bash
-docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
-ollama pull nomic-embed-text
-```
+**推荐本地配置（Qdrant + Nomic Embed / Infinity）：**
+
+完整 Compose、端口与排错：**[docs/memory-local-setup.zh-CN.md](../docs/memory-local-setup.zh-CN.md)**
 
 ```json
 {
@@ -132,11 +131,13 @@ ollama pull nomic-embed-text
       "command": "npx",
       "args": ["-y", "mcp-probe-kit@latest"],
       "env": {
-        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
+        "MEMORY_QDRANT_API_KEY": "你的-qdrant-api-key",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
-        "MEMORY_EMBEDDING_PROVIDER": "ollama",
-        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
-        "MEMORY_EMBEDDING_MODEL": "nomic-embed-text",
+        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:50012/embeddings",
+        "MEMORY_EMBEDDING_MODEL": "nomic-ai/nomic-embed-text-v1.5",
+        "MEMORY_EMBEDDING_API_KEY": "你的-infinity-api-key",
         "MEMORY_SEARCH_LIMIT": "3",
         "MEMORY_SUMMARY_MAX_CHARS": "280"
       }
@@ -145,7 +146,14 @@ ollama pull nomic-embed-text
 }
 ```
 
-**OpenAI-Compatible Embedding 配置示例：**
+**备选：Qdrant + Ollama**（已安装 Ollama 时）：
+
+```bash
+docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
+ollama pull nomic-embed-text
+```
+
+**云端 OpenAI-Compatible Embedding 示例：**
 ```json
 {
   "mcpServers": {
