@@ -56,3 +56,7 @@ mcp-publisher.exe
 .sisyphus
 .gitnexus
 .mcp-probe-kit/
+
+# Per-project harness output (generate via init_project_context in each repo)
+AGENTS.md
+docs/.mcp-probe/
