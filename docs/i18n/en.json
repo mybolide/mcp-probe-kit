@@ -91,11 +91,35 @@
         "title": "Memory System Setup (Qdrant + Embedding)",
         "descriptionPrefix": "If you want to use",
         "descriptionSuffix": ", you need to configure both a vector database and an embedding service.",
+        "guideLink": "Extended guide (troubleshooting, performance):",
+        "guidePath": "docs/memory-local-setup.md",
+        "deployIntro": "Copy the files below into two folders, start both services, then paste the MCP config. No Ollama required.",
+        "portTitle": "Ports",
+        "layoutTitle": "0. Directory layout",
+        "layoutText": "Create two folders anywhere on your machine (example: ~/mcp-memory/):",
+        "qdrantTitle": "1. Qdrant (vector DB, port 50008)",
+        "qdrantCompose": "qdrant/docker-compose.yml",
+        "qdrantEnv": "qdrant/.env",
+        "qdrantDeploy": "Start Qdrant",
+        "qdrantVerify": "Verify Qdrant",
+        "qdrantNote": "When API key is enabled, all requests need header api-key. Dashboard: http://127.0.0.1:50008/dashboard",
+        "nomicTitle": "2. Nomic Embed / Infinity (embeddings, port 50012)",
+        "nomicCompose": "nomic-embed/docker-compose.yml",
+        "nomicEnv": "nomic-embed/.env",
+        "nomicDeploy": "Start embedding service",
+        "nomicVerify": "Verify embeddings",
+        "nomicNote": "First start downloads the model (~2–5 min). Use POST /embeddings (not /v1/embeddings). Returns 768-dim vectors.",
+        "mcpTitle": "3. MCP client configuration",
+        "mcpNote": "Use the same keys as in qdrant/.env and nomic-embed/.env. Restart Cursor after saving.",
+        "alternativesTitle": "Other embedding options",
         "optionA": {
-          "title": "Option A: Qdrant + Ollama (recommended)"
+          "title": "Recommended stack (steps above)"
         },
         "optionB": {
-          "title": "Option B: Qdrant + OpenAI-Compatible Embedding API"
+          "title": "Option B: Qdrant + Ollama"
+        },
+        "optionC": {
+          "title": "Option C: Qdrant + hosted OpenAI-compatible API"
         },
         "env": {
           "title": "Environment Variables",

@@ -91,11 +91,35 @@
         "title": "记忆系统安装配置（Qdrant + Embedding）",
         "descriptionPrefix": "如果你要使用",
         "descriptionSuffix": "，需要同时配置向量数据库和 embedding 服务。",
+        "guideLink": "扩展说明（排错、性能）：",
+        "guidePath": "docs/memory-local-setup.zh-CN.md",
+        "deployIntro": "按下面创建两个目录、复制 compose 与 .env、启动服务，再配置 MCP。无需安装 Ollama。",
+        "portTitle": "端口",
+        "layoutTitle": "0. 目录结构",
+        "layoutText": "在任意路径创建两个文件夹（示例 ~/mcp-memory/）：",
+        "qdrantTitle": "1. Qdrant（向量库，端口 50008）",
+        "qdrantCompose": "qdrant/docker-compose.yml",
+        "qdrantEnv": "qdrant/.env",
+        "qdrantDeploy": "启动 Qdrant",
+        "qdrantVerify": "验证 Qdrant",
+        "qdrantNote": "开启 API Key 后，请求须带 api-key 头。面板：http://127.0.0.1:50008/dashboard",
+        "nomicTitle": "2. Nomic Embed / Infinity（向量生成，端口 50012）",
+        "nomicCompose": "nomic-embed/docker-compose.yml",
+        "nomicEnv": "nomic-embed/.env",
+        "nomicDeploy": "启动 Embedding 服务",
+        "nomicVerify": "验证 Embedding",
+        "nomicNote": "首次启动会下载模型（约 2–5 分钟）。路径为 POST /embeddings（不是 /v1/embeddings），向量维度 768。",
+        "mcpTitle": "3. MCP 客户端配置",
+        "mcpNote": "密钥与 qdrant/.env、nomic-embed/.env 保持一致。保存后请完全重启 Cursor。",
+        "alternativesTitle": "其它 Embedding 方案",
         "optionA": {
-          "title": "方案 A：Qdrant + Ollama（默认推荐）"
+          "title": "推荐方案（见上文步骤）"
         },
         "optionB": {
-          "title": "方案 B：Qdrant + OpenAI-Compatible Embedding API"
+          "title": "方案 B：Qdrant + Ollama"
+        },
+        "optionC": {
+          "title": "方案 C：Qdrant + 云端 OpenAI 兼容 Embedding API"
         },
         "env": {
           "title": "环境变量说明",

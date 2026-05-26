@@ -255,51 +255,235 @@
                             <code class="bg-gray-200 px-1 rounded text-xs">scan_and_extract_patterns</code>
                             <span data-i18n="gettingStarted.step1.memory.descriptionSuffix">, you need to configure both a vector database and an embedding service.</span>
                         </p>
+                        <p class="mb-3 text-text-secondary" data-i18n="gettingStarted.step1.memory.deployIntro">Copy the files below into two folders, start both services, then paste the MCP config. No Ollama required.</p>
+                        <p class="mb-3 text-text-secondary">
+                            <span data-i18n="gettingStarted.step1.memory.guideLink">Extended guide (troubleshooting, performance):</span>
+                            <a class="text-emerald-700 underline" href="https://github.com/mybolide/mcp-probe-kit/blob/main/docs/memory-local-setup.md" data-i18n="gettingStarted.step1.memory.guidePath">docs/memory-local-setup.md</a>
+                            · <a class="text-emerald-700 underline" href="https://github.com/mybolide/mcp-probe-kit/blob/main/docs/memory-local-setup.zh-CN.md">中文</a>
+                        </p>
+
+                        <p class="font-medium mb-1" data-i18n="gettingStarted.step1.memory.portTitle">Ports</p>
+                        <table class="w-full mb-4 text-xs border border-emerald-200 rounded overflow-hidden">
+                            <thead class="bg-emerald-100"><tr><th class="px-2 py-1 text-left">Service</th><th class="px-2 py-1 text-left">URL</th></tr></thead>
+                            <tbody>
+                                <tr class="border-t border-emerald-200"><td class="px-2 py-1">Qdrant HTTP</td><td class="px-2 py-1"><code>http://127.0.0.1:50008</code></td></tr>
+                                <tr class="border-t border-emerald-200"><td class="px-2 py-1">Qdrant gRPC</td><td class="px-2 py-1"><code>127.0.0.1:50009</code></td></tr>
+                                <tr class="border-t border-emerald-200"><td class="px-2 py-1">Nomic Embed</td><td class="px-2 py-1"><code>http://127.0.0.1:50012</code></td></tr>
+                            </tbody>
+                        </table>
+
+                        <p class="font-medium mb-1" data-i18n="gettingStarted.step1.memory.layoutTitle">0. Directory layout</p>
+                        <p class="mb-2 text-text-secondary" data-i18n="gettingStarted.step1.memory.layoutText">Create two folders anywhere on your machine (example: ~/mcp-memory/):</p>
+                        <pre class="code-block mb-4 p-3 text-sm text-slate-200 bg-slate-900 rounded overflow-x-auto"><code>mcp-memory/
+├── qdrant/
+│   ├── docker-compose.yml
+│   ├── .env
+│   ├── data/
+│   └── snapshots/
+└── nomic-embed/
+    ├── docker-compose.yml
+    └── .env</code></pre>
+
+                        <!-- Qdrant -->
+                        <p class="font-semibold mb-2" data-i18n="gettingStarted.step1.memory.qdrantTitle">1. Qdrant (vector DB, port 50008)</p>
+                        <p class="text-xs text-text-secondary mb-1" data-i18n="gettingStarted.step1.memory.qdrantCompose">qdrant/docker-compose.yml</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-3">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">docker-compose.yml</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "50008:6333"
+      - "50009:6334"
+    volumes:
+      - ./data:/qdrant/storage
+      - ./snapshots:/qdrant/snapshots
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=INFO
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
+    healthcheck:
+      test:
+        - "CMD"
+        - "bash"
+        - "-c"
+        - "exec 3&lt;&gt;/dev/tcp/127.0.0.1/6333 &amp;&amp; printf 'GET /collections HTTP/1.1\r\nHost: localhost\r\napi-key: ${QDRANT_API_KEY}\r\nConnection: close\r\n\r\n' &gt;&amp;3 &amp;&amp; IFS= read -r line &lt;&amp;3 &amp;&amp; [[ \"$$line\" == *\"200\"* ]]"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s</code></pre>
+                        </div>
+                        <p class="text-xs text-text-secondary mb-1" data-i18n="gettingStarted.step1.memory.qdrantEnv">qdrant/.env</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-3">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">.env</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code># Generate: python -c "import secrets; print(secrets.token_urlsafe(32))"
+QDRANT_API_KEY=change-me-to-a-long-random-string
+QDRANT_URL=http://127.0.0.1:50008</code></pre>
+                        </div>
+                        <p class="text-xs font-medium mb-1" data-i18n="gettingStarted.step1.memory.qdrantDeploy">Start Qdrant</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-3">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">PowerShell / Bash</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>cd qdrant
+mkdir data snapshots 2&gt;$null; mkdir -p data snapshots
+docker compose up -d
+docker compose ps</code></pre>
+                        </div>
+                        <p class="text-xs font-medium mb-1" data-i18n="gettingStarted.step1.memory.qdrantVerify">Verify Qdrant</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-2">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">curl</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>curl http://127.0.0.1:50008/collections \
+  -H "api-key: YOUR_QDRANT_API_KEY"</code></pre>
+                        </div>
+                        <p class="mb-4 text-xs text-text-secondary" data-i18n="gettingStarted.step1.memory.qdrantNote">When API key is enabled, all requests need header api-key. Dashboard: http://127.0.0.1:50008/dashboard</p>
+
+                        <!-- Nomic Embed -->
+                        <p class="font-semibold mb-2" data-i18n="gettingStarted.step1.memory.nomicTitle">2. Nomic Embed / Infinity (embeddings, port 50012)</p>
+                        <p class="text-xs text-text-secondary mb-1" data-i18n="gettingStarted.step1.memory.nomicCompose">nomic-embed/docker-compose.yml</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-3">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">docker-compose.yml</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>services:
+  nomic-embed:
+    image: michaelf34/infinity:0.0.70
+    container_name: nomic-embed
+    restart: unless-stopped
+    ports:
+      - "50012:7997"
+    volumes:
+      - hf_cache:/app/.cache
+    environment:
+      INFINITY_API_KEY: ${INFINITY_API_KEY}
+    command:
+      - v2
+      - --model-id
+      - nomic-ai/nomic-embed-text-v1.5
+      - --revision
+      - main
+      - --dtype
+      - float32
+      - --batch-size
+      - "8"
+      - --engine
+      - torch
+      - --port
+      - "7997"
+      - --no-bettertransformer
+    healthcheck:
+      test:
+        - "CMD"
+        - "curl"
+        - "-f"
+        - "http://127.0.0.1:7997/health"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  hf_cache:</code></pre>
+                        </div>
+                        <p class="text-xs text-text-secondary mb-1" data-i18n="gettingStarted.step1.memory.nomicEnv">nomic-embed/.env</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-3">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">.env</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code># Generate: python -c "import secrets; print(secrets.token_urlsafe(32))"
+INFINITY_API_KEY=change-me-to-a-long-random-string</code></pre>
+                        </div>
+                        <p class="text-xs font-medium mb-1" data-i18n="gettingStarted.step1.memory.nomicDeploy">Start embedding service</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-3">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">PowerShell / Bash</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>cd nomic-embed
+docker compose up -d
+docker logs -f nomic-embed
+# Wait for: ready to batch requests</code></pre>
+                        </div>
+                        <p class="text-xs font-medium mb-1" data-i18n="gettingStarted.step1.memory.nomicVerify">Verify embeddings</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-2">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">curl</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>curl http://127.0.0.1:50012/health
+
+curl http://127.0.0.1:50012/embeddings \
+  -H "Authorization: Bearer YOUR_INFINITY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"nomic-ai/nomic-embed-text-v1.5","input":"hello world"}'
+# Expect data[0].embedding length = 768</code></pre>
+                        </div>
+                        <p class="mb-4 text-xs text-text-secondary" data-i18n="gettingStarted.step1.memory.nomicNote">First start downloads the model (~2–5 min). Use POST /embeddings (not /v1/embeddings). Returns 768-dim vectors.</p>
+
+                        <!-- MCP -->
+                        <p class="font-semibold mb-2" data-i18n="gettingStarted.step1.memory.mcpTitle">3. MCP client configuration</p>
+                        <div class="bg-slate-900 rounded-lg overflow-hidden mb-2">
+                            <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
+                                <span class="text-xs text-slate-300 font-medium">Cursor / Claude Desktop mcpServers</span>
+                                <button type="button" onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                            </div>
+                            <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
+  "mcpServers": {
+    "mcp-probe-kit": {
+      "command": "npx",
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
+        "MEMORY_QDRANT_API_KEY": "same-as-qdrant-.env-QDRANT_API_KEY",
+        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
+        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:50012/embeddings",
+        "MEMORY_EMBEDDING_MODEL": "nomic-ai/nomic-embed-text-v1.5",
+        "MEMORY_EMBEDDING_API_KEY": "same-as-nomic-embed-.env-INFINITY_API_KEY",
+        "MEMORY_SEARCH_LIMIT": "3",
+        "MEMORY_SUMMARY_MAX_CHARS": "280"
+      }
+    }
+  }
+}</code></pre>
+                        </div>
+                        <p class="mb-4 text-xs text-text-secondary" data-i18n="gettingStarted.step1.memory.mcpNote">Use the same keys as in qdrant/.env and nomic-embed/.env. Restart Cursor after saving.</p>
+
+                        <p class="font-medium mb-2" data-i18n="gettingStarted.step1.memory.alternativesTitle">Other embedding options</p>
                         <div class="space-y-3">
                             <div>
-                                <p class="font-medium mb-2" data-i18n="gettingStarted.step1.memory.optionA.title">Option A: Qdrant + Ollama (recommended)</p>
+                                <p class="font-medium mb-2" data-i18n="gettingStarted.step1.memory.optionB.title">Option B: Qdrant + Ollama</p>
                                 <pre class="code-block mb-2 p-3 text-sm text-slate-200 bg-slate-900 rounded overflow-x-auto"><code>docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant
 ollama pull nomic-embed-text</code></pre>
-                                <pre class="code-block p-3 text-sm text-slate-200 bg-slate-900 rounded overflow-x-auto"><code>{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
-      "env": {
-        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
-        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
-        "MEMORY_EMBEDDING_PROVIDER": "ollama",
-        "MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
-        "MEMORY_EMBEDDING_MODEL": "nomic-embed-text",
-        "MEMORY_SEARCH_LIMIT": "3",
-        "MEMORY_SUMMARY_MAX_CHARS": "280"
-      }
-    }
-  }
-}</code></pre>
+                                <pre class="code-block p-3 text-sm text-slate-200 bg-slate-900 rounded overflow-x-auto"><code>"MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
+"MEMORY_EMBEDDING_PROVIDER": "ollama",
+"MEMORY_EMBEDDING_URL": "http://127.0.0.1:11434/api/embeddings",
+"MEMORY_EMBEDDING_MODEL": "nomic-embed-text"</code></pre>
                             </div>
                             <div>
-                                <p class="font-medium mb-2" data-i18n="gettingStarted.step1.memory.optionB.title">Option B: Qdrant + OpenAI-Compatible Embedding API</p>
-                                <pre class="code-block mb-2 p-3 text-sm text-slate-200 bg-slate-900 rounded overflow-x-auto"><code>docker run -d --name mcp-qdrant -p 6333:6333 qdrant/qdrant</code></pre>
-                                <pre class="code-block p-3 text-sm text-slate-200 bg-slate-900 rounded overflow-x-auto"><code>{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
-      "env": {
-        "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
-        "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
-        "MEMORY_QDRANT_API_KEY": "",
-        "MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
-        "MEMORY_EMBEDDING_URL": "https://your-embedding-endpoint/v1/embeddings",
-        "MEMORY_EMBEDDING_API_KEY": "your-api-key",
-        "MEMORY_EMBEDDING_MODEL": "text-embedding-3-small",
-        "MEMORY_SEARCH_LIMIT": "3",
-        "MEMORY_SUMMARY_MAX_CHARS": "280"
-      }
-    }
-  }
-}</code></pre>
+                                <p class="font-medium mb-2" data-i18n="gettingStarted.step1.memory.optionC.title">Option C: Qdrant + hosted OpenAI-compatible API</p>
+                                <pre class="code-block p-3 text-sm text-slate-200 bg-slate-900 rounded overflow-x-auto"><code>"MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
+"MEMORY_EMBEDDING_PROVIDER": "openai-compatible",
+"MEMORY_EMBEDDING_URL": "https://your-embedding-endpoint/v1/embeddings",
+"MEMORY_EMBEDDING_API_KEY": "your-api-key",
+"MEMORY_EMBEDDING_MODEL": "text-embedding-3-small"</code></pre>
                             </div>
                         </div>
                         <div class="mt-3">
