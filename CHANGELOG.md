@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.19] - 2026-05-26
+
+### ✨ 新功能
+
+**AGENTS.md 作为 Harness 入口**
+- `init_project_context` 生成/合并根目录 `AGENTS.md` 中的 `mcp-probe:context` 块（保留用户自定义内容）
+- 精简 MCP 路由：`start_feature` / `start_bugfix` / `start_ui` / `code_insight` / `init_project_context`
+- 记忆工作流写入 AGENTS.md：开干前检索、Bug 修完后 `memorize_asset` type=`bugfix`
+
+**可移植项目布局 manifest**
+- 新增 `docs/.mcp-probe/layout.json`（仅相对路径 + `projectRootEnv`，不写死绝对路径）
+- 项目根目录从 manifest 文件位置反推；`start_*` / `code_insight` 通过 layout 解析 `docs/` 等路径
+- 支持自定义 `docs_dir`（如 `documentation/.mcp-probe/layout.json`）
+
+### 🔧 改进
+
+- `memory-orchestration`：区分 feature / bugfix / ui 沉淀模板；检索引导包含历史 Bug 修复记录
+- `resolveWorkspaceRoot`：优先从 layout manifest 发现项目根
+- 新增 `project-context-layout`、`merge-agents-md`、`agents-md-template` 模块与单测
+
+### 📚 文档
+
+- 本地记忆栈指南（Qdrant + Infinity）补充
+
+---
+
 ## [3.0.18] - 2026-05-20
 
 ### ✨ 新功能
