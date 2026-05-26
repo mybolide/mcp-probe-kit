@@ -17,6 +17,11 @@ import {
   renderMemoryGuideSection,
 } from "../lib/memory-orchestration.js";
 import { resolveWorkspaceRoot, toWorkspacePath, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
+import {
+  layoutAbsPath,
+  parseLayoutArgsFromRecord,
+  resolveProjectContextLayout,
+} from "../lib/project-context-layout.js";
 
 /**
  * start_feature 智能编排工具
@@ -293,15 +298,25 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
 
     throwIfAborted(context?.signal, "start_feature 已取消");
     await reportToolProgress(context, 55, "start_feature: 刷新图谱并收敛需求范围");
-    const graphDocs = {
-      latestMarkdownPath: `${docsDir}/graph-insights/latest.md`,
-      latestJsonPath: `${docsDir}/graph-insights/latest.json`,
-    };
     const resolvedProjectRoot = resolveWorkspaceRoot(projectRoot);
+    const layout = resolveProjectContextLayout(
+      resolvedProjectRoot,
+      parseLayoutArgsFromRecord({ docs_dir: docsDir })
+    );
+    const projectRootAbs = layout.projectRoot;
+    const graphDocs = {
+      latestMarkdownPath: layout.latestMarkdownPath,
+      latestJsonPath: layout.latestJsonPath,
+    };
     const bootstrapState = {
-      projectContextExists: fs.existsSync(path.join(resolvedProjectRoot, docsDir, "project-context.md")),
-      latestMarkdownExists: fs.existsSync(path.join(resolvedProjectRoot, docsDir, "graph-insights", "latest.md")),
-      latestJsonExists: fs.existsSync(path.join(resolvedProjectRoot, docsDir, "graph-insights", "latest.json")),
+      projectContextExists:
+        fs.existsSync(layoutAbsPath(layout, layout.indexPath)) ||
+        fs.existsSync(layoutAbsPath(layout, layout.legacyIndexPath)),
+      latestMarkdownExists: fs.existsSync(layoutAbsPath(layout, layout.latestMarkdownPath)),
+      latestJsonExists: fs.existsSync(layoutAbsPath(layout, layout.latestJsonPath)),
+      indexPath: layout.indexPath,
+      projectRoot: layout.projectRootPosix,
+      layoutManifest: layout.manifestPath,
     };
     const graphDocsMissing = !bootstrapState.latestMarkdownExists || !bootstrapState.latestJsonExists;
     const graphContext = await buildFeatureGraphContext({
@@ -375,12 +390,12 @@ ${graphContext.highlights.length > 0
           {
             id: 'context',
             tool: 'init_project_context',
-            when: `缺少 ${docsDir}/project-context.md 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
+            when: `缺少 ${layout.indexPath} 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
             args: {
               docs_dir: docsDir,
               ...(projectRoot ? { project_root: projectRoot } : {}),
             },
-            outputs: [`${docsDir}/project-context.md`, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
+            outputs: [layout.indexPath, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
             note: `兼容老项目：即使已有旧版 project-context，只要缺少图谱文档，也要先补齐 ${graphDocs.latestMarkdownPath}`,
           },
           {
@@ -421,7 +436,7 @@ ${graphContext.highlights.length > 0
             },
             outputs: [],
           },
-          ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
+          ...(memoryContext.enabled ? [buildMemoryPlanStep('feature')] : []),
         ],
       };
 
@@ -523,12 +538,12 @@ ${graphContext.highlights.length > 0
         {
           id: 'context',
           tool: 'init_project_context',
-          when: `缺少 ${docsDir}/project-context.md 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
+          when: `缺少 ${layout.indexPath} 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
           args: {
             docs_dir: docsDir,
             ...(projectRoot ? { project_root: projectRoot } : {}),
           },
-          outputs: [`${docsDir}/project-context.md`, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
+          outputs: [layout.indexPath, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
           note: `兼容老项目：即使已有旧版 project-context，只要缺少图谱文档，也要先补齐 ${graphDocs.latestMarkdownPath}`,
         },
         {
@@ -550,7 +565,7 @@ ${graphContext.highlights.length > 0
           },
           outputs: [],
         },
-        ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
+        ...(memoryContext.enabled ? [buildMemoryPlanStep('feature')] : []),
       ],
     };
 
@@ -562,7 +577,7 @@ ${graphContext.highlights.length > 0
         {
           name: '检查项目上下文',
           status: 'pending',
-          description: `检查 ${docsDir}/project-context.md 与 graph-insights/latest.* 是否存在，缺失则调用 init_project_context`,
+          description: `检查 ${layout.indexPath} 与 graph-insights/latest.* 是否存在，缺失则调用 init_project_context`,
         },
         {
           name: '生成功能规格',

@@ -5,13 +5,36 @@
 export const projectToolSchemas = [
   {
     name: "init_project_context",
-    description: "当用户需要生成项目上下文文档、帮助团队快速上手时使用。生成项目上下文文档（技术栈/架构/编码规范），供后续开发参考",
+    description:
+      "生成/更新项目上下文：默认写入 AGENTS.md（含 MCP 与 GitNexus 触发规则）及 docs/project-context/。新功能请先 start_feature，修 bug 请先 start_bugfix。完成后 Agent 应阅读 AGENTS.md。",
     inputSchema: {
       type: "object",
       properties: {
         docs_dir: {
           type: "string",
-          description: "文档目录。可选，默认 docs",
+          description: "附属文档根目录（project-context、graph-insights）。默认 docs",
+        },
+        index_style: {
+          type: "string",
+          enum: ["auto", "agents", "legacy"],
+          description: "索引风格：auto（默认 AGENTS.md）、agents、legacy（docs/project-context.md）",
+        },
+        output: {
+          type: "string",
+          description: "高级：索引文件相对路径，如 AGENTS.md",
+        },
+        output_dir: {
+          type: "string",
+          description: "高级：索引所在目录，如 .claude/rules",
+        },
+        filename: {
+          type: "string",
+          description: "高级：与 output_dir 合用，默认 project-context.md",
+        },
+        locale: {
+          type: "string",
+          enum: ["en", "zh-CN"],
+          description: "AGENTS.md 语言；默认根据 README 探测",
         },
       },
       required: [],

@@ -161,15 +161,15 @@ describe("code_insight 单元测试", () => {
       expect(text).toMatch(/不要只口头总结而不写文件/);
       expect(text).toMatch(/docs\/graph-insights\/latest\.md/);
       expect(text).toMatch(/使用场景指南/);
-      expect(structured.projectDocs.latestMarkdownFilePath).toContain("/docs/graph-insights/latest.md");
+      expect(structured.projectDocs.latestMarkdownFilePath).toMatch(/docs\/graph-insights\/latest\.md$/);
       expect(structured.projectDocs.archiveMarkdownFilePath).toContain("/docs/graph-insights/");
-      expect(structured.projectDocs.projectContextFilePath).toContain("/docs/project-context.md");
+      expect(structured.projectDocs.projectContextFilePath).toMatch(/\/(AGENTS\.md|docs\/project-context\.md)$/);
       expect(structured.projectDocs.navigationSnippet).toMatch(/代码图谱洞察/);
       expect(structured.plan.mode).toBe("delegated");
       expect(structured.plan.steps).toHaveLength(2);
       expect(structured.plan.steps[0].id).toBe("consume-result");
       expect(structured.plan.steps[1].id).toBe("optional-save");
-      expect(structured.plan.steps[1].outputs[0]).toContain("/docs/graph-insights/latest.md");
+      expect(structured.plan.steps[1].outputs[0]).toMatch(/docs\/graph-insights\/latest\.md$/);
       expect(fs.existsSync(path.join(projectRoot, "docs", "graph-insights", "latest.md"))).toBe(false);
     } finally {
       fs.rmSync(projectRoot, { recursive: true, force: true });

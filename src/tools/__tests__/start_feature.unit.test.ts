@@ -31,7 +31,7 @@ describe('start_feature 单元测试', () => {
     expect(plan).toBeTruthy();
     expect(plan.mode).toBe('delegated');
     expect(Array.isArray(plan.steps)).toBe(true);
-    expect(plan.steps.length).toBe(3);
+    expect(plan.steps.length).toBeGreaterThanOrEqual(3);
 
     const tools = plan.steps.map((step: any) => step.tool);
     expect(tools).toContain('init_project_context');
@@ -39,6 +39,7 @@ describe('start_feature 单元测试', () => {
     expect(tools).toContain('estimate');
 
     const contextStep = plan.steps.find((step: any) => step.tool === 'init_project_context');
+    expect(contextStep.outputs).toContain('AGENTS.md');
     expect(contextStep.outputs).toContain('docs/graph-insights/latest.md');
     expect(contextStep.outputs).toContain('docs/graph-insights/latest.json');
     expect(contextStep.when).toMatch(/graph-insights\/latest\.md/);

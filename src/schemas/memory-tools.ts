@@ -16,7 +16,7 @@ export const memoryToolSchemas = [
   },
   {
     name: 'memorize_asset',
-    description: '当 AI 完成开发并确认存在可复用代码、模式或规范时使用。将高价值资产沉淀到记忆系统。',
+    description: '沉淀可检索资产到记忆系统：可复用代码/模式；Bug 修复后必须写入 type=bugfix（现象、根因、改法、tags 含 bugfix）。',
     inputSchema: {
       type: 'object',
       properties: {
