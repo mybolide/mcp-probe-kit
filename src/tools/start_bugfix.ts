@@ -17,6 +17,11 @@ import {
   renderMemoryGuideSection,
 } from "../lib/memory-orchestration.js";
 import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
+import {
+  layoutAbsPath,
+  parseLayoutArgsFromRecord,
+  resolveProjectContextLayout,
+} from "../lib/project-context-layout.js";
 
 /**
  * start_bugfix 智能编排工具
@@ -368,6 +373,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
     const stackTrace = getString(parsedArgs.stack_trace);
     const codeContext = getString(parsedArgs.code_context);
     const projectRoot = getString(parsedArgs.project_root);
+    const docsDir = getString((parsedArgs as Record<string, unknown>).docs_dir) || "docs";
     if (isLikelyProjectNamedRelativePath(projectRoot)) {
       return {
         content: [{
@@ -425,15 +431,24 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
 
     throwIfAborted(context?.signal, "start_bugfix 已取消");
     await reportToolProgress(context, 55, "start_bugfix: 刷新图谱并收敛问题范围");
-    const graphDocs = {
-      latestMarkdownPath: "docs/graph-insights/latest.md",
-      latestJsonPath: "docs/graph-insights/latest.json",
-    };
     const resolvedProjectRoot = resolveWorkspaceRoot(projectRoot);
+    const layout = resolveProjectContextLayout(
+      resolvedProjectRoot,
+      parseLayoutArgsFromRecord({ docs_dir: docsDir })
+    );
+    const graphDocs = {
+      latestMarkdownPath: layout.latestMarkdownPath,
+      latestJsonPath: layout.latestJsonPath,
+    };
     const bootstrapState = {
-      projectContextExists: fs.existsSync(path.join(resolvedProjectRoot, "docs", "project-context.md")),
-      latestMarkdownExists: fs.existsSync(path.join(resolvedProjectRoot, "docs", "graph-insights", "latest.md")),
-      latestJsonExists: fs.existsSync(path.join(resolvedProjectRoot, "docs", "graph-insights", "latest.json")),
+      projectContextExists:
+        fs.existsSync(layoutAbsPath(layout, layout.indexPath)) ||
+        fs.existsSync(layoutAbsPath(layout, layout.legacyIndexPath)),
+      latestMarkdownExists: fs.existsSync(layoutAbsPath(layout, layout.latestMarkdownPath)),
+      latestJsonExists: fs.existsSync(layoutAbsPath(layout, layout.latestJsonPath)),
+      indexPath: layout.indexPath,
+      projectRoot: layout.projectRootPosix,
+      layoutManifest: layout.manifestPath,
     };
     const graphDocsMissing = !bootstrapState.latestMarkdownExists || !bootstrapState.latestJsonExists;
     const graphContext = await buildBugfixGraphContext({
@@ -509,12 +524,12 @@ ${graphContext.highlights.length > 0
           {
             id: 'context',
             tool: 'init_project_context',
-            when: `缺少 docs/project-context.md 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
+            when: `缺少 ${layout.indexPath} 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
             args: {
               docs_dir: 'docs',
               ...(projectRoot ? { project_root: projectRoot } : {}),
             },
-            outputs: ['docs/project-context.md', graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
+            outputs: [layout.indexPath, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
             note: `兼容老项目：如果旧项目没有 graph-insights/latest.*，先补齐图谱初始化再进入 bug 收敛`,
           },
           {
@@ -556,7 +571,7 @@ ${graphContext.highlights.length > 0
             },
             outputs: [],
           },
-          ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
+          ...(memoryContext.enabled ? [buildMemoryPlanStep('bugfix')] : []),
         ],
       };
 
@@ -667,12 +682,12 @@ ${graphContext.highlights.length > 0
         {
           id: 'context',
           tool: 'init_project_context',
-          when: `缺少 docs/project-context.md 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
+          when: `缺少 ${layout.indexPath} 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
           args: {
-            docs_dir: 'docs',
+            docs_dir: layout.contextRoot,
             ...(projectRoot ? { project_root: projectRoot } : {}),
           },
-          outputs: ['docs/project-context.md', graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
+          outputs: [layout.indexPath, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
           note: `兼容老项目：如果旧项目没有 graph-insights/latest.*，先补齐图谱初始化再进入 bug 收敛`,
         },
         {
@@ -695,7 +710,7 @@ ${graphContext.highlights.length > 0
           },
           outputs: [],
         },
-        ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
+        ...(memoryContext.enabled ? [buildMemoryPlanStep('bugfix')] : []),
       ],
     };
 
@@ -708,7 +723,7 @@ ${graphContext.highlights.length > 0
         {
           name: '检查项目上下文',
           status: 'pending',
-          description: '检查 docs/project-context.md 与 graph-insights/latest.* 是否存在，缺失则调用 init_project_context',
+          description: `检查 ${layout.indexPath} 与 graph-insights/latest.* 是否存在，缺失则调用 init_project_context`,
         },
         {
           name: 'Bug 分析与修复',

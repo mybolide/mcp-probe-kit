@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { discoverProjectRootFromLayout } from "./project-context-layout.js";
 
 const WORKSPACE_ENV_KEYS = [
   "MCP_PROJECT_ROOT",
@@ -150,11 +151,16 @@ export function buildProjectRootRetryHint(inputPath?: string) {
 export function resolveWorkspaceRoot(explicitProjectRoot?: string): string {
   const explicit = safeResolve(explicitProjectRoot || "");
   if (isExistingDirectory(explicit)) {
-    return explicit;
+    return discoverProjectRootFromLayout(explicit) ?? explicit;
   }
 
   const packageRoot = getRuntimePackageRoot();
   const cwd = safeResolve(process.cwd()) || packageRoot;
+
+  const fromLayout = discoverProjectRootFromLayout(cwd);
+  if (fromLayout) {
+    return fromLayout;
+  }
 
   for (const key of WORKSPACE_ENV_KEYS) {
     const candidate = safeResolve(process.env[key] || "");

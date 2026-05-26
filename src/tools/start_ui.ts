@@ -732,7 +732,7 @@ start_ui <描述> --requirements_mode=loop
             action: 'update_project_context',
             outputs: ['docs/project-context.md'],
           },
-          ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
+          ...(memoryContext.enabled ? [buildMemoryPlanStep('ui')] : []),
         ],
       };
 
@@ -967,7 +967,7 @@ ${recommendation.reasoning}
             action: 'update_project_context',
             outputs: ['docs/project-context.md'],
           },
-          ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
+          ...(memoryContext.enabled ? [buildMemoryPlanStep('ui')] : []),
         ],
       };
 
@@ -1194,7 +1194,7 @@ start_ui "设置页面" --framework=react
           action: 'update_project_context',
           outputs: ['docs/project-context.md'],
         },
-        ...(memoryContext.enabled ? [buildMemoryPlanStep()] : []),
+        ...(memoryContext.enabled ? [buildMemoryPlanStep('ui')] : []),
       ],
     };
 

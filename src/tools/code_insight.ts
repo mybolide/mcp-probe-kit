@@ -14,7 +14,13 @@ import {
   throwIfAborted,
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
-import { isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
+import { isLikelyProjectNamedRelativePath, buildProjectRootRetryHint, resolveWorkspaceRoot } from "../lib/workspace-root.js";
+import {
+  layoutAbsPath,
+  parseLayoutArgsFromRecord,
+  resolveProjectContextLayout,
+  type ProjectContextLayout,
+} from "../lib/project-context-layout.js";
 
 const ALLOWED_MODES = new Set<CodeInsightMode>(["auto", "query", "context", "impact"]);
 const ALLOWED_DIRECTIONS = new Set<CodeInsightDirection>(["upstream", "downstream"]);
@@ -60,7 +66,7 @@ function makeSafeSegment(value: string): string {
 
 function buildProjectDocsOutputs(input: {
   projectRoot?: string;
-  docsDirName?: string;
+  graphDir?: string;
   mode: CodeInsightMode;
   structured: Record<string, unknown>;
 }): { markdownFilePath: string; jsonFilePath: string } | null {
@@ -69,7 +75,7 @@ function buildProjectDocsOutputs(input: {
     return null;
   }
 
-  const docsRoot = path.join(path.resolve(projectRoot), input.docsDirName || "docs", "graph-insights");
+  const docsRoot = path.join(path.resolve(projectRoot), input.graphDir || "docs/graph-insights");
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const suffix = makeSafeSegment(input.structured.summary as string || input.mode);
   const baseName = `${timestamp}-${input.mode}-${suffix}`;
@@ -186,13 +192,16 @@ function formatAmbiguities(ambiguities: CodeInsightAmbiguity[]): string {
     .join("\n");
 }
 
-function createProjectDocsPlan(projectRoot: string, docsDirName: string, docsSnapshot: { markdownFilePath: string; jsonFilePath: string }): ProjectDocsPlan {
-  const docsDir = path.dirname(docsSnapshot.markdownFilePath);
+function createProjectDocsPlan(
+  layout: ProjectContextLayout,
+  docsSnapshot: { markdownFilePath: string; jsonFilePath: string }
+): ProjectDocsPlan {
+  const docsDir = layout.contextRoot;
   return {
     docsDir,
-    projectContextFilePath: toPosixPath(path.join(path.resolve(projectRoot), docsDirName, "project-context.md")),
-    latestMarkdownFilePath: toPosixPath(path.join(docsDir, "latest.md")),
-    latestJsonFilePath: toPosixPath(path.join(docsDir, "latest.json")),
+    projectContextFilePath: toPosixPath(layoutAbsPath(layout, layout.indexPath)),
+    latestMarkdownFilePath: layout.latestMarkdownPath,
+    latestJsonFilePath: layout.latestJsonPath,
     archiveMarkdownFilePath: docsSnapshot.markdownFilePath,
     archiveJsonFilePath: docsSnapshot.jsonFilePath,
     navigationSnippet: `### [代码图谱洞察](./graph-insights/latest.md)
@@ -364,6 +373,10 @@ export async function codeInsight(args: any, context?: ToolExecutionContext) {
       };
     }
     const docsDirName = getString(parsedArgs.docs_dir) || "docs";
+    const layout = resolveProjectContextLayout(
+      projectRoot ? resolveWorkspaceRoot(projectRoot) : resolveWorkspaceRoot(),
+      parseLayoutArgsFromRecord({ docs_dir: docsDirName })
+    );
     const goal = getString(parsedArgs.goal);
     const taskContext = getString(parsedArgs.task_context);
     const direction = normalizeDirection(getString(parsedArgs.direction));
@@ -454,13 +467,13 @@ ${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}`.tr
     const docsProjectRoot = saveToDocs ? (projectRoot || result.sourceRoot) : "";
     const docsSnapshot = buildProjectDocsOutputs({
       projectRoot: docsProjectRoot,
-      docsDirName,
+      graphDir: layout.graphDir,
       mode,
       structured,
     });
 
     const projectDocs = docsSnapshot
-      ? createProjectDocsPlan(docsProjectRoot, docsDirName, docsSnapshot)
+      ? createProjectDocsPlan(layout, docsSnapshot)
       : undefined;
     if (projectDocs) {
       structured.projectDocs = projectDocs;

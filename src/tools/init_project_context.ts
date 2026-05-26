@@ -4,6 +4,18 @@ import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { ProjectContext } from "../schemas/output/project-tools.js";
 import { detectProjectType } from "../lib/project-detector.js";
 import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
+import {
+  detectDocumentLocale,
+  layoutAbsPath,
+  legacyProjectContextExists,
+  parseLayoutArgsFromRecord,
+  resolveProjectContextLayout,
+  toPosixPath,
+  writeLayoutManifest,
+  type ProjectContextLayout,
+} from "../lib/project-context-layout.js";
+import { mergeAgentsMdBlock } from "../lib/merge-agents-md.js";
+import { generateAgentsMdInner } from "../lib/agents-md-template.js";
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -21,10 +33,6 @@ import * as path from 'path';
 
 // 默认文档目录
 const DEFAULT_DOCS_DIR = "docs";
-
-function toPosixPath(value: string) {
-  return value.replace(/\\/g, "/");
-}
 
 function renderPlanSteps(steps: Array<{ id: string; action: string; outputs?: string[]; note?: string }>): string {
   return steps
@@ -162,135 +170,189 @@ function generateDevGuide(docs: Array<{ file: string; title: string; purpose: st
 /**
  * 生成项目上下文文档指导
  */
-async function generateProjectContext(docsDir: string, projectRoot?: string) {
+async function generateProjectContext(layout: ProjectContextLayout, projectRoot?: string) {
   try {
-    // 检测项目类型
     const resolvedRoot = resolveWorkspaceRoot(projectRoot);
-    const detection = detectProjectType(resolvedRoot);
-    const projectInfo = getProjectInfo(resolvedRoot);
+    const projectRootAbs = layout.projectRoot || resolvedRoot;
+    const detection = detectProjectType(projectRootAbs);
+    const projectInfo = getProjectInfo(projectRootAbs);
     const docs = getDocumentList(detection.category);
-    const projectContextPath = toPosixPath(path.join(resolvedRoot, docsDir, 'project-context.md'));
-    const projectContextExists = fs.existsSync(path.join(resolvedRoot, docsDir, 'project-context.md'));
-    const graphDocsRoot = toPosixPath(path.join(resolvedRoot, docsDir, 'graph-insights'));
+    const docsDir = layout.contextRoot;
+    const modularExists = legacyProjectContextExists(projectRootAbs, layout);
+    const agentsPath = toPosixPath(layoutAbsPath(layout, layout.indexPath));
     const graphDocs = {
-      latestMarkdownFilePath: `${graphDocsRoot}/latest.md`,
-      latestJsonFilePath: `${graphDocsRoot}/latest.json`,
+      latestMarkdownFilePath: layout.latestMarkdownPath,
+      latestJsonFilePath: layout.latestJsonPath,
     };
+
+    const existingAgentsRaw = fs.existsSync(layoutAbsPath(layout, layout.indexPath))
+      ? fs.readFileSync(layoutAbsPath(layout, layout.indexPath), "utf8")
+      : undefined;
+    const locale = detectDocumentLocale(projectRootAbs, existingAgentsRaw);
+    const agentsInner = generateAgentsMdInner({
+      layout,
+      locale,
+      projectName: projectInfo.name,
+      projectVersion: projectInfo.version,
+      description: projectInfo.description,
+      language: detection.language,
+      framework: detection.framework,
+      category: detection.category,
+      docs,
+      projectRootPosix: layout.projectRootPosix,
+      graphReady: false,
+    });
+    const mergedAgents = mergeAgentsMdBlock(existingAgentsRaw, agentsInner);
+    const manifestWritten = writeLayoutManifest(projectRootAbs, layout);
+
+    const codeInsightArgs = JSON.stringify({
+      mode: "auto",
+      project_root: layout.projectRootPosix,
+      docs_dir: docsDir,
+    });
+
+    const modularOutputs = docs.map((doc) => `${layout.modularDir}/${doc.file}`);
+
     const plan = {
-      mode: 'delegated' as const,
-      steps: projectContextExists
+      mode: "delegated" as const,
+      steps: modularExists
         ? [
             {
-              id: 'bootstrap-code-insight',
-              action: `检测到现有 ${projectContextPath}，跳过重写上下文文档，直接调用 code_insight 补齐图谱文档`,
+              id: "bootstrap-code-insight",
+              action: `检测到现有 ${layout.legacyIndexPath}，跳过重写分类文档，调用 code_insight 补齐图谱`,
               outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-              note: `调用参数建议: {"mode":"auto","project_root":"${toPosixPath(resolvedRoot)}","docs_dir":"${docsDir}"}`,
+              note: `调用参数: ${codeInsightArgs}`,
             },
             {
-              id: 'persist-graph-docs',
-              action: `严格执行 code_insight 返回的 delegated plan，将图谱结果写入 ${docsDir}/graph-insights/ 并仅更新 ${projectContextPath} 中的图谱入口`,
-              outputs: [projectContextPath, graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-              note: '保留现有 project-context 内容，只补 graph-insights 入口，避免覆盖老文档。',
+              id: "persist-graph-docs",
+              action: `执行 code_insight 的 delegated plan，写入 ${layout.graphDir}/`,
+              outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
+              note: "保留现有 project-context 分类文档",
+            },
+            {
+              id: "finalize-agents-md",
+              action: `将下方 agentsMdTemplate 写入 ${layout.indexPath}（mcp-probe 块置顶，保留用户原有内容）`,
+              outputs: [layout.indexPath],
+              note: `mergeMode: ${mergedAgents.mergeMode}；layout manifest 已由服务端写入 ${manifestWritten}`,
             },
           ]
         : [
             {
-              id: 'write-project-context',
-              action: `按下方模板创建 ${projectContextPath} 以及 ${docsDir}/project-context/ 下的分类文档`,
-              outputs: [
-                projectContextPath,
-                ...docs.map((doc) => toPosixPath(path.join(resolvedRoot, docsDir, 'project-context', doc.file))),
-              ],
-              note: '先完成项目上下文骨架，再启动图谱分析，这样后续入口才稳定。',
+              id: "write-modular-docs",
+              action: `先创建 ${layout.legacyIndexPath}（文档索引），再创建 ${layout.modularDir}/ 分类文档`,
+              outputs: [layout.legacyIndexPath, ...modularOutputs],
+              note: modularExists
+                ? "跳过：索引与分类文档已存在"
+                : "project-context.md 是细节入口；AGENTS.md 仅含 MCP 规则",
             },
             {
-              id: 'bootstrap-code-insight',
-              action: `调用 code_insight 对项目做一次整体图谱分析，生成首份图谱文档`,
+              id: "bootstrap-code-insight",
+              action: "调用 code_insight 做整体图谱分析",
               outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-              note: `调用参数建议: {"mode":"auto","project_root":"${toPosixPath(resolvedRoot)}","docs_dir":"${docsDir}"}`,
+              note: `调用参数: ${codeInsightArgs}`,
             },
             {
-              id: 'persist-graph-docs',
-              action: `严格执行 code_insight 返回的 delegated plan，将图谱结果写入 ${docsDir}/graph-insights/ 并刷新索引`,
-              outputs: [projectContextPath, graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-              note: '后续 feature / bugfix 编排直接读取这份图谱文档，不再各自重新触发 code_insight。',
+              id: "persist-graph-docs",
+              action: `执行 code_insight 的 delegated plan，写入 ${layout.graphDir}/`,
+              outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
+            },
+            {
+              id: "finalize-agents-md",
+              action: `将下方 agentsMdTemplate 写入 ${layout.indexPath}（mcp-probe 块置顶）`,
+              outputs: [layout.indexPath],
+              note: `mergeMode: ${mergedAgents.mergeMode}；manifest 已写入 ${manifestWritten}`,
             },
           ],
     };
 
-    // 生成指导文本
-    const guide = generateGuideText(detection, projectInfo, docs, docsDir, resolvedRoot, {
-      projectContextExists,
+    const guide = generateGuideText(detection, projectInfo, docs, layout, resolvedRoot, {
+      modularExists,
     });
     const header = renderOrchestrationHeader({
-      tool: 'init_project_context',
-      goal: projectContextExists
-        ? '检测到现有项目上下文，仅补齐代码图谱入口'
-        : '生成项目上下文文档，并为后续编排预置代码图谱入口',
-      tasks: projectContextExists
-        ? [
-            '保留现有 project-context.md',
-            '调用 code_insight 生成或刷新图谱文档',
-            '仅补 graph-insights 索引入口',
-          ]
-        : [
-            '先写 project-context 文档骨架',
-            '再调用 code_insight 生成首份图谱文档',
-            '将 graph-insights 挂回 project-context.md 索引',
-          ],
-      notes: [`项目根目录: ${toPosixPath(resolvedRoot)}`, `文档目录: ${docsDir}`],
+      tool: "init_project_context",
+      goal: modularExists
+        ? "补齐图谱与 AGENTS.md 入口（保留现有分类文档）"
+        : "生成项目上下文、图谱入口与 AGENTS.md 操作规则",
+      tasks: modularExists
+        ? ["保留现有分类文档", "code_insight 生成图谱", `写入 ${layout.indexPath}`]
+        : ["写分类文档", "code_insight", `写入 ${layout.indexPath}`],
+      notes: [
+        `项目根目录: ${toPosixPath(resolvedRoot)}`,
+        `上下文目录: ${docsDir}`,
+        `索引: ${layout.indexPath}`,
+        `layout: ${manifestWritten}（已服务端写入）`,
+      ],
     });
-    
-    // 构建结构化数据
+
     const structuredData: ProjectContext = {
-      summary: projectContextExists
-        ? `检测到现有项目上下文，仅补齐 ${detection.category} 项目的图谱分析入口`
-        : `生成 ${detection.category} 项目的上下文文档，并初始化图谱分析入口`,
+      summary: modularExists
+        ? `检测到现有项目上下文，补齐图谱与 ${layout.indexPath}`
+        : `生成 ${detection.category} 项目上下文与 ${layout.indexPath}`,
       mode: "modular",
       projectOverview: {
         name: projectInfo.name,
         description: projectInfo.description,
         techStack: detection.framework ? [detection.framework] : [],
-        architecture: detection.category
+        architecture: detection.category,
       },
       documentation: [
+        { path: layout.indexPath, purpose: "Harness 入口（MCP 触发规则，省 token）" },
         {
-          path: `${docsDir}/project-context.md`,
-          purpose: '项目上下文索引文件（入口）'
+          path: layout.legacyIndexPath,
+          purpose: "项目上下文索引（写代码前优先读，链到分类文档）",
         },
-        ...docs.map(doc => ({
-          path: `${docsDir}/project-context/${doc.file}`,
-          purpose: doc.purpose
+        ...docs.map((doc) => ({
+          path: `${layout.modularDir}/${doc.file}`,
+          purpose: doc.purpose,
         })),
         {
-          path: `${docsDir}/graph-insights/latest.md`,
-          purpose: '最新代码图谱洞察（由 code_insight 维护）',
+          path: layout.latestMarkdownPath,
+          purpose: "最新代码图谱洞察（由 code_insight 维护）",
         },
         {
-          path: `${docsDir}/graph-insights/latest.json`,
-          purpose: '最新代码图谱结构化结果（由 code_insight 维护）',
+          path: layout.latestJsonPath,
+          purpose: "最新代码图谱结构化结果（由 code_insight 维护）",
         },
+        { path: layout.manifestPath, purpose: "layout manifest（工具链路径发现）" },
       ],
       nextSteps: [
-        ...(projectContextExists ? ['保留现有 project-context.md，不重写已有分类文档'] : [`按模板生成 ${docsDir}/project-context.md 和分类文档`]),
-        '调用 code_insight 完成项目整体图谱分析',
-        `将图谱文档保存到 ${docsDir}/graph-insights/ 并更新 project-context.md 索引`,
+        ...(modularExists
+          ? [`保留 ${layout.legacyIndexPath} 与分类文档`]
+          : [`生成 ${layout.modularDir}/ 分类文档`]),
+        "调用 code_insight",
+        `将 agentsMdTemplate 写入 ${layout.indexPath}`,
       ],
       metadata: {
         plan,
         graphDocs,
-        projectContextFilePath: projectContextPath,
-        projectContextExists,
+        layout,
+        locale,
+        agentsMdTemplate: mergedAgents.content,
+        agentsMdMergeMode: mergedAgents.mergeMode,
+        manifestWritten,
+        projectContextFilePath: agentsPath,
+        legacyProjectContextExists: modularExists,
+        projectContextExists: modularExists,
       },
     };
-    
-    return okStructured(`${header}${guide}
+
+    return okStructured(
+      `${header}${guide}
+
+## AGENTS.md 终稿（finalize-agents-md 使用 fsWrite 写入 \`${layout.indexPath}\`）
+
+\`\`\`markdown
+${mergedAgents.content}
+\`\`\`
 
 ## delegated plan
 ${renderPlanSteps(plan.steps)}
-`, structuredData, {
-      schema: (await import("../schemas/output/project-tools.js")).ProjectContextSchema,
-    });
+`,
+      structuredData,
+      {
+        schema: (await import("../schemas/output/project-tools.js")).ProjectContextSchema,
+      }
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`项目上下文初始化失败: ${errorMessage}`);
@@ -304,12 +366,13 @@ function generateGuideText(
   detection: any,
   projectInfo: any,
   docs: Array<{ file: string; title: string; purpose: string }>,
-  docsDir: string,
+  layout: ProjectContextLayout,
   projectRoot: string,
-  options?: { projectContextExists?: boolean }
+  options?: { modularExists?: boolean }
 ): string {
   const timestamp = new Date().toISOString();
-  const projectContextExists = options?.projectContextExists === true;
+  const docsDir = layout.contextRoot;
+  const projectContextExists = options?.modularExists === true;
   
   return `# 项目上下文文档生成指导
 
@@ -324,8 +387,9 @@ function generateGuideText(
 
 ## 🔎 当前状态
 
-- **project-context.md**: ${projectContextExists ? '已存在（将保留，不覆盖）' : '不存在（需要生成）'}
-- **图谱文档**: 需要确保 ${docsDir}/graph-insights/latest.md 与 latest.json 可用
+- **${layout.indexPath}**: Agent 入口（finalize-agents-md 写入，mcp-probe 块置顶）
+- **${layout.legacyIndexPath}**: ${projectContextExists ? '已存在（将保留分类文档）' : '将随分类文档一并生成'}
+- **图谱文档**: 需要确保 ${layout.latestMarkdownPath} 与 ${layout.latestJsonPath} 可用
 
 ## 📋 需要生成的文档
 
@@ -775,21 +839,29 @@ ${template}
 export async function initProjectContext(args: any) {
   let docsDir: string = DEFAULT_DOCS_DIR;
   let projectRoot: string = resolveWorkspaceRoot();
-  
+
   try {
-    // 智能参数解析，支持自然语言输入
     const parsedArgs = parseArgs<{
       docs_dir?: string;
       project_root?: string;
+      output?: string;
+      output_dir?: string;
+      filename?: string;
+      index_style?: string;
+      locale?: string;
+      compat_harness?: boolean;
     }>(args, {
       defaultValues: {
         docs_dir: DEFAULT_DOCS_DIR,
-        project_root: resolveWorkspaceRoot()
+        project_root: resolveWorkspaceRoot(),
       },
       primaryField: "docs_dir",
       fieldAliases: {
-        docs_dir: ["dir", "output", "directory", "目录", "文档目录"],
-        project_root: ["root", "path", "项目路径"]
+        docs_dir: ["dir", "directory", "文档目录", "docsDir"],
+        project_root: ["root", "path", "项目路径"],
+        output: ["index", "index_path", "agents_md"],
+        output_dir: ["outputDir"],
+        index_style: ["indexStyle", "style"],
       },
     });
 
@@ -810,8 +882,16 @@ export async function initProjectContext(args: any) {
       };
     }
 
-    // 生成项目上下文
-    return await generateProjectContext(docsDir, projectRoot);
+    const layoutArgs = parseLayoutArgsFromRecord({
+      docs_dir: docsDir,
+      output: getString(parsedArgs.output),
+      output_dir: getString(parsedArgs.output_dir),
+      filename: getString(parsedArgs.filename),
+      index_style: getString(parsedArgs.index_style) as "auto" | "agents" | "legacy" | undefined,
+    });
+    const layout = resolveProjectContextLayout(projectRoot, layoutArgs);
+
+    return await generateProjectContext(layout, projectRoot);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     
