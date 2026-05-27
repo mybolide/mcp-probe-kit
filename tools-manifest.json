@@ -1,7 +1,7 @@
 {
-  "version": "3.0.19",
+  "version": "3.0.21",
   "protocol": "2025-11-25",
-  "totalTools": 28,
+  "totalTools": 29,
   "toolsets": {
     "core": {
       "description": "9 core tools (daily high-frequency)",
@@ -19,9 +19,10 @@
       ]
     },
     "memory": {
-      "description": "6 memory & cursor history tools",
-      "count": 6,
+      "description": "7 memory & cursor history tools",
+      "count": 7,
       "tools": [
+        "search_memory",
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
@@ -41,8 +42,8 @@
       ]
     },
     "workflow": {
-      "description": "28 workflow tools (includes core + orchestration + interactive + UI + memory)",
-      "count": 28,
+      "description": "29 workflow tools (includes core + orchestration + interactive + UI + memory)",
+      "count": 29,
       "tools": [
         "gencommit",
         "code_review",
@@ -66,6 +67,7 @@
         "ui_design_system",
         "ui_search",
         "sync_ui_data",
+        "search_memory",
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
@@ -75,8 +77,8 @@
       ]
     },
     "full": {
-      "description": "All 28 tools",
-      "count": 28,
+      "description": "All 29 tools",
+      "count": 29,
       "note": "Default toolset, includes all tools"
     }
   },
@@ -102,8 +104,9 @@
       ]
     },
     "memory-cursor-history": {
-      "description": "Memory & Cursor History tools (6)",
+      "description": "Memory & Cursor History tools (7)",
       "tools": [
+        "search_memory",
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
@@ -147,7 +150,7 @@
   },
   "structuredOutput": {
     "description": "Tools supporting structured output (v2.0+)",
-    "version": "3.0.19",
+    "version": "3.0.21",
     "guidanceOnly": {
       "description": "Guidance-type tools (return okText) - AI should execute tasks according to guidance, Schema for reference",
       "count": 6,
@@ -162,7 +165,7 @@
     },
     "dataDriven": {
       "description": "Data-driven tools (return okStructured) - Return actual execution plans or data",
-      "count": 22,
+      "count": 23,
       "tools": [
         "gencommit",
         "code_insight",
@@ -180,6 +183,7 @@
         "ui_search",
         "sync_ui_data",
         "git_work_report",
+        "search_memory",
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
@@ -211,6 +215,7 @@
       "ui_search": "UISearchResultSchema",
       "sync_ui_data": "SyncReportSchema",
       "git_work_report": "GitWorkReportSchema",
+      "search_memory": "MemorySearchSchema",
       "read_memory_asset": "MemoryAssetSchema",
       "memorize_asset": "MemorizeResultSchema",
       "scan_and_extract_patterns": "PatternExtractionSchema",
@@ -219,8 +224,8 @@
       "cursor_read_conversation": "ConversationDetailSchema"
     },
     "coverage": {
-      "total": 28,
-      "completed": 28,
+      "total": 29,
+      "completed": 29,
       "percentage": 100
     }
   },
@@ -272,10 +277,11 @@
       }
     },
     "added": {
-      "count": 8,
+      "count": 9,
       "tools": [
         "code_insight",
         "git_work_report",
+        "search_memory",
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
@@ -286,6 +292,7 @@
       "reasons": {
         "code_insight": "GitNexus bridge for graph-aware code analysis",
         "git_work_report": "Generate work reports from git history",
+        "search_memory": "Semantic search across shared memory pool",
         "read_memory_asset": "Read stored memory assets from Qdrant",
         "memorize_asset": "Store memory assets to Qdrant with embeddings",
         "scan_and_extract_patterns": "Extract and memorize patterns from codebase",

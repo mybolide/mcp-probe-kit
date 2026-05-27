@@ -106,22 +106,23 @@ function summarizeContent(content: string, maxChars = 200): string {
     .slice(0, maxChars);
 }
 
-function buildPattern(content: string, filePath: string, projectName: string | undefined) {
+function buildPattern(content: string, filePath: string) {
   const normalized = content.trim();
   const candidateNames = collectCandidateNames(normalized);
   const primaryName = candidateNames[0] || (filePath ? path.basename(filePath) : 'snippet');
   const type = detectPatternType(normalized, filePath);
   const summary = summarizeContent(normalized);
+  const fileHint = filePath ? `（摘录自 ${filePath}）` : '';
 
   return {
     name: primaryName,
     type,
-    description: filePath ? `从 ${filePath} 提取的可复用模式` : '从代码片段提取的可复用模式',
+    description: filePath
+      ? `从 ${filePath} 提取的可复用模式${fileHint}`
+      : '从代码片段提取的可复用模式',
     summary,
     content: normalized,
     tags: inferTags(normalized, filePath),
-    sourcePath: filePath || undefined,
-    sourceProject: projectName || undefined,
     confidence: filePath ? 0.62 : 0.55,
     candidateNames,
   };
@@ -302,7 +303,6 @@ export async function scanAndExtractPatterns(args: any) {
 
     const content = getString(parsed.content);
     const filePath = getString(parsed.file_path);
-    const projectName = getString(parsed.project_name);
     const directoryPath = getString(parsed.directory_path);
     const projectRoot = resolveWorkspaceRoot(getString(parsed.project_root));
     const maxFiles = Math.max(1, Math.min(200, getNumber(parsed.max_files, 30)));
@@ -316,7 +316,7 @@ export async function scanAndExtractPatterns(args: any) {
     );
 
     if (content) {
-      const pattern = buildPattern(content, filePath, projectName || undefined);
+      const pattern = buildPattern(content, filePath);
       return okStructured(
         `已提取 1 个候选模式${filePath ? `: ${filePath}` : ''}`,
         {
@@ -378,7 +378,7 @@ export async function scanAndExtractPatterns(args: any) {
       }
 
       const relativePath = toRelativePath(absoluteFile, projectRoot).replace(/\\/g, '/');
-      patterns.push(buildPattern(normalized, relativePath, projectName || path.basename(projectRoot)));
+      patterns.push(buildPattern(normalized, relativePath));
     }
 
     return okStructured(

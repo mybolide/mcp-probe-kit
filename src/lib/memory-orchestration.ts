@@ -1,5 +1,6 @@
-import type { MemorySearchResult } from './memory-client.js';
+import type { MemoryAsset, MemorySearchResult } from './memory-client.js';
 import { createMemoryClient } from './memory-client.js';
+import { getMemoryConfig, type MemoryConfig } from './memory-config.js';
 
 export type MemoryPlanKind = 'feature' | 'bugfix' | 'ui' | 'default';
 
@@ -9,10 +10,56 @@ export interface MemoryInjectionContext {
   degraded: boolean;
   query: string;
   results: MemorySearchResult[];
+  /** Full assets keyed by search hit id (auto-loaded for start_* injection) */
+  assetsById: Record<string, MemoryAsset>;
   error?: string;
 }
 
-export async function loadMemoryInjectionContext(query: string): Promise<MemoryInjectionContext> {
+function kindSearchPreferences(kind: MemoryPlanKind): {
+  preferTypes: string[];
+  preferTags: string[];
+} {
+  switch (kind) {
+    case 'bugfix':
+      return { preferTypes: ['bugfix'], preferTags: ['bugfix', 'root-cause'] };
+    case 'ui':
+      return { preferTypes: ['component', 'pattern'], preferTags: ['ui', 'pattern'] };
+    case 'feature':
+      return { preferTypes: ['pattern', 'code'], preferTags: ['feature', 'pattern'] };
+    default:
+      return { preferTypes: [], preferTags: [] };
+  }
+}
+
+export function truncateInjectionText(value: string, maxChars: number): string {
+  if (value.length <= maxChars) {
+    return value;
+  }
+  return `${value.slice(0, Math.max(0, maxChars - 3))}...`;
+}
+
+async function loadFullAssets(
+  results: MemorySearchResult[]
+): Promise<Record<string, MemoryAsset>> {
+  const client = createMemoryClient();
+  if (!client.isReadEnabled() || results.length === 0) {
+    return {};
+  }
+
+  const entries = await Promise.all(
+    results.map(async (item) => {
+      const asset = await client.getAsset(item.id);
+      return asset ? ([item.id, asset] as const) : null;
+    })
+  );
+
+  return Object.fromEntries(entries.filter((entry): entry is [string, MemoryAsset] => entry !== null));
+}
+
+export async function loadMemoryInjectionContext(
+  query: string,
+  kind: MemoryPlanKind = 'default'
+): Promise<MemoryInjectionContext> {
   const client = createMemoryClient();
   if (!client.isEnabled()) {
     return {
@@ -21,17 +68,25 @@ export async function loadMemoryInjectionContext(query: string): Promise<MemoryI
       degraded: false,
       query,
       results: [],
+      assetsById: {},
     };
   }
 
   try {
-    const results = await client.search(query);
+    const prefs = kindSearchPreferences(kind);
+    const results = await client.search(query, {
+      preferTypes: prefs.preferTypes,
+      preferTags: prefs.preferTags,
+    });
+    const assetsById = await loadFullAssets(results);
+
     return {
       enabled: true,
       available: true,
       degraded: false,
       query,
       results,
+      assetsById,
     };
   } catch (error) {
     return {
@@ -40,6 +95,7 @@ export async function loadMemoryInjectionContext(query: string): Promise<MemoryI
       degraded: true,
       query,
       results: [],
+      assetsById: {},
       error: error instanceof Error ? error.message : String(error),
     };
   }
@@ -55,7 +111,60 @@ function formatMemoryResultLabel(item: MemorySearchResult): string {
   return `${item.name} [${item.type}] (${kind})`;
 }
 
+export function shouldShowSourceInSearch(
+  item: MemorySearchResult,
+  config: MemoryConfig = getMemoryConfig()
+): boolean {
+  if (config.searchShowSource) {
+    return Boolean(item.sourcePath);
+  }
+  if (!config.repoId || !item.sourceProject || !item.sourcePath) {
+    return false;
+  }
+  return item.sourceProject === config.repoId;
+}
+
+function formatSourceHint(item: MemorySearchResult, config: MemoryConfig): string {
+  if (!shouldShowSourceInSearch(item, config)) {
+    return '';
+  }
+  return `\n   - 来源: ${item.sourcePath}`;
+}
+
+function formatAssetBody(asset: MemoryAsset, config: MemoryConfig): string {
+  const lines = [
+    `### ${asset.name}`,
+    `- asset_id: ${asset.id}`,
+    asset.description ? `- 描述: ${asset.description}` : '',
+    asset.usage ? `- 适用: ${asset.usage}` : '',
+    asset.tags.length > 0 ? `- 标签: ${asset.tags.join(', ')}` : '',
+    '',
+    truncateInjectionText(asset.content, config.injectionContentMaxChars),
+  ].filter(Boolean);
+
+  return lines.join('\n');
+}
+
+function formatResultBlock(
+  item: MemorySearchResult,
+  index: number,
+  context: MemoryInjectionContext,
+  config: MemoryConfig
+): string {
+  const label = formatMemoryResultLabel(item);
+  const asset = context.assetsById[item.id];
+  const header = `${index + 1}. ${label} score=${item.score.toFixed(3)}\n   - 摘要: ${item.summary}${formatSourceHint(item, config)}`;
+
+  if (asset?.content) {
+    return `${header}\n\n${formatAssetBody(asset, config)}\n`;
+  }
+
+  return `${header}\n   - 全文加载失败，可手动: read_memory_asset {"asset_id": "${item.id}"}\n`;
+}
+
 export function renderMemoryGuideSection(context: MemoryInjectionContext): string {
+  const config = getMemoryConfig();
+
   if (!context.enabled) {
     return '';
   }
@@ -68,14 +177,12 @@ export function renderMemoryGuideSection(context: MemoryInjectionContext): strin
     return `\n\n## 🧠 记忆系统\n- 状态: 已启用\n- 检索结果: 未找到高相关记录（含历史 Bug 修复与可复用模式）\n- 处理: 继续主流程；Bug 修复验证通过后必须 \`memorize_asset\` 沉淀；功能/UI 有可复用产出再沉淀\n`;
   }
 
+  const loadedCount = context.results.filter((item) => context.assetsById[item.id]?.content).length;
   const items = context.results
-    .map((item, index) => {
-      const label = formatMemoryResultLabel(item);
-      return `${index + 1}. ${label} score=${item.score.toFixed(3)}\n   - 摘要: ${item.summary}\n   - 读取: read_memory_asset {\"asset_id\": \"${item.id}\"}${item.sourcePath ? `\n   - 来源: ${item.sourcePath}` : ''}`;
-    })
+    .map((item, index) => formatResultBlock(item, index, context, config))
     .join('\n');
 
-  return `\n\n## 🧠 记忆系统\n- 状态: 已启用\n- 指令: 开干前先复用下列记录（含历史 Bug 现象/根因/改法）；相关条目用 \`read_memory_asset\` 读全文，避免重复踩坑\n- 检索结果:\n${items}\n`;
+  return `\n\n## 🧠 记忆系统\n- 状态: 已启用\n- 指令: 下列为已自动加载的历史经验全文（${loadedCount}/${context.results.length} 条）；开干前直接复用，无需再调 \`read_memory_asset\`\n- 检索结果:\n${items}`;
 }
 
 export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
@@ -90,7 +197,7 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
         description: '[现象、报错信息、复现条件]',
         summary: '[检索用：关键词 + 根因 + 修复要点，一句话]',
         content:
-          '【现象】...\n【根因】...\n【修复】具体改动文件与关键代码/配置\n【验证】如何确认已修好',
+          '【现象】...\n【根因】...\n【修复】具体改动与关键代码/配置\n【验证】如何确认已修好',
         usage: '[再次遇到何种症状时可参考]',
         tags: ['bugfix', 'root-cause'],
         confidence: 0.85,

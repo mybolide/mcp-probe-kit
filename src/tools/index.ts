@@ -20,6 +20,7 @@ export { askUser } from "./ask_user.js";
 export { uiDesignSystem, uiSearch, syncUiData } from "./ui-ux-tools.js";
 export { startUi } from "./start_ui.js";
 // 记忆工具
+export { searchMemory } from "./search_memory.js";
 export { readMemoryAsset } from "./read_memory_asset.js";
 export { memorizeAsset } from "./memorize_asset.js";
 export { scanAndExtractPatterns } from "./scan_and_extract_patterns.js";

@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.21] - 2026-05-27
+
+### 🔧 改进
+
+- `start_feature` / `start_bugfix` / `start_ui`：记忆检索命中后**自动加载全文**并注入编排结果，无需 Agent 再调 `read_memory_asset`
+- 环境变量 `MEMORY_INJECTION_CONTENT_MAX_CHARS`（默认 `1500`）控制每条注入内容长度
+- `init_project_context` 生成的 AGENTS.md 模板同步记忆规则（自动注入、跨仓库沉淀规范）
+
+---
+
+## [3.0.20] - 2026-05-27
+
+### ✨ 新功能
+
+- 新增 `search_memory`：主动语义检索共享记忆库（支持 type/tags 优先排序）
+- 记忆 payload 归一化：兼容 Qdrant 中旧格式（`kind`/`title`/`created_at` 等）
+
+### 🔧 改进
+
+**跨仓库共享记忆**
+- 检索注入默认**不展示** `sourcePath`（避免误用其他仓库路径）
+- `MEMORY_REPO_ID` 匹配时才展示来源；`MEMORY_SEARCH_SHOW_SOURCE=true` 强制展示
+- `scan_and_extract_patterns` 不再写入 `sourceProject`/`sourcePath`
+- `memorize_asset`：bugfix 沉淀校验提示；跨仓库填写 source_* 时给出 warning
+- `start_feature` / `start_bugfix` / `start_ui` 检索按场景优先排序（bugfix/ui/feature）
+
+**检索质量**
+- `MEMORY_SEARCH_MIN_SCORE`：相似度下限（0 表示关闭，推荐 0.72）
+- 检索拉取更多候选后按类型/标签加权排序
+
+### 📚 文档
+
+- AGENTS.md 记忆段落：共享库沉淀规范、`search_memory` 用法
+- 环境变量：`MEMORY_SEARCH_SHOW_SOURCE`、`MEMORY_SEARCH_MIN_SCORE`、`MEMORY_REPO_ID`
+- 新增 `npm run test:memory` 与 `scripts/memory-functional.mjs` 端到端记忆链路测试
+
+---
+
 ## [3.0.19] - 2026-05-26
 
 ### ✨ 新功能

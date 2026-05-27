@@ -403,6 +403,24 @@ verbose: true`
   ],
   memory: [
     {
+      name: 'search_memory',
+      description: '按语义检索共享记忆库，支持 type/tags 优先排序',
+      schema: 'MemorySearchSchema',
+      params: [
+        { name: 'query', type: 'string', required: true, desc: '检索关键词或问题描述' },
+        { name: 'type', type: 'string', required: false, desc: '优先匹配的类型，如 bugfix' },
+        { name: 'tags', type: 'array', required: false, desc: '优先匹配的标签' },
+        { name: 'limit', type: 'number', required: false, desc: '返回条数' }
+      ],
+      usage: '在 start_* 之外主动查找历史 Bug 修复或可复用模式',
+      example: `// 使用示例
+你: 请使用 search_memory 搜索 proxy 相关 bugfix
+
+query: "proxy 400 HTTPS"
+type: "bugfix"
+limit: 5`
+    },
+    {
       name: 'read_memory_asset',
       description: '按 asset_id 读取已存储 memory 资产的完整内容和元数据',
       schema: 'ReadMemoryAssetSchema',

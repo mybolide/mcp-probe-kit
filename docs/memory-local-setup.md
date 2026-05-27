@@ -1,6 +1,6 @@
 # Local Memory Stack (Qdrant + Nomic Embed)
 
-This guide documents a **lightweight local setup** for mcp-probe-kit memory tools (`memorize_asset`, `read_memory_asset`, `scan_and_extract_patterns`):
+This guide documents a **lightweight local setup** for mcp-probe-kit memory tools (`search_memory`, `memorize_asset`, `read_memory_asset`, `scan_and_extract_patterns`):
 
 - **Qdrant** — vector database (port `50008`)
 - **Infinity (nomic-embed)** — embedding API (port `50012`), replaces Ollama for users who want a smaller footprint

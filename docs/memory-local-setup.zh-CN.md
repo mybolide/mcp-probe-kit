@@ -1,6 +1,6 @@
 # 本地记忆栈（Qdrant + Nomic Embed）
 
-面向 `memorize_asset`、`read_memory_asset`、`scan_and_extract_patterns` 的**轻量本机部署**说明：
+面向 `search_memory`、`memorize_asset`、`read_memory_asset`、`scan_and_extract_patterns` 的**轻量本机部署**说明：
 
 - **Qdrant** — 向量库（端口 `50008`）
 - **Infinity（nomic-embed）** — 向量生成（端口 `50012`），**替代 Ollama**，对用户更轻
@@ -229,7 +229,10 @@ Swagger：`http://127.0.0.1:50012/docs`
         "MEMORY_EMBEDDING_MODEL": "nomic-ai/nomic-embed-text-v1.5",
         "MEMORY_EMBEDDING_API_KEY": "与 nomic-embed/.env 中 INFINITY_API_KEY 相同",
         "MEMORY_SEARCH_LIMIT": "3",
-        "MEMORY_SUMMARY_MAX_CHARS": "280"
+        "MEMORY_SUMMARY_MAX_CHARS": "280",
+        "MEMORY_SEARCH_MIN_SCORE": "0",
+        "MEMORY_SEARCH_SHOW_SOURCE": "false",
+        "MEMORY_REPO_ID": ""
       }
     }
   }

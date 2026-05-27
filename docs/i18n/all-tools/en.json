@@ -41,6 +41,7 @@
     "ui_design_system": "Design System",
     "ui_search": "Search UI",
     "code_insight": "Code Insight",
+    "search_memory": "Search Memory",
     "read_memory_asset": "Read Memory",
     "memorize_asset": "Store Memory",
     "scan_and_extract_patterns": "Extract Patterns",
@@ -75,7 +76,7 @@
     },
     "memory": {
       "title": "Memory & Cursor History",
-      "count": "6 tools"
+      "count": "7 tools"
     }
   },
   "toolsData": {
@@ -166,6 +167,10 @@
     "code_insight": {
       "description": "Code graph insight tool, bridging GitNexus to analyze call chains, context, and impact (auto-degrades when unavailable)",
       "usage": "Refresh the GitNexus index, perform task-level call-chain/context/impact analysis, and persist results to docs/graph-insights plus the project-context index"
+    },
+    "search_memory": {
+      "description": "Semantic search across the shared memory pool, with optional type/tags preference",
+      "usage": "Use outside start_* to find historical bugfixes or patterns; follow with read_memory_asset for full content"
     },
     "read_memory_asset": {
       "description": "Read the full content and metadata of a stored memory asset by asset ID",
