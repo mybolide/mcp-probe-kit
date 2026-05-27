@@ -23,7 +23,7 @@ import {
   startRalph, interview, askUser,
   uiDesignSystem, uiSearch, syncUiData, startUi,
   startProduct, gitWorkReport,
-  readMemoryAsset, memorizeAsset, scanAndExtractPatterns,
+  searchMemory, readMemoryAsset, memorizeAsset, scanAndExtractPatterns,
   cursorListConversations, cursorSearchConversations, cursorReadConversation
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
@@ -598,6 +598,8 @@ async function executeTool(
       return await startProduct((args ?? {}) as any, context);
     case "git_work_report":
       return await gitWorkReport(args as any);
+    case "search_memory":
+      return await searchMemory(args as any);
     case "read_memory_asset":
       return await readMemoryAsset(args as any);
     case "memorize_asset":

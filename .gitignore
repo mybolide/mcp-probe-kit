@@ -61,3 +61,12 @@ mcp-publisher.exe
 # Per-project harness output (generate via init_project_context in each repo)
 AGENTS.md
 docs/.mcp-probe/
+
+# npm pack artifacts (local publish only)
+*.tgz
+
+# Memory: local unit tests (run on your machine; not part of repo CI)
+src/lib/__tests__/memory-orchestration.unit.test.ts
+src/lib/__tests__/memory-payload.unit.test.ts
+scripts/memory-functional.mjs
+scripts/memory-sanitize.mjs

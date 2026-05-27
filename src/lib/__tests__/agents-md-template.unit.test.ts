@@ -24,5 +24,7 @@ describe('generateAgentsMdInner', () => {
     expect(md).toContain('start_bugfix');
     expect(md).toContain('memorize_asset');
     expect(md).toContain('bugfix');
+    expect(md).toContain('search_memory');
+    expect(md).toContain('自动注入');
   });
 });

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { getMemoryConfig, isMemoryEnabled, isMemoryReadEnabled, type MemoryConfig } from './memory-config.js';
+import { normalizeMemoryPayload, payloadToMemoryFields } from './memory-payload.js';
 
 export interface MemoryAsset {
   id: string;
@@ -27,7 +28,15 @@ export interface MemorySearchResult {
   description: string;
   summary: string;
   tags: string[];
+  sourceProject?: string;
   sourcePath?: string;
+}
+
+export interface MemorySearchOptions {
+  limit?: number;
+  minScore?: number;
+  preferTypes?: string[];
+  preferTags?: string[];
 }
 
 interface QdrantPoint {
@@ -223,27 +232,15 @@ export class MemoryClient {
       }
     );
 
-    const payload = data.result?.points?.[0]?.payload;
-    if (!payload) {
+    const rawPayload = data.result?.points?.[0]?.payload;
+    if (!rawPayload) {
       return null;
     }
 
+    const fields = payloadToMemoryFields(rawPayload);
     return {
-      id: String(payload.id || ''),
-      name: String(payload.name || ''),
-      type: String(payload.type || ''),
-      description: String(payload.description || ''),
-      summary: String(payload.summary || ''),
-      content: String(payload.content || ''),
-      tags: ensureArray(payload.tags),
-      confidence: numberOr(payload.confidence, 0.5),
-      sourceProject: typeof payload.sourceProject === 'string' ? payload.sourceProject : undefined,
-      sourcePath: typeof payload.sourcePath === 'string' ? payload.sourcePath : undefined,
-      usage: typeof payload.usage === 'string' ? payload.usage : undefined,
-      contentHash: typeof payload.contentHash === 'string' ? payload.contentHash : undefined,
-      normalizedContentHash: typeof payload.normalizedContentHash === 'string' ? payload.normalizedContentHash : undefined,
-      createdAt: String(payload.createdAt || ''),
-      updatedAt: String(payload.updatedAt || ''),
+      ...fields,
+      id: fields.id || String(rawPayload.id || ''),
     };
   }
 
@@ -319,10 +316,14 @@ export class MemoryClient {
     return asset;
   }
 
-  async search(query: string, limit: number = this.config.searchLimit): Promise<MemorySearchResult[]> {
+  async search(query: string, options: MemorySearchOptions = {}): Promise<MemorySearchResult[]> {
     if (!this.isEnabled()) {
       return [];
     }
+
+    const limit = options.limit ?? this.config.searchLimit;
+    const minScore = options.minScore ?? this.config.searchMinScore;
+    const fetchLimit = Math.min(Math.max(limit * 4, limit), 50);
 
     const vector = await this.embed(query);
     const data = await this.requestJson<{ result?: QdrantPoint[] }>(
@@ -332,25 +333,33 @@ export class MemoryClient {
         headers: this.buildHeaders(),
         body: JSON.stringify({
           vector,
-          limit,
+          limit: fetchLimit,
           with_payload: true,
         }),
       }
     );
 
-    return (data.result || []).map((point) => {
-      const payload = point.payload || {};
+    const mapped = (data.result || []).map((point) => {
+      const payload = normalizeMemoryPayload(point.payload || {});
+      const fields = payloadToMemoryFields(payload);
       return {
         id: String(point.id),
         score: numberOr(point.score, 0),
-        name: String(payload.name || ''),
-        type: String(payload.type || ''),
-        description: String(payload.description || ''),
-        summary: truncate(String(payload.summary || ''), this.config.summaryMaxChars),
-        tags: ensureArray(payload.tags),
-        sourcePath: typeof payload.sourcePath === 'string' ? payload.sourcePath : undefined,
+        name: fields.name,
+        type: fields.type,
+        description: fields.description,
+        summary: truncate(fields.summary, this.config.summaryMaxChars),
+        tags: fields.tags,
+        sourceProject: fields.sourceProject,
+        sourcePath: fields.sourcePath,
       };
     });
+
+    const ranked = rankSearchResults(mapped, options.preferTypes, options.preferTags);
+    const filtered =
+      minScore > 0 ? ranked.filter((item) => item.score >= minScore) : ranked;
+
+    return filtered.slice(0, limit);
   }
 
   async getAsset(assetId: string): Promise<MemoryAsset | null> {
@@ -366,29 +375,49 @@ export class MemoryClient {
       }
     );
 
-    const payload = data.result?.payload;
-    if (!payload) {
+    const rawPayload = data.result?.payload;
+    if (!rawPayload) {
       return null;
     }
 
+    const fields = payloadToMemoryFields(rawPayload);
     return {
-      id: String(payload.id || assetId),
-      name: String(payload.name || ''),
-      type: String(payload.type || ''),
-      description: String(payload.description || ''),
-      summary: String(payload.summary || ''),
-      content: String(payload.content || ''),
-      tags: ensureArray(payload.tags),
-      confidence: numberOr(payload.confidence, 0.5),
-      sourceProject: typeof payload.sourceProject === 'string' ? payload.sourceProject : undefined,
-      sourcePath: typeof payload.sourcePath === 'string' ? payload.sourcePath : undefined,
-      usage: typeof payload.usage === 'string' ? payload.usage : undefined,
-      contentHash: typeof payload.contentHash === 'string' ? payload.contentHash : undefined,
-      normalizedContentHash: typeof payload.normalizedContentHash === 'string' ? payload.normalizedContentHash : undefined,
-      createdAt: String(payload.createdAt || ''),
-      updatedAt: String(payload.updatedAt || ''),
+      ...fields,
+      id: fields.id || assetId,
     };
   }
+}
+
+function rankSearchResults(
+  results: MemorySearchResult[],
+  preferTypes: string[] = [],
+  preferTags: string[] = []
+): MemorySearchResult[] {
+  if (preferTypes.length === 0 && preferTags.length === 0) {
+    return [...results].sort((a, b) => b.score - a.score);
+  }
+
+  const preferredTypes = new Set(preferTypes.map((item) => item.toLowerCase()));
+  const preferredTags = new Set(preferTags.map((item) => item.toLowerCase()));
+
+  const scoreBoost = (item: MemorySearchResult): number => {
+    let boost = 0;
+    if (preferredTypes.has(item.type.toLowerCase())) {
+      boost += 2;
+    }
+    if (item.tags.some((tag) => preferredTags.has(tag.toLowerCase()))) {
+      boost += 1;
+    }
+    return boost;
+  };
+
+  return [...results].sort((a, b) => {
+    const boostDiff = scoreBoost(b) - scoreBoost(a);
+    if (boostDiff !== 0) {
+      return boostDiff;
+    }
+    return b.score - a.score;
+  });
 }
 
 export function createMemoryClient(): MemoryClient {

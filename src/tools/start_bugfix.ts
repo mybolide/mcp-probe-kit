@@ -489,7 +489,10 @@ ${graphContext.highlights.length > 0
 - 使用方式: 先读取基线图谱，再用本次任务图谱做 TBP-4 / TBP-5 / TBP-6 的边界与真因收敛
 `;
 
-    const memoryContext = await loadMemoryInjectionContext([errorMessage, stackTrace, codeContext].filter(Boolean).join("\n"));
+    const memoryContext = await loadMemoryInjectionContext(
+      [errorMessage, stackTrace, codeContext].filter(Boolean).join("\n"),
+      "bugfix"
+    );
     const memoryGuideSection = renderMemoryGuideSection(memoryContext);
 
     if (requirementsMode === "loop") {
@@ -584,7 +587,7 @@ ${graphContext.highlights.length > 0
         ],
         notes: [
           ...headerNotes,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，优先复用历史修复经验并在结束后评估沉淀'] : []),
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，历史修复经验全文已自动注入，结束后评估沉淀'] : []),
         ],
       });
 
@@ -660,7 +663,7 @@ ${graphContext.highlights.length > 0
       ],
       notes: [
         ...headerNotes,
-        ...(memoryContext.enabled ? ['记忆系统: 已启用，必要时先读取相似历史资产'] : []),
+        ...(memoryContext.enabled ? ['记忆系统: 已启用，相似历史经验全文已自动注入'] : []),
       ],
     });
 

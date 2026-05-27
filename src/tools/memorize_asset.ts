@@ -63,6 +63,20 @@ export async function memorizeAsset(args: any) {
       );
     }
 
+    const warnings: string[] = [];
+    if (type === 'bugfix') {
+      const requiredSections = ['【现象】', '【根因】', '【修复】'];
+      const missing = requiredSections.filter((section) => !content.includes(section));
+      if (missing.length > 0) {
+        warnings.push(`建议 content 包含 ${missing.join('、')}，便于跨仓库检索与复用`);
+      }
+    }
+    if (sourceProject || sourcePath) {
+      warnings.push(
+        '跨仓库共享记忆时请勿依赖 source_project/source_path；路径请写入 content 正文（可选）'
+      );
+    }
+
     const asset = await client.upsertAsset({
       name,
       type,
@@ -82,6 +96,7 @@ export async function memorizeAsset(args: any) {
         enabled: true,
         stored: true,
         asset,
+        warnings: warnings.length > 0 ? warnings : undefined,
       }
     );
   } catch (error) {

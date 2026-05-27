@@ -589,7 +589,7 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
     const skillBridgeSection = renderSkillBridgeSection(skillBridge);
     headerNotes.push(buildSkillHeaderNote(skillBridge));
 
-    const memoryContext = await loadMemoryInjectionContext(description || templateName);
+    const memoryContext = await loadMemoryInjectionContext(description || templateName, 'ui');
     const memoryGuideSection = renderMemoryGuideSection(memoryContext);
 
     // 验证 mode 参数
@@ -980,7 +980,7 @@ ${recommendation.reasoning}
         ],
         notes: [
           ...headerNotes,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，必要时先读取相似历史 UI 资产'] : []),
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，相似历史 UI 经验全文已自动注入'] : []),
         ],
       });
 
@@ -1123,7 +1123,7 @@ start_ui "设置页面" --framework=react
       ],
       notes: [
         ...headerNotes,
-        ...(memoryContext.enabled ? ['记忆系统: 已启用，必要时先读取相似历史 UI 资产'] : []),
+        ...(memoryContext.enabled ? ['记忆系统: 已启用，相似历史 UI 经验全文已自动注入'] : []),
       ],
     });
 

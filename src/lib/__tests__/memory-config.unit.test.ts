@@ -40,4 +40,16 @@ describe('memory-config 单元测试', () => {
     expect(isMemoryReadEnabled(config)).toBe(true);
     expect(isMemoryEnabled(config)).toBe(true);
   });
+
+  test('记忆检索展示与阈值环境变量', () => {
+    vi.stubEnv('MEMORY_SEARCH_SHOW_SOURCE', 'true');
+    vi.stubEnv('MEMORY_SEARCH_MIN_SCORE', '0.72');
+    vi.stubEnv('MEMORY_REPO_ID', 'my-org/my-repo');
+
+    const config = getMemoryConfig();
+
+    expect(config.searchShowSource).toBe(true);
+    expect(config.searchMinScore).toBe(0.72);
+    expect(config.repoId).toBe('my-org/my-repo');
+  });
 });

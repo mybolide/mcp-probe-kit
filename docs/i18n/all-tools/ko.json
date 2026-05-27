@@ -42,6 +42,7 @@
     "ui_search": "UI 검색",
     "sync_ui_data": "데이터 동기화",
     "code_insight": "코드 인사이트",
+    "search_memory": "메모리 검색",
     "read_memory_asset": "메모리 읽기",
     "memorize_asset": "메모리 저장",
     "scan_and_extract_patterns": "패턴 추출",
@@ -76,7 +77,7 @@
     },
     "memory": {
       "title": "Memory 및 Cursor History",
-      "count": "6개"
+      "count": "7개"
     }
   },
   "toolsData": {

@@ -42,6 +42,7 @@
     "ui_search": "UI検索",
     "sync_ui_data": "データ同期",
     "code_insight": "コード洞察",
+    "search_memory": "メモリ検索",
     "read_memory_asset": "メモリ読取",
     "memorize_asset": "メモリ保存",
     "scan_and_extract_patterns": "パターン抽出",
@@ -76,7 +77,7 @@
     },
     "memory": {
       "title": "Memory と Cursor History",
-      "count": "6個"
+      "count": "7個"
     }
   },
   "toolsData": {

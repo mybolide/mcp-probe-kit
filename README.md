@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 28 tools—it's a context-aware system that helps AI agents grasp what you're building.
+> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 29 tools—it's a context-aware system that helps AI agents grasp what you're building.
 
 **Languages**: [English](README.md) | [简体中文](i18n/README.zh-CN.md) | [日本語](i18n/README.ja-JP.md) | [한국어](i18n/README.ko-KR.md) | [Español](i18n/README.es-ES.md) | [Français](i18n/README.fr-FR.md) | [Deutsch](i18n/README.de-DE.md) | [Português (BR)](i18n/README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server providing **28 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
+A powerful MCP (Model Context Protocol) server providing **29 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
 
 **🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
@@ -42,7 +42,7 @@ A powerful MCP (Model Context Protocol) server providing **28 tools** covering t
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 28 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 29 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -64,8 +64,8 @@ A powerful MCP (Model Context Protocol) server providing **28 tools** covering t
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX Utilities** (3 tools) - Design systems and UI data synchronization
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory & Cursor History** (6 tools) - Reusable asset memory and local Cursor conversation retrieval
-  - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
+- **🧠 Memory & Cursor History** (7 tools) - Reusable asset memory and local Cursor conversation retrieval
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
 
 ### 🧠 Code Graph Bridge (GitNexus)
 
@@ -100,9 +100,12 @@ A powerful MCP (Model Context Protocol) server providing **28 tools** covering t
   - Linux: `~/.config/Cursor/User/globalStorage/state.vscdb`
 
 **Memory tools:**
+- `search_memory` - Semantic search across the shared memory pool (optionally prefer `type` / `tags`)
 - `memorize_asset` - Persist reusable code/spec/pattern assets into vector memory
 - `read_memory_asset` - Read full asset content by `asset_id`
 - `scan_and_extract_patterns` - Extract reusable patterns from code/file/directory before deciding whether to persist
+
+**Cross-repo memory pools:** do not rely on `source_project` / `source_path` for shared retrieval; put file paths in `content` instead. Search injection hides foreign `sourcePath` unless `MEMORY_REPO_ID` matches or `MEMORY_SEARCH_SHOW_SOURCE=true`.
 
 **Memory backend and embedding configuration:**
 - Vector database: **Qdrant**
@@ -121,6 +124,10 @@ A powerful MCP (Model Context Protocol) server providing **28 tools** covering t
   - `MEMORY_EMBEDDING_PROVIDER` (`ollama` by default)
   - `MEMORY_SEARCH_LIMIT` (default: `3`)
   - `MEMORY_SUMMARY_MAX_CHARS` (default: `280`)
+  - `MEMORY_SEARCH_MIN_SCORE` (default: `0` = disabled; try `0.72` for noisy pools)
+  - `MEMORY_SEARCH_SHOW_SOURCE` (default: `false`)
+  - `MEMORY_REPO_ID` (optional; show `sourcePath` only when `sourceProject` matches)
+  - `MEMORY_INJECTION_CONTENT_MAX_CHARS` (default: `1500`; max content per hit injected into `start_*` guides)
 - Behavior notes:
   - Read-only memory access only requires `MEMORY_QDRANT_URL`
   - Memory write is enabled only when `MEMORY_QDRANT_URL`, `MEMORY_EMBEDDING_URL`, and `MEMORY_EMBEDDING_MODEL` are all configured

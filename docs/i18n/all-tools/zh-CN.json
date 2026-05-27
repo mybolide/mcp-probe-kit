@@ -5,7 +5,7 @@
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "MCP Probe Kit 提供 28 个实用工具，核心与编排工具支持结构化输出"
+    "subtitle": "MCP Probe Kit 提供 29 个实用工具，核心与编排工具支持结构化输出"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -41,6 +41,7 @@
     "ui_design_system": "设计系统",
     "ui_search": "搜索UI",
     "code_insight": "图谱洞察",
+    "search_memory": "搜索记忆",
     "read_memory_asset": "读取记忆",
     "memorize_asset": "沉淀记忆",
     "scan_and_extract_patterns": "抽取模式",
@@ -75,7 +76,7 @@
     },
     "memory": {
       "title": "记忆与 Cursor 历史",
-      "count": "6 个"
+      "count": "7 个"
     }
   },
   "toolsData": {
@@ -166,6 +167,10 @@
     "code_insight": {
       "description": "代码图谱洞察工具，桥接 GitNexus 分析调用链、上下文和影响面（不可用时自动降级）",
       "usage": "用于刷新 GitNexus 图谱、获取任务级调用链/上下文/影响面，并把结果保存到 docs/graph-insights 与 project-context 索引"
+    },
+    "search_memory": {
+      "description": "按语义检索共享记忆库，支持 type/tags 优先排序",
+      "usage": "在 start_* 之外主动查找历史 Bug 修复或可复用模式；命中后用 read_memory_asset 读全文"
     },
     "read_memory_asset": {
       "description": "按资产 ID 读取已沉淀记忆的完整内容与元数据",

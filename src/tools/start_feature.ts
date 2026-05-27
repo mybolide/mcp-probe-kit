@@ -355,7 +355,7 @@ ${graphContext.highlights.length > 0
       .filter(Boolean)
       .join("\n");
 
-    const memoryContext = await loadMemoryInjectionContext(`${featureName}\n${description}`);
+    const memoryContext = await loadMemoryInjectionContext(`${featureName}\n${description}`, 'feature');
     const memoryGuideSection = renderMemoryGuideSection(memoryContext);
 
     if (requirementsMode === "loop") {
@@ -450,7 +450,7 @@ ${graphContext.highlights.length > 0
         notes: [
           `模板档位: ${templateProfile}`,
           graphStatusNote,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，按需读取历史资产并在结束后评估是否沉淀'] : []),
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，历史经验全文已自动注入，结束后评估是否沉淀'] : []),
         ],
       });
 
@@ -519,7 +519,7 @@ ${graphContext.highlights.length > 0
         notes: [
           `模板档位: ${templateProfile}`,
           graphStatusNote,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，先复用摘要资产，必要时读取详情'] : []),
+          ...(memoryContext.enabled ? ['记忆系统: 已启用，历史经验全文已自动注入'] : []),
         ],
     });
 
