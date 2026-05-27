@@ -1,6 +1,30 @@
 {
   "version": "2.2.3",
-  "syncedAt": "2026-05-27T08:48:58.509Z",
+  "syncedAt": "2026-05-27T10:50:38.982Z",
   "source": "uipro-cli",
-  "format": "json"
+  "format": "json",
+  "sources": {
+    "uipro-cli": {
+      "version": "2.2.3",
+      "syncedAt": "2026-05-27T08:58:13.736Z"
+    },
+    "shadcn": {
+      "version": "d61db1575ba0fcbb",
+      "syncedAt": "2026-05-27T09:24:56.951Z",
+      "checksum": "d61db1575ba0fcbb",
+      "style": "new-york",
+      "blocks": 124,
+      "components": 54
+    },
+    "themes": {
+      "version": "1.0.0",
+      "syncedAt": "2026-05-27T10:50:37.768Z",
+      "checksum": "aea5e2fa8c91a5db"
+    },
+    "vercel": {
+      "version": "2026-04-06",
+      "syncedAt": "2026-05-27T10:50:38.981Z",
+      "checksum": "c13c9261824b5804"
+    }
+  }
 }

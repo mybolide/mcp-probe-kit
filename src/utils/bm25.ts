@@ -72,6 +72,8 @@ export class BM25 {
       }
       this.invertedIndex.get(term)!.set(doc.id, freq);
     }
+
+    this.recalculateAvgDocLength();
   }
   
   /**
@@ -81,8 +83,14 @@ export class BM25 {
     for (const doc of docs) {
       this.addDocument(doc);
     }
-    
-    // 计算平均文档长度
+  }
+
+  private recalculateAvgDocLength(): void {
+    if (this.documents.length === 0) {
+      this.avgDocLength = 0;
+      return;
+    }
+
     let totalLength = 0;
     for (const length of this.documentLengths.values()) {
       totalLength += length;
@@ -131,7 +139,7 @@ export class BM25 {
   /**
    * 搜索文档
    */
-  search(query: string, limit: number = 10): BM25SearchResult[] {
+  search(query: string, limit: number = 10, predicate?: (metadata?: Record<string, any>) => boolean): BM25SearchResult[] {
     const queryTerms = this.tokenize(query);
     
     if (queryTerms.length === 0) {
@@ -152,10 +160,18 @@ export class BM25 {
     // 计算得分
     const results: BM25SearchResult[] = [];
     for (const docId of relevantDocs) {
-      const score = this.calculateScore(docId, queryTerms);
       const doc = this.documents.find(d => d.id === docId);
+      if (!doc) {
+        continue;
+      }
+
+      if (predicate && !predicate(doc.metadata)) {
+        continue;
+      }
+
+      const score = this.calculateScore(docId, queryTerms);
       
-      if (doc && score > 0) {
+      if (score > 0) {
         results.push({
           id: docId,
           score,
@@ -177,6 +193,6 @@ export class BM25 {
     this.documents = [];
     this.invertedIndex.clear();
     this.documentLengths.clear();
-    this.avgDocLength = 0;
+    this.recalculateAvgDocLength();
   }
 }

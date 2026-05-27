@@ -1,0 +1,2541 @@
+[
+  {
+    "name": "dashboard-01",
+    "title": "dashboard-01",
+    "description": "A dashboard with sidebar, charts and data table.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@dnd-kit/core",
+      "@dnd-kit/modifiers",
+      "@dnd-kit/sortable",
+      "@dnd-kit/utilities",
+      "@tanstack/react-table",
+      "zod"
+    ],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "label",
+      "chart",
+      "card",
+      "select",
+      "tabs",
+      "table",
+      "toggle-group",
+      "badge",
+      "button",
+      "checkbox",
+      "dropdown-menu",
+      "drawer",
+      "input",
+      "avatar",
+      "sheet",
+      "sonner"
+    ],
+    "fileCount": 11,
+    "files": [
+      "app/dashboard/page.tsx",
+      "app/dashboard/data.json",
+      "registry/new-york/blocks/dashboard-01/components/app-sidebar.tsx",
+      "registry/new-york/blocks/dashboard-01/components/chart-area-interactive.tsx",
+      "registry/new-york/blocks/dashboard-01/components/data-table.tsx",
+      "registry/new-york/blocks/dashboard-01/components/nav-documents.tsx",
+      "registry/new-york/blocks/dashboard-01/components/nav-main.tsx",
+      "registry/new-york/blocks/dashboard-01/components/nav-secondary.tsx",
+      "registry/new-york/blocks/dashboard-01/components/nav-user.tsx",
+      "registry/new-york/blocks/dashboard-01/components/section-cards.tsx",
+      "registry/new-york/blocks/dashboard-01/components/site-header.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add dashboard-01",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-01",
+    "title": "sidebar-01",
+    "description": "A simple sidebar with navigation grouped by section.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "label",
+      "dropdown-menu"
+    ],
+    "fileCount": 4,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-01/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-01/components/search-form.tsx",
+      "registry/new-york/blocks/sidebar-01/components/version-switcher.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-01",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-02",
+    "title": "sidebar-02",
+    "description": "A sidebar with collapsible sections.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "label",
+      "dropdown-menu"
+    ],
+    "fileCount": 4,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-02/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-02/components/search-form.tsx",
+      "registry/new-york/blocks/sidebar-02/components/version-switcher.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-02",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-03",
+    "title": "sidebar-03",
+    "description": "A sidebar with submenus.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-03/components/app-sidebar.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-03",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-04",
+    "title": "sidebar-04",
+    "description": "A floating sidebar with submenus.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-04/components/app-sidebar.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-04",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-05",
+    "title": "sidebar-05",
+    "description": "A sidebar with collapsible submenus.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "label",
+      "collapsible"
+    ],
+    "fileCount": 3,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-05/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-05/components/search-form.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-05",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-06",
+    "title": "sidebar-06",
+    "description": "A sidebar with submenus as dropdowns.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "card",
+      "dropdown-menu"
+    ],
+    "fileCount": 4,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-06/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-06/components/nav-main.tsx",
+      "registry/new-york/blocks/sidebar-06/components/sidebar-opt-in-form.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-06",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-07",
+    "title": "sidebar-07",
+    "description": "A sidebar that collapses to icons.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "collapsible",
+      "dropdown-menu",
+      "avatar"
+    ],
+    "fileCount": 6,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-07/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-07/components/nav-main.tsx",
+      "registry/new-york/blocks/sidebar-07/components/nav-projects.tsx",
+      "registry/new-york/blocks/sidebar-07/components/nav-user.tsx",
+      "registry/new-york/blocks/sidebar-07/components/team-switcher.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-07",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-08",
+    "title": "sidebar-08",
+    "description": "An inset sidebar with secondary navigation.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "collapsible",
+      "dropdown-menu",
+      "avatar"
+    ],
+    "fileCount": 6,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-08/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-08/components/nav-main.tsx",
+      "registry/new-york/blocks/sidebar-08/components/nav-projects.tsx",
+      "registry/new-york/blocks/sidebar-08/components/nav-secondary.tsx",
+      "registry/new-york/blocks/sidebar-08/components/nav-user.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-08",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-09",
+    "title": "sidebar-09",
+    "description": "Collapsible nested sidebars.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "collapsible",
+      "dropdown-menu",
+      "avatar",
+      "switch",
+      "label"
+    ],
+    "fileCount": 3,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-09/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-09/components/nav-user.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-09",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-10",
+    "title": "sidebar-10",
+    "description": "A sidebar in a popover.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "popover",
+      "collapsible",
+      "dropdown-menu"
+    ],
+    "fileCount": 8,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-10/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-10/components/nav-actions.tsx",
+      "registry/new-york/blocks/sidebar-10/components/nav-favorites.tsx",
+      "registry/new-york/blocks/sidebar-10/components/nav-main.tsx",
+      "registry/new-york/blocks/sidebar-10/components/nav-secondary.tsx",
+      "registry/new-york/blocks/sidebar-10/components/nav-workspaces.tsx",
+      "registry/new-york/blocks/sidebar-10/components/team-switcher.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-10",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-11",
+    "title": "sidebar-11",
+    "description": "A sidebar with a collapsible file tree.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "collapsible"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-11/components/app-sidebar.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-11",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-12",
+    "title": "sidebar-12",
+    "description": "A sidebar with a calendar.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "collapsible",
+      "calendar",
+      "dropdown-menu",
+      "avatar"
+    ],
+    "fileCount": 5,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-12/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-12/components/calendars.tsx",
+      "registry/new-york/blocks/sidebar-12/components/date-picker.tsx",
+      "registry/new-york/blocks/sidebar-12/components/nav-user.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-12",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-13",
+    "title": "sidebar-13",
+    "description": "A sidebar in a dialog.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "button",
+      "dialog"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-13/components/settings-dialog.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-13",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-14",
+    "title": "sidebar-14",
+    "description": "A sidebar on the right.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-14/components/app-sidebar.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-14",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-15",
+    "title": "sidebar-15",
+    "description": "A left and right sidebar.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "popover",
+      "collapsible",
+      "dropdown-menu",
+      "calendar",
+      "avatar"
+    ],
+    "fileCount": 11,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-15/components/calendars.tsx",
+      "registry/new-york/blocks/sidebar-15/components/date-picker.tsx",
+      "registry/new-york/blocks/sidebar-15/components/nav-favorites.tsx",
+      "registry/new-york/blocks/sidebar-15/components/nav-main.tsx",
+      "registry/new-york/blocks/sidebar-15/components/nav-secondary.tsx",
+      "registry/new-york/blocks/sidebar-15/components/nav-user.tsx",
+      "registry/new-york/blocks/sidebar-15/components/nav-workspaces.tsx",
+      "registry/new-york/blocks/sidebar-15/components/sidebar-left.tsx",
+      "registry/new-york/blocks/sidebar-15/components/sidebar-right.tsx",
+      "registry/new-york/blocks/sidebar-15/components/team-switcher.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-15",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "sidebar-16",
+    "title": "sidebar-16",
+    "description": "A sidebar with a sticky site header.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "sidebar",
+      "breadcrumb",
+      "separator",
+      "collapsible",
+      "dropdown-menu",
+      "avatar",
+      "button",
+      "label"
+    ],
+    "fileCount": 8,
+    "files": [
+      "app/dashboard/page.tsx",
+      "registry/new-york/blocks/sidebar-16/components/app-sidebar.tsx",
+      "registry/new-york/blocks/sidebar-16/components/nav-main.tsx",
+      "registry/new-york/blocks/sidebar-16/components/nav-projects.tsx",
+      "registry/new-york/blocks/sidebar-16/components/nav-secondary.tsx",
+      "registry/new-york/blocks/sidebar-16/components/nav-user.tsx",
+      "registry/new-york/blocks/sidebar-16/components/search-form.tsx",
+      "registry/new-york/blocks/sidebar-16/components/site-header.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar-16",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "login-01",
+    "title": "login-01",
+    "description": "A simple login form.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "button",
+      "card",
+      "input",
+      "label"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/login/page.tsx",
+      "registry/new-york/blocks/login-01/components/login-form.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add login-01",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "login-02",
+    "title": "login-02",
+    "description": "A two column login page with a cover image.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "button",
+      "card",
+      "input",
+      "label"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/login/page.tsx",
+      "registry/new-york/blocks/login-02/components/login-form.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add login-02",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "login-03",
+    "title": "login-03",
+    "description": "A login page with a muted background color.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "button",
+      "card",
+      "input",
+      "label"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/login/page.tsx",
+      "registry/new-york/blocks/login-03/components/login-form.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add login-03",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "login-04",
+    "title": "login-04",
+    "description": "A login page with form and image.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "button",
+      "card",
+      "input",
+      "label"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/login/page.tsx",
+      "registry/new-york/blocks/login-04/components/login-form.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add login-04",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "login-05",
+    "title": "login-05",
+    "description": "A simple email-only login page.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "button",
+      "card",
+      "input",
+      "label"
+    ],
+    "fileCount": 2,
+    "files": [
+      "app/login/page.tsx",
+      "registry/new-york/blocks/login-05/components/login-form.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add login-05",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-01",
+    "title": "calendar-01",
+    "description": "A simple calendar.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-01.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-01",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-02",
+    "title": "calendar-02",
+    "description": "Multiple months with single selection.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-02.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-02",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-03",
+    "title": "calendar-03",
+    "description": "Multiple months with multiple selection.",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-03.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-03",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-04",
+    "title": "calendar-04",
+    "description": "Single month with range selection",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-04.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-04",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-05",
+    "title": "calendar-05",
+    "description": "Multiple months with range selection",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-05.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-05",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-06",
+    "title": "calendar-06",
+    "description": "Range selection with minimum days",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-06.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-06",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-07",
+    "title": "calendar-07",
+    "description": "Range selection with minimum and maximum days",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-07.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-07",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-08",
+    "title": "calendar-08",
+    "description": "Calendar with disabled days",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-08.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-08",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-09",
+    "title": "calendar-09",
+    "description": "Calendar with disabled weekends",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-09.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-09",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-10",
+    "title": "calendar-10",
+    "description": "Today button",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "card",
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-10.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-10",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-11",
+    "title": "calendar-11",
+    "description": "Start and end of month",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-11.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-11",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-12",
+    "title": "calendar-12",
+    "description": "Localized calendar",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "card",
+      "select"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-12.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-12",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-13",
+    "title": "calendar-13",
+    "description": "With Month and Year Dropdown",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "label",
+      "select"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-13.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-13",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-14",
+    "title": "calendar-14",
+    "description": "With Booked/Unavailable Days",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-14.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-14",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-15",
+    "title": "calendar-15",
+    "description": "With Week Numbers",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-15.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-15",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-16",
+    "title": "calendar-16",
+    "description": "With time picker",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "card",
+      "input",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-16.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-16",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-17",
+    "title": "calendar-17",
+    "description": "With time picker inline",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "card",
+      "input",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-17.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-17",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-18",
+    "title": "calendar-18",
+    "description": "Variable size",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-18.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-18",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-19",
+    "title": "calendar-19",
+    "description": "With presets",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "date-fns"
+    ],
+    "registryDependencies": [
+      "calendar",
+      "card",
+      "input",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-19.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-19",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-20",
+    "title": "calendar-20",
+    "description": "With time presets",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "card",
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-20.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-20",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-21",
+    "title": "calendar-21",
+    "description": "Custom days and formatters",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-21.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-21",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-22",
+    "title": "calendar-22",
+    "description": "Date picker",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "popover",
+      "button",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-22.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-22",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-23",
+    "title": "calendar-23",
+    "description": "Date range picker",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "popover",
+      "button",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-23.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-23",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-24",
+    "title": "calendar-24",
+    "description": "Date and Time picker",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "popover",
+      "button",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-24.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-24",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-25",
+    "title": "calendar-25",
+    "description": "Date and Time range picker",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "popover",
+      "button",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-25.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-25",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-26",
+    "title": "calendar-26",
+    "description": "Date range picker with time",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "popover",
+      "button",
+      "input",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-26.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-26",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-27",
+    "title": "calendar-27",
+    "description": "Chart filter",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "chart",
+      "card",
+      "popover",
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-27.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-27",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-28",
+    "title": "calendar-28",
+    "description": "Input with date picker",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "input",
+      "label",
+      "popover",
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-28.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-28",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-29",
+    "title": "calendar-29",
+    "description": "Natural language date picker",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "chrono-node"
+    ],
+    "registryDependencies": [
+      "calendar",
+      "input",
+      "label",
+      "popover",
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-29.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-29",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-30",
+    "title": "calendar-30",
+    "description": "With little-date",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "input",
+      "label",
+      "popover",
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-30.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-30",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-31",
+    "title": "calendar-31",
+    "description": "With event slots",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "card",
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-31.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-31",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "calendar-32",
+    "title": "calendar-32",
+    "description": "Date picker in a drawer",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "calendar",
+      "button",
+      "drawer"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/blocks/calendar-32.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar-32",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-axes",
+    "title": "chart-area-axes",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-axes.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-axes",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-default",
+    "title": "chart-area-default",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-default.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-default",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-gradient",
+    "title": "chart-area-gradient",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-gradient.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-gradient",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-icons",
+    "title": "chart-area-icons",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-icons.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-icons",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-interactive",
+    "title": "chart-area-interactive",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart",
+      "select"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-interactive.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-interactive",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-legend",
+    "title": "chart-area-legend",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-legend.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-legend",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-linear",
+    "title": "chart-area-linear",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-linear.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-linear",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-stacked-expand",
+    "title": "chart-area-stacked-expand",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-stacked-expand.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-stacked-expand",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-stacked",
+    "title": "chart-area-stacked",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-stacked.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-stacked",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-area-step",
+    "title": "chart-area-step",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-area-step.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-area-step",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-active",
+    "title": "chart-bar-active",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-active.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-active",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-default",
+    "title": "chart-bar-default",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-default.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-default",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-horizontal",
+    "title": "chart-bar-horizontal",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-horizontal.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-horizontal",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-interactive",
+    "title": "chart-bar-interactive",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-interactive.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-interactive",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-label-custom",
+    "title": "chart-bar-label-custom",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-label-custom.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-label-custom",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-label",
+    "title": "chart-bar-label",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-label.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-label",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-mixed",
+    "title": "chart-bar-mixed",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-mixed.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-mixed",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-multiple",
+    "title": "chart-bar-multiple",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-multiple.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-multiple",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-negative",
+    "title": "chart-bar-negative",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-negative.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-negative",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-bar-stacked",
+    "title": "chart-bar-stacked",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-bar-stacked.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-bar-stacked",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-default",
+    "title": "chart-line-default",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-default.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-default",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-dots-colors",
+    "title": "chart-line-dots-colors",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-dots-colors.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-dots-colors",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-dots-custom",
+    "title": "chart-line-dots-custom",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-dots-custom.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-dots-custom",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-dots",
+    "title": "chart-line-dots",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-dots.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-dots",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-interactive",
+    "title": "chart-line-interactive",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-interactive.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-interactive",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-label-custom",
+    "title": "chart-line-label-custom",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-label-custom.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-label-custom",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-label",
+    "title": "chart-line-label",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-label.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-label",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-linear",
+    "title": "chart-line-linear",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-linear.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-linear",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-multiple",
+    "title": "chart-line-multiple",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-multiple.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-multiple",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-line-step",
+    "title": "chart-line-step",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-line-step.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-line-step",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-donut-active",
+    "title": "chart-pie-donut-active",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-donut-active.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-donut-active",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-donut-text",
+    "title": "chart-pie-donut-text",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-donut-text.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-donut-text",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-donut",
+    "title": "chart-pie-donut",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-donut.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-donut",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-interactive",
+    "title": "chart-pie-interactive",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-interactive.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-interactive",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-label-custom",
+    "title": "chart-pie-label-custom",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-label-custom.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-label-custom",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-label-list",
+    "title": "chart-pie-label-list",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-label-list.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-label-list",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-label",
+    "title": "chart-pie-label",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-label.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-label",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-legend",
+    "title": "chart-pie-legend",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-legend.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-legend",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-separator-none",
+    "title": "chart-pie-separator-none",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-separator-none.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-separator-none",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-simple",
+    "title": "chart-pie-simple",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-simple.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-simple",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-pie-stacked",
+    "title": "chart-pie-stacked",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-pie-stacked.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-pie-stacked",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-default",
+    "title": "chart-radar-default",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-default.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-default",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-dots",
+    "title": "chart-radar-dots",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-dots.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-dots",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-grid-circle-fill",
+    "title": "chart-radar-grid-circle-fill",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-grid-circle-fill.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-grid-circle-fill",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-grid-circle-no-lines",
+    "title": "chart-radar-grid-circle-no-lines",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-grid-circle-no-lines.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-grid-circle-no-lines",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-grid-circle",
+    "title": "chart-radar-grid-circle",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-grid-circle.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-grid-circle",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-grid-custom",
+    "title": "chart-radar-grid-custom",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-grid-custom.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-grid-custom",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-grid-fill",
+    "title": "chart-radar-grid-fill",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-grid-fill.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-grid-fill",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-grid-none",
+    "title": "chart-radar-grid-none",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-grid-none.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-grid-none",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-icons",
+    "title": "chart-radar-icons",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-icons.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-icons",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-label-custom",
+    "title": "chart-radar-label-custom",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-label-custom.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-label-custom",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-legend",
+    "title": "chart-radar-legend",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-legend.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-legend",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-lines-only",
+    "title": "chart-radar-lines-only",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-lines-only.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-lines-only",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-multiple",
+    "title": "chart-radar-multiple",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-multiple.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-multiple",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radar-radius",
+    "title": "chart-radar-radius",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radar-radius.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radar-radius",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radial-grid",
+    "title": "chart-radial-grid",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radial-grid.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radial-grid",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radial-label",
+    "title": "chart-radial-label",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radial-label.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radial-label",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radial-shape",
+    "title": "chart-radial-shape",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radial-shape.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radial-shape",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radial-simple",
+    "title": "chart-radial-simple",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radial-simple.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radial-simple",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radial-stacked",
+    "title": "chart-radial-stacked",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radial-stacked.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radial-stacked",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-radial-text",
+    "title": "chart-radial-text",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-radial-text.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-radial-text",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-default",
+    "title": "chart-tooltip-default",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-default.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-default",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-indicator-line",
+    "title": "chart-tooltip-indicator-line",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-indicator-line.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-indicator-line",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-indicator-none",
+    "title": "chart-tooltip-indicator-none",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-indicator-none.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-indicator-none",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-label-none",
+    "title": "chart-tooltip-label-none",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-label-none.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-label-none",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-label-custom",
+    "title": "chart-tooltip-label-custom",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-label-custom.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-label-custom",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-label-formatter",
+    "title": "chart-tooltip-label-formatter",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-label-formatter.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-label-formatter",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-formatter",
+    "title": "chart-tooltip-formatter",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-formatter.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-formatter",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-icons",
+    "title": "chart-tooltip-icons",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-icons.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-icons",
+    "category": "shadcn-blocks"
+  },
+  {
+    "name": "chart-tooltip-advanced",
+    "title": "chart-tooltip-advanced",
+    "description": "block from shadcn/ui (new-york)",
+    "type": "block",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "card",
+      "chart"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/charts/chart-tooltip-advanced.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart-tooltip-advanced",
+    "category": "shadcn-blocks"
+  }
+]
