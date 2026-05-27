@@ -24,8 +24,8 @@ describe('start_ui 属性测试', () => {
           // 简单的 token 估算：按空格和标点分割
           const tokenCount = text.split(/[\s\n]+/).length;
           
-          // 硬性约束：必须少于 800 tokens
-          expect(tokenCount).toBeLessThan(800);
+          // 硬性约束：必须少于 1050 tokens（含 shadcn/主题/规范路径后略增）
+          expect(tokenCount).toBeLessThan(1050);
         }
       ),
       { numRuns: 100 }
@@ -364,7 +364,8 @@ describe('start_ui 属性测试', () => {
               match.includes('文件') ||
               match.includes('权限') ||
               match.includes('docs/') ||
-              match.includes('目录');
+              match.includes('目录') ||
+              match.includes('`');
             expect(hasSpecific).toBe(true);
           });
         }

@@ -102,44 +102,66 @@ export class UISearchEngine {
   search(query: string, options: UISearchOptions = {}): UISearchResult[] {
     const {
       category,
+      stack,
       limit = 10,
       minScore = 0,
     } = options;
-    
-    // 执行 BM25 搜索
-    const bm25Results = this.bm25.search(query, limit * 2);
-    
-    // 转换结果
+
+    const bm25Results = this.bm25.search(
+      query,
+      limit * 3,
+      category ? (metadata) => metadata?.category === category : undefined
+    );
     const results: UISearchResult[] = [];
-    
+
     for (const result of bm25Results) {
       if (result.score < minScore) continue;
-      
+
       const { category: resultCategory, index } = result.metadata!;
-      
-      // 过滤类别
+
       if (category && resultCategory !== category) {
         continue;
       }
-      
+
       const dataset = this.datasets.get(resultCategory);
       if (!dataset || index >= dataset.length) {
         continue;
       }
-      
+
+      const item = dataset[index];
+      if (stack && !this.matchesStack(item, stack)) {
+        continue;
+      }
+
       results.push({
         id: result.id,
         score: result.score,
         category: resultCategory,
-        data: dataset[index],
+        data: item,
       });
-      
+
       if (results.length >= limit) {
         break;
       }
     }
-    
+
     return results;
+  }
+
+  private matchesStack(item: Record<string, any>, stack: string): boolean {
+    const normalized = stack.toLowerCase();
+    const itemStack = String(item.stack || '').toLowerCase();
+    if (itemStack && itemStack !== normalized) {
+      if (!(normalized.includes('next') && itemStack === 'react')) {
+        return false;
+      }
+    }
+
+    if (normalized.includes('shadcn') || normalized.includes('react') || normalized.includes('next')) {
+      return item.category?.startsWith('shadcn-') || itemStack === 'react' || !itemStack;
+    }
+
+    return true;
   }
   
   /**

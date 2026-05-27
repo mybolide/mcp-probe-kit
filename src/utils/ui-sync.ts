@@ -1,7 +1,11 @@
 /**
  * UI/UX 数据同步工具
- * 
- * 从 npm 包 uipro-cli 同步数据到缓存目录
+ *
+ * 多源同步：
+ * - uipro-cli（设计词典）
+ * - shadcn/ui registry（blocks + components 索引）
+ * - ui-themes（shadcn 兼容 CSS 变量主题预设）
+ * - Vercel Web Interface Guidelines（可搜索规范条文）
  */
 
 import * as fs from 'fs';
@@ -11,17 +15,33 @@ import * as https from 'https';
 import * as tar from 'tar';
 import { createWriteStream } from 'fs';
 import { parse as parseCSV } from 'csv-parse/sync';
-
-interface PackageMetadata {
-  version: string;
-  syncedAt: string;
-  source: string;
-  format: 'csv' | 'json';
-}
+import { readUISyncMetadata, writeUISyncMetadata, type UISyncMetadata } from './ui-metadata.js';
+import {
+  computeRegistryChecksum,
+  fetchShadcnRegistry,
+  syncShadcnTo,
+} from './shadcn-sync.js';
+import { computeThemesChecksum, syncThemesTo } from './themes-sync.js';
+import { getVercelGuidelinesChecksum, syncVercelGuidelinesTo } from './vercel-guidelines-sync.js';
 
 export interface SyncRuntimeOptions {
   signal?: AbortSignal;
   onProgress?: (progress: number, message: string) => Promise<void> | void;
+  force?: boolean;
+}
+
+export interface UISourceUpdateStatus {
+  current?: string;
+  latest: string;
+  upToDate: boolean;
+}
+
+export interface UIUpdateCheckResult {
+  hasUpdate: boolean;
+  uipro: UISourceUpdateStatus;
+  shadcn: UISourceUpdateStatus;
+  themes: UISourceUpdateStatus;
+  vercel: UISourceUpdateStatus;
 }
 
 function throwIfAborted(signal: AbortSignal | undefined, message: string): void {
@@ -44,13 +64,7 @@ async function emitProgress(
   await options.onProgress(progress, message);
 }
 
-/**
- * 获取 npm 包的最新版本号
- */
-async function getLatestVersion(
-  packageName: string,
-  signal?: AbortSignal
-): Promise<string> {
+async function getLatestVersion(packageName: string, signal?: AbortSignal): Promise<string> {
   throwIfAborted(signal, 'Sync cancelled before fetching latest version');
 
   return new Promise((resolve, reject) => {
@@ -97,14 +111,7 @@ async function getLatestVersion(
   });
 }
 
-/**
- * 下载文件
- */
-async function downloadFile(
-  url: string,
-  outputPath: string,
-  signal?: AbortSignal
-): Promise<void> {
+async function downloadFile(url: string, outputPath: string, signal?: AbortSignal): Promise<void> {
   throwIfAborted(signal, 'Sync cancelled before download');
 
   return new Promise((resolve, reject) => {
@@ -115,21 +122,21 @@ async function downloadFile(
           return;
         }
       }
-      
+
       if (res.statusCode !== 200) {
         reject(new Error(`Failed to download: HTTP ${res.statusCode}`));
         return;
       }
-      
+
       const fileStream = createWriteStream(outputPath);
       res.pipe(fileStream);
-      
+
       fileStream.on('finish', () => {
         throwIfAborted(signal, 'Sync cancelled during download');
         fileStream.close();
         resolve();
       });
-      
+
       fileStream.on('error', (error) => {
         fs.unlinkSync(outputPath);
         reject(error);
@@ -163,9 +170,6 @@ async function downloadFile(
   });
 }
 
-/**
- * 解压 tarball 并提取指定目录
- */
 async function extractTarball(
   tarballPath: string,
   extractPath: string,
@@ -178,25 +182,22 @@ async function extractTarball(
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
   }
-  
+
   await tar.extract({
     file: tarballPath,
     cwd: tempDir,
   });
 
   throwIfAborted(signal, 'Sync cancelled after extract');
-  
+
   const sourceDir = path.join(tempDir, targetDir);
   if (!fs.existsSync(sourceDir)) {
     throw new Error(`Target directory not found in tarball: ${targetDir}`);
   }
-  
+
   return sourceDir;
 }
 
-/**
- * 转换 CSV 到 JSON
- */
 function convertCSVToJSON(csvContent: string, filename: string): any[] {
   try {
     const records = parseCSV(csvContent, {
@@ -216,9 +217,6 @@ function convertCSVToJSON(csvContent: string, filename: string): any[] {
   }
 }
 
-/**
- * 收集目录下所有 CSV 文件（递归）
- */
 function collectCsvFiles(rootDir: string): string[] {
   const files: string[] = [];
   const entries = fs.readdirSync(rootDir, { withFileTypes: true });
@@ -237,9 +235,6 @@ function collectCsvFiles(rootDir: string): string[] {
   return files;
 }
 
-/**
- * 处理数据文件
- */
 async function processDataFiles(
   sourceDir: string,
   outputDir: string,
@@ -263,21 +258,21 @@ async function processDataFiles(
 
     const sourcePath = csvFiles[index];
     const file = path.basename(sourcePath);
-    
+
     if (verbose) {
       console.log(`Processing: ${file}`);
     }
-    
+
     const csvContent = fs.readFileSync(sourcePath, 'utf-8');
     const jsonData = convertCSVToJSON(csvContent, file);
-    
+
     if (jsonData.length === 0) {
       if (verbose) {
         console.log(`  ⚠️  Skipped ${file} (no valid records)`);
       }
       continue;
     }
-    
+
     const outputFile = file.replace('.csv', '.json');
     const relativePath = path.relative(sourceDir, sourcePath);
     const relativeDir = path.dirname(relativePath);
@@ -288,9 +283,8 @@ async function processDataFiles(
     }
 
     const outputPath = path.join(outputSubDir, outputFile);
-    
-    fs.writeFileSync(outputPath, JSON.stringify(jsonData, null, 2), 'utf-8');
-    
+    fs.writeFileSync(outputPath, `${JSON.stringify(jsonData, null, 2)}\n`, 'utf-8');
+
     if (verbose) {
       console.log(`  → ${outputFile} (${jsonData.length} records)`);
     }
@@ -304,21 +298,102 @@ async function processDataFiles(
   }
 }
 
-/**
- * 写入元数据
- */
-function writeMetadata(outputDir: string, metadata: PackageMetadata): void {
-  const metadataPath = path.join(outputDir, 'metadata.json');
-  fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
-}
-
-/**
- * 清理临时文件
- */
 function cleanup(tempDir: string): void {
   if (fs.existsSync(tempDir)) {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
+}
+
+export async function checkUISourcesUpdate(
+  outputDir: string,
+  signal?: AbortSignal
+): Promise<UIUpdateCheckResult> {
+  const existing = readUISyncMetadata(outputDir);
+  const latestUipro = await getLatestVersion('uipro-cli', signal);
+  const registry = await fetchShadcnRegistry(signal);
+  const latestShadcn = computeRegistryChecksum(registry);
+
+  const uiproCurrent = existing?.sources['uipro-cli']?.version || existing?.version;
+  const shadcnCurrent = existing?.sources.shadcn?.checksum || existing?.sources.shadcn?.version;
+  const themesCurrent = existing?.sources.themes?.checksum || existing?.sources.themes?.version;
+  const vercelCurrent = existing?.sources.vercel?.checksum || existing?.sources.vercel?.version;
+
+  const latestThemes = computeThemesChecksum();
+  const latestVercel = await getVercelGuidelinesChecksum(signal);
+
+  const uiproUpToDate = uiproCurrent === latestUipro;
+  const shadcnUpToDate = shadcnCurrent === latestShadcn;
+  const themesUpToDate = themesCurrent === latestThemes;
+  const vercelUpToDate = vercelCurrent === latestVercel;
+
+  return {
+    hasUpdate: !uiproUpToDate || !shadcnUpToDate || !themesUpToDate || !vercelUpToDate,
+    uipro: {
+      current: uiproCurrent,
+      latest: latestUipro,
+      upToDate: uiproUpToDate,
+    },
+    shadcn: {
+      current: shadcnCurrent,
+      latest: latestShadcn,
+      upToDate: shadcnUpToDate,
+    },
+    themes: {
+      current: themesCurrent,
+      latest: latestThemes,
+      upToDate: themesUpToDate,
+    },
+    vercel: {
+      current: vercelCurrent,
+      latest: latestVercel,
+      upToDate: vercelUpToDate,
+    },
+  };
+}
+
+async function syncUiproPackage(
+  outputDir: string,
+  latestVersion: string,
+  verbose: boolean,
+  options?: SyncRuntimeOptions
+): Promise<{ version: string; syncedAt: string }> {
+  const packageName = 'uipro-cli';
+  const tarballUrl = `https://registry.npmjs.org/${packageName}/-/${packageName}-${latestVersion}.tgz`;
+  const tempDir = path.join(os.tmpdir(), '.mcp-ui-sync');
+  const tarballPath = path.join(tempDir, 'package.tgz');
+
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+
+  if (verbose) {
+    console.log('Downloading uipro-cli tarball...');
+  }
+  await downloadFile(tarballUrl, tarballPath, options?.signal);
+  await emitProgress(options, 40, 'Downloaded uipro-cli tarball');
+
+  const extractedDataDir = await extractTarball(
+    tarballPath,
+    tempDir,
+    'package/assets/data',
+    options?.signal
+  );
+  await emitProgress(options, 50, 'Extracted uipro-cli data');
+
+  await processDataFiles(extractedDataDir, outputDir, verbose, {
+    signal: options?.signal,
+    onProgress: async (progress, message) => {
+      const normalized = 50 + Math.round(progress * 0.25);
+      await emitProgress(options, normalized, message);
+    },
+  });
+
+  cleanup(tempDir);
+
+  return {
+    version: latestVersion,
+    syncedAt: new Date().toISOString(),
+  };
 }
 
 /**
@@ -328,100 +403,122 @@ export async function syncUIDataTo(
   outputDir: string,
   verbose: boolean = false,
   options?: SyncRuntimeOptions
-): Promise<void> {
-  const packageName = 'uipro-cli';
+): Promise<{ skipped: boolean; metadata: UISyncMetadata }> {
+  const force = options?.force ?? false;
   throwIfAborted(options?.signal, 'Sync cancelled before start');
   await emitProgress(options, 5, 'Initializing sync');
-  
+
   if (verbose) {
     console.log('🚀 Starting UI/UX data sync...\n');
   }
-  
+
+  const existing = readUISyncMetadata(outputDir);
+  const updateCheck = await checkUISourcesUpdate(outputDir, options?.signal);
+  await emitProgress(options, 15, 'Checked upstream versions');
+
+  if (!force && !updateCheck.hasUpdate && existing) {
+    await emitProgress(options, 100, 'All UI sources up to date');
+    if (verbose) {
+      console.log('✅ All UI sources up to date, skipping sync.');
+      console.log(`   uipro-cli: ${updateCheck.uipro.latest}`);
+      console.log(`   shadcn: ${updateCheck.shadcn.latest}`);
+      console.log(`   themes: ${updateCheck.themes.latest}`);
+      console.log(`   vercel: ${updateCheck.vercel.latest}`);
+    }
+    return { skipped: true, metadata: existing };
+  }
+
+  const sources: UISyncMetadata['sources'] = {
+    ...(existing?.sources || {}),
+  };
+
   try {
-    // 1. 获取最新版本
-    if (verbose) {
-      console.log(`Fetching latest version of ${packageName}...`);
+    if (force || !updateCheck.uipro.upToDate) {
+      if (verbose) {
+        console.log(`Syncing uipro-cli ${updateCheck.uipro.latest}...`);
+      }
+      const uiproMeta = await syncUiproPackage(
+        outputDir,
+        updateCheck.uipro.latest,
+        verbose,
+        options
+      );
+      sources['uipro-cli'] = {
+        version: uiproMeta.version,
+        syncedAt: uiproMeta.syncedAt,
+      };
     }
-    const latestVersion = await getLatestVersion(packageName, options?.signal);
-    await emitProgress(options, 15, `Fetched latest version: ${latestVersion}`);
-    if (verbose) {
-      console.log(`✓ Latest version: ${latestVersion}\n`);
-    }
-    
-    // 2. 下载 tarball
-    const tarballUrl = `https://registry.npmjs.org/${packageName}/-/${packageName}-${latestVersion}.tgz`;
-    const tempDir = path.join(os.tmpdir(), '.mcp-ui-sync');
-    const tarballPath = path.join(tempDir, 'package.tgz');
-    
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    
-    if (verbose) {
-      console.log(`Downloading tarball...`);
-    }
-    await downloadFile(tarballUrl, tarballPath, options?.signal);
-    await emitProgress(options, 35, 'Downloaded package tarball');
-    if (verbose) {
-      console.log('✓ Downloaded tarball\n');
-    }
-    
-    // 3. 解压并提取数据
-    if (verbose) {
-      console.log('Extracting data files...');
-    }
-    const extractedDataDir = await extractTarball(
-      tarballPath,
-      tempDir,
-      'package/assets/data',
-      options?.signal
-    );
-    await emitProgress(options, 50, 'Extracted package data files');
-    if (verbose) {
-      console.log('✓ Extracted data files\n');
-    }
-    
-    // 4. 处理数据文件
-    if (verbose) {
-      console.log('Processing data files...');
-    }
-    await processDataFiles(extractedDataDir, outputDir, verbose, {
+
+    await emitProgress(options, 78, 'Syncing shadcn/ui registry');
+    const shadcnResult = await syncShadcnTo(outputDir, {
       signal: options?.signal,
-      onProgress: async (progress, message) => {
-        const normalized = 50 + Math.round(progress * 0.35);
-        await emitProgress(options, normalized, message);
-      },
+      force,
+      existingChecksum: updateCheck.shadcn.current,
     });
-    if (verbose) {
-      console.log('✓ Processed all data files\n');
+    if (shadcnResult) {
+      sources.shadcn = shadcnResult.metadata;
+      if (verbose) {
+        console.log(
+          `✓ shadcn registry synced (${shadcnResult.blocks} blocks, ${shadcnResult.components} components)`
+        );
+      }
+    } else if (verbose) {
+      console.log('✓ shadcn registry unchanged');
     }
-    
-    // 5. 写入元数据
-    const metadata: PackageMetadata = {
-      version: latestVersion,
+
+    await emitProgress(options, 85, 'Syncing UI theme presets');
+    const themesResult = syncThemesTo(outputDir, {
+      force,
+      existingChecksum: updateCheck.themes.current,
+    });
+    if (themesResult) {
+      sources.themes = themesResult.metadata;
+      if (verbose) {
+        console.log(`✓ UI themes synced (${themesResult.count} presets)`);
+      }
+    } else if (verbose) {
+      console.log('✓ UI themes unchanged');
+    }
+
+    await emitProgress(options, 92, 'Syncing Vercel Web Interface Guidelines');
+    const vercelResult = await syncVercelGuidelinesTo(outputDir, {
+      signal: options?.signal,
+      force,
+      existingChecksum: updateCheck.vercel.current,
+    });
+    if (vercelResult) {
+      sources.vercel = vercelResult.metadata;
+      if (verbose) {
+        console.log(`✓ Vercel guidelines synced (${vercelResult.count} rules)`);
+      }
+    } else if (verbose) {
+      console.log('✓ Vercel guidelines unchanged');
+    }
+
+    const metadata: UISyncMetadata = {
+      version: sources['uipro-cli']?.version || updateCheck.uipro.latest,
       syncedAt: new Date().toISOString(),
-      source: packageName,
+      source: 'uipro-cli',
       format: 'json',
+      sources,
     };
-    writeMetadata(outputDir, metadata);
-    await emitProgress(options, 90, 'Wrote metadata');
-    if (verbose) {
-      console.log('✓ Written metadata\n');
-    }
-    
-    // 6. 清理临时文件
-    cleanup(tempDir);
+    writeUISyncMetadata(outputDir, metadata);
     await emitProgress(options, 100, 'Sync completed');
+
     if (verbose) {
-      console.log('✓ Cleaned up temporary files\n');
-      console.log('✅ Sync completed successfully!');
-      console.log(`   Version: ${latestVersion}`);
+      console.log('\n✅ Sync completed successfully!');
+      console.log(`   uipro-cli: ${metadata.sources['uipro-cli']?.version}`);
+      console.log(
+        `   shadcn: ${metadata.sources.shadcn?.blocks || 0} blocks, ${metadata.sources.shadcn?.components || 0} components`
+      );
+      console.log(`   themes: ${sources.themes?.version || 'n/a'} (${sources.themes?.checksum?.slice(0, 8) || '—'})`);
+      console.log(`   vercel: ${sources.vercel?.checksum?.slice(0, 8) || 'n/a'} rules checksum`);
       console.log(`   Output: ${outputDir}`);
     }
-    
+
+    return { skipped: false, metadata };
   } catch (error) {
-    const tempDir = path.join(os.tmpdir(), '.mcp-ui-sync');
-    cleanup(tempDir);
+    cleanup(path.join(os.tmpdir(), '.mcp-ui-sync'));
     throw error;
   }
 }
@@ -435,6 +532,5 @@ export async function syncUIDataToCache(
   options?: SyncRuntimeOptions
 ): Promise<void> {
   const cacheDir = path.join(os.homedir(), '.mcp-probe-kit', 'ui-ux-data');
-  void force;
-  await syncUIDataTo(cacheDir, verbose, options);
+  await syncUIDataTo(cacheDir, verbose, { ...options, force });
 }

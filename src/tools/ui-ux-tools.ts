@@ -9,7 +9,8 @@ import { UIDataLoader } from '../utils/ui-data-loader.js';
 import { DesignReasoningEngine, DesignRequest, DesignSystemRecommendation } from '../utils/design-reasoning-engine.js';
 import { ASCIIBoxFormatter } from '../utils/ascii-box-formatter.js';
 import { UISearchOptions } from '../utils/ui-search-engine.js';
-import { syncUIDataToCache } from '../utils/ui-sync.js';
+import { syncUIDataToCache, checkUISourcesUpdate } from '../utils/ui-sync.js';
+import { formatShadcnResult, formatGuidelineResult, formatThemeResult, isGuidelineCategory, isShadcnCategory, isShadcnStack, isThemeCategory, pickThemeForProductType } from '../lib/shadcn-ui.js';
 import { formatDesignSystemJson } from '../utils/design-system-json-formatter.js';
 import { okStructured } from '../lib/response.js';
 import type { DesignSystem, UISearchResult, SyncReport } from '../schemas/output/ui-ux-tools.js';
@@ -181,6 +182,8 @@ export function generateCreationGuidance(
     if (stackLower.includes('react') || stackLower.includes('next')) {
       config.push('React 组件样式方案（CSS Modules / Styled Components）');
       config.push('Theme Provider 配置');
+      config.push('shadcn/ui 初始化与主题变量（components.json、globals.css）');
+      config.push('优先使用 shadcn blocks/components，通过 `npx shadcn@latest add <name>` 安装');
     }
 
     if (stackLower.includes('vue') || stackLower.includes('nuxt')) {
@@ -210,8 +213,13 @@ export function generateCreationGuidance(
     '使用清晰的标题层级和结构',
   ];
 
-  // 根据技术栈添加特定提示
-  if (stack) {
+  if (stack && isShadcnStack(stack)) {
+    tips.push(`在技术配置文档中提供 ${stack} + shadcn/ui 的具体实现示例`);
+    tips.push('用 `ui_search --category=ui-themes` 选主题，把 globalsCssSnippet 写入 globals.css');
+    tips.push('用 `ui_search --category=ui-guidelines-vercel` 对照 Vercel 界面规范（无障碍/动效/表单）');
+    tips.push('实现阶段先 `ui_search --category=shadcn-blocks` 匹配 block，再 `npx shadcn@latest add <name>` 安装');
+    tips.push('避免手写泛 Tailwind 模板；组件结构对齐 shadcn/ui new-york 风格');
+  } else if (stack) {
     tips.push(`在技术配置文档中提供 ${stack} 的具体实现示例`);
     tips.push(`确保代码示例符合 ${stack} 的最佳实践`);
   }
@@ -328,6 +336,36 @@ export async function uiDesignSystem(args: any) {
       request.stack
     );
 
+    const loader = await getDataLoader();
+    const themeRecommendation = isShadcnStack(request.stack)
+      ? pickThemeForProductType(
+          loader.getSearchEngine().getCategoryData('ui-themes') || [],
+          request.productType
+        )
+      : undefined;
+    const themeSection = themeRecommendation
+      ? `
+## 🎨 推荐 shadcn 主题（内嵌预设）
+
+- **主题**: ${themeRecommendation.title} (\`${themeRecommendation.name}\`)
+- **说明**: ${themeRecommendation.description}
+- **操作**: 将下方 CSS variables 写入 \`app/globals.css\`；也可用 \`ui_search --category=ui-themes --query="${request.productType}"\`
+
+\`\`\`css
+${themeRecommendation.globalsCssSnippet}
+\`\`\`
+`
+      : '';
+
+    const vercelSection = isShadcnStack(request.stack)
+      ? `
+## ✅ Vercel 界面规范（实现时对照）
+
+- 检索: \`ui_search --category=ui-guidelines-vercel --query="form accessibility animation"\`
+- 重点: 表单可访问性、\`prefers-reduced-motion\`、对比度、键盘焦点、禁止 \`transition: all\`
+`
+      : '';
+
     // 构建输出对象
     const output: UIDesignSystemOutput = {
       asciiBox,
@@ -403,6 +441,8 @@ ${fileIndexList}
 以下是各类文档应包含的关键主题。**请根据上述 ASCII Box 推荐和 JSON 数据自由创作内容，不要使用固定模板**：
 
 ${guidanceText}
+${themeSection}
+${vercelSection}
 
 ---
 
@@ -437,6 +477,13 @@ ${guidanceText}
    - 包含具体的代码示例（不要抽象描述）
    - 展示实际应用场景
    - 参考反模式（antiPatterns）提供"应避免"的建议
+${isShadcnStack(request.stack) ? `
+6. **shadcn/ui 实现路径**（${request.stack}）：
+   - 用 \`ui_search --category=ui-themes\` 确认主题；上文的 globals.css 片段可直接使用
+   - 用 \`ui_search --category=shadcn-blocks --query="..."\` 找 block，再 \`npx shadcn@latest add <name>\`
+   - 用 \`ui_search --category=ui-guidelines-vercel\` 对照 Vercel 规范
+   - 在 block 基础上改文案/数据，不要从零写 Card/Button
+` : ''}
 
 ### 开始创作：
 
@@ -790,6 +837,28 @@ start_ui "设置页面"
     // 格式化结果
     const formattedResults = results.map((result, index) => {
       const data = result.data;
+
+      if (isShadcnCategory(result.category)) {
+        return `### ${index + 1}. ${data.name || data.title} (相关度: ${result.score.toFixed(2)})
+
+${formatShadcnResult(data)}
+`;
+      }
+
+      if (isThemeCategory(result.category)) {
+        return `### ${index + 1}. ${data.title || data.name} (相关度: ${result.score.toFixed(2)})
+
+${formatThemeResult(data)}
+`;
+      }
+
+      if (isGuidelineCategory(result.category)) {
+        return `### ${index + 1}. ${data.level} (相关度: ${result.score.toFixed(2)})
+
+${formatGuidelineResult(data)}
+`;
+      }
+
       const fields = Object.entries(data)
         .filter(([_key, value]) => value != null && value !== '')
         .map(([key, value]) => {
@@ -825,12 +894,18 @@ ${formattedResults}
       query: query,
       category: options.category,
       results: results.map(result => ({
-        id: result.data.id || result.data.name || '',
+        id: result.data.name || result.data.id || result.data.title || '',
         title: result.data.title || result.data.name || '',
         description: result.data.description || '',
         category: result.category,
         score: result.score,
-        preview: JSON.stringify(result.data, null, 2),
+        preview: isShadcnCategory(result.category)
+          ? `${result.data.installCommand || ''}\n${JSON.stringify(result.data, null, 2)}`
+          : isThemeCategory(result.category)
+            ? String(result.data.globalsCssSnippet || JSON.stringify(result.data, null, 2))
+            : isGuidelineCategory(result.category)
+              ? `${result.data.level}: ${result.data.rule}`
+              : JSON.stringify(result.data, null, 2),
       })),
       totalResults: results.length,
     };
@@ -871,10 +946,10 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
       await reportToolProgress(context, 15, 'sync_ui_data: 检查上游版本');
 
       const loader = await getDataLoader();
-      const cacheManager = loader.getCacheManager();
+      const cacheDir = loader.getCacheManager().getCacheDir();
 
       try {
-        const updateInfo = await cacheManager.checkUpdate();
+        const updateInfo = await checkUISourcesUpdate(cacheDir, context?.signal);
 
         if (!updateInfo.hasUpdate) {
           await reportToolProgress(context, 100, 'sync_ui_data: 数据已是最新');
@@ -883,14 +958,16 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
             summary: "UI/UX 数据已是最新版本",
             status: 'success',
             synced: {},
-            version: updateInfo.currentVersion || 'unknown',
+            version: updateInfo.uipro.current || updateInfo.uipro.latest,
             timestamp: new Date().toISOString(),
           };
           
           return okStructured(`✅ UI/UX 数据已是最新版本
 
-**当前版本:** ${updateInfo.currentVersion}
-**最新版本:** ${updateInfo.latestVersion}
+**uipro-cli:** ${updateInfo.uipro.current || 'unknown'} (latest ${updateInfo.uipro.latest})
+**shadcn registry:** ${updateInfo.shadcn.current || 'unknown'} (latest ${updateInfo.shadcn.latest})
+**ui-themes:** ${updateInfo.themes.current || 'unknown'} (latest ${updateInfo.themes.latest})
+**vercel guidelines:** ${updateInfo.vercel.current || 'unknown'} (latest ${updateInfo.vercel.latest})
 
 无需更新。如需强制同步，请使用 \`force: true\` 参数。
 `, upToDateData, {
@@ -898,7 +975,9 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
           });
         }
 
-        console.log(`Update available: ${updateInfo.currentVersion || 'none'} -> ${updateInfo.latestVersion}`);
+        console.log(
+          `Update available: uipro ${updateInfo.uipro.current || 'none'} -> ${updateInfo.uipro.latest}; shadcn ${updateInfo.shadcn.current || 'none'} -> ${updateInfo.shadcn.latest}`
+        );
       } catch (error) {
         console.log('Failed to check update, proceeding with sync...');
       }
@@ -910,6 +989,7 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
 
     await syncUIDataToCache(force, verbose, {
       signal: context?.signal,
+      force,
       onProgress: async (progress, message) => {
         await reportToolProgress(context, 30 + Math.round(progress * 0.6), `sync_ui_data: ${message}`);
       },
@@ -933,6 +1013,10 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
         icons: (searchEngine.getCategoryData('icons') || []).length,
         components: (searchEngine.getCategoryData('products') || []).length,
         patterns: (searchEngine.getCategoryData('landing') || []).length,
+        shadcnBlocks: (searchEngine.getCategoryData('shadcn-blocks') || []).length,
+        shadcnComponents: (searchEngine.getCategoryData('shadcn-components') || []).length,
+        themes: (searchEngine.getCategoryData('ui-themes') || []).length,
+        vercelGuidelines: (searchEngine.getCategoryData('ui-guidelines-vercel') || []).length,
       },
       version: metadata?.version,
       timestamp: new Date().toISOString(),
@@ -950,6 +1034,10 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
 - 图标: ${syncedData.synced.icons} 条
 - 组件: ${syncedData.synced.components} 条
 - 模式: ${syncedData.synced.patterns} 条
+- shadcn blocks: ${syncedData.synced.shadcnBlocks || 0} 条
+- shadcn components: ${syncedData.synced.shadcnComponents || 0} 条
+- UI 主题: ${syncedData.synced.themes || 0} 套
+- Vercel 规范: ${syncedData.synced.vercelGuidelines || 0} 条
 
 **会话状态:**
 - 当前会话使用版本: ${sessionInfo.activeVersion || 'unknown'}（source: ${sessionInfo.source}）

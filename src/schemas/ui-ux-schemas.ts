@@ -35,7 +35,7 @@ export const uiDesignSystemSchema = {
 
 export const uiSearchSchema = {
   name: "ui_search",
-  description: "搜索 UI/UX 数据库，包括颜色、图标、图表、组件、设计模式等。支持三种模式：search（搜索数据）、catalog（查看组件目录）、template（搜索 UI 模板）。使用 BM25 算法进行智能搜索，支持按类别和技术栈过滤。数据来源：uipro-cli npm 包（v2.2.0+）。",
+  description: "搜索 UI/UX 数据库，包括颜色、图标、图表、组件、设计模式，以及 shadcn/ui blocks、UI 主题预设（CSS variables）、Vercel Web Interface Guidelines 等。支持 search / catalog / template 三种模式。",
   inputSchema: {
     type: "object",
     properties: {
@@ -50,7 +50,7 @@ export const uiSearchSchema = {
       },
       category: {
         type: "string",
-        description: "数据类别（仅 search 模式）：colors（颜色）、icons（图标）、charts（图表）、landing（落地页）、products（产品）、typography（字体）、styles（样式）、ux-guidelines（UX 指南）、web-interface（Web 界面）等",
+        description: "数据类别（search 模式）：colors、icons、charts、landing、products、typography、styles、ux-guidelines、shadcn-blocks、shadcn-components、ui-themes、ui-guidelines-vercel 等",
       },
       stack: {
         type: "string",
@@ -72,7 +72,7 @@ export const uiSearchSchema = {
 
 export const syncUiDataSchema = {
   name: "sync_ui_data",
-  description: "同步 UI/UX 数据到本地缓存。从 npm 包 uipro-cli 下载最新数据，支持自动检查更新和强制同步。数据存储在 ~/.mcp-probe-kit/ui-ux-data/，默认在下次启动时生效以保证当前会话一致性。",
+  description: "同步 UI/UX 数据到本地缓存。来源：uipro-cli、shadcn/ui registry、内嵌 UI 主题预设、Vercel Web Interface Guidelines。",
   inputSchema: {
     type: "object",
     properties: {

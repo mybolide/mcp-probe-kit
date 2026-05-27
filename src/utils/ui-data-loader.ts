@@ -185,10 +185,24 @@ export class UIDataLoader {
    * 提取类别名称
    */
   private extractCategory(filename: string): string {
-    // 移除扩展名
     let category = filename.replace(/\.json$/, '');
 
-    // 处理子目录（如 stacks/react.json -> react）
+    // themes/presets.json -> ui-themes
+    if (category.startsWith('themes/')) {
+      return 'ui-themes';
+    }
+
+    // guidelines/vercel-web-interface.json -> ui-guidelines-vercel
+    if (category.startsWith('guidelines/')) {
+      return 'ui-guidelines-vercel';
+    }
+
+    // shadcn/blocks.json -> shadcn-blocks
+    if (category.startsWith('shadcn/')) {
+      return category.replace('/', '-');
+    }
+
+    // stacks/react.json -> react
     if (category.includes('/')) {
       const parts = category.split('/');
       category = parts[parts.length - 1];

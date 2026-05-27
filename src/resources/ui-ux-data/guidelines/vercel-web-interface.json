@@ -1,0 +1,1632 @@
+[
+  {
+    "id": "vercel-interactions-keyboard-1",
+    "title": "MUST: Full keyboard support per [WAI-ARIA APG](https://www.w3.org/WAI/ARIA/apg/pattern…",
+    "section": "Interactions",
+    "subsection": "Keyboard",
+    "level": "MUST",
+    "rule": "Full keyboard support per [WAI-ARIA APG](https://www.w3.org/WAI/ARIA/apg/patterns/)",
+    "description": "Full keyboard support per [WAI-ARIA APG](https://www.w3.org/WAI/ARIA/apg/patterns/)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "keyboard",
+      "aria"
+    ]
+  },
+  {
+    "id": "vercel-interactions-keyboard-2",
+    "title": "MUST: Visible focus rings (`:focus-visible`; group with `:focus-within`)",
+    "section": "Interactions",
+    "subsection": "Keyboard",
+    "level": "MUST",
+    "rule": "Visible focus rings (`:focus-visible`; group with `:focus-within`)",
+    "description": "Visible focus rings (`:focus-visible`; group with `:focus-within`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "focus"
+    ]
+  },
+  {
+    "id": "vercel-interactions-keyboard-3",
+    "title": "MUST: Manage focus (trap, move, return) per APG patterns",
+    "section": "Interactions",
+    "subsection": "Keyboard",
+    "level": "MUST",
+    "rule": "Manage focus (trap, move, return) per APG patterns",
+    "description": "Manage focus (trap, move, return) per APG patterns",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "focus"
+    ]
+  },
+  {
+    "id": "vercel-interactions-keyboard-4",
+    "title": "NEVER: `outline: none` without visible focus replacement",
+    "section": "Interactions",
+    "subsection": "Keyboard",
+    "level": "NEVER",
+    "rule": "`outline: none` without visible focus replacement",
+    "description": "`outline: none` without visible focus replacement",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "focus"
+    ]
+  },
+  {
+    "id": "vercel-interactions-targets-input-5",
+    "title": "MUST: Hit target ≥24px (mobile ≥44px); if visual <24px, expand hit area",
+    "section": "Interactions",
+    "subsection": "Targets & Input",
+    "level": "MUST",
+    "rule": "Hit target ≥24px (mobile ≥44px); if visual <24px, expand hit area",
+    "description": "Hit target ≥24px (mobile ≥44px); if visual <24px, expand hit area",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "mobile"
+    ]
+  },
+  {
+    "id": "vercel-interactions-targets-input-6",
+    "title": "MUST: Mobile `<input>` font-size ≥16px to prevent iOS zoom",
+    "section": "Interactions",
+    "subsection": "Targets & Input",
+    "level": "MUST",
+    "rule": "Mobile `<input>` font-size ≥16px to prevent iOS zoom",
+    "description": "Mobile `<input>` font-size ≥16px to prevent iOS zoom",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "mobile"
+    ]
+  },
+  {
+    "id": "vercel-interactions-targets-input-7",
+    "title": "NEVER: Disable browser zoom (`user-scalable=no`, `maximum-scale=1`)",
+    "section": "Interactions",
+    "subsection": "Targets & Input",
+    "level": "NEVER",
+    "rule": "Disable browser zoom (`user-scalable=no`, `maximum-scale=1`)",
+    "description": "Disable browser zoom (`user-scalable=no`, `maximum-scale=1`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-targets-input-8",
+    "title": "MUST: `touch-action: manipulation` to prevent double-tap zoom",
+    "section": "Interactions",
+    "subsection": "Targets & Input",
+    "level": "MUST",
+    "rule": "`touch-action: manipulation` to prevent double-tap zoom",
+    "description": "`touch-action: manipulation` to prevent double-tap zoom",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "touch"
+    ]
+  },
+  {
+    "id": "vercel-interactions-targets-input-9",
+    "title": "SHOULD: Set `-webkit-tap-highlight-color` to match design",
+    "section": "Interactions",
+    "subsection": "Targets & Input",
+    "level": "SHOULD",
+    "rule": "Set `-webkit-tap-highlight-color` to match design",
+    "description": "Set `-webkit-tap-highlight-color` to match design",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-10",
+    "title": "MUST: Hydration-safe inputs (no lost focus/value)",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Hydration-safe inputs (no lost focus/value)",
+    "description": "Hydration-safe inputs (no lost focus/value)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "focus",
+      "hydration"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-11",
+    "title": "NEVER: Block paste in `<input>`/`<textarea>`",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "NEVER",
+    "rule": "Block paste in `<input>`/`<textarea>`",
+    "description": "Block paste in `<input>`/`<textarea>`",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-12",
+    "title": "MUST: Loading buttons show spinner and keep original label",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Loading buttons show spinner and keep original label",
+    "description": "Loading buttons show spinner and keep original label",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-13",
+    "title": "MUST: Enter submits focused input; in `<textarea>`, ⌘/Ctrl+Enter submits",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Enter submits focused input; in `<textarea>`, ⌘/Ctrl+Enter submits",
+    "description": "Enter submits focused input; in `<textarea>`, ⌘/Ctrl+Enter submits",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "focus"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-14",
+    "title": "MUST: Keep submit enabled until request starts; then disable with spinner",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Keep submit enabled until request starts; then disable with spinner",
+    "description": "Keep submit enabled until request starts; then disable with spinner",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-15",
+    "title": "MUST: Accept free text, validate after—don't block typing",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Accept free text, validate after—don't block typing",
+    "description": "Accept free text, validate after—don't block typing",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-16",
+    "title": "MUST: Allow incomplete form submission to surface validation",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Allow incomplete form submission to surface validation",
+    "description": "Allow incomplete form submission to surface validation",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-17",
+    "title": "MUST: Errors inline next to fields; on submit, focus first error",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Errors inline next to fields; on submit, focus first error",
+    "description": "Errors inline next to fields; on submit, focus first error",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "focus"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-18",
+    "title": "MUST: `autocomplete` + meaningful `name`; correct `type` and `inputmode`",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "`autocomplete` + meaningful `name`; correct `type` and `inputmode`",
+    "description": "`autocomplete` + meaningful `name`; correct `type` and `inputmode`",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-19",
+    "title": "SHOULD: Disable spellcheck for emails/codes/usernames",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "SHOULD",
+    "rule": "Disable spellcheck for emails/codes/usernames",
+    "description": "Disable spellcheck for emails/codes/usernames",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-20",
+    "title": "SHOULD: Placeholders end with `…` and show example pattern",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "SHOULD",
+    "rule": "Placeholders end with `…` and show example pattern",
+    "description": "Placeholders end with `…` and show example pattern",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-21",
+    "title": "MUST: Warn on unsaved changes before navigation",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Warn on unsaved changes before navigation",
+    "description": "Warn on unsaved changes before navigation",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "navigation"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-22",
+    "title": "MUST: Compatible with password managers & 2FA; allow pasting codes",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Compatible with password managers & 2FA; allow pasting codes",
+    "description": "Compatible with password managers & 2FA; allow pasting codes",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-23",
+    "title": "MUST: Trim values to handle text expansion trailing spaces",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "Trim values to handle text expansion trailing spaces",
+    "description": "Trim values to handle text expansion trailing spaces",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-forms-24",
+    "title": "MUST: No dead zones on checkboxes/radios; label+control share one hit target",
+    "section": "Interactions",
+    "subsection": "Forms",
+    "level": "MUST",
+    "rule": "No dead zones on checkboxes/radios; label+control share one hit target",
+    "description": "No dead zones on checkboxes/radios; label+control share one hit target",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-state-navigation-25",
+    "title": "MUST: URL reflects state (deep-link filters/tabs/pagination/expanded panels)",
+    "section": "Interactions",
+    "subsection": "State & Navigation",
+    "level": "MUST",
+    "rule": "URL reflects state (deep-link filters/tabs/pagination/expanded panels)",
+    "description": "URL reflects state (deep-link filters/tabs/pagination/expanded panels)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-state-navigation-26",
+    "title": "MUST: Back/Forward restores scroll position",
+    "section": "Interactions",
+    "subsection": "State & Navigation",
+    "level": "MUST",
+    "rule": "Back/Forward restores scroll position",
+    "description": "Back/Forward restores scroll position",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-state-navigation-27",
+    "title": "MUST: Links use `<a>`/`<Link>` for navigation (support Cmd/Ctrl/middle-click)",
+    "section": "Interactions",
+    "subsection": "State & Navigation",
+    "level": "MUST",
+    "rule": "Links use `<a>`/`<Link>` for navigation (support Cmd/Ctrl/middle-click)",
+    "description": "Links use `<a>`/`<Link>` for navigation (support Cmd/Ctrl/middle-click)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "navigation"
+    ]
+  },
+  {
+    "id": "vercel-interactions-state-navigation-28",
+    "title": "NEVER: Use `<div onClick>` for navigation",
+    "section": "Interactions",
+    "subsection": "State & Navigation",
+    "level": "NEVER",
+    "rule": "Use `<div onClick>` for navigation",
+    "description": "Use `<div onClick>` for navigation",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "navigation"
+    ]
+  },
+  {
+    "id": "vercel-interactions-feedback-29",
+    "title": "SHOULD: Optimistic UI; reconcile on response; on failure rollback or offer Undo",
+    "section": "Interactions",
+    "subsection": "Feedback",
+    "level": "SHOULD",
+    "rule": "Optimistic UI; reconcile on response; on failure rollback or offer Undo",
+    "description": "Optimistic UI; reconcile on response; on failure rollback or offer Undo",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-feedback-30",
+    "title": "MUST: Confirm destructive actions or provide Undo window",
+    "section": "Interactions",
+    "subsection": "Feedback",
+    "level": "MUST",
+    "rule": "Confirm destructive actions or provide Undo window",
+    "description": "Confirm destructive actions or provide Undo window",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-feedback-31",
+    "title": "MUST: Use polite `aria-live` for toasts/inline validation",
+    "section": "Interactions",
+    "subsection": "Feedback",
+    "level": "MUST",
+    "rule": "Use polite `aria-live` for toasts/inline validation",
+    "description": "Use polite `aria-live` for toasts/inline validation",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "aria"
+    ]
+  },
+  {
+    "id": "vercel-interactions-feedback-32",
+    "title": "SHOULD: Ellipsis (`…`) for options opening follow-ups (\"Rename…\") and loading states (\"L…",
+    "section": "Interactions",
+    "subsection": "Feedback",
+    "level": "SHOULD",
+    "rule": "Ellipsis (`…`) for options opening follow-ups (\"Rename…\") and loading states (\"Loading…\")",
+    "description": "Ellipsis (`…`) for options opening follow-ups (\"Rename…\") and loading states (\"Loading…\")",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-touch-drag-33",
+    "title": "MUST: Generous targets, clear affordances; avoid finicky interactions",
+    "section": "Interactions",
+    "subsection": "Touch & Drag",
+    "level": "MUST",
+    "rule": "Generous targets, clear affordances; avoid finicky interactions",
+    "description": "Generous targets, clear affordances; avoid finicky interactions",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-touch-drag-34",
+    "title": "MUST: Delay first tooltip; subsequent peers instant",
+    "section": "Interactions",
+    "subsection": "Touch & Drag",
+    "level": "MUST",
+    "rule": "Delay first tooltip; subsequent peers instant",
+    "description": "Delay first tooltip; subsequent peers instant",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-touch-drag-35",
+    "title": "MUST: `overscroll-behavior: contain` in modals/drawers",
+    "section": "Interactions",
+    "subsection": "Touch & Drag",
+    "level": "MUST",
+    "rule": "`overscroll-behavior: contain` in modals/drawers",
+    "description": "`overscroll-behavior: contain` in modals/drawers",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-touch-drag-36",
+    "title": "MUST: During drag, disable text selection and set `inert` on dragged elements",
+    "section": "Interactions",
+    "subsection": "Touch & Drag",
+    "level": "MUST",
+    "rule": "During drag, disable text selection and set `inert` on dragged elements",
+    "description": "During drag, disable text selection and set `inert` on dragged elements",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-touch-drag-37",
+    "title": "MUST: If it looks clickable, it must be clickable",
+    "section": "Interactions",
+    "subsection": "Touch & Drag",
+    "level": "MUST",
+    "rule": "If it looks clickable, it must be clickable",
+    "description": "If it looks clickable, it must be clickable",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-interactions-autofocus-38",
+    "title": "SHOULD: Autofocus on desktop with single primary input; rarely on mobile",
+    "section": "Interactions",
+    "subsection": "Autofocus",
+    "level": "SHOULD",
+    "rule": "Autofocus on desktop with single primary input; rarely on mobile",
+    "description": "Autofocus on desktop with single primary input; rarely on mobile",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "focus",
+      "mobile"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-39",
+    "title": "MUST: Honor `prefers-reduced-motion` (provide reduced variant or disable)",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "MUST",
+    "rule": "Honor `prefers-reduced-motion` (provide reduced variant or disable)",
+    "description": "Honor `prefers-reduced-motion` (provide reduced variant or disable)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "animation",
+      "aria"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-40",
+    "title": "SHOULD: Prefer CSS > Web Animations API > JS libraries",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "SHOULD",
+    "rule": "Prefer CSS > Web Animations API > JS libraries",
+    "description": "Prefer CSS > Web Animations API > JS libraries",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-41",
+    "title": "MUST: Animate compositor-friendly props (`transform`, `opacity`) only",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "MUST",
+    "rule": "Animate compositor-friendly props (`transform`, `opacity`) only",
+    "description": "Animate compositor-friendly props (`transform`, `opacity`) only",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-42",
+    "title": "NEVER: Animate layout props (`top`, `left`, `width`, `height`)",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "NEVER",
+    "rule": "Animate layout props (`top`, `left`, `width`, `height`)",
+    "description": "Animate layout props (`top`, `left`, `width`, `height`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "animation",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-43",
+    "title": "NEVER: `transition: all`—list properties explicitly",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "NEVER",
+    "rule": "`transition: all`—list properties explicitly",
+    "description": "`transition: all`—list properties explicitly",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-44",
+    "title": "SHOULD: Animate only to clarify cause/effect or add deliberate delight",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "SHOULD",
+    "rule": "Animate only to clarify cause/effect or add deliberate delight",
+    "description": "Animate only to clarify cause/effect or add deliberate delight",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-45",
+    "title": "SHOULD: Choose easing to match the change (size/distance/trigger)",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "SHOULD",
+    "rule": "Choose easing to match the change (size/distance/trigger)",
+    "description": "Choose easing to match the change (size/distance/trigger)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-46",
+    "title": "MUST: Animations interruptible and input-driven (no autoplay)",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "MUST",
+    "rule": "Animations interruptible and input-driven (no autoplay)",
+    "description": "Animations interruptible and input-driven (no autoplay)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-47",
+    "title": "MUST: Correct `transform-origin` (motion starts where it \"physically\" should)",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "MUST",
+    "rule": "Correct `transform-origin` (motion starts where it \"physically\" should)",
+    "description": "Correct `transform-origin` (motion starts where it \"physically\" should)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-48",
+    "title": "MUST: SVG transforms on `<g>` wrapper with `transform-box: fill-box`",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "MUST",
+    "rule": "SVG transforms on `<g>` wrapper with `transform-box: fill-box`",
+    "description": "SVG transforms on `<g>` wrapper with `transform-box: fill-box`",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-layout-layout-49",
+    "title": "SHOULD: Optical alignment; adjust ±1px when perception beats geometry",
+    "section": "Layout",
+    "subsection": "Layout",
+    "level": "SHOULD",
+    "rule": "Optical alignment; adjust ±1px when perception beats geometry",
+    "description": "Optical alignment; adjust ±1px when perception beats geometry",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-layout-layout-50",
+    "title": "MUST: Deliberate alignment to grid/baseline/edges—no accidental placement",
+    "section": "Layout",
+    "subsection": "Layout",
+    "level": "MUST",
+    "rule": "Deliberate alignment to grid/baseline/edges—no accidental placement",
+    "description": "Deliberate alignment to grid/baseline/edges—no accidental placement",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-layout-layout-51",
+    "title": "SHOULD: Balance icon/text lockups (weight/size/spacing/color)",
+    "section": "Layout",
+    "subsection": "Layout",
+    "level": "SHOULD",
+    "rule": "Balance icon/text lockups (weight/size/spacing/color)",
+    "description": "Balance icon/text lockups (weight/size/spacing/color)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-layout-layout-52",
+    "title": "MUST: Verify mobile, laptop, ultra-wide (simulate ultra-wide at 50% zoom)",
+    "section": "Layout",
+    "subsection": "Layout",
+    "level": "MUST",
+    "rule": "Verify mobile, laptop, ultra-wide (simulate ultra-wide at 50% zoom)",
+    "description": "Verify mobile, laptop, ultra-wide (simulate ultra-wide at 50% zoom)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "mobile",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-layout-layout-53",
+    "title": "MUST: Respect safe areas (`env(safe-area-inset-*)`)",
+    "section": "Layout",
+    "subsection": "Layout",
+    "level": "MUST",
+    "rule": "Respect safe areas (`env(safe-area-inset-*)`)",
+    "description": "Respect safe areas (`env(safe-area-inset-*)`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-layout-layout-54",
+    "title": "MUST: Avoid unwanted scrollbars; fix overflows",
+    "section": "Layout",
+    "subsection": "Layout",
+    "level": "MUST",
+    "rule": "Avoid unwanted scrollbars; fix overflows",
+    "description": "Avoid unwanted scrollbars; fix overflows",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-layout-layout-55",
+    "title": "SHOULD: Flex/grid over JS measurement for layout",
+    "section": "Layout",
+    "subsection": "Layout",
+    "level": "SHOULD",
+    "rule": "Flex/grid over JS measurement for layout",
+    "description": "Flex/grid over JS measurement for layout",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-56",
+    "title": "SHOULD: Inline help first; tooltips last resort",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "SHOULD",
+    "rule": "Inline help first; tooltips last resort",
+    "description": "Inline help first; tooltips last resort",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-57",
+    "title": "MUST: Skeletons mirror final content to avoid layout shift",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Skeletons mirror final content to avoid layout shift",
+    "description": "Skeletons mirror final content to avoid layout shift",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-58",
+    "title": "MUST: `<title>` matches current context",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "`<title>` matches current context",
+    "description": "`<title>` matches current context",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-59",
+    "title": "MUST: No dead ends; always offer next step/recovery",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "No dead ends; always offer next step/recovery",
+    "description": "No dead ends; always offer next step/recovery",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-60",
+    "title": "MUST: Design empty/sparse/dense/error states",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Design empty/sparse/dense/error states",
+    "description": "Design empty/sparse/dense/error states",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-61",
+    "title": "SHOULD: Curly quotes (\" \"); avoid widows/orphans (`text-wrap: balance`)",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "SHOULD",
+    "rule": "Curly quotes (\" \"); avoid widows/orphans (`text-wrap: balance`)",
+    "description": "Curly quotes (\" \"); avoid widows/orphans (`text-wrap: balance`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-62",
+    "title": "MUST: `font-variant-numeric: tabular-nums` for number comparisons",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "`font-variant-numeric: tabular-nums` for number comparisons",
+    "description": "`font-variant-numeric: tabular-nums` for number comparisons",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility",
+      "aria"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-63",
+    "title": "MUST: Redundant status cues (not color-only); icons have text labels",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Redundant status cues (not color-only); icons have text labels",
+    "description": "Redundant status cues (not color-only); icons have text labels",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-64",
+    "title": "MUST: Accessible names exist even when visuals omit labels",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Accessible names exist even when visuals omit labels",
+    "description": "Accessible names exist even when visuals omit labels",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-65",
+    "title": "MUST: Use `…` character (not `...`)",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Use `…` character (not `...`)",
+    "description": "Use `…` character (not `...`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-66",
+    "title": "MUST: `scroll-margin-top` on headings; \"Skip to content\" link; hierarchical `<h1>`–`<h…",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "`scroll-margin-top` on headings; \"Skip to content\" link; hierarchical `<h1>`–`<h6>`",
+    "description": "`scroll-margin-top` on headings; \"Skip to content\" link; hierarchical `<h1>`–`<h6>`",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-67",
+    "title": "MUST: Resilient to user-generated content (short/avg/very long)",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Resilient to user-generated content (short/avg/very long)",
+    "description": "Resilient to user-generated content (short/avg/very long)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-68",
+    "title": "MUST: Locale-aware dates/times/numbers (`Intl.DateTimeFormat`, `Intl.NumberFormat`)",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Locale-aware dates/times/numbers (`Intl.DateTimeFormat`, `Intl.NumberFormat`)",
+    "description": "Locale-aware dates/times/numbers (`Intl.DateTimeFormat`, `Intl.NumberFormat`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-69",
+    "title": "SHOULD: `translate=\"no\"` on brand names, code tokens, & identifiers to prevent garbled a…",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "SHOULD",
+    "rule": "`translate=\"no\"` on brand names, code tokens, & identifiers to prevent garbled auto-translation",
+    "description": "`translate=\"no\"` on brand names, code tokens, & identifiers to prevent garbled auto-translation",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-70",
+    "title": "MUST: Accurate `aria-label`; decorative elements `aria-hidden`",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Accurate `aria-label`; decorative elements `aria-hidden`",
+    "description": "Accurate `aria-label`; decorative elements `aria-hidden`",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility",
+      "aria"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-71",
+    "title": "MUST: Icon-only buttons have descriptive `aria-label`",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Icon-only buttons have descriptive `aria-label`",
+    "description": "Icon-only buttons have descriptive `aria-label`",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility",
+      "aria"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-72",
+    "title": "MUST: Prefer native semantics (`button`, `a`, `label`, `table`) before ARIA",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Prefer native semantics (`button`, `a`, `label`, `table`) before ARIA",
+    "description": "Prefer native semantics (`button`, `a`, `label`, `table`) before ARIA",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility",
+      "aria"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-73",
+    "title": "MUST: Non-breaking spaces: `10&nbsp;MB`, `⌘&nbsp;K`, brand names",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Non-breaking spaces: `10&nbsp;MB`, `⌘&nbsp;K`, brand names",
+    "description": "Non-breaking spaces: `10&nbsp;MB`, `⌘&nbsp;K`, brand names",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-handling-content-handling-74",
+    "title": "MUST: Text containers handle long content (`truncate`, `line-clamp-*`, `break-words`)",
+    "section": "Content Handling",
+    "subsection": "Content Handling",
+    "level": "MUST",
+    "rule": "Text containers handle long content (`truncate`, `line-clamp-*`, `break-words`)",
+    "description": "Text containers handle long content (`truncate`, `line-clamp-*`, `break-words`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-content-handling-content-handling-75",
+    "title": "MUST: Flex children need `min-w-0` to allow truncation",
+    "section": "Content Handling",
+    "subsection": "Content Handling",
+    "level": "MUST",
+    "rule": "Flex children need `min-w-0` to allow truncation",
+    "description": "Flex children need `min-w-0` to allow truncation",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-content-handling-content-handling-76",
+    "title": "MUST: Handle empty states—no broken UI for empty strings/arrays",
+    "section": "Content Handling",
+    "subsection": "Content Handling",
+    "level": "MUST",
+    "rule": "Handle empty states—no broken UI for empty strings/arrays",
+    "description": "Handle empty states—no broken UI for empty strings/arrays",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-77",
+    "title": "SHOULD: Test iOS Low Power Mode and macOS Safari",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "SHOULD",
+    "rule": "Test iOS Low Power Mode and macOS Safari",
+    "description": "Test iOS Low Power Mode and macOS Safari",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-78",
+    "title": "MUST: Measure reliably (disable extensions that skew runtime)",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "MUST",
+    "rule": "Measure reliably (disable extensions that skew runtime)",
+    "description": "Measure reliably (disable extensions that skew runtime)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-79",
+    "title": "MUST: Track and minimize re-renders (React DevTools/React Scan)",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "MUST",
+    "rule": "Track and minimize re-renders (React DevTools/React Scan)",
+    "description": "Track and minimize re-renders (React DevTools/React Scan)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-80",
+    "title": "MUST: Profile with CPU/network throttling",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "MUST",
+    "rule": "Profile with CPU/network throttling",
+    "description": "Profile with CPU/network throttling",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-81",
+    "title": "MUST: Batch layout reads/writes; avoid reflows/repaints",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "MUST",
+    "rule": "Batch layout reads/writes; avoid reflows/repaints",
+    "description": "Batch layout reads/writes; avoid reflows/repaints",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance",
+      "layout"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-82",
+    "title": "MUST: Mutations (`POST`/`PATCH`/`DELETE`) target <500ms",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "MUST",
+    "rule": "Mutations (`POST`/`PATCH`/`DELETE`) target <500ms",
+    "description": "Mutations (`POST`/`PATCH`/`DELETE`) target <500ms",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-83",
+    "title": "SHOULD: Prefer uncontrolled inputs; controlled inputs cheap per keystroke",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "SHOULD",
+    "rule": "Prefer uncontrolled inputs; controlled inputs cheap per keystroke",
+    "description": "Prefer uncontrolled inputs; controlled inputs cheap per keystroke",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-84",
+    "title": "MUST: Virtualize large lists (>50 items)",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "MUST",
+    "rule": "Virtualize large lists (>50 items)",
+    "description": "Virtualize large lists (>50 items)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-85",
+    "title": "MUST: Preload above-fold images; lazy-load the rest",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "MUST",
+    "rule": "Preload above-fold images; lazy-load the rest",
+    "description": "Preload above-fold images; lazy-load the rest",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-86",
+    "title": "MUST: Prevent CLS (explicit image dimensions)",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "MUST",
+    "rule": "Prevent CLS (explicit image dimensions)",
+    "description": "Prevent CLS (explicit image dimensions)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-87",
+    "title": "SHOULD: `<link rel=\"preconnect\">` for CDN domains",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "SHOULD",
+    "rule": "`<link rel=\"preconnect\">` for CDN domains",
+    "description": "`<link rel=\"preconnect\">` for CDN domains",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-88",
+    "title": "SHOULD: Critical fonts: `<link rel=\"preload\" as=\"font\">` with `font-display: swap`",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "SHOULD",
+    "rule": "Critical fonts: `<link rel=\"preload\" as=\"font\">` with `font-display: swap`",
+    "description": "Critical fonts: `<link rel=\"preload\" as=\"font\">` with `font-display: swap`",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-dark-mode-theming-dark-mode-theming-89",
+    "title": "MUST: `color-scheme: dark` on `<html>` for dark themes",
+    "section": "Dark Mode & Theming",
+    "subsection": "Dark Mode & Theming",
+    "level": "MUST",
+    "rule": "`color-scheme: dark` on `<html>` for dark themes",
+    "description": "`color-scheme: dark` on `<html>` for dark themes",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "dark"
+    ]
+  },
+  {
+    "id": "vercel-dark-mode-theming-dark-mode-theming-90",
+    "title": "SHOULD: `<meta name=\"theme-color\">` matches page background",
+    "section": "Dark Mode & Theming",
+    "subsection": "Dark Mode & Theming",
+    "level": "SHOULD",
+    "rule": "`<meta name=\"theme-color\">` matches page background",
+    "description": "`<meta name=\"theme-color\">` matches page background",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "dark"
+    ]
+  },
+  {
+    "id": "vercel-dark-mode-theming-dark-mode-theming-91",
+    "title": "MUST: Native `<select>`: explicit `background-color` and `color` (Windows fix)",
+    "section": "Dark Mode & Theming",
+    "subsection": "Dark Mode & Theming",
+    "level": "MUST",
+    "rule": "Native `<select>`: explicit `background-color` and `color` (Windows fix)",
+    "description": "Native `<select>`: explicit `background-color` and `color` (Windows fix)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "dark"
+    ]
+  },
+  {
+    "id": "vercel-hydration-hydration-92",
+    "title": "MUST: Inputs with `value` need `onChange` (or use `defaultValue`)",
+    "section": "Hydration",
+    "subsection": "Hydration",
+    "level": "MUST",
+    "rule": "Inputs with `value` need `onChange` (or use `defaultValue`)",
+    "description": "Inputs with `value` need `onChange` (or use `defaultValue`)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "hydration"
+    ]
+  },
+  {
+    "id": "vercel-hydration-hydration-93",
+    "title": "SHOULD: Guard date/time rendering against hydration mismatch",
+    "section": "Hydration",
+    "subsection": "Hydration",
+    "level": "SHOULD",
+    "rule": "Guard date/time rendering against hydration mismatch",
+    "description": "Guard date/time rendering against hydration mismatch",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "hydration"
+    ]
+  },
+  {
+    "id": "vercel-design-design-94",
+    "title": "SHOULD: Layered shadows (ambient + direct)",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "SHOULD",
+    "rule": "Layered shadows (ambient + direct)",
+    "description": "Layered shadows (ambient + direct)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-design-design-95",
+    "title": "SHOULD: Crisp edges via semi-transparent borders + shadows",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "SHOULD",
+    "rule": "Crisp edges via semi-transparent borders + shadows",
+    "description": "Crisp edges via semi-transparent borders + shadows",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-design-design-96",
+    "title": "SHOULD: Nested radii: child ≤ parent; concentric",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "SHOULD",
+    "rule": "Nested radii: child ≤ parent; concentric",
+    "description": "Nested radii: child ≤ parent; concentric",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-design-design-97",
+    "title": "SHOULD: Hue consistency: tint borders/shadows/text toward bg hue",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "SHOULD",
+    "rule": "Hue consistency: tint borders/shadows/text toward bg hue",
+    "description": "Hue consistency: tint borders/shadows/text toward bg hue",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-design-design-98",
+    "title": "MUST: Accessible charts (color-blind-friendly palettes)",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "MUST",
+    "rule": "Accessible charts (color-blind-friendly palettes)",
+    "description": "Accessible charts (color-blind-friendly palettes)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-design-design-99",
+    "title": "MUST: Meet contrast—prefer [APCA](https://apcacontrast.com/) over WCAG 2",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "MUST",
+    "rule": "Meet contrast—prefer [APCA](https://apcacontrast.com/) over WCAG 2",
+    "description": "Meet contrast—prefer [APCA](https://apcacontrast.com/) over WCAG 2",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "contrast"
+    ]
+  },
+  {
+    "id": "vercel-design-design-100",
+    "title": "MUST: Increase contrast on `:hover`/`:active`/`:focus`",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "MUST",
+    "rule": "Increase contrast on `:hover`/`:active`/`:focus`",
+    "description": "Increase contrast on `:hover`/`:active`/`:focus`",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "focus",
+      "contrast"
+    ]
+  },
+  {
+    "id": "vercel-design-design-101",
+    "title": "SHOULD: Match browser UI to bg",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "SHOULD",
+    "rule": "Match browser UI to bg",
+    "description": "Match browser UI to bg",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface"
+    ]
+  },
+  {
+    "id": "vercel-design-design-102",
+    "title": "SHOULD: Avoid dark color gradient banding (use background images when needed)",
+    "section": "Design",
+    "subsection": "Design",
+    "level": "SHOULD",
+    "rule": "Avoid dark color gradient banding (use background images when needed)",
+    "description": "Avoid dark color gradient banding (use background images when needed)",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "dark"
+    ]
+  }
+]

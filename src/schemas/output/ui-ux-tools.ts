@@ -103,6 +103,10 @@ export const SyncReportSchema = {
         icons: { type: 'number' },
         components: { type: 'number' },
         patterns: { type: 'number' },
+        shadcnBlocks: { type: 'number' },
+        shadcnComponents: { type: 'number' },
+        themes: { type: 'number' },
+        vercelGuidelines: { type: 'number' },
       },
     },
     version: { type: 'string' },
@@ -273,6 +277,10 @@ export interface SyncReport {
     icons?: number;
     components?: number;
     patterns?: number;
+    shadcnBlocks?: number;
+    shadcnComponents?: number;
+    themes?: number;
+    vercelGuidelines?: number;
   };
   version?: string;
   timestamp?: string;

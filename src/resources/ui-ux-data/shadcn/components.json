@@ -1,0 +1,997 @@
+[
+  {
+    "name": "accordion",
+    "title": "accordion",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-accordion"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/accordion.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add accordion",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "alert",
+    "title": "alert",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/alert.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add alert",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "alert-dialog",
+    "title": "alert-dialog",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-alert-dialog"
+    ],
+    "registryDependencies": [
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/alert-dialog.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add alert-dialog",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "aspect-ratio",
+    "title": "aspect-ratio",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-aspect-ratio"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/aspect-ratio.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add aspect-ratio",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "avatar",
+    "title": "avatar",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-avatar"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/avatar.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add avatar",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "badge",
+    "title": "badge",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-slot"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/badge.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add badge",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "breadcrumb",
+    "title": "breadcrumb",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-slot"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/breadcrumb.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add breadcrumb",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "button",
+    "title": "button",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-slot"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/button.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add button",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "button-group",
+    "title": "button-group",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "button",
+      "separator"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/button-group.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add button-group",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "calendar",
+    "title": "calendar",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "react-day-picker@latest",
+      "date-fns"
+    ],
+    "registryDependencies": [
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/calendar.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add calendar",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "card",
+    "title": "card",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/card.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add card",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "carousel",
+    "title": "carousel",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "embla-carousel-react"
+    ],
+    "registryDependencies": [
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/carousel.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add carousel",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "chart",
+    "title": "chart",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "recharts@2.15.4",
+      "lucide-react"
+    ],
+    "registryDependencies": [
+      "card"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/chart.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add chart",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "checkbox",
+    "title": "checkbox",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-checkbox"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/checkbox.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add checkbox",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "collapsible",
+    "title": "collapsible",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-collapsible"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/collapsible.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add collapsible",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "command",
+    "title": "command",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "cmdk"
+    ],
+    "registryDependencies": [
+      "dialog"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/command.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add command",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "context-menu",
+    "title": "context-menu",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-context-menu"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/context-menu.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add context-menu",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "dialog",
+    "title": "dialog",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-dialog"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/dialog.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add dialog",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "drawer",
+    "title": "drawer",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "vaul",
+      "@radix-ui/react-dialog"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/drawer.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add drawer",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "dropdown-menu",
+    "title": "dropdown-menu",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-dropdown-menu"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/dropdown-menu.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add dropdown-menu",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "empty",
+    "title": "empty",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/empty.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add empty",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "field",
+    "title": "field",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "label",
+      "separator"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/field.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add field",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "form",
+    "title": "form",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-label",
+      "@radix-ui/react-slot",
+      "@hookform/resolvers",
+      "zod",
+      "react-hook-form"
+    ],
+    "registryDependencies": [
+      "button",
+      "label"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/form.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add form",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "hover-card",
+    "title": "hover-card",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-hover-card"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/hover-card.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add hover-card",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "input",
+    "title": "input",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/input.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add input",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "input-group",
+    "title": "input-group",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "button",
+      "input",
+      "textarea"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/input-group.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add input-group",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "input-otp",
+    "title": "input-otp",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "input-otp"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/input-otp.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add input-otp",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "item",
+    "title": "item",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "separator"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/item.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add item",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "kbd",
+    "title": "kbd",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/kbd.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add kbd",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "label",
+    "title": "label",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-label"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/label.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add label",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "menubar",
+    "title": "menubar",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-menubar"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/menubar.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add menubar",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "navigation-menu",
+    "title": "navigation-menu",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-navigation-menu"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/navigation-menu.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add navigation-menu",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "pagination",
+    "title": "pagination",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [
+      "button"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/pagination.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add pagination",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "popover",
+    "title": "popover",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-popover"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/popover.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add popover",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "progress",
+    "title": "progress",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-progress"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/progress.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add progress",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "radio-group",
+    "title": "radio-group",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-radio-group"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/radio-group.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add radio-group",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "resizable",
+    "title": "resizable",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "react-resizable-panels"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/resizable.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add resizable",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "scroll-area",
+    "title": "scroll-area",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-scroll-area"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/scroll-area.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add scroll-area",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "select",
+    "title": "select",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-select"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/select.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add select",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "separator",
+    "title": "separator",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-separator"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/separator.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add separator",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "sheet",
+    "title": "sheet",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-dialog"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/sheet.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sheet",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "sidebar",
+    "title": "sidebar",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-slot",
+      "class-variance-authority",
+      "lucide-react"
+    ],
+    "registryDependencies": [
+      "button",
+      "separator",
+      "sheet",
+      "tooltip",
+      "input",
+      "use-mobile",
+      "skeleton"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/sidebar.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sidebar",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "skeleton",
+    "title": "skeleton",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/skeleton.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add skeleton",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "slider",
+    "title": "slider",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-slider"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/slider.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add slider",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "sonner",
+    "title": "sonner",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "sonner",
+      "next-themes"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/sonner.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add sonner",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "spinner",
+    "title": "spinner",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "class-variance-authority"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/spinner.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add spinner",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "switch",
+    "title": "switch",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-switch"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/switch.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add switch",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "table",
+    "title": "table",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/table.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add table",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "tabs",
+    "title": "tabs",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-tabs"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/tabs.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add tabs",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "textarea",
+    "title": "textarea",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/textarea.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add textarea",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "toast",
+    "title": "toast",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-toast"
+    ],
+    "registryDependencies": [],
+    "fileCount": 3,
+    "files": [
+      "registry/new-york/ui/toast.tsx",
+      "registry/new-york/hooks/use-toast.ts",
+      "registry/new-york/ui/toaster.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add toast",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "toggle",
+    "title": "toggle",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-toggle"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/toggle.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add toggle",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "toggle-group",
+    "title": "toggle-group",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-toggle-group"
+    ],
+    "registryDependencies": [
+      "toggle"
+    ],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/toggle-group.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add toggle-group",
+    "category": "shadcn-components"
+  },
+  {
+    "name": "tooltip",
+    "title": "tooltip",
+    "description": "component from shadcn/ui (new-york)",
+    "type": "component",
+    "stack": "react",
+    "style": "new-york",
+    "dependencies": [
+      "@radix-ui/react-tooltip"
+    ],
+    "registryDependencies": [],
+    "fileCount": 1,
+    "files": [
+      "registry/new-york/ui/tooltip.tsx"
+    ],
+    "installCommand": "npx shadcn@latest add tooltip",
+    "category": "shadcn-components"
+  }
+]

@@ -33,9 +33,32 @@ import {
   loadMemoryInjectionContext,
   renderMemoryGuideSection,
 } from "../lib/memory-orchestration.js";
+import { isShadcnStack } from "../lib/shadcn-ui.js";
 
 type TemplateProfileResolved = 'guided' | 'strict';
 type TemplateProfileRequest = 'guided' | 'strict' | 'auto';
+
+function buildShadcnBlocksPlanStep(description: string, framework: string) {
+  if (!isShadcnStack(framework)) {
+    return [];
+  }
+
+  return [
+    {
+      id: 'shadcn-blocks',
+      tool: 'ui_search',
+      when: 'React/Next 栈：调用 ui_search（category=shadcn-blocks）匹配 block',
+      args: {
+        mode: 'search',
+        query: description,
+        category: 'shadcn-blocks',
+        stack: framework,
+        limit: 5,
+      },
+      outputs: [],
+    },
+  ];
+}
 
 function inferProductType(description: string): string {
   const text = (description || '').toLowerCase();
@@ -705,6 +728,7 @@ start_ui <描述> --requirements_mode=loop
             args: {},
             outputs: ['docs/ui/component-catalog.json'],
           },
+          ...buildShadcnBlocksPlanStep(description, framework),
           {
             id: 'template',
             tool: 'ui_search',
@@ -940,6 +964,7 @@ ${recommendation.reasoning}
             args: {},
             outputs: ['docs/ui/component-catalog.json'],
           },
+          ...buildShadcnBlocksPlanStep(description, inferredStack),
           {
             id: 'template',
             tool: 'ui_search',
@@ -1167,6 +1192,7 @@ start_ui "设置页面" --framework=react
           args: {},
           outputs: ['docs/ui/component-catalog.json'],
         },
+        ...buildShadcnBlocksPlanStep(description, framework),
         {
           id: 'template',
           tool: 'ui_search',
@@ -1241,9 +1267,12 @@ start_ui "设置页面" --framework=react
       ],
       artifacts: [],
       nextSteps: [
-        '检查项目上下文，如不存在则调用 init_project_context',
-        '检查设计系统文件，如不存在则调用 ui_design_system',
-        '检查组件目录，如不存在则调用 init_component_catalog',
+        '检查 docs/project-context.md，如不存在则调用 init_project_context',
+        '检查 docs/design-system.md，如不存在则调用 ui_design_system',
+        '检查 docs/ui/component-catalog.json，如不存在则调用 init_component_catalog',
+        ...(isShadcnStack(framework)
+          ? [`调用 ui_search --category=shadcn-blocks --query="${description}" 匹配 shadcn block`]
+          : []),
         `调用 ui_search --mode=template --query="${description}"`,
         `保存模板到 docs/ui/${templateName}.json`,
         `调用 render_ui --framework="${framework}"`,
