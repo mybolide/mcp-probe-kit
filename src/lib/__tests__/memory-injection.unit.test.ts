@@ -26,6 +26,7 @@ describe('memory injection auto-load', () => {
           type: 'bugfix',
           description: 'Feishu proxy mismatch',
           summary: 'proxy caused 400 on HTTPS',
+          content: '【现象】submit 成功但 sync_failed\n【根因】HTTP_PROXY 污染\n【修复】proxy:false',
           tags: ['bugfix', 'proxy'],
         },
       ],

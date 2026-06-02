@@ -56,6 +56,7 @@ export async function searchMemory(args: unknown) {
       type: item.type,
       description: item.description,
       summary: item.summary,
+      content: item.content,
       tags: item.tags,
       sourcePath: shouldShowSourceInSearch(item, config) ? item.sourcePath : undefined,
     }));

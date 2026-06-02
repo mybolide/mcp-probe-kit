@@ -412,7 +412,7 @@ verbose: true`
         { name: 'tags', type: 'array', required: false, desc: '优先匹配的标签' },
         { name: 'limit', type: 'number', required: false, desc: '返回条数' }
       ],
-      usage: '在 start_* 之外主动查找历史 Bug 修复或可复用模式；返回文本含 id/score/summary/description，并附带 structuredContent.results',
+      usage: '在 start_* 之外主动查找历史 Bug 修复或可复用模式；文本含 id/score/摘要/描述及 --- content --- 正文（默认最多 1500 字，可用 MEMORY_SEARCH_CONTENT_MAX_CHARS 调整）',
       example: `// 使用示例
 你: 请使用 search_memory 搜索 proxy 相关 bugfix
 
@@ -427,7 +427,7 @@ limit: 5`
       params: [
         { name: 'asset_id', type: 'string', required: true, desc: '资产唯一 ID' }
       ],
-      usage: '当工作流或搜索结果已经找到 memory 摘要后，用它读取完整可复用资产',
+      usage: '当工作流或搜索结果已经找到 memory 摘要后，用它读取完整可复用资产；文本输出含 --- content --- 全文与 structuredContent.asset',
       example: `// 使用示例
 你: 请使用 read_memory_asset 工具读取资产
 

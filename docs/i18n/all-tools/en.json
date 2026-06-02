@@ -168,11 +168,11 @@
     },
     "search_memory": {
       "description": "Semantic search across the shared memory pool, with optional type/tags preference",
-      "usage": "Use outside start_* to find historical bugfixes or patterns; text output includes id/score/summary/description; follow with read_memory_asset for full content"
+      "usage": "Use outside start_* to find historical bugfixes or patterns; text output includes id/score/summary/description and a --- content --- body (default 1500 chars; use read_memory_asset for unlimited full text)"
     },
     "read_memory_asset": {
       "description": "Read the full content and metadata of a stored memory asset by asset ID",
-      "usage": "Use this after a workflow or search result already found a memory summary and you need the full reusable artifact"
+      "usage": "Use after search_memory or orchestration hits; text output includes the full --- content --- body plus structuredContent.asset"
     },
     "memorize_asset": {
       "description": "Persist high-value code, spec, or pattern assets into the vector memory system for later reuse",

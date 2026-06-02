@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe('formatSearchMemoryResultsText', () => {
-  test('renders id, summary, description and read hint', () => {
+  test('renders id, summary, description, content and read hint', () => {
     const text = formatSearchMemoryResultsText([
       {
         id: '6c97bd10-654e-4f25-a560-99f7469dc11a',
@@ -32,6 +32,7 @@ describe('formatSearchMemoryResultsText', () => {
         type: 'pattern',
         description: 'Speed up Playwright E2E suites',
         summary: 'Playwright E2E parallelization pattern',
+        content: 'export const parallelWorkers = 4;\n// use project-based sharding',
         tags: ['pattern', 'e2e'],
       },
     ]);
@@ -40,6 +41,8 @@ describe('formatSearchMemoryResultsText', () => {
     expect(text).toContain('id: 6c97bd10-654e-4f25-a560-99f7469dc11a');
     expect(text).toContain('摘要: Playwright E2E parallelization pattern');
     expect(text).toContain('描述: Speed up Playwright E2E suites');
+    expect(text).toContain('--- content ---');
+    expect(text).toContain('export const parallelWorkers = 4;');
     expect(text).toContain('read_memory_asset {"asset_id": "6c97bd10-654e-4f25-a560-99f7469dc11a"}');
   });
 
@@ -74,6 +77,7 @@ describe('search_memory 单元测试', () => {
         type: 'bugfix',
         description: 'Feishu proxy mismatch',
         summary: 'proxy caused 400 on HTTPS',
+        content: '【现象】HTTPS 400\n【修复】修正 proxy 配置',
         tags: ['bugfix', 'proxy'],
       },
     ]);
@@ -88,6 +92,8 @@ describe('search_memory 单元测试', () => {
     expect(result.content[0].text).toContain('id: asset-1');
     expect(result.content[0].text).toContain('摘要: proxy caused 400 on HTTPS');
     expect(result.content[0].text).toContain('描述: Feishu proxy mismatch');
+    expect(result.content[0].text).toContain('--- content ---');
+    expect(result.content[0].text).toContain('【修复】修正 proxy 配置');
     expect(result.structuredContent.results[0]).toEqual(
       expect.objectContaining({
         id: 'asset-1',
