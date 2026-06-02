@@ -262,6 +262,7 @@ After changing env, **fully restart** your MCP client (e.g. quit and reopen Curs
 | `MEMORY_EMBEDDING_PROVIDER` | No | Must be `openai-compatible` for Infinity |
 | `MEMORY_EMBEDDING_API_KEY` | Yes for Infinity | Bearer token = `INFINITY_API_KEY` |
 | `MEMORY_SEARCH_LIMIT` | No | Default `3` |
+| `MEMORY_SEARCH_CONTENT_MAX_CHARS` | No | Max `content` chars in `search_memory` text; default `1500`, `0` = summary only |
 | `MEMORY_SUMMARY_MAX_CHARS` | No | Default `280` |
 
 ---

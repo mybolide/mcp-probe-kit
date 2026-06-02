@@ -27,6 +27,8 @@ export interface MemorySearchResult {
   type: string;
   description: string;
   summary: string;
+  /** Full payload content from Qdrant (may be empty on legacy points) */
+  content: string;
   tags: string[];
   sourceProject?: string;
   sourcePath?: string;
@@ -349,6 +351,7 @@ export class MemoryClient {
         type: fields.type,
         description: fields.description,
         summary: truncate(fields.summary, this.config.summaryMaxChars),
+        content: fields.content,
         tags: fields.tags,
         sourceProject: fields.sourceProject,
         sourcePath: fields.sourcePath,

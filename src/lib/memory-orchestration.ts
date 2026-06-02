@@ -131,7 +131,19 @@ export function formatSearchMemoryResultsText(
     if (shouldShowSourceInSearch(item, config) && item.sourcePath) {
       lines.push(`   - 来源: ${item.sourcePath}`);
     }
-    lines.push(`   - 全文: read_memory_asset {"asset_id": "${item.id}"}`);
+    if (config.searchContentMaxChars > 0) {
+      const body = truncateInjectionText(item.content || '', config.searchContentMaxChars);
+      lines.push('   --- content ---');
+      lines.push(
+        body
+          ? body
+              .split('\n')
+              .map((line) => `   ${line}`)
+              .join('\n')
+          : '   (empty)'
+      );
+    }
+    lines.push(`   - 更长全文: read_memory_asset {"asset_id": "${item.id}"}`);
     return lines.filter(Boolean).join('\n');
   });
 
@@ -158,18 +170,38 @@ function formatSourceHint(item: MemorySearchResult, config: MemoryConfig): strin
   return `\n   - 来源: ${item.sourcePath}`;
 }
 
-function formatAssetBody(asset: MemoryAsset, config: MemoryConfig): string {
+export function formatMemoryAssetText(
+  asset: MemoryAsset,
+  options?: { maxContentChars?: number }
+): string {
+  const content =
+    options?.maxContentChars !== undefined
+      ? truncateInjectionText(asset.content, options.maxContentChars)
+      : asset.content;
+
   const lines = [
     `### ${asset.name}`,
     `- asset_id: ${asset.id}`,
+    asset.type ? `- type: ${asset.type}` : '',
+    asset.summary ? `- 摘要: ${asset.summary}` : '',
     asset.description ? `- 描述: ${asset.description}` : '',
     asset.usage ? `- 适用: ${asset.usage}` : '',
     asset.tags.length > 0 ? `- 标签: ${asset.tags.join(', ')}` : '',
+    asset.sourcePath ? `- 来源: ${asset.sourcePath}` : '',
     '',
-    truncateInjectionText(asset.content, config.injectionContentMaxChars),
+    '--- content ---',
+    content || '(empty)',
   ].filter(Boolean);
 
   return lines.join('\n');
+}
+
+export function formatReadMemoryAssetText(asset: MemoryAsset): string {
+  return `已读取记忆资产: ${asset.name}\n\n${formatMemoryAssetText(asset)}`;
+}
+
+function formatAssetBody(asset: MemoryAsset, config: MemoryConfig): string {
+  return formatMemoryAssetText(asset, { maxContentChars: config.injectionContentMaxChars });
 }
 
 function formatResultBlock(
@@ -182,7 +214,7 @@ function formatResultBlock(
   const asset = context.assetsById[item.id];
   const header = `${index + 1}. ${label} score=${item.score.toFixed(3)}\n   - 摘要: ${item.summary}${formatSourceHint(item, config)}`;
 
-  if (asset?.content) {
+  if (asset) {
     return `${header}\n\n${formatAssetBody(asset, config)}\n`;
   }
 
@@ -204,7 +236,7 @@ export function renderMemoryGuideSection(context: MemoryInjectionContext): strin
     return `\n\n## 🧠 记忆系统\n- 状态: 已启用\n- 检索结果: 未找到高相关记录（含历史 Bug 修复与可复用模式）\n- 处理: 继续主流程；Bug 修复验证通过后必须 \`memorize_asset\` 沉淀；功能/UI 有可复用产出再沉淀\n`;
   }
 
-  const loadedCount = context.results.filter((item) => context.assetsById[item.id]?.content).length;
+  const loadedCount = context.results.filter((item) => Boolean(context.assetsById[item.id])).length;
   const items = context.results
     .map((item, index) => formatResultBlock(item, index, context, config))
     .join('\n');

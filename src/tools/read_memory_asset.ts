@@ -1,5 +1,6 @@
 import { okStructured } from '../lib/response.js';
 import { createMemoryClient } from '../lib/memory-client.js';
+import { formatReadMemoryAssetText } from '../lib/memory-orchestration.js';
 import { handleToolError } from '../utils/error-handler.js';
 
 export async function readMemoryAsset(args: any) {
@@ -25,13 +26,10 @@ export async function readMemoryAsset(args: any) {
       );
     }
 
-    return okStructured(
-      `已读取记忆资产: ${asset.name}`,
-      {
-        enabled: true,
-        asset,
-      }
-    );
+    return okStructured(formatReadMemoryAssetText(asset), {
+      enabled: true,
+      asset,
+    });
   } catch (error) {
     return handleToolError(error, 'read_memory_asset');
   }

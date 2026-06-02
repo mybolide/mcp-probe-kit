@@ -168,11 +168,11 @@
     },
     "search_memory": {
       "description": "按语义检索共享记忆库，支持 type/tags 优先排序",
-      "usage": "在 start_* 之外主动查找历史 Bug 修复或可复用模式；文本输出含 id/score/摘要/描述，命中后用 read_memory_asset 读全文"
+      "usage": "在 start_* 之外主动查找历史 Bug 修复或可复用模式；文本输出含 id/score/摘要/描述及 --- content --- 正文（默认最多 1500 字，更长全文用 read_memory_asset）"
     },
     "read_memory_asset": {
       "description": "按资产 ID 读取已沉淀记忆的完整内容与元数据",
-      "usage": "当编排阶段已经命中记忆摘要，需要进一步查看完整代码、规范或模式详情时使用"
+      "usage": "当编排阶段已经命中记忆摘要时使用；文本输出含 --- content --- 全文（代码/配置/详细描述）"
     },
     "memorize_asset": {
       "description": "把高价值代码、规范或模式写入向量记忆系统，供后续复用",

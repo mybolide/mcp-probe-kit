@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.24] - 2026-06-02
+
+### 🔧 改进
+
+- `read_memory_asset`：文本输出现包含 `--- content ---` 全文及元数据（v3.0.23 仅返回标题，正文只在 `structuredContent`，opencode 等宿主看不到）
+- `search_memory`：文本输出增加每条命中的 `--- content ---` 正文（默认最多 1500 字，可用 `MEMORY_SEARCH_CONTENT_MAX_CHARS` 调整；设为 `0` 则仅摘要）
+- `start_*` 记忆注入：即使 Qdrant 中 `content` 为空字符串也会展示元数据块，不再误报「全文加载失败」
+
+---
+
 ## [3.0.23] - 2026-06-01
 
 ### 🔧 改进

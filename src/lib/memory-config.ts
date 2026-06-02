@@ -16,6 +16,8 @@ export interface MemoryConfig {
   repoId: string;
   /** Max chars of each asset content injected into start_* guides */
   injectionContentMaxChars: number;
+  /** Max chars of content in search_memory text; 0 = omit content block */
+  searchContentMaxChars: number;
 }
 
 function normalizeBaseUrl(value: string | undefined): string {
@@ -65,6 +67,7 @@ export function getMemoryConfig(): MemoryConfig {
     searchMinScore: getOptionalNumberEnv('MEMORY_SEARCH_MIN_SCORE', 0),
     repoId: (process.env.MEMORY_REPO_ID || '').trim(),
     injectionContentMaxChars: getNumberEnv('MEMORY_INJECTION_CONTENT_MAX_CHARS', 1500),
+    searchContentMaxChars: getOptionalNumberEnv('MEMORY_SEARCH_CONTENT_MAX_CHARS', 1500),
   };
 }
 

@@ -100,9 +100,9 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
   - Linux: `~/.config/Cursor/User/globalStorage/state.vscdb`
 
 **Memory tools:**
-- `search_memory` - Semantic search across the shared memory pool (optionally prefer `type` / `tags`); returns `id`, `score`, `summary`, and `description` in both text output and `structuredContent` (for MCP clients that only surface `content[0].text`)
+- `search_memory` - Semantic search across the shared memory pool (optionally prefer `type` / `tags`); text output includes `id`, `score`, summary, description, and a `--- content ---` body (default up to 1500 chars via `MEMORY_SEARCH_CONTENT_MAX_CHARS`)
 - `memorize_asset` - Persist reusable code/spec/pattern assets into vector memory
-- `read_memory_asset` - Read full asset content by `asset_id`
+- `read_memory_asset` - Read full asset content by `asset_id` (text output includes the full `content` body)
 - `scan_and_extract_patterns` - Extract reusable patterns from code/file/directory before deciding whether to persist
 
 **Cross-repo memory pools:** do not rely on `source_project` / `source_path` for shared retrieval; put file paths in `content` instead. Search injection hides foreign `sourcePath` unless `MEMORY_REPO_ID` matches or `MEMORY_SEARCH_SHOW_SOURCE=true`.
