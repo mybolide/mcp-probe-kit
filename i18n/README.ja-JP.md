@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP は、ギーク向けに作られたプロトコルレベルの探査とコンテキスト供給ツールキットです。単なる28個のツールの集まりではなく、AIがプロジェクトの意図を本当に「理解」できるようにする知覚システムです.
+> Zhishi MCP は、ギーク向けに作られたプロトコルレベルの探査とコンテキスト供給ツールキットです。単なる27個のツールの集まりではなく、AIがプロジェクトの意図を本当に「理解」できるようにする知覚システムです.
 
 **言語**: [English](../README.md) | [简体中文](README.zh-CN.md) | **日本語** | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI駆動の完全開発ツールキット - 開発ライフサイクル全体をカバー
 
-強力な MCP (Model Context Protocol) サーバーで、製品分析から最終リリースまでの完全なワークフロー（要件 → 設計 → 開発 → 品質 → リリース）をカバーする **28のツール** を提供します。すべてのツールが**構造化出力**をサポートしています。
+強力な MCP (Model Context Protocol) サーバーで、製品分析から最終リリースまでの完全なワークフロー（要件 → 設計 → 開発 → 品質 → リリース）をカバーする **27のツール** を提供します。すべてのツールが**構造化出力**をサポートしています。
 
 **🎉 v3.0 メジャーアップデート**: ツール数を整理し、コア機能に集中、選択の迷いを解消し、AIにより多くのネイティブ作業を実行させます
 
@@ -35,7 +35,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [クイックスタート](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分でセットアップ
-- [全ツール](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 28ツールの完全リスト
+- [全ツール](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 27ツールの完全リスト
 - [ベストプラクティス](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完全な開発ワークフローガイド
 - [v3.0 移行ガイド](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.xからv3.0へのアップグレード
 
@@ -43,7 +43,7 @@
 
 ## ✨ コア機能
 
-### 📦 28のツール
+### 📦 27のツール
 
 - **🔄 ワークフローオーケストレーション** (6ツール) - ワンクリックで複雑な開発ワークフロー
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -57,8 +57,8 @@
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UXツール** (3ツール) - デザインシステムとUIデータ同期
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory と Cursor History** (6ツール) - 再利用可能な資産メモリとローカル Cursor 会話の読み取り
-  - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
+- **🧠 Memory と Cursor History** (5ツール) - 再利用可能な資産メモリとローカル Cursor 会話の読み取り
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
 
 ### 🧠 コードグラフブリッジ (GitNexus)
 

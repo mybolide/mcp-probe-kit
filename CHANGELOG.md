@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+---
+
+## [3.0.23] - 2026-06-01
+
+### 🔧 改进
+
+- `search_memory`：文本输出现包含每条命中的 `id`、`score`、`summary`、`description`，便于仅展示 `content[0].text` 的 MCP 宿主（如 opencode）使用
+- 文档与 `tools-manifest`：工具总数同步为 27，Memory & Cursor History 分类为 5
+
+### 🗑️ 移除
+
+- 移除 `cursor_list_conversations`、`cursor_search_conversations`；保留 `cursor_read_conversation` 按 `composer_id` 读取完整会话
+
+---
+
+## [3.0.22] - 2026-05-27
+
+### ✨ 新功能
+
+- 嵌入 shadcn catalog、themes 与 Vercel 设计指引
+
+---
+
 ## [3.0.21] - 2026-05-27
 
 ### 🔧 改进

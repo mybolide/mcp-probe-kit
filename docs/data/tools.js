@@ -412,7 +412,7 @@ verbose: true`
         { name: 'tags', type: 'array', required: false, desc: '优先匹配的标签' },
         { name: 'limit', type: 'number', required: false, desc: '返回条数' }
       ],
-      usage: '在 start_* 之外主动查找历史 Bug 修复或可复用模式',
+      usage: '在 start_* 之外主动查找历史 Bug 修复或可复用模式；返回文本含 id/score/summary/description，并附带 structuredContent.results',
       example: `// 使用示例
 你: 请使用 search_memory 搜索 proxy 相关 bugfix
 
@@ -466,38 +466,6 @@ kind: "pattern"`
 
 path: "src/auth"
 max_patterns: 5`
-    },
-    {
-      name: 'cursor_list_conversations',
-      description: '读取本地 Cursor 对话摘要，支持按标题或工作区过滤',
-      schema: 'CursorConversationListSchema',
-      params: [
-        { name: 'workspace', type: 'string', required: false, desc: '工作区路径过滤' },
-        { name: 'query', type: 'string', required: false, desc: '标题或摘要关键词' },
-        { name: 'limit', type: 'number', required: false, desc: '返回数量，默认 20' }
-      ],
-      usage: '用于恢复历史工作，快速定位某个工作区下最近的 Cursor 对话',
-      example: `// 使用示例
-你: 请使用 cursor_list_conversations 工具列出最近对话
-
-workspace: "e:/workspace/github/mcp-probe-kit"
-limit: 10`
-    },
-    {
-      name: 'cursor_search_conversations',
-      description: '按关键词或 request id 搜索本地 Cursor 历史消息',
-      schema: 'CursorConversationSearchSchema',
-      params: [
-        { name: 'query', type: 'string', required: true, desc: '关键词、日志片段或 request id' },
-        { name: 'workspace', type: 'string', required: false, desc: '工作区路径过滤' },
-        { name: 'limit', type: 'number', required: false, desc: '返回数量，默认 20' }
-      ],
-      usage: '适合按日志片段、问题关键词或 request id 追溯历史证据',
-      example: `// 使用示例
-你: 请使用 cursor_search_conversations 工具搜索历史记录
-
-query: "GitNexus"
-limit: 10`
     },
     {
       name: 'cursor_read_conversation',

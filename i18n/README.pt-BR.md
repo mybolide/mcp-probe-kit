@@ -63,8 +63,8 @@ Um poderoso servidor MCP (Model Context Protocol) fornecendo **28 ferramentas** 
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 Utilitários UI/UX** (3 ferramentas) - Sistemas de design e sincronização de dados
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory e Cursor History** (6 ferramentas) - Memória de ativos e recuperação local de conversas do Cursor
-  - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
+- **🧠 Memory e Cursor History** (5 ferramentas) - Memória de ativos e recuperação local de conversas do Cursor
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
 
 ### 🧠 Ponte de Grafo de Código (GitNexus)
 
@@ -139,8 +139,6 @@ ollama pull nomic-embed-text
 ```
 
 **Ferramentas de histórico Cursor:**
-- `cursor_list_conversations` - Listar conversas Cursor locais
-- `cursor_search_conversations` - Buscar por palavra-chave ou request id
 - `cursor_read_conversation` - Ler timeline por `composer_id`
 
 ### 🎯 Saída Estruturada
