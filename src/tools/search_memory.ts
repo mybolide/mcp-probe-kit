@@ -1,7 +1,10 @@
 import { parseArgs, getString, getNumber } from '../utils/parseArgs.js';
 import { okStructured } from '../lib/response.js';
 import { createMemoryClient } from '../lib/memory-client.js';
-import { shouldShowSourceInSearch } from '../lib/memory-orchestration.js';
+import {
+  formatSearchMemoryResultsText,
+  shouldShowSourceInSearch,
+} from '../lib/memory-orchestration.js';
 import { getMemoryConfig } from '../lib/memory-config.js';
 import { handleToolError } from '../utils/error-handler.js';
 
@@ -51,20 +54,18 @@ export async function searchMemory(args: unknown) {
       score: item.score,
       name: item.name,
       type: item.type,
+      description: item.description,
       summary: item.summary,
       tags: item.tags,
       sourcePath: shouldShowSourceInSearch(item, config) ? item.sourcePath : undefined,
     }));
 
-    return okStructured(
-      results.length > 0 ? `找到 ${results.length} 条相关记忆` : '未找到相关记忆',
-      {
-        enabled: true,
-        query,
-        count: results.length,
-        results: items,
-      }
-    );
+    return okStructured(formatSearchMemoryResultsText(results, config), {
+      enabled: true,
+      query,
+      count: results.length,
+      results: items,
+    });
   } catch (error) {
     return handleToolError(error, 'search_memory');
   }

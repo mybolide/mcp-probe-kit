@@ -78,35 +78,6 @@ export const memoryToolSchemas = [
     },
   },
   {
-    name: 'cursor_list_conversations',
-    description: '读取 Cursor 本地历史会话摘要。适合按标题、工作区列出最近会话，用于续接旧上下文。',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        title_query: { type: 'string', description: '按会话标题过滤，支持部分匹配' },
-        workspace_query: { type: 'string', description: '按工作区路径过滤，支持部分匹配' },
-        include_archived: { type: 'boolean', description: '是否包含已归档会话，默认 false' },
-        limit: { type: 'number', description: '最多返回多少条，默认 20，最大 200' },
-      },
-      required: [],
-      additionalProperties: true,
-    },
-  },
-  {
-    name: 'cursor_search_conversations',
-    description: '在 Cursor 本地历史消息里按关键词、request id 搜索命中内容，可选限定某个会话。',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: '搜索关键词，可传标题片段、正文片段或 request id' },
-        composer_id: { type: 'string', description: '可选，限定某个 Cursor 会话 ID' },
-        limit: { type: 'number', description: '最多返回多少条，默认 20，最大 200' },
-      },
-      required: ['query'],
-      additionalProperties: true,
-    },
-  },
-  {
     name: 'cursor_read_conversation',
     description: '按 composer_id 读取一条 Cursor 本地会话的消息时间线。',
     inputSchema: {

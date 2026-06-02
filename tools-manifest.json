@@ -1,7 +1,7 @@
 {
-  "version": "3.0.21",
+  "version": "3.0.23",
   "protocol": "2025-11-25",
-  "totalTools": 29,
+  "totalTools": 27,
   "toolsets": {
     "core": {
       "description": "9 core tools (daily high-frequency)",
@@ -19,15 +19,13 @@
       ]
     },
     "memory": {
-      "description": "7 memory & cursor history tools",
-      "count": 7,
+      "description": "5 memory & cursor history tools",
+      "count": 5,
       "tools": [
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
-        "cursor_list_conversations",
-        "cursor_search_conversations",
         "cursor_read_conversation"
       ]
     },
@@ -42,8 +40,8 @@
       ]
     },
     "workflow": {
-      "description": "29 workflow tools (includes core + orchestration + interactive + UI + memory)",
-      "count": 29,
+      "description": "27 workflow tools (includes core + orchestration + interactive + UI + memory)",
+      "count": 27,
       "tools": [
         "gencommit",
         "code_review",
@@ -71,14 +69,12 @@
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
-        "cursor_list_conversations",
-        "cursor_search_conversations",
         "cursor_read_conversation"
       ]
     },
     "full": {
-      "description": "All 29 tools",
-      "count": 29,
+      "description": "All 27 tools",
+      "count": 27,
       "note": "Default toolset, includes all tools"
     }
   },
@@ -104,14 +100,12 @@
       ]
     },
     "memory-cursor-history": {
-      "description": "Memory & Cursor History tools (7)",
+      "description": "Memory & Cursor History tools (5)",
       "tools": [
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
-        "cursor_list_conversations",
-        "cursor_search_conversations",
         "cursor_read_conversation"
       ]
     },
@@ -150,7 +144,7 @@
   },
   "structuredOutput": {
     "description": "Tools supporting structured output (v2.0+)",
-    "version": "3.0.21",
+    "version": "3.0.23",
     "guidanceOnly": {
       "description": "Guidance-type tools (return okText) - AI should execute tasks according to guidance, Schema for reference",
       "count": 6,
@@ -165,7 +159,7 @@
     },
     "dataDriven": {
       "description": "Data-driven tools (return okStructured) - Return actual execution plans or data",
-      "count": 23,
+      "count": 21,
       "tools": [
         "gencommit",
         "code_insight",
@@ -187,8 +181,6 @@
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
-        "cursor_list_conversations",
-        "cursor_search_conversations",
         "cursor_read_conversation"
       ]
     },
@@ -219,13 +211,11 @@
       "read_memory_asset": "MemoryAssetSchema",
       "memorize_asset": "MemorizeResultSchema",
       "scan_and_extract_patterns": "PatternExtractionSchema",
-      "cursor_list_conversations": "ConversationListSchema",
-      "cursor_search_conversations": "ConversationSearchSchema",
       "cursor_read_conversation": "ConversationDetailSchema"
     },
     "coverage": {
-      "total": 29,
-      "completed": 29,
+      "total": 27,
+      "completed": 27,
       "percentage": 100
     }
   },
@@ -277,7 +267,7 @@
       }
     },
     "added": {
-      "count": 9,
+      "count": 7,
       "tools": [
         "code_insight",
         "git_work_report",
@@ -285,8 +275,6 @@
         "read_memory_asset",
         "memorize_asset",
         "scan_and_extract_patterns",
-        "cursor_list_conversations",
-        "cursor_search_conversations",
         "cursor_read_conversation"
       ],
       "reasons": {
@@ -296,8 +284,6 @@
         "read_memory_asset": "Read stored memory assets from Qdrant",
         "memorize_asset": "Store memory assets to Qdrant with embeddings",
         "scan_and_extract_patterns": "Extract and memorize patterns from codebase",
-        "cursor_list_conversations": "List Cursor conversation history",
-        "cursor_search_conversations": "Search Cursor conversations by keyword",
         "cursor_read_conversation": "Read full Cursor conversation content"
       }
     },

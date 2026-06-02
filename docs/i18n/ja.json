@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "MCP Probe Kit - AI駆動の完全開発ツールキット | 開発ライフサイクル全体をカバーする28のツール",
-    "description": "MCP Probe Kitは、要件分析、コード開発、品質保証、バグ修正、リリース管理をカバーする28のAI駆動開発ツールを提供します。Cursor、Cline、Claude Desktopをサポートし、100%構造化出力を実現。",
+    "title": "MCP Probe Kit - AI駆動の完全開発ツールキット | 開発ライフサイクル全体をカバーする27のツール",
+    "description": "MCP Probe Kitは、要件分析、コード開発、品質保証、バグ修正、リリース管理をカバーする27のAI駆動開発ツールを提供します。Cursor、Cline、Claude Desktopをサポートし、100%構造化出力を実現。",
     "keywords": "MCP Probe Kit, AI開発ツール, コード生成, コードレビュー, Gitツール, UI開発, 開発効率, Cursor, Cline, Claude, MCPサーバー"
   },
   "nav": {
@@ -14,19 +14,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI開発強化ツールキット · ドキュメントセンター",
-    "version": "v3.0.21",
+    "version": "v3.0.23",
     "quickStart": "クイックスタート",
     "visitMainSite": "ByteZoneXを訪問"
   },
   "sections": {
     "quickStart": {
       "title": "クイックスタート",
-      "description": "5分でMCP Probe Kit v3.0.21を始める",
+      "description": "5分でMCP Probe Kit v3.0.23を始める",
       "installConfig": "インストールと設定"
     },
     "tools": {
       "title": "ツールドキュメント",
-      "description": "28の実用的なツールの完全なリファレンス。コードグラフ洞察とオーケストレーションを含む",
+      "description": "27の実用的なツールの完全なリファレンス。コードグラフ洞察とオーケストレーションを含む",
       "allTools": "すべてのツール"
     },
     "guides": {
@@ -249,7 +249,7 @@
     "subtitle": "v2.xからv3.0へスムーズに移行し、重大な変更と新機能を理解する",
     "overview": {
       "title": "概要",
-      "description": "MCP Probe Kit v3.0は大規模なバージョンアップデートで、28ツールに最適化され、より強力な機能とより良い開発体験をもたらします。",
+      "description": "MCP Probe Kit v3.0は大規模なバージョンアップデートで、27ツールに最適化され、より強力な機能とより良い開発体験をもたらします。",
       "migrationTime": "移行時間：",
       "migrationTimeText": "ほとんどのプロジェクトは10〜15分で移行を完了でき、v2.xのコアツールはv3.0で互換性を維持しています。"
     },
@@ -257,7 +257,7 @@
       "title": "主な変更点",
       "toolsOptimization": {
         "title": "1. ツールの最適化",
-        "description": "v2.x: 39ツール → v3.x: 28ツール（低頻度ツールを削除、高価値ツールを保持）"
+        "description": "v2.x: 39ツール → v3.x: 27ツール（低頻度ツールを削除、高価値ツールを保持）"
       },
       "workflows": {
         "title": "2. 新しいワークフローオーケストレーション",
@@ -329,7 +329,7 @@
     "subtitle": "MCP Probe Kitは完全な開発プロセスを統合、要件からデプロイまでのベストプラクティスガイド",
     "overview": {
       "title": "完全な開発プロセス",
-      "description": "MCP Probe Kitの28のツールは、要件分析からコードデプロイまでの完全な開発プロセスをカバーしています。以下は推奨されるベストプラクティスです。",
+      "description": "MCP Probe Kitの27のツールは、要件分析からコードデプロイまでの完全な開発プロセスをカバーしています。以下は推奨されるベストプラクティスです。",
       "coreIdea": "コア哲学：",
       "coreIdeaText": "ワークフローオーケストレーションツール（start_*）を通じて開発プロセス全体を連携し、AIを開発アシスタントにします。"
     },
@@ -584,7 +584,7 @@
     "resources": {
       "title": "その他のリソース",
       "allTools": "完全なツールリファレンス",
-      "allToolsDesc": "全28ツールの詳細説明を表示",
+      "allToolsDesc": "全27ツールの詳細説明を表示",
       "gettingStarted": "インストールと設定",
       "gettingStartedDesc": "クイックスタートガイド",
       "migration": "移行ガイド",

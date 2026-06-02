@@ -63,8 +63,8 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **28 Tools**, die d
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX-Dienstprogramme** (3 Tools) - Design-Systeme und UI-Datensynchronisation
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory & Cursor History** (6 Tools) - Wiederverwendbare Asset-Memory und lokales Cursor-Konversationsabruf
-  - `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_list_conversations`, `cursor_search_conversations`, `cursor_read_conversation`
+- **🧠 Memory & Cursor History** (5 Tools) - Wiederverwendbare Asset-Memory und lokales Cursor-Konversationsabruf
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
 
 ### 🧠 Code-Graph-Bridge (GitNexus)
 
@@ -139,8 +139,6 @@ ollama pull nomic-embed-text
 ```
 
 **Cursor-History-Tools:**
-- `cursor_list_conversations` - Lokale Cursor-Konversationen auflisten
-- `cursor_search_conversations` - Nach Stichwort oder Request-ID suchen
 - `cursor_read_conversation` - Konversationszeitachse per `composer_id` lesen
 
 ### 🎯 Strukturierte Ausgabe

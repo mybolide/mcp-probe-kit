@@ -111,6 +111,33 @@ function formatMemoryResultLabel(item: MemorySearchResult): string {
   return `${item.name} [${item.type}] (${kind})`;
 }
 
+export function formatSearchMemoryResultsText(
+  results: MemorySearchResult[],
+  config: MemoryConfig = getMemoryConfig()
+): string {
+  if (results.length === 0) {
+    return '未找到相关记忆';
+  }
+
+  const header = `找到 ${results.length} 条相关记忆`;
+  const items = results.map((item, index) => {
+    const lines = [
+      `${index + 1}. ${item.name} [${item.type}] score=${item.score.toFixed(3)}`,
+      `   - id: ${item.id}`,
+      item.summary ? `   - 摘要: ${item.summary}` : '',
+      item.description ? `   - 描述: ${item.description}` : '',
+      item.tags.length > 0 ? `   - 标签: ${item.tags.join(', ')}` : '',
+    ];
+    if (shouldShowSourceInSearch(item, config) && item.sourcePath) {
+      lines.push(`   - 来源: ${item.sourcePath}`);
+    }
+    lines.push(`   - 全文: read_memory_asset {"asset_id": "${item.id}"}`);
+    return lines.filter(Boolean).join('\n');
+  });
+
+  return `${header}\n\n${items.join('\n\n')}`;
+}
+
 export function shouldShowSourceInSearch(
   item: MemorySearchResult,
   config: MemoryConfig = getMemoryConfig()
