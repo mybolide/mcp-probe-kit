@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "모든 도구 - 27개 AI 개발 도구 전체 목록 | MCP Probe Kit",
-    "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 4개의 코드 분석 도구, 2개의 Git 도구, 1개의 생성 도구, 6개의 프로젝트 관리 도구, 3개의 UI/UX 도구, 5개의 Memory/Cursor History 도구.",
+    "title": "모든 도구 - 26개 AI 개발 도구 전체 목록 | MCP Probe Kit",
+    "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 4개의 코드 분석 도구, 2개의 Git 도구, 1개의 생성 도구, 6개의 프로젝트 관리 도구, 3개의 UI/UX 도구, 4개의 Memory 도구.",
     "keywords": "AI 개발 도구, 코드 생성 도구, 코드 리뷰 도구, Git 자동화, UI 생성, 코드 리팩토링, 성능 최적화, 보안 스캔"
   },
   "page": {
-    "subtitle": "MCP Probe Kit은 27개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
+    "subtitle": "MCP Probe Kit은 26개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
   },
   "search": {
     "placeholder": "🔍 도구 이름 또는 설명 검색...",
@@ -45,8 +45,7 @@
     "search_memory": "메모리 검색",
     "read_memory_asset": "메모리 읽기",
     "memorize_asset": "메모리 저장",
-    "scan_and_extract_patterns": "패턴 추출",
-    "cursor_read_conversation": "대화 읽기"
+    "scan_and_extract_patterns": "패턴 추출"
   },
   "categories": {
     "workflow": {
@@ -74,8 +73,8 @@
       "count": "3개"
     },
     "memory": {
-      "title": "Memory 및 Cursor History",
-      "count": "7개"
+      "title": "Memory",
+      "count": "4개"
     }
   },
   "toolsData": {

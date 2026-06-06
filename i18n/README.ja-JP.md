@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP は、ギーク向けに作られたプロトコルレベルの探査とコンテキスト供給ツールキットです。単なる27個のツールの集まりではなく、AIがプロジェクトの意図を本当に「理解」できるようにする知覚システムです.
+> Zhishi MCP は、ギーク向けに作られたプロトコルレベルの探査とコンテキスト供給ツールキットです。単なる26個のツールの集まりではなく、AIがプロジェクトの意図を本当に「理解」できるようにする知覚システムです.
 
 **言語**: [English](../README.md) | [简体中文](README.zh-CN.md) | **日本語** | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI駆動の完全開発ツールキット - 開発ライフサイクル全体をカバー
 
-強力な MCP (Model Context Protocol) サーバーで、製品分析から最終リリースまでの完全なワークフロー（要件 → 設計 → 開発 → 品質 → リリース）をカバーする **27のツール** を提供します。すべてのツールが**構造化出力**をサポートしています。
+強力な MCP (Model Context Protocol) サーバーで、製品分析から最終リリースまでの完全なワークフロー（要件 → 設計 → 開発 → 品質 → リリース）をカバーする **26のツール** を提供します。すべてのツールが**構造化出力**をサポートしています。
 
 **🎉 v3.0 メジャーアップデート**: ツール数を整理し、コア機能に集中、選択の迷いを解消し、AIにより多くのネイティブ作業を実行させます
 
@@ -35,7 +35,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [クイックスタート](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分でセットアップ
-- [全ツール](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 27ツールの完全リスト
+- [全ツール](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 26ツールの完全リスト
 - [ベストプラクティス](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完全な開発ワークフローガイド
 - [v3.0 移行ガイド](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.xからv3.0へのアップグレード
 
@@ -43,7 +43,7 @@
 
 ## ✨ コア機能
 
-### 📦 27のツール
+### 📦 26のツール
 
 - **🔄 ワークフローオーケストレーション** (6ツール) - ワンクリックで複雑な開発ワークフロー
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -57,8 +57,8 @@
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UXツール** (3ツール) - デザインシステムとUIデータ同期
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory と Cursor History** (5ツール) - 再利用可能な資産メモリとローカル Cursor 会話の読み取り
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
+- **🧠 Memory** (4ツール) - 再利用可能な資産メモリ
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
 
 ### 🧠 コードグラフブリッジ (GitNexus)
 
@@ -73,14 +73,12 @@
 - `start_bugfix` は既定で修正前に TBP 8 ステップの根本原因分析を行います
 - `fix_bug` は現象、タイムライン、除外した経路、境界、根本原因、証拠、修正計画を含む TBP 構造を返します
 
-### 🧠 Memory Retrieval と Cursor History
+### 🧠 Memory Retrieval
 
 - メモリツールは **Qdrant** をベクターデータベースとして使用します
 - サポートする埋め込みモード:
   - `ollama`
   - `openai-compatible`
-- Cursor history ツールは Node.js でローカル Cursor データベースを直接読み取ります
-- Cursor history は現在 Windows、macOS、Linux をサポートします
 
 **メモリツール:**
 - `memorize_asset` - 再利用可能なコード/仕様/パターン資産をベクターメモリへ保存

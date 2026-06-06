@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> 知时MCP 是专为极客打造的协议级探测与上下文补给工具箱。它不仅仅是 27 个工具的堆砌，更是一套让 AI 真正"读懂"你项目意图的感知系统。
+> 知时MCP 是专为极客打造的协议级探测与上下文补给工具箱。它不仅仅是 26 个工具的堆砌，更是一套让 AI 真正"读懂"你项目意图的感知系统。
 
 **Languages**: [English](../README.md) | **简体中文** | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **27 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **26 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
 
 **🎉 v3.0 重大更新**：精简工具数量，专注核心竞争力，消除选择困难，让 AI 做更多原生工作
 
@@ -36,7 +36,7 @@
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
 - [本地记忆栈（Qdrant + Nomic Embed）](../docs/memory-local-setup.zh-CN.md) - Docker Compose、端口 50008/50012、MCP 配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 27个工具完整列表
+- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 26个工具完整列表
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
 - [v3.0 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x → v3.0 升级指南
 
@@ -44,7 +44,7 @@
 
 ## ✨ 核心特性
 
-### 📦 27 个工具
+### 📦 26 个工具
 
 - **🔄 工作流编排** (6个) - 一键完成复杂开发流程
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -58,8 +58,8 @@
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX 工具** (3个) - 设计系统与数据同步
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 记忆与 Cursor 历史** (5个) - 资产记忆沉淀与本地 Cursor 会话读取
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
+- **🧠 记忆** (4个) - 资产记忆沉淀
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
 
 ### 🧠 代码图谱桥接 (GitNexus)
 
@@ -81,17 +81,12 @@
 - `fix_bug` 返回结构化 TBP 骨架，涵盖：现象、时间线、已排除路径、边界、根因、证据、修复计划
 - 这让 Bug、回归、异常、"为什么不行" 类排查遵循先分析再修复的纪律，而非打补丁
 
-### 🧠 记忆检索与 Cursor 历史
+### 🧠 记忆检索
 
 - 记忆工具使用 **Qdrant** 作为向量数据库后端
 - Embedding 服务支持两种模式：
   - `ollama`
   - `openai-compatible`
-- Cursor 历史工具通过 Node.js 直接读取本地 Cursor 数据库，不依赖 Python bridge
-- Cursor 历史当前支持：
-  - Windows: `%APPDATA%\\Cursor\\User\\globalStorage\\state.vscdb`
-  - macOS: `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`
-  - Linux: `~/.config/Cursor/User/globalStorage/state.vscdb`
 
 **记忆工具：**
 - `search_memory` - 语义检索共享记忆库；文本输出与 `structuredContent` 均含 `id`、`score`、`summary`、`description`
@@ -173,9 +168,6 @@ ollama pull nomic-embed-text
   }
 }
 ```
-
-**Cursor 历史工具：**
-- `cursor_read_conversation` - 按 `composer_id` 读取单个本地 Cursor 会话时间线
 
 ### 🎯 结构化输出
 
@@ -464,7 +456,6 @@ ollama pull nomic-embed-text
 - 只读记忆功能只要求配置 `MEMORY_QDRANT_URL`
 - 写入记忆要求同时配置 `MEMORY_QDRANT_URL`、`MEMORY_EMBEDDING_URL`、`MEMORY_EMBEDDING_MODEL`
 - 首次写入会自动创建 Qdrant collection，向量维度按第一次 embedding 返回结果自动推断
-- `cursor_read_conversation` 不依赖 Qdrant 或 embedding
 
 #### Cursor / Cline 配置
 

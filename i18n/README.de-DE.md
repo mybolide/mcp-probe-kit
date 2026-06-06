@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit ist ein Protokoll-Level-Toolkit für Entwickler, die wollen, dass KI die Absicht ihres Projekts wirklich versteht. Es ist nicht nur eine Sammlung von 28 Tools – es ist ein kontextbewusstes System, das KI-Agenten hilft zu erfassen, was Sie bauen.
+> mcp-probe-kit ist ein Protokoll-Level-Toolkit für Entwickler, die wollen, dass KI die Absicht ihres Projekts wirklich versteht. Es ist nicht nur eine Sammlung von 26 Tools – es ist ein kontextbewusstes System, das KI-Agenten hilft zu erfassen, was Sie bauen.
 
 **Sprachen**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | **Deutsch** | [Português (BR)](README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 KI-gestütztes Vollständiges Entwicklungs-Toolkit – Abdeckung des gesamten Entwicklungslebenszyklus
 
-Ein leistungsstarker MCP (Model Context Protocol) Server mit **28 Tools**, die den kompletten Workflow von der Produktanalyse bis zur Veröffentlichung abdecken (Anforderungen → Design → Entwicklung → Qualität → Release), alle Tools unterstützen **strukturierte Ausgabe**.
+Ein leistungsstarker MCP (Model Context Protocol) Server mit **26 Tools**, die den kompletten Workflow von der Produktanalyse bis zur Veröffentlichung abdecken (Anforderungen → Design → Entwicklung → Qualität → Release), alle Tools unterstützen **strukturierte Ausgabe**.
 
 **🎉 v3.0 Großes Update**: Vereinfachte Tool-Anzahl, Fokus auf Kernkompetenzen, Beseitigung von Entscheidungslähmung, mehr native Arbeit für KI
 
@@ -41,7 +41,7 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **28 Tools**, die d
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Schnellstart](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Einrichtung in 5 Minuten
-- [Alle Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Vollständige Liste von 28 Tools
+- [Alle Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Vollständige Liste von 26 Tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Vollständiger Entwicklungs-Workflow-Leitfaden
 - [v3.0 Migrationsleitfaden](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade von v2.x auf v3.0
 
@@ -49,7 +49,7 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **28 Tools**, die d
 
 ## ✨ Kernfunktionen
 
-### 📦 28 Tools
+### 📦 26 Tools
 
 - **🔄 Workflow-Orchestrierung** (6 Tools) - Komplexe Entwicklungs-Workflows mit einem Klick
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -63,8 +63,8 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **28 Tools**, die d
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX-Dienstprogramme** (3 Tools) - Design-Systeme und UI-Datensynchronisation
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory & Cursor History** (5 Tools) - Wiederverwendbare Asset-Memory und lokales Cursor-Konversationsabruf
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
+- **🧠 Memory** (4 Tools) - Wiederverwendbare Asset-Memory
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
 
 ### 🧠 Code-Graph-Bridge (GitNexus)
 
@@ -81,11 +81,10 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **28 Tools**, die d
 - `start_bugfix` verwendet standardmäßig Toyota-orientierte TBP 8-Schritte-Root-Cause-Analysis
 - `fix_bug` liefert strukturiertes TBP-Skelett mit Phänomen, Timeline, ausgeschlossenen Pfaden, Grenze, Ursache, Beweisen und Reparaturplan
 
-### 🧠 Memory Retrieval und Cursor History
+### 🧠 Memory Retrieval
 
 - Memory-Tools nutzen **Qdrant** als Vektor-Datenbank-Backend
 - Embedding-Dienst unterstützt: `ollama` und `openai-compatible`
-- Cursor-History-Tools lesen die lokale Cursor-Datenbank direkt per Node.js
 
 **Memory-Tools:**
 - `memorize_asset` - Wiederverwendbare Assets in Vektor-Memory persistieren
@@ -137,9 +136,6 @@ ollama pull nomic-embed-text
   }
 }
 ```
-
-**Cursor-History-Tools:**
-- `cursor_read_conversation` - Konversationszeitachse per `composer_id` lesen
 
 ### 🎯 Strukturierte Ausgabe
 
@@ -383,10 +379,6 @@ ollama pull nomic-embed-text
 - `MEMORY_EMBEDDING_MODEL` : Modell (Standard `nomic-embed-text`)
 - `MEMORY_SEARCH_LIMIT` : Ergebnisse (Standard `3`)
 - `MEMORY_SUMMARY_MAX_CHARS` : Kürzung (Standard `280`)
-
-### Cursor History Unterstützung
-
-Unterstützte Plattformen: Windows, macOS, Linux. Cursor muss lokal installiert sein.
 
 ### Windows-Hinweise für Graph-Tools
 

@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "All Tools - Complete List of 27 AI Development Tools | MCP Probe Kit",
-    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 4 code analysis tools, 2 Git tools, 1 generation tool, 6 project management tools, 3 UI/UX tools, and 5 memory/Cursor history tools.",
+    "title": "All Tools - Complete List of 26 AI Development Tools | MCP Probe Kit",
+    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 4 code analysis tools, 2 Git tools, 1 generation tool, 6 project management tools, 3 UI/UX tools, and 4 memory tools.",
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "MCP Probe Kit provides 27 practical tools with structured output support for core and orchestration tools"
+    "subtitle": "MCP Probe Kit provides 26 practical tools with structured output support for core and orchestration tools"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -44,8 +44,7 @@
     "search_memory": "Search Memory",
     "read_memory_asset": "Read Memory",
     "memorize_asset": "Store Memory",
-    "scan_and_extract_patterns": "Extract Patterns",
-    "cursor_read_conversation": "Read Chat"
+    "scan_and_extract_patterns": "Extract Patterns"
   },
   "categories": {
     "workflow": {
@@ -73,8 +72,8 @@
       "count": "3 tools"
     },
     "memory": {
-      "title": "Memory & Cursor History",
-      "count": "7 tools"
+      "title": "Memory",
+      "count": "4 tools"
     }
   },
   "toolsData": {
@@ -181,10 +180,6 @@
     "scan_and_extract_patterns": {
       "description": "Extract reusable patterns from a code snippet, file, or directory before deciding whether to store them into memory",
       "usage": "Use for pattern mining first, then optionally follow with memorize_asset to persist the best candidates"
-    },
-    "cursor_read_conversation": {
-      "description": "Read the full local Cursor conversation timeline for a single composer_id",
-      "usage": "Useful for precisely resuming a specific historical conversation and reviewing message order and context"
     }
   }
 }

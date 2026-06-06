@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] - 2026-06-06
+
+### 🗑️ 移除
+
+- 移除 `cursor_read_conversation` 工具及 Cursor 本地会话历史读取功能
+- 移除 `sqlite3` 原生依赖（此前仅服务于 Cursor 历史读取，也是 Windows 上 Visual Studio Build Tools 的安装负担来源之一）
+- 工具总数 27 → 26；Memory 分类由「Memory & Cursor History（5）」调整为「Memory（4）」
+
+### 🔧 改进
+
+- 发布产物瘦身：`package.json` 的 `files` 不再包含 `docs/`（文档站字体、图片、`tailwind.js` 等仅用于网站，MCP 运行时从不读取），减小 `npm install` / `npx` 的下载与解压体积
+
+---
+
 ## [3.0.24] - 2026-06-02
 
 ### 🔧 改进

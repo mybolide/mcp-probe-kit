@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit é um kit de ferramentas em nível de protocolo projetado para desenvolvedores que querem que a IA entenda verdadeiramente a intenção do seu projeto. Não é apenas uma coleção de 28 ferramentas — é um sistema consciente do contexto que ajuda os agentes de IA a compreender o que você está construindo.
+> mcp-probe-kit é um kit de ferramentas em nível de protocolo projetado para desenvolvedores que querem que a IA entenda verdadeiramente a intenção do seu projeto. Não é apenas uma coleção de 26 ferramentas — é um sistema consciente do contexto que ajuda os agentes de IA a compreender o que você está construindo.
 
 **Idiomas**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | **Português (BR)**
 
@@ -26,7 +26,7 @@
 
 > 🚀 Kit de Ferramentas de Desenvolvimento Completo Impulsionado por IA - Cobrindo Todo o Ciclo de Vida do Desenvolvimento
 
-Um poderoso servidor MCP (Model Context Protocol) fornecendo **28 ferramentas** cobrindo o fluxo de trabalho completo da análise do produto ao lançamento final (Requisitos → Design → Desenvolvimento → Qualidade → Lançamento), todas as ferramentas suportam **saída estruturada**.
+Um poderoso servidor MCP (Model Context Protocol) fornecendo **26 ferramentas** cobrindo o fluxo de trabalho completo da análise do produto ao lançamento final (Requisitos → Design → Desenvolvimento → Qualidade → Lançamento), todas as ferramentas suportam **saída estruturada**.
 
 **🎉 Atualização Maior v3.0**: Número de ferramentas simplificado, foco em competências centrais, eliminação de paralisia de escolha, mais trabalho nativo para a IA
 
@@ -41,7 +41,7 @@ Um poderoso servidor MCP (Model Context Protocol) fornecendo **28 ferramentas** 
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Início Rápido](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Configuração em 5 minutos
-- [Todas as Ferramentas](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Lista completa de 28 ferramentas
+- [Todas as Ferramentas](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Lista completa de 26 ferramentas
 - [Melhores Práticas](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Guia completo do fluxo de trabalho
 - [Guia de Migração v3.0](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Atualização de v2.x para v3.0
 
@@ -49,7 +49,7 @@ Um poderoso servidor MCP (Model Context Protocol) fornecendo **28 ferramentas** 
 
 ## ✨ Recursos Principais
 
-### 📦 28 Ferramentas
+### 📦 26 Ferramentas
 
 - **🔄 Orquestração de Fluxos de Trabalho** (6 ferramentas) - Fluxos complexos com um clique
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -63,8 +63,8 @@ Um poderoso servidor MCP (Model Context Protocol) fornecendo **28 ferramentas** 
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 Utilitários UI/UX** (3 ferramentas) - Sistemas de design e sincronização de dados
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory e Cursor History** (5 ferramentas) - Memória de ativos e recuperação local de conversas do Cursor
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
+- **🧠 Memory** (4 ferramentas) - Memória de ativos reutilizáveis
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
 
 ### 🧠 Ponte de Grafo de Código (GitNexus)
 
@@ -81,11 +81,10 @@ Um poderoso servidor MCP (Model Context Protocol) fornecendo **28 ferramentas** 
 - `start_bugfix` usa análise de causa raiz Toyota TBP de 8 etapas por padrão
 - `fix_bug` retorna esqueleto TBP estruturado com fenômeno, linha do tempo, caminhos descartados, fronteira, causa raiz, evidências e plano de reparo
 
-### 🧠 Recuperação de Memória e Histórico do Cursor
+### 🧠 Recuperação de Memória
 
 - Ferramentas de memória usam **Qdrant** como backend de banco vetorial
 - Serviço de embedding suporta: `ollama` e `openai-compatible`
-- Ferramentas de histórico Cursor leem o banco local diretamente via Node.js
 
 **Ferramentas de memória:**
 - `memorize_asset` - Persistir ativos reutilizáveis na memória vetorial
@@ -137,9 +136,6 @@ ollama pull nomic-embed-text
   }
 }
 ```
-
-**Ferramentas de histórico Cursor:**
-- `cursor_read_conversation` - Ler timeline por `composer_id`
 
 ### 🎯 Saída Estruturada
 
@@ -383,10 +379,6 @@ ollama pull nomic-embed-text
 - `MEMORY_EMBEDDING_MODEL` : Modelo (padrão `nomic-embed-text`)
 - `MEMORY_SEARCH_LIMIT` : Resultados (padrão `3`)
 - `MEMORY_SUMMARY_MAX_CHARS` : Truncagem (padrão `280`)
-
-### Suporte ao Histórico do Cursor
-
-Plataformas suportadas: Windows, macOS, Linux. Cursor deve estar instalado localmente.
 
 ### Notas do Windows para Ferramentas de Grafo
 

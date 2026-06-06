@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit est une boîte à outils au niveau protocole conçue pour les développeurs qui veulent que l'IA comprenne vraiment l'intention de leur projet. Ce n'est pas seulement une collection de 28 outils — c'est un système conscient du contexte qui aide les agents IA à saisir ce que vous construisez.
+> mcp-probe-kit est une boîte à outils au niveau protocole conçue pour les développeurs qui veulent que l'IA comprenne vraiment l'intention de leur projet. Ce n'est pas seulement une collection de 26 outils — c'est un système conscient du contexte qui aide les agents IA à saisir ce que vous construisez.
 
 **Langues**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | **Français** | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 Boîte à Outils de Développement Complète Alimentée par l'IA - Couvrant l'Ensemble du Cycle de Vie du Développement
 
-Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvrant le flux de travail complet de l'analyse produit au lancement final (Exigences → Conception → Développement → Qualité → Lancement), tous les outils supportent la **sortie structurée**.
+Un puissant serveur MCP (Model Context Protocol) fournissant **26 outils** couvrant le flux de travail complet de l'analyse produit au lancement final (Exigences → Conception → Développement → Qualité → Lancement), tous les outils supportent la **sortie structurée**.
 
 **🎉 Mise à Jour Majeure v3.0** : Nombre d'outils simplifié, focus sur les compétences clés, élimination de la paralysie du choix, permettant à l'IA de faire plus de travail natif
 
@@ -41,7 +41,7 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvr
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Démarrage Rapide](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Configuration en 5 minutes
-- [Tous les Outils](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Liste complète de 28 outils
+- [Tous les Outils](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Liste complète de 26 outils
 - [Meilleures Pratiques](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Guide complet du flux de travail de développement
 - [Guide de Migration v3.0](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Mise à niveau de v2.x vers v3.0
 
@@ -49,7 +49,7 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvr
 
 ## ✨ Fonctionnalités Principales
 
-### 📦 28 Outils
+### 📦 26 Outils
 
 - **🔄 Orchestration des Flux de Travail** (6 outils) - Flux de travail de développement complexes en un clic
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -63,8 +63,8 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvr
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 Utilitaires UI/UX** (3 outils) - Systèmes de conception et synchronisation des données UI
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Mémoire et Historique Cursor** (5 outils) - Mémoire d'actifs réutilisables et récupération locale des conversations Cursor
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
+- **🧠 Mémoire** (4 outils) - Mémoire d'actifs réutilisables
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
 
 ### 🧠 Pont de Graphe de Code (GitNexus)
 
@@ -86,12 +86,10 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **28 outils** couvr
 - `fix_bug` retourne un squelette TBP structuré couvrant le phénomène, la chronologie, les chemins exclus, la frontière, la cause racine, les preuves et le plan de réparation
 - Cela impose une discipline d'analyse préalable plutôt que de corriger les symptômes
 
-### 🧠 Récupération Mémoire et Historique Cursor
+### 🧠 Récupération Mémoire
 
 - Les outils mémoire utilisent **Qdrant** comme backend de base de données vectorielle
 - Le service d'embedding supporte deux modes : `ollama` et `openai-compatible`
-- Les outils d'historique Cursor lisent directement la base de données locale de Cursor via Node.js, sans pont Python
-- L'historique Cursor supporte Windows, macOS et Linux
 
 **Outils mémoire :**
 - `memorize_asset` - Persister des actifs réutilisables de code/spec/pattern dans la mémoire vectorielle
@@ -143,9 +141,6 @@ ollama pull nomic-embed-text
   }
 }
 ```
-
-**Outils d'historique Cursor :**
-- `cursor_read_conversation` - Lire la chronologie d'une conversation par `composer_id`
 
 ### 🎯 Sortie Structurée
 
@@ -389,10 +384,6 @@ ollama pull nomic-embed-text
 - `MEMORY_EMBEDDING_MODEL` : Modèle (défaut `nomic-embed-text`)
 - `MEMORY_SEARCH_LIMIT` : Résultats (défaut `3`)
 - `MEMORY_SUMMARY_MAX_CHARS` : Troncation (défaut `280`)
-
-### Support de l'Historique Cursor
-
-Plateformes supportées : Windows, macOS, Linux. Cursor doit être installé localement.
 
 ### Notes Windows pour les Outils de Graphe
 

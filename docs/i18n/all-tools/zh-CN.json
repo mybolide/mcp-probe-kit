@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "所有工具 - 27个AI研发工具完整列表 | MCP Probe Kit",
-    "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、4个代码分析工具、2个Git工具、1个生成工具、6个项目管理工具、3个UI/UX工具、5个记忆与 Cursor 历史工具。",
+    "title": "所有工具 - 26个AI研发工具完整列表 | MCP Probe Kit",
+    "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、4个代码分析工具、2个Git工具、1个生成工具、6个项目管理工具、3个UI/UX工具、4个记忆工具。",
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "MCP Probe Kit 提供 27 个实用工具，核心与编排工具支持结构化输出"
+    "subtitle": "MCP Probe Kit 提供 26 个实用工具，核心与编排工具支持结构化输出"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -44,8 +44,7 @@
     "search_memory": "搜索记忆",
     "read_memory_asset": "读取记忆",
     "memorize_asset": "沉淀记忆",
-    "scan_and_extract_patterns": "抽取模式",
-    "cursor_read_conversation": "读会话"
+    "scan_and_extract_patterns": "抽取模式"
   },
   "categories": {
     "workflow": {
@@ -73,8 +72,8 @@
       "count": "3 个"
     },
     "memory": {
-      "title": "记忆与 Cursor 历史",
-      "count": "7 个"
+      "title": "记忆",
+      "count": "4 个"
     }
   },
   "toolsData": {
@@ -181,10 +180,6 @@
     "scan_and_extract_patterns": {
       "description": "从单段代码、单文件或整个目录中抽取可复用模式，再决定是否沉淀到记忆系统",
       "usage": "适合先做模式归纳，再按需调用 memorize_asset 写入记忆"
-    },
-    "cursor_read_conversation": {
-      "description": "按 composer_id 读取一条 Cursor 本地会话的完整消息时间线",
-      "usage": "用于精确续接某一条历史会话，查看消息顺序、上下文和关键输出"
     }
   }
 }
