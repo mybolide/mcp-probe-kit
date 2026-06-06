@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "すべてのツール - 27個のAI開発ツール完全リスト | MCP Probe Kit",
-    "description": "MCP Probe Kit 完全ツールリスト：6個のワークフローオーケストレーションツール、4個のコード分析ツール、2個のGitツール、1個の生成ツール、6個のプロジェクト管理ツール、3個のUI/UXツール、5個の Memory / Cursor History ツール。",
+    "title": "すべてのツール - 26個のAI開発ツール完全リスト | MCP Probe Kit",
+    "description": "MCP Probe Kit 完全ツールリスト：6個のワークフローオーケストレーションツール、4個のコード分析ツール、2個のGitツール、1個の生成ツール、6個のプロジェクト管理ツール、3個のUI/UXツール、4個の Memory ツール。",
     "keywords": "AI開発ツール, コード生成ツール, コードレビューツール, Git自動化, UI生成, コードリファクタリング, パフォーマンス最適化, セキュリティスキャン"
   },
   "page": {
-    "subtitle": "MCP Probe Kitは27個の実用的なツールを提供し、コアおよびオーケストレーションツールは構造化出力をサポートします"
+    "subtitle": "MCP Probe Kitは26個の実用的なツールを提供し、コアおよびオーケストレーションツールは構造化出力をサポートします"
   },
   "search": {
     "placeholder": "🔍 ツール名または説明を検索...",
@@ -45,8 +45,7 @@
     "search_memory": "メモリ検索",
     "read_memory_asset": "メモリ読取",
     "memorize_asset": "メモリ保存",
-    "scan_and_extract_patterns": "パターン抽出",
-    "cursor_read_conversation": "会話読取"
+    "scan_and_extract_patterns": "パターン抽出"
   },
   "categories": {
     "workflow": {
@@ -74,8 +73,8 @@
       "count": "3個"
     },
     "memory": {
-      "title": "Memory と Cursor History",
-      "count": "7個"
+      "title": "Memory",
+      "count": "4個"
     }
   },
   "toolsData": {

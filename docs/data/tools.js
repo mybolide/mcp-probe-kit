@@ -466,19 +466,6 @@ kind: "pattern"`
 
 path: "src/auth"
 max_patterns: 5`
-    },
-    {
-      name: 'cursor_read_conversation',
-      description: '读取单个 composer_id 对应的完整本地 Cursor 对话时间线',
-      schema: 'CursorConversationReadSchema',
-      params: [
-        { name: 'composer_id', type: 'string', required: true, desc: 'Cursor 对话 composer_id' }
-      ],
-      usage: '用于精确恢复某个历史对话，并查看完整消息顺序与上下文',
-      example: `// 使用示例
-你: 请使用 cursor_read_conversation 工具读取完整对话
-
-composer_id: "composer-123"`
     }
   ],
 
@@ -516,8 +503,8 @@ composer_id: "composer-123"`
     },
     memory: {
       icon: '🧠',
-      title: 'Memory 与 Cursor History',
-      description: '可复用资产记忆、模式抽取与本地 Cursor 对话读取'
+      title: 'Memory',
+      description: '可复用资产记忆与模式抽取'
     }
   }
 };

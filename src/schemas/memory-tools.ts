@@ -77,18 +77,4 @@ export const memoryToolSchemas = [
       additionalProperties: true,
     },
   },
-  {
-    name: 'cursor_read_conversation',
-    description: '按 composer_id 读取一条 Cursor 本地会话的消息时间线。',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        composer_id: { type: 'string', description: 'Cursor 会话 ID' },
-        limit: { type: 'number', description: '最多返回多少条消息，默认 200，最大 2000' },
-        include_empty: { type: 'boolean', description: '是否包含空文本消息，默认 false' },
-      },
-      required: ['composer_id'],
-      additionalProperties: true,
-    },
-  },
 ] as const;

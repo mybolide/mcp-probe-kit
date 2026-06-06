@@ -26,7 +26,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server providing **27 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
+A powerful MCP (Model Context Protocol) server providing **26 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
 
 **🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
@@ -42,7 +42,7 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 27 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 26 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -50,7 +50,7 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
 
 ## ✨ Core Features
 
-### 📦 28 Tools
+### 📦 26 Tools
 
 - **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -64,8 +64,8 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
   - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX Utilities** (3 tools) - Design systems and UI data synchronization
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory & Cursor History** (5 tools) - Reusable asset memory and local Cursor conversation retrieval
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`, `cursor_read_conversation`
+- **🧠 Memory** (4 tools) - Reusable asset memory
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
 
 ### 🧠 Code Graph Bridge (GitNexus)
 
@@ -87,17 +87,12 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
 - `fix_bug` returns a structured TBP skeleton covering phenomenon, timeline, ruled-out paths, boundary, root cause, evidence, and repair plan
 - This makes bug, regression, anomaly, and "why didn't it work" investigations follow analyze-first discipline instead of patching symptoms
 
-### 🧠 Memory Retrieval and Cursor History
+### 🧠 Memory Retrieval
 
 - Memory tools use **Qdrant** as the vector database backend
 - Embedding service supports two modes:
   - `ollama`
   - `openai-compatible`
-- `cursor_read_conversation` reads the local Cursor database directly through Node.js, without Python bridge
-- Cursor history currently supports:
-  - Windows: `%APPDATA%\\Cursor\\User\\globalStorage\\state.vscdb`
-  - macOS: `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`
-  - Linux: `~/.config/Cursor/User/globalStorage/state.vscdb`
 
 **Memory tools:**
 - `search_memory` - Semantic search across the shared memory pool (optionally prefer `type` / `tags`); text output includes `id`, `score`, summary, description, and a `--- content ---` body (default up to 1500 chars via `MEMORY_SEARCH_CONTENT_MAX_CHARS`)
@@ -192,9 +187,6 @@ ollama pull nomic-embed-text
   }
 }
 ```
-
-**Cursor history tools:**
-- `cursor_read_conversation` - Read a single local Cursor conversation timeline by `composer_id`
 
 ### 🎯 Structured Output
 
@@ -556,22 +548,6 @@ ollama pull nomic-embed-text
 - Memory read capability only requires `MEMORY_QDRANT_URL`
 - Qdrant collections are auto-created on first write with `Cosine` distance
 - Vector size is inferred from the first embedding response
-
-### Cursor History Support
-
-`cursor_read_conversation` does not require Qdrant or embedding configuration.
-
-Supported platforms:
-
-- Windows
-- macOS
-- Linux
-
-Requirements:
-
-- Cursor must be installed locally
-- Cursor local database must exist under `User/globalStorage/state.vscdb`
-- Compatibility depends on Cursor's current local database schema
 
 ### Windows Notes for Graph Tools
 

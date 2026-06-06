@@ -23,8 +23,7 @@ import {
   startRalph, interview, askUser,
   uiDesignSystem, uiSearch, syncUiData, startUi,
   startProduct, gitWorkReport,
-  searchMemory, readMemoryAsset, memorizeAsset, scanAndExtractPatterns,
-  cursorReadConversation
+  searchMemory, readMemoryAsset, memorizeAsset, scanAndExtractPatterns
 } from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
@@ -606,8 +605,6 @@ async function executeTool(
       return await memorizeAsset(args as any);
     case "scan_and_extract_patterns":
       return await scanAndExtractPatterns(args as any);
-    case "cursor_read_conversation":
-      return await cursorReadConversation(args as any);
     default:
       throw new Error(`未知工具: ${name}`);
   }

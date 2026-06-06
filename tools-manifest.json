@@ -1,7 +1,7 @@
 {
-  "version": "3.0.24",
+  "version": "3.1.0",
   "protocol": "2025-11-25",
-  "totalTools": 27,
+  "totalTools": 26,
   "toolsets": {
     "core": {
       "description": "9 core tools (daily high-frequency)",
@@ -19,14 +19,13 @@
       ]
     },
     "memory": {
-      "description": "5 memory & cursor history tools",
-      "count": 5,
+      "description": "4 memory tools",
+      "count": 4,
       "tools": [
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
-        "scan_and_extract_patterns",
-        "cursor_read_conversation"
+        "scan_and_extract_patterns"
       ]
     },
     "ui": {
@@ -40,8 +39,8 @@
       ]
     },
     "workflow": {
-      "description": "27 workflow tools (includes core + orchestration + interactive + UI + memory)",
-      "count": 27,
+      "description": "26 workflow tools (includes core + orchestration + interactive + UI + memory)",
+      "count": 26,
       "tools": [
         "gencommit",
         "code_review",
@@ -68,13 +67,12 @@
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
-        "scan_and_extract_patterns",
-        "cursor_read_conversation"
+        "scan_and_extract_patterns"
       ]
     },
     "full": {
-      "description": "All 27 tools",
-      "count": 27,
+      "description": "All 26 tools",
+      "count": 26,
       "note": "Default toolset, includes all tools"
     }
   },
@@ -100,13 +98,12 @@
       ]
     },
     "memory-cursor-history": {
-      "description": "Memory & Cursor History tools (5)",
+      "description": "Memory tools (4)",
       "tools": [
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
-        "scan_and_extract_patterns",
-        "cursor_read_conversation"
+        "scan_and_extract_patterns"
       ]
     },
     "orchestration": {
@@ -144,7 +141,7 @@
   },
   "structuredOutput": {
     "description": "Tools supporting structured output (v2.0+)",
-    "version": "3.0.24",
+    "version": "3.1.0",
     "guidanceOnly": {
       "description": "Guidance-type tools (return okText) - AI should execute tasks according to guidance, Schema for reference",
       "count": 6,
@@ -159,7 +156,7 @@
     },
     "dataDriven": {
       "description": "Data-driven tools (return okStructured) - Return actual execution plans or data",
-      "count": 21,
+      "count": 20,
       "tools": [
         "gencommit",
         "code_insight",
@@ -180,8 +177,7 @@
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
-        "scan_and_extract_patterns",
-        "cursor_read_conversation"
+        "scan_and_extract_patterns"
       ]
     },
     "schemas": {
@@ -210,12 +206,11 @@
       "search_memory": "MemorySearchSchema",
       "read_memory_asset": "MemoryAssetSchema",
       "memorize_asset": "MemorizeResultSchema",
-      "scan_and_extract_patterns": "PatternExtractionSchema",
-      "cursor_read_conversation": "ConversationDetailSchema"
+      "scan_and_extract_patterns": "PatternExtractionSchema"
     },
     "coverage": {
-      "total": 27,
-      "completed": 27,
+      "total": 26,
+      "completed": 26,
       "percentage": 100
     }
   },
@@ -267,15 +262,14 @@
       }
     },
     "added": {
-      "count": 7,
+      "count": 6,
       "tools": [
         "code_insight",
         "git_work_report",
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
-        "scan_and_extract_patterns",
-        "cursor_read_conversation"
+        "scan_and_extract_patterns"
       ],
       "reasons": {
         "code_insight": "GitNexus bridge for graph-aware code analysis",
@@ -283,8 +277,7 @@
         "search_memory": "Semantic search across shared memory pool",
         "read_memory_asset": "Read stored memory assets from Qdrant",
         "memorize_asset": "Store memory assets to Qdrant with embeddings",
-        "scan_and_extract_patterns": "Extract and memorize patterns from codebase",
-        "cursor_read_conversation": "Read full Cursor conversation content"
+        "scan_and_extract_patterns": "Extract and memorize patterns from codebase"
       }
     },
     "philosophy": "Focus on core competencies, reduce tool selection difficulty, let AI do more native work"

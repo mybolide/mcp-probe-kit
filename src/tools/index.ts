@@ -24,7 +24,6 @@ export { searchMemory } from "./search_memory.js";
 export { readMemoryAsset } from "./read_memory_asset.js";
 export { memorizeAsset } from "./memorize_asset.js";
 export { scanAndExtractPatterns } from "./scan_and_extract_patterns.js";
-export { cursorReadConversation } from "./cursor_read_conversation.js";
 // 产品设计工作流
 export { startProduct } from "./start_product.js";
 // Git 工具
