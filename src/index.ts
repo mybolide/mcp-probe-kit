@@ -18,7 +18,7 @@ import * as path from "node:path";
 import { 
   initProject, gencommit,
   codeReview, codeInsight, gentest, refactor,
-  initProjectContext, addFeature, fixBug, estimate,
+  initProjectContext, addFeature, fixBug, estimate, checkSpec,
   startFeature, startBugfix, startOnboard,
   startRalph, interview, askUser,
   uiDesignSystem, uiSearch, syncUiData, startUi,
@@ -28,6 +28,7 @@ import {
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
 import { filterTools, getToolsetFromEnv } from "./lib/toolset-manager.js";
+import { withToolAnnotations } from "./lib/tool-annotations.js";
 import {
   isAbortError,
   type ToolExecutionContext,
@@ -543,7 +544,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   console.error(`[MCP Probe Kit] 当前工具集: ${toolset} (${filteredTools.length}/${allToolSchemas.length} 个工具)`);
   
   return {
-    tools: filteredTools,
+    tools: filteredTools.map(withToolAnnotations),
   };
 });
 
@@ -569,6 +570,8 @@ async function executeTool(
       return await initProjectContext(args as any);
     case "add_feature":
       return await addFeature(args as any);
+    case "check_spec":
+      return await checkSpec(args as any);
     case "fix_bug":
       return await fixBug(args as any);
     case "estimate":
