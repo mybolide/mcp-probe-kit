@@ -26,7 +26,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server providing **26 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
+A powerful MCP (Model Context Protocol) server providing **27 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
 
 **🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
@@ -42,7 +42,7 @@ A powerful MCP (Model Context Protocol) server providing **26 tools** covering t
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 26 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 27 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -50,7 +50,7 @@ A powerful MCP (Model Context Protocol) server providing **26 tools** covering t
 
 ## ✨ Core Features
 
-### 📦 26 Tools
+### 📦 27 Tools
 
 - **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -60,8 +60,8 @@ A powerful MCP (Model Context Protocol) server providing **26 tools** covering t
   - `gencommit`, `git_work_report`
 - **⚡ Code Generation** (1 tool) - Test generation
   - `gentest`
-- **📦 Project Management** (6 tools) - Project initialization and requirements management
-  - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
+- **📦 Project Management** (7 tools) - Project initialization, requirements, and spec validation
+  - `init_project`, `init_project_context`, `add_feature`, `check_spec`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX Utilities** (3 tools) - Design systems and UI data synchronization
   - `ui_design_system`, `ui_search`, `sync_ui_data`
 - **🧠 Memory** (4 tools) - Reusable asset memory
