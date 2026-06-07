@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.0] - 2026-06-07
+
+### ✨ 新功能
+
+- 新增 `check_spec` 工具（规格「填写后校验」闸门）：读取 `docs/specs/<feature>/{requirements,design,tasks}.md`，机械校验残留 `[填写]` 占位、缺章节、缺 FR/EARS 验收、FR 未进需求覆盖矩阵；未通过逐条打回，通过前不应进入实现。工具总数 26 → 27。
+- 为全部 27 个工具补充 MCP 工具注解（`readOnlyHint`/`idempotentHint`/`destructiveHint`/`openWorldHint`，24 只读 / 3 写型），便于客户端自动放行只读工具。
+
+### 🔧 改进
+
+- **记忆优先编排**：`start_feature` / `start_bugfix` / `start_ui` 将记忆检索提到引导最前，并在计划首位加入显式「检索消化历史经验/坑」步；feature/ui 检索补捞 `bugfix` 类「坑」，注入拆分为「⚠️ 历史坑」与「♻️ 可复用经验」两组。
+- **可追溯规格模板**：`add_feature` 的 requirements/design/tasks 模板加入稳定 FR-ID、范围边界（In/Out of Scope）、MoSCoW 优先级、design「对应需求」回链、tasks「需求覆盖矩阵」与 design 回链，并新增「历史经验与坑」承接节。
+- `start_feature` 编排在 `add_feature` 之后、`estimate` 之前插入 `check_spec` 闸门步。
+
+---
+
 ## [3.1.0] - 2026-06-06
 
 ### 🗑️ 移除
