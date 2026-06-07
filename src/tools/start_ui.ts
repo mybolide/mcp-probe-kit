@@ -614,6 +614,17 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
 
     const memoryContext = await loadMemoryInjectionContext(description || templateName, 'ui');
     const memoryGuideSection = renderMemoryGuideSection(memoryContext);
+    // 记忆优先：先复用历史 UI 资产/模式并规避历史 UI 坑，再进入设计与渲染
+    const memoryRecallStep = memoryContext.enabled
+      ? [{
+          id: 'recall-memory',
+          tool: 'search_memory',
+          when: '开干前（下方「历史经验与坑」已自动注入相似 UI 资产与坑；需要更多时再调）',
+          args: { query: description || templateName, limit: 5 },
+          outputs: [],
+          note: '先复用历史可复用 UI 组件/布局/交互模式，并规避历史 UI 坑（交互/兼容性/可访问性）',
+        }]
+      : [];
 
     // 验证 mode 参数
     const validModes = ["auto", "manual"];
@@ -685,6 +696,7 @@ start_ui <描述> --requirements_mode=loop
       const plan = {
         mode: 'delegated',
         steps: [
+          ...memoryRecallStep,
           skillBridgeStep,
           {
             id: 'loop-1',
@@ -769,7 +781,7 @@ start_ui <描述> --requirements_mode=loop
         ],
         notes: [
           ...headerNotes,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，先复用历史 UI 资产，再决定是否沉淀本次结果'] : []),
+          ...(memoryContext.enabled ? ['记忆优先: 已自动注入相似历史 UI 资产与坑（见顶部），先复用并规避同类坑；再决定是否沉淀'] : []),
         ],
       });
 
@@ -777,11 +789,11 @@ start_ui <描述> --requirements_mode=loop
         ? LOOP_PROMPT_TEMPLATE_STRICT
         : LOOP_PROMPT_TEMPLATE_GUIDED;
 
-      const guide = header + skillBridgeSection + loopTemplate
+      const renderedLoopPrompt = loopTemplate
         .replace(/{description}/g, description)
         .replace(/{question_budget}/g, String(questionBudget))
-        .replace(/{assumption_cap}/g, String(assumptionCap))
-        + memoryGuideSection;
+        .replace(/{assumption_cap}/g, String(assumptionCap));
+      const guide = header + memoryGuideSection + skillBridgeSection + renderedLoopPrompt;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -937,6 +949,7 @@ ${recommendation.reasoning}
       const plan = {
         mode: 'delegated',
         steps: [
+          ...memoryRecallStep,
           skillBridgeStep,
           {
             id: 'context',
@@ -1005,11 +1018,11 @@ ${recommendation.reasoning}
         ],
         notes: [
           ...headerNotes,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，相似历史 UI 经验全文已自动注入'] : []),
+          ...(memoryContext.enabled ? ['记忆优先: 已自动注入相似历史 UI 资产与坑（见顶部），先复用并规避同类坑'] : []),
         ],
       });
 
-      const smartPlan = header + skillBridgeSection + (profileDecision.resolved === 'strict' ? smartPlanStrict : smartPlanGuided) + memoryGuideSection;
+      const smartPlan = header + memoryGuideSection + skillBridgeSection + (profileDecision.resolved === 'strict' ? smartPlanStrict : smartPlanGuided);
 
       // Create structured UI report for auto mode
       const uiReport: UIReport = {
@@ -1148,7 +1161,7 @@ start_ui "设置页面" --framework=react
       ],
       notes: [
         ...headerNotes,
-        ...(memoryContext.enabled ? ['记忆系统: 已启用，相似历史 UI 经验全文已自动注入'] : []),
+        ...(memoryContext.enabled ? ['记忆优先: 已自动注入相似历史 UI 资产与坑（见顶部），先复用并规避同类坑'] : []),
       ],
     });
 
@@ -1156,16 +1169,17 @@ start_ui "设置页面" --framework=react
       ? PROMPT_TEMPLATE_STRICT
       : PROMPT_TEMPLATE_GUIDED;
 
-    let guide = header + skillBridgeSection + baseTemplate;
-    guide = safeReplace(guide, '{description}', escapeJson(description));
-    guide = safeReplace(guide, '{productType}', productType);
-    guide = safeReplace(guide, '{framework}', framework);
-    guide = safeReplace(guide, '{templateName}', templateName);
-    guide += memoryGuideSection;
+    let body = skillBridgeSection + baseTemplate;
+    body = safeReplace(body, '{description}', escapeJson(description));
+    body = safeReplace(body, '{productType}', productType);
+    body = safeReplace(body, '{framework}', framework);
+    body = safeReplace(body, '{templateName}', templateName);
+    const guide = header + memoryGuideSection + body;
 
     const plan = {
       mode: 'delegated',
       steps: [
+        ...memoryRecallStep,
         skillBridgeStep,
         {
           id: 'context',

@@ -1,11 +1,11 @@
 {
   "version": "3.1.0",
   "protocol": "2025-11-25",
-  "totalTools": 26,
+  "totalTools": 27,
   "toolsets": {
     "core": {
-      "description": "9 core tools (daily high-frequency)",
-      "count": 9,
+      "description": "10 core tools (daily high-frequency)",
+      "count": 10,
       "tools": [
         "gencommit",
         "code_review",
@@ -13,6 +13,7 @@
         "refactor",
         "fix_bug",
         "add_feature",
+        "check_spec",
         "init_project",
         "init_project_context",
         "estimate"
@@ -39,8 +40,8 @@
       ]
     },
     "workflow": {
-      "description": "26 workflow tools (includes core + orchestration + interactive + UI + memory)",
-      "count": 26,
+      "description": "27 workflow tools (includes core + orchestration + interactive + UI + memory)",
+      "count": 27,
       "tools": [
         "gencommit",
         "code_review",
@@ -49,6 +50,7 @@
         "refactor",
         "fix_bug",
         "add_feature",
+        "check_spec",
         "init_project",
         "init_project_context",
         "estimate",
@@ -71,8 +73,8 @@
       ]
     },
     "full": {
-      "description": "All 26 tools",
-      "count": 26,
+      "description": "All 27 tools",
+      "count": 27,
       "note": "Default toolset, includes all tools"
     }
   },
@@ -87,11 +89,12 @@
       ]
     },
     "project-management": {
-      "description": "Project management tools (6)",
+      "description": "Project management tools (7)",
       "tools": [
         "init_project",
         "init_project_context",
         "add_feature",
+        "check_spec",
         "fix_bug",
         "estimate",
         "git_work_report"
@@ -156,7 +159,7 @@
     },
     "dataDriven": {
       "description": "Data-driven tools (return okStructured) - Return actual execution plans or data",
-      "count": 20,
+      "count": 21,
       "tools": [
         "gencommit",
         "code_insight",
@@ -168,6 +171,7 @@
         "start_ralph",
         "init_project",
         "init_project_context",
+        "check_spec",
         "interview",
         "ask_user",
         "ui_design_system",
@@ -185,6 +189,7 @@
       "code_insight": "CodeInsightSchema",
       "fix_bug": "BugAnalysisSchema (reference only)",
       "add_feature": "FeatureSpecSchema (reference only)",
+      "check_spec": "SpecValidationReport (inline structuredContent)",
       "estimate": "EstimateSchema (reference only)",
       "gentest": "TestSuiteSchema (reference only)",
       "code_review": "CodeReviewReportSchema (reference only)",
@@ -209,8 +214,8 @@
       "scan_and_extract_patterns": "PatternExtractionSchema"
     },
     "coverage": {
-      "total": 26,
-      "completed": 26,
+      "total": 27,
+      "completed": 27,
       "percentage": 100
     }
   },

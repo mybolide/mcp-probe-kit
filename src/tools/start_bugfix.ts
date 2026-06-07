@@ -494,6 +494,17 @@ ${graphContext.highlights.length > 0
       "bugfix"
     );
     const memoryGuideSection = renderMemoryGuideSection(memoryContext);
+    // 记忆优先：先消化历史同类 Bug 的根因/修复（坑），再做 TBP 真因分析
+    const memoryRecallStep = memoryContext.enabled
+      ? [{
+          id: 'recall-memory',
+          tool: 'search_memory',
+          when: '开干前（下方「历史经验与坑」已自动注入相似历史修复；需要更多同类案例时再调）',
+          args: { query: errorMessage, limit: 5 },
+          outputs: [],
+          note: '先看历史同类 Bug 的根因与已验证修复，优先复用其修复路径并规避同类坑；据此收敛 TBP-4/5/6 的真因方向',
+        }]
+      : [];
 
     if (requirementsMode === "loop") {
       throwIfAborted(context?.signal, "start_bugfix(loop) 已取消");
@@ -524,6 +535,7 @@ ${graphContext.highlights.length > 0
       const plan = {
         mode: 'delegated',
         steps: [
+          ...memoryRecallStep,
           {
             id: 'context',
             tool: 'init_project_context',
@@ -587,7 +599,7 @@ ${graphContext.highlights.length > 0
         ],
         notes: [
           ...headerNotes,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，历史修复经验全文已自动注入，结束后评估沉淀'] : []),
+          ...(memoryContext.enabled ? ['记忆优先: 已自动注入历史同类 Bug 的根因与修复（见顶部），先复用、规避同类坑；结束后评估沉淀'] : []),
         ],
       });
 
@@ -595,13 +607,12 @@ ${graphContext.highlights.length > 0
         ? LOOP_PROMPT_TEMPLATE_STRICT
         : LOOP_PROMPT_TEMPLATE_GUIDED;
 
-      const guide = (header + loopTemplate
+      const renderedLoopPrompt = loopTemplate
         .replace(/{error_message}/g, errorMessage)
         .replace(/{analysis_mode}/g, analysisMode)
         .replace(/{question_budget}/g, String(questionBudget))
-        .replace(/{assumption_cap}/g, String(assumptionCap)))
-        + graphGuideSection
-        + memoryGuideSection;
+        .replace(/{assumption_cap}/g, String(assumptionCap));
+      const guide = header + memoryGuideSection + renderedLoopPrompt + graphGuideSection;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -663,7 +674,7 @@ ${graphContext.highlights.length > 0
       ],
       notes: [
         ...headerNotes,
-        ...(memoryContext.enabled ? ['记忆系统: 已启用，相似历史经验全文已自动注入'] : []),
+        ...(memoryContext.enabled ? ['记忆优先: 已自动注入历史同类 Bug 的根因与修复（见顶部），先复用、规避同类坑'] : []),
       ],
     });
 
@@ -671,17 +682,17 @@ ${graphContext.highlights.length > 0
       ? PROMPT_TEMPLATE_STRICT
       : PROMPT_TEMPLATE_GUIDED;
 
-    const guide = (header + promptTemplate
+    const renderedPrompt = promptTemplate
       .replace(/{error_message}/g, errorMessage)
       .replace(/{stack_trace}/g, stackTrace)
       .replace(/{analysis_mode}/g, analysisMode)
-      .replace(/{stack_trace_section}/g, stackTraceSection))
-      + graphGuideSection
-      + memoryGuideSection;
+      .replace(/{stack_trace_section}/g, stackTraceSection);
+    const guide = header + memoryGuideSection + renderedPrompt + graphGuideSection;
 
     const plan = {
       mode: 'delegated',
       steps: [
+        ...memoryRecallStep,
         {
           id: 'context',
           tool: 'init_project_context',

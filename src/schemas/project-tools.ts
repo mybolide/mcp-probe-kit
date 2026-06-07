@@ -95,4 +95,27 @@ export const projectToolSchemas = [
       additionalProperties: true,
     },
   },
+  {
+    name: "check_spec",
+    description: "校验已落盘的功能规格（docs/specs/<feature_name>/requirements|design|tasks.md）是否完整：检测残留 [填写] 占位、缺失章节、缺 FR/验收标准、FR 未进覆盖矩阵。写完规格后、进入实现前调用；未通过按报告补全后重跑。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        feature_name: {
+          type: "string",
+          description: "要校验的规格目录名，对应 docs/specs/<feature_name>/",
+        },
+        docs_dir: {
+          type: "string",
+          description: "文档根目录，默认为 docs",
+        },
+        project_root: {
+          type: "string",
+          description: "项目根目录绝对路径。可选，默认自动探测工作区根",
+        },
+      },
+      required: [],
+      additionalProperties: true,
+    },
+  },
 ] as const;

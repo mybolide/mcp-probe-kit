@@ -6,6 +6,7 @@ export { gentest } from "./gentest.js";
 export { refactor } from "./refactor.js";
 export { initProjectContext } from "./init_project_context.js";
 export { addFeature } from "./add_feature.js";
+export { checkSpec } from "./check_spec.js";
 export { fixBug } from "./fix_bug.js";
 export { estimate } from "./estimate.js";
 // 智能编排工具

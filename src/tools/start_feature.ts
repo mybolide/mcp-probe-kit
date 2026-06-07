@@ -114,7 +114,14 @@ const PROMPT_TEMPLATE = `# 🚀 新功能开发编排（委托式）
 - \`{docs_dir}/specs/{feature_name}/design.md\`
 - \`{docs_dir}/specs/{feature_name}/tasks.md\`
 
-### 2) 工作量估算
+### 2) 校验规格完整性（闸门）
+**调用**: \`check_spec\`
+\`\`\`json
+{ "feature_name": "{feature_name}", "docs_dir": "{docs_dir}" }
+\`\`\`
+**未通过**：按报告逐条补全 requirements/design/tasks 后**重跑 check_spec**；**通过前不要写实现代码**。
+
+### 3) 工作量估算
 **调用**: \`estimate\`
 \`\`\`json
 {
@@ -357,6 +364,17 @@ ${graphContext.highlights.length > 0
 
     const memoryContext = await loadMemoryInjectionContext(`${featureName}\n${description}`, 'feature');
     const memoryGuideSection = renderMemoryGuideSection(memoryContext);
+    // 记忆优先：把"先检索消化历史经验/坑"作为编排的显式第一步
+    const memoryRecallStep = memoryContext.enabled
+      ? [{
+          id: 'recall-memory',
+          tool: 'search_memory',
+          when: '开干前（下方「历史经验与坑」已自动注入 top 命中；需要更多历史需求/坑时再调）',
+          args: { query: `${featureName} ${description}`, limit: 5 },
+          outputs: [],
+          note: '先消化历史经验与可复用模式，并逐条核对「历史坑」是否已在本次设计中规避；据此收敛需求范围，并把要点填入 requirements.md 的「历史经验与坑」节',
+        }]
+      : [];
 
     if (requirementsMode === "loop") {
       throwIfAborted(context?.signal, "start_feature(loop) 已取消");
@@ -387,6 +405,7 @@ ${graphContext.highlights.length > 0
       const plan = {
         mode: 'delegated',
         steps: [
+          ...memoryRecallStep,
           {
             id: 'context',
             tool: 'init_project_context',
@@ -427,6 +446,14 @@ ${graphContext.highlights.length > 0
             ],
           },
           {
+            id: 'check-spec',
+            tool: 'check_spec',
+            when: 'stopConditions.ready=true 且 requirements/design/tasks 已落盘',
+            args: { feature_name: featureName, docs_dir: docsDir, ...(projectRoot ? { project_root: projectRoot } : {}) },
+            outputs: [],
+            note: '未通过则按报告补全规格后重跑 check_spec；通过前不要写实现代码',
+          },
+          {
             id: 'estimate',
             tool: 'estimate',
             when: 'stopConditions.ready=true',
@@ -450,18 +477,17 @@ ${graphContext.highlights.length > 0
         notes: [
           `模板档位: ${templateProfile}`,
           graphStatusNote,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，历史经验全文已自动注入，结束后评估是否沉淀'] : []),
+          ...(memoryContext.enabled ? ['记忆优先: 已自动注入历史经验与坑（见顶部），开干前先消化、约束范围并规避同类坑；结束后评估是否沉淀'] : []),
         ],
       });
 
-      const guide = (header + LOOP_PROMPT_TEMPLATE
+      const renderedLoopPrompt = LOOP_PROMPT_TEMPLATE
         .replace(/{feature_name}/g, featureName)
         .replace(/{description}/g, description)
         .replace(/{project_root}/g, toWorkspacePath(projectRoot))
         .replace(/{question_budget}/g, String(questionBudget))
-        .replace(/{assumption_cap}/g, String(assumptionCap)))
-        + graphGuideSection
-        + memoryGuideSection;
+        .replace(/{assumption_cap}/g, String(assumptionCap));
+      const guide = header + memoryGuideSection + renderedLoopPrompt + graphGuideSection;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -519,22 +545,22 @@ ${graphContext.highlights.length > 0
         notes: [
           `模板档位: ${templateProfile}`,
           graphStatusNote,
-          ...(memoryContext.enabled ? ['记忆系统: 已启用，历史经验全文已自动注入'] : []),
+          ...(memoryContext.enabled ? ['记忆优先: 已自动注入历史经验与坑（见顶部），开干前先消化、约束范围并规避同类坑'] : []),
         ],
     });
 
-    const guide = (header + PROMPT_TEMPLATE
+    const renderedPrompt = PROMPT_TEMPLATE
       .replace(/{feature_name}/g, featureName)
       .replace(/{description}/g, description)
       .replace(/{docs_dir}/g, docsDir)
       .replace(/{project_root}/g, (projectRoot || process.cwd()).replace(/\\/g, "/"))
-      .replace(/{template_profile}/g, templateProfile))
-      + graphGuideSection
-      + memoryGuideSection;
+      .replace(/{template_profile}/g, templateProfile);
+    const guide = header + memoryGuideSection + renderedPrompt + graphGuideSection;
 
     const plan = {
       mode: 'delegated',
       steps: [
+        ...memoryRecallStep,
         {
           id: 'context',
           tool: 'init_project_context',
@@ -555,6 +581,14 @@ ${graphContext.highlights.length > 0
             `${docsDir}/specs/${featureName}/design.md`,
             `${docsDir}/specs/${featureName}/tasks.md`,
           ],
+        },
+        {
+          id: 'check-spec',
+          tool: 'check_spec',
+          when: 'requirements/design/tasks 落盘后、进入估算/实现前',
+          args: { feature_name: featureName, docs_dir: docsDir, ...(projectRoot ? { project_root: projectRoot } : {}) },
+          outputs: [],
+          note: '未通过则按报告逐条补全规格后重跑 check_spec；通过前不要写实现代码',
         },
         {
           id: 'estimate',
@@ -596,6 +630,7 @@ ${graphContext.highlights.length > 0
         `如果缺少 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}，先调用 init_project_context 补齐图谱初始化`,
         `优先读取 ${graphDocs.latestMarkdownPath} 获取模块依赖与调用链摘要`,
         '调用 add_feature 工具生成功能规格文档',
+        '调用 check_spec 校验规格完整性，未通过先补全再重跑（通过前不要写实现代码）',
         '调用 estimate 工具进行工作量估算',
         '按照 tasks.md 开始开发',
       ],

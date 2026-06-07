@@ -23,9 +23,11 @@ function kindSearchPreferences(kind: MemoryPlanKind): {
     case 'bugfix':
       return { preferTypes: ['bugfix'], preferTags: ['bugfix', 'root-cause'] };
     case 'ui':
-      return { preferTypes: ['component', 'pattern'], preferTags: ['ui', 'pattern'] };
+      // 做 UI 时也优先捞历史坑（bugfix），避免重复踩同类交互/兼容性坑
+      return { preferTypes: ['component', 'pattern', 'bugfix'], preferTags: ['ui', 'pattern', 'root-cause'] };
     case 'feature':
-      return { preferTypes: ['pattern', 'code'], preferTags: ['feature', 'pattern'] };
+      // 做新功能时同时捞「可复用模式」与「历史坑」，让规划前就看到经验与雷区
+      return { preferTypes: ['pattern', 'code', 'bugfix'], preferTags: ['feature', 'pattern', 'root-cause'] };
     default:
       return { preferTypes: [], preferTags: [] };
   }
@@ -74,7 +76,11 @@ export async function loadMemoryInjectionContext(
 
   try {
     const prefs = kindSearchPreferences(kind);
+    // feature/ui 同时要「经验」与「坑」两类，默认条数偏少容易只剩一类；放宽下限让两组都有空间
+    const baseLimit = getMemoryConfig().searchLimit;
+    const injectionLimit = (kind === 'feature' || kind === 'ui') ? Math.max(baseLimit, 5) : baseLimit;
     const results = await client.search(query, {
+      limit: injectionLimit,
       preferTypes: prefs.preferTypes,
       preferTags: prefs.preferTags,
     });
@@ -221,6 +227,10 @@ function formatResultBlock(
   return `${header}\n   - 全文加载失败，可手动: read_memory_asset {"asset_id": "${item.id}"}\n`;
 }
 
+function isPitfallResult(item: MemorySearchResult): boolean {
+  return item.type === 'bugfix' || item.tags.includes('bugfix') || item.tags.includes('root-cause');
+}
+
 export function renderMemoryGuideSection(context: MemoryInjectionContext): string {
   const config = getMemoryConfig();
 
@@ -229,19 +239,34 @@ export function renderMemoryGuideSection(context: MemoryInjectionContext): strin
   }
 
   if (!context.available) {
-    return `\n\n## 🧠 记忆系统\n- 状态: 已配置但本次检索降级\n- 原因: ${context.error || '未知错误'}\n- 处理: 忽略记忆注入，继续主流程\n`;
+    return `\n\n## 🧠 历史经验与坑（记忆库）\n- 状态: 已配置但本次检索降级\n- 原因: ${context.error || '未知错误'}\n- 处理: 忽略记忆注入，继续主流程\n`;
   }
 
   if (context.results.length === 0) {
-    return `\n\n## 🧠 记忆系统\n- 状态: 已启用\n- 检索结果: 未找到高相关记录（含历史 Bug 修复与可复用模式）\n- 处理: 继续主流程；Bug 修复验证通过后必须 \`memorize_asset\` 沉淀；功能/UI 有可复用产出再沉淀\n`;
+    return `\n\n## 🧠 历史经验与坑（记忆库）\n- 状态: 已启用\n- 检索结果: 未找到高相关记录（含历史 Bug 修复与可复用模式）\n- 处理: 继续主流程；Bug 修复验证通过后必须 \`memorize_asset\` 沉淀；功能/UI 有可复用产出再沉淀\n`;
   }
 
   const loadedCount = context.results.filter((item) => Boolean(context.assetsById[item.id])).length;
-  const items = context.results
-    .map((item, index) => formatResultBlock(item, index, context, config))
-    .join('\n');
+  const pitfalls = context.results.filter(isPitfallResult);
+  const experiences = context.results.filter((item) => !isPitfallResult(item));
+  const renderGroup = (items: MemorySearchResult[]): string =>
+    items.map((item, index) => formatResultBlock(item, index, context, config)).join('\n');
 
-  return `\n\n## 🧠 记忆系统\n- 状态: 已启用\n- 指令: 下列为已自动加载的历史经验全文（${loadedCount}/${context.results.length} 条）；开干前直接复用，无需再调 \`read_memory_asset\`\n- 检索结果:\n${items}`;
+  const blocks: string[] = [
+    `\n\n## 🧠 历史经验与坑（记忆库）`,
+    `- 状态: 已启用`,
+    `- 指令: 下列为已自动加载的历史经验全文（${loadedCount}/${context.results.length} 条）；开干前直接复用，无需再调 \`read_memory_asset\``,
+    `- 用法: 先逐条核对「历史坑」是否已在本次设计中规避，再复用「可复用经验」，据此收敛需求范围`,
+  ];
+
+  if (pitfalls.length > 0) {
+    blocks.push(`\n### ⚠️ 历史坑（务必规避，共 ${pitfalls.length} 条）\n${renderGroup(pitfalls)}`);
+  }
+  if (experiences.length > 0) {
+    blocks.push(`\n### ♻️ 可复用经验 / 相关历史（共 ${experiences.length} 条）\n${renderGroup(experiences)}`);
+  }
+
+  return blocks.join('\n');
 }
 
 export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
