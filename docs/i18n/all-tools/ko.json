@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "모든 도구 - 26개 AI 개발 도구 전체 목록 | MCP Probe Kit",
+    "title": "모든 도구 - 27개 AI 개발 도구 전체 목록 | MCP Probe Kit",
     "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 4개의 코드 분석 도구, 2개의 Git 도구, 1개의 생성 도구, 6개의 프로젝트 관리 도구, 3개의 UI/UX 도구, 4개의 Memory 도구.",
     "keywords": "AI 개발 도구, 코드 생성 도구, 코드 리뷰 도구, Git 자동화, UI 생성, 코드 리팩토링, 성능 최적화, 보안 스캔"
   },
   "page": {
-    "subtitle": "MCP Probe Kit은 26개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
+    "subtitle": "MCP Probe Kit은 27개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
   },
   "search": {
     "placeholder": "🔍 도구 이름 또는 설명 검색...",
@@ -35,6 +35,7 @@
     "init_project": "초기화",
     "init_project_context": "프로젝트 컨텍스트",
     "add_feature": "기능 추가",
+    "check_spec": "사양 검증",
     "estimate": "추정",
     "interview": "요구사항 인터뷰",
     "ask_user": "사용자에게 질문",
@@ -66,7 +67,7 @@
     },
     "project": {
       "title": "프로젝트 관리",
-      "count": "6개"
+      "count": "7개"
     },
     "uiux": {
       "title": "UI/UX 디자인",
@@ -138,6 +139,10 @@
       "description": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다",
       "usage": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다"
     },
+    "check_spec": {
+      "description": "작성된 기능 사양(requirements/design/tasks.md)의 완전성 검증: 잔여 플레이스홀더, 누락된 섹션, FR/수용 기준 누락, 커버리지 매트릭스 미등록 FR 감지",
+      "usage": "사양 작성 후·구현 전 호출; 실패 시 보고서에 따라 보완 후 재실행"
+    },
     "estimate": {
       "description": "개발 작업량을 추정하고 스토리 포인트, 시간 범위(낙관적/정상/비관적), 위험 포인트를 출력합니다",
       "usage": "개발 작업량을 추정하고 스토리 포인트, 시간 범위(낙관적/정상/비관적), 위험 포인트를 출력합니다"
@@ -165,6 +170,22 @@
     "code_insight": {
       "description": "코드 그래프 인사이트 도구로 GitNexus를 브리지하여 호출 체인, 컨텍스트, 영향 범위를 분석합니다(사용 불가 시 자동 강등)",
       "usage": "GitNexus 인덱스를 갱신하고 작업 단위 호출 체인/컨텍스트/영향 범위를 분석한 뒤 결과를 docs/graph-insights 와 project-context 인덱스에 저장합니다"
+    },
+    "search_memory": {
+      "description": "공유 메모리 풀을 의미 기반 검색, type/tags 우선순위 지원",
+      "usage": "start_* 외에서 과거 버그 수정이나 재사용 가능한 패턴을 능동적으로 검색; 텍스트 출력에 id/score/요약/설명 및 --- content --- 본문 포함(기본 최대 1500자, 전문은 read_memory_asset)"
+    },
+    "read_memory_asset": {
+      "description": "자산 ID로 저장된 메모리의 전체 내용과 메타데이터를 읽기",
+      "usage": "오케스트레이션 단계에서 메모리 요약이 적중했을 때 사용; 텍스트 출력에 --- content --- 전문(코드/설정/상세 설명) 포함"
+    },
+    "memorize_asset": {
+      "description": "고가치 코드, 사양, 패턴 자산을 벡터 메모리 시스템에 저장하여 나중에 재사용",
+      "usage": "개발 완료 후 재사용 가능한 자산을 Qdrant + embedding 메모리 시스템에 저장"
+    },
+    "scan_and_extract_patterns": {
+      "description": "단일 코드 조각, 단일 파일 또는 전체 디렉터리에서 재사용 가능한 패턴을 추출한 후 메모리에 저장할지 결정",
+      "usage": "먼저 패턴 추출을 수행한 후 필요에 따라 memorize_asset을 호출하여 메모리에 기록"
     }
   }
 }

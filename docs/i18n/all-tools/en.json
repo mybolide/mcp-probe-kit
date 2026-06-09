@@ -5,7 +5,7 @@
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "MCP Probe Kit provides 26 practical tools with structured output support for core and orchestration tools"
+    "subtitle": "MCP Probe Kit provides 27 practical tools with structured output support for core and orchestration tools"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -35,11 +35,13 @@
     "init_project": "Init Project",
     "init_project_context": "Project Context",
     "add_feature": "Add Feature",
+    "check_spec": "Check Spec",
     "estimate": "Estimate",
     "interview": "Interview",
     "ask_user": "Ask User",
     "ui_design_system": "Design System",
     "ui_search": "Search UI",
+    "sync_ui_data": "Sync UI Data",
     "code_insight": "Code Insight",
     "search_memory": "Search Memory",
     "read_memory_asset": "Read Memory",
@@ -65,7 +67,7 @@
     },
     "project": {
       "title": "Project Management",
-      "count": "6 tools"
+      "count": "7 tools"
     },
     "uiux": {
       "title": "UI/UX Design",
@@ -136,6 +138,10 @@
     "add_feature": {
       "description": "Generate new feature specification documents (requirements/design/task list) based on project context",
       "usage": "Generate new feature specification documents (requirements/design/task list) based on project context"
+    },
+    "check_spec": {
+      "description": "Validate that a written feature spec (requirements/design/tasks.md) is complete: detects leftover placeholders, missing sections, missing FR/acceptance criteria, and FRs not in the coverage matrix",
+      "usage": "Call after writing the spec and before implementation; if it fails, fill the gaps per the report and rerun"
     },
     "estimate": {
       "description": "Estimate development workload, output story points, time range (optimistic/normal/pessimistic), risk points",
