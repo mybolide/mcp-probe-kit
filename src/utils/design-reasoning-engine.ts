@@ -8,6 +8,8 @@
  * https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
  */
 
+import { UI_HARD_RULES, UI_BANNED_LIST } from '../lib/quality-constraints.js';
+
 export interface DesignRequest {
   productType: string;      // 产品类型（如 "SaaS", "E-commerce", "Healthcare"）
   description?: string;      // 产品描述
@@ -37,6 +39,8 @@ export interface DesignSystemRecommendation {
   typography: TypographyPairing;     // 字体配对
   effects: EffectsRecommendation;    // 效果和动画
   antiPatterns: string[];            // 反模式（应避免）
+  hardConstraints: string[];         // UI 硬红线（带数值，可机器判定）
+  bannedList: string[];              // UI 禁用黑名单（命中即 AI slop）
   checklist: string[];               // 交付前检查清单
   reasoning: string;                 // 推理过程
 }
@@ -188,6 +192,8 @@ export class DesignReasoningEngine {
         animations: combinedEffects,
       },
       antiPatterns: (reasoning.antiPatterns || '').split('+').map((p: string) => p.trim()).filter(Boolean),
+      hardConstraints: [...UI_HARD_RULES],
+      bannedList: [...UI_BANNED_LIST],
       checklist: this.generateChecklist(bestStyle, request),
       reasoning: this.generateReasoningText(productRule, bestStyle, bestColor, bestTypography, reasoning),
     };

@@ -1,6 +1,6 @@
 {
   "name": "mcp-probe-kit",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "AI-Powered Development Toolkit - MCP Server with 27 tools covering code quality, development efficiency, project management, and UI/UX design. Features: Structured Output, Workflow Orchestration, UI/UX Pro Max, and Requirements Interview.",
   "mcpName": "io.github.mybolide/mcp-probe-kit",
   "type": "module",
@@ -20,7 +20,8 @@
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "sync-ui-data": "tsx scripts/sync-ui-data.ts",
-    "prebuild": "npm run sync-ui-data",
+    "sync-version": "node scripts/sync-version.mjs",
+    "prebuild": "npm run sync-version && npm run sync-ui-data",
     "docs:serve": "npx http-server docs -p 8080 -o"
   },
   "keywords": [

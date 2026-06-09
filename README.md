@@ -67,6 +67,16 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
 - **🧠 Memory** (4 tools) - Reusable asset memory
   - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
 
+### 🛡️ Quality Constraints (single source of truth)
+
+All hard quality rules live in one module (`src/lib/quality-constraints.ts`) and are injected into `code_review`, the `add_feature` task templates, and the UI tools. Change once, apply everywhere — inspired by [taste-skill](https://github.com/Leonxlnx/taste-skill) and [impeccable](https://github.com/pbakaus/impeccable).
+
+- **Code limits**: single file ≤ 500 lines (split into modules/components when exceeded), function ≤ 50 lines, nesting ≤ 4, parameters ≤ 3.
+- **Completeness blacklist**: `code_review` flags placeholder/elision patterns (`// ...`, `// TODO`, `// rest of code`, bare `...`) as CRITICAL — "a partial output is a broken output".
+- **Anti-laziness task templates**: `add_feature` tasks now carry a Scope-lock deliverable count, a mandatory evidence block (read code before writing), a per-file line budget, and a binary zero-tolerance rule for placeholders. `check_spec` validates these (missing Scope-lock = error, thin task without evidence = warning).
+- **UI hard red lines**: numeric, machine-checkable rules — 4pt spacing scale, WCAG contrast (4.5/3/3), type scale ≥ 1.25, hero font ≤ 6rem, OKLCH, eight interaction states, cognitive load ≤ 4, motion 150-300ms.
+- **UI banned list + Pre-Flight checklist**: match-and-refuse blacklist for AI slop (default Inter/Roboto, AI purple-blue gradients, gradient text, cookie-cutter card grids, em-dash, cream/beige body backgrounds, nested cards) plus a delivery-gate self-check matrix.
+
 ### 🧠 Code Graph Bridge (GitNexus)
 
 - `code_insight` bridges GitNexus by default for query/context/impact analysis

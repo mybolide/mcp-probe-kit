@@ -34,9 +34,21 @@ import {
   renderMemoryGuideSection,
 } from "../lib/memory-orchestration.js";
 import { isShadcnStack } from "../lib/shadcn-ui.js";
+import { renderUiHardRules, renderUiBannedList, renderPreFlightChecklist } from "../lib/quality-constraints.js";
 
 type TemplateProfileResolved = 'guided' | 'strict';
 type TemplateProfileRequest = 'guided' | 'strict' | 'auto';
+
+/** 渲染代码步骤统一注入的 UI 硬约束 + 黑名单 + 交付前自检 */
+const UI_CONSTRAINTS_BLOCK = `
+
+---
+
+${renderUiHardRules()}
+
+${renderUiBannedList()}
+
+${renderPreFlightChecklist()}`;
 
 function buildShadcnBlocksPlanStep(description: string, framework: string) {
   if (!isShadcnStack(framework)) {
@@ -286,6 +298,10 @@ A: 不需要。如果文件已存在，直接跳过步骤 1。
 
 **Q: 如何使用自定义模板？**
 A: 在 \`docs/ui/\` 目录创建 JSON 模板文件，然后在步骤 4 中指定模板路径。
+
+---
+
+${UI_CONSTRAINTS_BLOCK}
 `;
 
 const PROMPT_TEMPLATE_STRICT = `# UI 开发编排（严格）
@@ -364,6 +380,8 @@ const PROMPT_TEMPLATE_STRICT = `# UI 开发编排（严格）
 ## 步骤 7: 更新项目上下文索引
 
 将 UI 文档链接添加到 \`docs/project-context.md\`
+
+${UI_CONSTRAINTS_BLOCK}
 `;
 
 const LOOP_PROMPT_TEMPLATE_GUIDED = `# 🧭 UI 需求澄清与补全（Requirements Loop）

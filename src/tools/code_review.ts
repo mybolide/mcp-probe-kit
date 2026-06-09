@@ -2,6 +2,7 @@ import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okText } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
+import { renderCodeLimits, renderBannedPatterns, CODE_LIMITS } from "../lib/quality-constraints.js";
 
 // code_review 工具实现
 export async function codeReview(args: any) {
@@ -45,11 +46,13 @@ ${code || "请提供需要审查的代码"}
 
 ### 1️⃣ 代码质量检查
 
+${renderCodeLimits()}
+
 **代码坏味道（Code Smells）**：
 - [ ] 重复代码（Duplicated Code）
-- [ ] 过长函数（Long Function）> 30 行
-- [ ] 过长参数列表（Long Parameter List）> 3 个
-- [ ] 复杂条件判断（Complex Conditional）> 3 层嵌套
+- [ ] 过长函数（Long Function）> ${CODE_LIMITS.maxFunctionLines} 行
+- [ ] 过长参数列表（Long Parameter List）> ${CODE_LIMITS.maxParameters} 个
+- [ ] 复杂条件判断（Complex Conditional）> ${CODE_LIMITS.maxNestingDepth} 层嵌套
 - [ ] 魔法数字（Magic Numbers）
 - [ ] 命名不清晰（Poor Naming）
 
@@ -95,7 +98,11 @@ ${code || "请提供需要审查的代码"}
 - [ ] 大列表未虚拟化
 - [ ] 状态管理不当
 
-### 4️⃣ 最佳实践检查
+### 4️⃣ 完整性检查
+
+${renderBannedPatterns()}
+
+### 5️⃣ 最佳实践检查
 
 **TypeScript/JavaScript**：
 - [ ] 类型定义完整（避免 any）
