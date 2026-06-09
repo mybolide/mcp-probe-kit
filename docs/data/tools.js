@@ -296,6 +296,21 @@ description: "添加用户认证功能，支持邮箱登录和第三方登录"
 feature_name: "user-auth"`
     },
     {
+      name: 'check_spec',
+      description: '校验已落盘的功能规格（requirements/design/tasks.md）是否完整：检测残留占位符、缺失章节、缺 FR/验收标准、FR 未进覆盖矩阵',
+      schema: 'CheckSpecSchema',
+      params: [
+        { name: 'feature_name', type: 'string', required: true, desc: '要校验的规格目录名，对应 docs/specs/<feature_name>/' },
+        { name: 'docs_dir', type: 'string', required: false, desc: '文档根目录，默认为 docs' },
+        { name: 'project_root', type: 'string', required: false, desc: '项目根目录绝对路径，默认自动探测' }
+      ],
+      usage: '写完规格后、进入实现前调用；未通过则按报告补全后重跑',
+      example: `// 使用示例
+你: 请使用 check_spec 工具校验规格
+
+feature_name: "user-auth"`
+    },
+    {
       name: 'estimate',
       description: '估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点',
       schema: 'EstimateSchema',

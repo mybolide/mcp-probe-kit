@@ -5,7 +5,7 @@
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "MCP Probe Kit 提供 26 个实用工具，核心与编排工具支持结构化输出"
+    "subtitle": "MCP Probe Kit 提供 27 个实用工具，核心与编排工具支持结构化输出"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -35,11 +35,13 @@
     "init_project": "初始化",
     "init_project_context": "项目上下文",
     "add_feature": "添加功能",
+    "check_spec": "校验规格",
     "estimate": "工作量",
     "interview": "需求访谈",
     "ask_user": "提问用户",
     "ui_design_system": "设计系统",
     "ui_search": "搜索UI",
+    "sync_ui_data": "同步 UI 数据",
     "code_insight": "图谱洞察",
     "search_memory": "搜索记忆",
     "read_memory_asset": "读取记忆",
@@ -65,7 +67,7 @@
     },
     "project": {
       "title": "项目管理",
-      "count": "6 个"
+      "count": "7 个"
     },
     "uiux": {
       "title": "UI/UX 设计",
@@ -136,6 +138,10 @@
     "add_feature": {
       "description": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文",
       "usage": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文"
+    },
+    "check_spec": {
+      "description": "校验已落盘的功能规格（requirements/design/tasks.md）是否完整：检测残留占位符、缺失章节、缺 FR/验收标准、FR 未进覆盖矩阵",
+      "usage": "写完规格后、进入实现前调用；未通过则按报告补全后重跑"
     },
     "estimate": {
       "description": "估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点",
