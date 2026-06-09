@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.0] - 2026-06-09
+
+### ✨ 新功能
+
+- 新增 `src/lib/quality-constraints.ts` 质量约束「单一真相源」：集中定义代码量硬约束（`CODE_LIMITS`：单文件 ≤500 行、函数 ≤50 行、嵌套 ≤4 层、参数 ≤3 个）、代码完整性黑名单（`BANNED_CODE_PATTERNS`：占位/省略式代码零容忍）、UI 设计硬红线（`UI_HARD_RULES`：4pt 间距阶梯、对比度三档、字阶比例、Hero 字号上限、OKLCH、八态、认知负荷 ≤4、动效规范）、UI 禁用黑名单（`UI_BANNED_LIST`：AI 紫蓝渐变、gradient text、米色底、em-dash 零容忍等）。task 模板、`code_review`、UI 工具三处共同引用，改一处处处生效。
+
+### 🔧 改进
+
+- **反偷懒 task 模板**：`add_feature` 的 tasks 模板（guided/strict）新增「交付物清单（Scope-lock）」、每条任务强制「证据块（先读后写）」「行数预算（超 500 行写拆分方案）」「动词+对象+约束的具体标题」，并加二元禁占位符声明。借鉴 taste-skill / impeccable 的「机器可判定硬约束 + 二元禁令 + 交付前 checklist」方法论。
+- **code_review 强化**：注入代码量硬约束（单文件 ≤500 行超出判 HIGH）与完整性黑名单（占位符/省略注释判 CRITICAL）；统一函数行数阈值至 `CODE_LIMITS`（原 30 行 → 50 行）。
+- **UI 硬约束注入**：`ui_design_system` 输出注入硬红线 + 禁用黑名单 + 交付前自检矩阵；`start_ui` 编排各模式末尾注入同一约束块；`DesignSystemRecommendation` 新增 `hardConstraints` / `bannedList` 字段。
+- **spec-validator 扩展**：tasks 必需章节加入「交付物清单」「文件变更清单」；新增任务详细度校验（每条任务应附「证据块」，缺失记 `thin_task` 提醒）。
+- 新增 `scripts/sync-version.mjs` 并挂入 `prebuild`：以 `package.json` 为唯一版本真相源，自动同步 `tools-manifest.json` / `server.json`，杜绝多文件版本号漂移。
+
+---
+
 ## [3.2.0] - 2026-06-07
 
 ### ✨ 新功能

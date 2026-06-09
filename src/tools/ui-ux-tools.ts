@@ -12,6 +12,7 @@ import { UISearchOptions } from '../utils/ui-search-engine.js';
 import { syncUIDataToCache, checkUISourcesUpdate } from '../utils/ui-sync.js';
 import { formatShadcnResult, formatGuidelineResult, formatThemeResult, isGuidelineCategory, isShadcnCategory, isShadcnStack, isThemeCategory, pickThemeForProductType } from '../lib/shadcn-ui.js';
 import { formatDesignSystemJson } from '../utils/design-system-json-formatter.js';
+import { renderUiHardRules, renderUiBannedList, renderPreFlightChecklist } from '../lib/quality-constraints.js';
 import { okStructured } from '../lib/response.js';
 import type { DesignSystem, UISearchResult, SyncReport } from '../schemas/output/ui-ux-tools.js';
 import {
@@ -41,6 +42,9 @@ export interface CreationGuidance {
   layout: string[];          // 布局规范文档应包含的主题
   config: string[];          // 技术配置文档应包含的主题
   tips: string[];            // 创作提示
+  hardRules: string;         // UI 设计硬红线（带数值，可逐条核验）
+  banned: string;            // UI 禁用黑名单（命中即 AI slop）
+  preFlight: string;         // 交付前自检矩阵（Pre-Flight Check）
 }
 
 /**
@@ -242,6 +246,9 @@ export function generateCreationGuidance(
     layout,
     config,
     tips,
+    hardRules: renderUiHardRules(),
+    banned: renderUiBannedList(),
+    preFlight: renderPreFlightChecklist(),
   };
 }
 
@@ -396,6 +403,14 @@ ${creationGuidance.config.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
 
 ### 创作提示
 ${creationGuidance.tips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
+
+---
+
+${creationGuidance.hardRules}
+
+${creationGuidance.banned}
+
+${creationGuidance.preFlight}
 `;
 
     const message = `# ✅ 设计系统推荐已生成

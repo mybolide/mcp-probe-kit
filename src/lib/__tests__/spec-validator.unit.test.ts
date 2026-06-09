@@ -59,9 +59,15 @@ const goodTasks = `# 任务清单：demo
 ## 概述
 任务分解。
 
+## 交付物清单（Scope-lock）
+- 预计新建文件数: 1 个
+- 预计修改文件数: 0 个
+
 ## 任务列表
 ### 阶段 2: 核心实现
-- [ ] 2.1 实现登录接口 — _需求: FR-1_ ｜ _设计: API 设计_
+- [ ] 2.1 实现登录接口 POST /api/login，校验邮箱并返回 JWT
+  - 证据块: 先读 src/router.ts:1，确认路由注册方式
+  - _需求: FR-1_ ｜ _设计: API 设计_
 
 ## 检查点
 - [ ] 阶段 2 完成后：登录可用
@@ -123,5 +129,37 @@ describe('spec-validator（P1 填写后校验）', () => {
 
   test('extractFrIds 去重并保序', () => {
     expect(extractFrIds('FR-1 写了 FR-1 又写 FR-2')).toEqual(['FR-1', 'FR-2']);
+  });
+
+  test('tasks 缺少「交付物清单」章节 → 未通过', () => {
+    const tasksNoScope = goodTasks.replace(/## 交付物清单（Scope-lock）[\s\S]*?\n\n/, '');
+    // 防 fixture 漂移导致替换失效造成假通过
+    expect(tasksNoScope).not.toContain('交付物清单');
+    const r = validateSpecDocuments({ requirements: goodReq, design: goodDesign, tasks: tasksNoScope });
+    expect(r.passed).toBe(false);
+    expect(r.issues.some((i) => i.file === 'tasks' && i.code === 'missing_section')).toBe(true);
+  });
+
+  test('任务无「证据块」→ thin_task 提醒（warning，不阻断）', () => {
+    const tasksThin = goodTasks.replace(
+      '  - 证据块: 先读 src/router.ts:1，确认路由注册方式\n',
+      ''
+    );
+    expect(tasksThin).not.toBe(goodTasks);
+    const r = validateSpecDocuments({ requirements: goodReq, design: goodDesign, tasks: tasksThin });
+    expect(r.issues.some((i) => i.code === 'thin_task')).toBe(true);
+    expect(r.warningCount).toBeGreaterThan(0);
+    // 核心语义：thin_task 是 warning，不应阻断 passed
+    expect(r.passed).toBe(true);
+  });
+
+  test('裸 [填写] 占位（无冒号）也应被检出', () => {
+    const r = validateSpecDocuments({
+      requirements: goodReq + '\n- 备注: [填写]',
+      design: goodDesign,
+      tasks: goodTasks,
+    });
+    expect(r.passed).toBe(false);
+    expect(r.issues.some((i) => i.file === 'requirements' && i.code === 'placeholder')).toBe(true);
   });
 });

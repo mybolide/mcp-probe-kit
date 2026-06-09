@@ -33,8 +33,8 @@ export interface SpecValidationReport {
   summary: string;
 }
 
-/** 匹配未填写的占位符，如 `[填写：xxx]` / `[填写:xxx]` */
-const PLACEHOLDER_RE = /\[填写[：:][^\]]*\]/g;
+/** 匹配未填写的占位符：`[填写：xxx]` / `[填写:xxx]` / 裸 `[填写]` 都算 */
+const PLACEHOLDER_RE = /\[填写[：:]?[^\]]*\]/g;
 
 function countPlaceholders(content: string): number {
   const matches = content.match(PLACEHOLDER_RE);
@@ -60,7 +60,7 @@ export function extractFrIds(content: string): string[] {
 const REQUIRED_SECTIONS: Record<SpecFileKey, string[]> = {
   requirements: ['功能概述', '需求列表', '非功能需求', '依赖关系'],
   design: ['概述', '技术方案', '文件结构'],
-  tasks: ['任务列表', '需求覆盖矩阵'],
+  tasks: ['交付物清单', '任务列表', '需求覆盖矩阵', '文件变更清单'],
 };
 
 /**
@@ -127,6 +127,20 @@ export function validateSpecDocuments(input: SpecFileInput): SpecValidationRepor
         severity: 'error',
         code: 'uncovered_fr',
         message: `以下需求未在 tasks.md（含需求覆盖矩阵）出现，可能漏实现：${uncovered.join(', ')}`,
+      });
+    }
+  }
+
+  // tasks：详细度校验——每条任务应附「证据块」，避免宽泛任务导致 AI 偷懒
+  if (tasks && tasks.trim()) {
+    const taskItemCount = (tasks.match(/^\s*-\s*\[\s*\]\s*\d+\.\d+/gm) || []).length;
+    const evidenceCount = (tasks.match(/证据块/g) || []).length;
+    if (taskItemCount > 0 && evidenceCount < taskItemCount) {
+      issues.push({
+        file: 'tasks',
+        severity: 'warning',
+        code: 'thin_task',
+        message: `tasks.md 有 ${taskItemCount} 条任务，但仅 ${evidenceCount} 条标注「证据块」；过于宽泛的任务易导致实现时偷懒/跳步`,
       });
     }
   }
