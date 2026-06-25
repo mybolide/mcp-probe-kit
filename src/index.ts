@@ -28,8 +28,7 @@ import {
 import { VERSION, NAME } from "./version.js";
 import { allToolSchemas } from "./schemas/index.js";
 import { filterTools, getToolsetFromEnv } from "./lib/toolset-manager.js";
-import { withToolAnnotations } from "./lib/tool-annotations.js";
-import { withOutputSchema } from "./lib/output-schema-registry.js";
+import { prepareToolForToolsList } from "./lib/output-schema-registry.js";
 import { shouldAutoEscalateToTask } from "./lib/task-defaults.js";
 import { attachHandles, type ToolHandles } from "./lib/handles.js";
 import { buildMcpAppHtml, isMcpUiAppTool } from "./lib/mcp-apps.js";
@@ -37,7 +36,13 @@ import {
   ensureMcpProbeKitBootstrapForToolCall,
   type McpProbeKitBootstrapResult,
 } from "./lib/workflow-skill-installer.js";
-import { resolveWorkspaceRoot } from "./lib/workspace-root.js";
+import { resolveWorkspaceRoot, resolveWorkspaceRootWithMeta } from "./lib/workspace-root.js";
+import {
+  PROJECT_BOOTSTRAP_URI,
+  discoverProjectResources,
+  ensureAndDiscoverProjectResources,
+  readProjectResourceContent,
+} from "./lib/project-mcp-resources.js";
 import {
   isAbortError,
   type ToolExecutionContext,
@@ -567,12 +572,14 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const toolset = getToolsetFromEnv();
   const filteredTools = filterTools(allToolSchemas, toolset);
-  
-  console.error(`[MCP Probe Kit] 当前工具集: ${toolset} (${filteredTools.length}/${allToolSchemas.length} 个工具)`);
-  
-  return {
-    tools: filteredTools.map((tool) => withOutputSchema(withToolAnnotations(tool))),
-  };
+  const tools = filteredTools.map((tool) => prepareToolForToolsList(tool));
+
+  const payloadBytes = Buffer.byteLength(JSON.stringify({ tools }), "utf8");
+  console.error(
+    `[MCP Probe Kit] 当前工具集: ${toolset} (${tools.length}/${allToolSchemas.length} 个工具) | tools/list ≈ ${(payloadBytes / 1024).toFixed(1)} KB`
+  );
+
+  return { tools };
 });
 
 async function executeTool(
@@ -907,7 +914,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   }
 });
 
-// 定义资源列表（Cursor 设置页会展示为条目；仅保留 status + graph/latest，其余 URI 仍可 ReadResource）
+// 定义资源列表（轻量只读；bootstrap 写盘仅在 resources/read probe://project/bootstrap 或工具调用时）
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   const resources = [
     {
@@ -917,26 +924,32 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
       mimeType: "application/json",
     },
     {
-      uri: "probe://graph/latest",
-      name: "图谱快照",
-      description: "最新图谱快照（含历史摘要与落盘索引；Markdown 可读 probe://graph/latest.md）",
+      uri: PROJECT_BOOTSTRAP_URI,
+      name: "项目 MCP 自检",
+      description:
+        "读取时自动补齐 Skill + AGENTS.md，并返回 probe://project/skill|agents|context|graph 入口",
       mimeType: "application/json",
     },
   ];
 
-  if (uiAppsEnabled) {
-    for (const uri of uiAppResourceOrder.slice().reverse()) {
-      const entry = uiAppResources.get(uri);
-      if (!entry) {
-        continue;
+  try {
+    if (uiAppsEnabled) {
+      for (const uri of uiAppResourceOrder.slice().reverse()) {
+        const entry = uiAppResources.get(uri);
+        if (!entry) {
+          continue;
+        }
+        resources.push({
+          uri: entry.uri,
+          name: entry.name,
+          description: `${entry.description} (${entry.createdAt})`,
+          mimeType: entry.mimeType,
+        });
       }
-      resources.push({
-        uri: entry.uri,
-        name: entry.name,
-        description: `${entry.description} (${entry.createdAt})`,
-        mimeType: entry.mimeType,
-      });
     }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[MCP Probe Kit] resources/list UI 资源合并失败: ${message}`);
   }
 
   return {
@@ -998,6 +1011,22 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 })(),
               },
               toolCount: allToolSchemas.length,
+              projectResources: (() => {
+                try {
+                  const discovered = discoverProjectResources(resolveWorkspaceRoot(""));
+                  return {
+                    bootstrapUri: PROJECT_BOOTSTRAP_URI,
+                    projectRoot: toPosixPath(discovered.projectRoot),
+                    available: discovered.resources
+                      .filter((item) => item.exists)
+                      .map((item) => item.uri),
+                    note: "读取 probe://project/bootstrap 时执行 Skill/AGENTS 自动补齐",
+                  };
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : String(error);
+                  return { bootstrapUri: PROJECT_BOOTSTRAP_URI, error: message };
+                }
+              })(),
             },
             null,
             2
@@ -1005,6 +1034,27 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         },
       ],
     };
+  }
+
+  if (uri === PROJECT_BOOTSTRAP_URI || uri.startsWith("probe://project/")) {
+    try {
+      const content = readProjectResourceContent(uri, resolveWorkspaceRoot(""));
+      if (!content) {
+        throw new Error(`未知项目 resource: ${uri}`);
+      }
+      return {
+        contents: [
+          {
+            uri: content.uri,
+            mimeType: content.mimeType,
+            text: content.text,
+          },
+        ],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`读取项目 resource 失败 (${uri}): ${message}`);
+    }
   }
 
   if (uri.startsWith("ui://")) {
@@ -1186,8 +1236,13 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  const workspace = resolveWorkspaceRoot("");
-  console.error(`MCP Probe Kit v${VERSION} 已启动 | workspace=${workspace}`);
+  const workspaceMeta = resolveWorkspaceRootWithMeta("");
+  console.error(
+    `MCP Probe Kit v${VERSION} 已启动 | workspace=${workspaceMeta.root} | source=${workspaceMeta.source}`
+  );
+  if (workspaceMeta.warning) {
+    console.error(`[MCP Probe Kit] ${workspaceMeta.warning}`);
+  }
 }
 
 // 启动服务器

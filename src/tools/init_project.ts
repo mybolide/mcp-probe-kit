@@ -2,7 +2,8 @@ import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { ensureMcpProbeKitBootstrap } from "../lib/workflow-skill-installer.js";
 import { MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
-import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
+import { resolveWorkspaceRootWithMeta } from "../lib/workspace-root.js";
+import { toPosixPath } from "../lib/project-context-layout.js";
 import type { ProjectInit } from "../schemas/output/project-tools.js";
 
 /**
@@ -28,33 +29,49 @@ export async function initProject(args: any) {
       fieldAliases: {
         input: ["requirement", "description", "需求", "项目需求"],
         project_name: ["name", "project", "项目名", "项目名称"],
-        project_root: ["root", "path", "项目路径"],
+        project_root: ["root", "path", "项目路径", "projectRoot", "projectPath", "workspace"],
       },
     });
     
     const input = getString(parsedArgs.input);
     const projectName = getString(parsedArgs.project_name) || "新项目";
-    const projectRoot = resolveWorkspaceRoot(getString(parsedArgs.project_root));
+    const rootResolution = resolveWorkspaceRootWithMeta(getString(parsedArgs.project_root));
+    const projectRoot = rootResolution.root;
     const bootstrap = ensureMcpProbeKitBootstrap(projectRoot);
+    const pathWarnings = [rootResolution.warning, bootstrap.workspaceWarning].filter(
+      (item): item is string => Boolean(item)
+    );
+    const warningBlock = pathWarnings.length
+      ? `\n⚠️ **路径 / 工作区**\n${pathWarnings.map((w) => `- ${w}`).join("\n")}\n`
+      : "";
     const featureSlug = projectName.toLowerCase().replace(/\s+/g, '-');
+    const agentsRel = toPosixPath(bootstrap.agentsMd.path);
 
     const message = `你需要按照 Spec-Driven Development（规范驱动开发）的方式初始化项目，参考 https://github.com/github/spec-kit 的工作流程。
 
 📋 **项目需求**：
 ${input}
-
-📌 **MCP Skill 已同步**（项目根: \`${projectRoot}\`）：
+${warningBlock}
+📌 **MCP 已自动同步（必须先落盘）**（项目根: \`${toPosixPath(projectRoot)}\`）：
 - \`${MCP_PROBE_SKILL_REL_PATH}\`${bootstrap.skill.created ? "（已创建）" : bootstrap.skill.updated ? "（已升级）" : "（已是最新）"}
-- \`${bootstrap.agentsMd.path}\`${bootstrap.agentsMd.created ? "（已创建）" : bootstrap.agentsMd.updated ? "（已更新）" : ""}
-${bootstrap.workspaceWarning ? `\n⚠️ ${bootstrap.workspaceWarning}\n` : ""}
+- \`${agentsRel}\`${bootstrap.agentsMd.created ? "（已创建）" : bootstrap.agentsMd.updated ? "（已更新）" : ""}
 
 🎯 **初始化步骤**：
+
+**第零步：确认 MCP 产物（已完成服务端写入，Agent 勿跳过）**
+- Skill 与 AGENTS.md 已由 mcp-probe-kit 写入上述路径
+- 若未看到文件，确认已从目标项目目录打开 MCP 客户端，或在工具参数中传 \`project_root\` 绝对路径
 
 **第一步：创建项目基础结构**
 在当前工作区创建以下目录和文件：
 
 \`\`\`
 .
+├── .agents/
+│   └── skills/
+│       └── mcp-probe-kit/
+│           └── SKILL.md             # MCP 调用时机（已自动创建）
+├── AGENTS.md                        # Agent 规则（已自动创建/更新）
 ├── docs/
 │   ├── project-context.md           # 项目上下文（技术栈、架构、规范）
 │   ├── constitution.md              # 项目宪法（核心原则和约束）
@@ -207,8 +224,21 @@ ${bootstrap.workspaceWarning ? `\n⚠️ ${bootstrap.workspaceWarning}\n` : ""}
     const structuredData: ProjectInit = {
       summary: `初始化项目：${projectName}`,
       projectName: projectName,
+      projectRoot: toPosixPath(projectRoot),
+      bootstrap: {
+        skillPath: MCP_PROBE_SKILL_REL_PATH,
+        agentsMdPath: agentsRel,
+        skillCreated: bootstrap.skill.created,
+        skillUpdated: bootstrap.skill.updated,
+        agentsCreated: bootstrap.agentsMd.created,
+        agentsUpdated: bootstrap.agentsMd.updated,
+        workspaceWarnings: pathWarnings,
+        rootSource: rootResolution.source,
+        explicitHonored: rootResolution.explicitHonored,
+      },
       structure: {
         directories: [
+          '.agents/skills/mcp-probe-kit/',
           'docs/',
           'docs/specs/',
           `docs/specs/${featureSlug}/`,
@@ -216,6 +246,8 @@ ${bootstrap.workspaceWarning ? `\n⚠️ ${bootstrap.workspaceWarning}\n` : ""}
           'src/'
         ],
         files: [
+          MCP_PROBE_SKILL_REL_PATH,
+          agentsRel,
           'docs/project-context.md',
           'docs/constitution.md',
           `docs/specs/${featureSlug}/requirements.md`,
@@ -227,6 +259,7 @@ ${bootstrap.workspaceWarning ? `\n⚠️ ${bootstrap.workspaceWarning}\n` : ""}
         ]
       },
       nextSteps: [
+        '确认 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 已落盘',
         '创建项目目录结构',
         '生成 project-context.md',
         '生成 constitution.md',

@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP は、ギーク向けに作られたプロトコルレベルの探査とコンテキスト供給ツールキットです。単なる29個のツールの集まりではなく、AIがプロジェクトの意図を本当に「理解」できるようにする知覚システムです.
+> Zhishi MCP は、ギーク向けに作られたプロトコルレベルの探査とコンテキスト供給ツールキットです。単なる30個のツールの集まりではなく、AIがプロジェクトの意図を本当に「理解」できるようにする知覚システムです.
 
 **言語**: [English](../README.md) | [简体中文](README.zh-CN.md) | **日本語** | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -35,7 +35,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [クイックスタート](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分でセットアップ
-- [全ツール](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 29ツールの完全リスト
+- [全ツール](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 30ツールの完全リスト
 - [ベストプラクティス](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完全な開発ワークフローガイド
 - [v3.0 移行ガイド](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.xからv3.0へのアップグレード
 

@@ -76,7 +76,7 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **30 outils** couvr
 - Les anciens projets qui ont déjà `project-context.md` mais pas de documents de graphe sont initialisés automatiquement via `init_project_context`
 - Si GitNexus est indisponible, le serveur bascule automatiquement sans interrompre l'orchestration
 - Les requêtes de graphe réelles lisent l'index `.gitnexus` ; `docs/graph-insights/latest.md|json` sont des snapshots lisibles
-- Les snapshots de graphe sont exposés en ressources MCP : Cursor n’affiche que **2 entrées** (`probe://status`, `probe://graph/latest`) ; `latest` inclut l’historique et l’index des fichiers. Les URI à la demande (`probe://graph/history`, `probe://graph/latest.md`, `probe://graph/files`) restent lisibles via `resources/read`
+- Les ressources MCP dans Cursor : **2 entrées** (`probe://status`, `probe://project/bootstrap`). Les snapshots graphe (`probe://graph/latest`, etc.) restent lisibles via `resources/read`
 - Les snapshots sont persistés dans `.mcp-probe-kit/graph-snapshots` (personnalisable via `MCP_GRAPH_SNAPSHOT_DIR`)
 - Les réponses des outils incluent `_meta.graph` avec l'URI du snapshot et les chemins locaux
 

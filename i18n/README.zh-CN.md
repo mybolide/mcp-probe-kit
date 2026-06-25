@@ -71,7 +71,7 @@
 - 已有 `project-context.md` 但没有图谱文档的旧项目，会通过 `init_project_context` 自动引导生成
 - 如果 GitNexus 不可用，服务器自动降级，不会中断编排流程
 - 真正的图谱查询读取 `.gitnexus` 索引；`docs/graph-insights/latest.md|json` 是供人类和 AI Agent 阅读的快照
-- 图谱快照作为 MCP 资源：Cursor 设置页仅列出 **2 项**（`probe://status`、`probe://graph/latest`）；`latest` 内嵌历史摘要与落盘索引。按需 URI（`probe://graph/history`、`probe://graph/latest.md`、`probe://graph/files`）仍可通过 `resources/read` 读取
+- MCP 资源：MCP 客户端设置页仅 **2 项**（`probe://status`、`probe://project/bootstrap`）。运行时图谱 URI（`probe://graph/latest` 等）与 `probe://project/skill|agents|context|graph` 仍可通过 `resources/read` 按需读取
 - 图谱快照同时落盘到 `.mcp-probe-kit/graph-snapshots`（可通过 `MCP_GRAPH_SNAPSHOT_DIR` 自定义）
 - 工具响应中包含 `_meta.graph`，携带快照 URI 和本地 JSON/Markdown 文件路径
 

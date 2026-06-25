@@ -39,6 +39,7 @@ import {
   PatternExtractionSchema,
 } from '../schemas/output/memory-tools.js';
 import { CodeInsightSchema } from '../schemas/output/code-insight-tools.js';
+import { withToolAnnotations } from './tool-annotations.js';
 
 type JsonSchema = Record<string, unknown>;
 
@@ -112,9 +113,24 @@ export function getOutputSchemaForTool(toolName: string): JsonSchema | undefined
   return OUTPUT_SCHEMA_BY_TOOL[toolName];
 }
 
+/** Cursor 等对 tools/list 体积敏感时，默认不在列表里附带 outputSchema（调用仍返回 structuredContent） */
+export function shouldIncludeOutputSchemaInToolsList(): boolean {
+  const raw = process.env.MCP_INCLUDE_OUTPUT_SCHEMA;
+  if (raw === undefined) {
+    return false;
+  }
+  return /^(1|true|yes|on)$/i.test(raw.trim());
+}
+
 export function withOutputSchema<T extends { name: string }>(
   tool: T
 ): T & { outputSchema?: JsonSchema } {
   const outputSchema = getOutputSchemaForTool(tool.name);
   return outputSchema ? { ...tool, outputSchema } : tool;
+}
+
+/** tools/list 返回前的最终形态（默认省略 outputSchema 以兼容 Cursor lease） */
+export function prepareToolForToolsList<T extends { name: string }>(tool: T) {
+  const annotated = withToolAnnotations(tool);
+  return shouldIncludeOutputSchemaInToolsList() ? withOutputSchema(annotated) : annotated;
 }

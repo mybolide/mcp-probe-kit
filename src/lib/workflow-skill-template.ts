@@ -54,7 +54,7 @@ export function generateWorkflowSkillBody(skillVersion: string = VERSION): strin
   return `# MCP 调用时机 — mcp-probe-kit
 
 > 本 Skill 只回答一件事：**什么情况 → 调哪个 MCP**。不是开发流程剧本。
-> 由 mcp-probe-kit 自动安装；Cursor 从 \`.agents/skills/\` 加载。
+> 由 mcp-probe-kit 自动安装；支持 MCP 的 Agent 客户端可从 \`.agents/skills/\` 加载。
 
 ## 总规则
 
