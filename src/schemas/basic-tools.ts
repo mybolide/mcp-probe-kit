@@ -17,6 +17,10 @@ export const basicToolSchemas = [
           type: "string",
           description: "项目名称。可选，默认为'新项目'",
         },
+        project_root: {
+          type: "string",
+          description: "项目根目录绝对路径。用于 Skill/AGENTS.md 自动安装；未传则解析 Cursor 工作区",
+        },
       },
       required: [],
       additionalProperties: true,

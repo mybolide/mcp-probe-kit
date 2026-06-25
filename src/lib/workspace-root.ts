@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { discoverProjectRootFromLayout } from "./project-context-layout.js";
 
 const WORKSPACE_ENV_KEYS = [
+  "WORKSPACE_FOLDER_PATHS",
   "MCP_PROJECT_ROOT",
   "MCP_WORKSPACE_ROOT",
   "CURSOR_WORKSPACE_ROOT",
@@ -83,6 +84,37 @@ function getRuntimePackageRoot(): string {
   return path.resolve(moduleDir, "..", "..");
 }
 
+/** MCP 包自身安装目录（bootstrap 误写此处说明工作区未解析成功） */
+export function getMcpPackageInstallRoot(): string {
+  return getRuntimePackageRoot();
+}
+
+/** 解析 Cursor 等客户端注入的 WORKSPACE_FOLDER_PATHS */
+export function resolveFromWorkspaceFolderPathsEnv(): string | null {
+  const raw = process.env.WORKSPACE_FOLDER_PATHS?.trim();
+  if (!raw) {
+    return null;
+  }
+
+  if (raw.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const first = safeResolve(String(parsed[0]));
+        if (isExistingDirectory(first)) {
+          return first;
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  const firstSegment = raw.split(/[|;]/)[0]?.trim() || raw;
+  const candidate = safeResolve(firstSegment);
+  return isExistingDirectory(candidate) ? candidate : null;
+}
+
 function looksLikeWorkspaceRoot(target: string): boolean {
   return WORKSPACE_MARKERS.some((marker) => fs.existsSync(path.join(target, marker)));
 }
@@ -152,6 +184,11 @@ export function resolveWorkspaceRoot(explicitProjectRoot?: string): string {
   const explicit = safeResolve(explicitProjectRoot || "");
   if (isExistingDirectory(explicit)) {
     return discoverProjectRootFromLayout(explicit) ?? explicit;
+  }
+
+  const fromCursorWorkspace = resolveFromWorkspaceFolderPathsEnv();
+  if (fromCursorWorkspace) {
+    return discoverProjectRootFromLayout(fromCursorWorkspace) ?? fromCursorWorkspace;
   }
 
   const packageRoot = getRuntimePackageRoot();

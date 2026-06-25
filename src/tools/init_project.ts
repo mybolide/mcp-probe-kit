@@ -1,5 +1,8 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { ensureMcpProbeKitBootstrap } from "../lib/workflow-skill-installer.js";
+import { MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
+import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
 import type { ProjectInit } from "../schemas/output/project-tools.js";
 
 /**
@@ -14,26 +17,36 @@ export async function initProject(args: any) {
     const parsedArgs = parseArgs<{
       input?: string;
       project_name?: string;
+      project_root?: string;
     }>(args, {
       defaultValues: {
         input: "",
         project_name: "新项目",
+        project_root: "",
       },
       primaryField: "input", // 纯文本输入默认映射到 input 字段
       fieldAliases: {
         input: ["requirement", "description", "需求", "项目需求"],
         project_name: ["name", "project", "项目名", "项目名称"],
+        project_root: ["root", "path", "项目路径"],
       },
     });
     
     const input = getString(parsedArgs.input);
     const projectName = getString(parsedArgs.project_name) || "新项目";
+    const projectRoot = resolveWorkspaceRoot(getString(parsedArgs.project_root));
+    const bootstrap = ensureMcpProbeKitBootstrap(projectRoot);
     const featureSlug = projectName.toLowerCase().replace(/\s+/g, '-');
 
     const message = `你需要按照 Spec-Driven Development（规范驱动开发）的方式初始化项目，参考 https://github.com/github/spec-kit 的工作流程。
 
 📋 **项目需求**：
 ${input}
+
+📌 **MCP Skill 已同步**（项目根: \`${projectRoot}\`）：
+- \`${MCP_PROBE_SKILL_REL_PATH}\`${bootstrap.skill.created ? "（已创建）" : bootstrap.skill.updated ? "（已升级）" : "（已是最新）"}
+- \`${bootstrap.agentsMd.path}\`${bootstrap.agentsMd.created ? "（已创建）" : bootstrap.agentsMd.updated ? "（已更新）" : ""}
+${bootstrap.workspaceWarning ? `\n⚠️ ${bootstrap.workspaceWarning}\n` : ""}
 
 🎯 **初始化步骤**：
 

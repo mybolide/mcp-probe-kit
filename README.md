@@ -87,7 +87,7 @@ All hard quality rules live in one module (`src/lib/quality-constraints.ts`) and
 - Older projects that already have `project-context.md` but no graph docs are bootstrapped automatically through the `init_project_context` step
 - If GitNexus is unavailable, the server falls back automatically without breaking orchestration
 - Real graph queries read the `.gitnexus` index; `docs/graph-insights/latest.md|json` are readable snapshots for humans and AI agents
-- Graph snapshots are exposed as resources (`probe://graph/latest`, `probe://graph/history`, `probe://graph/latest.md`)
+- Graph snapshots are exposed as MCP resources: Cursor lists **2 entries** (`probe://status`, `probe://graph/latest`); `latest` embeds history and file index. On-demand URIs (`probe://graph/history`, `probe://graph/latest.md`, `probe://graph/files`) remain readable via `resources/read`
 - Graph snapshots are also persisted to readable files in `.mcp-probe-kit/graph-snapshots` (customizable via `MCP_GRAPH_SNAPSHOT_DIR`)
 - Tool responses include `_meta.graph` with snapshot URI and local JSON/Markdown file paths
 
@@ -415,11 +415,16 @@ No installation needed, use the latest version directly.
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MCP_PROJECT_ROOT": "${workspaceFolder}"
+      }
     }
   }
 }
 ```
+
+> **Skill 自动安装**：任意 MCP 工具调用会在用户项目写入 `.agents/skills/mcp-probe-kit/SKILL.md`。务必设置 `MCP_PROJECT_ROOT`（或 Cursor 注入的 `WORKSPACE_FOLDER_PATHS`），否则可能写到错误目录。需 **v3.6.0+**。
 
 #### Claude Desktop Configuration
 
@@ -434,7 +439,10 @@ No installation needed, use the latest version directly.
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@latest"],
+      "env": {
+        "MCP_PROJECT_ROOT": "${workspaceFolder}"
+      }
     }
   }
 }

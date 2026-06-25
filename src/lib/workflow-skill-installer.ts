@@ -20,6 +20,7 @@ import {
 } from "./workflow-skill-version.js";
 import {
   isLikelyProjectNamedRelativePath,
+  getMcpPackageInstallRoot,
   resolveWorkspaceRoot,
 } from "./workspace-root.js";
 
@@ -44,6 +45,21 @@ export interface McpProbeKitBootstrapResult {
   projectRoot: string;
   skill: SkillEnsureResult;
   agentsMd: AgentsMdEnsureResult;
+  /** 工作区可能解析失败（写到了 mcp-probe-kit 安装目录） */
+  workspaceWarning?: string;
+}
+
+function buildWorkspaceWarning(projectRoot: string): string | undefined {
+  const normalizedRoot = path.resolve(projectRoot);
+  const packageRoot = path.resolve(getMcpPackageInstallRoot());
+  if (normalizedRoot === packageRoot) {
+    return [
+      "未能解析用户项目根目录，Skill/AGENTS.md 可能写入了 mcp-probe-kit 安装目录。",
+      "请在 MCP 配置 env 中设置 MCP_PROJECT_ROOT 为 ${workspaceFolder}，",
+      "或调用工具时传 project_root 绝对路径。",
+    ].join("");
+  }
+  return undefined;
 }
 
 function flattenToolArgs(args: unknown): Record<string, unknown> {
@@ -193,10 +209,12 @@ export function ensureAgentsMdSkillReference(projectRoot: string): AgentsMdEnsur
  */
 export function ensureMcpProbeKitBootstrap(projectRoot: string): McpProbeKitBootstrapResult {
   const root = path.resolve(projectRoot);
+  const workspaceWarning = buildWorkspaceWarning(root);
   return {
     projectRoot: root,
     skill: ensureMcpProbeSkill(root),
     agentsMd: ensureAgentsMdSkillReference(root),
+    workspaceWarning,
   };
 }
 
