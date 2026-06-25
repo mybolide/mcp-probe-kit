@@ -389,6 +389,109 @@ export class MemoryClient {
       id: fields.id || assetId,
     };
   }
+
+  async deleteAsset(assetId: string): Promise<{ deleted: boolean; asset: MemoryAsset | null }> {
+    if (!this.isReadEnabled()) {
+      throw new Error('记忆系统未启用');
+    }
+
+    const asset = await this.getAsset(assetId);
+    if (!asset) {
+      return { deleted: false, asset: null };
+    }
+
+    await this.requestJson(
+      `${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}/points/delete?wait=true`,
+      {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({
+          points: [assetId],
+        }),
+      }
+    );
+
+    return { deleted: true, asset };
+  }
+
+  async updateAsset(
+    assetId: string,
+    patch: {
+      name?: string;
+      type?: string;
+      description?: string;
+      summary?: string;
+      content?: string;
+      tags?: string[];
+      confidence?: number;
+      sourceProject?: string;
+      sourcePath?: string;
+      usage?: string;
+    }
+  ): Promise<{ updated: boolean; asset: MemoryAsset | null }> {
+    if (!this.isEnabled()) {
+      throw new Error('记忆系统未启用');
+    }
+
+    const existing = await this.getAsset(assetId);
+    if (!existing) {
+      return { updated: false, asset: null };
+    }
+
+    const asset: MemoryAsset = {
+      ...existing,
+      name: patch.name ?? existing.name,
+      type: patch.type ?? existing.type,
+      description: patch.description ?? existing.description,
+      summary: patch.summary ?? existing.summary,
+      content: patch.content ?? existing.content,
+      tags: patch.tags ?? existing.tags,
+      confidence: patch.confidence ?? existing.confidence,
+      sourceProject: patch.sourceProject !== undefined ? patch.sourceProject : existing.sourceProject,
+      sourcePath: patch.sourcePath !== undefined ? patch.sourcePath : existing.sourcePath,
+      usage: patch.usage !== undefined ? patch.usage : existing.usage,
+      id: existing.id,
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const hashes = buildMemoryContentHashes(asset.content);
+    asset.contentHash = hashes.contentHash;
+    asset.normalizedContentHash = hashes.normalizedContentHash;
+
+    const vector = await this.embed(
+      buildEmbeddingInput({
+        name: asset.name,
+        type: asset.type,
+        description: asset.description,
+        summary: asset.summary,
+        tags: asset.tags,
+        usage: asset.usage,
+        content: asset.content,
+      })
+    );
+
+    await this.ensureCollection(vector.length);
+
+    await this.requestJson(
+      `${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}/points?wait=true`,
+      {
+        method: 'PUT',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({
+          points: [
+            {
+              id: assetId,
+              vector,
+              payload: asset,
+            },
+          ],
+        }),
+      }
+    );
+
+    return { updated: true, asset };
+  }
 }
 
 function rankSearchResults(

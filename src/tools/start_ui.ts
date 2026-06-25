@@ -12,6 +12,7 @@ import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { getReasoningEngine } from "./ui-ux-tools.js";
 import { DesignRequest } from "../utils/design-reasoning-engine.js";
 import { okStructured } from "../lib/response.js";
+import { attachHandles } from "../lib/handles.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import {
   buildSkillBridgePlanStep,
@@ -32,6 +33,7 @@ import {
   buildMemoryPlanStep,
   loadMemoryInjectionContext,
   renderMemoryGuideSection,
+  buildOrchestrationHandles,
 } from "../lib/memory-orchestration.js";
 import { isShadcnStack } from "../lib/shadcn-ui.js";
 import { renderUiHardRules, renderUiBannedList, renderPreFlightChecklist } from "../lib/quality-constraints.js";
@@ -847,7 +849,7 @@ start_ui <描述> --requirements_mode=loop
 
       return okStructured(
         guide,
-        loopReport,
+        attachHandles(loopReport, buildOrchestrationHandles(memoryContext)),
         {
           schema: RequirementsLoopSchema,
           note: 'AI 应按轮次澄清 UI 需求并更新结构化输出，满足结束条件后再执行 UI 计划',
@@ -1118,7 +1120,7 @@ ${recommendation.reasoning}
 
       return okStructured(
         smartPlan,
-        uiReport,
+        attachHandles(uiReport, buildOrchestrationHandles(memoryContext)),
         {
           schema: UIReportSchema,
           note: 'AI 应该按照智能计划执行步骤，并在每个步骤完成后更新 structuredContent',
@@ -1335,7 +1337,7 @@ start_ui "设置页面" --framework=react
 
     return okStructured(
       guide,
-      uiReport,
+      attachHandles(uiReport, buildOrchestrationHandles(memoryContext)),
       {
         schema: UIReportSchema,
         note: 'AI 应该按照指南执行步骤，并在每个步骤完成后更新 structuredContent',

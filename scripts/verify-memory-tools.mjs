@@ -1,19 +1,25 @@
 /**
  * Simulates MCP hosts that only surface content[0].text (e.g. opencode).
- * Exit 0 when read_memory_asset (and optionally search_memory) text outputs are usable.
+ * Exit 0 when memory CRUD tools produce usable text + structured handles.
  *
  * Notes:
  * - read_memory_asset only needs MEMORY_QDRANT_URL
  * - search_memory also needs MEMORY_EMBEDDING_URL + MEMORY_EMBEDDING_MODEL (and a running embedding service)
+ * - update/delete live CRUD roundtrip: set VERIFY_MEMORY_CRUD=1 (mutates Qdrant)
  */
 import { readMemoryAsset } from '../build/tools/read_memory_asset.js';
 import { searchMemory } from '../build/tools/search_memory.js';
+import { updateMemoryAsset } from '../build/tools/update_memory_asset.js';
+import { deleteMemoryAsset } from '../build/tools/delete_memory_asset.js';
+import { memorizeAsset } from '../build/tools/memorize_asset.js';
+import { buildMemoryAssetHandles } from '../build/lib/handles.js';
 import { getMemoryConfig, isMemoryEnabled, isMemoryReadEnabled } from '../build/lib/memory-config.js';
 
 const summary = {
   mock: 'pending',
   liveSearch: 'pending',
   liveRead: 'pending',
+  liveUpdateDelete: 'pending',
 };
 
 function textOnly(result) {
@@ -129,6 +135,11 @@ async function verifyWithMock() {
   assertIncludes(readText, '--- content ---', 'read_memory_asset');
   assertIncludes(readText, 'export const parallelWorkers = 4;', 'read_memory_asset');
 
+  const handles = buildMemoryAssetHandles([{ id: mockAsset.id, name: mockAsset.name }]);
+  if (!handles[0]?.tool || handles[0].tool !== 'read_memory_asset') {
+    throw new Error('handles: expected read_memory_asset tool');
+  }
+
   console.log('[mock] search_memory text preview:\n', searchText.slice(0, 400));
   console.log('\n[mock] read_memory_asset text preview:\n', readText.slice(0, 500));
   summary.mock = 'PASS';
@@ -231,6 +242,77 @@ async function verifyLiveRead(config, qdrantProbe) {
   summary.liveRead = 'PASS';
 }
 
+async function verifyLiveUpdateDelete(config, qdrantProbe) {
+  if (process.env.VERIFY_MEMORY_CRUD !== '1') {
+    summary.liveUpdateDelete = 'SKIP (set VERIFY_MEMORY_CRUD=1 to run mutating CRUD roundtrip)';
+    console.log('\n[live] update/delete SKIP: VERIFY_MEMORY_CRUD 未启用');
+    return;
+  }
+
+  if (!isMemoryEnabled(config)) {
+    summary.liveUpdateDelete = 'SKIP (memory write env incomplete)';
+    console.log('\n[live] update/delete SKIP: 未配置完整记忆环境变量');
+    return;
+  }
+
+  if (!qdrantProbe.ok) {
+    summary.liveUpdateDelete = `SKIP (${qdrantProbe.reason})`;
+    console.log('\n[live] update/delete SKIP:', qdrantProbe.reason);
+    return;
+  }
+
+  const embedding = await probeEmbedding(config);
+  if (!embedding.ok) {
+    summary.liveUpdateDelete = `SKIP (${embedding.reason})`;
+    console.log('\n[live] update/delete SKIP: embedding 不可用');
+    return;
+  }
+
+  const stamp = Date.now();
+  const createResult = await memorizeAsset({
+    name: `verify-crud-${stamp}`,
+    type: 'pattern',
+    description: 'verify-memory-tools CRUD roundtrip',
+    summary: `crud probe ${stamp}`,
+    content: `export const crudProbe = ${stamp};`,
+    tags: ['verify', 'crud'],
+  });
+
+  if (createResult.isError) {
+    throw new Error(`live memorize failed: ${textOnly(createResult)}`);
+  }
+
+  const assetId = createResult.structuredContent?.asset?.id;
+  if (!assetId) {
+    throw new Error('live memorize: missing asset id in structuredContent');
+  }
+
+  const previewDelete = await deleteMemoryAsset({ asset_id: assetId });
+  if (previewDelete.isError || !previewDelete.structuredContent?.requires_confirmation) {
+    throw new Error('live delete preview: expected requires_confirmation=true');
+  }
+  assertIncludes(textOnly(previewDelete), '待确认删除', 'live delete preview');
+
+  const updateResult = await updateMemoryAsset({
+    asset_id: assetId,
+    summary: `crud probe updated ${stamp}`,
+  });
+  if (updateResult.isError || !updateResult.structuredContent?.updated) {
+    throw new Error(`live update failed: ${textOnly(updateResult)}`);
+  }
+  if (!updateResult.structuredContent?.handles?.memory_assets?.[0]?.id) {
+    throw new Error('live update: missing handles.memory_assets');
+  }
+
+  const deleteResult = await deleteMemoryAsset({ asset_id: assetId, confirm: true });
+  if (deleteResult.isError || !deleteResult.structuredContent?.deleted) {
+    throw new Error(`live delete failed: ${textOnly(deleteResult)}`);
+  }
+
+  console.log('\n[live] update/delete CRUD roundtrip OK asset_id=', assetId);
+  summary.liveUpdateDelete = 'PASS';
+}
+
 async function main() {
   const config = getMemoryConfig();
   console.log('Memory verify');
@@ -244,15 +326,18 @@ async function main() {
   const qdrantProbe = await probeQdrant(config);
   await verifyLiveSearch(config, qdrantProbe);
   await verifyLiveRead(config, qdrantProbe);
+  await verifyLiveUpdateDelete(config, qdrantProbe);
 
   console.log('\n--- summary ---');
   console.log('  mock formatter:', summary.mock);
   console.log('  live search_memory:', summary.liveSearch);
   console.log('  live read_memory_asset:', summary.liveRead);
+  console.log('  live update/delete:', summary.liveUpdateDelete);
 
   if (
     summary.liveRead.startsWith('FAIL') ||
     summary.liveSearch.startsWith('FAIL') ||
+    summary.liveUpdateDelete.startsWith('FAIL') ||
     summary.mock !== 'PASS'
   ) {
     process.exitCode = 1;
@@ -260,11 +345,13 @@ async function main() {
     return;
   }
 
-  const skipped = [summary.liveSearch, summary.liveRead].some((s) => String(s).startsWith('SKIP'));
+  const skipped = [summary.liveSearch, summary.liveRead, summary.liveUpdateDelete].some((s) =>
+    String(s).startsWith('SKIP')
+  );
   console.log(
     skipped
-      ? '\nPASSED: 核心读写链路可用；SKIP 项请按上方提示补齐 Qdrant / embedding 环境。'
-      : '\nPASSED: search_memory 与 read_memory_asset 均通过。'
+      ? '\nPASSED: 核心读写链路可用；SKIP 项请按上方提示补齐 Qdrant / embedding / CRUD 环境。'
+      : '\nPASSED: search/read/update/delete 记忆链路均通过。'
   );
 }
 

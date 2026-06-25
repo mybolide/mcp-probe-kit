@@ -65,7 +65,7 @@ async function main() {
 
   fs.rmSync(tmp, { recursive: true, force: true });
 
-  // ④ 工具注解覆盖检查（27 工具应全覆盖）
+  // ④ 工具注解覆盖检查（29 工具应全覆盖）
   hr('④ 工具注解覆盖');
   const names = allToolSchemas.map((t: any) => t.name);
   const missing = names.filter((n: string) => !TOOL_ANNOTATIONS[n]);

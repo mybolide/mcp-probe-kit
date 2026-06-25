@@ -1,3 +1,6 @@
+import { VERSION } from "../version.js";
+import { formatAgentsContextVersionMarker } from "./workflow-skill-version.js";
+
 const BLOCK_BEGIN = "<!-- mcp-probe:context begin — auto-generated; re-run init_project_context updates this block only -->";
 const BLOCK_END = "<!-- mcp-probe:context end -->";
 
@@ -7,8 +10,9 @@ export type AgentsMdMergeMode =
   | "replaced-and-moved-to-top"
   | "skipped-empty";
 
-export function wrapMcpProbeBlock(innerMarkdown: string): string {
-  return `${BLOCK_BEGIN}\n${innerMarkdown.trim()}\n${BLOCK_END}`;
+export function wrapMcpProbeBlock(innerMarkdown: string, contextVersion: string = VERSION): string {
+  const versionLine = formatAgentsContextVersionMarker(contextVersion);
+  return `${BLOCK_BEGIN}\n${versionLine}\n${innerMarkdown.trim()}\n${BLOCK_END}`;
 }
 
 function stripExistingBlock(content: string): string {
@@ -41,9 +45,10 @@ function stripExistingBlock(content: string): string {
 
 export function mergeAgentsMdBlock(
   existingContent: string | null | undefined,
-  generatedInner: string
+  generatedInner: string,
+  contextVersion: string = VERSION
 ): { content: string; mergeMode: AgentsMdMergeMode } {
-  const block = wrapMcpProbeBlock(generatedInner);
+  const block = wrapMcpProbeBlock(generatedInner, contextVersion);
 
   if (!existingContent?.trim()) {
     return { content: `${block}\n`, mergeMode: "created" };

@@ -1,12 +1,13 @@
 {
-  "version": "3.3.0",
+  "version": "3.6.0",
   "protocol": "2025-11-25",
-  "totalTools": 27,
+  "totalTools": 30,
   "toolsets": {
     "core": {
-      "description": "10 core tools (daily high-frequency)",
-      "count": 10,
+      "description": "11 core tools (daily high-frequency)",
+      "count": 11,
       "tools": [
+        "workflow",
         "gencommit",
         "code_review",
         "gentest",
@@ -20,12 +21,14 @@
       ]
     },
     "memory": {
-      "description": "4 memory tools",
-      "count": 4,
+      "description": "6 memory tools",
+      "count": 6,
       "tools": [
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
+        "update_memory_asset",
+        "delete_memory_asset",
         "scan_and_extract_patterns"
       ]
     },
@@ -40,8 +43,8 @@
       ]
     },
     "workflow": {
-      "description": "27 workflow tools (includes core + orchestration + interactive + UI + memory)",
-      "count": 27,
+      "description": "29 workflow tools (includes core + orchestration + interactive + UI + memory)",
+      "count": 29,
       "tools": [
         "gencommit",
         "code_review",
@@ -69,12 +72,14 @@
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
+        "update_memory_asset",
+        "delete_memory_asset",
         "scan_and_extract_patterns"
       ]
     },
     "full": {
-      "description": "All 27 tools",
-      "count": 27,
+      "description": "All 29 tools",
+      "count": 29,
       "note": "Default toolset, includes all tools"
     }
   },
@@ -101,11 +106,13 @@
       ]
     },
     "memory-cursor-history": {
-      "description": "Memory tools (4)",
+      "description": "Memory tools (6)",
       "tools": [
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
+        "update_memory_asset",
+        "delete_memory_asset",
         "scan_and_extract_patterns"
       ]
     },
@@ -144,7 +151,7 @@
   },
   "structuredOutput": {
     "description": "Tools supporting structured output (v2.0+)",
-    "version": "3.3.0",
+    "version": "3.6.0",
     "guidanceOnly": {
       "description": "Guidance-type tools (return okText) - AI should execute tasks according to guidance, Schema for reference",
       "count": 6,
@@ -159,7 +166,7 @@
     },
     "dataDriven": {
       "description": "Data-driven tools (return okStructured) - Return actual execution plans or data",
-      "count": 21,
+      "count": 23,
       "tools": [
         "gencommit",
         "code_insight",
@@ -181,6 +188,8 @@
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
+        "update_memory_asset",
+        "delete_memory_asset",
         "scan_and_extract_patterns"
       ]
     },
@@ -211,11 +220,13 @@
       "search_memory": "MemorySearchSchema",
       "read_memory_asset": "MemoryAssetSchema",
       "memorize_asset": "MemorizeResultSchema",
+      "delete_memory_asset": "DeleteMemoryResultSchema",
+      "update_memory_asset": "UpdateMemoryResultSchema",
       "scan_and_extract_patterns": "PatternExtractionSchema"
     },
     "coverage": {
-      "total": 27,
-      "completed": 27,
+      "total": 29,
+      "completed": 29,
       "percentage": 100
     }
   },
@@ -274,6 +285,8 @@
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
+        "update_memory_asset",
+        "delete_memory_asset",
         "scan_and_extract_patterns"
       ],
       "reasons": {

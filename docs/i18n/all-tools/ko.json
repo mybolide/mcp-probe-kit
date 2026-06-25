@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "모든 도구 - 27개 AI 개발 도구 전체 목록 | MCP Probe Kit",
-    "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 4개의 코드 분석 도구, 2개의 Git 도구, 1개의 생성 도구, 6개의 프로젝트 관리 도구, 3개의 UI/UX 도구, 4개의 Memory 도구.",
+    "title": "모든 도구 - 29개 AI 개발 도구 전체 목록 | MCP Probe Kit",
+    "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 4개의 코드 분석 도구, 2개의 Git 도구, 1개의 생성 도구, 7개의 프로젝트 관리 도구, 3개의 UI/UX 도구, 6개의 Memory 도구.",
     "keywords": "AI 개발 도구, 코드 생성 도구, 코드 리뷰 도구, Git 자동화, UI 생성, 코드 리팩토링, 성능 최적화, 보안 스캔"
   },
   "page": {
-    "subtitle": "MCP Probe Kit은 27개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
+    "subtitle": "MCP Probe Kit은 29개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
   },
   "search": {
     "placeholder": "🔍 도구 이름 또는 설명 검색...",
@@ -46,6 +46,8 @@
     "search_memory": "메모리 검색",
     "read_memory_asset": "메모리 읽기",
     "memorize_asset": "메모리 저장",
+    "update_memory_asset": "메모리 수정",
+    "delete_memory_asset": "메모리 삭제",
     "scan_and_extract_patterns": "패턴 추출"
   },
   "categories": {
@@ -75,7 +77,7 @@
     },
     "memory": {
       "title": "Memory",
-      "count": "4개"
+      "count": "6개"
     }
   },
   "toolsData": {
@@ -182,6 +184,14 @@
     "memorize_asset": {
       "description": "고가치 코드, 사양, 패턴 자산을 벡터 메모리 시스템에 저장하여 나중에 재사용",
       "usage": "개발 완료 후 재사용 가능한 자산을 Qdrant + embedding 메모리 시스템에 저장"
+    },
+    "update_memory_asset": {
+      "description": "자산 ID로 공유 메모리 풀의 기존 자산을 업데이트(동일 ID 유지)",
+      "usage": "요약, 본문, 태그 수정 시 사용; content 변경 시 재벡터화됨"
+    },
+    "delete_memory_asset": {
+      "description": "자산 ID로 공유 메모리 풀에서 저장된 메모리 자산을 삭제",
+      "usage": "오래되었거나 잘못되었거나 중복된 자산 정리 시 사용; 삭제 전 read_memory_asset으로 내용 확인 권장"
     },
     "scan_and_extract_patterns": {
       "description": "단일 코드 조각, 단일 파일 또는 전체 디렉터리에서 재사용 가능한 패턴을 추출한 후 메모리에 저장할지 결정",

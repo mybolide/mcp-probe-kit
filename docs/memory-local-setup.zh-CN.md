@@ -1,6 +1,6 @@
 # 本地记忆栈（Qdrant + Nomic Embed）
 
-面向 `search_memory`、`memorize_asset`、`read_memory_asset`、`scan_and_extract_patterns` 的**轻量本机部署**说明：
+面向 `search_memory`、`memorize_asset`、`read_memory_asset`、`update_memory_asset`、`delete_memory_asset`、`scan_and_extract_patterns` 的**轻量本机部署**说明：
 
 - **Qdrant** — 向量库（端口 `50008`）
 - **Infinity（nomic-embed）** — 向量生成（端口 `50012`），**替代 Ollama**，对用户更轻
@@ -240,6 +240,17 @@ Swagger：`http://127.0.0.1:50012/docs`
 ```
 
 Claude Code：写入 `.mcp.json` 的 `mcpServers.mcp-probe-kit.env`。修改后**完全重启** Cursor。
+
+### 工具与环境变量
+
+| 工具 | 最低要求 |
+|------|----------|
+| `read_memory_asset` | `MEMORY_QDRANT_URL` |
+| `delete_memory_asset` | `MEMORY_QDRANT_URL` |
+| `search_memory` | Qdrant + embedding（`MEMORY_QDRANT_URL`、`MEMORY_EMBEDDING_URL`、`MEMORY_EMBEDDING_MODEL`） |
+| `memorize_asset` | Qdrant + embedding |
+| `update_memory_asset` | Qdrant + embedding（`content` 变更会重新向量化） |
+| `scan_and_extract_patterns` | 无（本地扫描；沉淀用 `memorize_asset`） |
 
 ---
 

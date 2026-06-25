@@ -2,8 +2,22 @@
  * 单元测试：start_bugfix 工具（委托式编排）
  */
 
-import { describe, test, expect } from 'vitest';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { afterEach, describe, test, expect } from 'vitest';
 import { startBugfix } from '../start_bugfix.js';
+
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
 
 describe('start_bugfix 单元测试', () => {
   test('缺少必填参数时返回错误', async () => {
@@ -44,6 +58,30 @@ describe('start_bugfix 单元测试', () => {
     expect(contextStep.note).toMatch(/兼容老项目|补齐/);
     expect(structured?.metadata?.graphDocs?.latestMarkdownPath).toBe('docs/graph-insights/latest.md');
     expect(structured?.metadata?.graphContext?.summary).toMatch(/GitNexus|图谱|降级/);
+  });
+
+  test('关联规格存在时计划包含 check_spec 闸门', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bugfix-spec-'));
+    tempDirs.push(root);
+    const featureName = 'checkout-flow';
+    const specDir = path.join(root, 'docs', 'specs', featureName);
+    fs.mkdirSync(specDir, { recursive: true });
+    fs.writeFileSync(path.join(specDir, 'requirements.md'), '# requirements\n');
+
+    const result = await startBugfix({
+      error_message: 'checkout total wrong',
+      feature_name: featureName,
+      docs_dir: 'docs',
+      project_root: root,
+    });
+
+    expect(result.isError).toBe(false);
+    const structured = (result as any).structuredContent;
+    const checkStep = structured?.metadata?.plan?.steps?.find((step: any) => step.tool === 'check_spec');
+    expect(checkStep).toBeTruthy();
+    expect(checkStep.args.feature_name).toBe(featureName);
+    expect(structured.metadata.specGate.featureName).toBe(featureName);
+    expect(result.content[0].text).toMatch(/check_spec|规格闸门/);
   });
 
   test('loop 模式返回需求循环结构', async () => {

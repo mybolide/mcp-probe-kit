@@ -4,6 +4,27 @@
 
 export const projectToolSchemas = [
   {
+    name: "workflow",
+    description:
+      "当不确定该用哪个 MCP 工具时使用。根据意图返回分阶段 MCP 指南（firstTool + phases）。同时确保用户项目已存在 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 中的 Skill 引用（缺失则自动创建/更新）。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        intent: {
+          type: "string",
+          description: "用户目标或任务描述（自然语言）",
+        },
+        scenario: {
+          type: "string",
+          enum: ["auto", "feature", "bugfix", "ui", "explore", "commit", "review", "refactor", "onboard", "spec", "memory"],
+          description: "可选：显式场景；默认 auto 从 intent 推断",
+        },
+      },
+      required: [],
+      additionalProperties: true,
+    },
+  },
+  {
     name: "init_project_context",
     description:
       "生成/更新项目上下文：默认写入 AGENTS.md（含 MCP 与 GitNexus 触发规则）及 docs/project-context/。新功能请先 start_feature，修 bug 请先 start_bugfix。完成后 Agent 应阅读 AGENTS.md。",

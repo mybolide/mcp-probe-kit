@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit est une boîte à outils au niveau protocole conçue pour les développeurs qui veulent que l'IA comprenne vraiment l'intention de leur projet. Ce n'est pas seulement une collection de 26 outils — c'est un système conscient du contexte qui aide les agents IA à saisir ce que vous construisez.
+> mcp-probe-kit est une boîte à outils au niveau protocole conçue pour les développeurs qui veulent que l'IA comprenne vraiment l'intention de leur projet. Ce n'est pas seulement une collection de 29 outils — c'est un système conscient du contexte qui aide les agents IA à saisir ce que vous construisez.
 
 **Langues**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | **Français** | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 Boîte à Outils de Développement Complète Alimentée par l'IA - Couvrant l'Ensemble du Cycle de Vie du Développement
 
-Un puissant serveur MCP (Model Context Protocol) fournissant **26 outils** couvrant le flux de travail complet de l'analyse produit au lancement final (Exigences → Conception → Développement → Qualité → Lancement), tous les outils supportent la **sortie structurée**.
+Un puissant serveur MCP (Model Context Protocol) fournissant **29 outils** couvrant le flux de travail complet de l'analyse produit au lancement final (Exigences → Conception → Développement → Qualité → Lancement), tous les outils supportent la **sortie structurée**.
 
 **🎉 Mise à Jour Majeure v3.0** : Nombre d'outils simplifié, focus sur les compétences clés, élimination de la paralysie du choix, permettant à l'IA de faire plus de travail natif
 
@@ -41,7 +41,7 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **26 outils** couvr
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Démarrage Rapide](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Configuration en 5 minutes
-- [Tous les Outils](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Liste complète de 26 outils
+- [Tous les Outils](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Liste complète de 29 outils
 - [Meilleures Pratiques](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Guide complet du flux de travail de développement
 - [Guide de Migration v3.0](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Mise à niveau de v2.x vers v3.0
 
@@ -49,7 +49,7 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **26 outils** couvr
 
 ## ✨ Fonctionnalités Principales
 
-### 📦 26 Outils
+### 📦 29 Outils
 
 - **🔄 Orchestration des Flux de Travail** (6 outils) - Flux de travail de développement complexes en un clic
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -59,12 +59,12 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **26 outils** couvr
   - `gencommit`, `git_work_report`
 - **⚡ Génération de Code** (1 outil) - Génération de tests
   - `gentest`
-- **📦 Gestion de Projet** (6 outils) - Initialisation de projet et gestion des exigences
-  - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
+- **📦 Gestion de Projet** (7 outils) - Initialisation, exigences et validation de spec
+  - `init_project`, `init_project_context`, `add_feature`, `check_spec`, `estimate`, `interview`, `ask_user`
 - **🎨 Utilitaires UI/UX** (3 outils) - Systèmes de conception et synchronisation des données UI
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Mémoire** (4 outils) - Mémoire d'actifs réutilisables
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
+- **🧠 Mémoire** (6 outils) - Mémoire d'actifs réutilisables
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
 
 ### 🧠 Pont de Graphe de Code (GitNexus)
 
@@ -92,9 +92,12 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **26 outils** couvr
 - Le service d'embedding supporte deux modes : `ollama` et `openai-compatible`
 
 **Outils mémoire :**
-- `memorize_asset` - Persister des actifs réutilisables de code/spec/pattern dans la mémoire vectorielle
+- `search_memory` - Recherche sémantique dans le pool partagé
+- `memorize_asset` - Persister des actifs réutilisables dans la mémoire vectorielle
 - `read_memory_asset` - Lire le contenu complet d'un actif par `asset_id`
-- `scan_and_extract_patterns` - Extraire des patterns réutilisables du code/fichier/répertoire
+- `update_memory_asset` - Mettre à jour un actif existant par `asset_id` (conserve l'ID)
+- `delete_memory_asset` - Supprimer un actif par `asset_id`
+- `scan_and_extract_patterns` - Extraire des patterns réutilisables
 
 **Configuration mémoire locale recommandée (Qdrant + Ollama) :**
 ```bash

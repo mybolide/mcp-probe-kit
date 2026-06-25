@@ -18,6 +18,7 @@ export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
 export const TOOLSET_DEFINITIONS = {
   // 核心工具集 - 日常高频工具
   core: [
+    'workflow',
     'gencommit',
     'code_review',
     'code_insight',
@@ -41,6 +42,7 @@ export const TOOLSET_DEFINITIONS = {
 
   // 工作流工具集 - 包含核心 + 编排 + 交互
   workflow: [
+    'workflow',
     // 核心工具
     'gencommit',
     'code_review',

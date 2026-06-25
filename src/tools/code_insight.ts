@@ -10,6 +10,7 @@ import {
   type CodeInsightDirection,
   type CodeInsightMode,
 } from "../lib/gitnexus-bridge.js";
+import { attachHandles, DEFAULT_GRAPH_RESOURCE_URI } from "../lib/handles.js";
 import {
   throwIfAborted,
   type ToolExecutionContext,
@@ -493,6 +494,10 @@ ${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}`.tr
         ? `请按 delegated plan 落盘图谱文档，并更新 ${projectDocs.projectContextFilePath} 的索引入口`
         : null;
 
+    const structuredWithHandles = attachHandles(structured, {
+      graph_resource: DEFAULT_GRAPH_RESOURCE_URI,
+    });
+
     return okStructured(
       delegatedPlan
         ? `${renderOrchestrationHeader({
@@ -530,7 +535,7 @@ ${usageGuide}`
         : `${message}
 
 ${usageGuide}`,
-      structured
+      structuredWithHandles
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

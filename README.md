@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 27 tools—it's a context-aware system that helps AI agents grasp what you're building.
+> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 30 tools—it's a context-aware system that helps AI agents grasp what you're building.
 
 **Languages**: [English](README.md) | [简体中文](i18n/README.zh-CN.md) | [日本語](i18n/README.ja-JP.md) | [한국어](i18n/README.ko-KR.md) | [Español](i18n/README.es-ES.md) | [Français](i18n/README.fr-FR.md) | [Deutsch](i18n/README.de-DE.md) | [Português (BR)](i18n/README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server providing **27 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
+A powerful MCP (Model Context Protocol) server providing **30 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
 
 **🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
@@ -42,7 +42,7 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 27 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 29 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -50,7 +50,7 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
 
 ## ✨ Core Features
 
-### 📦 27 Tools
+### 📦 29 Tools
 
 - **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -64,8 +64,8 @@ A powerful MCP (Model Context Protocol) server providing **27 tools** covering t
   - `init_project`, `init_project_context`, `add_feature`, `check_spec`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX Utilities** (3 tools) - Design systems and UI data synchronization
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory** (4 tools) - Reusable asset memory
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
+- **🧠 Memory** (6 tools) - Reusable asset memory
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
 
 ### 🛡️ Quality Constraints (single source of truth)
 
@@ -108,6 +108,8 @@ All hard quality rules live in one module (`src/lib/quality-constraints.ts`) and
 - `search_memory` - Semantic search across the shared memory pool (optionally prefer `type` / `tags`); text output includes `id`, `score`, summary, description, and a `--- content ---` body (default up to 1500 chars via `MEMORY_SEARCH_CONTENT_MAX_CHARS`)
 - `memorize_asset` - Persist reusable code/spec/pattern assets into vector memory
 - `read_memory_asset` - Read full asset content by `asset_id` (text output includes the full `content` body)
+- `update_memory_asset` - Update an existing asset by `asset_id` (preserves ID; `content` changes re-embed)
+- `delete_memory_asset` - Delete an asset by `asset_id` from the shared pool
 - `scan_and_extract_patterns` - Extract reusable patterns from code/file/directory before deciding whether to persist
 
 **Cross-repo memory pools:** do not rely on `source_project` / `source_path` for shared retrieval; put file paths in `content` instead. Search injection hides foreign `sourcePath` unless `MEMORY_REPO_ID` matches or `MEMORY_SEARCH_SHOW_SOURCE=true`.
@@ -478,7 +480,13 @@ Use in config file:
 
 ### Optional Memory System Setup
 
-If you want to use `memorize_asset`, `read_memory_asset`, and `scan_and_extract_patterns`, you need both:
+If you want to use `memorize_asset`, `update_memory_asset`, `read_memory_asset`, `delete_memory_asset`, and `scan_and_extract_patterns`, configure as follows:
+
+- **Qdrant only** (`MEMORY_QDRANT_URL`): `read_memory_asset`, `delete_memory_asset`
+- **Qdrant + embedding** (all three `MEMORY_*` write/search vars): `search_memory`, `memorize_asset`, `update_memory_asset`
+- **No memory backend**: `scan_and_extract_patterns` (local scan only; persist via `memorize_asset` when ready)
+
+For full write/search you need both:
 
 1. A **Qdrant** vector database
 2. An **embedding service** in either `ollama` or `openai-compatible` mode

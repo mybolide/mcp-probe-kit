@@ -72,6 +72,14 @@ export const orchestrationToolSchemas = [
           type: "string",
           description: "项目根目录绝对路径。建议显式传入；docs_dir 等相对路径参数应统一相对该项目根目录解析，避免依赖客户端 cwd。",
         },
+        docs_dir: {
+          type: "string",
+          description: "文档目录。可选，默认 docs",
+        },
+        feature_name: {
+          type: "string",
+          description: "关联功能规格名（对应 docs/specs/<feature_name>/）。提供后或能自动识别时，修复闭环会插入 check_spec 闸门",
+        },
         analysis_mode: {
           type: "string",
           description: "分析方法。默认 tbp8（丰田问题分析 8 步法）",
