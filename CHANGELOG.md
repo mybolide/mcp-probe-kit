@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Skill 安装路径改为 `.agents/skills/mcp-probe-kit/`，避免与用户自建 `workflow` Skill 冲突。
 - `AGENTS.md` 无则创建、有则合并 mcp-probe 块并写入 Skill 链接；块内增加 `mcp-probe:context-version` 版本标记。
+- GitHub Release：推送 `v*` tag 时由 `.github/workflows/release.yml` 从 CHANGELOG 自动生成 Release Notes（与 npm 发布解耦）。
 
 ---
 
