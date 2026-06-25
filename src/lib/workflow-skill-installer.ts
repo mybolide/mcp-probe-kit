@@ -54,9 +54,9 @@ function buildWorkspaceWarning(projectRoot: string): string | undefined {
   const packageRoot = path.resolve(getMcpPackageInstallRoot());
   if (normalizedRoot === packageRoot) {
     return [
-      "未能解析用户项目根目录，Skill/AGENTS.md 可能写入了 mcp-probe-kit 安装目录。",
-      "请在 MCP 配置 env 中设置 MCP_PROJECT_ROOT 为 ${workspaceFolder}，",
-      "或调用工具时传 project_root 绝对路径。",
+      "未能自动识别用户项目根目录，Skill/AGENTS.md 可能写入了 mcp-probe-kit 安装目录。",
+      "请从目标项目目录打开 MCP 客户端（Cursor / OpenCode 等会自动传入工作区），",
+      "或在工具参数中传 project_root 绝对路径。",
     ].join("");
   }
   return undefined;

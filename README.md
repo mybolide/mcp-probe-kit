@@ -87,8 +87,8 @@ All hard quality rules live in one module (`src/lib/quality-constraints.ts`) and
 - Older projects that already have `project-context.md` but no graph docs are bootstrapped automatically through the `init_project_context` step
 - If GitNexus is unavailable, the server falls back automatically without breaking orchestration
 - Real graph queries read the `.gitnexus` index; `docs/graph-insights/latest.md|json` are readable snapshots for humans and AI agents
-- Graph snapshots are exposed as MCP resources: Cursor lists **2 entries** (`probe://status`, `probe://graph/latest`); `latest` embeds history and file index. On-demand URIs (`probe://graph/history`, `probe://graph/latest.md`, `probe://graph/files`) remain readable via `resources/read`
-- Graph snapshots are also persisted to readable files in `.mcp-probe-kit/graph-snapshots` (customizable via `MCP_GRAPH_SNAPSHOT_DIR`)
+- MCP resources in MCP client settings list **2 entries** (`probe://status`, `probe://project/bootstrap`). Graph runtime snapshots (`probe://graph/latest`, etc.) and `probe://project/skill|agents|context|graph` remain readable via `resources/read` when tools expose URIs
+- Graph snapshots are persisted to `.mcp-probe-kit/graph-snapshots` (customizable via `MCP_GRAPH_SNAPSHOT_DIR`)
 - Tool responses include `_meta.graph` with snapshot URI and local JSON/Markdown file paths
 
 ### 🐛 TBP 8-Step RCA for Bug Workflows
@@ -415,16 +415,13 @@ No installation needed, use the latest version directly.
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
-      "env": {
-        "MCP_PROJECT_ROOT": "${workspaceFolder}"
-      }
+      "args": ["-y", "mcp-probe-kit@latest"]
     }
   }
 }
 ```
 
-> **Skill 自动安装**：任意 MCP 工具调用会在用户项目写入 `.agents/skills/mcp-probe-kit/SKILL.md`。务必设置 `MCP_PROJECT_ROOT`（或 Cursor 注入的 `WORKSPACE_FOLDER_PATHS`），否则可能写到错误目录。需 **v3.6.1+**。
+> **Skill 自动安装**：任意 MCP 工具调用会在用户项目写入 `.agents/skills/mcp-probe-kit/SKILL.md`。工作区根目录**自动识别**（Cursor 注入 `WORKSPACE_FOLDER_PATHS`；OpenCode 等项目级 `opencode.json` 会设置进程 cwd），**无需**在每台客户端配置 `MCP_PROJECT_ROOT`。仅全局 MCP 且无法识别工作区时，可选手动设置 `MCP_PROJECT_ROOT` 或在工具参数传 `project_root`。需 **v3.6.2+**。
 
 #### Claude Desktop Configuration
 
@@ -439,10 +436,7 @@ No installation needed, use the latest version directly.
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
-      "env": {
-        "MCP_PROJECT_ROOT": "${workspaceFolder}"
-      }
+      "args": ["-y", "mcp-probe-kit@latest"]
     }
   }
 }
@@ -705,6 +699,50 @@ npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
 2. Check config file path is correct
 3. Confirm JSON format is correct, no syntax errors
 4. Check client developer tools or logs for error messages
+
+### Q2b: Cursor shows connected but **0 tools** / Agent says **No MCP servers available**?
+
+This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connected-green-dot-and-tools-discovered-in-logs-but-0-tools-in-ui-and-agent/160620): stderr may log `tools/list` with 30 tools, while **Mcp FileSystem Writer** shows `lease returned 0 tools` and `toolCount=0` — the Agent lease layer silently dropped the tool list.
+
+**Common causes:**
+
+| Symptom in logs | Likely cause |
+|-----------------|--------------|
+| `tools/list ≈ 50+ KB` then `lease returned 0 tools` | Cursor internal payload size limit (whole list dropped silently) |
+| `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
+| Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
+
+**What we do (v3.6.2+):**  `tools/list` **omits `outputSchema` by default** (~50 KB → ~23 KB). Structured output still works via `structuredContent` on `tools/call`. To restore full schemas: `MCP_INCLUDE_OUTPUT_SCHEMA=1`.
+
+**What you can try:**
+
+1. **Reload MCP** or fully quit Cursor (not just close window) and reopen
+2. Check **Output → MCP** for `lease returned 0 tools` / `ipcReady` / `MessagePort`
+3. In **Composer**, open the tools panel — ensure the server toggle is on (some versions default off)
+4. Upgrade Cursor (3.7.36+ had Windows `ipcReady` regressions; try latest or roll back to a known-good build)
+5. If still broken after server update, report to Cursor with: `connected=true`, stderr tool count, lease `toolCount=0`, and `shared-process MCP routing disabled`
+
+**Diagnostic: `.cursor/projects/<project>/mcps/user-mcp-probe-kit/`**
+
+This folder is **written by Cursor** (Mcp FileSystem Writer), not by mcp-probe-kit. After a successful tool lease you should see:
+
+```text
+mcps/user-mcp-probe-kit/
+├── SERVER_METADATA.json
+├── STATUS.md
+├── tools/           ← one JSON per tool (~30); Agent reads these for CallMcpTool
+│   ├── init_project.json
+│   └── ...
+└── resources/       ← from resources/list (may exist even when tools/ is empty)
+```
+
+| State | Meaning |
+|-------|---------|
+| `resources/` exists, `tools/` missing or empty | `resources/list` OK but **tools lease failed** (matches `lease returned 0 tools`) |
+| `tools/` has some files but not 30 | Partial write or session interrupted; Reload MCP |
+| `STATUS.md` says server errored | Cursor marked the server unhealthy for Agent even if Settings is green |
+
+Healthy session: `tools/` should auto-populate within seconds of MCP connect — no manual setup, no repo config.
 
 ### Q3: How to update to latest version?
 

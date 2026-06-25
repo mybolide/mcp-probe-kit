@@ -2,6 +2,8 @@
  * 项目管理工具的 Schema 定义
  */
 
+import { PROJECT_ROOT_SCHEMA_DESCRIPTION } from "../lib/workspace-root.js";
+
 export const projectToolSchemas = [
   {
     name: "workflow",
@@ -132,7 +134,7 @@ export const projectToolSchemas = [
         },
         project_root: {
           type: "string",
-          description: "项目根目录绝对路径。可选，默认自动探测工作区根",
+          description: PROJECT_ROOT_SCHEMA_DESCRIPTION,
         },
       },
       required: [],

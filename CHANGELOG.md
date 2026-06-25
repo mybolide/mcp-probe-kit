@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.2] - 2026-06-25
+
+### 🔧 改进
+
+- **修复 Cursor/MCP 客户端 tools 无法加载**：`resources/list` 不再同步执行 Skill 写盘（避免连接握手超时）；bootstrap 仅在 `resources/read probe://project/bootstrap` 与工具调用时执行
+- **项目 MCP Resource 自检**：`resources/list` 仅 `probe://status` + `probe://project/bootstrap`；读取时自动补齐 Skill/AGENTS.md
+- **Cursor「connected 但 0 tools」**：`tools/list` 默认不再附带 `outputSchema`（约 50KB→23KB），避免 Cursor lease 层静默丢弃整表；`tools/call` 仍返回 `structuredContent`。需完整 schema 时设 `MCP_INCLUDE_OUTPUT_SCHEMA=1`
+- **工作区自动识别**：无需在每台 MCP 客户端配置 `MCP_PROJECT_ROOT`；优先 Cursor `WORKSPACE_FOLDER_PATHS`、进程 cwd、`INIT_CWD` 及项目 marker；忽略盘符根目录（如 `C:\`）误匹配
+- 文档：FAQ 补充 `.cursor/projects/.../mcps/` 诊断说明
+
+---
+
 ## [3.6.1] - 2026-06-25
 
 ### 🔧 改进

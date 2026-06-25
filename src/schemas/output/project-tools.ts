@@ -12,6 +12,22 @@ export const ProjectInitSchema = {
   properties: {
     summary: { type: 'string' },
     projectName: { type: 'string' },
+    projectRoot: { type: 'string', description: '解析后的项目根目录（POSIX）' },
+    bootstrap: {
+      type: 'object',
+      description: 'MCP Skill / AGENTS.md 自动安装结果',
+      properties: {
+        skillPath: { type: 'string' },
+        agentsMdPath: { type: 'string' },
+        skillCreated: { type: 'boolean' },
+        skillUpdated: { type: 'boolean' },
+        agentsCreated: { type: 'boolean' },
+        agentsUpdated: { type: 'boolean' },
+        workspaceWarnings: { type: 'array', items: { type: 'string' } },
+        rootSource: { type: 'string' },
+        explicitHonored: { type: 'boolean' },
+      },
+    },
     structure: {
       type: 'object',
       description: '项目结构',
@@ -260,6 +276,18 @@ export const ConflictResolutionSchema = {
 export interface ProjectInit {
   summary: string;
   projectName: string;
+  projectRoot?: string;
+  bootstrap?: {
+    skillPath: string;
+    agentsMdPath: string;
+    skillCreated: boolean;
+    skillUpdated: boolean;
+    agentsCreated: boolean;
+    agentsUpdated: boolean;
+    workspaceWarnings: string[];
+    rootSource: string;
+    explicitHonored: boolean;
+  };
   structure: {
     directories?: string[];
     files?: string[];

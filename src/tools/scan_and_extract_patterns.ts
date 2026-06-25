@@ -347,7 +347,7 @@ export async function scanAndExtractPatterns(args: any) {
     if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
       const attempted = attemptedRoots.map((root) => path.resolve(root, directoryPath).replace(/\\/g, '/'));
       return okStructured(
-        `目录不存在或不可访问: ${targetDir.replace(/\\/g, '/')}。相对路径解析依赖工作区根目录；请显式传入 project_root，或让客户端传递 MCP_PROJECT_ROOT。`,
+        `目录不存在或不可访问: ${targetDir.replace(/\\/g, '/')}。相对路径解析依赖工作区根目录；请显式传入 project_root，或从目标项目目录打开 MCP 客户端以自动识别工作区。`,
         {
           mode: 'directory',
           scannedFiles: 0,

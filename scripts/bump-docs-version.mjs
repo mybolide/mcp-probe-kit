@@ -6,9 +6,9 @@ import { fileURLToPath } from 'url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const versionPatterns = [
-  [/v3\.5\.0/g, 'v3.6.1'],
-  [/MCP Probe Kit v3\.5\.0/g, 'MCP Probe Kit v3.6.1'],
-  [/"version": "v3\.5\.0"/g, '"version": "v3.6.1"'],
+  [/v3\.6\.1/g, 'v3.6.2'],
+  [/MCP Probe Kit v3\.6\.1/g, 'MCP Probe Kit v3.6.2'],
+  [/"version": "v3\.6\.1"/g, '"version": "v3.6.2"'],
 ];
 
 const toolPatterns = [
