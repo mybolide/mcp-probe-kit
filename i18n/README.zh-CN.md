@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> 知时MCP 是专为极客打造的协议级探测与上下文补给工具箱。它不仅仅是 29 个工具的堆砌，更是一套让 AI 真正"读懂"你项目意图的感知系统。
+> 知时MCP 是专为极客打造的协议级探测与上下文补给工具箱。它不仅仅是 30 个工具的堆砌，更是一套让 AI 真正"读懂"你项目意图的感知系统。
 
 **Languages**: [English](../README.md) | **简体中文** | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **29 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **30 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
 
 **🎉 v3.0 重大更新**：精简工具数量，专注核心竞争力，消除选择困难，让 AI 做更多原生工作
 
@@ -36,7 +36,7 @@
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
 - [本地记忆栈（Qdrant + Nomic Embed）](../docs/memory-local-setup.zh-CN.md) - Docker Compose、端口 50008/50012、MCP 配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 29个工具完整列表
+- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 30个工具完整列表
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
 - [v3.0 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x → v3.0 升级指南
 
@@ -44,7 +44,7 @@
 
 ## ✨ 核心特性
 
-### 📦 29 个工具
+### 📦 30 个工具
 
 - **🔄 工作流编排** (6个) - 一键完成复杂开发流程
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`

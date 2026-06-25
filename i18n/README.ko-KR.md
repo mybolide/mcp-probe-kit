@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP는 기크를 위해 제작된 프로토콜 수준의 탐지 및 컨텍스트 공급 도구 상자입니다. 단순히 29개 도구의 집합이 아니라, AI가 프로젝트 의도를 진정으로 "이해"할 수 있게 하는 인식 시스템입니다.
+> Zhishi MCP는 기크를 위해 제작된 프로토콜 수준의 탐지 및 컨텍스트 공급 도구 상자입니다. 단순히 30개 도구의 집합이 아니라, AI가 프로젝트 의도를 진정으로 "이해"할 수 있게 하는 인식 시스템입니다.
 
 **언어**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | **한국어** | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI 기반 완전한 개발 툴킷 - 전체 개발 라이프사이클 커버
 
-제품 분석부터 최종 릴리스까지 전체 워크플로우(요구사항 → 설계 → 개발 → 품질 → 릴리스)를 커버하는 **29개 도구**를 제공하는 강력한 MCP (Model Context Protocol) 서버입니다. 모든 도구가 **구조화된 출력**을 지원합니다.
+제품 분석부터 최종 릴리스까지 전체 워크플로우(요구사항 → 설계 → 개발 → 품질 → 릴리스)를 커버하는 **30개 도구**를 제공하는 강력한 MCP (Model Context Protocol) 서버입니다. 모든 도구가 **구조화된 출력**을 지원합니다.
 
 **🎉 v3.0 주요 업데이트**: 도구 수 간소화, 핵심 역량에 집중, 선택 혼란 제거, AI가 더 많은 네이티브 작업 수행
 
@@ -35,7 +35,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [빠른 시작](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5분 안에 설정
-- [모든 도구](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 29개 도구 전체 목록
+- [모든 도구](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 30개 도구 전체 목록
 - [모범 사례](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 완전한 개발 워크플로우 가이드
 - [v3.0 마이그레이션 가이드](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x에서 v3.0으로 업그레이드
 
@@ -43,7 +43,7 @@
 
 ## ✨ 핵심 기능
 
-### 📦 29개 도구
+### 📦 30개 도구
 
 - **🔄 워크플로우 오케스트레이션** (6개) - 원클릭 복잡한 개발 워크플로우
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`

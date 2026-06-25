@@ -42,7 +42,7 @@ A powerful MCP (Model Context Protocol) server providing **30 tools** covering t
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 29 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 30 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -50,7 +50,7 @@ A powerful MCP (Model Context Protocol) server providing **30 tools** covering t
 
 ## ✨ Core Features
 
-### 📦 29 Tools
+### 📦 30 Tools
 
 - **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -424,7 +424,7 @@ No installation needed, use the latest version directly.
 }
 ```
 
-> **Skill 自动安装**：任意 MCP 工具调用会在用户项目写入 `.agents/skills/mcp-probe-kit/SKILL.md`。务必设置 `MCP_PROJECT_ROOT`（或 Cursor 注入的 `WORKSPACE_FOLDER_PATHS`），否则可能写到错误目录。需 **v3.6.0+**。
+> **Skill 自动安装**：任意 MCP 工具调用会在用户项目写入 `.agents/skills/mcp-probe-kit/SKILL.md`。务必设置 `MCP_PROJECT_ROOT`（或 Cursor 注入的 `WORKSPACE_FOLDER_PATHS`），否则可能写到错误目录。需 **v3.6.1+**。
 
 #### Claude Desktop Configuration
 
