@@ -47,11 +47,11 @@ jobs:
             | tar xz mcp-publisher
           chmod +x mcp-publisher
 
-      - name: Dry-run validate server.json
-        run: ./mcp-publisher publish --dry-run
-
       - name: Login to MCP Registry (GitHub OIDC)
         run: ./mcp-publisher login github-oidc
+
+      - name: Dry-run validate server.json
+        run: ./mcp-publisher publish --dry-run
 
       - name: Publish to MCP Registry
         run: ./mcp-publisher publish
