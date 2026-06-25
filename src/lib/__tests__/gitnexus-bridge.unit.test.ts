@@ -149,7 +149,7 @@ describe("gitnexus-bridge workspace preparation", () => {
     expect(result.stdout.trim().length).toBeGreaterThan(0);
   });
 
-  test("Windows 下 git.exe 直接启动，不走 git.cmd 壳层", () => {
+  test.runIf(process.platform === "win32")("Windows 下 git.exe 直接启动，不走 git.cmd 壳层", () => {
     const resolved = resolveExecutableCommand("git", "win32").toLowerCase();
     const spawned = resolveSpawnCommand("git", ["init", "-q"], "win32");
 
