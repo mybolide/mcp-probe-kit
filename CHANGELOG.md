@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.3] - 2026-06-25
+
+### 🔧 改进
+
+- **重新发布完整构建**：补全 3.6.2  npm 包中缺失的 `isFilesystemRoot` 工作区修复（避免 Windows 盘符根目录误写 Skill）；确保 `tools/list` 瘦身、`project-mcp-resources`、工作区自动识别等改动均打入包内
+
+---
+
 ## [3.6.2] - 2026-06-25
 
 ### 🔧 改进
