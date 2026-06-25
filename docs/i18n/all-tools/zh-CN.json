@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "所有工具 - 26个AI研发工具完整列表 | MCP Probe Kit",
-    "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、4个代码分析工具、2个Git工具、1个生成工具、6个项目管理工具、3个UI/UX工具、4个记忆工具。",
+    "title": "所有工具 - 29个AI研发工具完整列表 | MCP Probe Kit",
+    "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、4个代码分析工具、2个Git工具、1个生成工具、7个项目管理工具、3个UI/UX工具、6个记忆工具。",
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "MCP Probe Kit 提供 27 个实用工具，核心与编排工具支持结构化输出"
+    "subtitle": "MCP Probe Kit 提供 29 个实用工具，核心与编排工具支持结构化输出"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -46,6 +46,8 @@
     "search_memory": "搜索记忆",
     "read_memory_asset": "读取记忆",
     "memorize_asset": "沉淀记忆",
+    "update_memory_asset": "更新记忆",
+    "delete_memory_asset": "删除记忆",
     "scan_and_extract_patterns": "抽取模式"
   },
   "categories": {
@@ -75,7 +77,7 @@
     },
     "memory": {
       "title": "记忆",
-      "count": "4 个"
+      "count": "6 个"
     }
   },
   "toolsData": {
@@ -182,6 +184,14 @@
     "memorize_asset": {
       "description": "把高价值代码、规范或模式写入向量记忆系统，供后续复用",
       "usage": "在开发完成后，将可复用资产沉淀到 Qdrant + embedding 记忆系统中"
+    },
+    "update_memory_asset": {
+      "description": "按资产 ID 更新共享记忆库中的已有资产（保留原 ID）",
+      "usage": "用于修正摘要、正文或标签；content 变更会重新向量化"
+    },
+    "delete_memory_asset": {
+      "description": "按资产 ID 从共享记忆库删除一条已沉淀记忆",
+      "usage": "用于清理过时、错误或重复沉淀；删除前建议先用 read_memory_asset 确认内容"
     },
     "scan_and_extract_patterns": {
       "description": "从单段代码、单文件或整个目录中抽取可复用模式，再决定是否沉淀到记忆系统",

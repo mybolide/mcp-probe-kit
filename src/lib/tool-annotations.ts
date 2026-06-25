@@ -24,6 +24,7 @@ export interface ToolAnnotations {
 export const TOOL_ANNOTATIONS: Record<string, ToolAnnotations> = {
   // —— 只读指南型（可安全自动放行）——
   init_project: { title: '初始化项目', readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  workflow: { title: '开发工作流路由', readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   gencommit: { title: '生成提交信息', readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   code_review: { title: '代码审查', readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   gentest: { title: '生成测试', readOnlyHint: true, idempotentHint: true, openWorldHint: false },
@@ -55,6 +56,8 @@ export const TOOL_ANNOTATIONS: Record<string, ToolAnnotations> = {
   // —— 写型（工具自身落盘 / 写记忆 / 写缓存，非破坏）——
   init_project_context: { title: '生成项目上下文', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }, // 自己写 docs/.mcp-probe/layout.json（其余为指令）
   memorize_asset: { title: '沉淀记忆资产', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }, // 写 Qdrant
+  delete_memory_asset: { title: '删除记忆资产', readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true }, // 删 Qdrant
+  update_memory_asset: { title: '更新记忆资产', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }, // 写 Qdrant
   sync_ui_data: { title: '同步 UI 数据', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }, // 下载 + 写缓存
 };
 

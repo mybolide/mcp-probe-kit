@@ -1,6 +1,12 @@
 import type { MemoryAsset, MemorySearchResult } from './memory-client.js';
 import { createMemoryClient } from './memory-client.js';
 import { getMemoryConfig, type MemoryConfig } from './memory-config.js';
+import {
+  buildMemoryAssetHandles,
+  DEFAULT_GRAPH_RESOURCE_URI,
+  mergeHandles,
+  type ToolHandles,
+} from './handles.js';
 
 export type MemoryPlanKind = 'feature' | 'bugfix' | 'ui' | 'default';
 
@@ -267,6 +273,33 @@ export function renderMemoryGuideSection(context: MemoryInjectionContext): strin
   }
 
   return blocks.join('\n');
+}
+
+export function buildMemoryInjectionHandles(context: MemoryInjectionContext): ToolHandles {
+  if (!context.enabled || context.results.length === 0) {
+    return {};
+  }
+
+  return {
+    memory_assets: buildMemoryAssetHandles(
+      context.results.map((item) => ({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        summary: item.summary,
+      }))
+    ),
+  };
+}
+
+export function buildOrchestrationHandles(
+  memoryContext?: MemoryInjectionContext,
+  options?: { graphResourceUri?: string }
+): ToolHandles {
+  const memoryHandles = memoryContext ? buildMemoryInjectionHandles(memoryContext) : {};
+  return mergeHandles(memoryHandles, {
+    graph_resource: options?.graphResourceUri ?? DEFAULT_GRAPH_RESOURCE_URI,
+  });
 }
 
 export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {

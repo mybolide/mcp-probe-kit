@@ -467,6 +467,36 @@ content: "中间件实现与使用约定..."
 kind: "pattern"`
     },
     {
+      name: 'delete_memory_asset',
+      description: '按 asset_id 从共享记忆库删除一条已沉淀记忆',
+      schema: 'DeleteMemoryResultSchema',
+      params: [
+        { name: 'asset_id', type: 'string', required: true, desc: '要删除的资产唯一 ID' }
+      ],
+      usage: '用于清理过时、错误或重复沉淀；删除前建议先用 read_memory_asset 确认内容',
+      example: `// 使用示例
+你: 请使用 delete_memory_asset 删除过时记忆
+
+asset_id: "obsolete-pattern-001"`
+    },
+    {
+      name: 'update_memory_asset',
+      description: '按 asset_id 更新共享记忆库中的已有资产（保留原 ID）',
+      schema: 'UpdateMemoryResultSchema',
+      params: [
+        { name: 'asset_id', type: 'string', required: true, desc: '要更新的资产唯一 ID' },
+        { name: 'summary', type: 'string', required: false, desc: '新的检索摘要' },
+        { name: 'content', type: 'string', required: false, desc: '新的完整正文' },
+        { name: 'tags', type: 'array', required: false, desc: '新的标签列表' }
+      ],
+      usage: '用于修正已有记忆的摘要、正文或标签；content 变更会重新向量化',
+      example: `// 使用示例
+你: 请使用 update_memory_asset 修正 bugfix 摘要
+
+asset_id: "bugfix-001"
+summary: "proxy:false 修复 Feishu HTTPS 400"`
+    },
+    {
       name: 'scan_and_extract_patterns',
       description: '从代码片段、文件或目录中提取可复用模式，再决定是否写入 memory',
       schema: 'PatternExtractionSchema',

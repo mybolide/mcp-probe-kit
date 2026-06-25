@@ -101,5 +101,8 @@ describe('search_memory 单元测试', () => {
         summary: 'proxy caused 400 on HTTPS',
       })
     );
+    expect(result.structuredContent.handles.memory_assets[0]).toEqual(
+      expect.objectContaining({ id: 'asset-1', tool: 'read_memory_asset' })
+    );
   });
 });

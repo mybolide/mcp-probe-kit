@@ -1,6 +1,6 @@
 # Local Memory Stack (Qdrant + Nomic Embed)
 
-This guide documents a **lightweight local setup** for mcp-probe-kit memory tools (`search_memory`, `memorize_asset`, `read_memory_asset`, `scan_and_extract_patterns`):
+This guide documents a **lightweight local setup** for mcp-probe-kit memory tools (`search_memory`, `memorize_asset`, `read_memory_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`):
 
 - **Qdrant** — vector database (port `50008`)
 - **Infinity (nomic-embed)** — embedding API (port `50012`), replaces Ollama for users who want a smaller footprint
@@ -265,6 +265,17 @@ After changing env, **fully restart** your MCP client (e.g. quit and reopen Curs
 | `MEMORY_SEARCH_CONTENT_MAX_CHARS` | No | Max `content` chars in `search_memory` text; default `1500`, `0` = summary only |
 | `MEMORY_SUMMARY_MAX_CHARS` | No | Default `280` |
 
+### Tool vs environment
+
+| Tool | Minimum env |
+|------|-------------|
+| `read_memory_asset` | `MEMORY_QDRANT_URL` |
+| `delete_memory_asset` | `MEMORY_QDRANT_URL` |
+| `search_memory` | Qdrant + embedding (`MEMORY_QDRANT_URL`, `MEMORY_EMBEDDING_URL`, `MEMORY_EMBEDDING_MODEL`) |
+| `memorize_asset` | Qdrant + embedding |
+| `update_memory_asset` | Qdrant + embedding (`content` changes re-embed the point) |
+| `scan_and_extract_patterns` | None (local scan; persist with `memorize_asset`) |
+
 ---
 
 ## 4. End-to-end smoke test
@@ -282,7 +293,7 @@ curl -s -X POST http://127.0.0.1:50012/embeddings \
 # Expected: 768
 ```
 
-Then in the IDE, call `memorize_asset` once and `read_memory_asset` / semantic search via orchestration tools.
+Then in the IDE, call `memorize_asset` once, then `read_memory_asset` / `update_memory_asset` / `delete_memory_asset` or semantic search via orchestration tools.
 
 ---
 

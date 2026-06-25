@@ -5,6 +5,7 @@ import {
   formatSearchMemoryResultsText,
   shouldShowSourceInSearch,
 } from '../lib/memory-orchestration.js';
+import { attachHandles, buildMemoryAssetHandles } from '../lib/handles.js';
 import { getMemoryConfig } from '../lib/memory-config.js';
 import { handleToolError } from '../utils/error-handler.js';
 
@@ -61,12 +62,14 @@ export async function searchMemory(args: unknown) {
       sourcePath: shouldShowSourceInSearch(item, config) ? item.sourcePath : undefined,
     }));
 
-    return okStructured(formatSearchMemoryResultsText(results, config), {
+    return okStructured(formatSearchMemoryResultsText(results, config), attachHandles({
       enabled: true,
       query,
       count: results.length,
       results: items,
-    });
+    }, {
+      memory_assets: buildMemoryAssetHandles(items),
+    }));
   } catch (error) {
     return handleToolError(error, 'search_memory');
   }

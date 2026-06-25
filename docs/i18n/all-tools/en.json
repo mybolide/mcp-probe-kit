@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "All Tools - Complete List of 26 AI Development Tools | MCP Probe Kit",
-    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 4 code analysis tools, 2 Git tools, 1 generation tool, 6 project management tools, 3 UI/UX tools, and 4 memory tools.",
+    "title": "All Tools - Complete List of 29 AI Development Tools | MCP Probe Kit",
+    "description": "MCP Probe Kit complete tool list: 6 workflow orchestration tools, 4 code analysis tools, 2 Git tools, 1 generation tool, 7 project management tools, 3 UI/UX tools, and 6 memory tools.",
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "MCP Probe Kit provides 27 practical tools with structured output support for core and orchestration tools"
+    "subtitle": "MCP Probe Kit provides 29 practical tools with structured output support for core and orchestration tools"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -46,6 +46,8 @@
     "search_memory": "Search Memory",
     "read_memory_asset": "Read Memory",
     "memorize_asset": "Store Memory",
+    "update_memory_asset": "Update Memory",
+    "delete_memory_asset": "Delete Memory",
     "scan_and_extract_patterns": "Extract Patterns"
   },
   "categories": {
@@ -75,7 +77,7 @@
     },
     "memory": {
       "title": "Memory",
-      "count": "4 tools"
+      "count": "6 tools"
     }
   },
   "toolsData": {
@@ -182,6 +184,14 @@
     "memorize_asset": {
       "description": "Persist high-value code, spec, or pattern assets into the vector memory system for later reuse",
       "usage": "Use after implementation to store reusable assets into the Qdrant + embedding memory backend"
+    },
+    "update_memory_asset": {
+      "description": "Update an existing memory asset by asset ID while preserving the same ID",
+      "usage": "Use to fix summary, content, or tags on an existing asset; content changes trigger re-embedding"
+    },
+    "delete_memory_asset": {
+      "description": "Delete a stored memory asset by asset ID from the shared memory pool",
+      "usage": "Use to remove outdated, incorrect, or duplicate assets; confirm with read_memory_asset before deleting"
     },
     "scan_and_extract_patterns": {
       "description": "Extract reusable patterns from a code snippet, file, or directory before deciding whether to store them into memory",

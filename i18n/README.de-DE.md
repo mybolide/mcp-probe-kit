@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit ist ein Protokoll-Level-Toolkit für Entwickler, die wollen, dass KI die Absicht ihres Projekts wirklich versteht. Es ist nicht nur eine Sammlung von 26 Tools – es ist ein kontextbewusstes System, das KI-Agenten hilft zu erfassen, was Sie bauen.
+> mcp-probe-kit ist ein Protokoll-Level-Toolkit für Entwickler, die wollen, dass KI die Absicht ihres Projekts wirklich versteht. Es ist nicht nur eine Sammlung von 29 Tools – es ist ein kontextbewusstes System, das KI-Agenten hilft zu erfassen, was Sie bauen.
 
 **Sprachen**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | **Deutsch** | [Português (BR)](README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 KI-gestütztes Vollständiges Entwicklungs-Toolkit – Abdeckung des gesamten Entwicklungslebenszyklus
 
-Ein leistungsstarker MCP (Model Context Protocol) Server mit **26 Tools**, die den kompletten Workflow von der Produktanalyse bis zur Veröffentlichung abdecken (Anforderungen → Design → Entwicklung → Qualität → Release), alle Tools unterstützen **strukturierte Ausgabe**.
+Ein leistungsstarker MCP (Model Context Protocol) Server mit **29 Tools**, die den kompletten Workflow von der Produktanalyse bis zur Veröffentlichung abdecken (Anforderungen → Design → Entwicklung → Qualität → Release), alle Tools unterstützen **strukturierte Ausgabe**.
 
 **🎉 v3.0 Großes Update**: Vereinfachte Tool-Anzahl, Fokus auf Kernkompetenzen, Beseitigung von Entscheidungslähmung, mehr native Arbeit für KI
 
@@ -41,7 +41,7 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **26 Tools**, die d
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Schnellstart](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Einrichtung in 5 Minuten
-- [Alle Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Vollständige Liste von 26 Tools
+- [Alle Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Vollständige Liste von 29 Tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Vollständiger Entwicklungs-Workflow-Leitfaden
 - [v3.0 Migrationsleitfaden](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade von v2.x auf v3.0
 
@@ -49,7 +49,7 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **26 Tools**, die d
 
 ## ✨ Kernfunktionen
 
-### 📦 26 Tools
+### 📦 29 Tools
 
 - **🔄 Workflow-Orchestrierung** (6 Tools) - Komplexe Entwicklungs-Workflows mit einem Klick
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
@@ -59,12 +59,12 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **26 Tools**, die d
   - `gencommit`, `git_work_report`
 - **⚡ Code-Generierung** (1 Tool) - Test-Generierung
   - `gentest`
-- **📦 Projektmanagement** (6 Tools) - Projektinitialisierung und Anforderungsmanagement
-  - `init_project`, `init_project_context`, `add_feature`, `estimate`, `interview`, `ask_user`
+- **📦 Projektmanagement** (7 Tools) - Projektinitialisierung, Anforderungen und Spec-Validierung
+  - `init_project`, `init_project_context`, `add_feature`, `check_spec`, `estimate`, `interview`, `ask_user`
 - **🎨 UI/UX-Dienstprogramme** (3 Tools) - Design-Systeme und UI-Datensynchronisation
   - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory** (4 Tools) - Wiederverwendbare Asset-Memory
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `scan_and_extract_patterns`
+- **🧠 Memory** (6 Tools) - Wiederverwendbare Asset-Memory
+  - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
 
 ### 🧠 Code-Graph-Bridge (GitNexus)
 
@@ -87,8 +87,11 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **26 Tools**, die d
 - Embedding-Dienst unterstützt: `ollama` und `openai-compatible`
 
 **Memory-Tools:**
+- `search_memory` - Semantische Suche im gemeinsamen Memory-Pool
 - `memorize_asset` - Wiederverwendbare Assets in Vektor-Memory persistieren
 - `read_memory_asset` - Asset-Inhalt per `asset_id` lesen
+- `update_memory_asset` - Bestehendes Asset per `asset_id` aktualisieren (ID bleibt erhalten)
+- `delete_memory_asset` - Asset per `asset_id` aus dem Pool löschen
 - `scan_and_extract_patterns` - Wiederverwendbare Patterns extrahieren
 
 **Empfohlenes lokales Memory-Setup (Qdrant + Ollama):**

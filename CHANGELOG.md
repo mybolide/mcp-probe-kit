@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.0] - 2026-06-25
+
+### ✨ 新功能
+
+- 新增 `workflow` 工具：根据用户意图返回「何时调哪个 MCP」分阶段指南（`firstTool` + `phases`）。
+- **MCP 调用时机 Skill（必选增强）**：任意 MCP 工具调用前自动同步用户项目 `.agents/skills/mcp-probe-kit/SKILL.md` 与 `AGENTS.md` 引用；按 **kit 版本**升级覆盖。
+- `src/lib/mcp-tool-skill-registry.ts` 为 Skill 唯一真相源；`prebuild` 运行 `verify-workflow-skill` + `sync-workflow-skill` 与 `allToolSchemas` 对齐。
+- 工具总数 29 → **30**（新增 `workflow`）。
+
+### 🔧 改进
+
+- Skill 安装路径改为 `.agents/skills/mcp-probe-kit/`，避免与用户自建 `workflow` Skill 冲突。
+- `AGENTS.md` 无则创建、有则合并 mcp-probe 块并写入 Skill 链接；块内增加 `mcp-probe:context-version` 版本标记。
+
+---
+
+## [3.5.0] - 2026-06-25
+
+### ✨ 新功能
+
+- 新增 `update_memory_asset`、`delete_memory_asset`：按 `asset_id` 更新或删除共享记忆库资产；更新保留原 ID 并支持 `content` 重新向量化。
+- 工具总数 27 → 29；记忆工具 4 → 6。
+
+### 🔧 改进
+
+- **Handle 优先结构化输出**：`search_memory`、`start_feature` / `start_bugfix` / `start_ui`、`code_insight` 及图谱快照装饰层统一输出 `structuredContent.handles`（`memory_assets`、`graph_snapshot`、`graph_resource`），Agent 可直接按 ID/URI 跟进，无需从长文本抠取。
+- **`delete_memory_asset` 软确认**：默认仅返回 `requires_confirmation` + `preview`；`confirm: true` 后才真正删除（配合 `destructiveHint`）。
+- **长耗时工具默认 Task**：`code_insight`、`scan_and_extract_patterns` 在无显式 `task` 参数时自动升级为 MCP Task（可用 `MCP_DISABLE_AUTO_TASK=1` 关闭）。
+- **`tools/list` 挂载 `outputSchema`**：与 `tools-manifest.json` 对齐，覆盖记忆/编排/分析等 data-driven 工具。
+- **`verify-memory-tools.mjs`**：补充 handles mock 断言；`VERIFY_MEMORY_CRUD=1` 时可跑 create → preview-delete → update → delete 冒烟。
+- **MCP Apps 专用视图**：`MCP_ENABLE_UI_APPS=1` 时 `search_memory` / `code_insight` 生成结构化 HTML 预览（命中卡片、图谱执行表、handles 链接）；逻辑抽到 `src/lib/mcp-apps.ts`。
+- **`start_bugfix` 规格闸门**：可选 `feature_name` / `docs_dir`；能识别关联 `docs/specs/<feature>/` 时，修复闭环计划自动插入 `check_spec`（修复与测试通过后执行）。
+- 文档与站点文案统一为 29 个工具；记忆部署指南补充工具与环境变量对照表。
+
+---
+
 ## [3.3.0] - 2026-06-09
 
 ### ✨ 新功能

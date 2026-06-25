@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import { attachHandles } from "../lib/handles.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import { FeatureReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
 import type { FeatureReport, RequirementsLoopReport } from "../schemas/structured-output.js";
@@ -15,6 +16,7 @@ import {
   buildMemoryPlanStep,
   loadMemoryInjectionContext,
   renderMemoryGuideSection,
+  buildOrchestrationHandles,
 } from "../lib/memory-orchestration.js";
 import { resolveWorkspaceRoot, toWorkspacePath, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
 import {
@@ -527,7 +529,7 @@ ${graphContext.highlights.length > 0
 
       return okStructured(
         guide,
-        loopReport,
+        attachHandles(loopReport, buildOrchestrationHandles(memoryContext)),
         {
           schema: RequirementsLoopSchema,
           note: 'AI 应按轮次澄清需求并更新结构化输出，满足结束条件后再进入 add_feature / estimate',
@@ -669,7 +671,7 @@ ${graphContext.highlights.length > 0
 
     return okStructured(
       guide,
-      featureReport,
+      attachHandles(featureReport, buildOrchestrationHandles(memoryContext)),
       {
         schema: FeatureReportSchema,
         note: 'AI 应该按照指南执行步骤，并在每个步骤完成后更新 structuredContent 中的状态和估算信息',

@@ -23,6 +23,7 @@ describe('generateAgentsMdInner', () => {
     expect(md).toContain('记忆');
     expect(md).toContain('start_bugfix');
     expect(md).toContain('memorize_asset');
+    expect(md).toContain('mcp-probe-kit/SKILL.md');
     expect(md).toContain('bugfix');
     expect(md).toContain('search_memory');
     expect(md).toContain('自动注入');

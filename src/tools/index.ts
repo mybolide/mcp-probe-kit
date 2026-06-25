@@ -5,6 +5,7 @@ export { codeInsight } from "./code_insight.js";
 export { gentest } from "./gentest.js";
 export { refactor } from "./refactor.js";
 export { initProjectContext } from "./init_project_context.js";
+export { workflow } from "./workflow.js";
 export { addFeature } from "./add_feature.js";
 export { checkSpec } from "./check_spec.js";
 export { fixBug } from "./fix_bug.js";
@@ -24,6 +25,8 @@ export { startUi } from "./start_ui.js";
 export { searchMemory } from "./search_memory.js";
 export { readMemoryAsset } from "./read_memory_asset.js";
 export { memorizeAsset } from "./memorize_asset.js";
+export { deleteMemoryAsset } from "./delete_memory_asset.js";
+export { updateMemoryAsset } from "./update_memory_asset.js";
 export { scanAndExtractPatterns } from "./scan_and_extract_patterns.js";
 // 产品设计工作流
 export { startProduct } from "./start_product.js";
