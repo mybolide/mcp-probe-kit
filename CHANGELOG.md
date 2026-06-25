@@ -9,9 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [3.6.1] - 2026-06-25
+
 ### 🔧 改进
 
 - **精简 MCP Resources 列表**：`resources/list` 仅返回 `probe://status` 与 `probe://graph/latest`（不再逐条列出 history / markdown / files / 动态快照），减轻 Cursor 设置页条目过多；`probe://graph/latest` 响应内嵌 `history` 与 `fileIndex`，其余 URI 仍可通过 `resources/read` 按需读取。
+- **工作区根目录解析**：支持 `WORKSPACE_FOLDER_PATHS`；工具响应附带 `mcp_probe_bootstrap`；`init_project` 支持 `project_root`；误写到 kit 安装目录时给出警告。
+- 文档与站点版本号统一为 **v3.6.1**，工具总数 **30**。
 
 ---
 
