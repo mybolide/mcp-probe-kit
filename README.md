@@ -421,7 +421,7 @@ No installation needed, use the latest version directly.
 }
 ```
 
-> **Skill 自动安装**：任意 MCP 工具调用会在用户项目写入 `.agents/skills/mcp-probe-kit/SKILL.md`。工作区根目录**自动识别**（Cursor 注入 `WORKSPACE_FOLDER_PATHS`；OpenCode 等项目级 `opencode.json` 会设置进程 cwd），**无需**在每台客户端配置 `MCP_PROJECT_ROOT`。仅全局 MCP 且无法识别工作区时，可选手动设置 `MCP_PROJECT_ROOT` 或在工具参数传 `project_root`。需 **v3.6.2+**。
+> **Skill 自动安装**：任意 MCP 工具调用会在用户项目写入 `.agents/skills/mcp-probe-kit/SKILL.md`。工作区根目录**自动识别**（Cursor 注入 `WORKSPACE_FOLDER_PATHS`；OpenCode 等项目级 `opencode.json` 会设置进程 cwd），**无需**在每台客户端配置 `MCP_PROJECT_ROOT`。仅全局 MCP 且无法识别工作区时，可选手动设置 `MCP_PROJECT_ROOT` 或在工具参数传 `project_root`。需 **v3.6.3+**。
 
 #### Claude Desktop Configuration
 
@@ -712,7 +712,7 @@ This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connec
 | `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
 | Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
 
-**What we do (v3.6.2+):**  `tools/list` **omits `outputSchema` by default** (~50 KB → ~23 KB). Structured output still works via `structuredContent` on `tools/call`. To restore full schemas: `MCP_INCLUDE_OUTPUT_SCHEMA=1`.
+**What we do (v3.6.3+):**  `tools/list` **omits `outputSchema` by default** (~50 KB → ~23 KB). Structured output still works via `structuredContent` on `tools/call`. To restore full schemas: `MCP_INCLUDE_OUTPUT_SCHEMA=1`.
 
 **What you can try:**
 
