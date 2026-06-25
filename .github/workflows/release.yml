@@ -66,3 +66,43 @@ jobs:
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-mcp-registry:
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync server.json version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          export VERSION
+          node -e "
+            const fs = require('fs');
+            const j = JSON.parse(fs.readFileSync('server.json', 'utf8'));
+            j.version = process.env.VERSION;
+            if (Array.isArray(j.packages)) {
+              for (const pkg of j.packages) pkg.version = process.env.VERSION;
+            }
+            fs.writeFileSync('server.json', JSON.stringify(j, null, 2) + '\n');
+          "
+          echo "Publishing MCP Registry metadata for version ${VERSION}"
+
+      - name: Install MCP Publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+          chmod +x mcp-publisher
+
+      - name: Dry-run validate server.json
+        run: ./mcp-publisher publish --dry-run
+
+      - name: Login to MCP Registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
