@@ -33,7 +33,11 @@ import { withOutputSchema } from "./lib/output-schema-registry.js";
 import { shouldAutoEscalateToTask } from "./lib/task-defaults.js";
 import { attachHandles, type ToolHandles } from "./lib/handles.js";
 import { buildMcpAppHtml, isMcpUiAppTool } from "./lib/mcp-apps.js";
-import { ensureMcpProbeKitBootstrapForToolCall } from "./lib/workflow-skill-installer.js";
+import {
+  ensureMcpProbeKitBootstrapForToolCall,
+  type McpProbeKitBootstrapResult,
+} from "./lib/workflow-skill-installer.js";
+import { resolveWorkspaceRoot } from "./lib/workspace-root.js";
 import {
   isAbortError,
   type ToolExecutionContext,
@@ -271,6 +275,57 @@ function renderGraphSnapshotMarkdown(snapshot: GraphSnapshot): string {
   ].join("\n");
 }
 
+function buildGraphHistorySummary(summaryLimit = 200) {
+  const items = graphSnapshotOrder
+    .slice()
+    .reverse()
+    .map((id) => graphSnapshots.get(id))
+    .filter((item): item is GraphSnapshot => Boolean(item))
+    .map((item) => ({
+      id: item.id,
+      uri: item.uri,
+      toolName: item.toolName,
+      createdAt: item.createdAt,
+      status: item.status,
+      summary: trimText(item.summary, summaryLimit),
+      files: {
+        json: item.jsonFilePath ?? null,
+        markdown: item.markdownFilePath ?? null,
+      },
+    }));
+
+  return { count: items.length, items };
+}
+
+function buildGraphFilesIndex(fileLimit = 40) {
+  const latestId = graphSnapshotOrder[graphSnapshotOrder.length - 1];
+  const latest = latestId ? (graphSnapshots.get(latestId) ?? null) : null;
+  const hasDir = fs.existsSync(graphSnapshotDir);
+  const files = hasDir
+    ? fs
+        .readdirSync(graphSnapshotDir, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && /\.(json|md)$/i.test(entry.name))
+        .map((entry) => toPosixPath(path.join(graphSnapshotDir, entry.name)))
+        .sort((a, b) => b.localeCompare(a))
+        .slice(0, fileLimit)
+    : [];
+
+  return {
+    snapshotDir: toPosixPath(graphSnapshotDir),
+    exists: hasDir,
+    latest: latest
+      ? {
+          id: latest.id,
+          uri: latest.uri,
+          toolName: latest.toolName,
+          jsonFilePath: latest.jsonFilePath ?? null,
+          markdownFilePath: latest.markdownFilePath ?? null,
+        }
+      : null,
+    files,
+  };
+}
+
 function persistGraphSnapshot(snapshot: GraphSnapshot): GraphSnapshot {
   try {
     ensureGraphSnapshotDir();
@@ -439,13 +494,44 @@ function withStructuredHandles(result: ToolResult, handles: ToolHandles): ToolRe
   };
 }
 
+function withBootstrapMeta(
+  result: ToolResult,
+  bootstrap: McpProbeKitBootstrapResult | null
+): ToolResult {
+  if (!bootstrap) {
+    return result;
+  }
+
+  const base =
+    result.structuredContent &&
+    typeof result.structuredContent === "object" &&
+    !Array.isArray(result.structuredContent)
+      ? (result.structuredContent as Record<string, unknown>)
+      : {};
+
+  return {
+    ...result,
+    structuredContent: {
+      ...base,
+      mcp_probe_bootstrap: {
+        projectRoot: bootstrap.projectRoot,
+        skill: bootstrap.skill,
+        agentsMd: bootstrap.agentsMd,
+        workspaceWarning: bootstrap.workspaceWarning ?? null,
+      },
+    },
+  };
+}
+
 function decorateResult(
   toolName: string,
   args: unknown,
   raw: ToolResult,
-  traceMeta: unknown
+  traceMeta: unknown,
+  bootstrap: McpProbeKitBootstrapResult | null = null
 ): ToolResult {
   let result = withTraceMeta(raw, traceMeta);
+  result = withBootstrapMeta(result, bootstrap);
 
   const snapshot = rememberGraphSnapshot(toolName, result);
   if (snapshot) {
@@ -493,8 +579,11 @@ async function executeTool(
   name: string,
   args: unknown,
   context?: ToolExecutionContext
-) {
+): Promise<{ bootstrap: McpProbeKitBootstrapResult | null; result: ToolResult }> {
   const bootstrap = ensureMcpProbeKitBootstrapForToolCall(name, args);
+  if (bootstrap?.workspaceWarning) {
+    console.error(`[MCP Probe Kit] ${bootstrap.workspaceWarning}`);
+  }
   if (bootstrap?.skill.created) {
     console.error(
       `[MCP Probe Kit] 已创建 MCP Skill: ${bootstrap.skill.skillRelPath} (v${bootstrap.skill.version})`
@@ -514,70 +603,103 @@ async function executeTool(
     );
   }
 
+  let result: ToolResult;
   switch (name) {
     case "init_project":
-      return await initProject(args as any);
+      result = (await initProject(args as any)) as ToolResult;
+      break;
     case "gencommit":
-      return await gencommit(args as any);
+      result = (await gencommit(args as any)) as ToolResult;
+      break;
     case "code_review":
-      return await codeReview(args as any);
+      result = (await codeReview(args as any)) as ToolResult;
+      break;
     case "code_insight":
-      return await codeInsight(args as any, context);
+      result = (await codeInsight(args as any, context)) as ToolResult;
+      break;
     case "gentest":
-      return await gentest(args as any);
+      result = (await gentest(args as any)) as ToolResult;
+      break;
     case "refactor":
-      return await refactor(args as any);
+      result = (await refactor(args as any)) as ToolResult;
+      break;
     case "init_project_context":
-      return await initProjectContext(args as any);
+      result = (await initProjectContext(args as any)) as ToolResult;
+      break;
     case "workflow":
-      return await workflow(args as any);
+      result = (await workflow(args as any)) as ToolResult;
+      break;
     case "add_feature":
-      return await addFeature(args as any);
+      result = (await addFeature(args as any)) as ToolResult;
+      break;
     case "check_spec":
-      return await checkSpec(args as any);
+      result = (await checkSpec(args as any)) as ToolResult;
+      break;
     case "fix_bug":
-      return await fixBug(args as any);
+      result = (await fixBug(args as any)) as ToolResult;
+      break;
     case "estimate":
-      return await estimate(args as any);
+      result = (await estimate(args as any)) as ToolResult;
+      break;
     case "start_feature":
-      return await startFeature(args as any, context);
+      result = (await startFeature(args as any, context)) as ToolResult;
+      break;
     case "start_bugfix":
-      return await startBugfix(args as any, context);
+      result = (await startBugfix(args as any, context)) as ToolResult;
+      break;
     case "start_onboard":
-      return await startOnboard(args as any, context);
+      result = (await startOnboard(args as any, context)) as ToolResult;
+      break;
     case "start_ralph":
-      return await startRalph(args as any, context);
+      result = (await startRalph(args as any, context)) as ToolResult;
+      break;
     case "interview":
-      return await interview(args as any);
+      result = (await interview(args as any)) as ToolResult;
+      break;
     case "ask_user":
-      return await askUser(args as any);
+      result = (await askUser(args as any)) as ToolResult;
+      break;
     case "ui_design_system":
-      return await uiDesignSystem(args as any);
+      result = (await uiDesignSystem(args as any)) as ToolResult;
+      break;
     case "ui_search":
-      return await uiSearch(args as any);
+      result = (await uiSearch(args as any)) as ToolResult;
+      break;
     case "sync_ui_data":
-      return await syncUiData(args as any, context);
+      result = (await syncUiData(args as any, context)) as ToolResult;
+      break;
     case "start_ui":
-      return await startUi(args as any, context);
+      result = (await startUi(args as any, context)) as ToolResult;
+      break;
     case "start_product":
-      return await startProduct((args ?? {}) as any, context);
+      result = (await startProduct((args ?? {}) as any, context)) as ToolResult;
+      break;
     case "git_work_report":
-      return await gitWorkReport(args as any);
+      result = (await gitWorkReport(args as any)) as ToolResult;
+      break;
     case "search_memory":
-      return await searchMemory(args as any);
+      result = (await searchMemory(args as any)) as ToolResult;
+      break;
     case "read_memory_asset":
-      return await readMemoryAsset(args as any);
+      result = (await readMemoryAsset(args as any)) as ToolResult;
+      break;
     case "memorize_asset":
-      return await memorizeAsset(args as any);
+      result = (await memorizeAsset(args as any)) as ToolResult;
+      break;
     case "delete_memory_asset":
-      return await deleteMemoryAsset(args as any);
+      result = (await deleteMemoryAsset(args as any)) as ToolResult;
+      break;
     case "update_memory_asset":
-      return await updateMemoryAsset(args as any);
+      result = (await updateMemoryAsset(args as any)) as ToolResult;
+      break;
     case "scan_and_extract_patterns":
-      return await scanAndExtractPatterns(args as any);
+      result = (await scanAndExtractPatterns(args as any)) as ToolResult;
+      break;
     default:
       throw new Error(`未知工具: ${name}`);
   }
+
+  return { bootstrap, result };
 }
 
 function makeToolError(errorMessage: string) {
@@ -689,13 +811,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     void (async () => {
       try {
         await taskContext.reportProgress?.(5, `开始执行工具: ${name}`);
-        const rawResult = await executeTool(name, args, taskContext);
+        const { bootstrap, result: rawResult } = await executeTool(name, args, taskContext);
 
         if (!rawResult || typeof rawResult !== "object") {
           throw new Error(`工具 ${name} 返回了无效响应`);
         }
 
-        const result = decorateResult(name, args, rawResult as ToolResult, traceMeta);
+        const result = decorateResult(name, args, rawResult as ToolResult, traceMeta, bootstrap);
         const latestTask = await extra.taskStore?.getTask(task.taskId);
 
         if (!latestTask || isTerminalTaskStatus(latestTask.status)) {
@@ -764,13 +886,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     ensureNotAborted();
     await emitProgress(5, `开始执行工具: ${name}`);
 
-    const rawResult = await executeTool(name, args, toolContext);
+    const { bootstrap, result: rawResult } = await executeTool(name, args, toolContext);
     if (!rawResult || typeof rawResult !== "object") {
       throw new Error(`工具 ${name} 返回了无效响应`);
     }
 
     ensureNotAborted();
-    const result = decorateResult(name, args, rawResult as ToolResult, traceMeta);
+    const result = decorateResult(name, args, rawResult as ToolResult, traceMeta, bootstrap);
     await emitProgress(100, `工具执行完成: ${name}`);
     return result;
   } catch (error) {
@@ -785,7 +907,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   }
 });
 
-// 定义资源列表
+// 定义资源列表（Cursor 设置页会展示为条目；仅保留 status + graph/latest，其余 URI 仍可 ReadResource）
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   const resources = [
     {
@@ -796,42 +918,11 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     },
     {
       uri: "probe://graph/latest",
-      name: "图谱快照（最新）",
-      description: "最近一次 code_insight 或 start_* 生成的图谱快照",
-      mimeType: "application/json",
-    },
-    {
-      uri: "probe://graph/history",
-      name: "图谱快照（历史）",
-      description: `最近 ${graphSnapshotOrder.length} 条图谱快照摘要`,
-      mimeType: "application/json",
-    },
-    {
-      uri: "probe://graph/latest.md",
-      name: "图谱快照（最新 Markdown）",
-      description: "最近一次图谱快照的 Markdown 视图",
-      mimeType: "text/markdown",
-    },
-    {
-      uri: "probe://graph/files",
-      name: "图谱快照（文件索引）",
-      description: `图谱快照落盘目录: ${toPosixPath(graphSnapshotDir)}`,
+      name: "图谱快照",
+      description: "最新图谱快照（含历史摘要与落盘索引；Markdown 可读 probe://graph/latest.md）",
       mimeType: "application/json",
     },
   ];
-
-  for (const id of graphSnapshotOrder.slice().reverse().slice(0, 10)) {
-    const snapshot = graphSnapshots.get(id);
-    if (!snapshot) {
-      continue;
-    }
-    resources.push({
-      uri: snapshot.uri,
-      name: `图谱快照 · ${snapshot.toolName}`,
-      description: `${snapshot.status} · ${trimText(snapshot.summary, 120)} (${snapshot.createdAt})`,
-      mimeType: "application/json",
-    });
-  }
 
   if (uiAppsEnabled) {
     for (const uri of uiAppResourceOrder.slice().reverse()) {
@@ -975,6 +1066,13 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                 json: snapshot.jsonFilePath ?? null,
                 markdown: snapshot.markdownFilePath ?? null,
               },
+              history: buildGraphHistorySummary(),
+              fileIndex: buildGraphFilesIndex(),
+              relatedUris: {
+                markdown: "probe://graph/latest.md",
+                history: "probe://graph/history",
+                files: "probe://graph/files",
+              },
             },
             null,
             2
@@ -1020,78 +1118,26 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   }
 
   if (uri === "probe://graph/history") {
-    const history = graphSnapshotOrder
-      .slice()
-      .reverse()
-      .map((id) => graphSnapshots.get(id))
-      .filter((item): item is GraphSnapshot => Boolean(item))
-      .map((item) => ({
-        id: item.id,
-        uri: item.uri,
-        toolName: item.toolName,
-        createdAt: item.createdAt,
-        status: item.status,
-        summary: trimText(item.summary, 200),
-        files: {
-          json: item.jsonFilePath ?? null,
-          markdown: item.markdownFilePath ?? null,
-        },
-      }));
+    const history = buildGraphHistorySummary();
 
     return {
       contents: [
         {
           uri,
           mimeType: "application/json",
-          text: JSON.stringify(
-            {
-              count: history.length,
-              items: history,
-            },
-            null,
-            2
-          ),
+          text: JSON.stringify(history, null, 2),
         },
       ],
     };
   }
 
   if (uri === "probe://graph/files") {
-    const latestId = graphSnapshotOrder[graphSnapshotOrder.length - 1];
-    const latest = latestId ? graphSnapshots.get(latestId) ?? null : null;
-    const hasDir = fs.existsSync(graphSnapshotDir);
-    const files = hasDir
-      ? fs
-          .readdirSync(graphSnapshotDir, { withFileTypes: true })
-          .filter((entry) => entry.isFile() && /\.(json|md)$/i.test(entry.name))
-          .map((entry) => toPosixPath(path.join(graphSnapshotDir, entry.name)))
-          .sort((a, b) => b.localeCompare(a))
-          .slice(0, 40)
-      : [];
-
     return {
       contents: [
         {
           uri,
           mimeType: "application/json",
-          text: JSON.stringify(
-            {
-              snapshotDir: toPosixPath(graphSnapshotDir),
-              exists: hasDir,
-              latest: latest
-                ? {
-                    id: latest.id,
-                    uri: latest.uri,
-                    toolName: latest.toolName,
-                    jsonFilePath: latest.jsonFilePath ?? null,
-                    markdownFilePath: latest.markdownFilePath ?? null,
-                  }
-                : null,
-              files,
-            },
-            null,
-            2
-          ),
+          text: JSON.stringify(buildGraphFilesIndex(), null, 2),
         },
       ],
     };
@@ -1140,7 +1186,8 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("MCP Probe Kit 服务器已启动");
+  const workspace = resolveWorkspaceRoot("");
+  console.error(`MCP Probe Kit v${VERSION} 已启动 | workspace=${workspace}`);
 }
 
 // 启动服务器
