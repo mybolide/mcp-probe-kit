@@ -33,7 +33,29 @@ export const ProjectInitSchema = {
       description: '项目结构',
       properties: {
         directories: { type: 'array', items: { type: 'string' } },
-        files: { type: 'array', items: { type: 'string' } },
+        files: { type: 'array', items: { type: 'string' }, description: '已废弃，请用 writtenFiles / plannedFiles' },
+        writtenFiles: { type: 'array', items: { type: 'string' }, description: '已写入磁盘的路径' },
+        plannedFiles: { type: 'array', items: { type: 'string' }, description: '规划中尚未创建的路径' },
+      },
+    },
+    writtenFiles: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          action: { type: 'string', enum: ['created', 'updated', 'skipped'] },
+        },
+      },
+    },
+    pendingFiles: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          reason: { type: 'string' },
+        },
       },
     },
     techStack: {
@@ -102,6 +124,27 @@ export const ProjectContextSchema = {
           purpose: { type: 'string' },
         },
       },
+      description: '文档索引（含已写入与待生成）',
+    },
+    writtenFiles: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          action: { type: 'string', enum: ['created', 'updated', 'skipped'] },
+        },
+      },
+    },
+    pendingFiles: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          reason: { type: 'string' },
+        },
+      },
     },
     nextSteps: {
       type: 'array',
@@ -159,6 +202,27 @@ export const FeatureSpecSchema = {
         pessimistic: { type: 'string' },
       },
     },
+    writtenFiles: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          action: { type: 'string', enum: ['created', 'updated', 'skipped'] },
+        },
+      },
+    },
+    pendingFiles: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          reason: { type: 'string' },
+        },
+      },
+    },
+    specPaths: { type: 'array', items: { type: 'string' } },
   },
   required: ['summary', 'featureName', 'requirements', 'tasks'],
 } as const;
@@ -291,7 +355,11 @@ export interface ProjectInit {
   structure: {
     directories?: string[];
     files?: string[];
+    writtenFiles?: string[];
+    plannedFiles?: string[];
   };
+  writtenFiles?: Array<{ path: string; action: 'created' | 'updated' | 'skipped' }>;
+  pendingFiles?: Array<{ path: string; reason: string }>;
   techStack?: string[];
   dependencies?: Record<string, string>;
   scripts?: Record<string, string>;
@@ -319,6 +387,8 @@ export interface ProjectContext {
   }>;
   nextSteps?: string[];
   metadata?: Record<string, any>;
+  writtenFiles?: Array<{ path: string; action: 'created' | 'updated' | 'skipped' }>;
+  pendingFiles?: Array<{ path: string; reason: string }>;
 }
 
 export interface FeatureSpec {
@@ -343,6 +413,9 @@ export interface FeatureSpec {
     normal?: string;
     pessimistic?: string;
   };
+  writtenFiles?: Array<{ path: string; action: 'created' | 'updated' | 'skipped' }>;
+  pendingFiles?: Array<{ path: string; reason: string }>;
+  specPaths?: string[];
 }
 
 export interface Estimate {

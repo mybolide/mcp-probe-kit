@@ -1,13 +1,14 @@
-import { parseArgs, getString, validateRequired } from "../utils/parseArgs.js";
-import { okText } from "../lib/response.js";
+import { parseArgs, getString } from "../utils/parseArgs.js";
+import { okStructured } from "../lib/response.js";
 import { loadTemplate, normalizeTemplateProfile } from "../lib/template-loader.js";
 import { handleToolError } from "../utils/error-handler.js";
+import type { FeatureSpec } from "../schemas/output/project-tools.js";
 
 /**
  * add_feature 工具
- * 
+ *
  * 功能：为已有项目添加新功能的规格文档
- * 模式：指令生成器模式 - 返回详细的生成指南，由 AI 执行实际操作
+ * 模式：指令生成器 — MCP 返回模板与要求，由调用方 Agent 按模板落盘
  * 
  * 输出文件：
  * - docs/specs/{feature_name}/requirements.md - 需求文档
@@ -278,9 +279,9 @@ ${combinedValidation.warnings.length > 0 ? `- 其他警告: ${combinedValidation
 
 ---
 
-## 📝 创建文档
+## 📝 创建文档（由 Agent 落盘）
 
-请在 \`${docsDir}/specs/${featureName}/\` 目录下创建以下三个文件：
+MCP **不会**写入磁盘。请根据下方模板，在 \`${docsDir}/specs/${featureName}/\` 创建三个文件并替换占位符。
 
 ### 文件 1: requirements.md
 
@@ -329,9 +330,28 @@ ${fenceClose}
 *工具: MCP Probe Kit - add_feature*
 `;
 
-    return okText(guide, {
+    const specPaths = [
+      `${docsDir}/specs/${featureName}/requirements.md`,
+      `${docsDir}/specs/${featureName}/design.md`,
+      `${docsDir}/specs/${featureName}/tasks.md`,
+    ];
+    const pendingFiles = specPaths.map((specPath) => ({
+      path: specPath,
+      reason: "由 Agent 根据本工具返回的模板写入",
+    }));
+
+    const structuredData: FeatureSpec = {
+      summary: `功能规格：${featureName}`,
+      featureName,
+      requirements: ["见 requirements.md 模板"],
+      tasks: [{ id: "1", title: "按模板创建 specs 文档", description: "将下方模板落盘并补充真实内容" }],
+      pendingFiles,
+      specPaths,
+    };
+
+    return okStructured(guide, structuredData, {
       schema: (await import("../schemas/output/project-tools.js")).FeatureSpecSchema,
-      note: "本工具返回功能规格生成指南，AI 应根据指南创建需求、设计和任务文档",
+      note: "本工具返回模板与要求，不代写文件；Agent 须按指南创建 specs",
       template: {
         profile: templateProfile,
         requested: profileDecision.requested,
