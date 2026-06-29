@@ -275,7 +275,7 @@ function renderUsageGuide(): string {
 ## 下一步建议
 - 查询不精确: 增加 \`goal\`（例如“理解登录认证流程”）
 - 出现歧义: 传入 \`uid\` 或 \`file_path\` 重新执行
-- 需要落盘: 传 \`save_to_docs: true\`，再按 delegated plan 写入 docs/graph-insights`;
+- 需要落盘: 传 \`save_to_docs: true\`，再按 delegated plan 由 Agent 写入 docs/graph-insights`;
 }
 
 export function resolveCodeInsightQuery(input: {
@@ -491,7 +491,7 @@ ${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}`.tr
     structured.nextAction = delegatedPlan?.kind === "ambiguity"
       ? "请先选择 uid 或 file_path 重新调用 code_insight 完成消歧"
       : projectDocs
-        ? `请按 delegated plan 落盘图谱文档，并更新 ${projectDocs.projectContextFilePath} 的索引入口`
+        ? `请按 delegated plan 由 Agent 落盘图谱文档，并更新 ${projectDocs.projectContextFilePath} 的索引入口`
         : null;
 
     const structuredWithHandles = attachHandles(structured, {
@@ -504,7 +504,7 @@ ${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}`.tr
             tool: "code_insight",
             goal: delegatedPlan.kind === "ambiguity"
               ? "先完成符号消歧，再继续图谱分析"
-              : "完成图谱分析后，将结果按 delegated plan 落盘到 docs/graph-insights",
+              : "完成图谱分析后，由 Agent 按 delegated plan 落盘到 docs/graph-insights",
             tasks: delegatedPlan.kind === "ambiguity"
               ? [
                   "先阅读本次 code_insight 返回的 candidates",

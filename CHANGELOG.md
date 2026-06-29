@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.5] - 2026-06-25
+
+### 🔧 改进
+
+- **文件落盘边界**：MCP 服务端仅写 Harness 基础设施（Skill、`AGENTS.md`、`docs/.mcp-probe/layout.json`）；project-context 分类文档、specs、图谱 `docs/graph-insights/*` 由 Agent 按模板或 `code_insight` delegated plan 落盘
+- **`init_project_context`**：服务端写入完整 merge 后的 `AGENTS.md` + layout manifest；`writtenFiles` / `pendingFiles` 明确区分已写与待写路径
+- **`code_insight`**：恢复 `save_to_docs` 仅返回 delegated plan，不代写图谱文件
+- **`add_feature` / `init_project`**：仅返回模板与 `pendingFiles`，不代写 specs/docs
+
+### ✅ 保持不变
+
+- 每次 MCP 工具调用仍自动 bootstrap **Skill**（`.agents/skills/mcp-probe-kit/SKILL.md`）与 **AGENTS.md** Skill 引用，供 Harness 调用说明
+
+---
+
 ## [3.6.3] - 2026-06-25
 
 ### 🔧 改进

@@ -16,8 +16,14 @@ import {
 } from "../lib/project-context-layout.js";
 import { mergeAgentsMdBlock } from "../lib/merge-agents-md.js";
 import { generateAgentsMdInner } from "../lib/agents-md-template.js";
-import * as fs from 'fs';
-import * as path from 'path';
+import {
+  formatFileDeliverySection,
+  writeProjectFile,
+  type DeliveredFile,
+  type PendingFile,
+} from "../lib/file-delivery.js";
+import * as fs from "fs";
+import * as path from "path";
 
 /**
  * init_project_context 工具
@@ -204,14 +210,45 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
     });
     const mergedAgents = mergeAgentsMdBlock(existingAgentsRaw, agentsInner);
     const manifestWritten = writeLayoutManifest(projectRootAbs, layout);
+    const agentsMdWritten = writeProjectFile(
+      projectRootAbs,
+      layout.indexPath,
+      mergedAgents.content,
+      "always"
+    );
+    const writtenFiles: DeliveredFile[] = [
+      agentsMdWritten,
+      { path: manifestWritten, action: "updated" },
+    ];
+    const pendingFiles: PendingFile[] = [
+      ...(modularExists
+        ? []
+        : [
+            {
+              path: layout.legacyIndexPath,
+              reason: "由 Agent 按本工具返回的模板写入",
+            },
+            ...docs.map((doc) => ({
+              path: `${layout.modularDir}/${doc.file}`,
+              reason: "由 Agent 按模板写入",
+            })),
+          ]),
+      {
+        path: graphDocs.latestMarkdownFilePath,
+        reason: "由 Agent 按 code_insight 分析结果写入",
+      },
+      {
+        path: graphDocs.latestJsonFilePath,
+        reason: "由 Agent 按 code_insight 结构化结果写入",
+      },
+    ];
+    const deliverySection = formatFileDeliverySection({ writtenFiles, pendingFiles });
 
     const codeInsightArgs = JSON.stringify({
       mode: "auto",
       project_root: layout.projectRootPosix,
       docs_dir: docsDir,
     });
-
-    const modularOutputs = docs.map((doc) => `${layout.modularDir}/${doc.file}`);
 
     const plan = {
       mode: "delegated" as const,
@@ -221,61 +258,50 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
               id: "bootstrap-code-insight",
               action: `检测到现有 ${layout.legacyIndexPath}，跳过重写分类文档，调用 code_insight 补齐图谱`,
               outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-              note: `调用参数: ${codeInsightArgs}`,
+              note: `调用参数: ${codeInsightArgs}；${layout.indexPath} 与 layout 已由 MCP 写入`,
             },
             {
               id: "persist-graph-docs",
-              action: `执行 code_insight 的 delegated plan，写入 ${layout.graphDir}/`,
+              action: `执行 code_insight 的 delegated plan，由 Agent 写入 ${layout.graphDir}/`,
               outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
               note: "保留现有 project-context 分类文档",
-            },
-            {
-              id: "finalize-agents-md",
-              action: `将下方 agentsMdTemplate 写入 ${layout.indexPath}（mcp-probe 块置顶，保留用户原有内容）`,
-              outputs: [layout.indexPath],
-              note: `mergeMode: ${mergedAgents.mergeMode}；layout manifest 已由服务端写入 ${manifestWritten}`,
             },
           ]
         : [
             {
               id: "write-modular-docs",
-              action: `先创建 ${layout.legacyIndexPath}（文档索引），再创建 ${layout.modularDir}/ 分类文档`,
-              outputs: [layout.legacyIndexPath, ...modularOutputs],
-              note: modularExists
-                ? "跳过：索引与分类文档已存在"
-                : "project-context.md 是细节入口；AGENTS.md 仅含 MCP 规则",
+              action: `由 Agent 创建 ${layout.legacyIndexPath} 与 ${layout.modularDir}/ 分类文档（见下方模板）`,
+              outputs: [
+                layout.legacyIndexPath,
+                ...docs.map((doc) => `${layout.modularDir}/${doc.file}`),
+              ],
             },
             {
               id: "bootstrap-code-insight",
               action: "调用 code_insight 做整体图谱分析",
               outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-              note: `调用参数: ${codeInsightArgs}`,
+              note: `调用参数: ${codeInsightArgs}；${layout.indexPath} 已由 MCP 写入`,
             },
             {
               id: "persist-graph-docs",
-              action: `执行 code_insight 的 delegated plan，写入 ${layout.graphDir}/`,
+              action: `执行 code_insight 的 delegated plan，由 Agent 写入 ${layout.graphDir}/`,
               outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-            },
-            {
-              id: "finalize-agents-md",
-              action: `将下方 agentsMdTemplate 写入 ${layout.indexPath}（mcp-probe 块置顶）`,
-              outputs: [layout.indexPath],
-              note: `mergeMode: ${mergedAgents.mergeMode}；manifest 已写入 ${manifestWritten}`,
             },
           ],
     };
 
     const guide = generateGuideText(detection, projectInfo, docs, layout, resolvedRoot, {
       modularExists,
+      agentsMdWritten: true,
     });
     const header = renderOrchestrationHeader({
       tool: "init_project_context",
       goal: modularExists
-        ? "补齐图谱与 AGENTS.md 入口（保留现有分类文档）"
-        : "生成项目上下文、图谱入口与 AGENTS.md 操作规则",
+        ? "补齐图谱（保留现有分类文档；AGENTS.md 已由 MCP 写入）"
+        : "写入 AGENTS.md 与 layout，由 Agent 生成 project-context 与图谱",
       tasks: modularExists
-        ? ["保留现有分类文档", "code_insight 生成图谱", `写入 ${layout.indexPath}`]
-        : ["写分类文档", "code_insight", `写入 ${layout.indexPath}`],
+        ? ["保留现有分类文档", "code_insight + Agent 落盘图谱"]
+        : ["MCP 已写 AGENTS.md 与 layout", "Agent 写分类文档", "code_insight + Agent 落盘图谱"],
       notes: [
         `项目根目录: ${toPosixPath(resolvedRoot)}`,
         `上下文目录: ${docsDir}`,
@@ -318,16 +344,17 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
       nextSteps: [
         ...(modularExists
           ? [`保留 ${layout.legacyIndexPath} 与分类文档`]
-          : [`生成 ${layout.modularDir}/ 分类文档`]),
-        "调用 code_insight",
-        `将 agentsMdTemplate 写入 ${layout.indexPath}`,
+          : [`由 Agent 按模板创建 ${layout.modularDir}/ 分类文档`]),
+        "调用 code_insight，由 Agent 落盘图谱",
+        `${layout.indexPath} 与 ${manifestWritten} 已由 MCP 写入（mergeMode: ${mergedAgents.mergeMode}）`,
       ],
+      writtenFiles,
+      pendingFiles,
       metadata: {
         plan,
         graphDocs,
         layout,
         locale,
-        agentsMdTemplate: mergedAgents.content,
         agentsMdMergeMode: mergedAgents.mergeMode,
         manifestWritten,
         projectContextFilePath: agentsPath,
@@ -337,15 +364,12 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
     };
 
     return okStructured(
-      `${header}${guide}
+      `${header}
+${deliverySection}
 
-## AGENTS.md 终稿（finalize-agents-md 使用 fsWrite 写入 \`${layout.indexPath}\`）
+${guide}
 
-\`\`\`markdown
-${mergedAgents.content}
-\`\`\`
-
-## delegated plan
+## 后续 delegated plan（分类文档与图谱由 Agent 落盘）
 ${renderPlanSteps(plan.steps)}
 `,
       structuredData,
@@ -368,13 +392,20 @@ function generateGuideText(
   docs: Array<{ file: string; title: string; purpose: string }>,
   layout: ProjectContextLayout,
   projectRoot: string,
-  options?: { modularExists?: boolean }
+  options?: { modularExists?: boolean; agentsMdWritten?: boolean }
 ): string {
   const timestamp = new Date().toISOString();
   const docsDir = layout.contextRoot;
   const projectContextExists = options?.modularExists === true;
+  const agentsMdWritten = options?.agentsMdWritten === true;
   
   return `# 项目上下文文档生成指导
+${agentsMdWritten ? `
+## ⚠️ 文件落盘说明
+
+**MCP 已写入** \`${layout.indexPath}\` 与 \`${layout.manifestPath}\`。  
+**分类文档与图谱**须由 Agent 按下方模板与 \`code_insight\` 结果自行落盘（见 pendingFiles）。
+` : ""}
 
 ## 📊 项目信息
 
@@ -387,8 +418,8 @@ function generateGuideText(
 
 ## 🔎 当前状态
 
-- **${layout.indexPath}**: Agent 入口（finalize-agents-md 写入，mcp-probe 块置顶）
-- **${layout.legacyIndexPath}**: ${projectContextExists ? '已存在（将保留分类文档）' : '将随分类文档一并生成'}
+- **${layout.indexPath}**: Agent 入口（${agentsMdWritten ? "已由 MCP 写入" : "待 MCP 写入"}，mcp-probe 块置顶）
+- **${layout.legacyIndexPath}**: ${projectContextExists ? "已存在（将保留分类文档）" : "由 Agent 按模板创建"}
 - **图谱文档**: 需要确保 ${layout.latestMarkdownPath} 与 ${layout.latestJsonPath} 可用
 
 ## 📋 需要生成的文档
@@ -473,7 +504,7 @@ ${generateDevGuide(docs)}
 *生成工具: MCP Probe Kit - init_project_context v2.1*
 \`\`\`
 
-${projectContextExists ? '**如果该文件已存在，跳过此步骤，不要覆盖**' : '**使用 fsWrite 创建此文件**'}
+${projectContextExists ? '**如果该文件已存在，跳过此步骤，不要覆盖**' : '**由 Agent 使用 fsWrite 创建此文件**'}
 
 ---
 
@@ -487,7 +518,7 @@ ${docs.map((doc, index) => generateDocTemplate(doc, index + 2, projectInfo, dete
 
 请确认：
 
-- [ ] ${projectContextExists ? '保留现有 project-context 及分类文档，不做覆盖' : `已使用 fsWrite 创建 **${docs.length + 1}** 个文件`}
+- [ ] ${projectContextExists ? '保留现有 project-context 及分类文档，不做覆盖' : `由 Agent 创建 **${docs.length + 1}** 个分类文档`}
 - [ ] 索引文件 \`project-context.md\` ${projectContextExists ? '已存在并保留' : '已创建（最重要！）'}
 - [ ] 索引文件已包含 \`graph-insights/latest.md\` 的入口
 - [ ] 所有文档都包含**真实的文件路径**（不是 [xxx] 占位符）
@@ -825,7 +856,7 @@ function generateDocTemplate(
 
 ${template}
 
-**使用 fsWrite 创建此文件**`;
+**由 Agent 使用 fsWrite 创建此文件**`;
 }
 
 /**

@@ -46,6 +46,21 @@ export async function initProject(args: any) {
       : "";
     const featureSlug = projectName.toLowerCase().replace(/\s+/g, '-');
     const agentsRel = toPosixPath(bootstrap.agentsMd.path);
+    const bootstrapWritten = [
+      { path: MCP_PROBE_SKILL_REL_PATH, action: bootstrap.skill.created ? "created" as const : bootstrap.skill.updated ? "updated" as const : "skipped" as const },
+      { path: agentsRel, action: bootstrap.agentsMd.created ? "created" as const : bootstrap.agentsMd.updated ? "updated" as const : "skipped" as const },
+    ];
+    const pendingFiles = [
+      { path: "docs/project-context.md", reason: "由 Agent 按指南创建" },
+      { path: "docs/constitution.md", reason: "由 Agent 按指南创建" },
+      { path: `docs/specs/${featureSlug}/requirements.md`, reason: "由 Agent 按指南创建" },
+      { path: `docs/specs/${featureSlug}/design.md`, reason: "由 Agent 按指南创建" },
+      { path: `docs/specs/${featureSlug}/tasks.md`, reason: "由 Agent 按指南创建" },
+      { path: `docs/specs/${featureSlug}/research.md`, reason: "由 Agent 按指南创建" },
+      { path: "scripts/check-prerequisites.sh", reason: "由 Agent 按指南创建" },
+      { path: "scripts/setup.sh", reason: "由 Agent 按指南创建" },
+      { path: "src/", reason: "由 Agent 按项目类型创建源代码目录" },
+    ];
 
     const message = `你需要按照 Spec-Driven Development（规范驱动开发）的方式初始化项目，参考 https://github.com/github/spec-kit 的工作流程。
 
@@ -218,7 +233,7 @@ ${warningBlock}
 7. 识别可以并行执行的任务以优化开发效率
 
 🚀 **开始执行**：
-现在请按照上述步骤创建项目结构和所有必需的文档。`;
+MCP 已写入 Skill 与 AGENTS.md。请按上述步骤由 Agent 创建 docs、scripts、src 及 specs 文档。`;
 
     // 创建结构化数据对象
     const structuredData: ProjectInit = {
@@ -245,29 +260,17 @@ ${warningBlock}
           'scripts/',
           'src/'
         ],
-        files: [
-          MCP_PROBE_SKILL_REL_PATH,
-          agentsRel,
-          'docs/project-context.md',
-          'docs/constitution.md',
-          `docs/specs/${featureSlug}/requirements.md`,
-          `docs/specs/${featureSlug}/design.md`,
-          `docs/specs/${featureSlug}/tasks.md`,
-          `docs/specs/${featureSlug}/research.md`,
-          'scripts/check-prerequisites.sh',
-          'scripts/setup.sh'
-        ]
+        writtenFiles: bootstrapWritten.map((file) => file.path),
+        plannedFiles: pendingFiles.map((file) => file.path),
       },
+      writtenFiles: bootstrapWritten,
+      pendingFiles,
       nextSteps: [
-        '确认 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 已落盘',
-        '创建项目目录结构',
-        '生成 project-context.md',
-        '生成 constitution.md',
-        '生成需求文档 requirements.md',
-        '生成设计文档 design.md',
-        '生成任务清单 tasks.md',
-        '生成技术调研 research.md',
-        '创建辅助脚本'
+        '确认 Skill 与 AGENTS.md 已落盘',
+        '按指南创建 docs/ 文档与 specs',
+        '创建 scripts/ 辅助脚本',
+        '创建 src/ 源代码目录',
+        '运行 init_project_context 生成完整上下文与图谱',
       ]
     };
 

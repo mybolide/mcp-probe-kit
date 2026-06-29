@@ -143,7 +143,7 @@ describe("code_insight 单元测试", () => {
     }
   });
 
-  test("返回 docs 保存指引而不直接代写文件", async () => {
+  test("save_to_docs 时返回 delegated plan，由 Agent 落盘图谱文件", async () => {
     const prev = process.env.MCP_ENABLE_GITNEXUS_BRIDGE;
     process.env.MCP_ENABLE_GITNEXUS_BRIDGE = "0";
     const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "code-insight-docs-"));
@@ -163,13 +163,11 @@ describe("code_insight 单元测试", () => {
       expect(text).toMatch(/使用场景指南/);
       expect(structured.projectDocs.latestMarkdownFilePath).toMatch(/docs\/graph-insights\/latest\.md$/);
       expect(structured.projectDocs.archiveMarkdownFilePath).toContain("/docs/graph-insights/");
-      expect(structured.projectDocs.projectContextFilePath).toMatch(/\/(AGENTS\.md|docs\/project-context\.md)$/);
-      expect(structured.projectDocs.navigationSnippet).toMatch(/代码图谱洞察/);
       expect(structured.plan.mode).toBe("delegated");
       expect(structured.plan.steps).toHaveLength(2);
       expect(structured.plan.steps[0].id).toBe("consume-result");
       expect(structured.plan.steps[1].id).toBe("optional-save");
-      expect(structured.plan.steps[1].outputs[0]).toMatch(/docs\/graph-insights\/latest\.md$/);
+      expect(structured.writtenFiles).toBeUndefined();
       expect(fs.existsSync(path.join(projectRoot, "docs", "graph-insights", "latest.md"))).toBe(false);
     } finally {
       fs.rmSync(projectRoot, { recursive: true, force: true });
