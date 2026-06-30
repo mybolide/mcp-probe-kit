@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI開発強化ツールキット · ドキュメントセンター",
-    "version": "v3.6.8",
+    "version": "v3.6.9",
     "quickStart": "クイックスタート",
     "visitMainSite": "ByteZoneXを訪問"
   },
   "sections": {
     "quickStart": {
       "title": "クイックスタート",
-      "description": "5分でMCP Probe Kit v3.6.8を始める",
+      "description": "5分でMCP Probe Kit v3.6.9を始める",
       "installConfig": "インストールと設定"
     },
     "tools": {
@@ -63,10 +63,10 @@
   },
   "gettingStarted": {
     "title": "インストールと設定",
-    "subtitle": "5分でMCP Probe Kit v3.6.8を始める。Cursor、Cline、Claude Desktopをサポート",
+    "subtitle": "5分でMCP Probe Kit v3.6.9を始める。Cursor、Cline、Claude Desktopをサポート",
     "skillBootstrap": {
       "title": "Skill と AGENTS の自動ブートストラップ",
-      "body": "MCP ツール呼び出しごとに AGENTS.md と .agents/skills/mcp-probe-kit/SKILL.md を書き込みます（ルール単一ソース）。.trae/、.lingma/、.comate/ などのディレクトリがある場合は薄いアダプタを自動作成します（v3.6.8+、環境変数不要）。"
+      "body": "MCP ツール呼び出しごとに AGENTS.md と .agents/skills/mcp-probe-kit/SKILL.md を書き込みます（ルール単一ソース）。.trae/、.lingma/、.comate/ などのディレクトリがある場合は薄いアダプタを自動作成します（v3.6.9+、環境変数不要）。"
     },
     "breadcrumb": {
       "home": "ドキュメント",

@@ -134,8 +134,8 @@
       "usage": "按 Spec-Driven Development 方式生成需求/设计/任务文档"
     },
     "init_project_context": {
-      "description": "生成或维护项目上下文文档，并补齐 graph-insights 图谱基线入口",
-      "usage": "新项目生成上下文骨架；老项目若已有 project-context.md，则保留旧文档，仅补 graph-insights 图谱文档与索引入口"
+      "description": "生成项目上下文写作计划（delegated）：MCP 写 AGENTS.md 与 layout；分类文档与图谱由 Agent 按 plan 落盘",
+      "usage": "缺上下文时调用；返回 metadata.plan、pendingFiles 与 documentation 状态（exists/written/agent_action_required），Agent 须手动写入待落盘文件"
     },
     "add_feature": {
       "description": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文",

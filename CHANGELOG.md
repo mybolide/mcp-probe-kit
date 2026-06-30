@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.9] - 2026-06-25
+
+### 🔧 改进
+
+- **`init_project` delegated 输出**：`summary` 改为「写作计划」表述；`nextSteps` 首项明确 MCP 仅写 Skill + AGENTS.md、Agent 须手动落盘 pendingFiles
+- **`init_project_context` delegated 输出**：`summary` 改为「写作计划」表述；`documentation[]` 增加 `exists` / `written` / `agent_action_required`；`nextSteps` 明确 Agent 须按 plan 手动落盘
+- **`add_feature` delegated 输出**：`summary` 改为「已生成功能规格写作计划」表述，与 `pendingFiles` / `_meta.note` 一致表明 MCP 不代写 specs
+- **`file-delivery`**：新增共用 `buildFileStatusEntries`，供文档路径状态计算
+
+---
+
 ## [3.6.8] - 2026-06-25
 
 ### 🔧 改进

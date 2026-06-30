@@ -33,6 +33,26 @@ describe("init_project_context 单元测试", () => {
 
     const plan = structured.metadata?.plan;
     expect(plan?.mode).toBe("delegated");
+    expect(structured.summary).toMatch(/写作计划/);
+    expect(structured.summary).not.toMatch(/^生成 .*项目上下文/);
+    expect(structured.nextSteps?.[0]).toMatch(/不会自动生成完整/);
+
+    const legacyDoc = structured.documentation?.find(
+      (doc: any) => doc.path === "docs/project-context.md"
+    );
+    expect(legacyDoc).toMatchObject({
+      exists: false,
+      written: false,
+      agent_action_required: true,
+    });
+
+    const agentsDoc = structured.documentation?.find((doc: any) => doc.path === "AGENTS.md");
+    expect(agentsDoc).toMatchObject({
+      exists: true,
+      written: true,
+      agent_action_required: false,
+    });
+
     expect(plan.steps.map((step: any) => step.id)).toEqual([
       "write-modular-docs",
       "bootstrap-code-insight",
@@ -75,6 +95,26 @@ describe("init_project_context 单元测试", () => {
     expect(structured.pendingFiles.every((f: any) => !f.path.startsWith("docs/project-context"))).toBe(
       true
     );
+    expect(structured.summary).toMatch(/保留现有分类文档/);
+
+    const legacyDoc = structured.documentation?.find(
+      (doc: any) => doc.path === "docs/project-context.md"
+    );
+    expect(legacyDoc).toMatchObject({
+      exists: true,
+      written: true,
+      agent_action_required: false,
+    });
+
+    const graphDoc = structured.documentation?.find(
+      (doc: any) => doc.path === "docs/graph-insights/latest.md"
+    );
+    expect(graphDoc).toMatchObject({
+      exists: false,
+      written: false,
+      agent_action_required: true,
+    });
+
     expect(fs.readFileSync(path.join(projectRoot, "docs", "project-context.md"), "utf8")).toBe(
       "# existing context\n"
     );

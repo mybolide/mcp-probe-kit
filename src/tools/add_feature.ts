@@ -341,7 +341,7 @@ ${fenceClose}
     }));
 
     const structuredData: FeatureSpec = {
-      summary: `功能规格：${featureName}`,
+      summary: `已生成功能规格写作计划：${featureName}`,
       featureName,
       requirements: ["见 requirements.md 模板"],
       tasks: [{ id: "1", title: "按模板创建 specs 文档", description: "将下方模板落盘并补充真实内容" }],
