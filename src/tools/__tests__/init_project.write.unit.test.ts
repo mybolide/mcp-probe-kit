@@ -15,6 +15,11 @@ describe("init_project 落盘边界", () => {
 
     expect(result.isError).toBeFalsy();
     const structured = (result as any).structuredContent;
+    expect(structured.summary).toBe(
+      "已生成项目初始化写作计划，请 Agent 按指南落盘 docs/specs/scripts/src"
+    );
+    expect(structured.nextSteps[0]).toContain("MCP 仅写入 Skill 与 AGENTS.md");
+    expect(structured.nextSteps[0]).toContain("Agent 须按指南手动落盘");
     expect(structured.writtenFiles.length).toBe(2);
     expect(structured.pendingFiles.length).toBeGreaterThan(0);
     expect(fs.existsSync(path.join(projectRoot, "AGENTS.md"))).toBe(true);

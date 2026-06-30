@@ -134,8 +134,8 @@
       "usage": "Generate requirement/design/task documents following Spec-Driven Development approach"
     },
     "init_project_context": {
-      "description": "Generate or maintain project context documentation and bootstrap graph-insights entry points",
-      "usage": "Creates context docs for new projects; if project-context.md already exists, it preserves the old docs and only backfills graph-insights plus the index entry"
+      "description": "Build a delegated project-context writing plan: MCP writes AGENTS.md and layout; Agent writes modular docs and graph-insights per plan",
+      "usage": "Call when context is missing; returns metadata.plan, pendingFiles, and documentation status (exists/written/agent_action_required). Agent must write pending files manually."
     },
     "add_feature": {
       "description": "Generate new feature specification documents (requirements/design/task list) based on project context",

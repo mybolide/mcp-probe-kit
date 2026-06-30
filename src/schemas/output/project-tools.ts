@@ -122,9 +122,15 @@ export const ProjectContextSchema = {
         properties: {
           path: { type: 'string' },
           purpose: { type: 'string' },
+          exists: { type: 'boolean', description: '文件是否已存在于磁盘' },
+          written: { type: 'boolean', description: '内容是否已落盘（MCP 已写或 Agent 无需再写）' },
+          agent_action_required: {
+            type: 'boolean',
+            description: '是否仍需 Agent 按 plan 手动写入',
+          },
         },
       },
-      description: '文档索引（含已写入与待生成）',
+      description: '文档索引（含 exists / written / agent_action_required 状态）',
     },
     writtenFiles: {
       type: 'array',
@@ -384,6 +390,9 @@ export interface ProjectContext {
   documentation?: Array<{
     path?: string;
     purpose?: string;
+    exists?: boolean;
+    written?: boolean;
+    agent_action_required?: boolean;
   }>;
   nextSteps?: string[];
   metadata?: Record<string, any>;

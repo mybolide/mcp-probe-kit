@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
-    "version": "v3.6.8",
+    "version": "v3.6.9",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "Quick Start",
-      "description": "Get started with MCP Probe Kit v3.6.8 in 5 minutes",
+      "description": "Get started with MCP Probe Kit v3.6.9 in 5 minutes",
       "installConfig": "Installation & Configuration"
     },
     "tools": {
@@ -63,10 +63,10 @@
   },
   "gettingStarted": {
     "title": "Installation & Configuration",
-    "subtitle": "Get started with MCP Probe Kit v3.6.8 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
+    "subtitle": "Get started with MCP Probe Kit v3.6.9 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
     "skillBootstrap": {
       "title": "Skill & AGENTS auto-bootstrap",
-      "body": "Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v3.6.8+)."
+      "body": "Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v3.6.9+)."
     },
     "breadcrumb": {
       "home": "Documentation",

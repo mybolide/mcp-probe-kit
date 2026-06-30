@@ -6,6 +6,9 @@ import { resolveWorkspaceRootWithMeta } from "../lib/workspace-root.js";
 import { toPosixPath } from "../lib/project-context-layout.js";
 import type { ProjectInit } from "../schemas/output/project-tools.js";
 
+const AGENT_MANUAL_WRITE_NOTICE =
+  "MCP 仅写入 Skill 与 AGENTS.md；Agent 须按指南手动落盘 pendingFiles 中的 docs、specs、scripts、src。";
+
 /**
  * init_project 工具
  * 
@@ -237,7 +240,7 @@ MCP 已写入 Skill 与 AGENTS.md。请按上述步骤由 Agent 创建 docs、sc
 
     // 创建结构化数据对象
     const structuredData: ProjectInit = {
-      summary: `初始化项目：${projectName}`,
+      summary: "已生成项目初始化写作计划，请 Agent 按指南落盘 docs/specs/scripts/src",
       projectName: projectName,
       projectRoot: toPosixPath(projectRoot),
       bootstrap: {
@@ -266,11 +269,12 @@ MCP 已写入 Skill 与 AGENTS.md。请按上述步骤由 Agent 创建 docs、sc
       writtenFiles: bootstrapWritten,
       pendingFiles,
       nextSteps: [
-        '确认 Skill 与 AGENTS.md 已落盘',
-        '按指南创建 docs/ 文档与 specs',
-        '创建 scripts/ 辅助脚本',
-        '创建 src/ 源代码目录',
-        '运行 init_project_context 生成完整上下文与图谱',
+        AGENT_MANUAL_WRITE_NOTICE,
+        "确认 Skill 与 AGENTS.md 已落盘",
+        "按指南创建 docs/ 文档与 specs",
+        "创建 scripts/ 辅助脚本",
+        "创建 src/ 源代码目录",
+        "运行 init_project_context 生成完整上下文与图谱",
       ]
     };
 

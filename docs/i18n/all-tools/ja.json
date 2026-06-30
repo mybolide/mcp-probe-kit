@@ -134,8 +134,8 @@
       "usage": "Spec-Driven Developmentアプローチに従って要件/設計/タスクドキュメントを生成します"
     },
     "init_project_context": {
-      "description": "プロジェクトコンテキスト文書を生成・維持し、graph-insights の基線入口を補完します",
-      "usage": "新規プロジェクトでは骨組みを生成し、既存の project-context.md がある場合は上書きせず graph-insights と索引入口だけを補完します"
+      "description": "delegated 方式のコンテキスト執筆プランを返す：MCP が AGENTS.md と layout を書き込み、分類ドキュメントと graph-insights は Agent が plan に従って落盘",
+      "usage": "コンテキスト不足時に呼び出し。metadata.plan、pendingFiles、documentation の exists/written/agent_action_required を返す。Agent が pending ファイルを手動作成する必要あり"
     },
     "add_feature": {
       "description": "プロジェクトコンテキストに基づいて新機能仕様ドキュメント（要件/設計/タスクリスト）を生成します",

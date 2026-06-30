@@ -134,8 +134,8 @@
       "usage": "Spec-Driven Development 접근 방식에 따라 요구사항/설계/작업 문서를 생성합니다"
     },
     "init_project_context": {
-      "description": "프로젝트 컨텍스트 문서를 생성 또는 유지하고 graph-insights 베이스라인 진입점을 보강합니다",
-      "usage": "신규 프로젝트는 컨텍스트 골격을 생성하고, 기존 project-context.md 가 있으면 덮어쓰지 않고 graph-insights 와 인덱스 진입점만 보강합니다"
+      "description": "delegated 컨텍스트 작성 계획 반환: MCP는 AGENTS.md와 layout 기록, 분류 문서와 graph-insights는 Agent가 plan에 따라 작성",
+      "usage": "컨텍스트 부족 시 호출. metadata.plan, pendingFiles, documentation exists/written/agent_action_required 반환. Agent가 pending 파일을 수동 작성해야 함"
     },
     "add_feature": {
       "description": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다",

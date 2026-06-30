@@ -18,6 +18,14 @@ export interface FileDeliveryReport {
   pendingFiles: PendingFile[];
 }
 
+export interface FileStatusEntry {
+  path: string;
+  exists: boolean;
+  written: boolean;
+  agent_action_required: boolean;
+  purpose?: string;
+}
+
 export function toPosixRel(relPath: string): string {
   return relPath.replace(/\\/g, "/");
 }
@@ -37,6 +45,35 @@ export function writeProjectFile(
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   fs.writeFileSync(absPath, content, "utf8");
   return { path: posixPath, action: existed ? "updated" : "created" };
+}
+
+export function buildFileStatusEntries(
+  projectRoot: string,
+  entries: Array<{ path: string; purpose?: string }>,
+  writtenFiles: DeliveredFile[],
+  pendingFiles: PendingFile[]
+): FileStatusEntry[] {
+  const writtenByMcp = new Set(
+    writtenFiles
+      .filter((file) => file.action === "created" || file.action === "updated")
+      .map((file) => toPosixRel(file.path))
+  );
+  const pendingPaths = new Set(pendingFiles.map((file) => toPosixRel(file.path)));
+
+  return entries.map(({ path: relPath, purpose }) => {
+    const posixPath = toPosixRel(relPath);
+    const absPath = path.join(path.resolve(projectRoot), ...posixPath.split("/"));
+    const exists = fs.existsSync(absPath);
+    const agent_action_required = pendingPaths.has(posixPath);
+    const written = writtenByMcp.has(posixPath) || (exists && !agent_action_required);
+    return {
+      path: posixPath,
+      ...(purpose !== undefined ? { purpose } : {}),
+      exists,
+      written,
+      agent_action_required,
+    };
+  });
 }
 
 export function mergeDeliveryReports(...reports: FileDeliveryReport[]): FileDeliveryReport {

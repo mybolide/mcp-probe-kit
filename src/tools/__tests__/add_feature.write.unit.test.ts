@@ -18,8 +18,11 @@ describe("add_feature 不落盘", () => {
 
       expect(result.isError).toBeFalsy();
       const structured = (result as any).structuredContent;
+      expect(structured.summary).toBe("已生成功能规格写作计划：user-auth");
       expect(structured.pendingFiles).toHaveLength(3);
+      expect(structured.specPaths).toHaveLength(3);
       expect(structured.writtenFiles).toBeUndefined();
+      expect((result as any)._meta?.note).toMatch(/不代写文件/);
       expect(fs.existsSync(path.join(projectRoot, "docs", "specs", "user-auth", "requirements.md"))).toBe(
         false
       );

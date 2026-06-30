@@ -29,7 +29,7 @@ export const projectToolSchemas = [
   {
     name: "init_project_context",
     description:
-      "生成/更新项目上下文：默认写入 AGENTS.md（含 MCP 与 GitNexus 触发规则）及 docs/project-context/。新功能请先 start_feature，修 bug 请先 start_bugfix。完成后 Agent 应阅读 AGENTS.md。",
+      "生成/更新项目上下文写作计划（delegated）：MCP 写入 AGENTS.md 与 layout.json；project-context 分类文档与 graph-insights 由 Agent 按返回的 plan 落盘。新功能请先 start_feature，修 bug 请先 start_bugfix。",
     inputSchema: {
       type: "object",
       properties: {

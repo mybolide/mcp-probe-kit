@@ -20,6 +20,7 @@ import { ensureHarnessAdapters } from "../lib/harness-adapters.js";
 import { generateWorkflowSkillContent, MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
 import { getMcpProbeSkillVersion } from "../lib/workflow-skill-version.js";
 import {
+  buildFileStatusEntries,
   formatFileDeliverySection,
   writeProjectFile,
   type DeliveredFile,
@@ -27,6 +28,9 @@ import {
 } from "../lib/file-delivery.js";
 import * as fs from "fs";
 import * as path from "path";
+
+const AGENT_MANUAL_WRITE_NOTICE =
+  "本工具不会自动生成完整 project-context 与图谱内容，Agent 必须根据 metadata.plan 与 pendingFiles 手动写入这些文件。";
 
 /**
  * init_project_context 工具
@@ -316,23 +320,45 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
     const header = renderOrchestrationHeader({
       tool: "init_project_context",
       goal: modularExists
-        ? "补齐图谱（保留现有分类文档；AGENTS.md 已由 MCP 写入）"
-        : "写入 AGENTS.md 与 layout，由 Agent 生成 project-context 与图谱",
+        ? "已生成 delegated 写作计划（保留现有分类文档；AGENTS.md 已由 MCP 写入）"
+        : "已生成 delegated 写作计划（AGENTS.md 与 layout 已由 MCP 写入）",
       tasks: modularExists
-        ? ["保留现有分类文档", "code_insight + Agent 落盘图谱"]
-        : ["MCP 已写 AGENTS.md 与 layout", "Agent 写分类文档", "code_insight + Agent 落盘图谱"],
+        ? ["保留现有分类文档", "Agent 按 plan 落盘图谱"]
+        : ["Agent 按 plan 落盘 project-context 分类文档", "code_insight + Agent 落盘图谱"],
       notes: [
         `项目根目录: ${toPosixPath(resolvedRoot)}`,
         `上下文目录: ${docsDir}`,
         `索引: ${layout.indexPath}`,
         `layout: ${manifestWritten}（已服务端写入）`,
+        AGENT_MANUAL_WRITE_NOTICE,
       ],
     });
 
+    const documentationDefs = [
+      { path: layout.indexPath, purpose: "Harness 入口（MCP 触发规则，省 token）" },
+      {
+        path: layout.legacyIndexPath,
+        purpose: "项目上下文索引（写代码前优先读，链到分类文档）",
+      },
+      ...docs.map((doc) => ({
+        path: `${layout.modularDir}/${doc.file}`,
+        purpose: doc.purpose,
+      })),
+      {
+        path: layout.latestMarkdownPath,
+        purpose: "最新代码图谱洞察（由 code_insight 维护）",
+      },
+      {
+        path: layout.latestJsonPath,
+        purpose: "最新代码图谱结构化结果（由 code_insight 维护）",
+      },
+      { path: layout.manifestPath, purpose: "layout manifest（工具链路径发现）" },
+    ];
+
     const structuredData: ProjectContext = {
       summary: modularExists
-        ? `检测到现有项目上下文，补齐图谱与 ${layout.indexPath}`
-        : `生成 ${detection.category} 项目上下文与 ${layout.indexPath}`,
+        ? "已生成上下文写作计划（保留现有分类文档），请 Agent 按 plan 落盘图谱文件"
+        : "已生成上下文写作计划，请 Agent 按 plan 落盘文件",
       mode: "modular",
       projectOverview: {
         name: projectInfo.name,
@@ -340,31 +366,21 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
         techStack: detection.framework ? [detection.framework] : [],
         architecture: detection.category,
       },
-      documentation: [
-        { path: layout.indexPath, purpose: "Harness 入口（MCP 触发规则，省 token）" },
-        {
-          path: layout.legacyIndexPath,
-          purpose: "项目上下文索引（写代码前优先读，链到分类文档）",
-        },
-        ...docs.map((doc) => ({
-          path: `${layout.modularDir}/${doc.file}`,
-          purpose: doc.purpose,
-        })),
-        {
-          path: layout.latestMarkdownPath,
-          purpose: "最新代码图谱洞察（由 code_insight 维护）",
-        },
-        {
-          path: layout.latestJsonPath,
-          purpose: "最新代码图谱结构化结果（由 code_insight 维护）",
-        },
-        { path: layout.manifestPath, purpose: "layout manifest（工具链路径发现）" },
-      ],
+      documentation: buildFileStatusEntries(
+        projectRootAbs,
+        documentationDefs,
+        writtenFiles,
+        pendingFiles
+      ).map((entry) => ({
+        ...entry,
+        purpose: entry.purpose ?? "",
+      })),
       nextSteps: [
+        AGENT_MANUAL_WRITE_NOTICE,
         ...(modularExists
           ? [`保留 ${layout.legacyIndexPath} 与分类文档`]
           : [`由 Agent 按模板创建 ${layout.modularDir}/ 分类文档`]),
-        "调用 code_insight，由 Agent 落盘图谱",
+        "调用 code_insight，由 Agent 按 metadata.plan 落盘图谱",
         `${layout.indexPath} 与 ${manifestWritten} 已由 MCP 写入（mergeMode: ${mergedAgents.mergeMode}）`,
       ],
       writtenFiles,
