@@ -16,6 +16,9 @@ import {
 } from "../lib/project-context-layout.js";
 import { mergeAgentsMdBlock } from "../lib/merge-agents-md.js";
 import { generateAgentsMdInner } from "../lib/agents-md-template.js";
+import { ensureHarnessAdapters } from "../lib/harness-adapters.js";
+import { generateWorkflowSkillContent, MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
+import { getMcpProbeSkillVersion } from "../lib/workflow-skill-version.js";
 import {
   formatFileDeliverySection,
   writeProjectFile,
@@ -206,10 +209,20 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
       category: detection.category,
       docs,
       projectRootPosix: layout.projectRootPosix,
-      graphReady: false,
+      graphReady: fs.existsSync(layoutAbsPath(layout, layout.latestMarkdownPath)),
+      contextReady: modularExists,
     });
     const mergedAgents = mergeAgentsMdBlock(existingAgentsRaw, agentsInner);
-    const manifestWritten = writeLayoutManifest(projectRootAbs, layout);
+    const skillPath = layoutAbsPath(layout, MCP_PROBE_SKILL_REL_PATH);
+    const skillContent = fs.existsSync(skillPath)
+      ? fs.readFileSync(skillPath, "utf8")
+      : generateWorkflowSkillContent(getMcpProbeSkillVersion());
+    const harnessResult = ensureHarnessAdapters(projectRootAbs, skillContent, layout.indexPath);
+    const manifestWritten = writeLayoutManifest(
+      projectRootAbs,
+      layout,
+      harnessResult.layoutHarness
+    );
     const agentsMdWritten = writeProjectFile(
       projectRootAbs,
       layout.indexPath,
@@ -219,6 +232,12 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
     const writtenFiles: DeliveredFile[] = [
       agentsMdWritten,
       { path: manifestWritten, action: "updated" },
+      ...harnessResult.adapters
+        .filter((a) => a.created || a.updated)
+        .map((a) => ({
+          path: a.path,
+          action: (a.created ? "created" : "updated") as "created" | "updated",
+        })),
     ];
     const pendingFiles: PendingFile[] = [
       ...(modularExists

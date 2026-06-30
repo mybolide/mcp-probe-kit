@@ -16,6 +16,8 @@ import {
   skillContentNeedsUpgrade,
 } from "../workflow-skill-version.js";
 import {
+  formatSkillFrontmatter,
+  generateWorkflowSkillContent,
   LEGACY_WORKFLOW_SKILL_REL_PATH,
   MCP_PROBE_SKILL_REL_PATH,
 } from "../workflow-skill-template.js";
@@ -56,15 +58,32 @@ describe("workflow-skill-installer", () => {
     expect(result.updated).toBe(false);
     expect(result.version).toBe(VERSION);
     const text = fs.readFileSync(path.join(root, MCP_PROBE_SKILL_REL_PATH), "utf8");
-    expect(text).toContain(formatSkillVersionMarker(VERSION));
+    expect(text).toContain('name: mcp-probe-kit');
+    expect(text).toContain('mcp-probe-kit-version:');
     expect(text).toContain("MCP 调用时机");
   });
 
-  test("同版本 Skill 不覆盖", () => {
+  test("仅 HTML 注释同版本会升级为 frontmatter", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
     tempDirs.push(root);
     const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
     const content = `${formatSkillVersionMarker(VERSION)}\n# same version\n`;
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath, content, "utf8");
+
+    const result = ensureMcpProbeSkill(root);
+
+    expect(result.updated).toBe(true);
+    const text = fs.readFileSync(skillPath, "utf8");
+    expect(text).toContain("name: mcp-probe-kit");
+    expect(text).not.toBe(content);
+  });
+
+  test("标准 frontmatter 同版本不覆盖", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
+    tempDirs.push(root);
+    const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
+    const content = generateWorkflowSkillContent(VERSION);
     fs.mkdirSync(path.dirname(skillPath), { recursive: true });
     fs.writeFileSync(skillPath, content, "utf8");
 
@@ -75,7 +94,7 @@ describe("workflow-skill-installer", () => {
     expect(fs.readFileSync(skillPath, "utf8")).toBe(content);
   });
 
-  test("旧版本 Skill 会升级覆盖", () => {
+  test("旧版 HTML 注释 Skill 会升级", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
     tempDirs.push(root);
     const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
@@ -91,12 +110,12 @@ describe("workflow-skill-installer", () => {
     expect(result.updated).toBe(true);
     expect(result.previousVersion).toBe("0.1.0");
     const text = fs.readFileSync(skillPath, "utf8");
-    expect(text).toContain(formatSkillVersionMarker(VERSION));
+    expect(text).toContain('name: mcp-probe-kit');
     expect(text).toContain("何时调用");
     expect(text).not.toContain("stale tools list");
   });
 
-  test("无 AGENTS.md 时创建并引用 Skill", () => {
+  test("无 AGENTS.md 时创建并 @ 引用 Skill", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
     tempDirs.push(root);
 
@@ -106,6 +125,7 @@ describe("workflow-skill-installer", () => {
     const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
     expect(agents).toContain("mcp-probe:context-version");
     expect(agents).toContain(MCP_PROBE_SKILL_REL_PATH);
+    expect(agents).toContain(`@${MCP_PROBE_SKILL_REL_PATH}`);
   });
 
   test("已有 AGENTS.md 但缺 Skill 引用时更新", () => {

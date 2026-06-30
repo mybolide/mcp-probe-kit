@@ -1,5 +1,9 @@
 import type { DocumentLocale, ProjectContextLayout } from "./project-context-layout.js";
 import { relativeLink } from "./project-context-layout.js";
+import {
+  formatAgentsSkillReference,
+  formatAgentsSkillReferenceEn,
+} from "./agents-skill-ref.js";
 import { MCP_PROBE_SKILL_REL_PATH } from "./workflow-skill-template.js";
 
 export interface AgentsMdTemplateInput {
@@ -14,6 +18,7 @@ export interface AgentsMdTemplateInput {
   docs: Array<{ file: string; title: string; purpose: string }>;
   projectRootPosix: string;
   graphReady: boolean;
+  contextReady?: boolean;
   /** @deprecated kept for callers; memory rules are always included in AGENTS.md */
   memoryEnabled?: boolean;
 }
@@ -49,13 +54,22 @@ Memory (requires MEMORY_* env):
  */
 export function generateAgentsMdInner(input: AgentsMdTemplateInput): string {
   const { layout, locale } = input;
+  const contextReady = input.contextReady === true;
+  const graphReady = input.graphReady === true;
   const graph = link(layout, layout.latestMarkdownPath);
   const ctxIndex = link(layout, layout.legacyIndexPath);
   const skillLink = link(layout, MCP_PROBE_SKILL_REL_PATH);
 
+  const contextLineZh = contextReady
+    ? `上下文：写代码前先读 [project-context](${ctxIndex})（链到 \`${layout.modularDir}/\` 各文档）`
+    : `上下文：待 Agent 落盘后读 [project-context](${ctxIndex})（可先 \`init_project_context\` + 按模板写 \`${layout.modularDir}/\`）`;
+  const graphLineZh = graphReady
+    ? `图谱：大改前读 [latest](${graph})；过期 \`code_insight\` mode=auto save_to_docs=true`
+    : `图谱：待 \`code_insight\` 落盘后读 [latest](${graph})（save_to_docs=true，由 Agent 写入）`;
+
   if (locale === "zh-CN") {
     return `## MCP（必须先调）
-需已配置 mcp-probe-kit。写代码前先读 Skill：[MCP 调用时机](${skillLink})（\`${MCP_PROBE_SKILL_REL_PATH}\`，首次 MCP 调用自动创建）。
+需已配置 mcp-probe-kit。${formatAgentsSkillReference(skillLink)}（首次 MCP 调用自动创建 Skill 文件）。
 
 - 不确定用哪个 MCP → \`workflow\`（返回 firstTool）
 - 新功能 → \`start_feature\`（会先搜记忆）
@@ -65,12 +79,19 @@ export function generateAgentsMdInner(input: AgentsMdTemplateInput): string {
 - 缺上下文 → \`init_project_context\`
 - 提交 → \`gencommit\`
 
-上下文：写代码前先读 [project-context](${ctxIndex})（链到 \`${layout.modularDir}/\` 各文档）
-图谱：大改前读 [latest](${graph})；过期 \`code_insight\` mode=auto save_to_docs=true${memorySection(locale)}`;
+${contextLineZh}
+${graphLineZh}${memorySection(locale)}`;
   }
 
+  const contextLineEn = contextReady
+    ? `Context: before coding read [project-context](${ctxIndex}) (links to \`${layout.modularDir}/\`)`
+    : `Context: read [project-context](${ctxIndex}) after Agent creates it (\`init_project_context\` + templates)`;
+  const graphLineEn = graphReady
+    ? `Graph: read [latest](${graph}) before large changes; refresh \`code_insight\` mode=auto save_to_docs=true`
+    : `Graph: read [latest](${graph}) after Agent saves code_insight output (save_to_docs=true)`;
+
   return `## MCP (call first)
-Requires mcp-probe-kit. Before coding, read Skill: [When to call MCP](${skillLink}) (\`${MCP_PROBE_SKILL_REL_PATH}\`, auto-created on first MCP call).
+Requires mcp-probe-kit. ${formatAgentsSkillReferenceEn(skillLink)} (Skill file auto-created on first MCP call).
 
 - Unsure which MCP → \`workflow\` (returns firstTool)
 - Feature → \`start_feature\` (searches memory first)
@@ -80,8 +101,8 @@ Requires mcp-probe-kit. Before coding, read Skill: [When to call MCP](${skillLin
 - Missing context → \`init_project_context\`
 - Commit → \`gencommit\`
 
-Context: before coding read [project-context](${ctxIndex}) (links to \`${layout.modularDir}/\`)
-Graph: read [latest](${graph}) before large changes; refresh \`code_insight\` mode=auto save_to_docs=true${memorySection(locale)}`;
+${contextLineEn}
+${graphLineEn}${memorySection(locale)}`;
 }
 
 export function generateAgentsMdTemplate(input: AgentsMdTemplateInput): string {

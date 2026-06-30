@@ -1,6 +1,9 @@
 import { VERSION } from "../version.js";
 
-/** Skill 文件首行版本标记：`<!-- mcp-probe-kit-skill-version: 3.5.0 -->` */
+/** Skill frontmatter 版本字段 */
+export const SKILL_VERSION_FRONTMATTER_KEY = "mcp-probe-kit-version";
+
+/** @deprecated 旧版 HTML 版本标记，仍用于解析历史文件 */
 export const SKILL_VERSION_MARKER = "mcp-probe-kit-skill-version";
 
 /** AGENTS.md mcp-probe 块内版本标记 */
@@ -25,6 +28,50 @@ export function parseSkillVersionMarker(content: string): string | null {
   );
   const match = content.match(pattern);
   return match?.[1]?.trim() ?? null;
+}
+
+function parseSkillVersionFromFrontmatter(content: string): string | null {
+  if (!content.trimStart().startsWith("---")) {
+    return null;
+  }
+  const end = content.indexOf("\n---", 3);
+  if (end === -1) {
+    return null;
+  }
+  const header = content.slice(0, end + 4);
+  const pattern = new RegExp(
+    `^${SKILL_VERSION_FRONTMATTER_KEY}:\\s*["']?([^"'\\n]+)["']?\\s*$`,
+    "m"
+  );
+  const match = header.match(pattern);
+  return match?.[1]?.trim().replace(/^["']|["']$/g, "") ?? null;
+}
+
+/** 从 Skill 正文解析已安装版本（frontmatter 优先，HTML 注释兜底） */
+export function parseSkillInstalledVersion(content: string): string | null {
+  return parseSkillVersionFromFrontmatter(content) ?? parseSkillVersionMarker(content);
+}
+
+/** 是否缺少 Agent Skill 发现所需的 YAML frontmatter */
+export function skillFrontmatterNeedsUpgrade(content: string): boolean {
+  if (!content.trimStart().startsWith("---")) {
+    return true;
+  }
+  const end = content.indexOf("\n---", 3);
+  if (end === -1) {
+    return true;
+  }
+  const header = content.slice(0, end + 4);
+  if (!/^name:\s*mcp-probe-kit\s*$/m.test(header)) {
+    return true;
+  }
+  if (!/^description:\s*>?-?\s*\S/m.test(header)) {
+    return true;
+  }
+  if (!new RegExp(`^${SKILL_VERSION_FRONTMATTER_KEY}:\\s*`, "m").test(header)) {
+    return true;
+  }
+  return false;
 }
 
 export function parseAgentsContextVersion(content: string): string | null {
@@ -70,7 +117,10 @@ export function skillContentNeedsUpgrade(
   if (!existing?.trim()) {
     return true;
   }
-  const installed = parseSkillVersionMarker(existing);
+  if (skillFrontmatterNeedsUpgrade(existing)) {
+    return true;
+  }
+  const installed = parseSkillInstalledVersion(existing);
   if (!installed) {
     return true;
   }

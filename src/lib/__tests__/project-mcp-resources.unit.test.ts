@@ -53,7 +53,7 @@ describe("project-mcp-resources", () => {
       ensureAndDiscoverProjectResources(root);
       const content = readProjectResourceContent("probe://project/skill", root);
       expect(content?.mimeType).toBe("text/markdown");
-      expect(content?.text).toContain("mcp-probe-kit-skill-version");
+      expect(content?.text).toContain("mcp-probe-kit-version:");
     });
   });
 });

@@ -1,12 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import {
+  agentsSkillReferenceSatisfied,
+  resolveAgentsSkillRefMode,
+} from "./agents-skill-ref.js";
 import { generateAgentsMdInner } from "./agents-md-template.js";
 import { mergeAgentsMdBlock } from "./merge-agents-md.js";
-import {
-  detectDocumentLocale,
-  resolveProjectContextLayout,
-  toPosixPath,
-} from "./project-context-layout.js";
 import {
   generateWorkflowSkillContent,
   LEGACY_WORKFLOW_SKILL_REL_PATH,
@@ -15,9 +14,16 @@ import {
 import {
   agentsContextNeedsUpgrade,
   getMcpProbeSkillVersion,
-  parseSkillVersionMarker,
+  parseSkillInstalledVersion,
   skillContentNeedsUpgrade,
 } from "./workflow-skill-version.js";
+import { ensureHarnessAdapters, type HarnessAdapterEnsureResult } from "./harness-adapters.js";
+import {
+  detectDocumentLocale,
+  patchLayoutManifestHarness,
+  resolveProjectContextLayout,
+  toPosixPath,
+} from "./project-context-layout.js";
 import {
   isLikelyProjectNamedRelativePath,
   getMcpPackageInstallRoot,
@@ -45,6 +51,7 @@ export interface McpProbeKitBootstrapResult {
   projectRoot: string;
   skill: SkillEnsureResult;
   agentsMd: AgentsMdEnsureResult;
+  harness?: HarnessAdapterEnsureResult;
   /** 工作区可能解析失败（写到了 mcp-probe-kit 安装目录） */
   workspaceWarning?: string;
 }
@@ -92,6 +99,7 @@ function buildAgentsMdInner(projectRoot: string, existingAgentsContent?: string)
   const layout = resolveProjectContextLayout(projectRoot);
   const locale = detectDocumentLocale(projectRoot, existingAgentsContent);
   const graphReady = fs.existsSync(path.join(projectRoot, layout.latestMarkdownPath));
+  const contextReady = fs.existsSync(path.join(projectRoot, layout.legacyIndexPath));
 
   return generateAgentsMdInner({
     layout,
@@ -104,6 +112,7 @@ function buildAgentsMdInner(projectRoot: string, existingAgentsContent?: string)
     docs: [],
     projectRootPosix: toPosixPath(projectRoot),
     graphReady,
+    contextReady,
   });
 }
 
@@ -122,6 +131,9 @@ function agentsMdNeedsUpdate(
     return true;
   }
   if (!content.includes(skillRelPath)) {
+    return true;
+  }
+  if (!agentsSkillReferenceSatisfied(content, resolveAgentsSkillRefMode())) {
     return true;
   }
   if (agentsContextNeedsUpgrade(content, targetVersion)) {
@@ -143,7 +155,7 @@ export function ensureMcpProbeSkill(projectRoot: string): SkillEnsureResult {
   const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
   const targetVersion = getMcpProbeSkillVersion();
   const existing = fs.existsSync(skillPath) ? fs.readFileSync(skillPath, "utf8") : null;
-  const previousVersion = existing ? parseSkillVersionMarker(existing) : null;
+  const previousVersion = existing ? parseSkillInstalledVersion(existing) : null;
 
   if (!skillContentNeedsUpgrade(existing, targetVersion)) {
     return {
@@ -210,10 +222,17 @@ export function ensureAgentsMdSkillReference(projectRoot: string): AgentsMdEnsur
 export function ensureMcpProbeKitBootstrap(projectRoot: string): McpProbeKitBootstrapResult {
   const root = path.resolve(projectRoot);
   const workspaceWarning = buildWorkspaceWarning(root);
+  const skill = ensureMcpProbeSkill(root);
+  const agentsMd = ensureAgentsMdSkillReference(root);
+  const skillContent = fs.readFileSync(skill.skillPath, "utf8");
+  const layout = resolveProjectContextLayout(root);
+  const harness = ensureHarnessAdapters(root, skillContent, layout.indexPath);
+  patchLayoutManifestHarness(root, harness.layoutHarness);
   return {
     projectRoot: root,
-    skill: ensureMcpProbeSkill(root),
-    agentsMd: ensureAgentsMdSkillReference(root),
+    skill,
+    agentsMd,
+    harness,
     workspaceWarning,
   };
 }

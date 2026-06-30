@@ -518,10 +518,11 @@ function withBootstrapMeta(
     ...result,
     structuredContent: {
       ...base,
-      mcp_probe_bootstrap: {
+        mcp_probe_bootstrap: {
         projectRoot: bootstrap.projectRoot,
         skill: bootstrap.skill,
         agentsMd: bootstrap.agentsMd,
+        harness: bootstrap.harness ?? null,
         workspaceWarning: bootstrap.workspaceWarning ?? null,
       },
     },
