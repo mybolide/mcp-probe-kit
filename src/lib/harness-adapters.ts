@@ -31,26 +31,34 @@ export interface HarnessAdapterEnsureResult {
   layoutHarness: LayoutHarnessManifest;
 }
 
-function generateRulesPointerContent(skillCanonical: string, version: string): string {
+function generateRulesPointerContent(
+  skillCanonical: string,
+  version: string,
+  agentsIndexPath: string
+): string {
   return `# mcp-probe-kit MCP
 
 > ${RULES_POINTER_VERSION_KEY}: ${version}
 
 配置 **mcp-probe-kit** MCP 后，写代码 / 改文件前：
 
-1. 阅读项目根 \`AGENTS.md\` 中 \`<!-- mcp-probe:context -->\` 块（MCP 触发规则）
+1. 阅读项目根 \`${agentsIndexPath}\` 中 \`<!-- mcp-probe:context -->\` 块（MCP 触发规则）
 2. 需要完整工具表时阅读 \`${skillCanonical}\`
 
 **不要**跳过 MCP 直接改业务代码。拿不准先调 \`workflow\`。
 `;
 }
 
-function generateComateRulesContent(skillCanonical: string, version: string): string {
+function generateComateRulesContent(
+  skillCanonical: string,
+  version: string,
+  agentsIndexPath: string
+): string {
   return `# mcp-probe-kit-mcp
 
 > ${RULES_POINTER_VERSION_KEY}: ${version}
 
-配置 mcp-probe-kit MCP 后，写代码前阅读 AGENTS.md 的 mcp-probe 块或 ${skillCanonical}。拿不准先调 workflow。
+配置 mcp-probe-kit MCP 后，写代码前阅读 ${agentsIndexPath} 的 mcp-probe 块或 ${skillCanonical}。拿不准先调 workflow。
 `;
 }
 
@@ -87,7 +95,8 @@ function mergeClaudePointer(existing: string | null, block: string): string {
 function adapterNeedsUpdate(
   existing: string | null,
   nextContent: string,
-  kind: HarnessAdapterKind
+  kind: HarnessAdapterKind,
+  agentsIndexPath?: string
 ): boolean {
   if (!existing?.trim()) {
     return true;
@@ -100,7 +109,13 @@ function adapterNeedsUpdate(
     return true;
   }
   if (kind === "claude-pointer") {
-    return !existing.includes(CANONICAL_SKILL_REL_PATH);
+    return (
+      !existing.includes(CANONICAL_SKILL_REL_PATH) ||
+      Boolean(agentsIndexPath && !existing.includes(agentsIndexPath))
+    );
+  }
+  if (kind === "rules-pointer" && agentsIndexPath && !existing.includes(agentsIndexPath)) {
+    return true;
   }
   return existing !== nextContent;
 }
@@ -116,8 +131,8 @@ function resolveAdapterContent(
       return skillContent;
     case "rules-pointer":
       return adapter.relPath.endsWith(".mdr")
-        ? generateComateRulesContent(CANONICAL_SKILL_REL_PATH, version)
-        : generateRulesPointerContent(CANONICAL_SKILL_REL_PATH, version);
+        ? generateComateRulesContent(CANONICAL_SKILL_REL_PATH, version, agentsIndexPath)
+        : generateRulesPointerContent(CANONICAL_SKILL_REL_PATH, version, agentsIndexPath);
     case "claude-pointer":
       return mergeClaudePointer(
         null,
@@ -131,15 +146,16 @@ function resolveAdapterContent(
 function writeAdapterFile(
   projectRoot: string,
   adapter: HarnessAdapterTarget,
-  content: string
+  content: string,
+  agentsIndexPath: string
 ): HarnessAdapterWriteResult {
   const absolute = path.join(projectRoot, adapter.relPath);
   const existing = fs.existsSync(absolute) ? fs.readFileSync(absolute, "utf8") : null;
 
   if (adapter.kind === "claude-pointer" && existing) {
-    const block = generateClaudePointerBlock(CANONICAL_SKILL_REL_PATH, "AGENTS.md");
+    const block = generateClaudePointerBlock(CANONICAL_SKILL_REL_PATH, agentsIndexPath);
     const merged = mergeClaudePointer(existing, block);
-    if (!adapterNeedsUpdate(existing, merged, adapter.kind)) {
+    if (!adapterNeedsUpdate(existing, merged, adapter.kind, agentsIndexPath)) {
       return {
         id: adapter.id,
         path: adapter.relPath,
@@ -161,7 +177,7 @@ function writeAdapterFile(
     };
   }
 
-  if (!adapterNeedsUpdate(existing, content, adapter.kind)) {
+  if (!adapterNeedsUpdate(existing, content, adapter.kind, agentsIndexPath)) {
     return {
       id: adapter.id,
       path: adapter.relPath,
@@ -185,6 +201,19 @@ function writeAdapterFile(
   };
 }
 
+function collectInstalledAdapterManifest(
+  projectRoot: string,
+  detection: HarnessDetectionResult
+): Array<{ id: string; kind: HarnessAdapterKind; path: string }> {
+  return detection.adaptersToWrite
+    .filter((adapter) => fs.existsSync(path.join(projectRoot, adapter.relPath)))
+    .map((adapter) => ({
+      id: adapter.id,
+      kind: adapter.kind,
+      path: adapter.relPath,
+    }));
+}
+
 /**
  * Write optional harness adapters. AGENTS.md and canonical Skill are unchanged.
  * Canonical Skill must already exist at `.agents/skills/mcp-probe-kit/SKILL.md`.
@@ -200,16 +229,15 @@ export function ensureHarnessAdapters(
 
   for (const adapter of detection.adaptersToWrite) {
     const content = resolveAdapterContent(adapter, skillContent, agentsIndexPath);
-    adapters.push(writeAdapterFile(root, adapter, content));
+    adapters.push(writeAdapterFile(root, adapter, content, agentsIndexPath));
   }
-
-  const written = adapters
-    .filter((a) => !a.skipped)
-    .map((a) => ({ id: a.id, kind: a.kind, path: a.path }));
 
   return {
     detection,
     adapters,
-    layoutHarness: toLayoutHarnessManifest(detection, written),
+    layoutHarness: toLayoutHarnessManifest(
+      detection,
+      collectInstalledAdapterManifest(root, detection)
+    ),
   };
 }

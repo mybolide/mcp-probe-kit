@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.8] - 2026-06-25
+
+### 🔧 改进
+
+- **Harness layout 补丁**：`patchLayoutManifestHarness` 仅更新 `harness` 字段，保留 `generatedAt` / `generatedBy`；内容无变化时不写盘
+- **Harness adapters 记录**：`layout.harness.adapters` 反映磁盘上已存在的适配文件，而非仅当次写入
+- **自定义 indexPath**：灵码/Comate/CLAUDE 薄适配使用 `layout.indexPath`，不再硬编码 `AGENTS.md`
+- **文档与版本号**：站点 i18n、README、manifest 统一为 **v3.6.8**
+
+---
+
 ## [3.6.7] - 2026-06-25
 
 ### 🔧 改进

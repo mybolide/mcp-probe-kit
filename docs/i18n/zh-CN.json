@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 开发增强工具集 · 文档中心",
-    "version": "v3.6.3",
+    "version": "v3.6.8",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v3.6.3",
+      "description": "5 分钟快速上手 MCP Probe Kit v3.6.8",
       "installConfig": "安装配置"
     },
     "tools": {
@@ -63,7 +63,11 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.6.3，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.6.8，支持 Cursor、Cline 和 Claude Desktop",
+    "skillBootstrap": {
+      "title": "Skill 与 AGENTS 自动安装",
+      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v3.6.8+）。"
+    },
     "breadcrumb": {
       "home": "文档首页",
       "quickStart": "快速开始",

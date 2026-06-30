@@ -319,6 +319,13 @@ export function writeLayoutManifest(
   return manifestRel;
 }
 
+function layoutHarnessEquals(
+  left: LayoutManifestHarnessV1 | undefined,
+  right: LayoutManifestHarnessV1
+): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right);
+}
+
 /** Patch harness section on an existing layout.json (e.g. after bootstrap adapters). */
 export function patchLayoutManifestHarness(
   projectRoot: string,
@@ -329,8 +336,19 @@ export function patchLayoutManifestHarness(
   if (!existing) {
     return null;
   }
+  if (layoutHarnessEquals(existing.harness, harness)) {
+    return null;
+  }
+
   const layout = layoutFromManifest(existing, resolvedRoot);
-  return writeLayoutManifest(resolvedRoot, layout, harness);
+  const manifestRel = layout.manifestPath;
+  const absoluteManifest = path.join(resolvedRoot, ...manifestRel.split("/"));
+  const updated: LayoutManifestV1 = {
+    ...existing,
+    harness,
+  };
+  fs.writeFileSync(absoluteManifest, `${JSON.stringify(updated, null, 2)}\n`, "utf8");
+  return manifestRel;
 }
 
 export function layoutFromManifest(
