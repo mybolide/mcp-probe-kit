@@ -10,7 +10,7 @@ import {
   MCP_SKILL_COMMON_FLOWS,
   MCP_TOOL_SKILL_GROUPS,
 } from "./mcp-tool-skill-registry.js";
-import { formatSkillVersionMarker } from "./workflow-skill-version.js";
+import { SKILL_VERSION_FRONTMATTER_KEY } from "./workflow-skill-version.js";
 
 export const MCP_PROBE_SKILL_REL_PATH = ".agents/skills/mcp-probe-kit/SKILL.md";
 
@@ -92,12 +92,22 @@ ${renderAvoidRules()}
 `;
 }
 
+export const MCP_PROBE_SKILL_NAME = "mcp-probe-kit";
+
+export const MCP_PROBE_SKILL_DESCRIPTION = `将用户意图路由到 mcp-probe-kit MCP 工具（start_feature、start_bugfix、code_insight、workflow、gencommit 等）。在已配置 MCP 且准备写代码前读取；仅说明调哪个 MCP，不是项目研发流程本身。Routes intent to mcp-probe-kit MCP tools; read before coding when MCP is configured.`;
+
+export function formatSkillFrontmatter(skillVersion: string = VERSION): string {
+  return `---
+name: ${MCP_PROBE_SKILL_NAME}
+description: >-
+  ${MCP_PROBE_SKILL_DESCRIPTION}
+${SKILL_VERSION_FRONTMATTER_KEY}: "${skillVersion}"
+---`;
+}
+
 export function generateWorkflowSkillContent(skillVersion: string = VERSION): string {
-  const versionMarker = formatSkillVersionMarker(skillVersion);
-  return `${versionMarker}
+  return `${formatSkillFrontmatter(skillVersion)}
 
 ${generateWorkflowSkillBody(skillVersion)}
-
-${versionMarker}
 `;
 }

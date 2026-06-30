@@ -24,6 +24,8 @@ describe('generateAgentsMdInner', () => {
     expect(md).toContain('start_bugfix');
     expect(md).toContain('memorize_asset');
     expect(md).toContain('mcp-probe-kit/SKILL.md');
+    expect(md).toContain('@.agents/skills/mcp-probe-kit/SKILL.md');
+    expect(md).toContain('待 Agent 落盘');
     expect(md).toContain('bugfix');
     expect(md).toContain('search_memory');
     expect(md).toContain('自动注入');

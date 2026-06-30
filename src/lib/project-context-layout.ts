@@ -54,6 +54,12 @@ const LAYOUT_PROJECT_ROOT_ENV_FALLBACKS = [
   "PROJECT_ROOT",
 ] as const;
 
+export interface LayoutManifestHarnessV1 {
+  detected: string[];
+  skillCanonical: string;
+  adapters: Array<{ id: string; kind: string; path: string }>;
+}
+
 export interface LayoutManifestV1 {
   version: 1;
   /** Ignored if present in old files — project root is always inferred from manifest path */
@@ -67,6 +73,8 @@ export interface LayoutManifestV1 {
   indexStyle: "agents" | "legacy";
   generatedBy: string;
   generatedAt: string;
+  /** Harness detection snapshot (AGENTS.md + canonical Skill stay harness-agnostic) */
+  harness?: LayoutManifestHarnessV1;
 }
 
 export function toPosixPath(value: string): string {
@@ -279,7 +287,10 @@ export function attachProjectRoot(layout: ProjectContextLayoutCore, projectRoot:
   };
 }
 
-export function buildLayoutManifest(layout: ProjectContextLayout): LayoutManifestV1 {
+export function buildLayoutManifest(
+  layout: ProjectContextLayout,
+  harness?: LayoutManifestHarnessV1
+): LayoutManifestV1 {
   return {
     version: 1,
     projectRootEnv: LAYOUT_PROJECT_ROOT_ENV,
@@ -290,17 +301,36 @@ export function buildLayoutManifest(layout: ProjectContextLayout): LayoutManifes
     indexStyle: layout.indexStyle,
     generatedBy: "init_project_context",
     generatedAt: new Date().toISOString(),
+    ...(harness ? { harness } : {}),
   };
 }
 
-export function writeLayoutManifest(projectRoot: string, layout: ProjectContextLayout): string {
+export function writeLayoutManifest(
+  projectRoot: string,
+  layout: ProjectContextLayout,
+  harness?: LayoutManifestHarnessV1
+): string {
   const resolvedRoot = path.resolve(projectRoot);
   const manifestRel = layoutManifestRel(layout.contextRoot);
-  const manifest = buildLayoutManifest(attachProjectRoot(layout, resolvedRoot));
+  const manifest = buildLayoutManifest(attachProjectRoot(layout, resolvedRoot), harness);
   const absoluteManifest = path.join(resolvedRoot, ...manifestRel.split("/"));
   fs.mkdirSync(path.dirname(absoluteManifest), { recursive: true });
   fs.writeFileSync(absoluteManifest, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return manifestRel;
+}
+
+/** Patch harness section on an existing layout.json (e.g. after bootstrap adapters). */
+export function patchLayoutManifestHarness(
+  projectRoot: string,
+  harness: LayoutManifestHarnessV1
+): string | null {
+  const resolvedRoot = path.resolve(projectRoot);
+  const existing = readLayoutManifest(resolvedRoot);
+  if (!existing) {
+    return null;
+  }
+  const layout = layoutFromManifest(existing, resolvedRoot);
+  return writeLayoutManifest(resolvedRoot, layout, harness);
 }
 
 export function layoutFromManifest(

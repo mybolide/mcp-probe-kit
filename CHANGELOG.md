@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.7] - 2026-06-25
+
+### 🔧 改进
+
+- **Harness 单源策略**：`AGENTS.md` 与 canonical Skill（`.agents/skills/mcp-probe-kit/SKILL.md`）内容不再随 harness 分叉；`@` 引用固定 canonical 路径
+- **薄适配层（零配置）**：项目内已有 `.trae/`、`.lingma/`、`.comate/`、`.codebuddy/`、`.claude/` 等目录时，自动写对应 Skill 镜像或规则指针；无需环境变量
+- **layout.json**：记录 `harness.detected`、`skillCanonical`、已写适配层路径
+
+---
+
+## [3.6.6] - 2026-06-25
+
+### 🔧 改进
+
+- **Skill 标准 frontmatter**：`.agents/skills/mcp-probe-kit/SKILL.md` 生成 `name` / `description` / `mcp-probe-kit-version`，支持 Agent Skill 自动发现；仍兼容旧版 HTML 版本注释并自动升级
+- **AGENTS.md 强引用**：默认同时生成 `@.agents/skills/mcp-probe-kit/SKILL.md` 与 Markdown 链接（`MCP_AGENTS_SKILL_REF=link|at|both`）
+- **AGENTS 死链措辞**：`project-context` / `graph-insights` 在未落盘时标明「待 Agent / code_insight 落盘后阅读」
+
+---
+
 ## [3.6.5] - 2026-06-25
 
 ### 🔧 改进
