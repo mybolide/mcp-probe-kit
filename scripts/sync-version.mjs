@@ -14,9 +14,10 @@ const writeJson = (p, obj) => writeFileSync(p, JSON.stringify(obj, null, 2) + '\
 
 const pkgPath = join(rootDir, 'package.json');
 const version = readJson(pkgPath).version;
+const displayVersion = `v${version}`;
 
 // 每个目标文件：路径 + 一个就地更新版本号字段的函数
-const targets = [
+const jsonTargets = [
   {
     file: 'tools-manifest.json',
     update: (data) => {
@@ -35,8 +36,26 @@ const targets = [
   },
 ];
 
+const docTextTargets = [
+  'docs/i18n/en.json',
+  'docs/i18n/zh-CN.json',
+  'docs/i18n/ja.json',
+  'docs/i18n/ko.json',
+  'docs/index.html',
+  'docs/pages/getting-started.html',
+  'docs/pages/all-tools.html',
+  'docs/pages/examples.html',
+  'docs/pages/migration.html',
+];
+
+/** 文档中的产品版本号（v3.x.y），不影响端口号等其它数字 */
+function bumpProductVersionInText(content) {
+  return content.replace(/v3\.\d+\.\d+/g, displayVersion);
+}
+
 const changed = [];
-for (const { file, update } of targets) {
+
+for (const { file, update } of jsonTargets) {
   const path = join(rootDir, file);
   const data = readJson(path);
   const before = JSON.stringify(data);
@@ -44,6 +63,16 @@ for (const { file, update } of targets) {
   if (JSON.stringify(data) !== before) {
     writeJson(path, data);
     changed.push(file);
+  }
+}
+
+for (const rel of docTextTargets) {
+  const path = join(rootDir, rel);
+  const before = readFileSync(path, 'utf-8');
+  const after = bumpProductVersionInText(before);
+  if (after !== before) {
+    writeFileSync(path, after, 'utf-8');
+    changed.push(rel);
   }
 }
 

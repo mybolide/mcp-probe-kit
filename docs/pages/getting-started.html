@@ -155,9 +155,9 @@
             <!-- Page title -->
             <div class="mb-6">
                 <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2" data-i18n="gettingStarted.title">Installation & Configuration</h1>
-                    <p class="text-sm sm:text-base text-text-secondary" data-i18n="gettingStarted.subtitle">Get started with MCP Probe Kit v3.6.3 in 5 minutes. Supports Cursor, Cline, and Claude Desktop</p>
+                    <p class="text-sm sm:text-base text-text-secondary" data-i18n="gettingStarted.subtitle">Get started with MCP Probe Kit v3.6.8 in 5 minutes. Supports Cursor, Cline, and Claude Desktop</p>
                 <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
-                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.6.3</span>
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v3.6.8</span>
                     <span>MCP 2025-11-25</span>
                     <span>SDK 1.27.1</span>
                 </div>
@@ -612,6 +612,12 @@ npm run build</code></pre>
                         </div>
                     </div>
                 </div>
+            </section>
+
+            <!-- Skill / AGENTS bootstrap -->
+            <section class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 sm:p-6 mb-6">
+                <h2 class="text-lg font-semibold text-text-primary mb-2" data-i18n="gettingStarted.skillBootstrap.title">Skill & AGENTS auto-bootstrap</h2>
+                <p class="text-sm text-text-secondary leading-relaxed" data-i18n="gettingStarted.skillBootstrap.body">Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v3.6.8+).</p>
             </section>
 
             <!-- Step 2: Configuration file locations -->

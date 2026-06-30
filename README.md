@@ -421,7 +421,9 @@ No installation needed, use the latest version directly.
 }
 ```
 
-> **Skill 自动安装**：任意 MCP 工具调用会在用户项目写入 `.agents/skills/mcp-probe-kit/SKILL.md`。工作区根目录**自动识别**（Cursor 注入 `WORKSPACE_FOLDER_PATHS`；OpenCode 等项目级 `opencode.json` 会设置进程 cwd），**无需**在每台客户端配置 `MCP_PROJECT_ROOT`。仅全局 MCP 且无法识别工作区时，可选手动设置 `MCP_PROJECT_ROOT` 或在工具参数传 `project_root`。需 **v3.6.3+**。
+> **Skill & AGENTS auto-bootstrap (v3.6.3+)**: Every MCP tool call writes `.agents/skills/mcp-probe-kit/SKILL.md` and merges the `mcp-probe:context` block into `AGENTS.md`. Workspace root is **auto-detected** (Cursor injects `WORKSPACE_FOLDER_PATHS`; OpenCode project `opencode.json` sets cwd). No per-client `MCP_PROJECT_ROOT` unless global MCP cannot resolve the workspace — then set `MCP_PROJECT_ROOT` or pass `project_root` in tool args.
+
+> **Multi-harness adapters (v3.6.8+)**: `AGENTS.md` and the canonical Skill stay the **single rule source**. If the project already has `.trae/`, `.lingma/`, `.comate/`, `.codebuddy/`, or `.claude/`, matching thin adapters (skill mirror or rules pointer) are written automatically — **no env vars**.
 
 #### Claude Desktop Configuration
 

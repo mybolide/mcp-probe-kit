@@ -52,7 +52,7 @@ describe("harness-skill-targets", () => {
     tempDirs.push(root);
     fs.mkdirSync(path.join(root, ".lingma"), { recursive: true });
 
-    const result = ensureHarnessAdapters(root, generateWorkflowSkillContent(VERSION));
+    const result = ensureHarnessAdapters(root, generateWorkflowSkillContent(VERSION), "AGENTS.md");
 
     const lingma = result.adapters.find((a) => a.id === "lingma-rules");
     expect(lingma?.created).toBe(true);
