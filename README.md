@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/mybolide-mcp-probe-kit-badge.png)](https://mseep.ai/app/mybolide-mcp-probe-kit)
+
 # mcp-probe-kit — Know the Context, Feed the Moment
 
 <div align="center">
