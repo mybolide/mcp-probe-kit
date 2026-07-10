@@ -23,6 +23,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/mcp-probe-kit.svg)](https://www.npmjs.com/package/mcp-probe-kit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/mybolide/mcp-probe-kit.svg)](https://github.com/mybolide/mcp-probe-kit/stargazers)
+[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/ce79a9e5-7422-4862-b235-bc3d65710397)
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
