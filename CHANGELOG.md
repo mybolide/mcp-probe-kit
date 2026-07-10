@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.10] - 2026-07-10
+
+### 🐛 修复
+
+- **`code_insight` 默认不再自动升级为 MCP Task**：多数 Agent 客户端不会轮询 task 结果，导致图谱工具调用“报错/无内容”；需异步 Task 时显式设置 `MCP_ENABLE_AUTO_TASK=1`（仍可用 `MCP_DISABLE_AUTO_TASK=1` 强制关闭）
+- **GitNexus 索引刷新失败降级**：`gitnexus analyze` 失败时不再让整个 `code_insight` 硬错误，改为 `index_refresh_failed` 警告后继续尝试 bridge 查询
+
+---
+
 ## [3.6.9] - 2026-06-25
 
 ### 🔧 改进
