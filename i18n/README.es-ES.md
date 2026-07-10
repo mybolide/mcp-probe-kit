@@ -218,7 +218,7 @@ Usa `requirements_mode=loop` en `start_feature / start_bugfix / start_ui` para 1
 
 6 herramientas de orquestación:
 - `start_feature` - Nueva función (Requisitos → Diseño → Estimación)
-- `start_bugfix` - Corrección de bug (RCA TBP 8 pasos → Fix → Tests)
+- `start_bugfix` - Corrección de bug (SRC-8 RCA → Fix → Tests)
 - `start_onboard` - Incorporación al proyecto
 - `start_ui` - Desarrollo UI (Sistema de diseño → Componentes → Código)
 - `start_product` - Diseño de producto (PRD → Prototipo → HTML)
@@ -258,7 +258,7 @@ Herramientas UI/UX con `start_ui` como entrada unificada:
 | Nueva función (flujo completo) | `start_feature` | Auto: Spec → Estimación |
 | Solo docs de spec | `add_feature` | Más ligero |
 | Corrección de bug (flujo completo) | `start_bugfix` | TBP RCA → Fix → Test |
-| Solo análisis de bug | `fix_bug` | RCA TBP 8 pasos |
+| Solo análisis de bug | `fix_bug` | SRC-8 + rootCauseWorksheet |
 | Generar sistema de diseño | `ui_design_system` | Generación directa |
 | Desarrollar componentes UI | `start_ui` | Flujo completo |
 | Diseño de producto | `start_product` | PRD → Prototipo → HTML |

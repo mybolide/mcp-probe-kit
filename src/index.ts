@@ -48,6 +48,14 @@ import {
   type ToolExecutionContext,
 } from "./lib/tool-execution-context.js";
 
+/** 启动日志标识：用于确认 Cursor 是否加载了当前 build（非 npm/npx 缓存旧进程） */
+const MCP_BUILD_TAG = "progress-off-20260710";
+
+function isProgressNotificationEnabled(): boolean {
+  const raw = (process.env.MCP_PROGRESS_NOTIFICATIONS ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
 type ToolResult = {
   content?: unknown;
   isError?: boolean;
@@ -736,7 +744,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     taskRequest = taskRequest ?? {};
   }
 
-  const emitProgress = async (progress: number, message: string) => {
+  const emitProgress = async (_progress: number, _message: string) => {
+    // Cursor Shared MCP 在工具响应返回后会立即注销 progressToken；
+    // 迟到的 notifications/progress 会导致整连接 error（unknown token）。
+    // 默认关闭；需要时可设 MCP_PROGRESS_NOTIFICATIONS=1。
+    if (!isProgressNotificationEnabled()) {
+      return;
+    }
+
     const progressToken = extra._meta?.progressToken;
 
     if (progressToken === undefined) {
@@ -749,9 +764,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
           method: "notifications/progress",
           params: {
             progressToken,
-            progress,
+            progress: _progress,
             total: 100,
-            message,
+            message: _message,
             ...(traceMeta === undefined
               ? {}
               : {
@@ -818,7 +833,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     // 后台执行任务，不阻塞当前请求，立即返回 taskId 给客户端轮询。
     void (async () => {
       try {
-        await taskContext.reportProgress?.(5, `开始执行工具: ${name}`);
         const { bootstrap, result: rawResult } = await executeTool(name, args, taskContext);
 
         if (!rawResult || typeof rawResult !== "object") {
@@ -892,7 +906,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
 
   try {
     ensureNotAborted();
-    await emitProgress(5, `开始执行工具: ${name}`);
 
     const { bootstrap, result: rawResult } = await executeTool(name, args, toolContext);
     if (!rawResult || typeof rawResult !== "object") {
@@ -901,15 +914,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
 
     ensureNotAborted();
     const result = decorateResult(name, args, rawResult as ToolResult, traceMeta, bootstrap);
-    await emitProgress(100, `工具执行完成: ${name}`);
     return result;
   } catch (error) {
-    if (extra.signal.aborted) {
-      await emitProgress(100, `工具执行已取消: ${name}`);
-    } else {
-      await emitProgress(100, `工具执行失败: ${name}`);
-    }
-
     const errorMessage = error instanceof Error ? error.message : String(error);
     return withTraceMeta(makeToolError(errorMessage), traceMeta);
   }
@@ -1239,7 +1245,7 @@ async function main() {
   await server.connect(transport);
   const workspaceMeta = resolveWorkspaceRootWithMeta("");
   console.error(
-    `MCP Probe Kit v${VERSION} 已启动 | workspace=${workspaceMeta.root} | source=${workspaceMeta.source}`
+    `MCP Probe Kit v${VERSION} 已启动 | build=${MCP_BUILD_TAG} | workspace=${workspaceMeta.root} | source=${workspaceMeta.source}`
   );
   if (workspaceMeta.warning) {
     console.error(`[MCP Probe Kit] ${workspaceMeta.warning}`);

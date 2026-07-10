@@ -103,31 +103,80 @@ const TbpRepairItemSchema = {
   required: ['layer', 'action', 'verification'],
 } as const;
 
+const RootCauseHypothesisSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    statement: { type: 'string' },
+    attributionLayer: {
+      type: 'string',
+      enum: ['code', 'runtime', 'data_contract', 'integration', 'agent_behavior', 'environment'],
+    },
+    status: { type: 'string', enum: ['ruled_out', 'pending', 'confirmed'] },
+    evidence: { type: 'array', items: { type: 'string' } },
+    counterEvidence: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['id', 'statement', 'status'],
+} as const;
+
+const WhyChainItemSchema = {
+  type: 'object',
+  properties: {
+    level: { type: 'number' },
+    observation: { type: 'string', description: '观察到的事实' },
+    why: { type: 'string' },
+    because: { type: 'string' },
+  },
+  required: ['level', 'observation', 'why', 'because'],
+} as const;
+
+/** SRC-8 Step 4 真因工作表 — Agent 必须产出 */
+export const RootCauseAnalysisSchema = {
+  type: 'object',
+  description: 'SRC-8 Step 4 把握真因：假设清单、排除矩阵、对比分叉、5 Why、因果陈述',
+  properties: {
+    mode: { type: 'string', enum: ['simple', 'complex'] },
+    attributionLayer: {
+      type: 'string',
+      enum: ['code', 'runtime', 'data_contract', 'integration', 'agent_behavior', 'environment'],
+    },
+    hypotheses: { type: 'array', items: RootCauseHypothesisSchema },
+    forkPoint: { type: 'string', description: '成功/失败分叉点' },
+    whyChain: { type: 'array', items: WhyChainItemSchema },
+    primaryCause: { type: 'string' },
+    contributingFactors: { type: 'array', items: { type: 'string' } },
+    rootCauseStatement: { type: 'string', description: '因果句：A + B 在 D 下导致 C' },
+    confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+    evidenceGaps: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['mode', 'hypotheses', 'whyChain', 'rootCauseStatement', 'confidence'],
+} as const;
+
 const TbpAnalysisSchema = {
   type: 'object',
   properties: {
-    phenomenon: { type: 'string', description: 'TBP-1 现象' },
+    phenomenon: { type: 'string', description: 'SRC-1 明确差距' },
     timeline: {
       type: 'array',
-      description: 'TBP-2 时间线',
+      description: 'SRC-2 时间线/分解',
       items: TbpTimelineEventSchema,
     },
     ruledOut: {
       type: 'array',
-      description: 'TBP-3 已排除方向',
+      description: 'SRC-4 已排除假设',
       items: { type: 'string' },
     },
-    commonPattern: { type: 'string', description: 'TBP-4 共同模式' },
-    boundary: { type: 'string', description: 'TBP-5 问题边界' },
-    rootCauseStatement: { type: 'string', description: 'TBP-6 真因因果句' },
+    commonPattern: { type: 'string', description: 'SRC-4 对比分叉' },
+    boundary: { type: 'string', description: 'SRC-2 问题边界/归因层' },
+    rootCauseStatement: { type: 'string', description: 'SRC-4 真因因果句' },
     evidence: {
       type: 'array',
-      description: 'TBP-7 证据链',
+      description: 'SRC-4 证据链',
       items: TbpEvidenceItemSchema,
     },
     repair: {
       type: 'array',
-      description: 'TBP-8 修复设计',
+      description: 'SRC-5 对策设计',
       items: TbpRepairItemSchema,
     },
   },
@@ -136,7 +185,7 @@ const TbpAnalysisSchema = {
 
 /**
  * Bug Analysis Schema
- * 用于 fix_bug 工具的结构化输出
+ * 用于 fix_bug 工具的结构化输出（SRC-8，TBP-inspired）
  */
 export const BugAnalysisSchema = {
   type: 'object',
@@ -152,9 +201,13 @@ export const BugAnalysisSchema = {
     },
     analysisMode: {
       type: 'string',
-      enum: ['tbp8'],
+      enum: ['src8', 'tbp8'],
+      description: '分析方法：src8（推荐）；tbp8 为兼容别名',
     },
-    rootCause: { type: 'string' },
+    rootCause: { type: 'string', description: 'SRC-4 真因摘要' },
+    rootCauseAnalysis: {
+      ...RootCauseAnalysisSchema,
+    },
     affectedComponents: {
       type: 'array',
       items: { type: 'string' },
@@ -186,10 +239,10 @@ export const BugAnalysisSchema = {
     },
     tbp: {
       ...TbpAnalysisSchema,
-      description: 'TBP 8 步法分析结果',
+      description: 'SRC-8 各步产出（字段名 tbp 为历史兼容）',
     },
   },
-  required: ['summary', 'bugType', 'severity', 'analysisMode', 'rootCause', 'fixPlan', 'testPlan', 'tbp'],
+  required: ['summary', 'bugType', 'severity', 'analysisMode', 'rootCause', 'rootCauseAnalysis', 'fixPlan', 'testPlan', 'tbp'],
 } as const;
 
 /**
@@ -467,8 +520,32 @@ export interface BugAnalysis {
   summary: string;
   bugType: 'functional' | 'performance' | 'security' | 'ui' | 'data' | 'integration';
   severity: 'critical' | 'high' | 'medium' | 'low';
-  analysisMode: 'tbp8';
+  analysisMode: 'src8' | 'tbp8';
   rootCause: string;
+  rootCauseAnalysis: {
+    mode: 'simple' | 'complex';
+    attributionLayer?: 'code' | 'runtime' | 'data_contract' | 'integration' | 'agent_behavior' | 'environment';
+    hypotheses: Array<{
+      id: string;
+      statement: string;
+      attributionLayer?: 'code' | 'runtime' | 'data_contract' | 'integration' | 'agent_behavior' | 'environment';
+      status: 'ruled_out' | 'pending' | 'confirmed';
+      evidence?: string[];
+      counterEvidence?: string[];
+    }>;
+    forkPoint?: string;
+    whyChain: Array<{
+      level: number;
+      observation: string;
+      why: string;
+      because: string;
+    }>;
+    primaryCause?: string;
+    contributingFactors?: string[];
+    rootCauseStatement: string;
+    confidence: 'high' | 'medium' | 'low';
+    evidenceGaps?: string[];
+  };
   affectedComponents?: string[];
   affectedFiles?: string[];
   fixPlan: {

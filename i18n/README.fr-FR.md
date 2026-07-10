@@ -223,7 +223,7 @@ Utilisez `requirements_mode=loop` dans `start_feature / start_bugfix / start_ui`
 
 6 outils d'orchestration :
 - `start_feature` - Nouvelle fonctionnalité (Exigences → Conception → Estimation)
-- `start_bugfix` - Correction de bug (RCA TBP 8 étapes → Correction → Tests)
+- `start_bugfix` - Correction de bug (SRC-8 RCA → Correction → Tests)
 - `start_onboard` - Intégration projet
 - `start_ui` - Développement UI (Système de conception → Composants → Code)
 - `start_product` - Conception produit (PRD → Prototype → HTML)
@@ -263,7 +263,7 @@ Outils UI/UX avec `start_ui` comme entrée unifiée :
 | Nouvelle fonctionnalité (flux complet) | `start_feature` | Auto-complète : spec → estimation |
 | Seulement docs de spec | `add_feature` | Plus léger |
 | Correction de bug (flux complet) | `start_bugfix` | RCA TBP → correction → test |
-| Seulement analyse de bug | `fix_bug` | RCA TBP 8 étapes uniquement |
+| Seulement analyse de bug | `fix_bug` | SRC-8 + rootCauseWorksheet |
 | Générer système de conception | `ui_design_system` | Génération directe |
 | Développer composants UI | `start_ui` | Flux complet |
 | Conception produit | `start_product` | PRD → prototype → HTML |

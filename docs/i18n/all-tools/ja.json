@@ -86,7 +86,7 @@
       "usage": "不足している graph-insights を補完し、GitNexus の query/context/impact で範囲を絞ったうえで仕様と見積もりを生成します"
     },
     "start_bugfix": {
-      "description": "バグ修正ワークフローオーケストレーション：グラフ基線補完 → GitNexus 更新 → 障害境界の収束 → TBP 8段階の真因分析 → 修正方針 → テスト生成",
+      "description": "バグ修正ワークフロー：グラフ基線 → GitNexus → SRC-8 真因分析（TBP-inspired）→ 修正 → テスト → 記憶",
       "usage": "バグ・回帰・異常調査向け。先に graph-insights を補完し、GitNexus で境界と影響面を絞った後に TBP RCA を進めます"
     },
     "start_onboard": {
@@ -110,7 +110,7 @@
       "usage": "包括的なコード品質レビュー、構造化された問題リスト（severity/category/suggestion）を出力します"
     },
     "fix_bug": {
-      "description": "TBP 8段階に基づくバグ真因分析と修正ガイダンス。証拠連鎖、修正計画、テスト計画、再発防止策を返します",
+      "description": "SRC-8 ガイド型バグ真因分析（TBP-inspired）：rootCauseWorksheet を注入し、Agent が rootCauseAnalysis を出力",
       "usage": "真因を先に特定したいときに使います。現象・境界・真因・修正までの因果連鎖を閉じます"
     },
     "refactor": {

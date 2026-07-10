@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 开发增强工具集 · 文档中心",
-    "version": "v3.6.10",
+    "version": "v3.6.11",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v3.6.10",
+      "description": "5 分钟快速上手 MCP Probe Kit v3.6.11",
       "installConfig": "安装配置"
     },
     "tools": {
@@ -63,10 +63,10 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.6.10，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v3.6.11，支持 Cursor、Cline 和 Claude Desktop",
     "skillBootstrap": {
       "title": "Skill 与 AGENTS 自动安装",
-      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v3.6.10+）。"
+      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v3.6.11+）。"
     },
     "breadcrumb": {
       "home": "文档首页",
@@ -522,7 +522,7 @@
       "bugfix": {
         "title": "4.1 系统化 Bug 修复（推荐）",
         "description": "使用",
-        "description2": "工作流，默认按 TBP 8 步法先做真因分析，再进入修复与测试。",
+        "description2": "工作流，默认按 SRC-8（TBP-inspired）先做真因分析，再进入修复与测试。",
         "example1": "你: 登录功能报错了",
         "step1": "✓ 检查项目上下文，补齐缺失的 graph-insights，并刷新 GitNexus 索引",
         "step2": "✓ 用 TBP-1~TBP-4 建立现象、时间线和共同模式",
@@ -533,7 +533,7 @@
       "quick": {
         "title": "4.2 快速 Bug 分析",
         "description": "使用",
-        "description2": "工具按 TBP 8 步法做快速真因分析，并给出修复与验证建议。"
+        "description2": "工具按 SRC-8 注入真因工作表与清单，由 Agent 输出 rootCauseAnalysis 并修复。"
       }
     },
     "stage5": {

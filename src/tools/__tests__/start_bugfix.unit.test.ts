@@ -27,6 +27,20 @@ describe('start_bugfix 单元测试', () => {
     expect(result.content[0].text).toMatch(/缺少必填参数|错误信息/i);
   });
 
+  test('description 可作为 error_message 别名', async () => {
+    const result = await startBugfix({
+      description: 'memory-config 读取 items 时未做空值检查导致 map 报错',
+      analysis_mode: 'src8',
+    });
+
+    expect(result.isError).toBe(false);
+    const structured = (result as any).structuredContent;
+    const src8Step = structured?.metadata?.plan?.steps?.find((step: any) => step.id === 'src8-1');
+    expect(src8Step?.action).toMatch(/明确差距/);
+    expect(result.content[0].text).toMatch(/memory-config/);
+    expect(result.content[0].text).not.toMatch(/docs\/src8-methodology/);
+  });
+
   test('返回委托式执行计划（steps）', async () => {
     const result = await startBugfix({
       error_message: 'TypeError: Cannot read property',
@@ -44,13 +58,14 @@ describe('start_bugfix 单元测试', () => {
     expect(plan).toBeTruthy();
     expect(plan.mode).toBe('delegated');
     expect(Array.isArray(plan.steps)).toBe(true);
-    expect(structured.analysisMode).toBe('tbp8');
+    expect(structured.analysisMode).toBe('src8');
     expect(structured.tbp.rootCauseStatement).toMatch(/A \+ B|因果句|待形成/);
 
-    const fixStep = plan.steps.find((step: any) => step.tool === 'fix_bug');
+    const fixStep = plan.steps.find((step: any) => step.id === 'src8-4');
     expect(fixStep).toBeTruthy();
-    expect(fixStep.args.error_message).toBe('TypeError: Cannot read property');
-    expect(fixStep.args.analysis_mode).toBe('tbp8');
+    expect(fixStep.action).toMatch(/把握真因/);
+    const gentestStep = plan.steps.find((step: any) => step.id === 'src8-7');
+    expect(gentestStep?.tool).toBe('gentest');
     const contextStep = plan.steps.find((step: any) => step.tool === 'init_project_context');
     expect(contextStep.outputs).toContain('docs/graph-insights/latest.md');
     expect(contextStep.outputs).toContain('docs/graph-insights/latest.json');

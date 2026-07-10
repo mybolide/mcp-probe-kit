@@ -5,13 +5,21 @@
 export const codeAnalysisToolSchemas = [
   {
     name: "code_review",
-    description: "当用户需要审查代码质量、检查代码问题时使用。审查代码的质量、安全性、性能，输出结构化问题清单（severity/category/suggestion）",
+    description: "当用户需要审查代码质量、检查代码问题时使用。指南型工具：注入 code/file_path 与审查清单，由 Agent 阅读代码后输出结构化问题清单（severity/category/suggestion）；MCP 不做静态规则扫描",
     inputSchema: {
       type: "object",
       properties: {
         code: {
           type: "string",
           description: "要审查的代码。可以是代码片段、完整文件或 git diff 输出",
+        },
+        file_path: {
+          type: "string",
+          description: "要审查的文件路径（相对 project_root 或绝对路径）。未传 code 时从磁盘读取",
+        },
+        project_root: {
+          type: "string",
+          description: "项目根目录绝对路径。配合 file_path 解析相对路径",
         },
         focus: {
           type: "string",
@@ -75,13 +83,21 @@ export const codeAnalysisToolSchemas = [
   },
   {
     name: "refactor",
-    description: "当用户需要重构代码、改善代码结构时使用。分析代码结构，提供重构建议、重构步骤和风险评估",
+    description: "当用户需要重构代码、改善代码结构时使用。指南型工具：注入 code/file_path 与重构清单，由 Agent 分析后输出重构计划 JSON；MCP 不自动修改源文件",
     inputSchema: {
       type: "object",
       properties: {
         code: {
           type: "string",
           description: "要重构的代码",
+        },
+        file_path: {
+          type: "string",
+          description: "要重构的文件路径（相对 project_root 或绝对路径）。未传 code 时从磁盘读取",
+        },
+        project_root: {
+          type: "string",
+          description: "项目根目录绝对路径。配合 file_path 解析相对路径",
         },
         goal: {
           type: "string",
@@ -94,7 +110,7 @@ export const codeAnalysisToolSchemas = [
   },
   {
     name: "fix_bug",
-    description: "当用户需要找问题、修 bug、排查异常、定位回归、分析失败原因、分析为什么没生效、先分析再修时使用。默认采用 TBP 8 步法做真因分析，并输出修复方案与验证步骤",
+    description: "当用户需要找问题、修 bug、排查异常时使用。指南型 SRC-8（TBP-inspired）：注入真因工作表与门禁，由 Agent 完成 rootCauseAnalysis 并修复；MCP 不自动修 Bug",
     inputSchema: {
       type: "object",
       properties: {
@@ -108,11 +124,39 @@ export const codeAnalysisToolSchemas = [
         },
         code_context: {
           type: "string",
-          description: "相关代码。可选",
+          description: "相关代码或图谱摘要。可选",
+        },
+        file_path: {
+          type: "string",
+          description: "相关代码文件路径（相对 project_root 或绝对路径）。未传 code_context 时从磁盘读取",
+        },
+        project_root: {
+          type: "string",
+          description: "项目根目录绝对路径。配合 file_path 解析相对路径",
+        },
+        actual_behavior: {
+          type: "string",
+          description: "实际行为。可选，用于 TBP-1 现象定义",
+        },
+        success_sample: {
+          type: "string",
+          description: "成功/正常样本描述（Step 4 对比用）。无则 Agent 须标注对比样本不足",
+        },
+        verification_target: {
+          type: "string",
+          description: "验收目标（Step 3 SMART 目标），如：原复现步骤通过、特定测试绿",
+        },
+        steps_to_reproduce: {
+          type: "string",
+          description: "复现步骤。可选，用于 TBP-2 时间线",
+        },
+        expected_behavior: {
+          type: "string",
+          description: "期望行为。可选",
         },
         analysis_mode: {
           type: "string",
-          description: "分析方法。默认 tbp8（丰田问题分析 8 步法）",
+          description: "分析方法。默认 src8（Software Root-Cause 8-step，受丰田 TBP 启发）；tbp8 为兼容别名",
         },
       },
       required: [],
