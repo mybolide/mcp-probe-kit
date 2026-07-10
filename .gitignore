@@ -38,6 +38,8 @@ docs/specs/
 docs/*.md
 !docs/memory-local-setup.md
 !docs/memory-local-setup.zh-CN.md
+!docs/src8-methodology.md
+!docs/src8-methodology.zh-CN.md
 docs/project-context
 .kiro
 skills
