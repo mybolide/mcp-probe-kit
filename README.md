@@ -95,8 +95,8 @@ All hard quality rules live in one module (`src/lib/quality-constraints.ts`) and
 ### 🐛 SRC-8 Bug Root-Cause Workflow (TBP-Inspired)
 
 - **[SRC-8 Methodology](docs/src8-methodology.md)** (中文: [src8-methodology.zh-CN.md](docs/src8-methodology.zh-CN.md)) — Software Root-Cause 8-step protocol inspired by Toyota TBP / PDCA, adapted for code and AI agents
-- `start_bugfix` runs graph narrowing, then SRC-8 guidance before repair and tests
-- `fix_bug` returns `src8Checklist`, **`rootCauseWorksheet`** (Step 4 core: hypotheses, exclusion matrix, 5 Why, causal statement), and hard gates (no code change until root-cause worksheet is closed)
+- `start_bugfix` runs graph narrowing, then **delegated SRC-8 plan** (`metadata.plan.steps` src8-1~8) before repair and tests
+- `fix_bug` returns **delegated plan** (src8-1~8), `src8Checklist`, **`rootCauseWorksheet`** (Step 4 core), and hard gates (no code change until root-cause worksheet is closed)
 - Highlights vs manufacturing TBP: **repro contract**, **attribution layers** (including `agent_behavior`), **contributing factors**, **memorize_asset** for cross-repo learning
 
 **Inherited from Toyota TBP:** gap thinking, Plan-before-Do, no skipping to root-cause analysis, fact-based investigation, countermeasures over symptoms, evaluate then standardize.
@@ -392,8 +392,8 @@ This ensures `start_ui` can generate professional-grade UI code even offline.
 |---------|-----------------|--------|
 | Develop new feature (complete flow) | `start_feature` | Auto-complete: spec→estimation |
 | Only need feature spec docs | `add_feature` | More lightweight, only generates docs |
-| Fix bug (complete flow) | `start_bugfix` | Root-cause-first: SRC-8 → fix → test → memorize |
-| Only need bug analysis | `fix_bug` | SRC-8 guidance + root-cause worksheet (see [docs](docs/src8-methodology.md)) |
+| Fix bug (complete flow) | `start_bugfix` | Delegated SRC-8 plan (src8-1~8) → fix → test → memorize |
+| Only need bug analysis | `fix_bug` | Delegated SRC-8 plan + root-cause worksheet (methodology: [docs](docs/src8-methodology.md)) |
 | Generate design system | `ui_design_system` | Directly generate design specs |
 | Develop UI components | `start_ui` | Complete flow: design→components→code |
 | Product design (requirements to prototype) | `start_product` | One-click: PRD→prototype→HTML |

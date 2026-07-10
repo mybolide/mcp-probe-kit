@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 新增 `src8-guidance`、`code_review`、`gentest`、`refactor` 单元测试与 `scripts/smoke-src8-tools.mjs` 冒烟脚本
 
+### 📚 文档
+
+- 提交 `docs/src8-methodology.md` / `zh-CN.md`（此前被 `.gitignore` 忽略）；补充 delegated plan（src8-1~8）与「MCP prompt 不引用 docs」说明
+- README / all-tools 更新 delegated plan 表述
+
 ---
 
 ## [3.6.10] - 2026-07-10
