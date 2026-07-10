@@ -10,6 +10,7 @@ import {
   resolveGitNexusBridgeCommand,
   resolveSpawnCommand,
   rerankQueryStructuredContent,
+  tryRefreshWorkspaceIndex,
 } from "../gitnexus-bridge.js";
 
 const tempRoots: string[] = [];
@@ -156,6 +157,32 @@ describe("gitnexus-bridge workspace preparation", () => {
     expect(resolved).toContain("git");
     expect(resolved.endsWith(".exe") || resolved === "git" || resolved === "git.cmd").toBe(true);
     expect(spawned.command.toLowerCase()).toContain("git");
+  });
+
+  test("index refresh 失败时返回错误信息而不抛错", async () => {
+    const repoRoot = makeTempDir("gitnexus-index-fail-");
+    fs.mkdirSync(path.join(repoRoot, ".git"));
+    const prevCommand = process.env.MCP_GITNEXUS_COMMAND;
+    const prevPath = process.env.PATH;
+    process.env.MCP_GITNEXUS_COMMAND = path.join(repoRoot, "missing-gitnexus.cmd");
+    process.env.PATH = repoRoot;
+
+    try {
+      const workspace = await prepareBridgeWorkspace(repoRoot);
+      const error = await tryRefreshWorkspaceIndex(workspace);
+      expect(error).toBeTruthy();
+    } finally {
+      if (prevCommand === undefined) {
+        delete process.env.MCP_GITNEXUS_COMMAND;
+      } else {
+        process.env.MCP_GITNEXUS_COMMAND = prevCommand;
+      }
+      if (prevPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = prevPath;
+      }
+    }
   });
 
   test("git 目录直接使用源仓库", async () => {

@@ -1040,13 +1040,21 @@ export async function prepareBridgeWorkspace(
   return createTempAnalysisWorkspace(resolvedCwd, signal, options);
 }
 
-async function ensureWorkspaceIndexed(workspace: BridgeWorkspace, signal?: AbortSignal): Promise<void> {
+export async function tryRefreshWorkspaceIndex(
+  workspace: BridgeWorkspace,
+  signal?: AbortSignal
+): Promise<string | undefined> {
   if (workspace.workspaceMode !== "direct") {
-    return;
+    return undefined;
   }
 
-  const analyzeCli = resolveGitNexusCliCommand("analyze");
-  await runProcess(analyzeCli.command, analyzeCli.args, workspace.analysisRoot, signal);
+  try {
+    const analyzeCli = resolveGitNexusCliCommand("analyze");
+    await runProcess(analyzeCli.command, analyzeCli.args, workspace.analysisRoot, signal);
+    return undefined;
+  } catch (error) {
+    return normalizeError(error);
+  }
 }
 
 function isUnsafeHomeRoot(sourceRoot: string): boolean {
@@ -1250,13 +1258,16 @@ export async function runCodeInsightBridge(
   }
 
   const workspace = await prepareBridgeWorkspace(requestedProjectRoot, request.signal);
-  await ensureWorkspaceIndexed(workspace, request.signal);
+  const warnings: string[] = [];
+  const indexRefreshError = await tryRefreshWorkspaceIndex(workspace, request.signal);
+  if (indexRefreshError) {
+    warnings.push("index_refresh_failed");
+  }
   const effectiveRepo =
     workspace.workspaceMode === "temp-repo"
       ? workspace.repoName
       : resolvePreferredRepoName(request.repo) || workspace.repoName;
   const { command, args } = launcher;
-  const warnings: string[] = [];
   if (workspace.workspaceMode === "temp-repo") {
     warnings.push("temp_repo_workspace");
   }
