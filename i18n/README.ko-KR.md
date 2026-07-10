@@ -68,9 +68,10 @@
 - `start_feature` 와 `start_bugfix` 는 GitNexus 인덱스를 새로고침하고 작업 단위 그래프 힌트를 사용합니다
 - GitNexus 를 사용할 수 없더라도 오케스트레이션을 깨지 않고 자동으로 폴백합니다
 
-### 🐛 버그 워크플로우용 TBP 8단계 RCA
+### 🐛 SRC-8 Bug RCA (TBP-inspired)
 
-- `start_bugfix` 는 기본적으로 수정 전에 TBP 8단계 근본 원인 분석을 수행합니다
+- Docs: [src8-methodology.md](../docs/src8-methodology.md)
+- `start_bugfix` runs SRC-8 before repair; `fix_bug` injects **rootCauseWorksheet**
 - `fix_bug` 는 현상, 타임라인, 제외한 경로, 경계, 근본 원인, 증거, 수정 계획을 담은 TBP 구조를 반환합니다
 
 ### 🧠 Memory Retrieval

@@ -1,42 +1,85 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
-import { okText } from "../lib/response.js";
+import { okStructured } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
 import { renderCodeLimits, renderBannedPatterns, CODE_LIMITS } from "../lib/quality-constraints.js";
+import { resolveReviewCode, trimReviewCodeForPrompt } from "../lib/code-review-input.js";
+import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
 
-// code_review 工具实现
 export async function codeReview(args: any) {
   try {
-    // 智能参数解析，支持自然语言输入
     const parsedArgs = parseArgs<{
       code?: string;
       focus?: string;
+      file_path?: string;
+      project_root?: string;
+      input?: string;
     }>(args, {
       defaultValues: {
         code: "",
         focus: "all",
+        file_path: "",
+        project_root: "",
       },
-      primaryField: "code", // 纯文本输入默认映射到 code 字段
+      primaryField: "code",
       fieldAliases: {
-        code: ["source", "src", "代码", "content"],
+        code: ["source", "src", "代码", "content", "diff"],
         focus: ["type", "category", "类型", "重点"],
+        file_path: ["filePath", "filepath", "path", "文件路径"],
+        project_root: ["projectRoot", "project_path", "dir", "directory", "项目路径"],
       },
     });
-    
-    const code = getString(parsedArgs.code);
-    const focus = getString(parsedArgs.focus) || "all"; // quality, security, performance, all
+
+    const focus = getString(parsedArgs.focus) || "all";
+    const inlineCode = getString(parsedArgs.code) || getString(parsedArgs.input);
+    const filePath = getString(parsedArgs.file_path);
+    const projectRoot = getString(parsedArgs.project_root);
+
+    const resolved = resolveReviewCode({
+      code: inlineCode,
+      filePath: filePath || undefined,
+      projectRoot: projectRoot ? resolveWorkspaceRoot(projectRoot) : undefined,
+    });
+
+    if (resolved.error) {
+      return okStructured(
+        `❌ code_review 无法读取输入: ${resolved.error}`,
+        {
+          mode: "guidance",
+          reviewInput: {
+            received: false,
+            error: resolved.error,
+            file: filePath || null,
+          },
+        },
+        {
+          note: "指南型工具：请修正 file_path / project_root 或传入 code 后，由 Agent 按清单完成审查并输出 issues JSON",
+        }
+      );
+    }
+
+    const hasCode = Boolean(resolved.code.trim());
+    const promptCode = hasCode ? trimReviewCodeForPrompt(resolved.code) : "";
 
     const header = renderGuidanceHeader({
       tool: "code_review",
-      goal: "对代码进行全面审查，发现问题并提供改进建议。",
-      tasks: ["基于代码进行质量/安全/性能检查", "列出发现的问题和建议"],
-      outputs: ["审查报告（包含问题清单、优点、建议）"],
+      goal: "由 Agent 根据下方代码与审查清单完成审查，并输出结构化问题清单。",
+      tasks: [
+        "先阅读本次注入的 reviewInput.code（或 file_path 对应文件）",
+        "按审查清单逐项检查，不要只复述清单",
+        "在回复中输出 issues JSON（severity/category/message/suggestion）",
+      ],
+      outputs: ["审查报告（问题清单、优点、建议）— 由 Agent 生成，非 MCP 静态扫描"],
+      notes: [
+        "本工具为指南型（guidance-only），不在服务端做静态规则扫描",
+        hasCode ? `已注入待审代码（${resolved.code.split("\n").length} 行）` : "未收到 code/file_path，请先提供待审内容",
+      ],
     });
 
     const message = `${header}请对以下代码进行全面审查：
 
-📝 **代码内容**：
-${code || "请提供需要审查的代码"}
+📝 **待审代码**${resolved.file ? `（来源: ${resolved.file}）` : ""}：
+${hasCode ? `\`\`\`\n${promptCode}\n\`\`\`` : "_未提供 code / file_path，请 Agent 先读取目标文件或让用户补充后再审查_"}
 
 🎯 **审查重点**：${focus}
 
@@ -74,13 +117,6 @@ ${renderCodeLimits()}
 - [ ] 未验证的输入
 - [ ] 敏感信息泄露
 
-**安全最佳实践**：
-- [ ] 输入验证和过滤
-- [ ] 输出编码
-- [ ] 使用参数化查询
-- [ ] 密码/密钥使用环境变量
-- [ ] HTTPS 通信
-
 ### 3️⃣ 性能问题检查
 
 **性能风险**：
@@ -92,12 +128,6 @@ ${renderCodeLimits()}
 - [ ] 大数据量未分页
 - [ ] 同步 I/O 操作
 
-**React/Vue 性能**：
-- [ ] 未使用 useMemo/useCallback
-- [ ] 组件不必要的重渲染
-- [ ] 大列表未虚拟化
-- [ ] 状态管理不当
-
 ### 4️⃣ 完整性检查
 
 ${renderBannedPatterns()}
@@ -108,57 +138,15 @@ ${renderBannedPatterns()}
 - [ ] 类型定义完整（避免 any）
 - [ ] 错误处理完善（try-catch）
 - [ ] 异步操作正确处理
-- [ ] 使用 const/let 替代 var
-- [ ] 箭头函数合理使用
-
-**命名规范**：
-- [ ] 变量：驼峰命名（camelCase）
-- [ ] 常量：大写下划线（UPPER_CASE）
-- [ ] 类/接口：帕斯卡命名（PascalCase）
-- [ ] 文件：短横线命名（kebab-case）
-- [ ] 布尔值：is/has/should 前缀
-
-**注释和文档**：
-- [ ] 复杂逻辑有注释说明
-- [ ] 公共 API 有文档
-- [ ] TODO/FIXME 标记清晰
 
 ---
 
-## 审查报告格式
-
-**严重问题（🔴 Critical）**：
-1. [位置] 问题描述
-   - 风险：...
-   - 建议：...
-   - 修复示例：\`\`\`typescript ... \`\`\`
-
-**警告（🟡 Warning）**：
-1. [位置] 问题描述
-   - 影响：...
-   - 建议：...
-
-**建议（🟢 Suggestion）**：
-1. [位置] 改进建议
-   - 当前：...
-   - 建议：...
-   - 收益：...
-
-**优点（✅ Good）**：
-- 做得好的地方
-
----
-
----
-
-## 📤 输出格式要求
-
-请严格按以下 JSON 格式输出审查结果：
+## 📤 Agent 必须输出的 JSON 格式
 
 \`\`\`json
 {
   "summary": "代码整体评价（一句话）",
-  "score": 85,
+  "overallScore": 85,
   "issues": [
     {
       "severity": "critical|high|medium|low",
@@ -167,29 +155,39 @@ ${renderBannedPatterns()}
       "line": 10,
       "code": "问题代码片段",
       "message": "问题描述",
-      "suggestion": "修复建议",
-      "fix_example": "修复示例代码"
+      "suggestion": "修复建议"
     }
   ],
-  "highlights": ["做得好的地方1", "做得好的地方2"]
+  "strengths": ["做得好的地方"]
 }
 \`\`\`
 
-## ⚠️ 边界约束
+## ⚠️ 边界
 
-- ❌ 仅分析，不自动修改源代码
-- ❌ 不执行代码或 shell 命令
-- ❌ 不做业务逻辑正确性判断（只关注代码质量）
-- ✅ 输出结构化问题清单和改进建议
+- MCP 仅返回指南 + 注入的待审代码，**issues 由 Agent 审查后生成**
+- 不要声称「工具已扫描完成」；应基于上方代码与清单给出真实发现
 
-现在请开始代码审查，生成详细的审查报告。`;
+现在请开始审查并输出问题清单。`;
 
-    return okText(message, {
-      schema: (await import('../schemas/output/core-tools.js')).CodeReviewReportSchema,
-      note: "本工具返回代码审查指南，AI 应根据指南分析代码并输出审查报告"
-    });
+    return okStructured(
+      message,
+      {
+        mode: "guidance",
+        reviewInput: {
+          received: hasCode,
+          focus,
+          file: resolved.file ?? null,
+          lineCount: hasCode ? resolved.code.split("\n").length : 0,
+          code: hasCode ? resolved.code : null,
+          truncatedInPrompt: hasCode && resolved.code.length !== promptCode.length,
+        },
+      },
+      {
+        schema: (await import("../schemas/output/core-tools.js")).CodeReviewReportSchema,
+        note: "指南型工具：issues 须由 Agent 按清单审查后生成；MCP 不返回静态扫描结果",
+      }
+    );
   } catch (error) {
-    return handleToolError(error, 'code_review');
+    return handleToolError(error, "code_review");
   }
 }
-

@@ -92,11 +92,16 @@ All hard quality rules live in one module (`src/lib/quality-constraints.ts`) and
 - Graph snapshots are persisted to `.mcp-probe-kit/graph-snapshots` (customizable via `MCP_GRAPH_SNAPSHOT_DIR`)
 - Tool responses include `_meta.graph` with snapshot URI and local JSON/Markdown file paths
 
-### 🐛 TBP 8-Step RCA for Bug Workflows
+### 🐛 SRC-8 Bug Root-Cause Workflow (TBP-Inspired)
 
-- `start_bugfix` defaults to Toyota-style TBP 8-step root-cause analysis before repair
-- `fix_bug` returns a structured TBP skeleton covering phenomenon, timeline, ruled-out paths, boundary, root cause, evidence, and repair plan
-- This makes bug, regression, anomaly, and "why didn't it work" investigations follow analyze-first discipline instead of patching symptoms
+- **[SRC-8 Methodology](docs/src8-methodology.md)** (中文: [src8-methodology.zh-CN.md](docs/src8-methodology.zh-CN.md)) — Software Root-Cause 8-step protocol inspired by Toyota TBP / PDCA, adapted for code and AI agents
+- `start_bugfix` runs graph narrowing, then SRC-8 guidance before repair and tests
+- `fix_bug` returns `src8Checklist`, **`rootCauseWorksheet`** (Step 4 core: hypotheses, exclusion matrix, 5 Why, causal statement), and hard gates (no code change until root-cause worksheet is closed)
+- Highlights vs manufacturing TBP: **repro contract**, **attribution layers** (including `agent_behavior`), **contributing factors**, **memorize_asset** for cross-repo learning
+
+**Inherited from Toyota TBP:** gap thinking, Plan-before-Do, no skipping to root-cause analysis, fact-based investigation, countermeasures over symptoms, evaluate then standardize.
+
+**Our elevation:** genchi-genbutsu → read code/logs/repro; Step 4 worksheet; guidance-only MCP that forces discipline while the Agent executes.
 
 ### 🧠 Memory Retrieval
 
@@ -302,7 +307,7 @@ This mode performs 1-2 rounds of structured clarification before entering spec/f
 
 6 intelligent orchestration tools that automatically combine multiple basic tools for one-click complex development workflows:
 - `start_feature` - New feature development (Requirements → Design → Estimation)
-- `start_bugfix` - Bug fixing (TBP 8-step RCA → Fix → Testing)
+- `start_bugfix` - Bug fixing (SRC-8 RCA → Fix → Testing)
 - `start_onboard` - Project onboarding (Generate project context docs)
 - `start_ui` - UI development (Design system → Components → Code)
 - `start_product` - Product design (PRD → Prototype → Design system → HTML)
@@ -387,8 +392,8 @@ This ensures `start_ui` can generate professional-grade UI code even offline.
 |---------|-----------------|--------|
 | Develop new feature (complete flow) | `start_feature` | Auto-complete: spec→estimation |
 | Only need feature spec docs | `add_feature` | More lightweight, only generates docs |
-| Fix bug (complete flow) | `start_bugfix` | Root-cause-first flow: TBP RCA → fix → test |
-| Only need bug analysis | `fix_bug` | TBP 8-step RCA only, without full orchestration |
+| Fix bug (complete flow) | `start_bugfix` | Root-cause-first: SRC-8 → fix → test → memorize |
+| Only need bug analysis | `fix_bug` | SRC-8 guidance + root-cause worksheet (see [docs](docs/src8-methodology.md)) |
 | Generate design system | `ui_design_system` | Directly generate design specs |
 | Develop UI components | `start_ui` | Complete flow: design→components→code |
 | Product design (requirements to prototype) | `start_product` | One-click: PRD→prototype→HTML |

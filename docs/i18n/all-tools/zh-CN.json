@@ -86,8 +86,8 @@
       "usage": "用于启动完整的功能开发流程，自动补齐 graph-insights，并通过 GitNexus 的 query/context/impact 收敛需求范围后生成规格与估算"
     },
     "start_bugfix": {
-      "description": "Bug 修复工作流编排：补齐图谱基线 → 刷新 GitNexus 图谱 → 收敛故障边界 → TBP 8 步真因分析 → 修复方案 → 生成测试",
-      "usage": "适用于找问题、修 bug、排查异常、定位回归；会先补齐 graph-insights 并用 GitNexus 收敛边界，再按 TBP 8 步法闭合真因后修复"
+      "description": "Bug 修复工作流编排：图谱基线 → GitNexus 收敛边界 → SRC-8 真因分析（TBP-inspired）→ 修复 → 测试 → 记忆沉淀",
+      "usage": "找问题/修 bug/排查回归；按 SRC-8 完成 rootCauseWorksheet 后再修复。详见 docs/src8-methodology.zh-CN.md"
     },
     "start_onboard": {
       "description": "项目上手工作流：生成上下文文档，帮助新成员快速了解项目",
@@ -110,8 +110,8 @@
       "usage": "全面审查代码质量，输出结构化问题清单（severity/category/suggestion）"
     },
     "fix_bug": {
-      "description": "基于 TBP 8 步法的 Bug 真因分析与修复指导，输出证据链、修复计划、测试计划和预防措施",
-      "usage": "适用于先找真因再修，帮助闭合现象、时间线、边界、真因和修复之间的因果链"
+      "description": "SRC-8 指南型 Bug 真因分析（TBP-inspired）：注入真因工作表 rootCauseWorksheet 与门禁，由 Agent 输出 rootCauseAnalysis 并修复",
+      "usage": "先闭合 Step 4 真因工作表（4a~4e），再制定对策与改代码；MCP 不自动修 Bug"
     },
     "refactor": {
       "description": "重构建议工具，分析代码结构，提供重构步骤、风险评估和回滚计划",

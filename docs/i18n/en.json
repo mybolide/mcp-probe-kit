@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
-    "version": "v3.6.10",
+    "version": "v3.6.11",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "Quick Start",
-      "description": "Get started with MCP Probe Kit v3.6.10 in 5 minutes",
+      "description": "Get started with MCP Probe Kit v3.6.11 in 5 minutes",
       "installConfig": "Installation & Configuration"
     },
     "tools": {
@@ -63,10 +63,10 @@
   },
   "gettingStarted": {
     "title": "Installation & Configuration",
-    "subtitle": "Get started with MCP Probe Kit v3.6.10 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
+    "subtitle": "Get started with MCP Probe Kit v3.6.11 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
     "skillBootstrap": {
       "title": "Skill & AGENTS auto-bootstrap",
-      "body": "Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v3.6.10+)."
+      "body": "Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v3.6.11+)."
     },
     "breadcrumb": {
       "home": "Documentation",
@@ -522,7 +522,7 @@
       "bugfix": {
         "title": "4.1 Systematic Bug Fix (Recommended)",
         "description": "Use",
-        "description2": "workflow to run TBP 8-step root-cause analysis before repair and testing.",
+        "description2": "workflow to run SRC-8 root-cause analysis (TBP-inspired) before repair and testing.",
         "example1": "You: Login function is throwing an error",
         "step1": "✓ Check project context, backfill missing graph docs, and refresh the GitNexus index",
         "step2": "✓ Use TBP-1~TBP-4 to define the symptom, timeline, and common pattern",
@@ -533,7 +533,7 @@
       "quick": {
         "title": "4.2 Quick Bug Analysis",
         "description": "Use",
-        "description2": "tool for fast TBP 8-step RCA with repair and validation guidance."
+        "description2": "tool for SRC-8 fast RCA with rootCauseWorksheet and repair guidance.",
       }
     },
     "stage5": {

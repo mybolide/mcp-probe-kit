@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.11] - 2026-07-10
+
+### 🐛 修复
+
+- **`code_review` / `gentest` / `refactor` 指南型输入注入**：将 `code` / `file_path` 读入并注入 `*Input` 结构化字段；移除易误导的「已完成分析」脚手架，明确由 Agent 产出 issues / 测试 / 重构计划
+- **MCP progress 通知**：默认关闭工具进度通知（`MCP_PROGRESS_NOTIFICATIONS=1` 可开启），避免 Cursor 等客户端因 sync 路径上的 progress token 报 `unknown token` 并断开连接
+
+### 🔧 改进
+
+- **SRC-8 方法论（TBP-inspired）**：新增 `src/lib/src8-guidance.ts` 与 `docs/src8-methodology.md` / `docs/src8-methodology.zh-CN.md`；归因六层、验收契约、真因工作表 4a~4e、`tbp8` 兼容别名
+- **`fix_bug` / `start_bugfix` delegated plan**：与 `start_feature` 同模式，返回 `metadata.plan.steps`（src8-1~8）；Agent 侧 prompt 内嵌计划与门禁，**不引用** npm 包内不可见的 `docs/*.md`
+- **`start_bugfix`**：`mergeBugfixOrchestrationPlan` 合并 context → SRC-8 八步 → 可选 `check_spec` / `memorize`；loop 模式同样走 src8 plan
+- **文档与 i18n**：README / `docs/i18n` / `all-tools` 统一 SRC-8 表述
+
+### 🧪 测试
+
+- 新增 `src8-guidance`、`code_review`、`gentest`、`refactor` 单元测试与 `scripts/smoke-src8-tools.mjs` 冒烟脚本
+
+---
+
 ## [3.6.10] - 2026-07-10
 
 ### 🐛 修复

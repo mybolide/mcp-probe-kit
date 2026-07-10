@@ -52,13 +52,17 @@ export const orchestrationToolSchemas = [
   },
   {
     name: "start_bugfix",
-    description: "当用户需要找问题、修 bug、排查异常、定位回归、分析失败原因、分析为什么没生效、先分析再修时使用。默认按 TBP 8 步法编排：取证澄清→分析定位→修复方案→生成测试。",
+    description: "当用户需要找问题、修 bug、排查异常时使用。默认按 SRC-8（TBP-inspired）编排：收敛边界→真因工作表→修复→测试→记忆沉淀。",
     inputSchema: {
       type: "object",
       properties: {
         error_message: {
           type: "string",
-          description: "错误信息",
+          description: "错误信息（可与 description 二选一）",
+        },
+        description: {
+          type: "string",
+          description: "Bug 描述（与 error_message 同义；仅传 description 时自动作为错误信息）",
         },
         stack_trace: {
           type: "string",
@@ -82,7 +86,7 @@ export const orchestrationToolSchemas = [
         },
         analysis_mode: {
           type: "string",
-          description: "分析方法。默认 tbp8（丰田问题分析 8 步法）",
+          description: "分析方法。默认 src8；tbp8 为兼容别名",
         },
         template_profile: {
           type: "string",

@@ -67,7 +67,7 @@
 - 桥接默认通过 `npx -y gitnexus@latest mcp` 启动，降低抓取过期包的风险
 - `init_project_context` 在 `docs/graph-insights/` 下生成基线图谱文档；如果 `docs/project-context.md` 已存在则保留旧上下文文档，仅回填图谱文档及索引条目
 - `start_feature` 刷新 GitNexus 索引，并在生成 spec 前执行任务级 `query/context/impact` 收窄，以减少过度范围
-- `start_bugfix` 刷新 GitNexus 索引，并在 TBP RCA 前执行任务级图谱分析，以约束故障边界和爆炸半径
+- `start_bugfix` 刷新 GitNexus 索引，并在 SRC-8 真因分析前执行任务级图谱分析，以约束故障边界和爆炸半径
 - 已有 `project-context.md` 但没有图谱文档的旧项目，会通过 `init_project_context` 自动引导生成
 - 如果 GitNexus 不可用，服务器自动降级，不会中断编排流程
 - 真正的图谱查询读取 `.gitnexus` 索引；`docs/graph-insights/latest.md|json` 是供人类和 AI Agent 阅读的快照
@@ -75,11 +75,12 @@
 - 图谱快照同时落盘到 `.mcp-probe-kit/graph-snapshots`（可通过 `MCP_GRAPH_SNAPSHOT_DIR` 自定义）
 - 工具响应中包含 `_meta.graph`，携带快照 URI 和本地 JSON/Markdown 文件路径
 
-### 🐛 Bug 流程的 TBP 8 步根因分析法
+### 🐛 Bug 流程 SRC-8 真因分析（TBP-inspired）
 
-- `start_bugfix` 默认在修复前执行 Toyota 式 TBP 8 步根因分析
-- `fix_bug` 返回结构化 TBP 骨架，涵盖：现象、时间线、已排除路径、边界、根因、证据、修复计划
-- 这让 Bug、回归、异常、"为什么不行" 类排查遵循先分析再修复的纪律，而非打补丁
+- 方法论文档：[SRC-8 软件真因分析八步法](../docs/src8-methodology.zh-CN.md)（英文：[src8-methodology.md](../docs/src8-methodology.md)）
+- `start_bugfix` 默认在修复前执行 SRC-8（借鉴丰田 TBP/PDCA，面向代码与 Agent 升华）
+- `fix_bug` 返回 `src8Checklist`、**`rootCauseWorksheet`（Step 4 核心）** 与硬门禁；真因由 Agent 输出 `rootCauseAnalysis`
+- 亮点：验收契约、归因六层（含 `agent_behavior`）、贡献因子、复现门禁、`memorize_asset` 巩固
 
 ### 🧠 记忆检索
 

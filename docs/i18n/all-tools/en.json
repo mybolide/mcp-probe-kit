@@ -86,7 +86,7 @@
       "usage": "Used to start the full feature flow, backfill graph-insights when missing, then use GitNexus query/context/impact analysis to narrow scope before spec and estimation"
     },
     "start_bugfix": {
-      "description": "Bug fix workflow orchestration: bootstrap graph baseline → refresh GitNexus index → narrow failure boundary → TBP 8-step root-cause analysis → fix plan → generate tests",
+      "description": "Bug fix workflow: graph baseline → GitNexus → SRC-8 root-cause (TBP-inspired) → fix → tests → memorize",
       "usage": "Use it for bugs, regressions, and anomalies; it backfills graph-insights first and uses GitNexus to constrain boundary and impact before TBP RCA"
     },
     "start_onboard": {
@@ -110,7 +110,7 @@
       "usage": "Comprehensive code quality review, outputting structured issue list (severity/category/suggestion)"
     },
     "fix_bug": {
-      "description": "TBP 8-step bug RCA and repair guidance with evidence chain, fix plan, test plan, and prevention measures",
+      "description": "SRC-8 guidance-only bug RCA (TBP-inspired): injects rootCauseWorksheet and gates; Agent produces rootCauseAnalysis",
       "usage": "Use it when you need to find the true cause first and close the chain from symptom and boundary to repair"
     },
     "refactor": {

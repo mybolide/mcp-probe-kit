@@ -352,8 +352,8 @@ export const BugFixReportSchema = {
   properties: {
     analysisMode: {
       type: 'string',
-      enum: ['tbp8'],
-      description: '分析方法',
+      enum: ['src8', 'tbp8'],
+      description: '分析方法（src8 推荐；tbp8 兼容）',
     },
     rootCause: {
       type: 'string',
@@ -380,7 +380,7 @@ export const BugFixReportSchema = {
     },
     tbp: {
       ...TbpAnalysisSchema,
-      description: 'TBP 8 步法分析骨架',
+      description: 'SRC-8 分析骨架（字段名 tbp 为历史兼容）',
     },
   },
   required: ['analysisMode', 'rootCause', 'fixPlan', 'testPlan', 'tbp'],
@@ -904,7 +904,7 @@ export interface ExecutionPlan {
 }
 
 export interface BugFixReport extends WorkflowReport {
-  analysisMode: 'tbp8';
+  analysisMode: 'src8' | 'tbp8';
   rootCause: string;
   fixPlan: string;
   testPlan: string;
@@ -1174,12 +1174,22 @@ export const BugAnalysisSchema = {
     },
     analysisMode: {
       type: 'string',
-      enum: ['tbp8'],
-      description: '分析方法',
+      enum: ['src8', 'tbp8'],
+      description: '分析方法（src8 推荐；tbp8 兼容）',
     },
     rootCause: {
       type: 'string',
       description: '根本原因',
+    },
+    rootCauseAnalysis: {
+      type: 'object',
+      description: 'SRC-8 Step 4 真因工作表产出',
+      properties: {
+        mode: { type: 'string', enum: ['simple', 'complex'] },
+        rootCauseStatement: { type: 'string' },
+        confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+      },
+      required: ['mode', 'rootCauseStatement', 'confidence'],
     },
     affectedComponents: {
       type: 'array',
@@ -1232,10 +1242,10 @@ export const BugAnalysisSchema = {
     },
     tbp: {
       ...TbpAnalysisSchema,
-      description: 'TBP 8 步法分析结果',
+      description: 'SRC-8 各步产出（字段名 tbp 为历史兼容）',
     },
   },
-  required: ['summary', 'bugType', 'severity', 'analysisMode', 'rootCause', 'fixPlan', 'testPlan', 'tbp'],
+  required: ['summary', 'bugType', 'severity', 'analysisMode', 'rootCause', 'rootCauseAnalysis', 'fixPlan', 'testPlan', 'tbp'],
 } as const;
 
 /**

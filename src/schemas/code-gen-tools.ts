@@ -5,13 +5,21 @@
 export const codeGenToolSchemas = [
   {
     name: "gentest",
-    description: "当用户需要为代码生成单元测试时使用。生成单元测试代码（Jest/Vitest/Mocha），包含边界用例和 mock",
+    description: "当用户需要为代码生成单元测试时使用。指南型工具：注入 code/file_path 与测试清单，由 Agent 生成完整测试代码；MCP 不自动生成或运行测试",
     inputSchema: {
       type: "object",
       properties: {
         code: {
           type: "string",
           description: "要生成测试的代码。可以是函数、类或模块",
+        },
+        file_path: {
+          type: "string",
+          description: "要生成测试的源文件路径（相对 project_root 或绝对路径）。未传 code 时从磁盘读取",
+        },
+        project_root: {
+          type: "string",
+          description: "项目根目录绝对路径。配合 file_path 解析相对路径",
         },
         framework: {
           type: "string",

@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 개발 강화 툴킷 · 문서 센터",
-    "version": "v3.6.10",
+    "version": "v3.6.11",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
   },
   "sections": {
     "quickStart": {
       "title": "빠른 시작",
-      "description": "5분 안에 MCP Probe Kit v3.6.10 시작하기",
+      "description": "5분 안에 MCP Probe Kit v3.6.11 시작하기",
       "installConfig": "설치 및 구성"
     },
     "tools": {
@@ -63,10 +63,10 @@
   },
   "gettingStarted": {
     "title": "설치 및 구성",
-    "subtitle": "5분 안에 MCP Probe Kit v3.6.10 시작하기. Cursor, Cline, Claude Desktop 지원",
+    "subtitle": "5분 안에 MCP Probe Kit v3.6.11 시작하기. Cursor, Cline, Claude Desktop 지원",
     "skillBootstrap": {
       "title": "Skill 및 AGENTS 자동 부트스트랩",
-      "body": "MCP 도구 호출 시 AGENTS.md와 .agents/skills/mcp-probe-kit/SKILL.md를 작성합니다(단일 규칙 소스). .trae/, .lingma/, .comate/ 등 디렉터리가 있으면 얇은 어댑터를 자동 생성합니다(v3.6.10+, 환경 변수 불필요)."
+      "body": "MCP 도구 호출 시 AGENTS.md와 .agents/skills/mcp-probe-kit/SKILL.md를 작성합니다(단일 규칙 소스). .trae/, .lingma/, .comate/ 등 디렉터리가 있으면 얇은 어댑터를 자동 생성합니다(v3.6.11+, 환경 변수 불필요)."
     },
     "breadcrumb": {
       "home": "문서",

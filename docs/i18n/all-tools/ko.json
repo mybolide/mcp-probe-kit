@@ -86,7 +86,7 @@
       "usage": "누락된 graph-insights 를 먼저 보강하고 GitNexus query/context/impact 로 범위를 수렴시킨 뒤 사양과 추정을 생성합니다"
     },
     "start_bugfix": {
-      "description": "버그 수정 워크플로우 오케스트레이션: 그래프 베이스라인 보강 → GitNexus 갱신 → 장애 경계 수렴 → TBP 8단계 근본원인 분석 → 수정 방안 → 테스트 생성",
+      "description": "버그 수정 워크플로우：그래프 → GitNexus → SRC-8 근본원인 분석（TBP-inspired）→ 수정 → 테스트 → 기억",
       "usage": "버그, 회귀, 이상 분석용. 먼저 graph-insights 를 보강하고 GitNexus 로 경계와 영향면을 좁힌 뒤 TBP RCA 를 진행합니다"
     },
     "start_onboard": {
@@ -110,7 +110,7 @@
       "usage": "포괄적인 코드 품질 리뷰, 구조화된 문제 목록(severity/category/suggestion)을 출력합니다"
     },
     "fix_bug": {
-      "description": "TBP 8단계 기반 버그 RCA 및 수정 가이드로 증거 사슬, 수정 계획, 테스트 계획, 예방 조치를 제공합니다",
+      "description": "SRC-8 가이드형 버그 RCA（TBP-inspired）：rootCauseWorksheet 주입, Agent 가 rootCauseAnalysis 출력",
       "usage": "먼저 진짜 원인을 찾고 싶을 때 사용하며 현상, 경계, 진짜 원인, 수정까지의 인과 사슬을 닫아줍니다"
     },
     "refactor": {

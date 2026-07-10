@@ -76,9 +76,9 @@ Ein leistungsstarker MCP (Model Context Protocol) Server mit **30 Tools**, die d
 - Graph-Snapshots werden als Ressourcen bereitgestellt (`probe://graph/latest`, etc.)
 - Snapshots werden in `.mcp-probe-kit/graph-snapshots` persistiert
 
-### 🐛 TBP 8-Schritte-RCA für Bug-Workflows
+### 🐛 SRC-8 Bug RCA (TBP-inspired)
 
-- `start_bugfix` verwendet standardmäßig Toyota-orientierte TBP 8-Schritte-Root-Cause-Analysis
+- `start_bugfix`: SRC-8 → Fix → Tests; `fix_bug`: **rootCauseWorksheet** (see docs/src8-methodology.md)
 - `fix_bug` liefert strukturiertes TBP-Skelett mit Phänomen, Timeline, ausgeschlossenen Pfaden, Grenze, Ursache, Beweisen und Reparaturplan
 
 ### 🧠 Memory Retrieval
@@ -218,7 +218,7 @@ Verwenden Sie `requirements_mode=loop` in `start_feature / start_bugfix / start_
 
 6 intelligente Orchestrierungstools:
 - `start_feature` - Neue Funktion (Anforderungen → Design → Schätzung)
-- `start_bugfix` - Bugfix (TBP 8-Schritte RCA → Fix → Tests)
+- `start_bugfix` - Bugfix (SRC-8 RCA → Fix → Tests)
 - `start_onboard` - Projekt-Onboarding
 - `start_ui` - UI-Entwicklung (Design-System → Komponenten → Code)
 - `start_product` - Produktdesign (PRD → Prototyp → HTML)
@@ -258,7 +258,7 @@ UI/UX-Tools mit `start_ui` als einheitlichem Einstiegspunkt:
 | Neue Funktion (kompletter Flow) | `start_feature` | Auto: Spec → Schätzung |
 | Nur Spec-Docs | `add_feature` | Leichter |
 | Bugfix (kompletter Flow) | `start_bugfix` | TBP RCA → Fix → Test |
-| Nur Bug-Analyse | `fix_bug` | TBP 8-Schritte RCA |
+| Nur Bug-Analyse | `fix_bug` | SRC-8 guidance + rootCauseWorksheet |
 | Design-System generieren | `ui_design_system` | Direkte Generierung |
 | UI-Komponenten entwickeln | `start_ui` | Kompletter Flow |
 | Produktdesign | `start_product` | PRD → Prototyp → HTML |
