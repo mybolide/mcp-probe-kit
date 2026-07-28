@@ -4,7 +4,12 @@ import { parseArgs, getString } from '../utils/parseArgs.js';
 import { okStructured } from '../lib/response.js';
 import { handleToolError } from '../utils/error-handler.js';
 import { resolveWorkspaceRoot } from '../lib/workspace-root.js';
-import { validateSpecDocuments, type SpecIssue } from '../lib/spec-validator.js';
+import {
+  validateParentChildSpecDocuments,
+  validateSpecDocuments,
+  type SpecIssue,
+} from '../lib/spec-validator.js';
+import { normalizeDocsDir, normalizeFeatureName, parseParentChildManifest } from '../lib/parent-child-spec.js';
 
 /**
  * check_spec 工具（P1「填写后校验」闸门）
@@ -48,22 +53,52 @@ export async function checkSpec(args: any) {
       },
     });
 
-    const featureName = getString(parsed.feature_name);
-    const docsDir = getString(parsed.docs_dir) || DEFAULT_DOCS_DIR;
+    const rawFeatureName = getString(parsed.feature_name);
+    const docsDir = normalizeDocsDir(getString(parsed.docs_dir), DEFAULT_DOCS_DIR);
     const projectRoot = resolveWorkspaceRoot(getString(parsed.project_root));
 
-    if (!featureName) {
+    if (!rawFeatureName) {
       throw new Error('请提供 feature_name（要校验的规格目录名，对应 docs/specs/<feature_name>/）');
     }
 
-    const specDir = path.join(projectRoot, docsDir, 'specs', featureName);
-    const report = validateSpecDocuments({
-      requirements: readIfExists(path.join(specDir, 'requirements.md')),
-      design: readIfExists(path.join(specDir, 'design.md')),
-      tasks: readIfExists(path.join(specDir, 'tasks.md')),
-    });
+    const featureName = normalizeFeatureName(rawFeatureName);
+    const specsRoot = path.resolve(projectRoot, docsDir, 'specs');
+    const relativeSpecsRoot = path.relative(projectRoot, specsRoot);
+    if (relativeSpecsRoot.startsWith('..') || path.isAbsolute(relativeSpecsRoot)) {
+      throw new Error('docs_dir 解析后超出项目根目录，拒绝读取规格文件');
+    }
+    const specDir = path.resolve(specsRoot, featureName);
+    const requirements = readIfExists(path.join(specDir, 'requirements.md'));
+    const design = readIfExists(path.join(specDir, 'design.md'));
+    const tasks = readIfExists(path.join(specDir, 'tasks.md'));
+    const manifest = readIfExists(path.join(specDir, 'spec-manifest.json'));
+    const parsedManifest = parseParentChildManifest(manifest);
+    const subspecs = Object.fromEntries((parsedManifest?.subspecs ?? []).map((subspec) => [
+      subspec.id,
+      {
+        spec: readIfExists(path.join(specDir, 'subspecs', subspec.id, 'spec.md')),
+        tasks: readIfExists(path.join(specDir, 'subspecs', subspec.id, 'tasks.md')),
+      },
+    ]));
+    const report = manifest !== null
+      ? validateParentChildSpecDocuments({
+        requirements,
+        design,
+        tasks,
+        readme: readIfExists(path.join(specDir, 'README.md')),
+        manifest,
+        subspecs,
+      })
+      : validateSpecDocuments({
+        requirements,
+        design,
+        tasks,
+      });
 
     const relDir = `${docsDir}/specs/${featureName}`;
+    const subspecIds = 'subspecIds' in report && Array.isArray(report.subspecIds)
+      ? report.subspecIds
+      : null;
     const issueLines = report.issues.length > 0
       ? report.issues.map(formatIssue).join('\n')
       : '- 无';
@@ -73,7 +108,7 @@ export async function checkSpec(args: any) {
 
 ${report.summary}
 
-**需求清单**: ${report.frIds.join(', ') || '（未发现 FR）'}
+**需求清单**: ${report.frIds.join(', ') || '（未发现 FR）'}${subspecIds ? `\n**子规格**: ${subspecIds.join(', ') || '（未发现）'}` : ''}
 ${report.warningCount > 0 ? `\n仍有 ${report.warningCount} 个提醒（非阻塞，建议处理）：\n${issueLines}\n` : ''}
 **下一步**: 规格已具备可实现性，可进入实现/估算阶段。`
       : `# ❌ 规格校验未通过：${featureName}

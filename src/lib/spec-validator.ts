@@ -16,6 +16,12 @@ export interface SpecFileInput {
   tasks?: string | null;
 }
 
+export interface ParentChildSpecFileInput extends SpecFileInput {
+  readme?: string | null;
+  manifest?: string | null;
+  subspecs?: Record<string, { spec?: string | null; tasks?: string | null }>;
+}
+
 export interface SpecIssue {
   file: SpecFileKey | 'cross';
   severity: 'error' | 'warning';
@@ -53,7 +59,7 @@ function hasSection(content: string, name: string): boolean {
 
 /** 提取去重后的 FR-n 需求 ID */
 export function extractFrIds(content: string): string[] {
-  const matches = content.match(/\bFR-\d+\b/g) || [];
+  const matches = content.match(/(?<![A-Z0-9])FR-\d+(?!\d)/g) || [];
   return [...new Set(matches)];
 }
 
@@ -66,7 +72,10 @@ const REQUIRED_SECTIONS: Record<SpecFileKey, string[]> = {
 /**
  * 校验三份规格文档。传入各文件的全文（不存在传 null）。
  */
-export function validateSpecDocuments(input: SpecFileInput): SpecValidationReport {
+export function validateSpecDocuments(
+  input: SpecFileInput,
+  options: { requireAcceptance?: boolean } = {},
+): SpecValidationReport {
   const issues: SpecIssue[] = [];
   const requirements = input.requirements ?? null;
   const design = input.design ?? null;
@@ -104,7 +113,7 @@ export function validateSpecDocuments(input: SpecFileInput): SpecValidationRepor
     if (frIds.length === 0) {
       issues.push({ file: 'requirements', severity: 'error', code: 'no_fr', message: 'requirements.md 未定义任何带稳定 ID 的需求（FR-1、FR-2…）' });
     }
-    if (!/SHALL/i.test(requirements)) {
+    if (options.requireAcceptance !== false && !/SHALL/i.test(requirements)) {
       issues.push({ file: 'requirements', severity: 'error', code: 'no_acceptance', message: 'requirements.md 未发现 EARS 验收标准（应包含「SHALL」）' });
     }
   }
@@ -154,3 +163,235 @@ export function validateSpecDocuments(input: SpecFileInput): SpecValidationRepor
 
   return { passed, errorCount, warningCount, issues, frIds, summary };
 }
+
+function addIssue(issues: SpecIssue[], code: string, message: string): void {
+  issues.push({ file: 'cross', severity: 'error', code, message });
+}
+
+function hasNamedSection(content: string, name: string): boolean {
+  return hasSection(content, name);
+}
+
+interface TaskBlock {
+  id: string;
+  content: string;
+}
+
+function extractTaskBlocks(content: string): TaskBlock[] {
+  const blocks: TaskBlock[] = [];
+  let current: { id: string; lines: string[] } | undefined;
+  for (const line of content.split(/\r?\n/)) {
+    const match = line.match(/^\s*-\s*\[[ xX]\]\s*(\d+\.\d+)\b/);
+    if (match?.[1]) {
+      if (current) blocks.push({ id: current.id, content: current.lines.join('\n') });
+      current = { id: match[1], lines: [line] };
+    } else if (current) {
+      current.lines.push(line);
+    }
+  }
+  if (current) blocks.push({ id: current.id, content: current.lines.join('\n') });
+  return blocks;
+}
+
+function extractSectionBody(content: string, name: string): string {
+  const lines = content.split(/\r?\n/);
+  const start = lines.findIndex((line) => new RegExp(`^#{1,6}\\s+${escapeRegExp(name)}\\s*$`).test(line));
+  if (start < 0) {
+    return '';
+  }
+  const section: string[] = [];
+  for (let index = start + 1; index < lines.length && !/^#{1,6}\s+/.test(lines[index] ?? ''); index += 1) {
+    section.push(lines[index] ?? '');
+  }
+  return section.join('\n').trim();
+}
+
+function extractSectionBullets(content: string, name: string): string[] {
+  return extractSectionBody(content, name)
+    .split(/\r?\n/)
+    .map((line) => line.match(/^\s*-\s+(.+)$/)?.[1]?.trim())
+    .filter((item): item is string => typeof item === 'string' && !/^(无|暂无|不涉及)$/i.test(item));
+}
+
+function parseManifest(content: string | null | undefined): ParentChildSpecManifest | null {
+  if (!content?.trim()) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(content) as { layout?: unknown; subspecs?: unknown };
+    if (parsed.layout !== 'parent-child') {
+      return null;
+    }
+    return { layout: 'parent-child', subspecs: normalizeSubspecs(parsed.subspecs, 'parent-child') };
+  } catch {
+    return null;
+  }
+}
+
+function checkChildSpec(
+  id: string,
+  definition: SubspecDefinition,
+  child: { spec?: string | null; tasks?: string | null } | undefined,
+  parentFrIds: Set<string>,
+  parentTasks: string,
+  issues: SpecIssue[],
+): void {
+  if (!child) {
+    addIssue(issues, 'missing_subspec', `subspecs/${id}/ 未按 spec-manifest.json 创建`);
+    return;
+  }
+  const spec = child.spec ?? '';
+  const tasks = child.tasks ?? '';
+  checkChildSpecDocument(id, definition, spec, parentFrIds, issues);
+  checkChildTasks(id, definition, tasks, parentTasks, issues);
+}
+
+function checkChildSpecDocument(
+  id: string,
+  definition: SubspecDefinition,
+  spec: string,
+  parentFrIds: Set<string>,
+  issues: SpecIssue[],
+): void {
+  if (!spec.trim()) {
+    addIssue(issues, 'missing_subspec_spec', `subspecs/${id}/spec.md 不存在或为空`);
+    return;
+  }
+  for (const section of ['范围', '需求回链', '涉及文件', '不做项']) {
+    if (!hasNamedSection(spec, section)) {
+      addIssue(issues, 'missing_subspec_section', `subspecs/${id}/spec.md 缺少章节「${section}」`);
+    } else if (!extractSectionBody(spec, section)) {
+      addIssue(issues, 'empty_subspec_section', `subspecs/${id}/spec.md 章节「${section}」不能为空`);
+    }
+  }
+  if (countPlaceholders(spec) > 0) addIssue(issues, 'subspec_placeholder', `subspecs/${id}/spec.md 仍有未填写占位符`);
+  if (!/SHALL/i.test(spec)) addIssue(issues, 'missing_subspec_acceptance', `subspecs/${id}/spec.md 缺少 EARS 验收标准（应包含 SHALL）`);
+  const childFrIds = new Set(extractFrIds(spec));
+  for (const frId of definition.fr) {
+    if (!childFrIds.has(frId)) addIssue(issues, 'missing_subspec_fr_backlink', `subspecs/${id}/spec.md 未回链 ${frId}`);
+  }
+  for (const frId of childFrIds) {
+    if (!parentFrIds.has(frId)) {
+      addIssue(issues, 'unknown_subspec_fr', `subspecs/${id}/spec.md 引用了母规格不存在的 ${frId}`);
+    }
+  }
+}
+
+function checkChildTasks(
+  id: string,
+  definition: SubspecDefinition,
+  tasks: string,
+  parentTasks: string,
+  issues: SpecIssue[],
+): void {
+  if (!tasks.trim()) {
+    addIssue(issues, 'missing_subspec_tasks', `subspecs/${id}/tasks.md 不存在或为空`);
+    return;
+  }
+  if (countPlaceholders(tasks) > 0) {
+    addIssue(issues, 'subspec_task_placeholder', `subspecs/${id}/tasks.md 仍有未填写占位符`);
+  }
+  const taskBlocks = extractTaskBlocks(tasks);
+  if (taskBlocks.length === 0) {
+    addIssue(issues, 'missing_subspec_task', `subspecs/${id}/tasks.md 未定义编号任务`);
+  }
+  for (const task of taskBlocks) {
+    if (!/证据块\s*[:：]/.test(task.content)) {
+      addIssue(issues, 'missing_task_evidence', `subspecs/${id}/tasks.md 的任务 ${task.id} 必须包含证据块`);
+    }
+    const blockFrIds = extractFrIds(task.content);
+    if (blockFrIds.length === 0) {
+      addIssue(issues, 'missing_task_fr', `subspecs/${id}/tasks.md 的任务 ${task.id} 必须回链至少一个 FR-n`);
+    }
+    for (const frId of blockFrIds) {
+      if (!definition.fr.includes(frId)) {
+        addIssue(issues, 'unknown_task_fr', `subspecs/${id}/tasks.md 的任务 ${task.id} 回链了本子规格未负责的 ${frId}`);
+      }
+    }
+  }
+  const taskFrIds = new Set(extractFrIds(tasks));
+  for (const frId of definition.fr) {
+    if (!taskFrIds.has(frId)) {
+      addIssue(issues, 'missing_subspec_task_fr', `subspecs/${id}/tasks.md 未回链本子规格负责的 ${frId}`);
+    }
+  }
+  for (const task of taskBlocks) {
+    const reference = `${id}/${task.id}`;
+    if (!new RegExp(`(?<![a-z0-9-])${escapeRegExp(reference)}(?!\\d)`, 'i').test(parentTasks)) {
+      addIssue(issues, 'unreferenced_subspec_task', `母 tasks.md 未引用子任务 ${id}/${task.id}`);
+    }
+  }
+}
+
+/** 校验已由 Agent 落盘的 parent-child 规格；MCP 不写入或修复任何业务文件。 */
+export function validateParentChildSpecDocuments(input: ParentChildSpecFileInput): SpecValidationReport & { subspecIds: string[] } {
+  const base = validateSpecDocuments(input, { requireAcceptance: false });
+  const issues = [...base.issues];
+  const manifest = parseManifest(input.manifest);
+  if (!manifest) {
+    addIssue(issues, 'invalid_manifest', 'spec-manifest.json 缺失、不是 JSON，或 layout 不是 parent-child');
+    return buildParentChildReport(base.frIds, issues, []);
+  }
+
+  const readme = input.readme ?? '';
+  if (countPlaceholders(readme) > 0) {
+    addIssue(issues, 'parent_readme_placeholder', 'README.md 仍有未填写占位符');
+  }
+  for (const section of ['原则', '子规格索引', '依赖关系', '里程碑']) {
+    if (!hasNamedSection(readme, section)) {
+      addIssue(issues, 'missing_parent_readme_section', `README.md 缺少章节「${section}」`);
+    } else if (!extractSectionBody(readme, section)) {
+      addIssue(issues, 'empty_parent_readme_section', `README.md 章节「${section}」不能为空`);
+    }
+  }
+
+  const mappedFrIds = new Set(manifest.subspecs.flatMap((subspec) => subspec.fr));
+  for (const frId of base.frIds) {
+    if (!mappedFrIds.has(frId)) {
+      addIssue(issues, 'unmapped_parent_fr', `母 requirements.md 的 ${frId} 未映射到任何子规格`);
+    }
+  }
+
+  const parentFrIds = new Set(base.frIds);
+  const outOfScopeOwners = new Map<string, string>();
+  for (const subspec of manifest.subspecs) {
+    if (!readme.includes(subspec.id)) {
+      addIssue(issues, 'missing_parent_index_entry', `README.md 子规格索引未引用 ${subspec.id}`);
+    }
+    for (const frId of subspec.fr) {
+      if (!parentFrIds.has(frId)) {
+        addIssue(issues, 'unknown_manifest_fr', `spec-manifest.json 中 ${subspec.id} 映射了母规格不存在的 ${frId}`);
+      }
+    }
+    const child = input.subspecs?.[subspec.id];
+    checkChildSpec(subspec.id, subspec, child, parentFrIds, input.tasks ?? '', issues);
+    for (const item of extractSectionBullets(child?.spec ?? '', '不做项')) {
+      const key = item.toLowerCase().replace(/[。；;，,\s]+$/g, '');
+      const owner = outOfScopeOwners.get(key);
+      if (owner && owner !== subspec.id) {
+        addIssue(issues, 'duplicate_out_of_scope', `子规格 ${owner} 与 ${subspec.id} 重复声明不做项：「${item}」`);
+      } else {
+        outOfScopeOwners.set(key, subspec.id);
+      }
+    }
+  }
+
+  return buildParentChildReport(base.frIds, issues, manifest.subspecs.map((subspec) => subspec.id));
+}
+
+function buildParentChildReport(frIds: string[], issues: SpecIssue[], subspecIds: string[]) {
+  const errorCount = issues.filter((item) => item.severity === 'error').length;
+  const warningCount = issues.filter((item) => item.severity === 'warning').length;
+  return {
+    passed: errorCount === 0,
+    errorCount,
+    warningCount,
+    issues,
+    frIds,
+    subspecIds,
+    summary: errorCount === 0
+      ? `分层规格校验通过（${frIds.length} 条需求，${subspecIds.length} 个子规格）`
+      : `分层规格校验未通过：${errorCount} 个必须修复的问题${warningCount ? `、${warningCount} 个提醒` : ''}`,
+  };
+}
+import { normalizeSubspecs, type ParentChildSpecManifest, type SubspecDefinition } from './parent-child-spec.js';

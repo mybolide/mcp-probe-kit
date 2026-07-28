@@ -18,6 +18,7 @@ export async function workflow(args: unknown) {
       input?: string;
       scenario?: string;
       description?: string;
+      project_root?: string;
     }>(args, {
       defaultValues: {
         intent: '',
@@ -29,6 +30,7 @@ export async function workflow(args: unknown) {
       fieldAliases: {
         intent: ['input', 'description', 'goal', 'task', '需求', '目标', '描述'],
         scenario: ['mode', 'type', '场景', '类型'],
+        project_root: ['projectRoot', 'project_path', 'projectPath', 'root', '项目路径', '项目根目录'],
       },
     });
 
@@ -40,7 +42,7 @@ export async function workflow(args: unknown) {
 
     const plan = buildDevWorkflow(intent, { scenario });
     const text = renderWorkflowMarkdown(plan, intent);
-    const projectRoot = resolveWorkspaceRoot('');
+    const projectRoot = resolveWorkspaceRoot(getString(parsed.project_root));
     const bootstrap = ensureMcpProbeKitBootstrap(projectRoot);
 
     return okStructured(text, {

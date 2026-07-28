@@ -24,6 +24,14 @@ import {
   parseLayoutArgsFromRecord,
   resolveProjectContextLayout,
 } from "../lib/project-context-layout.js";
+import {
+  normalizeDocsDir,
+  normalizeFeatureName,
+  normalizeSpecLayout,
+  normalizeSubspecs,
+  type SpecLayout,
+  type SubspecDefinition,
+} from "../lib/parent-child-spec.js";
 
 /**
  * start_feature 智能编排工具
@@ -108,13 +116,13 @@ const PROMPT_TEMPLATE = `# 🚀 新功能开发编排（委托式）
   "feature_name": "{feature_name}",
   "description": "{description}",
   "docs_dir": "{docs_dir}",
-  "template_profile": "{template_profile}"
+  "template_profile": "{template_profile}",
+  "spec_layout": "{spec_layout}",
+  "subspecs": {subspecs_json}
 }
 \`\`\`
 **预期输出**:
-- \`{docs_dir}/specs/{feature_name}/requirements.md\`
-- \`{docs_dir}/specs/{feature_name}/design.md\`
-- \`{docs_dir}/specs/{feature_name}/tasks.md\`
+{spec_output_list}
 
 ### 2) 校验规格完整性（闸门）
 **调用**: \`check_spec\`
@@ -208,6 +216,28 @@ function buildOpenQuestions(questionBudget: number) {
   return base.slice(0, Math.max(0, questionBudget));
 }
 
+function buildSpecOutputs(
+  docsDir: string,
+  featureName: string,
+  specLayout: SpecLayout,
+  subspecs: SubspecDefinition[],
+): string[] {
+  const root = `${docsDir}/specs/${featureName}`;
+  const flatFiles = [`${root}/requirements.md`, `${root}/design.md`, `${root}/tasks.md`];
+  if (specLayout === 'flat') {
+    return flatFiles;
+  }
+  return [
+    `${root}/README.md`,
+    ...flatFiles,
+    `${root}/spec-manifest.json`,
+    ...subspecs.flatMap((subspec) => [
+      `${root}/subspecs/${subspec.id}/spec.md`,
+      `${root}/subspecs/${subspec.id}/tasks.md`,
+    ]),
+  ];
+}
+
 export async function startFeature(args: any, context?: ToolExecutionContext) {
   try {
     throwIfAborted(context?.signal, "start_feature 已取消");
@@ -220,6 +250,8 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       docs_dir?: string;
       project_root?: string;
       template_profile?: string;
+      spec_layout?: string;
+      subspecs?: unknown;
       requirements_mode?: string;
       loop_max_rounds?: number;
       loop_question_budget?: number;
@@ -231,6 +263,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         description: "",
         docs_dir: "docs",
         template_profile: "auto",
+        spec_layout: "flat",
         requirements_mode: "steady",
         loop_max_rounds: 2,
         loop_question_budget: 5,
@@ -243,6 +276,8 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         docs_dir: ["dir", "output", "目录", "文档目录"],
         project_root: ["projectRoot", "project_path", "projectPath", "root", "project_root", "项目路径", "项目根目录"],
         template_profile: ["profile", "template_profile", "模板档位", "模板模式"],
+        spec_layout: ["layout", "specLayout", "规格布局"],
+        subspecs: ["sub_specs", "子规格", "子模块"],
         requirements_mode: ["mode", "requirements_mode", "loop", "需求模式"],
         loop_max_rounds: ["max_rounds", "rounds", "最大轮次"],
         loop_question_budget: ["question_budget", "问题数量", "问题预算"],
@@ -252,7 +287,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
 
     let featureName = getString(parsedArgs.feature_name);
     let description = getString(parsedArgs.description);
-    const docsDir = getString(parsedArgs.docs_dir) || "docs";
+    const docsDir = normalizeDocsDir(getString(parsedArgs.docs_dir), "docs");
     const projectRoot = getString(parsedArgs.project_root);
     if (isLikelyProjectNamedRelativePath(projectRoot)) {
       return {
@@ -269,6 +304,8 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       };
     }
     const templateProfile = getString(parsedArgs.template_profile) || "auto";
+    const specLayout = normalizeSpecLayout(parsedArgs.spec_layout);
+    const subspecs = normalizeSubspecs(parsedArgs.subspecs, specLayout);
     const requirementsMode = getString(parsedArgs.requirements_mode) || "steady";
     const maxRounds = getNumber(parsedArgs.loop_max_rounds, 2);
     const questionBudget = getNumber(parsedArgs.loop_question_budget, 5);
@@ -304,6 +341,8 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         "- JSON格式：{\"feature_name\": \"user-auth\", \"description\": \"用户认证功能\"}"
       );
     }
+    featureName = normalizeFeatureName(featureName);
+    const specOutputs = buildSpecOutputs(docsDir, featureName, specLayout, subspecs);
 
     throwIfAborted(context?.signal, "start_feature 已取消");
     await reportToolProgress(context, 55, "start_feature: 刷新图谱并收敛需求范围");
@@ -440,12 +479,15 @@ ${graphContext.highlights.length > 0
             id: 'spec',
             tool: 'add_feature',
             when: 'stopConditions.ready=true',
-            args: { feature_name: featureName, description, docs_dir: docsDir, template_profile: templateProfile },
-            outputs: [
-              `${docsDir}/specs/${featureName}/requirements.md`,
-              `${docsDir}/specs/${featureName}/design.md`,
-              `${docsDir}/specs/${featureName}/tasks.md`,
-            ],
+            args: {
+              feature_name: featureName,
+              description,
+              docs_dir: docsDir,
+              template_profile: templateProfile,
+              spec_layout: specLayout,
+              ...(specLayout === 'parent-child' ? { subspecs } : {}),
+            },
+            outputs: specOutputs,
           },
           {
             id: 'check-spec',
@@ -556,7 +598,10 @@ ${graphContext.highlights.length > 0
       .replace(/{description}/g, description)
       .replace(/{docs_dir}/g, docsDir)
       .replace(/{project_root}/g, (projectRoot || process.cwd()).replace(/\\/g, "/"))
-      .replace(/{template_profile}/g, templateProfile);
+      .replace(/{template_profile}/g, templateProfile)
+      .replace(/{spec_layout}/g, specLayout)
+      .replace(/{subspecs_json}/g, JSON.stringify(subspecs, null, 2))
+      .replace(/{spec_output_list}/g, specOutputs.map((specPath) => `- \`${specPath}\``).join('\n'));
     const guide = header + memoryGuideSection + renderedPrompt + graphGuideSection;
 
     const plan = {
@@ -577,12 +622,15 @@ ${graphContext.highlights.length > 0
         {
           id: 'spec',
           tool: 'add_feature',
-          args: { feature_name: featureName, description, docs_dir: docsDir, template_profile: templateProfile },
-          outputs: [
-            `${docsDir}/specs/${featureName}/requirements.md`,
-            `${docsDir}/specs/${featureName}/design.md`,
-            `${docsDir}/specs/${featureName}/tasks.md`,
-          ],
+          args: {
+            feature_name: featureName,
+            description,
+            docs_dir: docsDir,
+            template_profile: templateProfile,
+            spec_layout: specLayout,
+            ...(specLayout === 'parent-child' ? { subspecs } : {}),
+          },
+          outputs: specOutputs,
         },
         {
           id: 'check-spec',

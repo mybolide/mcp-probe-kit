@@ -30,7 +30,7 @@ describe('start_ui 属性测试', () => {
       ),
       { numRuns: 100 }
     );
-  });
+  }, 30_000);
 
   // Feature: ui-workflow-execution-issue, Property 18: 一致的 Markdown 结构
   test('任务 1.2: 指导使用一致的 Markdown 结构', async () => {

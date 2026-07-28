@@ -87,6 +87,38 @@ describe('start_feature 单元测试', () => {
     expect(specStep.args.template_profile).toBe('strict');
   });
 
+  test('parent-child 布局透传到 add_feature 委托计划', async () => {
+    const result = await startFeature({
+      feature_name: 'commerce-v2',
+      description: 'v2 升级。',
+      spec_layout: 'parent-child',
+      subspecs: [{ id: '01-foundation', title: '数据底座', fr: ['FR-1'] }],
+    });
+
+    expect(result.isError).toBe(false);
+    const plan = (result as any).structuredContent.metadata.plan;
+    const specStep = plan.steps.find((step: any) => step.tool === 'add_feature');
+    expect(specStep.args.spec_layout).toBe('parent-child');
+    expect(specStep.args.subspecs).toEqual([
+      { id: '01-foundation', title: '数据底座', fr: ['FR-1'] },
+    ]);
+    expect(specStep.outputs).toContain('docs/specs/commerce-v2/spec-manifest.json');
+    expect(specStep.outputs).toContain('docs/specs/commerce-v2/subspecs/01-foundation/spec.md');
+    expect(result.content[0].text).toMatch(/"spec_layout": "parent-child"/);
+  });
+
+  test('parent-child 拒绝无效的子规格依赖', async () => {
+    const result = await startFeature({
+      feature_name: 'commerce-v2',
+      description: 'v2 升级。',
+      spec_layout: 'parent-child',
+      subspecs: [{ id: '01-foundation', title: '数据底座', fr: ['FR-1'], dependsOn: ['missing'] }],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/依赖.*无效/);
+  });
+
   test('loop 模式返回需求循环结构', async () => {
     const result = await startFeature({
       feature_name: 'user-auth',
@@ -107,5 +139,15 @@ describe('start_feature 单元测试', () => {
     expect(loop.maxRounds).toBeGreaterThanOrEqual(1);
     expect(Array.isArray(loop.openQuestions)).toBe(true);
     expect(loop.openQuestions.length).toBeLessThanOrEqual(3);
+  });
+
+  test('拒绝会逃出规格目录的 feature_name', async () => {
+    const result = await startFeature({
+      feature_name: '../../escape',
+      description: '非法路径测试',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/feature_name|kebab-case/);
   });
 });

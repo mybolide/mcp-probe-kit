@@ -303,6 +303,24 @@ This mode performs 1-2 rounds of structured clarification before entering spec/f
 - `strict`: Requirements structured, prefer more compact guidance
 - `auto`: Default recommendation, auto-selects guided/strict
 
+### Parent-Child Specifications
+
+For version-level or epic work, pass `spec_layout: "parent-child"` and an explicit `subspecs` array to `add_feature` or `start_feature`. The MCP server returns templates and `pendingFiles`; the calling Agent creates the parent spec, `spec-manifest.json`, and child specs after review. `check_spec` then validates the complete hierarchy recursively. The default `flat` layout is unchanged.
+
+`start_feature` uses query-only GitNexus narrowing with an 8-second degradation budget, so graph cold starts do not block specification planning. Automatic index refresh is disabled by default; set `MCP_GITNEXUS_AUTO_REFRESH=1` when the MCP process should refresh the index before graph queries.
+
+```json
+{
+  "feature_name": "commerce-v2",
+  "description": "Upgrade the commerce domain while preserving v1 compatibility",
+  "spec_layout": "parent-child",
+  "subspecs": [
+    { "id": "01-foundation", "title": "Data foundation", "fr": ["FR-1"] },
+    { "id": "06-inventory-ledger", "title": "Inventory ledger", "fr": ["FR-2"], "dependsOn": ["01-foundation"] }
+  ]
+}
+```
+
 ### 🔄 Workflow Orchestration
 
 6 intelligent orchestration tools that automatically combine multiple basic tools for one-click complex development workflows:

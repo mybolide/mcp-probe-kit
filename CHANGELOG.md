@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.7.0] - 2026-07-28
+
+### Added
+
+- **Parent-Child Spec guidance**: `add_feature` and `start_feature` accept `spec_layout=parent-child` plus explicit `subspecs`, and return an Agent-owned writing plan for the parent spec, manifest, and child specs without writing business specification files.
+- **Recursive specification gate**: `check_spec` validates parent FR coverage, child FR backlinks and EARS criteria, required child sections, evidence-backed tasks, parent task references, and duplicate out-of-scope declarations.
+
+### Fixed
+
+- **GitNexus cold start**: feature planning uses query-only narrowing with an 8-second degradation budget; automatic index refresh is opt-in via `MCP_GITNEXUS_AUTO_REFRESH=1`.
+- **Specification path containment**: `add_feature`, `start_feature`, and `check_spec` reject path separators and project-escaping `docs_dir` values.
+- **Per-task validation**: every child task is independently checked for an evidence block and FR backlink.
+- **Workflow test isolation**: `workflow` accepts `project_root` and writes harness files only inside the requested project during tests and explicit calls.
+- **Release reliability**: raised the full-suite test timeout budget for Windows concurrency and excluded compiled test files from the npm tarball.
+
+### Security
+
+- Removed hardcoded memory service credentials from MCP handshake scripts; smoke tests now inherit credentials exclusively from the environment.
+- Added runtime and JSON Schema limits for parent-child input sizes and escaped Markdown table cells.
+- Updated runtime and test dependencies to versions with zero reported `npm audit` vulnerabilities.
+
+---
+
 ## [3.6.11] - 2026-07-10
 
 ### 🐛 修复

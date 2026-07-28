@@ -2,6 +2,13 @@ import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { loadTemplate, normalizeTemplateProfile } from "../lib/template-loader.js";
 import { handleToolError } from "../utils/error-handler.js";
+import {
+  buildParentChildSpecArtifacts,
+  normalizeDocsDir,
+  normalizeFeatureName,
+  normalizeSpecLayout,
+  normalizeSubspecs,
+} from "../lib/parent-child-spec.js";
 import type { FeatureSpec } from "../schemas/output/project-tools.js";
 
 /**
@@ -133,6 +140,8 @@ export async function addFeature(args: any) {
       description?: string;
       docs_dir?: string;
       template_profile?: string;
+      spec_layout?: string;
+      subspecs?: unknown;
       input?: string;
     }>(args, {
       defaultValues: {
@@ -140,6 +149,7 @@ export async function addFeature(args: any) {
         description: "",
         docs_dir: DEFAULT_DOCS_DIR,
         template_profile: "auto",
+        spec_layout: "flat",
       },
       primaryField: "input", // 纯文本输入默认映射到 input 字段
       fieldAliases: {
@@ -147,13 +157,17 @@ export async function addFeature(args: any) {
         description: ["desc", "requirement", "描述", "需求"],
         docs_dir: ["dir", "output", "目录", "文档目录"],
         template_profile: ["profile", "mode", "模板档位", "模板模式", "模板级别"],
+        spec_layout: ["layout", "specLayout", "规格布局"],
+        subspecs: ["sub_specs", "子规格", "子模块"],
       },
     });
 
     let featureName = getString(parsedArgs.feature_name);
     let description = getString(parsedArgs.description);
-    const docsDir = getString(parsedArgs.docs_dir) || DEFAULT_DOCS_DIR;
+    const docsDir = normalizeDocsDir(getString(parsedArgs.docs_dir), DEFAULT_DOCS_DIR);
     const rawProfile = getString(parsedArgs.template_profile);
+    const specLayout = normalizeSpecLayout(parsedArgs.spec_layout);
+    const subspecs = normalizeSubspecs(parsedArgs.subspecs, specLayout);
 
     // 如果是纯自然语言输入（input 字段有值但 feature_name 和 description 为空）
     const input = getString(parsedArgs.input);
@@ -184,9 +198,94 @@ export async function addFeature(args: any) {
         "- JSON格式：{\"feature_name\": \"user-auth\", \"description\": \"用户认证功能\"}"
       );
     }
+    featureName = normalizeFeatureName(featureName);
 
     const profileDecision = resolveTemplateProfile(rawProfile, description);
     const templateProfile = profileDecision.resolved;
+
+    if (specLayout === 'parent-child') {
+      const artifacts = buildParentChildSpecArtifacts(docsDir, featureName, description, subspecs);
+      const markdownFence = '````markdown';
+      const jsonFence = '````json';
+      const fenceClose = '````';
+      const childSections = subspecs.map((subspec) => {
+        const templates = artifacts.templates.subspecs[subspec.id];
+        return `### 子规格：${subspec.id}（${subspec.title}）\n\n**spec.md**\n\n${markdownFence}\n${templates.spec}\n${fenceClose}\n\n**tasks.md**\n\n${markdownFence}\n${templates.tasks}\n${fenceClose}`;
+      }).join('\n\n---\n\n');
+      const guide = `# 添加分层功能规格指南（Agent 落盘）
+
+## 任务目标
+
+为项目添加 parent-child 功能规格：**${featureName}**
+
+MCP **不会**写入磁盘。请由 Agent 在用户审阅后创建下列文件；\`spec-manifest.json\` 是 FR 归属、依赖与子规格目录的机器可读 SSOT。
+
+## 待 Agent 创建的文件
+
+${artifacts.specPaths.map((specPath) => `- \`${specPath}\``).join('\n')}
+
+## 母规格模板
+
+### README.md
+
+${markdownFence}
+${artifacts.templates.readme}
+${fenceClose}
+
+### requirements.md
+
+${markdownFence}
+${artifacts.templates.requirements}
+${fenceClose}
+
+### design.md
+
+${markdownFence}
+${artifacts.templates.design}
+${fenceClose}
+
+### tasks.md
+
+${markdownFence}
+${artifacts.templates.tasks}
+${fenceClose}
+
+### spec-manifest.json
+
+${jsonFence}
+${artifacts.templates.manifest}
+${fenceClose}
+
+## 子规格模板
+
+${childSections}
+
+## 校验顺序
+
+1. Agent 创建全部 pendingFiles 后调用 \`check_spec\`。
+2. 校验通过前，不进入实现。
+3. 子规格 \`tasks.md\` 是任务唯一明细；母 \`tasks.md\` 只维护任务引用矩阵。`;
+      const pendingFiles = artifacts.specPaths.map((specPath) => ({
+        path: specPath,
+        reason: '由 Agent 根据 parent-child 模板写入；MCP 不写入业务规格文件',
+      }));
+      const structuredData: FeatureSpec & Record<string, unknown> = {
+        summary: `已生成分层功能规格写作计划：${featureName}`,
+        featureName,
+        requirements: [...new Set(subspecs.flatMap((subspec) => subspec.fr))],
+        tasks: [{ id: '1', title: '由 Agent 创建分层规格', description: '按模板落盘母规格、清单和子规格' }],
+        pendingFiles,
+        specPaths: artifacts.specPaths,
+        specLayout,
+        subspecs,
+        manifest: artifacts.manifest,
+      };
+      return okStructured(guide, structuredData, {
+        schema: (await import("../schemas/output/project-tools.js")).FeatureSpecSchema,
+        note: '本工具仅返回分层规格写作计划；Agent 须创建业务文件',
+        template: { profile: templateProfile, requested: profileDecision.requested },
+      });
+    }
 
     const templateVars = {
       feature_name: featureName,

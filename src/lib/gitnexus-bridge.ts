@@ -89,6 +89,8 @@ export interface EmbeddedGraphContext {
 
 const DEFAULT_CONNECT_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_CONNECT_TIMEOUT_MS", 12000);
 const DEFAULT_CALL_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_TIMEOUT_MS", 20000);
+const DEFAULT_INDEX_REFRESH_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_REFRESH_TIMEOUT_MS", 8000);
+const DEFAULT_FEATURE_GRAPH_BUDGET_MS = readIntEnv("MCP_GITNEXUS_FEATURE_BUDGET_MS", 8000);
 const DEFAULT_GITNEXUS_ARGS = ["-y", "gitnexus@latest", "mcp"];
 const FAILURE_CACHE_TTL_MS = readIntEnv("MCP_GITNEXUS_FAILURE_CACHE_TTL_MS", 30000);
 const DEFAULT_IGNORED_DIRS = new Set([
@@ -137,6 +139,11 @@ function isEnvDisabled(name: string): boolean {
     return false;
   }
   return /^(0|false|no|off)$/i.test(value.trim());
+}
+
+function isEnvEnabled(name: string): boolean {
+  const value = process.env[name];
+  return value !== undefined && /^(1|true|yes|on)$/i.test(value.trim());
 }
 
 function isBridgeEnabled(): boolean {
@@ -860,7 +867,8 @@ async function runProcess(
   command: string,
   args: string[],
   cwd: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  timeoutMs: number = DEFAULT_INDEX_REFRESH_TIMEOUT_MS
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
@@ -871,18 +879,29 @@ async function runProcess(
     });
 
     let stderr = "";
+    let settled = false;
+    const finish = (callback: () => void): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      callback();
+    };
+    const timeout = setTimeout(() => {
+      child.kill();
+      finish(() => reject(new Error(`${command} 超过 ${timeoutMs}ms 未完成`)));
+    }, timeoutMs);
 
     child.stderr?.on("data", (chunk: Buffer | string) => {
       stderr += String(chunk);
     });
 
-    child.on("error", reject);
+    child.on("error", (error) => finish(() => reject(error)));
     child.on("close", (code: number | null) => {
       if (code === 0) {
-        resolve();
+        finish(resolve);
         return;
       }
-      reject(new Error(stderr.trim() || `${command} ${args.join(" ")} 退出码 ${code ?? "unknown"}`));
+      finish(() => reject(new Error(stderr.trim() || `${command} ${args.join(" ")} 退出码 ${code ?? "unknown"}`)));
     });
   });
 }
@@ -1044,7 +1063,7 @@ export async function tryRefreshWorkspaceIndex(
   workspace: BridgeWorkspace,
   signal?: AbortSignal
 ): Promise<string | undefined> {
-  if (workspace.workspaceMode !== "direct") {
+  if (workspace.workspaceMode !== "direct" || !isEnvEnabled("MCP_GITNEXUS_AUTO_REFRESH")) {
     return undefined;
   }
 
@@ -1577,18 +1596,55 @@ export async function buildFeatureGraphContext(input: {
   repo?: string;
   projectRoot?: string;
 }): Promise<EmbeddedGraphContext> {
-  const bridge = await runCodeInsightBridge({
-    mode: "auto",
+  const controller = new AbortController();
+  let timedOut = false;
+  const forwardAbort = (): void => controller.abort(input.signal?.reason);
+  input.signal?.addEventListener("abort", forwardAbort, { once: true });
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort(new Error("GitNexus feature planning budget exceeded"));
+  }, DEFAULT_FEATURE_GRAPH_BUDGET_MS);
+
+  try {
+    const bridge = await runCodeInsightBridge(buildFeatureGraphRequest({
+      ...input,
+      signal: controller.signal,
+    }));
+    return toEmbeddedGraphContext(bridge);
+  } catch (error) {
+    if (!timedOut) throw error;
+    return {
+      enabled: true,
+      available: false,
+      degraded: true,
+      summary: `GitNexus 图谱收敛超过 ${DEFAULT_FEATURE_GRAPH_BUDGET_MS}ms，已降级继续功能规划。`,
+      warnings: ["feature_graph_timeout"],
+      provider: "gitnexus",
+      mode: "query",
+      highlights: [],
+    };
+  } finally {
+    clearTimeout(timeout);
+    input.signal?.removeEventListener("abort", forwardAbort);
+  }
+}
+
+export function buildFeatureGraphRequest(input: {
+  featureName: string;
+  description: string;
+  signal?: AbortSignal;
+  repo?: string;
+  projectRoot?: string;
+}): CodeInsightRequest {
+  return {
+    mode: "query",
     query: `${input.featureName} ${input.description}`,
-    target: input.featureName,
-    direction: "upstream",
     goal: "Find related modules and execution flows for feature planning",
-    taskContext: "start_feature planning with query/context/impact narrowing",
+    taskContext: "start_feature planning with query-only narrowing",
     repo: input.repo,
     projectRoot: input.projectRoot,
     signal: input.signal,
-  });
-  return toEmbeddedGraphContext(bridge);
+  };
 }
 
 export async function buildBugfixGraphContext(input: {

@@ -53,4 +53,69 @@ describe('add_feature 模板系统', () => {
     expect(meta?.requested).toBe('auto');
     expect(meta?.profile).toBe('strict');
   });
+
+  test('parent-child 返回 Agent 落盘计划和分层清单', async () => {
+    const result = await addFeature({
+      feature_name: 'commerce-v2',
+      description: 'v2 升级，包含数据底座和库存台账。',
+      spec_layout: 'parent-child',
+      subspecs: [
+        { id: '01-foundation', title: '数据底座', fr: ['FR-1'] },
+        { id: '06-inventory-ledger', title: '库存台账', fr: ['FR-2'], dependsOn: ['01-foundation'] },
+      ],
+    });
+
+    expect(result.isError).toBe(false);
+    const text = result.content[0].text;
+    expect(text).toMatch(/spec-manifest\.json/);
+    expect(text).toMatch(/subspecs\/01-foundation\/spec\.md/);
+    expect(text).toMatch(/MCP \*\*不会\*\*写入磁盘/);
+
+    const structured = (result as any).structuredContent;
+    expect(structured.specLayout).toBe('parent-child');
+    expect(structured.subspecs).toHaveLength(2);
+    expect(structured.pendingFiles).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'docs/specs/commerce-v2/spec-manifest.json' }),
+    ]));
+  });
+
+  test('parent-child 拒绝重复子规格 ID', async () => {
+    const result = await addFeature({
+      feature_name: 'commerce-v2',
+      description: 'v2 升级。',
+      spec_layout: 'parent-child',
+      subspecs: [
+        { id: '01-foundation', title: '数据底座', fr: ['FR-1'] },
+        { id: '01-foundation', title: '重复目录', fr: ['FR-2'] },
+      ],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/重复/);
+  });
+
+  test('parent-child 拒绝循环依赖', async () => {
+    const result = await addFeature({
+      feature_name: 'commerce-v2',
+      description: 'v2 升级。',
+      spec_layout: 'parent-child',
+      subspecs: [
+        { id: '01-foundation', title: '数据底座', fr: ['FR-1'], dependsOn: ['02-orders'] },
+        { id: '02-orders', title: '订单', fr: ['FR-2'], dependsOn: ['01-foundation'] },
+      ],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/循环依赖/);
+  });
+
+  test('拒绝会逃出规格目录的 feature_name', async () => {
+    const result = await addFeature({
+      feature_name: '../escape',
+      description: '非法路径测试',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/feature_name|kebab-case/);
+  });
 });

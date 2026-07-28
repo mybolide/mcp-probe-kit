@@ -229,6 +229,20 @@ export const FeatureSpecSchema = {
       },
     },
     specPaths: { type: 'array', items: { type: 'string' } },
+    specLayout: { type: 'string', enum: ['flat', 'parent-child'] },
+    subspecs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          fr: { type: 'array', items: { type: 'string' } },
+          dependsOn: { type: 'array', items: { type: 'string' } },
+        },
+      },
+    },
+    manifest: { type: 'object', additionalProperties: true },
   },
   required: ['summary', 'featureName', 'requirements', 'tasks'],
 } as const;
@@ -425,6 +439,14 @@ export interface FeatureSpec {
   writtenFiles?: Array<{ path: string; action: 'created' | 'updated' | 'skipped' }>;
   pendingFiles?: Array<{ path: string; reason: string }>;
   specPaths?: string[];
+  specLayout?: 'flat' | 'parent-child';
+  subspecs?: Array<{
+    id: string;
+    title: string;
+    fr: string[];
+    dependsOn?: string[];
+  }>;
+  manifest?: object;
 }
 
 export interface Estimate {

@@ -4,6 +4,7 @@ import * as path from "node:path";
 import spawn from "cross-spawn";
 import { afterEach, describe, expect, test } from "vitest";
 import {
+  buildFeatureGraphRequest,
   extractResolvedSymbolIdFromContext,
   prepareBridgeWorkspace,
   resolveExecutableCommand,
@@ -164,8 +165,10 @@ describe("gitnexus-bridge workspace preparation", () => {
     fs.mkdirSync(path.join(repoRoot, ".git"));
     const prevCommand = process.env.MCP_GITNEXUS_COMMAND;
     const prevPath = process.env.PATH;
+    const prevAutoRefresh = process.env.MCP_GITNEXUS_AUTO_REFRESH;
     process.env.MCP_GITNEXUS_COMMAND = path.join(repoRoot, "missing-gitnexus.cmd");
     process.env.PATH = repoRoot;
+    process.env.MCP_GITNEXUS_AUTO_REFRESH = "1";
 
     try {
       const workspace = await prepareBridgeWorkspace(repoRoot);
@@ -182,7 +185,48 @@ describe("gitnexus-bridge workspace preparation", () => {
       } else {
         process.env.PATH = prevPath;
       }
+      if (prevAutoRefresh === undefined) {
+        delete process.env.MCP_GITNEXUS_AUTO_REFRESH;
+      } else {
+        process.env.MCP_GITNEXUS_AUTO_REFRESH = prevAutoRefresh;
+      }
     }
+  });
+
+  test("默认跳过自动索引刷新，避免规划入口冷启动阻塞", async () => {
+    const repoRoot = makeTempDir("gitnexus-index-skip-");
+    fs.mkdirSync(path.join(repoRoot, ".git"));
+    const prevCommand = process.env.MCP_GITNEXUS_COMMAND;
+    const prevPath = process.env.PATH;
+    const prevAutoRefresh = process.env.MCP_GITNEXUS_AUTO_REFRESH;
+    process.env.MCP_GITNEXUS_COMMAND = path.join(repoRoot, "missing-gitnexus.cmd");
+    process.env.PATH = repoRoot;
+    delete process.env.MCP_GITNEXUS_AUTO_REFRESH;
+
+    try {
+      const workspace = await prepareBridgeWorkspace(repoRoot);
+      await expect(tryRefreshWorkspaceIndex(workspace)).resolves.toBeUndefined();
+    } finally {
+      if (prevCommand === undefined) delete process.env.MCP_GITNEXUS_COMMAND;
+      else process.env.MCP_GITNEXUS_COMMAND = prevCommand;
+      if (prevPath === undefined) delete process.env.PATH;
+      else process.env.PATH = prevPath;
+      if (prevAutoRefresh === undefined) delete process.env.MCP_GITNEXUS_AUTO_REFRESH;
+      else process.env.MCP_GITNEXUS_AUTO_REFRESH = prevAutoRefresh;
+    }
+  });
+
+  test("功能规划只构造 query 请求，不把 feature slug 当代码符号", () => {
+    const request = buildFeatureGraphRequest({
+      featureName: "commerce-v2",
+      description: "库存和售后升级",
+      projectRoot: "E:/workspace/shop",
+    });
+
+    expect(request.mode).toBe("query");
+    expect(request.query).toContain("commerce-v2");
+    expect(request.target).toBeUndefined();
+    expect(request.direction).toBeUndefined();
   });
 
   test("git 目录直接使用源仓库", async () => {

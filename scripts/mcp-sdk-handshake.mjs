@@ -12,15 +12,6 @@ const transport = new StdioClientTransport({
   cwd: root,
   env: {
     ...process.env,
-    MEMORY_QDRANT_URL: "http://8.134.219.239:50008",
-    MEMORY_QDRANT_API_KEY: "REDACTED",
-    MEMORY_QDRANT_COLLECTION: "mcp_probe_memory",
-    MEMORY_EMBEDDING_PROVIDER: "openai-compatible",
-    MEMORY_EMBEDDING_URL: "https://frps-tc-web.evwali.com/embedding/embeddings",
-    MEMORY_EMBEDDING_MODEL: "nomic-ai/nomic-embed-text-v1.5",
-    MEMORY_EMBEDDING_API_KEY: "REDACTED",
-    MEMORY_SEARCH_LIMIT: "3",
-    MEMORY_SUMMARY_MAX_CHARS: "280",
   },
   stderr: "pipe",
 });

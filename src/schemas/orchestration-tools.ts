@@ -11,6 +11,8 @@ export const orchestrationToolSchemas = [
       properties: {
         feature_name: {
           type: "string",
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          maxLength: 120,
           description: "功能名称（kebab-case 格式，如 user-auth）。可选，如果不提供会从 description 自动提取",
         },
         description: {
@@ -19,6 +21,7 @@ export const orchestrationToolSchemas = [
         },
         docs_dir: {
           type: "string",
+          maxLength: 240,
           description: "文档输出目录，默认为 docs",
         },
         project_root: {
@@ -28,6 +31,27 @@ export const orchestrationToolSchemas = [
         template_profile: {
           type: "string",
           description: "模板档位：auto（默认，自动选择 guided/strict）、guided（普通模型友好）或 strict（结构更紧凑）",
+        },
+        spec_layout: {
+          type: "string",
+          enum: ["flat", "parent-child"],
+          description: "规格布局：flat（默认）或 parent-child（由 Agent 落盘母/子规格）",
+        },
+        subspecs: {
+          type: "array",
+          maxItems: 50,
+          description: "parent-child 的子规格定义；每项包含 id、title、fr 和可选 dependsOn",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$", maxLength: 120, description: "唯一的小写 kebab-case 子规格 ID" },
+              title: { type: "string", minLength: 1, maxLength: 120, description: "子规格标题" },
+              fr: { type: "array", minItems: 1, maxItems: 100, items: { type: "string", pattern: "^FR-\\d+$" }, description: "负责的 FR-n 列表" },
+              dependsOn: { type: "array", maxItems: 50, items: { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }, description: "依赖的子规格 ID" },
+            },
+            required: ["id", "title", "fr"],
+            additionalProperties: false,
+          },
         },
         requirements_mode: {
           type: "string",
