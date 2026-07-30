@@ -1,4 +1,13 @@
 export type SpecLayout = 'flat' | 'parent-child';
+export type SpecLayoutRequest = 'auto' | SpecLayout;
+
+export interface SpecLayoutDecision {
+  requested: SpecLayoutRequest;
+  resolved: SpecLayout;
+  score: number;
+  reasons: string[];
+  requiresSubspecDefinition: boolean;
+}
 
 export interface SubspecDefinition {
   id: string;
@@ -48,6 +57,128 @@ export function normalizeSpecLayout(value: unknown): SpecLayout {
     return layout;
   }
   throw new Error('spec_layout 仅支持 flat 或 parent-child');
+}
+
+export function normalizeSpecLayoutRequest(value: unknown): SpecLayoutRequest {
+  const layout = String(value ?? 'auto').trim().toLowerCase() || 'auto';
+  if (layout === 'auto' || layout === 'flat' || layout === 'parent-child') {
+    return layout;
+  }
+  throw new Error('spec_layout 仅支持 auto、flat 或 parent-child');
+}
+
+function countMatches(text: string, pattern: RegExp): number {
+  return [...text.matchAll(pattern)].length;
+}
+
+/**
+ * start_feature 的规格布局决策器。
+ *
+ * add_feature 仍保持显式 flat / parent-child；智能选择只发生在编排入口，
+ * 避免原子工具在缺少上下文时意外扩大输出范围。
+ */
+export function resolveSpecLayoutDecision(input: {
+  requested?: unknown;
+  description?: string;
+  subspecs?: unknown;
+}): SpecLayoutDecision {
+  const requested = normalizeSpecLayoutRequest(input.requested);
+  const suppliedSubspecCount = Array.isArray(input.subspecs) ? input.subspecs.length : 0;
+
+  if (requested === 'flat') {
+    return {
+      requested,
+      resolved: 'flat',
+      score: 0,
+      reasons: ['调用方显式指定 flat'],
+      requiresSubspecDefinition: false,
+    };
+  }
+
+  if (requested === 'parent-child') {
+    return {
+      requested,
+      resolved: 'parent-child',
+      score: 100,
+      reasons: ['调用方显式指定 parent-child'],
+      requiresSubspecDefinition: suppliedSubspecCount === 0,
+    };
+  }
+
+  if (suppliedSubspecCount > 0) {
+    return {
+      requested,
+      resolved: 'parent-child',
+      score: 100,
+      reasons: [`已提供 ${suppliedSubspecCount} 个子规格定义`],
+      requiresSubspecDefinition: false,
+    };
+  }
+
+  const description = String(input.description ?? '').trim();
+  let score = 0;
+  const reasons: string[] = [];
+
+  if (description.length >= 500) {
+    score += 2;
+    reasons.push('需求描述较长，包含较多约束与交付内容');
+  } else if (description.length >= 250) {
+    score += 1;
+    reasons.push('需求描述达到中等复杂度');
+  }
+
+  const structuredItems = countMatches(description, /(?:^|\n)\s*(?:#{1,4}\s+|[-*]\s+|\d+[.)、]\s+)/gm);
+  if (structuredItems >= 6) {
+    score += 2;
+    reasons.push(`检测到 ${structuredItems} 个结构化需求项`);
+  } else if (structuredItems >= 3) {
+    score += 1;
+    reasons.push(`检测到 ${structuredItems} 个结构化需求项`);
+  }
+
+  const phaseMarkers = countMatches(description, /(?:\bR\d+\b|\bP[0-3]\b|阶段[一二三四五六七八九十\d]+|里程碑)/gi);
+  if (phaseMarkers >= 3) {
+    score += 3;
+    reasons.push('需求包含多个明确阶段或里程碑');
+  } else if (phaseMarkers > 0) {
+    score += 1;
+    reasons.push('需求包含阶段化交付信号');
+  }
+
+  const domainSignals = [
+    /协议|兼容|SDK|transport|双栈|legacy|modern/i,
+    /记忆|Qdrant|memory|知识库/i,
+    /工具注册|Tool Registry|Schema|dispatcher|路由/i,
+    /任务运行时|Task Runtime|异步任务|progress|cancellation|取消/i,
+    /Skill|AGENTS\.md|workflow|工作流|编排/i,
+    /测试矩阵|兼容矩阵|conformance|评估|eval/i,
+  ].filter((pattern) => pattern.test(description)).length;
+
+  if (domainSignals >= 3) {
+    score += 3;
+    reasons.push(`需求跨越 ${domainSignals} 类独立能力域`);
+  } else if (domainSignals >= 2) {
+    score += 2;
+    reasons.push(`需求跨越 ${domainSignals} 类能力域`);
+  }
+
+  if (/多模块|跨模块|多个子系统|全链路|架构升级|大版本|平台化|体系化/i.test(description)) {
+    score += 2;
+    reasons.push('需求明确具有跨模块或架构级特征');
+  }
+
+  const resolved: SpecLayout = score >= 4 ? 'parent-child' : 'flat';
+  if (reasons.length === 0) {
+    reasons.push('未检测到需要分层管理的复杂度信号');
+  }
+
+  return {
+    requested,
+    resolved,
+    score,
+    reasons,
+    requiresSubspecDefinition: resolved === 'parent-child',
+  };
 }
 
 export function normalizeSubspecs(value: unknown, layout: SpecLayout): SubspecDefinition[] {

@@ -1,0 +1,28 @@
+{
+  "layout": "parent-child",
+  "subspecs": [
+    {
+      "id": "core-governance",
+      "title": "核心治理与编排",
+      "fr": ["FR-1", "FR-2", "FR-7"]
+    },
+    {
+      "id": "memory-convergence",
+      "title": "记忆学习与收敛恢复",
+      "fr": ["FR-3", "FR-8"],
+      "dependsOn": ["core-governance"]
+    },
+    {
+      "id": "protocol-compatibility",
+      "title": "SDK v2 与双协议兼容",
+      "fr": ["FR-4", "FR-5"],
+      "dependsOn": ["core-governance"]
+    },
+    {
+      "id": "task-runtime",
+      "title": "内部任务运行时与协议适配",
+      "fr": ["FR-6"],
+      "dependsOn": ["protocol-compatibility"]
+    }
+  ]
+}

@@ -53,7 +53,7 @@ export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = [
       {
         name: "start_feature",
         whenToCall:
-          "任何**新功能 / 增强**；会先搜记忆，再指引 `add_feature` → `check_spec` → 实现",
+          "任何**新功能 / 增强**；description 应汇总当前对话已确认的完整范围，默认自动判断 flat / parent-child，复杂多模块需求先拆子规格，再指引 `add_feature` → `check_spec` → 实现",
       },
       {
         name: "start_bugfix",
@@ -240,6 +240,7 @@ export const MCP_SKILL_COMMON_FLOWS = [
 
 export const MCP_SKILL_AVOID_RULES = [
   "有对应 MCP 却**直接大段写实现**",
+  "大型跨模块需求绕过 `start_feature` 直接手写单体 Spec",
   "`check_spec` **未通过**就写功能代码",
   "Bug 修完**不** `memorize_asset`",
   "`delete_memory_asset` 不带 `confirm: true`",

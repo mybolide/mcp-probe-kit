@@ -27,9 +27,11 @@ import {
 import {
   normalizeDocsDir,
   normalizeFeatureName,
-  normalizeSpecLayout,
+  normalizeSpecLayoutRequest,
   normalizeSubspecs,
+  resolveSpecLayoutDecision,
   type SpecLayout,
+  type SpecLayoutDecision,
   type SubspecDefinition,
 } from "../lib/parent-child-spec.js";
 import {
@@ -236,11 +238,44 @@ function buildSpecOutputs(
     `${root}/README.md`,
     ...flatFiles,
     `${root}/spec-manifest.json`,
-    ...subspecs.flatMap((subspec) => [
-      `${root}/subspecs/${subspec.id}/spec.md`,
-      `${root}/subspecs/${subspec.id}/tasks.md`,
-    ]),
+    ...(subspecs.length > 0
+      ? subspecs.flatMap((subspec) => [
+          `${root}/subspecs/${subspec.id}/spec.md`,
+          `${root}/subspecs/${subspec.id}/tasks.md`,
+        ])
+      : [
+          `${root}/subspecs/<subspec-id>/spec.md`,
+          `${root}/subspecs/<subspec-id>/tasks.md`,
+        ]),
   ];
+}
+
+function buildSubspecDecompositionStep(
+  featureName: string,
+  layoutDecision: SpecLayoutDecision,
+): DelegatedPlanStep[] {
+  if (!layoutDecision.requiresSubspecDefinition) {
+    return [];
+  }
+  return [{
+    id: 'decompose-spec',
+    type: 'agent_action',
+    action: `根据已确认需求把 ${featureName} 拆分为 2-8 个职责单一、可独立验收的子规格，并生成 SubspecDefinition[] 后再调用 add_feature`,
+    when: '需求范围与 FR-n 已明确后、调用 add_feature 前',
+    requiredInputs: ['已确认的功能需求与范围边界', '代码图谱与模块边界', 'FR-n 需求编号'],
+    expectedOutputs: ['subspecs 数组：每项包含 id、title、fr 和可选 dependsOn'],
+    completionEvidence: [
+      '每个 FR-n 至少映射到一个子规格',
+      '子规格之间无循环依赖',
+      '跨模块契约留在母规格，模块实现细节归入子规格',
+    ],
+    qualityGates: ['子规格数量与项目复杂度相称', '不存在仅按文件夹机械拆分的子规格'],
+    onFailure: {
+      strategy: 'ask_user',
+      instruction: '模块边界不明确时，先向用户确认交付范围或调用 code_insight 收敛边界',
+    },
+    note: `自动布局评分 ${layoutDecision.score}；原因：${layoutDecision.reasons.join('；')}`,
+  }];
 }
 
 export async function startFeature(args: any, context?: ToolExecutionContext) {
@@ -268,7 +303,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         description: "",
         docs_dir: "docs",
         template_profile: "auto",
-        spec_layout: "flat",
+        spec_layout: "auto",
         requirements_mode: "steady",
         loop_max_rounds: 2,
         loop_question_budget: 5,
@@ -309,8 +344,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       };
     }
     const templateProfile = getString(parsedArgs.template_profile) || "auto";
-    const specLayout = normalizeSpecLayout(parsedArgs.spec_layout);
-    const subspecs = normalizeSubspecs(parsedArgs.subspecs, specLayout);
+    const specLayoutRequest = normalizeSpecLayoutRequest(parsedArgs.spec_layout);
     const requirementsMode = getString(parsedArgs.requirements_mode) || "steady";
     const maxRounds = getNumber(parsedArgs.loop_max_rounds, 2);
     const questionBudget = getNumber(parsedArgs.loop_question_budget, 5);
@@ -347,6 +381,30 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       );
     }
     featureName = normalizeFeatureName(featureName);
+    const layoutDecision = resolveSpecLayoutDecision({
+      requested: specLayoutRequest,
+      description,
+      subspecs: parsedArgs.subspecs,
+    });
+    const specLayout = layoutDecision.resolved;
+    let subspecs: SubspecDefinition[] = [];
+    if (specLayout === 'parent-child' && Array.isArray(parsedArgs.subspecs) && parsedArgs.subspecs.length > 0) {
+      subspecs = normalizeSubspecs(parsedArgs.subspecs, specLayout);
+    } else if (
+      specLayout === 'parent-child'
+      && parsedArgs.subspecs !== undefined
+      && parsedArgs.subspecs !== null
+      && !Array.isArray(parsedArgs.subspecs)
+    ) {
+      subspecs = normalizeSubspecs(parsedArgs.subspecs, specLayout);
+    }
+    const subspecDecompositionSteps = buildSubspecDecompositionStep(featureName, {
+      ...layoutDecision,
+      requiresSubspecDefinition: specLayout === 'parent-child' && subspecs.length === 0,
+    });
+    const delegatedSubspecs = subspecs.length > 0
+      ? subspecs
+      : '[先执行 decompose-spec，并将生成的 SubspecDefinition[] 填入此参数]';
     const specOutputs = buildSpecOutputs(docsDir, featureName, specLayout, subspecs);
 
     throwIfAborted(context?.signal, "start_feature 已取消");
@@ -497,6 +555,7 @@ ${graphContext.highlights.length > 0
                 },
               ]
             : []),
+          ...subspecDecompositionSteps,
           {
             id: 'spec',
             tool: 'add_feature',
@@ -507,7 +566,7 @@ ${graphContext.highlights.length > 0
               docs_dir: docsDir,
               template_profile: templateProfile,
               spec_layout: specLayout,
-              ...(specLayout === 'parent-child' ? { subspecs } : {}),
+              ...(specLayout === 'parent-child' ? { subspecs: delegatedSubspecs } : {}),
             },
             outputs: specOutputs,
           },
@@ -542,6 +601,8 @@ ${graphContext.highlights.length > 0
         ],
         notes: [
           `模板档位: ${templateProfile}`,
+          `规格布局: ${specLayout}（请求: ${layoutDecision.requested}；评分: ${layoutDecision.score}）`,
+          ...layoutDecision.reasons.map((reason) => `布局依据: ${reason}`),
           graphStatusNote,
           ...(memoryContext.enabled ? ['记忆优先: 已自动注入历史经验与坑（见顶部），开干前先消化、约束范围并规避同类坑；结束后评估是否沉淀'] : []),
         ],
@@ -580,6 +641,7 @@ ${graphContext.highlights.length > 0
         },
         metadata: {
           plan,
+          layoutDecision,
           graphDocs,
           bootstrapState: {
             ...bootstrapState,
@@ -622,7 +684,7 @@ ${graphContext.highlights.length > 0
       .replace(/{project_root}/g, (projectRoot || process.cwd()).replace(/\\/g, "/"))
       .replace(/{template_profile}/g, templateProfile)
       .replace(/{spec_layout}/g, specLayout)
-      .replace(/{subspecs_json}/g, JSON.stringify(subspecs, null, 2))
+      .replace(/{subspecs_json}/g, JSON.stringify(delegatedSubspecs, null, 2))
       .replace(/{spec_output_list}/g, specOutputs.map((specPath) => `- \`${specPath}\``).join('\n'));
     const guide = header + memoryGuideSection + renderedPrompt + graphGuideSection;
 
@@ -659,6 +721,7 @@ ${graphContext.highlights.length > 0
           outputs: [layout.indexPath, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
           note: `兼容老项目：即使已有旧版 project-context，只要缺少图谱文档，也要先补齐 ${graphDocs.latestMarkdownPath}`,
         },
+        ...subspecDecompositionSteps,
         {
           id: 'spec',
           tool: 'add_feature',
@@ -668,7 +731,7 @@ ${graphContext.highlights.length > 0
             docs_dir: docsDir,
             template_profile: templateProfile,
             spec_layout: specLayout,
-            ...(specLayout === 'parent-child' ? { subspecs } : {}),
+            ...(specLayout === 'parent-child' ? { subspecs: delegatedSubspecs } : {}),
           },
           outputs: specOutputs,
         },
@@ -746,6 +809,7 @@ ${graphContext.highlights.length > 0
       dependencies: [],
       metadata: {
         plan,
+        layoutDecision,
         graphDocs,
         bootstrapState: {
           ...bootstrapState,

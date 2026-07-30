@@ -1,6 +1,8 @@
 # MCP Probe Kit v4.0 Design
 
-## 1. 总体架构
+## 概述
+
+**对应需求：** FR-1、FR-2、FR-3、FR-4、FR-5、FR-6、FR-7、FR-8
 
 ```text
 Canonical SKILL.md
@@ -23,7 +25,7 @@ Task Runtime
 └── Synchronous Fallback
 ```
 
-## 2. 关键设计决定
+## 技术方案
 
 ### D-1 单 Skill 而非多 Workflow Skill
 
@@ -62,7 +64,20 @@ createLegacyServer(core)
 createModernServer(core)
 ```
 
-## 3. 模块拆分目标
+### D-6 复杂需求自动采用子母 Spec
+
+`start_feature` 是智能编排入口，默认使用 `spec_layout=auto`。布局决策遵循：
+
+1. 显式 `flat` / `parent-child` 优先；
+2. 已提供 `subspecs` 时直接采用 parent-child；
+3. 根据多阶段、结构化需求项、跨能力域和架构级关键词评分；
+4. 达到复杂度阈值时选择 parent-child；
+5. 缺少具体子规格定义时，先返回 `decompose-spec` Agent action，再调用 `add_feature`；
+6. 原子工具 `add_feature` 仍保持显式布局，避免缺少上下文时意外扩大输出。
+
+布局决策必须放入结构化 metadata，便于 Agent、测试和客户端解释为什么采用某种规格结构。
+
+## 文件结构
 
 ```text
 src/
@@ -81,6 +96,7 @@ src/
     sync-task-adapter.ts
   plans/
     delegated-plan-contract.ts
+    spec-layout-decision.ts
     plan-heartbeat.ts
     plan-resume.ts
   resources/

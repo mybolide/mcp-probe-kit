@@ -13,6 +13,50 @@ describe('start_feature 单元测试', () => {
     expect(result.content[0].text).toMatch(/请提供功能名称和描述|参数错误/i);
   });
 
+  test('复杂需求默认 auto 触发 parent-child 并先生成子规格拆分步骤', async () => {
+    const result = await startFeature({
+      feature_name: 'mcp-v4',
+      description: `MCP v4 架构升级：
+- R1 Tool Registry 与 dispatcher
+- R2 Canonical Skill 和 delegated workflow
+- R3 Memory / Qdrant 学习闭环
+- R4 Legacy / Modern 双协议兼容
+- R5 Task Runtime、progress 与 cancellation
+- R6 conformance 兼容测试矩阵`,
+    });
+
+    expect(result.isError).toBe(false);
+    const structured = (result as any).structuredContent;
+    const plan = structured.metadata.plan;
+    const decompositionStep = plan.steps.find((step: any) => step.id === 'decompose-spec');
+    const specStep = plan.steps.find((step: any) => step.tool === 'add_feature');
+
+    expect(structured.metadata.layoutDecision.resolved).toBe('parent-child');
+    expect(decompositionStep?.type).toBe('agent_action');
+    expect(decompositionStep?.action).toMatch(/拆分为 2-8 个/);
+    expect(specStep.args.spec_layout).toBe('parent-child');
+    expect(specStep.args.subspecs).toMatch(/decompose-spec/);
+    expect(specStep.outputs).toContain('docs/specs/mcp-v4/spec-manifest.json');
+    expect(specStep.outputs).toContain('docs/specs/mcp-v4/subspecs/<subspec-id>/spec.md');
+  });
+
+  test('未显式布局但提供 subspecs 时自动采用 parent-child', async () => {
+    const result = await startFeature({
+      feature_name: 'commerce-v3',
+      description: '商业系统版本升级',
+      subspecs: [
+        { id: 'foundation', title: '基础能力', fr: ['FR-1'] },
+        { id: 'orders', title: '订单能力', fr: ['FR-2'], dependsOn: ['foundation'] },
+      ],
+    });
+
+    expect(result.isError).toBe(false);
+    const plan = (result as any).structuredContent.metadata.plan;
+    const specStep = plan.steps.find((step: any) => step.tool === 'add_feature');
+    expect(specStep.args.spec_layout).toBe('parent-child');
+    expect(plan.steps.some((step: any) => step.id === 'decompose-spec')).toBe(false);
+  });
+
   test('返回委托式执行计划（steps）', async () => {
     const result = await startFeature({
       feature_name: 'user-auth',
@@ -53,6 +97,7 @@ describe('start_feature 单元测试', () => {
 
     const specStep = plan.steps.find((step: any) => step.tool === 'add_feature');
     expect(specStep.args.feature_name).toBe('user-auth');
+    expect(specStep.args.spec_layout).toBe('flat');
     expect(specStep.outputs).toContain('docs/specs/user-auth/requirements.md');
     expect(structured?.metadata?.graphDocs?.latestMarkdownPath).toBe('docs/graph-insights/latest.md');
     expect(structured?.metadata?.graphContext?.summary).toMatch(/GitNexus|图谱|降级/);

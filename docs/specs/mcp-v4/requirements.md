@@ -1,12 +1,12 @@
 # MCP Probe Kit v4.0 Requirements
 
-## 1. 产品目标
+## 功能概述
 
 MCP Probe Kit v4.0 将继续作为跨 Agent 的研发治理与执行规范层，而不是源码编辑器。它通过一个 canonical Skill 告诉 Agent 何时调用哪些 MCP 工具，通过 `start_*` 动态生成 delegated plan，并由 Agent 使用宿主文件、终端和 Git 能力完成真实开发。
 
 v4.0 的目标是让不同客户端、不同模型和不同开发者在同一项目中获得一致、规范、可恢复、可验证且能持续学习的研发体验。
 
-## 2. 必须保持的产品边界
+## 范围边界
 
 1. canonical Skill 只负责 MCP 工具路由和调用纪律，不承载完整业务 Workflow。
 2. `start_*` 继续返回 delegated plan，不直接替 Agent 修改业务源码。
@@ -15,7 +15,7 @@ v4.0 的目标是让不同客户端、不同模型和不同开发者在同一项
 5. v4.0 必须同时支持 Legacy MCP 与 Modern MCP，不允许因客户端未升级而失效。
 6. Modern 扩展不可用时，核心工具必须自动降级到 Legacy 或同步路径。
 
-## 3. 核心功能需求
+## 需求列表
 
 ### FR-1 Canonical Skill
 
@@ -32,6 +32,9 @@ v4.0 的目标是让不同客户端、不同模型和不同开发者在同一项
 - 新结构应包含 planId、workflow、workflowVersion、objective、全局规则、完成条件和记忆策略。
 - 每个步骤可表达类型、依赖、输入、输出、完成证据、质量门禁和失败处理。
 - Plan Contract 只描述和约束执行，不自动执行 Agent action。
+- `start_feature` 的 `spec_layout` 默认为 `auto`：简单局部需求使用 flat，复杂多模块或多阶段需求自动选择 parent-child。
+- 显式 `flat` 或 `parent-child` 必须覆盖自动判断；已提供 `subspecs` 时自动选择 parent-child。
+- 自动选择 parent-child 但尚未提供 `subspecs` 时，Plan 必须先生成 `decompose-spec` 步骤，不得静默退回 flat。
 
 ### FR-3 Memory Learning Loop
 
@@ -78,7 +81,7 @@ v4.0 的目标是让不同客户端、不同模型和不同开发者在同一项
 - 长流程应支持轻量 Plan Heartbeat 与恢复上下文。
 - 恢复状态不得依赖原始完整对话。
 
-## 4. 非功能需求
+## 非功能需求
 
 - v3 工具名称和主要输入输出在 v4 首个稳定版本中保持兼容。
 - 核心流程不依赖 Qdrant、GitNexus、Apps 或现代 Tasks 才能运行。
@@ -87,7 +90,15 @@ v4.0 的目标是让不同客户端、不同模型和不同开发者在同一项
 - 全量测试不得重复扫描 build 产物。
 - 新架构应逐步拆分 `src/index.ts`，避免单文件继续承担全部职责。
 
-## 5. 发布硬门槛
+## 依赖关系
+
+- FR-1、FR-2 与 FR-7 由 `core-governance` 子规格负责，是其他能力域的基础。
+- FR-3 与 FR-8 依赖统一 Plan Contract，由 `memory-convergence` 子规格负责。
+- FR-4 与 FR-5 依赖共享业务核心，由 `protocol-compatibility` 子规格负责。
+- FR-6 依赖协议能力模型，由 `task-runtime` 子规格负责。
+- 详细依赖以 `spec-manifest.json` 为机器可读 SSOT。
+
+## 发布硬门槛
 
 1. Legacy 与 Modern reference client 均能完成 tools/list、tools/call 和 resources/read。
 2. `start_feature`、`start_bugfix`、`start_ui` 的 delegated 语义不变。

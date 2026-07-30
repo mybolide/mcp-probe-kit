@@ -17,7 +17,7 @@ export const orchestrationToolSchemas = [
         },
         description: {
           type: "string",
-          description: "功能详细描述。可以是简短的自然语言（如'开发用户认证功能'）或详细的需求说明",
+          description: "功能详细描述。应汇总当前对话已经确认的完整范围、模块、阶段和约束，不要只传最后一句简短确认；该字段也用于自动判断 flat / parent-child。",
         },
         docs_dir: {
           type: "string",
@@ -34,8 +34,8 @@ export const orchestrationToolSchemas = [
         },
         spec_layout: {
           type: "string",
-          enum: ["flat", "parent-child"],
-          description: "规格布局：flat（默认）或 parent-child（由 Agent 落盘母/子规格）",
+          enum: ["auto", "flat", "parent-child"],
+          description: "规格布局：auto（默认，复杂多模块需求自动选择 parent-child）、flat 或 parent-child。显式值优先于自动判断。",
         },
         subspecs: {
           type: "array",
