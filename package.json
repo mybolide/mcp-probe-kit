@@ -27,11 +27,15 @@
     "acceptance:agent": "node scripts/agent-local-acceptance.mjs",
     "eval:agents": "tsx scripts/run-agent-evals.ts",
     "release:static": "tsx scripts/verify-release-readiness.ts",
-    "release:verify": "npm run release:static && npm test && npm run build && npm run smoke:protocol && npm run acceptance:agent && npm run eval:agents && npm run smoke:package",
+    "release:verify": "npm run release:static && npm test && npm run build && npm run smoke:protocol && npm run acceptance:agent && npm run stability:soak && npm run eval:agents && npm run smoke:package && npm run smoke:rollback && npm run smoke:inspector && npm run security:audit",
     "verify-workflow-skill": "tsx scripts/verify-workflow-skill.ts",
     "sync-workflow-skill": "tsx scripts/sync-workflow-skill.ts",
     "prebuild": "npm run sync-version && npm run sync-ui-data && npm run sync-tool-manifest && npm run verify-workflow-skill && npm run sync-workflow-skill",
-    "docs:serve": "npx http-server docs -p 8080 -o"
+    "docs:serve": "npx http-server docs -p 8080 -o",
+    "stability:soak": "node scripts/stability-soak.mjs",
+    "smoke:rollback": "node scripts/rollback-smoke.mjs",
+    "smoke:inspector": "node scripts/inspector-smoke.mjs",
+    "security:audit": "npm audit --omit=dev --audit-level=high"
   },
   "keywords": [
     "mcp",

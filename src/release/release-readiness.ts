@@ -164,6 +164,12 @@ export function verifyReleaseReadiness(
   checks.push(fileCheck(workspaceRoot, 'docs/migration-v3-to-v4.md'));
   checks.push(contentCheck(
     workspaceRoot,
+    'docs/rc-stability-policy.md',
+    ['稳定性循环', 'npm `next`', '3.7.0', 'MCP Inspector', '观察窗口'],
+    '稳定 RC 策略必须定义稳定性、安全、回退、真实客户端和发布后观察要求'
+  ));
+  checks.push(contentCheck(
+    workspaceRoot,
     'CHANGELOG.md',
     [`## [${packageVersion}]`],
     'CHANGELOG 必须包含当前发布版本的独立章节'
@@ -192,13 +198,29 @@ export function verifyReleaseReadiness(
     ['Prerelease ${VERSION} must not be published'],
     '手工 MCP Registry 工作流必须拒绝预发布版本'
   ));
+  checks.push(contentCheck(
+    workspaceRoot,
+    '.github/workflows/ci.yml',
+    ['node-version: "20"', 'node-version: "22"', 'npm run release:verify'],
+    '稳定 RC 必须在 Node 20 最低版本和 Node 22 当前版本上持续回归'
+  ));
+  const requiredReleaseScripts = [
+    'eval:agents',
+    'acceptance:agent',
+    'stability:soak',
+    'smoke:package',
+    'smoke:rollback',
+    'smoke:inspector',
+    'security:audit',
+    'release:verify',
+  ];
   checks.push(check(
     'release-scripts',
-    Boolean(packageJson.scripts?.['eval:agents'] && packageJson.scripts?.['release:verify']),
+    requiredReleaseScripts.every((name) => Boolean(packageJson.scripts?.[name])),
     'error',
-    ['eval:agents', 'release:verify'],
+    requiredReleaseScripts,
     Object.keys(packageJson.scripts ?? {}),
-    '发布候选必须提供 Agent Evals 与统一发布闸门'
+    '稳定 RC 必须提供 Agent Evals、真实 Agent 验收、稳定性循环、安装包冒烟与统一发布闸门'
   ));
   const errors = checks.filter((item) => !item.passed && item.severity === 'error').length;
   const warnings = checks.filter((item) => !item.passed && item.severity === 'warning').length;

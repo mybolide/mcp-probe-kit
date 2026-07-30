@@ -60,7 +60,7 @@ function createFixture(options: {
       '@modelcontextprotocol/core': '2.0.0',
     },
     files: ['build', 'README.md', 'LICENSE'],
-    scripts: { 'eval:agents': 'eval', 'release:verify': 'verify' },
+    scripts: { 'eval:agents': 'eval', 'acceptance:agent': 'accept', 'stability:soak': 'soak', 'smoke:package': 'pack', 'smoke:rollback': 'rollback', 'smoke:inspector': 'inspector', 'security:audit': 'audit', 'release:verify': 'verify' },
   }));
   fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
     version: options.version,
@@ -85,12 +85,20 @@ function createFixture(options: {
     'Reference client 自动验证状态\n真实客户端人工验证矩阵\npending'
   );
   fs.writeFileSync(
+    path.join(root, 'docs/rc-stability-policy.md'),
+    '稳定性循环\nnpm `next`\n3.7.0\nMCP Inspector\n观察窗口\n'
+  );
+  fs.writeFileSync(
     path.join(root, '.github/workflows/release.yml'),
     'node-version: "20"\nnpm run release:verify\nnpm publish --tag\nprerelease:\npublish_mcp_registry\n'
   );
   fs.writeFileSync(
     path.join(root, '.github/workflows/publish-mcp-registry.yml'),
     'Prerelease ${VERSION} must not be published\n'
+  );
+  fs.writeFileSync(
+    path.join(root, '.github/workflows/ci.yml'),
+    'node-version: "20"\nnode-version: "22"\nnpm run release:verify\n'
   );
   if (options.includeMigration) {
     fs.writeFileSync(path.join(root, 'docs/migration-v3-to-v4.md'), 'migration');

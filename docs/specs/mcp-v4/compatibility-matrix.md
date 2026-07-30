@@ -61,6 +61,10 @@
 | Agent Routing / Plan Compliance / Memory Safety | passed | `npm run eval:agents` |
 | 本地真实 Agent 调用 | passed | `npm run acceptance:agent`：完整摘要路由、parent-child、Heartbeat/Resume、收敛拒绝与通过 |
 | npm tarball 安装调用 | passed | `npm run smoke:package`：打包、临时安装、Modern tools/list 与 workflow 调用 |
+| Node.js 20 最低运行时 | passed | Node 20.20.2 下 81 个测试文件/383 项、双协议、Agent 验收与稳定性循环全部通过 |
+| 真实进程稳定性循环 | passed | `npm run stability:soak`：16 个场景、81 次 Workflow 调用、冷启动/热调用/并发/Memory 降级/协议拒绝，0 失败 |
+| 生产依赖安全审计 | passed | `npm audit --omit=dev --audit-level=high`：0 vulnerabilities |
+| v3.7.0 回退演练 | passed | `npm run smoke:rollback`：npm 安装、Legacy 握手、30 个工具和核心工具发现通过 |
 
 ## 6. 真实客户端人工验证矩阵
 
@@ -68,7 +72,7 @@ Reference client 的 `passed` 不等于真实宿主客户端已验证。以下�
 
 | 客户端 | 客户端版本 | 状态 | 验证日期 | 证据 | 备注 |
 |---|---|---|---|---|---|
-| MCP Inspector | 待记录 | pending | — | — | 验证 tools/resources、Legacy/Modern 模式和 elicitation |
+| MCP Inspector | 2.0.0 | passed | 2026-07-30 | `npm run smoke:inspector`；CLI 连接生产构建并发现 33 个工具 | 已验证 tools/list 与关键 Workflow/Plan 工具发现；其他交互能力继续由 reference matrix 覆盖 |
 | Cursor | 待记录 | pending | — | — | 验证 Skill 发现、工具路由和同步降级 |
 | Claude Code | 待记录 | pending | — | — | 验证 Canonical Skill、Plan Heartbeat 和恢复 |
 | VS Code Copilot | 待记录 | pending | — | — | 验证工具发现、结构化结果和资源读取 |
@@ -80,6 +84,7 @@ Reference client 的 `passed` 不等于真实宿主客户端已验证。以下�
 ## 7. 发布判定
 
 - 自动 reference matrix、全量测试、构建、生产冒烟和 Agent Evals 全部通过，是发布候选的必要条件。
+- 稳定 RC 还必须通过 Node 20/22、真实进程稳定性循环、生产依赖审计、tarball 安装、v3.7.0 回退和固定版本 Inspector 验收；详细规则见 `docs/rc-stability-policy.md`。
 - `4.0.0-rc.1` 只能使用 npm `next`；`latest` 与正式 MCP Registry 仅允许稳定版本。
 - 真实客户端尚未验证时，允许生成内部 release candidate，但不得在发布说明中宣称这些客户端已经通过兼容认证。
 - 人工矩阵出现 `failed` 时，必须记录复现步骤和降级结果；核心流程无法降级时阻断稳定版发布。

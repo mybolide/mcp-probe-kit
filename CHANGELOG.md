@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory 2.0**: project knowledge is ranked ahead of shared experience within a bounded relevance boost; negative memory supports `failed_approach`, `false_root_cause`, and `regression_case` with lifecycle metadata.
 - **Parent-Child Spec automation**: complex, multi-module features default to `spec_layout=auto` and can be decomposed into parent and child specifications.
 - **Agent Evals and release gates**: deterministic routing, parameter, plan-compliance, memory-safety, and tool-description evaluations are included in `npm run release:verify`.
+- **Stable RC qualification**: added Node 20/22 CI, real-process soak tests, pinned MCP Inspector validation, production dependency audit, clean tarball installation, and a tested v3.7.0 rollback path.
 
 ### Changed
 
@@ -39,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Validation
 
 - Reference Legacy and Modern protocol matrix.
-- Full unit and integration suite, production build, protocol smoke tests, Agent Evals, package-content check, functional Spec checks, and Parent-Child Spec gate.
+- Full unit and integration suite, production build, protocol smoke tests, Agent Evals, package-content check, functional Spec checks, Parent-Child Spec gate, 81-call stability soak, Node 20 minimum-runtime validation, Inspector 2.0.0, production audit, and rollback drill.
 - Real host-client certification remains explicitly tracked as `pending` until tested in the named client and version.
 
 ### Known limitations

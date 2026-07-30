@@ -16,13 +16,20 @@
 4. WHEN 运行发布闸门 THEN 系统 SHALL 串联全量测试、生产构建、双协议生产冒烟、Agent Evals 与 npm 包清单检查。
 5. WHEN 客户端尚未实机验证 THEN 兼容矩阵 SHALL 标记为 pending，并保留验证日期、版本和证据字段。
 6. WHEN 用户从 v3 升级 THEN 迁移说明 SHALL 明确 Node 20、SDK v2、协议模式、Tasks 降级、Plan 状态和 Memory 顺序。
+7. WHEN 判断 RC 是否稳定可发布 THEN 系统 SHALL 在 Node 20/22 上验证，并执行真实进程冷启动、连续调用、并发、Memory 故障降级和协议拒绝，且失败数为 0。
+8. WHEN 准备 RC 回退方案 THEN 系统 SHALL 验证固定 v3.7.0 包仍能安装、完成 Legacy 握手并发现核心工具。
+9. WHEN 宣称至少一个真实宿主已验证 THEN 系统 SHALL 使用固定版本 MCP Inspector 连接生产构建，并记录版本、日期和可重复证据。
 
 ## 涉及文件
 
 - `src/evals/`
 - `scripts/run-agent-evals.ts`
 - `scripts/verify-release-readiness.ts`
+- `scripts/stability-soak.mjs`
+- `scripts/rollback-smoke.mjs`
+- `scripts/inspector-smoke.mjs`
 - `docs/migration-v3-to-v4.md`
+- `docs/rc-stability-policy.md`
 - `docs/specs/mcp-v4/compatibility-matrix.md`
 - `package.json`
 
@@ -38,3 +45,4 @@
 - 发布闸门失败时必须返回非零退出码，并指出失败阶段。
 - 人工客户端矩阵与 reference client 自动测试分开记录。
 - 自动化通过是发布候选的必要条件，不是替代人工客户端验收的充分条件。
+- RC 可在未完成全部宿主认证时发布到 `next`，但稳定版 `4.0.0` 必须经过发布后观察和目标宿主实机验证。
