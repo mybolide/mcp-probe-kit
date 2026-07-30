@@ -1,44 +1,19 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { getMemoryConfig, isMemoryEnabled, isMemoryReadEnabled, type MemoryConfig } from './memory-config.js';
+import { buildMemoryEmbeddingInput } from './memory-embedding.js';
+import {
+  isMemorySearchEligible,
+  normalizeMemoryStatus,
+  normalizeStringArray,
+  resolveMemoryStatus,
+  type MemoryAsset,
+  type MemorySearchOptions,
+  type MemorySearchResult,
+  type MemoryStatus,
+} from './memory-model.js';
 import { normalizeMemoryPayload, payloadToMemoryFields } from './memory-payload.js';
 import { rankMemorySearchResults } from './memory-ranking.js';
-export interface MemoryAsset {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  summary: string;
-  content: string;
-  tags: string[];
-  confidence: number;
-  sourceProject?: string;
-  sourcePath?: string;
-  usage?: string;
-  contentHash?: string;
-  normalizedContentHash?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-export interface MemorySearchResult {
-  id: string;
-  score: number;
-  name: string;
-  type: string;
-  description: string;
-  summary: string;
-  /** Full payload content from Qdrant (may be empty on legacy points) */
-  content: string;
-  tags: string[];
-  confidence?: number;
-  sourceProject?: string;
-  sourcePath?: string;
-}
-export interface MemorySearchOptions {
-  limit?: number;
-  minScore?: number;
-  preferTypes?: string[];
-  preferTags?: string[];
-}
+export type { MemoryAsset, MemorySearchOptions, MemorySearchResult } from './memory-model.js';
 interface QdrantPoint {
   id: string;
   score?: number;
@@ -51,39 +26,9 @@ function truncate(value: string, maxChars: number): string {
   }
   return `${value.slice(0, Math.max(0, maxChars - 3))}...`;
 }
-
-function ensureArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
-}
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
-
-function buildEmbeddingInput(input: {
-  name: string;
-  type: string;
-  description: string;
-  summary: string;
-  tags: string[];
-  usage?: string;
-  content: string;
-}): string {
-  return [
-    `name: ${input.name}`,
-    `type: ${input.type}`,
-    `description: ${input.description}`,
-    `summary: ${input.summary}`,
-    input.tags.length > 0 ? `tags: ${input.tags.join(', ')}` : '',
-    input.usage ? `usage: ${input.usage}` : '',
-    `content:\n${input.content}`,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
-}
-
 export function normalizeContentForHash(content: string): string {
   return content
     .replace(/\r\n?/g, '\n')
@@ -93,18 +38,15 @@ export function normalizeContentForHash(content: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
-
 export function sha256Hex(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
-
 export function buildMemoryContentHashes(content: string): { contentHash: string; normalizedContentHash: string } {
   return {
     contentHash: sha256Hex(content),
     normalizedContentHash: sha256Hex(normalizeContentForHash(content)),
   };
 }
-
 export class MemoryClient {
   constructor(private readonly config: MemoryConfig = getMemoryConfig()) {}
 
@@ -206,23 +148,25 @@ export class MemoryClient {
     return data.embedding;
   }
 
-  private async findExistingAssetByNormalizedContentHash(normalizedContentHash: string): Promise<MemoryAsset | null> {
+  private async findExistingAsset(input: {
+    normalizedContentHash: string;
+    type: string;
+    sourceProject?: string;
+  }): Promise<MemoryAsset | null> {
     const data = await this.requestJson<{ result?: { points?: QdrantPoint[] } }>(
       `${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}/points/scroll`,
       {
         method: 'POST',
         headers: this.buildHeaders(),
         body: JSON.stringify({
-          limit: 1,
+          limit: 20,
           with_payload: true,
           with_vectors: false,
           filter: {
             must: [
               {
                 key: 'normalizedContentHash',
-                match: {
-                  value: normalizedContentHash,
-                },
+                match: { value: input.normalizedContentHash },
               },
             ],
           },
@@ -230,16 +174,15 @@ export class MemoryClient {
       }
     );
 
-    const rawPayload = data.result?.points?.[0]?.payload;
-    if (!rawPayload) {
-      return null;
+    const expectedProject = normalizeProjectIdentity(input.sourceProject);
+    for (const point of data.result?.points ?? []) {
+      if (!point.payload) continue;
+      const fields = payloadToMemoryFields(point.payload);
+      if (fields.type !== input.type) continue;
+      if (normalizeProjectIdentity(fields.sourceProject) !== expectedProject) continue;
+      return { ...fields, id: fields.id || String(point.id) };
     }
-
-    const fields = payloadToMemoryFields(rawPayload);
-    return {
-      ...fields,
-      id: fields.id || String(rawPayload.id || ''),
-    };
+    return null;
   }
 
   async upsertAsset(input: {
@@ -253,6 +196,12 @@ export class MemoryClient {
     sourceProject?: string;
     sourcePath?: string;
     usage?: string;
+    evidence?: string[];
+    applicability?: string;
+    status?: MemoryStatus;
+    expiresAt?: string;
+    supersedes?: string[];
+    supersededBy?: string;
   }): Promise<MemoryAsset> {
     if (!this.isEnabled()) {
       throw new Error('记忆系统未启用');
@@ -267,32 +216,46 @@ export class MemoryClient {
       description: input.description,
       summary: input.summary,
       content: input.content,
-      tags: ensureArray(input.tags),
+      tags: normalizeStringArray(input.tags),
       confidence: numberOr(input.confidence, 0.5),
       sourceProject: input.sourceProject,
       sourcePath: input.sourcePath,
       usage: input.usage,
+      evidence: normalizeStringArray(input.evidence),
+      applicability: input.applicability,
+      status: normalizeMemoryStatus(input.status),
+      expiresAt: input.expiresAt,
+      supersedes: normalizeStringArray(input.supersedes),
+      supersededBy: input.supersededBy,
       contentHash: hashes.contentHash,
       normalizedContentHash: hashes.normalizedContentHash,
       createdAt: now,
       updatedAt: now,
     };
+    asset.status = resolveMemoryStatus(asset);
 
     const vector = await this.embed(
-      buildEmbeddingInput({
+      buildMemoryEmbeddingInput({
         name: asset.name,
         type: asset.type,
         description: asset.description,
         summary: asset.summary,
         tags: asset.tags,
         usage: asset.usage,
+        evidence: asset.evidence,
+        applicability: asset.applicability,
+        status: asset.status,
         content: asset.content,
       })
     );
 
     await this.ensureCollection(vector.length);
 
-    const existing = await this.findExistingAssetByNormalizedContentHash(asset.normalizedContentHash || '');
+    const existing = await this.findExistingAsset({
+      normalizedContentHash: asset.normalizedContentHash || '',
+      type: asset.type,
+      sourceProject: asset.sourceProject,
+    });
     if (existing) {
       return existing;
     }
@@ -350,12 +313,21 @@ export class MemoryClient {
         content: fields.content,
         tags: fields.tags,
         confidence: fields.confidence,
+        evidence: fields.evidence,
+        applicability: fields.applicability,
+        status: resolveMemoryStatus(fields),
+        expiresAt: fields.expiresAt,
+        supersedes: fields.supersedes,
+        supersededBy: fields.supersededBy,
         sourceProject: fields.sourceProject,
         sourcePath: fields.sourcePath,
       };
     });
 
-    const ranked = rankMemorySearchResults(mapped, {
+    const eligible = options.includeInactive
+      ? mapped
+      : mapped.filter((item) => isMemorySearchEligible(item));
+    const ranked = rankMemorySearchResults(eligible, {
       preferTypes: options.preferTypes,
       preferTags: options.preferTags,
       config: this.config,
@@ -428,6 +400,12 @@ export class MemoryClient {
       sourceProject?: string;
       sourcePath?: string;
       usage?: string;
+      evidence?: string[];
+      applicability?: string;
+      status?: MemoryStatus;
+      expiresAt?: string | null;
+      supersedes?: string[];
+      supersededBy?: string;
     }
   ): Promise<{ updated: boolean; asset: MemoryAsset | null }> {
     if (!this.isEnabled()) {
@@ -451,23 +429,37 @@ export class MemoryClient {
       sourceProject: patch.sourceProject !== undefined ? patch.sourceProject : existing.sourceProject,
       sourcePath: patch.sourcePath !== undefined ? patch.sourcePath : existing.sourcePath,
       usage: patch.usage !== undefined ? patch.usage : existing.usage,
+      evidence: patch.evidence ?? existing.evidence,
+      applicability:
+        patch.applicability !== undefined ? patch.applicability : existing.applicability,
+      status:
+        patch.status ?? (patch.supersededBy ? 'superseded' : existing.status),
+      expiresAt:
+        patch.expiresAt !== undefined ? patch.expiresAt ?? undefined : existing.expiresAt,
+      supersedes: patch.supersedes ?? existing.supersedes,
+      supersededBy:
+        patch.supersededBy !== undefined ? patch.supersededBy : existing.supersededBy,
       id: existing.id,
       createdAt: existing.createdAt,
       updatedAt: new Date().toISOString(),
     };
+    asset.status = resolveMemoryStatus(asset);
 
     const hashes = buildMemoryContentHashes(asset.content);
     asset.contentHash = hashes.contentHash;
     asset.normalizedContentHash = hashes.normalizedContentHash;
 
     const vector = await this.embed(
-      buildEmbeddingInput({
+      buildMemoryEmbeddingInput({
         name: asset.name,
         type: asset.type,
         description: asset.description,
         summary: asset.summary,
         tags: asset.tags,
         usage: asset.usage,
+        evidence: asset.evidence,
+        applicability: asset.applicability,
+        status: asset.status,
         content: asset.content,
       })
     );
@@ -496,4 +488,11 @@ export class MemoryClient {
 }
 export function createMemoryClient(): MemoryClient {
   return new MemoryClient();
+}
+function normalizeProjectIdentity(value: string | undefined): string {
+  return (value ?? '')
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/\.git$/i, '')
+    .toLowerCase();
 }

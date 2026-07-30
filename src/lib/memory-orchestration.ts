@@ -1,6 +1,10 @@
 import type { MemoryAsset, MemorySearchResult } from './memory-client.js';
 import { createMemoryClient } from './memory-client.js';
 import { getMemoryConfig, type MemoryConfig } from './memory-config.js';
+import {
+  isNegativeMemoryType,
+  resolveMemoryStatus,
+} from './memory-model.js';
 import { classifyMemoryScope, rankMemorySearchResults } from './memory-ranking.js';
 import {
   buildMemoryAssetHandles,
@@ -54,13 +58,22 @@ function kindSearchPreferences(kind: MemoryPlanKind): {
 } {
   switch (kind) {
     case 'bugfix':
-      return { preferTypes: ['bugfix'], preferTags: ['bugfix', 'root-cause'] };
+      return {
+        preferTypes: ['bugfix', 'failed_approach', 'false_root_cause', 'regression_case'],
+        preferTags: ['bugfix', 'root-cause', 'negative-memory'],
+      };
     case 'ui':
       // 做 UI 时也优先捞历史坑（bugfix），避免重复踩同类交互/兼容性坑
-      return { preferTypes: ['component', 'pattern', 'bugfix'], preferTags: ['ui', 'pattern', 'root-cause'] };
+      return {
+        preferTypes: ['component', 'pattern', 'bugfix', 'failed_approach', 'regression_case'],
+        preferTags: ['ui', 'pattern', 'root-cause', 'negative-memory'],
+      };
     case 'feature':
       // 做新功能时同时捞「可复用模式」与「历史坑」，让规划前就看到经验与雷区
-      return { preferTypes: ['pattern', 'code', 'bugfix'], preferTags: ['feature', 'pattern', 'root-cause'] };
+      return {
+        preferTypes: ['pattern', 'code', 'bugfix', 'failed_approach', 'false_root_cause', 'regression_case'],
+        preferTags: ['feature', 'pattern', 'root-cause', 'negative-memory'],
+      };
     default:
       return { preferTypes: [], preferTags: [] };
   }
@@ -149,7 +162,9 @@ export async function loadMemoryInjectionContext(
 
 function formatMemoryResultLabel(item: MemorySearchResult): string {
   const kind =
-    item.type === 'bugfix' || item.tags.includes('bugfix')
+    isNegativeMemoryType(item.type)
+      ? '负面经验'
+      : item.type === 'bugfix' || item.tags.includes('bugfix')
       ? '历史 Bug 修复'
       : item.type === 'pattern' || item.type === 'component'
         ? '可复用模式'
@@ -174,6 +189,13 @@ export function formatSearchMemoryResultsText(
       item.description ? `   - 描述: ${item.description}` : '',
       item.tags.length > 0 ? `   - 标签: ${item.tags.join(', ')}` : '',
       `   - 范围: ${formatMemoryScopeLabel(item, config)}`,
+      `   - 状态: ${resolveMemoryStatus(item)}`,
+      item.applicability ? `   - 适用边界: ${item.applicability}` : '',
+      (item.evidence?.length ?? 0) > 0
+        ? `   - 证据: ${item.evidence?.join(' | ')}`
+        : '',
+      item.expiresAt ? `   - 失效时间: ${item.expiresAt}` : '',
+      item.supersededBy ? `   - 已被替代: ${item.supersededBy}` : '',
     ];
     if (shouldShowSourceInSearch(item, config) && item.sourcePath) {
       lines.push(`   - 来源: ${item.sourcePath}`);
@@ -233,6 +255,16 @@ export function formatMemoryAssetText(
     asset.summary ? `- 摘要: ${asset.summary}` : '',
     asset.description ? `- 描述: ${asset.description}` : '',
     asset.usage ? `- 适用: ${asset.usage}` : '',
+    asset.applicability ? `- 适用边界: ${asset.applicability}` : '',
+    `- 状态: ${resolveMemoryStatus(asset)}`,
+    (asset.evidence?.length ?? 0) > 0
+      ? `- 证据:\n${asset.evidence?.map((item) => `  - ${item}`).join('\n')}`
+      : '',
+    asset.expiresAt ? `- 失效时间: ${asset.expiresAt}` : '',
+    (asset.supersedes?.length ?? 0) > 0
+      ? `- 替代资产: ${asset.supersedes?.join(', ')}`
+      : '',
+    asset.supersededBy ? `- 已被替代: ${asset.supersededBy}` : '',
     asset.tags.length > 0 ? `- 标签: ${asset.tags.join(', ')}` : '',
     asset.sourcePath ? `- 来源: ${asset.sourcePath}` : '',
     '',
@@ -270,7 +302,10 @@ function formatResultBlock(
 }
 
 function isPitfallResult(item: MemorySearchResult): boolean {
-  return item.type === 'bugfix' || item.tags.includes('bugfix') || item.tags.includes('root-cause');
+  return isNegativeMemoryType(item.type)
+    || item.type === 'bugfix'
+    || item.tags.includes('bugfix')
+    || item.tags.includes('root-cause');
 }
 
 export function renderMemoryGuideSection(context: MemoryInjectionContext): string {
@@ -344,16 +379,18 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
     return {
       id: 'memorize-bugfix',
       tool: 'memorize_asset',
-      when: 'Bug 已修复且验证通过后（必须沉淀，便于下次同类问题检索）',
+      when: '每轮验证后：修复成功写 bugfix；方案失败写 failed_approach；根因被证伪写 false_root_cause；发现回归写 regression_case',
       args: {
         name: '[问题简述，如 登录超时-Redis连接池]',
-        type: 'bugfix',
+        type: '[bugfix | failed_approach | false_root_cause | regression_case]',
         description: '[现象、报错信息、复现条件]',
-        summary: '[检索用：关键词 + 根因 + 修复要点，一句话]',
+        summary: '[检索用：关键词 + 已验证结论，一句话]',
         content:
-          '【现象】...\n【根因】...\n【修复】具体改动与关键代码/配置\n【验证】如何确认已修好',
-        usage: '[再次遇到何种症状时可参考]',
-        tags: ['bugfix', 'root-cause'],
+          '【现象】...\n【假设/根因】...\n【尝试/修复】...\n【验证】成功、失败、证伪或回归证据',
+        evidence: ['[测试、日志、反例或监控证据]'],
+        applicability: '[适用条件、边界和不适用场景]',
+        usage: '[再次遇到何种症状时可参考或应避免]',
+        tags: ['[按结论填写 bugfix/root-cause/negative-memory]'],
         confidence: 0.85,
       },
       outputs: [],

@@ -2,6 +2,13 @@ import { parseArgs, getString, getNumber } from '../utils/parseArgs.js';
 import { okStructured } from '../lib/response.js';
 import { createMemoryClient } from '../lib/memory-client.js';
 import { handleToolError } from '../utils/error-handler.js';
+import {
+  isNegativeMemoryType,
+  mergeMemoryTags,
+  normalizeMemoryStatus,
+  normalizeOptionalIsoDate,
+  normalizeStringArray,
+} from '../lib/memory-model.js';
 
 export async function memorizeAsset(args: any) {
   try {
@@ -18,6 +25,12 @@ export async function memorizeAsset(args: any) {
       usage?: string;
       confidence?: number;
       tags?: string[];
+      evidence?: string[];
+      applicability?: string;
+      status?: string;
+      expires_at?: string;
+      supersedes?: string[];
+      superseded_by?: string;
     }>(args, {
       defaultValues: {
         name: '',
@@ -31,12 +44,19 @@ export async function memorizeAsset(args: any) {
         source_path: '',
         usage: '',
         confidence: 0.7,
+        applicability: '',
+        status: 'active',
+        expires_at: '',
+        superseded_by: '',
       },
       fieldAliases: {
         code_snippet: ['code', 'snippet'],
         file_path: ['path'],
         source_project: ['project'],
         source_path: ['source'],
+        applicability: ['applicable_when', 'boundaries', 'limitations'],
+        expires_at: ['expiresAt', 'expiry', 'valid_until'],
+        superseded_by: ['supersededBy', 'replaced_by'],
       },
     });
 
@@ -49,10 +69,24 @@ export async function memorizeAsset(args: any) {
     const sourcePath = getString(parsed.source_path) || getString(parsed.file_path);
     const usage = getString(parsed.usage);
     const confidence = getNumber(parsed.confidence, 0.7);
-    const tags = Array.isArray(parsed.tags) ? parsed.tags.filter((item): item is string => typeof item === 'string') : [];
+    const evidence = normalizeStringArray(parsed.evidence);
+    const applicability = getString(parsed.applicability);
+    const supersedes = normalizeStringArray(parsed.supersedes);
+    const supersededBy = getString(parsed.superseded_by);
+    const status = supersededBy
+      ? 'superseded'
+      : normalizeMemoryStatus(getString(parsed.status));
+    const expiresAt = normalizeOptionalIsoDate(parsed.expires_at, 'expires_at');
+    const tags = mergeMemoryTags(
+      normalizeStringArray(parsed.tags),
+      isNegativeMemoryType(type) ? [type, 'negative-memory'] : []
+    );
 
     if (!name || !description || !summary || !content) {
       throw new Error('缺少必填参数: name, description, summary, content/code_snippet');
+    }
+    if (isNegativeMemoryType(type) && evidence.length === 0) {
+      throw new Error(`${type} 必须提供 evidence，记录失败或证伪依据`);
     }
 
     const client = createMemoryClient();
@@ -71,9 +105,12 @@ export async function memorizeAsset(args: any) {
         warnings.push(`建议 content 包含 ${missing.join('、')}，便于跨仓库检索与复用`);
       }
     }
+    if (isNegativeMemoryType(type) && !applicability) {
+      warnings.push('负面记忆建议提供 applicability，明确适用边界，避免过度泛化');
+    }
     if (sourceProject || sourcePath) {
       warnings.push(
-        '跨仓库共享记忆时请勿依赖 source_project/source_path；路径请写入 content 正文（可选）'
+        'source_project/source_path 会将资产识别为项目范围；跨项目共享经验请将必要上下文写入 content'
       );
     }
 
@@ -88,6 +125,12 @@ export async function memorizeAsset(args: any) {
       usage: usage || undefined,
       confidence,
       tags,
+      evidence,
+      applicability: applicability || undefined,
+      status,
+      expiresAt,
+      supersedes,
+      supersededBy: supersededBy || undefined,
     });
 
     return okStructured(

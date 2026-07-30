@@ -1,4 +1,4 @@
-import { parseArgs, getString, getNumber } from '../utils/parseArgs.js';
+import { parseArgs, getString, getNumber, getBoolean } from '../utils/parseArgs.js';
 import { okStructured } from '../lib/response.js';
 import { createMemoryClient } from '../lib/memory-client.js';
 import {
@@ -8,6 +8,7 @@ import {
 import { attachHandles, buildMemoryAssetHandles } from '../lib/handles.js';
 import { getMemoryConfig } from '../lib/memory-config.js';
 import { classifyMemoryScope, rankMemorySearchResults } from '../lib/memory-ranking.js';
+import { resolveMemoryStatus } from '../lib/memory-model.js';
 import { handleToolError } from '../utils/error-handler.js';
 
 export async function searchMemory(args: unknown) {
@@ -17,6 +18,7 @@ export async function searchMemory(args: unknown) {
       type?: string;
       limit?: number;
       tags?: string[];
+      include_inactive?: boolean;
     }>(args, {
       defaultValues: {
         query: '',
@@ -44,11 +46,13 @@ export async function searchMemory(args: unknown) {
     const tags = Array.isArray(parsed.tags)
       ? parsed.tags.filter((item): item is string => typeof item === 'string')
       : [];
+    const includeInactive = getBoolean(parsed.include_inactive, false);
 
     const rawResults = await client.search(query, {
       limit,
       preferTypes: typeFilter ? [typeFilter] : [],
       preferTags: tags,
+      includeInactive,
     });
     const results = rankMemorySearchResults(rawResults, {
       preferTypes: typeFilter ? [typeFilter] : [],
@@ -66,6 +70,11 @@ export async function searchMemory(args: unknown) {
       content: item.content,
       tags: item.tags,
       scope: classifyMemoryScope(item, config),
+      status: resolveMemoryStatus(item),
+      expiresAt: item.expiresAt,
+      supersededBy: item.supersededBy,
+      evidence: item.evidence ?? [],
+      applicability: item.applicability,
       sourcePath: shouldShowSourceInSearch(item, config) ? item.sourcePath : undefined,
     }));
 

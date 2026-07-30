@@ -1,3 +1,9 @@
+import {
+  normalizeMemoryStatus,
+  normalizeStringArray,
+  type MemoryStatus,
+} from './memory-model.js';
+
 function truncate(value: string, maxChars: number): string {
   if (value.length <= maxChars) {
     return value;
@@ -44,6 +50,23 @@ export function normalizeMemoryPayload(payload: Record<string, unknown>): Record
     }
   }
 
+  const aliases: Array<[string, string]> = [
+    ['source_project', 'sourceProject'],
+    ['source_path', 'sourcePath'],
+    ['expires_at', 'expiresAt'],
+    ['superseded_by', 'supersededBy'],
+    ['applicable_when', 'applicability'],
+  ];
+  for (const [legacyKey, currentKey] of aliases) {
+    if (normalized[currentKey] === undefined && normalized[legacyKey] !== undefined) {
+      normalized[currentKey] = normalized[legacyKey];
+    }
+  }
+
+  if (normalized.supersedes === undefined && normalized.supersedes_ids !== undefined) {
+    normalized.supersedes = normalized.supersedes_ids;
+  }
+
   return normalized;
 }
 
@@ -56,6 +79,12 @@ export function payloadToMemoryFields(payload: Record<string, unknown>): {
   content: string;
   tags: string[];
   confidence: number;
+  evidence: string[];
+  applicability?: string;
+  status: MemoryStatus;
+  expiresAt?: string;
+  supersedes: string[];
+  supersededBy?: string;
   sourceProject?: string;
   sourcePath?: string;
   usage?: string;
@@ -66,9 +95,7 @@ export function payloadToMemoryFields(payload: Record<string, unknown>): {
 } {
   const p = normalizeMemoryPayload(payload);
 
-  const tags = Array.isArray(p.tags)
-    ? p.tags.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-    : [];
+  const tags = normalizeStringArray(p.tags);
 
   return {
     id: String(p.id || ''),
@@ -79,6 +106,12 @@ export function payloadToMemoryFields(payload: Record<string, unknown>): {
     content: String(p.content || ''),
     tags,
     confidence: typeof p.confidence === 'number' && Number.isFinite(p.confidence) ? p.confidence : 0.5,
+    evidence: normalizeStringArray(p.evidence),
+    applicability: typeof p.applicability === 'string' ? p.applicability : undefined,
+    status: normalizeMemoryStatus(p.status),
+    expiresAt: typeof p.expiresAt === 'string' ? p.expiresAt : undefined,
+    supersedes: normalizeStringArray(p.supersedes),
+    supersededBy: typeof p.supersededBy === 'string' ? p.supersededBy : undefined,
     sourceProject: typeof p.sourceProject === 'string' ? p.sourceProject : undefined,
     sourcePath: typeof p.sourcePath === 'string' ? p.sourcePath : undefined,
     usage: typeof p.usage === 'string' ? p.usage : undefined,

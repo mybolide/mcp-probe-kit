@@ -3,6 +3,14 @@ import { okStructured } from '../lib/response.js';
 import { createMemoryClient } from '../lib/memory-client.js';
 import { handleToolError } from '../utils/error-handler.js';
 import { attachHandles, buildMemoryAssetHandles } from '../lib/handles.js';
+import {
+  isNegativeMemoryType,
+  mergeMemoryTags,
+  normalizeMemoryStatus,
+  normalizeOptionalIsoDate,
+  normalizeStringArray,
+  type MemoryStatus,
+} from '../lib/memory-model.js';
 
 function fieldProvided(args: any, ...keys: string[]): boolean {
   const record =
@@ -31,12 +39,21 @@ export async function updateMemoryAsset(args: any) {
       usage?: string;
       confidence?: number;
       tags?: string[];
+      evidence?: string[];
+      applicability?: string;
+      status?: string;
+      expires_at?: string;
+      supersedes?: string[];
+      superseded_by?: string;
     }>(args, {
       fieldAliases: {
         code_snippet: ['code', 'snippet'],
         file_path: ['path'],
         source_project: ['project'],
         source_path: ['source'],
+        applicability: ['applicable_when', 'boundaries', 'limitations'],
+        expires_at: ['expiresAt', 'expiry', 'valid_until'],
+        superseded_by: ['supersededBy', 'replaced_by'],
       },
     });
 
@@ -56,6 +73,12 @@ export async function updateMemoryAsset(args: any) {
       sourceProject?: string;
       sourcePath?: string;
       usage?: string;
+      evidence?: string[];
+      applicability?: string;
+      status?: MemoryStatus;
+      expiresAt?: string | null;
+      supersedes?: string[];
+      supersededBy?: string;
     } = {};
 
     if (fieldProvided(args, 'name')) {
@@ -74,9 +97,7 @@ export async function updateMemoryAsset(args: any) {
       patch.content = getString(parsed.content) || getString(parsed.code_snippet);
     }
     if (fieldProvided(args, 'tags')) {
-      patch.tags = Array.isArray(parsed.tags)
-        ? parsed.tags.filter((item): item is string => typeof item === 'string')
-        : [];
+      patch.tags = normalizeStringArray(parsed.tags);
     }
     if (fieldProvided(args, 'confidence')) {
       patch.confidence = getNumber(parsed.confidence, 0.7);
@@ -90,9 +111,40 @@ export async function updateMemoryAsset(args: any) {
     if (fieldProvided(args, 'source_path', 'source', 'file_path', 'path')) {
       patch.sourcePath = getString(parsed.source_path) || getString(parsed.file_path);
     }
+    if (fieldProvided(args, 'evidence')) {
+      patch.evidence = normalizeStringArray(parsed.evidence);
+    }
+    if (fieldProvided(args, 'applicability', 'applicable_when', 'boundaries', 'limitations')) {
+      patch.applicability = getString(parsed.applicability);
+    }
+    if (fieldProvided(args, 'status')) {
+      patch.status = normalizeMemoryStatus(getString(parsed.status));
+    }
+    if (fieldProvided(args, 'expires_at', 'expiresAt', 'expiry', 'valid_until')) {
+      const rawExpiresAt = getString(parsed.expires_at);
+      patch.expiresAt = rawExpiresAt
+        ? normalizeOptionalIsoDate(rawExpiresAt, 'expires_at')
+        : null;
+    }
+    if (fieldProvided(args, 'supersedes')) {
+      patch.supersedes = normalizeStringArray(parsed.supersedes);
+    }
+    if (fieldProvided(args, 'superseded_by', 'supersededBy', 'replaced_by')) {
+      patch.supersededBy = getString(parsed.superseded_by);
+      if (!fieldProvided(args, 'status') && patch.supersededBy) {
+        patch.status = 'superseded';
+      }
+    }
+
+    if (patch.type && isNegativeMemoryType(patch.type)) {
+      patch.tags = mergeMemoryTags(patch.tags ?? [], [patch.type, 'negative-memory']);
+      if ((patch.evidence?.length ?? 0) === 0) {
+        throw new Error(`${patch.type} 的 evidence 不能为空`);
+      }
+    }
 
     if (Object.keys(patch).length === 0) {
-      throw new Error('至少提供一个待更新字段: name, type, description, summary, content, tags, confidence, usage 等');
+      throw new Error('至少提供一个待更新字段: name, type, description, summary, content, tags, confidence, evidence, status 等');
     }
 
     const client = createMemoryClient();
@@ -115,7 +167,7 @@ export async function updateMemoryAsset(args: any) {
     }
     if (patch.sourceProject || patch.sourcePath) {
       warnings.push(
-        '跨仓库共享记忆时请勿依赖 source_project/source_path；路径请写入 content 正文（可选）'
+        'source_project/source_path 会将资产识别为项目范围；跨项目共享经验请将必要上下文写入 content'
       );
     }
 

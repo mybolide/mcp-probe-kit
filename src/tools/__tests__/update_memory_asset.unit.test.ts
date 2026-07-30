@@ -97,4 +97,52 @@ describe('update_memory_asset 单元测试', () => {
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain('至少提供一个待更新字段');
   });
+
+  test('更新替代关系时自动标记 superseded，并可清除失效时间', async () => {
+    isEnabledMock.mockReturnValue(true);
+    updateAssetMock.mockResolvedValue({
+      updated: true,
+      asset: {
+        id: 'asset-1',
+        name: '旧方案',
+        type: 'failed_approach',
+        description: '旧方案失效',
+        summary: '由新方案替代',
+        content: '旧内容',
+        tags: ['negative-memory'],
+        evidence: ['回归测试'],
+        confidence: 0.8,
+        status: 'superseded',
+        supersededBy: 'asset-2',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-07-30T00:00:00.000Z',
+      },
+    });
+
+    const result = await updateMemoryAsset({
+      asset_id: 'asset-1',
+      superseded_by: 'asset-2',
+      expires_at: '',
+    });
+
+    expect(result.isError).toBe(false);
+    expect(updateAssetMock).toHaveBeenCalledWith('asset-1', {
+      expiresAt: null,
+      supersededBy: 'asset-2',
+      status: 'superseded',
+    });
+  });
+
+  test('将资产改为负面类型时必须同时提供 evidence', async () => {
+    isEnabledMock.mockReturnValue(true);
+
+    const result = await updateMemoryAsset({
+      asset_id: 'asset-1',
+      type: 'regression_case',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('evidence');
+    expect(updateAssetMock).not.toHaveBeenCalled();
+  });
 });

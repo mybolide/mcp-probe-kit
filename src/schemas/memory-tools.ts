@@ -2,7 +2,7 @@ export const memoryToolSchemas = [
   {
     name: 'search_memory',
     description:
-      '按语义检索共享记忆库。适合在 start_* 之外主动查找历史 Bug 修复或可复用模式；命中后用 read_memory_asset 读取全文。',
+      '按语义检索分层记忆库。当前项目记忆优先于跨项目经验；默认排除过期、被替代和撤回资产。适合主动查找历史 Bug、负面经验或可复用模式。',
     inputSchema: {
       type: 'object',
       properties: {
@@ -10,6 +10,10 @@ export const memoryToolSchemas = [
         type: { type: 'string', description: '优先匹配的资产类型，如 bugfix、pattern、component' },
         tags: { type: 'array', items: { type: 'string' }, description: '优先匹配的标签' },
         limit: { type: 'number', description: '返回条数，默认 MEMORY_SEARCH_LIMIT' },
+        include_inactive: {
+          type: 'boolean',
+          description: '维护/审计时设为 true，可返回 expired、superseded、retracted 资产；正常研发不要开启',
+        },
       },
       required: ['query'],
       additionalProperties: true,
@@ -33,20 +37,26 @@ export const memoryToolSchemas = [
   {
     name: 'memorize_asset',
     description:
-      '沉淀可检索资产到共享记忆库。Bug 修复后必须 type=bugfix，content 含【现象】【根因】【修复】【验证】。跨仓库共享时勿填 source_project/source_path，路径写入 content 即可。',
+      '沉淀可检索记忆资产。支持成功经验及 failed_approach、false_root_cause、regression_case 负面记忆；负面记忆必须附 evidence，并建议填写 applicability。正式经验应在验证通过后写入。',
     inputSchema: {
       type: 'object',
       properties: {
         name: { type: 'string', description: '资产名称' },
-        type: { type: 'string', description: '资产类型：bugfix / pattern / component / code 等' },
+        type: { type: 'string', description: '资产类型：bugfix / pattern / component / code / failed_approach / false_root_cause / regression_case' },
         description: { type: 'string', description: '资产描述' },
         summary: { type: 'string', description: '检索用一句话摘要（关键词 + 根因/要点）' },
         content: { type: 'string', description: '完整内容（bugfix 建议结构化四段）' },
         code_snippet: { type: 'string', description: '代码片段，content 的别名' },
         file_path: { type: 'string', description: '已废弃：勿用于跨仓库沉淀，路径写入 content' },
-        source_project: { type: 'string', description: '已废弃：仅同仓库追溯时可选' },
-        source_path: { type: 'string', description: '已废弃：仅同仓库追溯时可选' },
+        source_project: { type: 'string', description: '项目标识；填写后该资产按项目范围记忆处理' },
+        source_path: { type: 'string', description: '项目内来源路径，仅用于追溯' },
         usage: { type: 'string', description: '适用场景/使用方式' },
+        applicability: { type: 'string', description: '适用条件、边界和不适用场景' },
+        evidence: { type: 'array', items: { type: 'string' }, description: '验证证据、失败日志、反例或回归用例；负面记忆必填' },
+        status: { type: 'string', enum: ['active', 'expired', 'superseded', 'retracted'], description: '生命周期状态，默认 active' },
+        expires_at: { type: 'string', description: '自动失效时间，ISO 日期时间' },
+        supersedes: { type: 'array', items: { type: 'string' }, description: '本资产替代的旧资产 ID' },
+        superseded_by: { type: 'string', description: '替代本资产的新资产 ID；填写后状态自动变为 superseded' },
         confidence: { type: 'number', description: '置信度，0-1' },
         tags: { type: 'array', items: { type: 'string' }, description: '标签列表，如 bugfix, root-cause' },
       },
@@ -77,21 +87,27 @@ export const memoryToolSchemas = [
   {
     name: 'update_memory_asset',
     description:
-      '按 asset_id 更新共享记忆库中的已有资产（保留原 ID）。适用于修正摘要、正文或标签；content 变更会重新向量化。跨仓库共享时勿填 source_project/source_path。',
+      '按 asset_id 更新已有记忆资产（保留原 ID）。可修正内容、证据、适用边界、失效时间及替代关系；content 或生命周期语义变化会重新向量化。',
     inputSchema: {
       type: 'object',
       properties: {
         asset_id: { type: 'string', description: '要更新的记忆资产 ID' },
         name: { type: 'string', description: '资产名称' },
-        type: { type: 'string', description: '资产类型：bugfix / pattern / component / code 等' },
+        type: { type: 'string', description: '资产类型，支持 failed_approach / false_root_cause / regression_case' },
         description: { type: 'string', description: '资产描述' },
         summary: { type: 'string', description: '检索用一句话摘要' },
         content: { type: 'string', description: '完整内容' },
         code_snippet: { type: 'string', description: '代码片段，content 的别名' },
         file_path: { type: 'string', description: '已废弃：勿用于跨仓库沉淀，路径写入 content' },
-        source_project: { type: 'string', description: '已废弃：仅同仓库追溯时可选' },
-        source_path: { type: 'string', description: '已废弃：仅同仓库追溯时可选' },
+        source_project: { type: 'string', description: '项目标识；填写后按项目范围记忆处理' },
+        source_path: { type: 'string', description: '项目内来源路径' },
         usage: { type: 'string', description: '适用场景/使用方式' },
+        applicability: { type: 'string', description: '适用条件、边界和不适用场景' },
+        evidence: { type: 'array', items: { type: 'string' }, description: '验证证据、失败日志、反例或回归用例' },
+        status: { type: 'string', enum: ['active', 'expired', 'superseded', 'retracted'], description: '生命周期状态' },
+        expires_at: { type: 'string', description: '自动失效时间，ISO 日期时间；空字符串可清除' },
+        supersedes: { type: 'array', items: { type: 'string' }, description: '本资产替代的旧资产 ID' },
+        superseded_by: { type: 'string', description: '替代本资产的新资产 ID' },
         confidence: { type: 'number', description: '置信度，0-1' },
         tags: { type: 'array', items: { type: 'string' }, description: '标签列表' },
       },

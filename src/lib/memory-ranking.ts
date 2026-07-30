@@ -1,5 +1,5 @@
 import type { MemoryConfig } from './memory-config.js';
-import type { MemorySearchResult } from './memory-client.js';
+import type { MemorySearchResult } from './memory-model.js';
 
 export type MemoryScope = 'project' | 'shared';
 
