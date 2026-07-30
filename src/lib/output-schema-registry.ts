@@ -1,5 +1,6 @@
 /**
- * tools/list 的 outputSchema 注册表（与 tools-manifest.json structuredOutput.schemas 对齐）
+ * tools/list 的 outputSchema 兼容注册表。
+ * 工具元数据主入口为 Tool Registry；本文件暂时保留输出 Schema 的独立映射。
  */
 
 import {

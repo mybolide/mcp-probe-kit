@@ -35,7 +35,7 @@
 | FR-4 | protocol-compatibility | protocol-compatibility/1.1、protocol-compatibility/1.2 | 未开始 |
 | FR-5 | protocol-compatibility | protocol-compatibility/2.1 | 未开始 |
 | FR-6 | task-runtime | task-runtime/1.1、task-runtime/1.2、task-runtime/2.1 | 未开始 |
-| FR-7 | core-governance | core-governance/2.1、core-governance/2.2 | 未开始 |
+| FR-7 | core-governance | core-governance/2.1、core-governance/2.2 | 已完成 |
 | FR-8 | memory-convergence | memory-convergence/2.1 | 未开始 |
 
 ## 文件变更清单

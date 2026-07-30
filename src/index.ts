@@ -15,20 +15,8 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { 
-  initProject, gencommit,
-  codeReview, codeInsight, gentest, refactor,
-  initProjectContext, addFeature, fixBug, estimate, checkSpec, workflow,
-  startFeature, startBugfix, startOnboard,
-  startRalph, interview, askUser,
-  uiDesignSystem, uiSearch, syncUiData, startUi,
-  startProduct, gitWorkReport,
-  searchMemory, readMemoryAsset, memorizeAsset, deleteMemoryAsset, updateMemoryAsset, scanAndExtractPatterns
-} from "./tools/index.js";
 import { VERSION, NAME } from "./version.js";
-import { allToolSchemas } from "./schemas/index.js";
-import { filterTools, getToolsetFromEnv } from "./lib/toolset-manager.js";
-import { prepareToolForToolsList } from "./lib/output-schema-registry.js";
+import { getToolsetFromEnv } from "./lib/toolset-manager.js";
 import { shouldAutoEscalateToTask } from "./lib/task-defaults.js";
 import { attachHandles, type ToolHandles } from "./lib/handles.js";
 import { buildMcpAppHtml, isMcpUiAppTool } from "./lib/mcp-apps.js";
@@ -47,6 +35,12 @@ import {
   isAbortError,
   type ToolExecutionContext,
 } from "./lib/tool-execution-context.js";
+import {
+  executeRegisteredTool,
+  listToolDefinitions,
+  listToolDefinitionsForToolset,
+  prepareRegisteredToolForList,
+} from "./server/tool-registry.js";
 
 /** 启动日志标识：用于确认 Cursor 是否加载了当前 build（非 npm/npx 缓存旧进程） */
 const MCP_BUILD_TAG = "progress-off-20260710";
@@ -580,12 +574,12 @@ const server = new Server(
 // 定义工具列表 - 从 schemas 导入，并根据工具集过滤
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const toolset = getToolsetFromEnv();
-  const filteredTools = filterTools(allToolSchemas, toolset);
-  const tools = filteredTools.map((tool) => prepareToolForToolsList(tool));
+  const definitions = listToolDefinitionsForToolset(toolset);
+  const tools = definitions.map((definition) => prepareRegisteredToolForList(definition));
 
   const payloadBytes = Buffer.byteLength(JSON.stringify({ tools }), "utf8");
   console.error(
-    `[MCP Probe Kit] 当前工具集: ${toolset} (${tools.length}/${allToolSchemas.length} 个工具) | tools/list ≈ ${(payloadBytes / 1024).toFixed(1)} KB`
+    `[MCP Probe Kit] 当前工具集: ${toolset} (${tools.length}/${listToolDefinitions().length} 个工具) | tools/list ≈ ${(payloadBytes / 1024).toFixed(1)} KB`
   );
 
   return { tools };
@@ -619,101 +613,7 @@ async function executeTool(
     );
   }
 
-  let result: ToolResult;
-  switch (name) {
-    case "init_project":
-      result = (await initProject(args as any)) as ToolResult;
-      break;
-    case "gencommit":
-      result = (await gencommit(args as any)) as ToolResult;
-      break;
-    case "code_review":
-      result = (await codeReview(args as any)) as ToolResult;
-      break;
-    case "code_insight":
-      result = (await codeInsight(args as any, context)) as ToolResult;
-      break;
-    case "gentest":
-      result = (await gentest(args as any)) as ToolResult;
-      break;
-    case "refactor":
-      result = (await refactor(args as any)) as ToolResult;
-      break;
-    case "init_project_context":
-      result = (await initProjectContext(args as any)) as ToolResult;
-      break;
-    case "workflow":
-      result = (await workflow(args as any)) as ToolResult;
-      break;
-    case "add_feature":
-      result = (await addFeature(args as any)) as ToolResult;
-      break;
-    case "check_spec":
-      result = (await checkSpec(args as any)) as ToolResult;
-      break;
-    case "fix_bug":
-      result = (await fixBug(args as any)) as ToolResult;
-      break;
-    case "estimate":
-      result = (await estimate(args as any)) as ToolResult;
-      break;
-    case "start_feature":
-      result = (await startFeature(args as any, context)) as ToolResult;
-      break;
-    case "start_bugfix":
-      result = (await startBugfix(args as any, context)) as ToolResult;
-      break;
-    case "start_onboard":
-      result = (await startOnboard(args as any, context)) as ToolResult;
-      break;
-    case "start_ralph":
-      result = (await startRalph(args as any, context)) as ToolResult;
-      break;
-    case "interview":
-      result = (await interview(args as any)) as ToolResult;
-      break;
-    case "ask_user":
-      result = (await askUser(args as any)) as ToolResult;
-      break;
-    case "ui_design_system":
-      result = (await uiDesignSystem(args as any)) as ToolResult;
-      break;
-    case "ui_search":
-      result = (await uiSearch(args as any)) as ToolResult;
-      break;
-    case "sync_ui_data":
-      result = (await syncUiData(args as any, context)) as ToolResult;
-      break;
-    case "start_ui":
-      result = (await startUi(args as any, context)) as ToolResult;
-      break;
-    case "start_product":
-      result = (await startProduct((args ?? {}) as any, context)) as ToolResult;
-      break;
-    case "git_work_report":
-      result = (await gitWorkReport(args as any)) as ToolResult;
-      break;
-    case "search_memory":
-      result = (await searchMemory(args as any)) as ToolResult;
-      break;
-    case "read_memory_asset":
-      result = (await readMemoryAsset(args as any)) as ToolResult;
-      break;
-    case "memorize_asset":
-      result = (await memorizeAsset(args as any)) as ToolResult;
-      break;
-    case "delete_memory_asset":
-      result = (await deleteMemoryAsset(args as any)) as ToolResult;
-      break;
-    case "update_memory_asset":
-      result = (await updateMemoryAsset(args as any)) as ToolResult;
-      break;
-    case "scan_and_extract_patterns":
-      result = (await scanAndExtractPatterns(args as any)) as ToolResult;
-      break;
-    default:
-      throw new Error(`未知工具: ${name}`);
-  }
+  const result = (await executeRegisteredTool(name, args, context)) as ToolResult;
 
   return { bootstrap, result };
 }
@@ -1017,7 +917,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
                   };
                 })(),
               },
-              toolCount: allToolSchemas.length,
+              toolCount: listToolDefinitions().length,
               projectResources: (() => {
                 try {
                   const discovered = discoverProjectResources(resolveWorkspaceRoot(""));

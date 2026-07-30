@@ -4,20 +4,21 @@
   "totalTools": 30,
   "toolsets": {
     "core": {
-      "description": "11 core tools (daily high-frequency)",
-      "count": 11,
+      "description": "12 core tools (daily high-frequency)",
+      "count": 12,
       "tools": [
-        "workflow",
+        "init_project",
         "gencommit",
         "code_review",
-        "gentest",
+        "code_insight",
         "refactor",
         "fix_bug",
-        "add_feature",
-        "check_spec",
-        "init_project",
+        "gentest",
+        "workflow",
         "init_project_context",
-        "estimate"
+        "add_feature",
+        "estimate",
+        "check_spec"
       ]
     },
     "memory": {
@@ -27,8 +28,8 @@
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
-        "update_memory_asset",
         "delete_memory_asset",
+        "update_memory_asset",
         "scan_and_extract_patterns"
       ]
     },
@@ -36,44 +37,44 @@
       "description": "4 UI/UX tools (recommend using start_ui unified entry)",
       "count": 4,
       "tools": [
-        "start_ui",
         "ui_design_system",
         "ui_search",
-        "sync_ui_data"
+        "sync_ui_data",
+        "start_ui"
       ]
     },
     "workflow": {
       "description": "29 workflow tools (includes core + orchestration + interactive + UI + memory)",
       "count": 29,
       "tools": [
+        "init_project",
         "gencommit",
         "code_review",
         "code_insight",
-        "gentest",
         "refactor",
         "fix_bug",
-        "add_feature",
-        "check_spec",
-        "init_project",
+        "gentest",
+        "workflow",
         "init_project_context",
+        "add_feature",
         "estimate",
-        "git_work_report",
+        "check_spec",
         "start_feature",
         "start_bugfix",
         "start_onboard",
-        "start_ui",
-        "start_product",
         "start_ralph",
         "interview",
         "ask_user",
         "ui_design_system",
         "ui_search",
         "sync_ui_data",
+        "start_ui",
+        "start_product",
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
-        "update_memory_asset",
         "delete_memory_asset",
+        "update_memory_asset",
         "scan_and_extract_patterns"
       ]
     },
@@ -84,25 +85,56 @@
     }
   },
   "categories": {
-    "code-analysis": {
-      "description": "Code analysis tools (4)",
+    "orchestration": {
+      "description": "Intelligent orchestration tools (6)",
       "tools": [
-        "code_review",
-        "code_insight",
-        "gentest",
-        "refactor"
+        "start_feature",
+        "start_bugfix",
+        "start_onboard",
+        "start_ralph",
+        "start_ui",
+        "start_product"
+      ]
+    },
+    "routing": {
+      "description": "Agent intent routing tools (1)",
+      "tools": [
+        "workflow"
       ]
     },
     "project-management": {
-      "description": "Project management tools (7)",
+      "description": "Project management and specification tools (5)",
       "tools": [
         "init_project",
         "init_project_context",
         "add_feature",
-        "check_spec",
-        "fix_bug",
         "estimate",
+        "check_spec"
+      ]
+    },
+    "code-analysis": {
+      "description": "Code analysis tools (5)",
+      "tools": [
+        "code_review",
+        "code_insight",
+        "refactor",
+        "fix_bug",
+        "gentest"
+      ]
+    },
+    "git": {
+      "description": "Git tools (2)",
+      "tools": [
+        "gencommit",
         "git_work_report"
+      ]
+    },
+    "ui-ux": {
+      "description": "UI/UX tools (excluding orchestration tools) (3)",
+      "tools": [
+        "ui_design_system",
+        "ui_search",
+        "sync_ui_data"
       ]
     },
     "memory-cursor-history": {
@@ -111,26 +143,9 @@
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
-        "update_memory_asset",
         "delete_memory_asset",
+        "update_memory_asset",
         "scan_and_extract_patterns"
-      ]
-    },
-    "orchestration": {
-      "description": "Intelligent orchestration tools (6)",
-      "tools": [
-        "start_feature",
-        "start_bugfix",
-        "start_onboard",
-        "start_ui",
-        "start_product",
-        "start_ralph"
-      ]
-    },
-    "git": {
-      "description": "Git tools (1)",
-      "tools": [
-        "gencommit"
       ]
     },
     "interactive": {
@@ -138,14 +153,6 @@
       "tools": [
         "interview",
         "ask_user"
-      ]
-    },
-    "ui-ux": {
-      "description": "UI/UX tools (3, excluding orchestration tools)",
-      "tools": [
-        "ui_design_system",
-        "ui_search",
-        "sync_ui_data"
       ]
     }
   },

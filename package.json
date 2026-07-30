@@ -21,9 +21,10 @@
     "prepublishOnly": "npm run build",
     "sync-ui-data": "tsx scripts/sync-ui-data.ts",
     "sync-version": "node scripts/sync-version.mjs",
+    "sync-tool-manifest": "tsx scripts/sync-tool-manifest.ts",
     "verify-workflow-skill": "tsx scripts/verify-workflow-skill.ts",
     "sync-workflow-skill": "tsx scripts/sync-workflow-skill.ts",
-    "prebuild": "npm run sync-version && npm run sync-ui-data && npm run verify-workflow-skill && npm run sync-workflow-skill",
+    "prebuild": "npm run sync-version && npm run sync-ui-data && npm run sync-tool-manifest && npm run verify-workflow-skill && npm run sync-workflow-skill",
     "docs:serve": "npx http-server docs -p 8080 -o"
   },
   "keywords": [

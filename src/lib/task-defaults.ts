@@ -3,7 +3,11 @@
  * 默认关闭：多数 Agent 客户端不会轮询 task 结果，自动升级会导致 code_insight 等“报错/无结果”。
  */
 
-const AUTO_TASK_TOOLS = new Set(['code_insight', 'scan_and_extract_patterns']);
+import { TOOL_CATALOG } from '../server/tool-catalog.js';
+
+const AUTO_TASK_TOOLS = new Set(
+  TOOL_CATALOG.filter((entry) => entry.taskPolicy.autoEscalate).map((entry) => entry.name)
+);
 
 export function isAutoTaskTool(toolName: string): boolean {
   return AUTO_TASK_TOOLS.has(toolName);

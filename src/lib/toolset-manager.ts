@@ -3,9 +3,10 @@
  * 根据环境变量 MCP_TOOLSET 过滤工具列表
  */
 
-import { allToolSchemas } from '../schemas/index.js';
+import { TOOL_CATALOG } from '../server/tool-catalog.js';
+import type { ToolsetType } from '../server/tool-definition.js';
 
-export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
+export type { ToolsetType } from '../server/tool-definition.js';
 
 /**
  * 工具集定义 (v3.0 精简版)
@@ -15,74 +16,16 @@ export type ToolsetType = 'core' | 'ui' | 'workflow' | 'full';
  * - workflow: 工作流工具（包含 core + 编排工具）
  * - full: 所有工具（默认）
  */
+function namesFor(toolset: Exclude<ToolsetType, 'full'>): string[] {
+  return TOOL_CATALOG
+    .filter((entry) => entry.toolsets.includes(toolset))
+    .map((entry) => entry.name);
+}
+
 export const TOOLSET_DEFINITIONS = {
-  // 核心工具集 - 日常高频工具
-  core: [
-    'workflow',
-    'gencommit',
-    'code_review',
-    'code_insight',
-    'gentest',
-    'refactor',
-    'fix_bug',
-    'add_feature',
-    'check_spec',
-    'init_project',
-    'init_project_context',
-    'estimate',
-  ],
-
-  // UI/UX 工具集 - 包含统一入口（4 个）
-  ui: [
-    'start_ui',         // ⭐ 统一入口（编排工具）
-    'ui_design_system', // 生成设计系统
-    'ui_search',        // 搜索 UI/UX 数据库
-    'sync_ui_data',     // 同步 UI 数据
-  ],
-
-  // 工作流工具集 - 包含核心 + 编排 + 交互
-  workflow: [
-    'workflow',
-    // 核心工具
-    'gencommit',
-    'code_review',
-    'code_insight',
-    'gentest',
-    'refactor',
-    'fix_bug',
-    'add_feature',
-    'check_spec',
-    'init_project',
-    'init_project_context',
-    'estimate',
-    
-    // 编排工具（6 个）
-    'start_feature',
-    'start_bugfix',
-    'start_onboard',
-    'start_ui',
-    'start_product',
-    'start_ralph',
-    
-    // 交互工具（2 个）
-    'interview',
-    'ask_user',
-    
-    // UI/UX 工具（3 个）
-    'ui_design_system',
-    'ui_search',
-    'sync_ui_data',
-
-    // 记忆工具（start_* delegated plan 会直接引用）
-    'search_memory',
-    'read_memory_asset',
-    'memorize_asset',
-    'update_memory_asset',
-    'delete_memory_asset',
-    'scan_and_extract_patterns',
-  ],
-
-  // 完整工具集 - 所有工具
+  core: namesFor('core'),
+  ui: namesFor('ui'),
+  workflow: namesFor('workflow'),
   full: 'all' as const,
 };
 
@@ -135,7 +78,7 @@ export function getToolsetFromEnv(): ToolsetType {
  */
 export function getToolsetSize(toolset: ToolsetType): number {
   if (toolset === 'full') {
-    return allToolSchemas.length;
+    return TOOL_CATALOG.length;
   }
   
   const allowedTools = TOOLSET_DEFINITIONS[toolset];

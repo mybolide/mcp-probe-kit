@@ -14,8 +14,7 @@ import { uiUxSchemas } from "./ui-ux-schemas.js";
 import { productDesignSchemas } from "./product-design-schemas.js";
 import { memoryToolSchemas } from "./memory-tools.js";
 
-// 合并所有工具 schemas
-// 增删工具时同步更新 src/lib/mcp-tool-skill-registry.ts（prebuild 会 verify-workflow-skill 校验）
+// 合并所有工具 schemas；Tool Catalog/Registry 会在模块加载和测试中校验一一覆盖。
 export const allToolSchemas = [
   ...basicToolSchemas,
   ...gitToolSchemas,

@@ -9,12 +9,12 @@
 - [x] 1.3 将当前 v4 规格迁移为 parent-child — _需求: FR-1, FR-2_
   - 证据块：母规格、`spec-manifest.json`、四个子规格及 `check_spec` 校验结果。
   - 涉及文件：`docs/specs/mcp-v4/`。
-- [ ] 2.1 定义统一 ToolDefinition 与 Registry — _需求: FR-7_
-  - 证据块：工具名称、Schema、Annotation、Toolset、Handler 和协议策略由单一注册源生成。
-  - 涉及文件：`src/server/tool-registry.ts`、现有 Schema 与 registry 文件。
-- [ ] 2.2 从 Registry 生成 tools/list、dispatcher、manifest 与 Skill 路由 — _需求: FR-7_
-  - 证据块：生成物一致性测试与 30 个现有工具快照无未审核差异。
-  - 涉及文件：`src/server/tool-dispatcher.ts`、scripts、manifest。
+- [x] 2.1 定义统一 ToolDefinition 与 Registry — _需求: FR-7_
+  - 证据块：`src/server/tool-catalog.ts` 统一 Toolset、Skill Route、Annotation、Task/Protocol Policy；`src/server/tool-registry.ts` 组合 Schema 与 Handler，并在加载时校验 30 个工具一一覆盖。
+  - 涉及文件：`src/server/tool-definition.ts`、`src/server/tool-catalog.ts`、`src/server/tool-registry.ts`、`src/lib/tool-annotations.ts`、`src/lib/toolset-manager.ts`、`src/lib/task-defaults.ts`。
+- [x] 2.2 从 Registry 生成 tools/list、dispatcher、manifest 与 Skill 路由 — _需求: FR-7_
+  - 证据块：`src/index.ts` 已通过 Registry 生成 `tools/list` 并执行 Handler，原 30 分支 switch 已删除；Manifest/Skill/Toolset/Annotation 均由 Catalog 生成；逐工具 tools/list 等价测试通过。
+  - 涉及文件：`src/index.ts`、`src/server/tool-manifest.ts`、`scripts/sync-tool-manifest.ts`、`tools-manifest.json`、`src/lib/mcp-tool-skill-registry.ts`。
 - [ ] 2.3 拆分 Server 核心并收敛 `src/index.ts` — _需求: FR-1, FR-2, FR-7_
   - 证据块：启动、tools、resources、apps、tasks 各模块测试通过，`src/index.ts` 仅保留启动职责。
   - 涉及文件：`src/server/`、`src/resources/`、`src/index.ts`。
