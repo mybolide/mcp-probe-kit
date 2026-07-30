@@ -82,6 +82,14 @@ v4.0 的目标是让不同客户端、不同模型和不同开发者在同一项
 - `resume_plan` SHALL 依据持久化 Plan 与依赖恢复下一可执行步骤，不依赖原始完整对话。
 - `converge` 未通过前，系统 SHALL 拒绝将本次结论作为正式长期记忆写入。
 
+### FR-9 Agent Evals 与发布就绪
+
+- 系统 SHALL 提供可重复执行的 Agent Routing、参数构造、Plan Compliance、Memory 污染防护和工具描述触发评估。
+- Evals SHALL 使用确定性用例与明确断言，不得依赖人工主观判断才能得出通过结果。
+- 发布闸门 SHALL 串联全量测试、生产构建、双协议冒烟、Agent Evals 与 npm 包内容检查。
+- v3 → v4 迁移说明 SHALL 明确 Node.js、协议模式、Tasks 降级、Plan Heartbeat、Converge 和 Memory 写入顺序。
+- 尚未完成的真实客户端人工验收 SHALL 明确标记为 pending，不得以 reference client 结果代替。
+
 ## 非功能需求
 
 - v3 工具名称和主要输入输出在 v4 首个稳定版本中保持兼容。
@@ -97,6 +105,7 @@ v4.0 的目标是让不同客户端、不同模型和不同开发者在同一项
 - FR-3 与 FR-8 依赖统一 Plan Contract，由 `memory-convergence` 子规格负责。
 - FR-4 与 FR-5 依赖共享业务核心，由 `protocol-compatibility` 子规格负责。
 - FR-6 依赖协议能力模型，由 `task-runtime` 子规格负责。
+- FR-9 依赖 FR-1 至 FR-8 的稳定实现，由 `release-readiness` 子规格负责。
 - 详细依赖以 `spec-manifest.json` 为机器可读 SSOT。
 
 ## 发布硬门槛
@@ -106,3 +115,5 @@ v4.0 的目标是让不同客户端、不同模型和不同开发者在同一项
 3. Memory 全链路在 Legacy 和 Modern 下均可调用。
 4. 不支持 Tasks、Progress、Apps、input_required 的客户端仍能完成核心流程。
 5. v3 回归测试、v4 协议测试和客户端兼容测试全部通过。
+6. Agent Evals 全部通过，发布闸门能够输出机器可读报告。
+7. 人工客户端矩阵中未验证项必须保持 pending，不得伪造为通过。

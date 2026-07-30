@@ -48,12 +48,35 @@
 - Modern input_required：接受、拒绝和无 capability 降级
 - Legacy requirements loop：SDK shim 完成同一 elicitation 流程
 
-## 5. 待发布前人工验证
+## 5. Reference client 自动验证状态
 
-- MCP Inspector
-- Cursor
-- Claude Code
-- VS Code Copilot
-- Cline / OpenCode（按客户端实际能力记录结果）
+| 验证项 | 状态 | 证据 |
+|---|---|---|
+| Legacy tools/resources | passed | `src/protocol/__tests__/dual-era-stdio.integration.test.ts` |
+| Modern tools/resources | passed | `src/protocol/__tests__/dual-era-stdio.integration.test.ts` |
+| Legacy Task wire | passed | Legacy Task integration + `npm run smoke:protocol` |
+| Modern Task 同步降级 | passed | dual-era reference matrix + production smoke |
+| Modern input_required | passed | 接受、拒绝、取消和无 capability 路径 |
+| Plan Heartbeat / Resume / Converge | passed | Plan lifecycle tests + production smoke |
+| Agent Routing / Plan Compliance / Memory Safety | passed | `npm run eval:agents` |
 
-任何客户端不支持扩展时，不得导致 `start_feature`、`start_bugfix`、`start_ui`、Memory 和代码分析不可用。
+## 6. 真实客户端人工验证矩阵
+
+Reference client 的 `passed` 不等于真实宿主客户端已验证。以下项目必须在对应客户端和版本上实机运行后才能改为 `passed`。
+
+| 客户端 | 客户端版本 | 状态 | 验证日期 | 证据 | 备注 |
+|---|---|---|---|---|---|
+| MCP Inspector | 待记录 | pending | — | — | 验证 tools/resources、Legacy/Modern 模式和 elicitation |
+| Cursor | 待记录 | pending | — | — | 验证 Skill 发现、工具路由和同步降级 |
+| Claude Code | 待记录 | pending | — | — | 验证 Canonical Skill、Plan Heartbeat 和恢复 |
+| VS Code Copilot | 待记录 | pending | — | — | 验证工具发现、结构化结果和资源读取 |
+| Cline | 待记录 | pending | — | — | 验证 Legacy/Modern 协商与 Requirements Loop |
+| OpenCode | 待记录 | pending | — | — | 验证工具路由、Tasks 降级和 Memory |
+
+状态只允许：`pending`、`passed`、`failed`、`blocked`。任何客户端不支持扩展时，不得导致 `start_feature`、`start_bugfix`、`start_ui`、Memory 和代码分析不可用。
+
+## 7. 发布判定
+
+- 自动 reference matrix、全量测试、构建、生产冒烟和 Agent Evals 全部通过，是发布候选的必要条件。
+- 真实客户端尚未验证时，允许生成内部 release candidate，但不得在发布说明中宣称这些客户端已经通过兼容认证。
+- 人工矩阵出现 `failed` 时，必须记录复现步骤和降级结果；核心流程无法降级时阻断稳定版发布。

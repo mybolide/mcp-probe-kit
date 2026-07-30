@@ -26,4 +26,4 @@
 2. M2：Tool Registry 与 Server 解耦完成。
 3. M3：Memory 2.0、Converge 和恢复能力完成。
 4. M4：SDK v2 双协议与 Task Adapter 完成。
-5. M5：客户端矩阵、Evals、迁移说明和 v4.0.0 发布完成。
+5. M5：客户端矩阵、Evals、迁移说明和 v4.0.0 发布完成（`release-readiness`）。

@@ -23,6 +23,17 @@
       "title": "内部任务运行时与协议适配",
       "fr": ["FR-6"],
       "dependsOn": ["protocol-compatibility"]
+    },
+    {
+      "id": "release-readiness",
+      "title": "Agent Evals 与发布就绪",
+      "fr": ["FR-9"],
+      "dependsOn": [
+        "core-governance",
+        "memory-convergence",
+        "protocol-compatibility",
+        "task-runtime"
+      ]
     }
   ]
 }
