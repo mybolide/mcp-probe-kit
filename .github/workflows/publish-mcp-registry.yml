@@ -7,9 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "server.json / npm version to publish (e.g. 3.6.3)"
+        description: "Stable server.json / npm version to republish (e.g. 4.0.0; prereleases are rejected)"
         required: true
-        default: "3.6.3"
 
 permissions:
   contents: read
@@ -28,6 +27,10 @@ jobs:
             VERSION="${{ inputs.version }}"
           else
             VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          if [[ "${VERSION}" == *-* ]]; then
+            echo "Prerelease ${VERSION} must not be published to the stable MCP Registry" >&2
+            exit 1
           fi
           export VERSION
           node -e "

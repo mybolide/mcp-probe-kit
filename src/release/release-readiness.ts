@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { resolveReleaseChannel } from './release-channel.js';
 
 export interface ReleaseReadinessCheck {
   id: string;
@@ -31,8 +32,20 @@ interface PackageManifest {
 }
 
 interface ToolManifest {
+  version?: string;
   totalTools?: number;
+  structuredOutput?: { version?: string };
   toolsets?: Record<string, { count?: number; tools?: string[] }>;
+}
+
+interface PackageLockManifest {
+  version?: string;
+  packages?: Record<string, { version?: string }>;
+}
+
+interface ServerManifest {
+  version?: string;
+  packages?: Array<{ version?: string }>;
 }
 
 const SDK_PACKAGES = [
@@ -46,9 +59,44 @@ export function verifyReleaseReadiness(
   now: Date = new Date()
 ): ReleaseReadinessReport {
   const packageJson = readJson<PackageManifest>(workspaceRoot, 'package.json');
+  const packageLock = readJson<PackageLockManifest>(workspaceRoot, 'package-lock.json');
+  const serverManifest = readJson<ServerManifest>(workspaceRoot, 'server.json');
   const toolManifest = readJson<ToolManifest>(workspaceRoot, 'tools-manifest.json');
   const checks: ReleaseReadinessCheck[] = [];
   const dependencies = packageJson.dependencies ?? {};
+  const packageVersion = packageJson.version ?? '';
+  const releaseChannel = safeReleaseChannel(packageVersion);
+
+  checks.push(check(
+    'v4-release-version',
+    Boolean(releaseChannel && /^4\./.test(packageVersion)),
+    'error',
+    'valid 4.x SemVer release or prerelease',
+    packageVersion || 'missing',
+    'RC 或稳定版提交必须使用有效的 4.x SemVer 版本'
+  ));
+  checks.push(check(
+    'version-parity',
+    [
+      packageLock.version,
+      packageLock.packages?.['']?.version,
+      serverManifest.version,
+      ...(serverManifest.packages ?? []).map((item) => item.version),
+      toolManifest.version,
+      toolManifest.structuredOutput?.version,
+    ].every((item) => item === packageVersion),
+    'error',
+    packageVersion,
+    {
+      packageLock: packageLock.version,
+      packageLockRoot: packageLock.packages?.['']?.version,
+      server: serverManifest.version,
+      serverPackages: (serverManifest.packages ?? []).map((item) => item.version),
+      toolManifest: toolManifest.version,
+      structuredOutput: toolManifest.structuredOutput?.version,
+    },
+    'package、lockfile、server metadata 与 Tool Manifest 版本必须完全一致'
+  ));
 
   checks.push(check(
     'node-runtime',
@@ -116,8 +164,33 @@ export function verifyReleaseReadiness(
   checks.push(fileCheck(workspaceRoot, 'docs/migration-v3-to-v4.md'));
   checks.push(contentCheck(
     workspaceRoot,
+    'CHANGELOG.md',
+    [`## [${packageVersion}]`],
+    'CHANGELOG 必须包含当前发布版本的独立章节'
+  ));
+  checks.push(contentCheck(
+    workspaceRoot,
     'docs/specs/mcp-v4/compatibility-matrix.md',
-    ['Reference client 自动验证状态', '真实客户端人工验证矩阵', 'pending']
+    ['Reference client 自动验证状态', '真实客户端人工验证矩阵', 'pending'],
+    '兼容矩阵必须区分自动验证、真实客户端与 pending 状态'
+  ));
+  checks.push(contentCheck(
+    workspaceRoot,
+    '.github/workflows/release.yml',
+    [
+      'node-version: "20"',
+      'npm run release:verify',
+      'npm publish --tag',
+      'prerelease:',
+      'publish_mcp_registry',
+    ],
+    'Tag 发布工作流必须区分 RC 与稳定版发布渠道'
+  ));
+  checks.push(contentCheck(
+    workspaceRoot,
+    '.github/workflows/publish-mcp-registry.yml',
+    ['Prerelease ${VERSION} must not be published'],
+    '手工 MCP Registry 工作流必须拒绝预发布版本'
   ));
   checks.push(check(
     'release-scripts',
@@ -127,15 +200,6 @@ export function verifyReleaseReadiness(
     Object.keys(packageJson.scripts ?? {}),
     '发布候选必须提供 Agent Evals 与统一发布闸门'
   ));
-  checks.push(check(
-    'v4-version-bump',
-    /^4\./.test(packageJson.version ?? ''),
-    'warning',
-    '4.x release version',
-    packageJson.version,
-    '当前仍是开发版本；正式发布提交需将版本提升到 4.x'
-  ));
-
   const errors = checks.filter((item) => !item.passed && item.severity === 'error').length;
   const warnings = checks.filter((item) => !item.passed && item.severity === 'warning').length;
   return {
@@ -175,7 +239,8 @@ function fileCheck(root: string, relativePath: string): ReleaseReadinessCheck {
 function contentCheck(
   root: string,
   relativePath: string,
-  requiredTerms: string[]
+  requiredTerms: string[],
+  message: string
 ): ReleaseReadinessCheck {
   const absolutePath = path.join(root, relativePath);
   const content = fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, 'utf8') : '';
@@ -186,8 +251,16 @@ function contentCheck(
     'error',
     requiredTerms,
     missing.length === 0 ? requiredTerms : { missing },
-    `${relativePath} 必须区分自动验证、真实客户端与 pending 状态`
+    message
   );
+}
+
+function safeReleaseChannel(version: string): ReturnType<typeof resolveReleaseChannel> | undefined {
+  try {
+    return resolveReleaseChannel(version);
+  } catch {
+    return undefined;
+  }
 }
 
 function check(

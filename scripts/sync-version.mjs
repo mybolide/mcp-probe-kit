@@ -46,18 +46,34 @@ const docTextTargets = [
   'docs/pages/all-tools.html',
   'docs/pages/examples.html',
   'docs/pages/migration.html',
+  'docs/pages/migration-v4.html',
 ];
 
-/** 文档中的产品版本号（v3.x.y），不影响端口号等其它数字 */
-function bumpProductVersionInText(content) {
-  return content.replace(/v3\.\d+\.\d+/g, displayVersion);
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** 仅替换此前由 JSON SSOT 记录的产品版本，避免改写历史迁移版本。 */
+function bumpProductVersionInText(content, previousVersions) {
+  let updated = content;
+  for (const previousVersion of previousVersions) {
+    updated = updated.replace(
+      new RegExp(`v${escapeRegExp(previousVersion)}`, 'g'),
+      displayVersion
+    );
+  }
+  return updated;
 }
 
 const changed = [];
+const previousVersions = new Set();
 
 for (const { file, update } of jsonTargets) {
   const path = join(rootDir, file);
   const data = readJson(path);
+  if (typeof data.version === 'string' && data.version !== version) {
+    previousVersions.add(data.version);
+  }
   const before = JSON.stringify(data);
   update(data);
   if (JSON.stringify(data) !== before) {
@@ -69,7 +85,7 @@ for (const { file, update } of jsonTargets) {
 for (const rel of docTextTargets) {
   const path = join(rootDir, rel);
   const before = readFileSync(path, 'utf-8');
-  const after = bumpProductVersionInText(before);
+  const after = bumpProductVersionInText(before, previousVersions);
   if (after !== before) {
     writeFileSync(path, after, 'utf-8');
     changed.push(rel);

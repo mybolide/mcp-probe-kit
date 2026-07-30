@@ -59,6 +59,8 @@
 | Modern input_required | passed | 接受、拒绝、取消和无 capability 路径 |
 | Plan Heartbeat / Resume / Converge | passed | Plan lifecycle tests + production smoke |
 | Agent Routing / Plan Compliance / Memory Safety | passed | `npm run eval:agents` |
+| 本地真实 Agent 调用 | passed | `npm run acceptance:agent`：完整摘要路由、parent-child、Heartbeat/Resume、收敛拒绝与通过 |
+| npm tarball 安装调用 | passed | `npm run smoke:package`：打包、临时安装、Modern tools/list 与 workflow 调用 |
 
 ## 6. 真实客户端人工验证矩阵
 
@@ -78,5 +80,6 @@ Reference client 的 `passed` 不等于真实宿主客户端已验证。以下�
 ## 7. 发布判定
 
 - 自动 reference matrix、全量测试、构建、生产冒烟和 Agent Evals 全部通过，是发布候选的必要条件。
+- `4.0.0-rc.1` 只能使用 npm `next`；`latest` 与正式 MCP Registry 仅允许稳定版本。
 - 真实客户端尚未验证时，允许生成内部 release candidate，但不得在发布说明中宣称这些客户端已经通过兼容认证。
 - 人工矩阵出现 `failed` 时，必须记录复现步骤和降级结果；核心流程无法降级时阻断稳定版发布。

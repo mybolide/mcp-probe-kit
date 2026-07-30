@@ -11,19 +11,28 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release-meta.outputs.version }}
+      npm_tag: ${{ steps.release-meta.outputs.npm_tag }}
+      prerelease: ${{ steps.release-meta.outputs.prerelease }}
+      publish_mcp_registry: ${{ steps.release-meta.outputs.publish_mcp_registry }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build & test
-        run: npm run build && npm test
+      - name: Verify release tag and channel
+        id: release-meta
+        run: npx tsx scripts/verify-release-tag.ts "${{ github.ref_name }}"
+
+      - name: Run release gate
+        run: npm run release:verify
 
   github-release:
     needs: build
@@ -41,7 +50,7 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: release-notes.md
           draft: false
-          prerelease: false
+          prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
           generate_release_notes: false
 
   publish-npm:
@@ -53,7 +62,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
@@ -63,12 +72,13 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        run: npm publish
+        run: npm publish --tag "${{ needs.build.outputs.npm_tag }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-mcp-registry:
-    needs: publish-npm
+    needs: [build, publish-npm]
+    if: needs.build.outputs.publish_mcp_registry == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

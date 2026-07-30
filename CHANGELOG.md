@@ -11,6 +11,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.1] - 2026-07-30
+
+### Added
+
+- **SDK v2 dual-era runtime**: one server factory supports Legacy and Modern MCP clients, with `auto`, `legacy`, and `modern` protocol modes.
+- **Recoverable delegated plans**: added `plan_heartbeat`, `resume_plan`, and `converge`; the MCP toolset now contains 33 tools.
+- **Memory 2.0**: project knowledge is ranked ahead of shared experience within a bounded relevance boost; negative memory supports `failed_approach`, `false_root_cause`, and `regression_case` with lifecycle metadata.
+- **Parent-Child Spec automation**: complex, multi-module features default to `spec_layout=auto` and can be decomposed into parent and child specifications.
+- **Agent Evals and release gates**: deterministic routing, parameter, plan-compliance, memory-safety, and tool-description evaluations are included in `npm run release:verify`.
+
+### Changed
+
+- Requires **Node.js 20+** and the MCP TypeScript SDK v2 split packages.
+- `src/index.ts` is reduced to the stdio bootstrap; tools, resources, tasks, protocol compatibility, and runtime state are separated by responsibility.
+- Tool metadata is generated from a single Tool Catalog/Registry source instead of duplicated manual maps.
+- Long-term memory writes now occur only after `converge` passes; workflows prepare `MemoryCandidate` evidence before convergence.
+- Complex feature routing requires a complete conversation-derived task summary rather than forwarding short confirmations such as “continue”.
+
+### Compatibility
+
+- Legacy Tasks remain available through the compatibility adapter.
+- Modern clients without native Tasks support receive synchronous tool results rather than invalid Legacy task handles.
+- Form elicitation is used for `input_required` only when the client declares support; otherwise the existing Requirements Loop remains available.
+- RC packages are published under the npm **`next`** dist-tag. Stable `latest` and the official MCP Registry are not updated by prerelease tags.
+
+### Validation
+
+- Reference Legacy and Modern protocol matrix.
+- Full unit and integration suite, production build, protocol smoke tests, Agent Evals, package-content check, functional Spec checks, and Parent-Child Spec gate.
+- Real host-client certification remains explicitly tracked as `pending` until tested in the named client and version.
+
+### Known limitations
+
+- Modern Tasks Extension is not yet advertised as a native wire capability; Modern task requests use the validated synchronous fallback.
+- Cursor, Claude Code, VS Code Copilot, Cline, OpenCode, and MCP Inspector require separate real-client RC acceptance before the stable `4.0.0` release.
+
+---
+
 ## [3.7.0] - 2026-07-28
 
 ### Added

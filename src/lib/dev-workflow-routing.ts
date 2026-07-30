@@ -68,7 +68,7 @@ const SCENARIO_PATTERNS: Array<{ scenario: WorkflowScenario; patterns: RegExp[] 
   },
   {
     scenario: 'spec',
-    patterns: [/规格|spec|requirements|check_spec|验收/i],
+    patterns: [/规格|spec|requirements|check_spec|验收标准|规格验收|验收文档|验收条件/i],
   },
   {
     scenario: 'memory',

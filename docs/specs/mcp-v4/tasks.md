@@ -27,7 +27,7 @@
   - 证据块：Legacy、Modern、同步三路径等价测试；真实 Legacy Task 协议集成；取消/断线/晚到 Progress/并发状态竞态与 JSON 重启恢复测试。
   - 子任务引用：task-runtime/1.1、task-runtime/1.2、task-runtime/2.1。
 - [x] 0.6 完成 Agent Evals 与发布就绪自动化 — _需求: FR-9_
-  - 证据块：24 项 Agent Evals 全部通过；`npm run release:verify` 完成 80 文件/379 项测试、构建、双协议冒烟、Evals 和 npm 包清单；v3 → v4 迁移说明与 pending 人工客户端矩阵已落地。
+  - 证据块：24 项 Agent Evals 全部通过；`npm run release:verify` 完成 81 文件/383 项测试、构建、双协议冒烟、真实 Agent 调用、Evals 和 tarball 临时安装；`4.0.0-rc.1` 映射 npm `next` 且跳过稳定 MCP Registry；v3 → v4 迁移说明与 pending 人工客户端矩阵已落地。
   - 子任务引用：release-readiness/1.1、release-readiness/1.2、release-readiness/2.1。
 
 ## 需求覆盖矩阵
@@ -54,7 +54,7 @@
 | Task Runtime | `src/tasks/` | 新增 |
 | 测试 | `src/**/__tests__/`、reference clients、scripts | 新增 / 调整 |
 | 文档 | `docs/specs/mcp-v4/`、README、迁移说明 | 新增 / 更新 |
-| 发布就绪 | `src/evals/`、`scripts/run-agent-evals.ts`、发布校验脚本 | 新增 |
+| 发布就绪 | `src/evals/`、`src/release/`、Agent/协议/包安装验收脚本、发布校验脚本 | 新增 / 增强 |
 
 ## 子规格任务覆盖矩阵
 

@@ -13,7 +13,26 @@ v4 的核心变化是底层治理能力升级，而不是要求用户重写项�
 3. 确认 v3 项目中的 `docs/specs/`、`docs/project-context/` 和 Memory 配置可正常读取。
 4. 生产环境建议先记录当前 v3 版本，以便紧急回退。
 
-## 安装升级
+## RC 安装与稳定版升级
+
+当前候选版本使用 npm `next` 标签，不会覆盖稳定版 `latest`：
+
+```bash
+npm install -g mcp-probe-kit@next
+# 或固定首个候选版本
+npm install -g mcp-probe-kit@4.0.0-rc.1
+```
+
+MCP 客户端测试 RC：
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "mcp-probe-kit@next"]
+}
+```
+
+只有稳定版 `4.0.0` 发布后，才使用下面的稳定通道配置。
 
 使用 npx 的配置通常无需修改命令，只需将版本更新到 v4：
 
@@ -29,6 +48,8 @@ v4 的核心变化是底层治理能力升级，而不是要求用户重写项�
 ```bash
 npm install -g mcp-probe-kit@4
 ```
+
+RC 不发布到 `latest`，也不写入正式 MCP Registry。真实客户端验收完成并发布 `4.0.0` 后，稳定通道才会更新。
 
 ## Node.js 与 SDK
 

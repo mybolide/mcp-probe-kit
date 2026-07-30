@@ -31,7 +31,16 @@ if (start === -1) {
 const lineEnd = changelog.indexOf("\n", start);
 const bodyStart = lineEnd === -1 ? start + header.length : lineEnd + 1;
 const nextSection = changelog.indexOf("\n## [", bodyStart);
-const section = changelog.slice(bodyStart, nextSection === -1 ? undefined : nextSection).trim();
+const section = changelog
+  .slice(bodyStart, nextSection === -1 ? undefined : nextSection)
+  .trim()
+  .replace(/\n---\s*$/, "")
+  .trim();
+const prerelease = version.includes("-");
+const recommendedInstall = prerelease ? "next" : version;
+const exactInstall = prerelease
+  ? `\n# exact candidate\nnpm install -g mcp-probe-kit@${version}`
+  : "";
 
 const notes = `${section}
 
@@ -40,9 +49,9 @@ const notes = `${section}
 ## 📦 Installation
 
 \`\`\`bash
-npm install -g mcp-probe-kit@${version}
+npm install -g mcp-probe-kit@${recommendedInstall}${exactInstall}
 # or
-npx mcp-probe-kit@${version}
+npx mcp-probe-kit@${recommendedInstall}
 \`\`\`
 
 ## 📚 Documentation

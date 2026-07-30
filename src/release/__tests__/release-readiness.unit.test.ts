@@ -13,18 +13,26 @@ afterEach(() => {
 });
 
 describe('release readiness', () => {
-  it('当前仓库通过错误级静态检查，并正确报告版本准备状态', () => {
-    const report = verifyReleaseReadiness(process.cwd(), new Date('2026-07-30T12:00:00.000Z'));
+  it('完整的 4.0.0-rc.1 发布候选通过静态闸门', () => {
+    const root = createFixture({
+      version: '4.0.0-rc.1',
+      serverVersion: '2.0.0',
+      includeMigration: true,
+    });
+    const report = verifyReleaseReadiness(root, new Date('2026-07-30T12:00:00.000Z'));
 
     expect(report.passed).toBe(true);
     expect(report.totals.errors).toBe(0);
-    const versionCheck = report.checks.find((item) => item.id === 'v4-version-bump');
-    expect(versionCheck?.severity).toBe('warning');
-    expect(versionCheck?.passed).toBe(/^4\./.test(report.packageVersion));
+    expect(report.packageVersion).toBe('4.0.0-rc.1');
+    expect(report.checks.find((item) => item.id === 'version-parity')?.passed).toBe(true);
   });
 
   it('缺少迁移材料或 SDK 版本漂移时阻断发布候选', () => {
-    const root = createFixture({ serverVersion: '^2.0.0', includeMigration: false });
+    const root = createFixture({
+      version: '4.0.0-rc.1',
+      serverVersion: '^2.0.0',
+      includeMigration: false,
+    });
     const report = verifyReleaseReadiness(root);
 
     expect(report.passed).toBe(false);
@@ -34,12 +42,17 @@ describe('release readiness', () => {
   });
 });
 
-function createFixture(options: { serverVersion: string; includeMigration: boolean }): string {
+function createFixture(options: {
+  version: string;
+  serverVersion: string;
+  includeMigration: boolean;
+}): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-release-readiness-'));
   temporaryDirectories.push(root);
+  fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
   fs.mkdirSync(path.join(root, 'docs/specs/mcp-v4'), { recursive: true });
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
-    version: '3.7.0',
+    version: options.version,
     engines: { node: '>=20.0.0' },
     dependencies: {
       '@modelcontextprotocol/server': options.serverVersion,
@@ -49,13 +62,35 @@ function createFixture(options: { serverVersion: string; includeMigration: boole
     files: ['build', 'README.md', 'LICENSE'],
     scripts: { 'eval:agents': 'eval', 'release:verify': 'verify' },
   }));
+  fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
+    version: options.version,
+    packages: { '': { version: options.version } },
+  }));
+  fs.writeFileSync(path.join(root, 'server.json'), JSON.stringify({
+    version: options.version,
+    packages: [{ version: options.version }],
+  }));
   fs.writeFileSync(path.join(root, 'tools-manifest.json'), JSON.stringify({
+    version: options.version,
+    structuredOutput: { version: options.version },
     totalTools: 33,
     toolsets: { workflow: { tools: ['plan_heartbeat', 'resume_plan', 'converge'] } },
   }));
   fs.writeFileSync(
+    path.join(root, 'CHANGELOG.md'),
+    `# Changelog\n\n## [${options.version}] - 2026-07-30\n\n- release candidate\n`
+  );
+  fs.writeFileSync(
     path.join(root, 'docs/specs/mcp-v4/compatibility-matrix.md'),
     'Reference client 自动验证状态\n真实客户端人工验证矩阵\npending'
+  );
+  fs.writeFileSync(
+    path.join(root, '.github/workflows/release.yml'),
+    'node-version: "20"\nnpm run release:verify\nnpm publish --tag\nprerelease:\npublish_mcp_registry\n'
+  );
+  fs.writeFileSync(
+    path.join(root, '.github/workflows/publish-mcp-registry.yml'),
+    'Prerelease ${VERSION} must not be published\n'
   );
   if (options.includeMigration) {
     fs.writeFileSync(path.join(root, 'docs/migration-v3-to-v4.md'), 'migration');
