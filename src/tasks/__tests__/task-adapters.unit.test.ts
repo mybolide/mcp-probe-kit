@@ -1,15 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { LegacyTaskAdapter, type LegacyProtocolTaskStore } from "../legacy-task-adapter.js";
+import {
+  LegacyTaskAdapter,
+  type LegacyProtocolTask,
+  type LegacyProtocolTaskStore,
+} from "../legacy-task-adapter.js";
 import { ModernTaskAdapter } from "../modern-task-adapter.js";
 import { InMemoryInternalTaskStore } from "../task-store.js";
 import { InternalTaskRuntime } from "../task-runtime.js";
 import { SyncTaskAdapter } from "../sync-task-adapter.js";
 
 class FakeLegacyStore implements LegacyProtocolTaskStore {
-  readonly tasks = new Map<string, { taskId: string; status: string; result?: unknown }>();
+  readonly tasks = new Map<string, LegacyProtocolTask & { result?: unknown }>();
 
-  async createTask() {
-    const task = { taskId: `legacy-${this.tasks.size + 1}`, status: "working" };
+  async createTask(options: { ttl?: number | null }) {
+    const now = new Date().toISOString();
+    const task: LegacyProtocolTask = {
+      taskId: `legacy-${this.tasks.size + 1}`,
+      status: "working",
+      ttl: options.ttl ?? null,
+      createdAt: now,
+      lastUpdatedAt: now,
+    };
     this.tasks.set(task.taskId, task);
     return task;
   }
@@ -20,7 +31,10 @@ class FakeLegacyStore implements LegacyProtocolTaskStore {
 
   async updateTaskStatus(taskId: string, status: string) {
     const task = this.tasks.get(taskId);
-    if (task) task.status = status;
+    if (task) {
+      task.status = status as LegacyProtocolTask["status"];
+      task.lastUpdatedAt = new Date().toISOString();
+    }
   }
 
   async storeTaskResult(
@@ -32,6 +46,7 @@ class FakeLegacyStore implements LegacyProtocolTaskStore {
     if (task) {
       task.status = status;
       task.result = result;
+      task.lastUpdatedAt = new Date().toISOString();
     }
   }
 }

@@ -30,6 +30,8 @@ import {
   updateMemoryAsset,
   scanAndExtractPatterns,
 } from "../tools/index.js";
+import { ToolSchema } from "@modelcontextprotocol/core";
+import type { Tool } from "@modelcontextprotocol/server";
 import { allToolSchemas } from "../schemas/index.js";
 import { getOutputSchemaForTool, shouldIncludeOutputSchemaInToolsList } from "../lib/output-schema-registry.js";
 import { TOOL_CATALOG } from "./tool-catalog.js";
@@ -149,7 +151,7 @@ export function listToolDefinitionsForToolset(toolset: ToolsetType): readonly To
   return TOOL_DEFINITIONS.filter((definition) => definition.toolsets.includes(toolset));
 }
 
-export function prepareRegisteredToolForList(definition: ToolDefinition): RegisteredToolSchema {
+export function prepareRegisteredToolForList(definition: ToolDefinition): Tool {
   const tool: RegisteredToolSchema & {
     annotations?: ToolDefinition["annotations"];
     outputSchema?: ToolDefinition["outputSchema"];
@@ -162,7 +164,13 @@ export function prepareRegisteredToolForList(definition: ToolDefinition): Regist
     tool.outputSchema = definition.outputSchema;
   }
 
-  return tool;
+  const parsed = ToolSchema.safeParse(tool);
+  if (!parsed.success) {
+    throw new Error(
+      `工具 ${definition.name} 不符合 MCP v2 Tool Schema: ${parsed.error.message}`
+    );
+  }
+  return parsed.data;
 }
 
 export async function executeRegisteredTool(

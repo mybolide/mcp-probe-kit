@@ -7,12 +7,17 @@ import type { InternalTaskError, InternalTaskRecord } from "./task-types.js";
 
 export interface LegacyProtocolTask {
   taskId: string;
-  status: string;
+  status: "working" | "input_required" | "completed" | "failed" | "cancelled";
+  ttl: number | null;
+  createdAt: string;
+  lastUpdatedAt: string;
+  pollInterval?: number;
+  statusMessage?: string;
   [key: string]: unknown;
 }
 
 export interface LegacyProtocolTaskStore {
-  createTask(options: { ttl?: number }): Promise<LegacyProtocolTask>;
+  createTask(options: { ttl?: number | null }): Promise<LegacyProtocolTask>;
   getTask(taskId: string): Promise<LegacyProtocolTask | null>;
   updateTaskStatus(taskId: string, status: string, message?: string): Promise<unknown>;
   storeTaskResult(
@@ -24,7 +29,7 @@ export interface LegacyProtocolTaskStore {
 
 export interface LegacyTaskAdapterOptions<TResult> {
   taskStore: LegacyProtocolTaskStore;
-  ttl?: number;
+  ttl?: number | null;
   externalSignal?: AbortSignal;
   pollIntervalMs?: number;
   reportProgress?: (progress: number, message: string) => Promise<void> | void;
@@ -46,7 +51,9 @@ export class LegacyTaskAdapter {
     const protocolTask = await options.taskStore.createTask({ ttl: options.ttl });
     const internal = await this.runtime.create({
       ...request,
-      ttlMs: request.ttlMs ?? options.ttl,
+      ttlMs:
+        request.ttlMs ??
+        (typeof options.ttl === "number" ? options.ttl : undefined),
       idempotencyKey: request.idempotencyKey ?? `legacy:${protocolTask.taskId}`,
       metadata: {
         ...request.metadata,

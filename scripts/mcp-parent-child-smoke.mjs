@@ -1,5 +1,5 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import { Client } from "@modelcontextprotocol/client";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -43,7 +43,7 @@ try {
       spec_layout: "parent-child",
       subspecs,
     },
-  }, undefined, { timeout: 15_000 });
+  }, { timeout: 15_000 });
   assert(structured(addResult).specLayout === "parent-child", "add_feature 未返回 parent-child 布局");
   assert(structured(addResult).pendingFiles?.length === 7, "add_feature pendingFiles 数量不正确");
 
@@ -57,7 +57,7 @@ try {
       spec_layout: "parent-child",
       subspecs,
     },
-  }, undefined, { timeout: 15_000 });
+  }, { timeout: 15_000 });
   assert(!startResult.isError, "start_feature 返回错误");
   assert(Date.now() - startedAt < 15_000, "start_feature 超过客户端预算");
 
@@ -72,14 +72,14 @@ try {
   const validResult = await client.callTool({
     name: "check_spec",
     arguments: { feature_name: "commerce-v2", project_root: projectRoot },
-  }, undefined, { timeout: 15_000 });
+  }, { timeout: 15_000 });
   assert(structured(validResult).passed === true, "有效 parent-child 规格未通过 check_spec");
 
   write("tasks.md", fs.readFileSync(path.join(featureRoot, "tasks.md"), "utf8").replace("01-foundation/1.1", ""));
   const invalidResult = await client.callTool({
     name: "check_spec",
     arguments: { feature_name: "commerce-v2", project_root: projectRoot },
-  }, undefined, { timeout: 15_000 });
+  }, { timeout: 15_000 });
   assert(structured(invalidResult).issues?.some((issue) => issue.code === "unreferenced_subspec_task"), "断链任务未被 check_spec 拦截");
 
   console.log("parent-child MCP smoke passed");

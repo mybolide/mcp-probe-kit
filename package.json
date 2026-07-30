@@ -22,6 +22,7 @@
     "sync-ui-data": "tsx scripts/sync-ui-data.ts",
     "sync-version": "node scripts/sync-version.mjs",
     "sync-tool-manifest": "tsx scripts/sync-tool-manifest.ts",
+    "smoke:protocol": "node scripts/mcp-v2-dual-era-smoke.mjs",
     "verify-workflow-skill": "tsx scripts/verify-workflow-skill.ts",
     "sync-workflow-skill": "tsx scripts/sync-workflow-skill.ts",
     "prebuild": "npm run sync-version && npm run sync-ui-data && npm run sync-tool-manifest && npm run verify-workflow-skill && npm run sync-workflow-skill",
@@ -59,7 +60,7 @@
   },
   "homepage": "https://mcp-probe-kit.bytezonex.com",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "files": [
     "build",
@@ -70,10 +71,13 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
     "cross-spawn": "^7.0.6",
     "csv-parse": "^6.1.0",
-    "tar": "^7.5.6"
+    "tar": "^7.5.6",
+    "zod": "4.2.0"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",

@@ -1,9 +1,5 @@
 import * as path from "node:path";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import {
-  InMemoryTaskMessageQueue,
-  InMemoryTaskStore,
-} from "@modelcontextprotocol/sdk/experimental/index.js";
+import { Server } from "@modelcontextprotocol/server";
 import { NAME, VERSION } from "../version.js";
 import { GraphSnapshotStore } from "../resources/graph-snapshot-store.js";
 import { UiAppResourceStore } from "../resources/ui-app-resource-store.js";
@@ -17,6 +13,12 @@ import {
 } from "../tasks/task-store.js";
 import { InternalTaskRuntime } from "../tasks/task-runtime.js";
 import type { InternalTaskRecord } from "../tasks/task-types.js";
+import {
+  getProtocolModeFromEnv,
+  type ProtocolMode,
+} from "../protocol/protocol-capabilities.js";
+import { LegacyTaskWireStore } from "../protocol/legacy-task-wire-store.js";
+import { registerLegacyTaskHandlers } from "../protocol/register-legacy-task-handlers.js";
 
 const EXTENSIONS_CAPABILITY_KEY = "io.github.mybolide/extensions";
 
@@ -25,9 +27,18 @@ export interface ProbeServerRuntime {
   decorator: ResultDecorator;
   taskRuntime: InternalTaskRuntime;
   taskRuntimeReady: Promise<InternalTaskRecord[]>;
+  legacyTaskStore: LegacyTaskWireStore;
+  protocolMode: ProtocolMode;
 }
 
-export function createProbeServer(): ProbeServerRuntime {
+export interface CreateProbeServerOptions {
+  protocolMode?: ProtocolMode;
+}
+
+export function createProbeServer(
+  options: CreateProbeServerOptions = {}
+): ProbeServerRuntime {
+  const protocolMode = options.protocolMode ?? getProtocolModeFromEnv();
   const extensionsCapabilityEnabled = envEnabled("MCP_ENABLE_EXTENSIONS_CAPABILITY");
   const uiAppsEnabled = envEnabled("MCP_ENABLE_UI_APPS");
   const traceMetaKey = process.env.MCP_TRACE_META_KEY || "trace";
@@ -38,6 +49,7 @@ export function createProbeServer(): ProbeServerRuntime {
   const taskStore = createInternalTaskStore();
   const taskRuntime = new InternalTaskRuntime(taskStore);
   const taskRuntimeReady = recoverPersistedTasks(taskRuntime, taskStore);
+  const legacyTaskStore = new LegacyTaskWireStore();
 
   const capabilities: Record<string, unknown> = {
     tools: {},
@@ -63,23 +75,31 @@ export function createProbeServer(): ProbeServerRuntime {
     { name: NAME, version: VERSION },
     {
       capabilities: capabilities as never,
-      taskStore: new InMemoryTaskStore(),
-      taskMessageQueue: new InMemoryTaskMessageQueue(),
     }
   );
 
   registerToolHandlers(server, decorator, {
     progressNotificationsEnabled: envEnabled("MCP_PROGRESS_NOTIFICATIONS"),
     taskRuntime,
+    legacyTaskStore,
   });
+  registerLegacyTaskHandlers(server, legacyTaskStore);
   registerResourceHandlers(server, {
     extensionsCapabilityEnabled,
     traceMetaKey,
     graphStore,
     uiStore,
+    protocolMode,
   });
 
-  return { server, decorator, taskRuntime, taskRuntimeReady };
+  return {
+    server,
+    decorator,
+    taskRuntime,
+    taskRuntimeReady,
+    legacyTaskStore,
+    protocolMode,
+  };
 }
 
 function envEnabled(name: string): boolean {

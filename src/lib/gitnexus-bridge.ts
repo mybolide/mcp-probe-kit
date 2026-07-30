@@ -1,5 +1,5 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import { Client } from "@modelcontextprotocol/client";
 import { execFileSync } from "node:child_process";
 import spawn from "cross-spawn";
 import * as fs from "node:fs";
@@ -1150,7 +1150,6 @@ async function callBridgeTool(
         name: tool,
         arguments: args,
       },
-      undefined,
       {
         timeout: DEFAULT_CALL_TIMEOUT_MS,
         signal,

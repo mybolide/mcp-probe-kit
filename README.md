@@ -33,7 +33,9 @@ A powerful MCP (Model Context Protocol) server providing **30 tools** covering t
 
 **Supports All MCP Clients**: Cursor, Claude Desktop, Cline, Continue, and more
 
-**Protocol Version**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.27.1
+**Protocol Support**: Legacy MCP (2025-era) + Modern MCP 2026-07-28 · **SDK**: split TypeScript SDK v2 packages
+
+**Runtime**: Node.js 20 or newer. `MCP_PROTOCOL_MODE=auto` is the default; use `legacy` or `modern` only for compatibility diagnosis.
 
 ---
 

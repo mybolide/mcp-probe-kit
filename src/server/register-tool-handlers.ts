@@ -1,9 +1,13 @@
-import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
+  CallToolResultSchema,
   ProgressNotificationSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+} from "@modelcontextprotocol/core";
+import type {
+  CallToolResult,
+  ListToolsResult,
+  Server,
+} from "@modelcontextprotocol/server";
+import { CLIENT_CAPABILITIES_META_KEY } from "@modelcontextprotocol/server";
 import { getToolsetFromEnv } from "../lib/toolset-manager.js";
 import { shouldAutoEscalateToTask } from "../lib/task-defaults.js";
 import {
@@ -18,6 +22,14 @@ import {
 } from "../tasks/legacy-task-adapter.js";
 import { SyncTaskAdapter } from "../tasks/sync-task-adapter.js";
 import type { InternalTaskRuntime } from "../tasks/task-runtime.js";
+import { LegacyTaskWireStore } from "../protocol/legacy-task-wire-store.js";
+import { resolveProtocolEra } from "../protocol/protocol-capabilities.js";
+import {
+  applyRequirementsInputResponses,
+  buildRequirementsInputRequired,
+  isRequirementsLoopRequest,
+  supportsFormElicitation,
+} from "../protocol/requirements-input-bridge.js";
 import {
   executeRegisteredTool,
   listToolDefinitions,
@@ -30,6 +42,7 @@ import type { ToolResult } from "./runtime-types.js";
 export interface ToolHandlerOptions {
   progressNotificationsEnabled: boolean;
   taskRuntime: InternalTaskRuntime;
+  legacyTaskStore: LegacyTaskWireStore;
 }
 
 export function registerToolHandlers(
@@ -40,7 +53,7 @@ export function registerToolHandlers(
   const legacyTaskAdapter = new LegacyTaskAdapter(options.taskRuntime);
   const syncTaskAdapter = new SyncTaskAdapter(options.taskRuntime);
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
+  server.setRequestHandler("tools/list", async (): Promise<ListToolsResult> => {
     const toolset = getToolsetFromEnv();
     const definitions = listToolDefinitionsForToolset(toolset);
     const tools = definitions.map(prepareRegisteredToolForList);
@@ -51,10 +64,27 @@ export function registerToolHandlers(
     return { tools };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+  server.setRequestHandler("tools/call", async (request, ctx) => {
     const { name, arguments: args } = request.params;
     let taskRequest = request.params.task;
-    const traceMeta = decorator.getTraceMeta(extra._meta);
+    const traceMeta = decorator.getTraceMeta(ctx.mcpReq._meta);
+    const protocolEra = resolveProtocolEra(server.getNegotiatedProtocolVersion());
+    const inputApplication = applyRequirementsInputResponses(
+      name,
+      args,
+      ctx.mcpReq.inputResponses
+    );
+    const effectiveArgs = inputApplication.args;
+
+    if (inputApplication.cancelled) {
+      return toProtocolToolResult(
+        decorator.withTraceMeta(makeToolError(inputApplication.cancelled), traceMeta)
+      );
+    }
+
+    if (isRequirementsLoopRequest(name, args) || ctx.mcpReq.inputResponses) {
+      taskRequest = undefined;
+    }
 
     if (shouldAutoEscalateToTask(name, Boolean(taskRequest))) {
       taskRequest = taskRequest ?? {};
@@ -62,11 +92,11 @@ export function registerToolHandlers(
 
     const emitProgress = async (progress: number, message: string) => {
       if (!options.progressNotificationsEnabled) return;
-      const progressToken = extra._meta?.progressToken;
+      const progressToken = ctx.mcpReq._meta?.progressToken;
       if (progressToken === undefined) return;
 
       try {
-        await extra.sendNotification(
+        await ctx.mcpReq.notify(
           ProgressNotificationSchema.parse({
             method: "notifications/progress",
             params: {
@@ -87,12 +117,15 @@ export function registerToolHandlers(
     };
 
     if (taskRequest) {
-      if (!extra.taskStore) {
+      if (protocolEra === "modern") {
         const fallback = await syncTaskAdapter.execute({
           taskType: name,
-          metadata: { protocolMode: "sync-fallback" },
+          metadata: {
+            protocolMode: "modern-sync-fallback",
+            reason: "Modern Tasks Extension 尚未启用",
+          },
           executor: async (taskContext) => {
-            const { bootstrap, result } = await executeTool(name, args, {
+            const { bootstrap, result } = await executeTool(name, effectiveArgs, {
               signal: taskContext.signal,
               traceMeta,
               reportProgress: async (progress, message) => {
@@ -101,14 +134,24 @@ export function registerToolHandlers(
               },
             });
             ensureValidResult(name, result);
-            return decorator.decorate(name, args, result, traceMeta, bootstrap);
+            return decorator.decorate(
+              name,
+              effectiveArgs,
+              result,
+              traceMeta,
+              bootstrap
+            );
           },
         });
 
-        if (fallback.status === "completed" && fallback.result) return fallback.result;
-        return decorator.withTraceMeta(
-          makeToolError(fallback.error?.message ?? fallback.message ?? "任务执行失败"),
-          traceMeta
+        if (fallback.status === "completed" && fallback.result) {
+          return toProtocolToolResult(fallback.result);
+        }
+        return toProtocolToolResult(
+          decorator.withTraceMeta(
+            makeToolError(fallback.error?.message ?? fallback.message ?? "任务执行失败"),
+            traceMeta
+          )
         );
       }
 
@@ -117,19 +160,25 @@ export function registerToolHandlers(
           taskType: name,
           metadata: { protocolMode: "legacy" },
           executor: async (taskContext) => {
-            const { bootstrap, result } = await executeTool(name, args, {
+            const { bootstrap, result } = await executeTool(name, effectiveArgs, {
               signal: taskContext.signal,
               traceMeta,
               reportProgress: taskContext.reportProgress,
             });
             ensureValidResult(name, result);
-            return decorator.decorate(name, args, result, traceMeta, bootstrap);
+            return decorator.decorate(
+              name,
+              effectiveArgs,
+              result,
+              traceMeta,
+              bootstrap
+            );
           },
         },
         {
-          taskStore: wrapLegacyTaskStore(extra.taskStore),
-          ttl: extra.taskRequestedTtl ?? taskRequest.ttl,
-          externalSignal: extra.signal,
+          taskStore: options.legacyTaskStore,
+          ttl: taskRequest.ttl,
+          externalSignal: ctx.mcpReq.signal,
           reportProgress: async (progress, message) => {
             await emitProgress(normalizeProgress(progress), message);
           },
@@ -143,11 +192,13 @@ export function registerToolHandlers(
         console.error(`[MCP Probe Kit] task execution failed: ${message}`);
       });
 
-      return decorator.withTraceMeta({ task: execution.task }, traceMeta);
+      return toProtocolToolResult(
+        decorator.withTraceMeta({ task: execution.task }, traceMeta)
+      );
     }
 
     const context: ToolExecutionContext = {
-      signal: extra.signal,
+      signal: ctx.mcpReq.signal,
       traceMeta,
       reportProgress: async (progress, message) => {
         await emitProgress(normalizeProgress(progress), message);
@@ -155,14 +206,28 @@ export function registerToolHandlers(
     };
 
     try {
-      ensureNotAborted(extra.signal, name);
-      const { bootstrap, result } = await executeTool(name, args, context);
+      ensureNotAborted(ctx.mcpReq.signal, name);
+      const { bootstrap, result } = await executeTool(name, effectiveArgs, context);
       ensureValidResult(name, result);
-      ensureNotAborted(extra.signal, name);
-      return decorator.decorate(name, args, result, traceMeta, bootstrap);
+      ensureNotAborted(ctx.mcpReq.signal, name);
+      const inputRequiredResult = buildRequirementsInputRequired(
+        result,
+        supportsFormElicitation(
+          server,
+          (ctx.mcpReq.envelope as Record<string, unknown> | undefined)?.[
+            CLIENT_CAPABILITIES_META_KEY
+          ]
+        )
+      );
+      if (inputRequiredResult) return inputRequiredResult;
+      return toProtocolToolResult(
+        decorator.decorate(name, effectiveArgs, result, traceMeta, bootstrap)
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return decorator.withTraceMeta(makeToolError(message), traceMeta);
+      return toProtocolToolResult(
+        decorator.withTraceMeta(makeToolError(message), traceMeta)
+      );
     }
   });
 }
@@ -217,17 +282,10 @@ function makeToolError(errorMessage: string): ToolResult {
   };
 }
 
-function wrapLegacyTaskStore(
-  taskStore: NonNullable<Parameters<Parameters<Server["setRequestHandler"]>[1]>[1]["taskStore"]>
-): LegacyProtocolTaskStore {
-  return {
-    createTask: async (options) =>
-      (await taskStore.createTask(options)) as LegacyProtocolTask,
-    getTask: async (taskId) =>
-      ((await taskStore.getTask(taskId)) as LegacyProtocolTask | undefined) ?? null,
-    updateTaskStatus: async (taskId, status, message) =>
-      taskStore.updateTaskStatus(taskId, status as never, message),
-    storeTaskResult: async (taskId, status, result) =>
-      taskStore.storeTaskResult(taskId, status as never, result as never),
-  };
+function toProtocolToolResult(result: ToolResult): CallToolResult {
+  const parsed = CallToolResultSchema.safeParse(result);
+  if (!parsed.success) {
+    throw new Error(`工具结果不符合 MCP v2 Schema: ${parsed.error.message}`);
+  }
+  return parsed.data;
 }

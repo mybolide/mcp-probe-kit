@@ -2,12 +2,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
   CallToolResultSchema,
   CreateTaskResultSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+  GetTaskResultSchema,
+} from "@modelcontextprotocol/core";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { createProbeServer } from "../../server/create-server.js";
 
 const cleanup: string[] = [];
@@ -36,8 +36,8 @@ describe("Legacy Task protocol integration", () => {
     await client.connect(clientTransport);
 
     try {
-      const created = await client.request(
-        {
+      const created = CreateTaskResultSchema.parse(
+        await client.request({
           method: "tools/call",
           params: {
             name: "workflow",
@@ -48,8 +48,7 @@ describe("Legacy Task protocol integration", () => {
             },
             task: { ttl: 60_000 },
           },
-        },
-        CreateTaskResultSchema
+        } as never, CreateTaskResultSchema)
       );
 
       expect(created.task.taskId).toBeTruthy();
@@ -57,9 +56,11 @@ describe("Legacy Task protocol integration", () => {
       const terminal = await waitForTerminalTask(client, created.task.taskId);
       expect(terminal.status).toBe("completed");
 
-      const result = await client.experimental.tasks.getTaskResult(
-        created.task.taskId,
-        CallToolResultSchema
+      const result = CallToolResultSchema.parse(
+        await client.request({
+          method: "tasks/result",
+          params: { taskId: created.task.taskId },
+        } as never, CallToolResultSchema)
       );
       expect(result.isError ?? false).toBe(false);
       expect(result.structuredContent).toMatchObject({
@@ -76,7 +77,12 @@ describe("Legacy Task protocol integration", () => {
 
 async function waitForTerminalTask(client: Client, taskId: string) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
-    const task = await client.experimental.tasks.getTask(taskId);
+    const task = GetTaskResultSchema.parse(
+      await client.request({
+        method: "tasks/get",
+        params: { taskId },
+      } as never, GetTaskResultSchema)
+    );
     if (["completed", "failed", "cancelled"].includes(task.status)) return task;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }

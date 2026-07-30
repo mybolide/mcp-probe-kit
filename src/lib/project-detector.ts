@@ -65,7 +65,15 @@ const detectionRules: Record<string, DetectionRule> = {
       'tauri': { deps: ['@tauri-apps/api'], category: 'desktop' },
       
       // MCP 服务器
-      'mcp-server': { deps: ['@modelcontextprotocol/sdk'], category: 'library' }
+      'mcp-server': {
+        deps: [
+          '@modelcontextprotocol/sdk',
+          '@modelcontextprotocol/server',
+          '@modelcontextprotocol/client',
+          '@modelcontextprotocol/core',
+        ],
+        category: 'library',
+      }
     }
   },
   

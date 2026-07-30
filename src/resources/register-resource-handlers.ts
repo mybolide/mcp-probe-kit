@@ -1,8 +1,9 @@
-import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import {
-  ListResourcesRequestSchema,
-  ReadResourceRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import type {
+  ListResourcesResult,
+  ReadResourceResult,
+  Server,
+} from "@modelcontextprotocol/server";
+import { CLIENT_CAPABILITIES_META_KEY } from "@modelcontextprotocol/server";
 import { NAME, VERSION } from "../version.js";
 import {
   PROJECT_BOOTSTRAP_URI,
@@ -13,19 +14,26 @@ import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
 import { listToolDefinitions } from "../server/tool-registry.js";
 import { GraphSnapshotStore } from "./graph-snapshot-store.js";
 import { UiAppResourceStore } from "./ui-app-resource-store.js";
+import {
+  resolveProtocolEra,
+  resolveProtocolFeatures,
+  type ProtocolMode,
+} from "../protocol/protocol-capabilities.js";
+import { supportsFormElicitation } from "../protocol/requirements-input-bridge.js";
 
 export interface ResourceHandlerOptions {
   extensionsCapabilityEnabled: boolean;
   traceMetaKey: string;
   graphStore: GraphSnapshotStore;
   uiStore: UiAppResourceStore;
+  protocolMode: ProtocolMode;
 }
 
 export function registerResourceHandlers(
   server: Server,
   options: ResourceHandlerOptions
 ): void {
-  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  server.setRequestHandler("resources/list", async (): Promise<ListResourcesResult> => {
     const resources = [
       {
         uri: "probe://status",
@@ -51,46 +59,72 @@ export function registerResourceHandlers(
     return { resources };
   });
 
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-    const { uri } = request.params;
+  server.setRequestHandler(
+    "resources/read",
+    async (request, ctx): Promise<ReadResourceResult> => {
+      const { uri } = request.params;
 
-    if (uri === "probe://status") {
-      return {
-        contents: [
-          {
-            uri,
-            mimeType: "application/json",
-            text: JSON.stringify(buildStatus(server, options), null, 2),
-          },
-        ],
-      };
-    }
-
-    if (uri === PROJECT_BOOTSTRAP_URI || uri.startsWith("probe://project/")) {
-      try {
-        const content = readProjectResourceContent(uri, resolveWorkspaceRoot(""));
-        if (!content) throw new Error(`未知项目 resource: ${uri}`);
-        return { contents: [content] };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`读取项目 resource 失败 (${uri}): ${message}`);
+      if (uri === "probe://status") {
+        const envelopeCapabilities = (
+          ctx.mcpReq.envelope as Record<string, unknown> | undefined
+        )?.[CLIENT_CAPABILITIES_META_KEY];
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: "application/json",
+              text: JSON.stringify(
+                buildStatus(server, options, envelopeCapabilities),
+                null,
+                2
+              ),
+            },
+          ],
+        };
       }
+
+      if (uri === PROJECT_BOOTSTRAP_URI || uri.startsWith("probe://project/")) {
+        try {
+          const content = readProjectResourceContent(uri, resolveWorkspaceRoot(""));
+          if (!content) throw new Error(`未知项目 resource: ${uri}`);
+          return { contents: [content] };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(`读取项目 resource 失败 (${uri}): ${message}`);
+        }
+      }
+
+      if (uri.startsWith("ui://")) {
+        const content = options.uiStore.read(uri);
+        if (!content) throw new Error(`未知 UI 资源: ${uri}`);
+        return { contents: [content] };
+      }
+
+      const graphContent = options.graphStore.read(uri);
+      if (graphContent) return { contents: [graphContent] };
+
+      throw new Error(`未知资源: ${uri}`);
     }
-
-    if (uri.startsWith("ui://")) {
-      const content = options.uiStore.read(uri);
-      if (!content) throw new Error(`未知 UI 资源: ${uri}`);
-      return { contents: [content] };
-    }
-
-    const graphContent = options.graphStore.read(uri);
-    if (graphContent) return { contents: [graphContent] };
-
-    throw new Error(`未知资源: ${uri}`);
-  });
+  );
 }
 
-function buildStatus(server: Server, options: ResourceHandlerOptions) {
+function buildStatus(
+  server: Server,
+  options: ResourceHandlerOptions,
+  envelopeCapabilities?: unknown
+) {
+  const negotiatedVersion = server.getNegotiatedProtocolVersion();
+  const era = resolveProtocolEra(negotiatedVersion);
+  const features = resolveProtocolFeatures({
+    era,
+    formElicitationSupported: supportsFormElicitation(
+      server,
+      envelopeCapabilities
+    ),
+    progressEnabled: envEnabled("MCP_PROGRESS_NOTIFICATIONS"),
+    appsEnabled: options.uiStore.enabled,
+    modernTasksEnabled: false,
+  });
   return {
     status: "running",
     timestamp: new Date().toISOString(),
@@ -104,10 +138,11 @@ function buildStatus(server: Server, options: ResourceHandlerOptions) {
       traceMetaKey: options.traceMetaKey,
       uiAppsEnabled: options.uiStore.enabled,
     },
-    experimentalTasksStreaming: {
-      requestStream: typeof server.experimental.tasks.requestStream === "function",
-      createMessageStream: typeof server.experimental.tasks.createMessageStream === "function",
-      elicitInputStream: typeof server.experimental.tasks.elicitInputStream === "function",
+    protocol: {
+      mode: options.protocolMode,
+      era,
+      negotiatedVersion: negotiatedVersion ?? null,
+      features,
     },
     graphSnapshots: options.graphStore.status(),
     toolCount: listToolDefinitions().length,
@@ -132,4 +167,9 @@ function discoverProjectResourceStatus() {
 
 function toPosixPath(value: string): string {
   return value.replace(/\\/g, "/");
+}
+
+function envEnabled(name: string): boolean {
+  const raw = process.env[name];
+  return raw !== undefined && /^(1|true|yes|on)$/i.test(raw.trim());
 }
