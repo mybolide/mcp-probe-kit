@@ -15,6 +15,6 @@
 - [x] 2.2 从 Registry 生成 tools/list、dispatcher、manifest 与 Skill 路由 — _需求: FR-7_
   - 证据块：`src/index.ts` 已通过 Registry 生成 `tools/list` 并执行 Handler，原 30 分支 switch 已删除；Manifest/Skill/Toolset/Annotation 均由 Catalog 生成；逐工具 tools/list 等价测试通过。
   - 涉及文件：`src/index.ts`、`src/server/tool-manifest.ts`、`scripts/sync-tool-manifest.ts`、`tools-manifest.json`、`src/lib/mcp-tool-skill-registry.ts`。
-- [ ] 2.3 拆分 Server 核心并收敛 `src/index.ts` — _需求: FR-1, FR-2, FR-7_
-  - 证据块：启动、tools、resources、apps、tasks 各模块测试通过，`src/index.ts` 仅保留启动职责。
-  - 涉及文件：`src/server/`、`src/resources/`、`src/index.ts`。
+- [x] 2.3 拆分 Server 核心并收敛 `src/index.ts` — _需求: FR-1, FR-2, FR-7_
+  - 证据块：`src/index.ts` 从 1159 行收敛为 28 行，仅负责 stdio 启动；Server Factory、tools/Legacy Tasks、Resources、UI Apps、Graph Snapshot 与结果装饰均已模块化。真实 SDK Client 完成 initialize、30 个 tools/list、resources/list、probe://status 和 workflow tools/call 冒烟验证。
+  - 涉及文件：`src/server/create-server.ts`、`src/server/register-tool-handlers.ts`、`src/server/result-decorator.ts`、`src/server/runtime-types.ts`、`src/resources/`、`src/index.ts`。

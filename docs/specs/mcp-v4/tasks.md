@@ -12,8 +12,8 @@
 - [x] 0.1 建立 v4 基线与 parent-child 规格 — _需求: FR-1, FR-2, FR-7_
   - 证据块：`docs/specs/mcp-v4/spec-manifest.json` 与 `check_spec` 结果。
   - 子任务引用：core-governance/1.1、core-governance/1.2、core-governance/1.3。
-- [ ] 0.2 完成核心治理与 Server 解耦 — _需求: FR-1, FR-2, FR-7_
-  - 证据块：Tool Registry 生成物一致性测试、`src/index.ts` 职责收敛报告。
+- [x] 0.2 完成核心治理与 Server 解耦 — _需求: FR-1, FR-2, FR-7_
+  - 证据块：Tool Registry 生成物一致性测试、`src/index.ts` 28 行职责收敛、stdio initialize/list/read/call 冒烟验证。
   - 子任务引用：core-governance/2.1、core-governance/2.2、core-governance/2.3。
 - [ ] 0.3 完成 Memory 2.0、Converge 与恢复 — _需求: FR-3, FR-8_
   - 证据块：Memory relevance eval、失败经验召回测试、resume_plan 恢复测试。
@@ -29,8 +29,8 @@
 
 | FR ID | 子规格 | 任务引用 | 状态 |
 |---|---|---|---|
-| FR-1 | core-governance | core-governance/1.1、core-governance/2.3 | 进行中 |
-| FR-2 | core-governance | core-governance/1.2、core-governance/1.3 | 进行中 |
+| FR-1 | core-governance | core-governance/1.1、core-governance/2.3 | 已完成 |
+| FR-2 | core-governance | core-governance/1.2、core-governance/1.3 | 已完成 |
 | FR-3 | memory-convergence | memory-convergence/1.1、memory-convergence/1.2 | 未开始 |
 | FR-4 | protocol-compatibility | protocol-compatibility/1.1、protocol-compatibility/1.2 | 未开始 |
 | FR-5 | protocol-compatibility | protocol-compatibility/2.1 | 未开始 |
