@@ -10,7 +10,14 @@ import {
   ensureMcpProbeKitBootstrapForToolCall,
   type McpProbeKitBootstrapResult,
 } from "../lib/workflow-skill-installer.js";
-import { isAbortError, type ToolExecutionContext } from "../lib/tool-execution-context.js";
+import type { ToolExecutionContext } from "../lib/tool-execution-context.js";
+import {
+  LegacyTaskAdapter,
+  type LegacyProtocolTask,
+  type LegacyProtocolTaskStore,
+} from "../tasks/legacy-task-adapter.js";
+import { SyncTaskAdapter } from "../tasks/sync-task-adapter.js";
+import type { InternalTaskRuntime } from "../tasks/task-runtime.js";
 import {
   executeRegisteredTool,
   listToolDefinitions,
@@ -22,6 +29,7 @@ import type { ToolResult } from "./runtime-types.js";
 
 export interface ToolHandlerOptions {
   progressNotificationsEnabled: boolean;
+  taskRuntime: InternalTaskRuntime;
 }
 
 export function registerToolHandlers(
@@ -29,6 +37,9 @@ export function registerToolHandlers(
   decorator: ResultDecorator,
   options: ToolHandlerOptions
 ): void {
+  const legacyTaskAdapter = new LegacyTaskAdapter(options.taskRuntime);
+  const syncTaskAdapter = new SyncTaskAdapter(options.taskRuntime);
+
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const toolset = getToolsetFromEnv();
     const definitions = listToolDefinitionsForToolset(toolset);
@@ -77,69 +88,62 @@ export function registerToolHandlers(
 
     if (taskRequest) {
       if (!extra.taskStore) {
+        const fallback = await syncTaskAdapter.execute({
+          taskType: name,
+          metadata: { protocolMode: "sync-fallback" },
+          executor: async (taskContext) => {
+            const { bootstrap, result } = await executeTool(name, args, {
+              signal: taskContext.signal,
+              traceMeta,
+              reportProgress: async (progress, message) => {
+                await taskContext.reportProgress(progress, message);
+                await emitProgress(normalizeProgress(progress), message);
+              },
+            });
+            ensureValidResult(name, result);
+            return decorator.decorate(name, args, result, traceMeta, bootstrap);
+          },
+        });
+
+        if (fallback.status === "completed" && fallback.result) return fallback.result;
         return decorator.withTraceMeta(
-          makeToolError("服务器未启用任务存储，无法创建任务"),
+          makeToolError(fallback.error?.message ?? fallback.message ?? "任务执行失败"),
           traceMeta
         );
       }
 
-      const task = await extra.taskStore.createTask({
-        ttl: extra.taskRequestedTtl ?? taskRequest.ttl,
-      });
-      const taskAbortController = new AbortController();
-      const cancelWatcher = setInterval(() => {
-        void (async () => {
-          try {
-            const latestTask = await extra.taskStore?.getTask(task.taskId);
-            if (latestTask?.status === "cancelled" && !taskAbortController.signal.aborted) {
-              taskAbortController.abort();
-            }
-          } catch {
-            // ignore watcher errors
-          }
-        })();
-      }, 400);
-
-      const onRequestAbort = () => taskAbortController.abort();
-      extra.signal.addEventListener("abort", onRequestAbort, { once: true });
-
-      const taskContext: ToolExecutionContext = {
-        signal: taskAbortController.signal,
-        traceMeta,
-        reportProgress: async (progress, message) => {
-          const normalized = normalizeProgress(progress);
-          await emitProgress(normalized, message);
-          try {
-            await extra.taskStore?.updateTaskStatus(
-              task.taskId,
-              "working",
-              `[${normalized}%] ${message}`
-            );
-          } catch {
-            // task may have reached a terminal status
-          }
+      const execution = await legacyTaskAdapter.start(
+        {
+          taskType: name,
+          metadata: { protocolMode: "legacy" },
+          executor: async (taskContext) => {
+            const { bootstrap, result } = await executeTool(name, args, {
+              signal: taskContext.signal,
+              traceMeta,
+              reportProgress: taskContext.reportProgress,
+            });
+            ensureValidResult(name, result);
+            return decorator.decorate(name, args, result, traceMeta, bootstrap);
+          },
         },
-      };
+        {
+          taskStore: wrapLegacyTaskStore(extra.taskStore),
+          ttl: extra.taskRequestedTtl ?? taskRequest.ttl,
+          externalSignal: extra.signal,
+          reportProgress: async (progress, message) => {
+            await emitProgress(normalizeProgress(progress), message);
+          },
+          failureResult: (error) =>
+            decorator.withTraceMeta(makeToolError(error.message), traceMeta),
+        }
+      );
 
-      void executeTaskInBackground({
-        name,
-        args,
-        taskId: task.taskId,
-        context: taskContext,
-        traceMeta,
-        decorator,
-        taskStore: extra.taskStore,
-      })
-        .catch((error) => {
-          const message = error instanceof Error ? error.message : String(error);
-          console.error(`[MCP Probe Kit] task execution failed: ${message}`);
-        })
-        .finally(() => {
-          clearInterval(cancelWatcher);
-          extra.signal.removeEventListener("abort", onRequestAbort);
-        });
+      void execution.completion.catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[MCP Probe Kit] task execution failed: ${message}`);
+      });
 
-      return decorator.withTraceMeta({ task }, traceMeta);
+      return decorator.withTraceMeta({ task: execution.task }, traceMeta);
     }
 
     const context: ToolExecutionContext = {
@@ -161,39 +165,6 @@ export function registerToolHandlers(
       return decorator.withTraceMeta(makeToolError(message), traceMeta);
     }
   });
-}
-
-async function executeTaskInBackground(options: {
-  name: string;
-  args: unknown;
-  taskId: string;
-  context: ToolExecutionContext;
-  traceMeta: unknown;
-  decorator: ResultDecorator;
-  taskStore: NonNullable<Parameters<Parameters<Server["setRequestHandler"]>[1]>[1]["taskStore"]>;
-}) {
-  const { name, args, taskId, context, traceMeta, decorator, taskStore } = options;
-  try {
-    const { bootstrap, result: rawResult } = await executeTool(name, args, context);
-    ensureValidResult(name, rawResult);
-    const result = decorator.decorate(name, args, rawResult, traceMeta, bootstrap);
-    const latestTask = await taskStore.getTask(taskId);
-    if (!latestTask || isTerminalTaskStatus(latestTask.status)) return;
-    await taskStore.storeTaskResult(taskId, result.isError ? "failed" : "completed", result as never);
-  } catch (error) {
-    const latestTask = await taskStore.getTask(taskId);
-    if (!latestTask || isTerminalTaskStatus(latestTask.status)) return;
-    const message = isAbortError(error)
-      ? `工具执行已取消: ${name}`
-      : error instanceof Error
-        ? error.message
-        : String(error);
-    await taskStore.storeTaskResult(
-      taskId,
-      "failed",
-      decorator.withTraceMeta(makeToolError(message), traceMeta) as never
-    );
-  }
 }
 
 async function executeTool(
@@ -246,6 +217,17 @@ function makeToolError(errorMessage: string): ToolResult {
   };
 }
 
-function isTerminalTaskStatus(status: string): boolean {
-  return status === "completed" || status === "failed" || status === "cancelled";
+function wrapLegacyTaskStore(
+  taskStore: NonNullable<Parameters<Parameters<Server["setRequestHandler"]>[1]>[1]["taskStore"]>
+): LegacyProtocolTaskStore {
+  return {
+    createTask: async (options) =>
+      (await taskStore.createTask(options)) as LegacyProtocolTask,
+    getTask: async (taskId) =>
+      ((await taskStore.getTask(taskId)) as LegacyProtocolTask | undefined) ?? null,
+    updateTaskStatus: async (taskId, status, message) =>
+      taskStore.updateTaskStatus(taskId, status as never, message),
+    storeTaskResult: async (taskId, status, result) =>
+      taskStore.storeTaskResult(taskId, status as never, result as never),
+  };
 }

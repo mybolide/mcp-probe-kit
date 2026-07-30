@@ -9,7 +9,13 @@ import { createProbeServer } from "./server/create-server.js";
 const MCP_BUILD_TAG = "v4-server-split-20260730";
 
 async function main(): Promise<void> {
-  const { server } = createProbeServer();
+  const { server, taskRuntimeReady } = createProbeServer();
+  const recoveredTasks = await taskRuntimeReady;
+  if (recoveredTasks.length > 0) {
+    console.error(
+      `[MCP Probe Kit] 已处理 ${recoveredTasks.length} 个重启遗留任务；不可恢复任务已明确标记 failed`
+    );
+  }
   await server.connect(new StdioServerTransport());
 
   const workspace = resolveWorkspaceRootWithMeta("");

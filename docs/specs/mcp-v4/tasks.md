@@ -21,8 +21,8 @@
 - [ ] 0.4 完成 SDK v2 双协议兼容 — _需求: FR-4, FR-5_
   - 证据块：Legacy / Modern reference client 集成测试和 capability 降级矩阵。
   - 子任务引用：protocol-compatibility/1.1、protocol-compatibility/1.2、protocol-compatibility/2.1。
-- [ ] 0.5 完成 Task Runtime 与适配器 — _需求: FR-6_
-  - 证据块：Legacy、Modern、同步三路径测试及取消/进度竞态测试。
+- [x] 0.5 完成 Task Runtime 与适配器 — _需求: FR-6_
+  - 证据块：Legacy、Modern、同步三路径等价测试；真实 Legacy Task 协议集成；取消/断线/晚到 Progress/并发状态竞态与 JSON 重启恢复测试。
   - 子任务引用：task-runtime/1.1、task-runtime/1.2、task-runtime/2.1。
 
 ## 需求覆盖矩阵
@@ -34,7 +34,7 @@
 | FR-3 | memory-convergence | memory-convergence/1.1、memory-convergence/1.2 | 未开始 |
 | FR-4 | protocol-compatibility | protocol-compatibility/1.1、protocol-compatibility/1.2 | 未开始 |
 | FR-5 | protocol-compatibility | protocol-compatibility/2.1 | 未开始 |
-| FR-6 | task-runtime | task-runtime/1.1、task-runtime/1.2、task-runtime/2.1 | 未开始 |
+| FR-6 | task-runtime | task-runtime/1.1、task-runtime/1.2、task-runtime/2.1 | 已完成 |
 | FR-7 | core-governance | core-governance/2.1、core-governance/2.2 | 已完成 |
 | FR-8 | memory-convergence | memory-convergence/2.1 | 未开始 |
 

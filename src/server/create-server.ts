@@ -10,12 +10,21 @@ import { UiAppResourceStore } from "../resources/ui-app-resource-store.js";
 import { registerResourceHandlers } from "../resources/register-resource-handlers.js";
 import { registerToolHandlers } from "./register-tool-handlers.js";
 import { ResultDecorator } from "./result-decorator.js";
+import {
+  InMemoryInternalTaskStore,
+  JsonFileInternalTaskStore,
+  type InternalTaskStore,
+} from "../tasks/task-store.js";
+import { InternalTaskRuntime } from "../tasks/task-runtime.js";
+import type { InternalTaskRecord } from "../tasks/task-types.js";
 
 const EXTENSIONS_CAPABILITY_KEY = "io.github.mybolide/extensions";
 
 export interface ProbeServerRuntime {
   server: Server;
   decorator: ResultDecorator;
+  taskRuntime: InternalTaskRuntime;
+  taskRuntimeReady: Promise<InternalTaskRecord[]>;
 }
 
 export function createProbeServer(): ProbeServerRuntime {
@@ -26,6 +35,9 @@ export function createProbeServer(): ProbeServerRuntime {
   const graphStore = new GraphSnapshotStore(graphSnapshotDir);
   const uiStore = new UiAppResourceStore(uiAppsEnabled);
   const decorator = new ResultDecorator(traceMetaKey, graphStore, uiStore);
+  const taskStore = createInternalTaskStore();
+  const taskRuntime = new InternalTaskRuntime(taskStore);
+  const taskRuntimeReady = recoverPersistedTasks(taskRuntime, taskStore);
 
   const capabilities: Record<string, unknown> = {
     tools: {},
@@ -58,6 +70,7 @@ export function createProbeServer(): ProbeServerRuntime {
 
   registerToolHandlers(server, decorator, {
     progressNotificationsEnabled: envEnabled("MCP_PROGRESS_NOTIFICATIONS"),
+    taskRuntime,
   });
   registerResourceHandlers(server, {
     extensionsCapabilityEnabled,
@@ -66,7 +79,7 @@ export function createProbeServer(): ProbeServerRuntime {
     uiStore,
   });
 
-  return { server, decorator };
+  return { server, decorator, taskRuntime, taskRuntimeReady };
 }
 
 function envEnabled(name: string): boolean {
@@ -80,4 +93,30 @@ function resolveGraphSnapshotDir(): string {
     return path.resolve(process.cwd(), ".mcp-probe-kit", "graph-snapshots");
   }
   return path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+}
+
+function createInternalTaskStore(): InternalTaskStore {
+  const mode = (process.env.MCP_TASK_STORE ?? "memory").trim().toLowerCase();
+  if (mode === "memory") return new InMemoryInternalTaskStore();
+  if (mode !== "json") {
+    throw new Error(`不支持的 MCP_TASK_STORE: ${mode}（可选 memory/json）`);
+  }
+
+  const configuredPath = process.env.MCP_TASK_STORE_PATH?.trim();
+  const filePath = configuredPath
+    ? path.isAbsolute(configuredPath)
+      ? configuredPath
+      : path.resolve(process.cwd(), configuredPath)
+    : path.resolve(process.cwd(), ".mcp-probe-kit", "tasks.json");
+  return new JsonFileInternalTaskStore(filePath);
+}
+
+function recoverPersistedTasks(
+  runtime: InternalTaskRuntime,
+  store: InternalTaskStore
+): Promise<InternalTaskRecord[]> {
+  if (!(store instanceof JsonFileInternalTaskStore)) return Promise.resolve([]);
+  return runtime.recoverInterrupted(() => ({
+    reason: "服务重启后缺少可重建的执行器，请重新发起对应工具调用",
+  }));
 }

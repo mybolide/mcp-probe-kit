@@ -212,12 +212,15 @@ Core and orchestration tools support **structured output**, returning machine-re
 
 ### ⏱️ Native Tasks, Progress, and Cancellation
 
-- Built on MCP SDK native task support (`taskStore` + `taskMessageQueue`)
+- Uses an SDK-independent Internal Task Runtime, with the current SDK task protocol exposed through a Legacy Adapter
 - Supports task lifecycle endpoints: `tasks/get`, `tasks/result`, `tasks/list`, `tasks/cancel`
 - Advertises `capabilities.tasks.requests.tools.call` so clients can create tasks for `tools/call`
+- Falls back to synchronous execution when protocol task storage is unavailable
 - Emits `notifications/progress` when client provides `_meta.progressToken`
-- Handles request cancellation via `AbortSignal` and returns a clear cancellation error
+- Ignores late progress after terminal completion; tool/task result is the final completion signal
+- Handles request cancellation via `AbortSignal` and preserves a clear `cancelled` state
 - Long-running orchestration tools (`start_*`) and `sync_ui_data` support cooperative cancellation/progress callbacks
+- Internal task persistence defaults to memory. Set `MCP_TASK_STORE=json` to use `.mcp-probe-kit/tasks.json`, or set `MCP_TASK_STORE_PATH` to choose another JSON path. Interrupted tasks that cannot reconstruct their executor are explicitly marked failed on restart instead of being reported as still running.
 
 ### 🔌 Extensions & UI Apps (Optional)
 
@@ -305,7 +308,7 @@ This mode performs 1-2 rounds of structured clarification before entering spec/f
 
 ### Parent-Child Specifications
 
-For version-level or epic work, pass `spec_layout: "parent-child"` and an explicit `subspecs` array to `add_feature` or `start_feature`. The MCP server returns templates and `pendingFiles`; the calling Agent creates the parent spec, `spec-manifest.json`, and child specs after review. `check_spec` then validates the complete hierarchy recursively. The default `flat` layout is unchanged.
+For version-level or epic work, `start_feature` defaults to `spec_layout: "auto"` and selects `parent-child` when the requirement spans multiple modules, stages, or capability domains. If child boundaries are not known yet, the delegated plan first returns a `decompose-spec` step. You can still explicitly pass `flat` or `parent-child`; `add_feature` remains an atomic tool and defaults to `flat` unless the layout and `subspecs` are already defined. The MCP server returns templates and `pendingFiles`; the calling Agent creates the parent spec, `spec-manifest.json`, and child specs after review. `check_spec` then validates the complete hierarchy recursively.
 
 `start_feature` uses query-only GitNexus narrowing with an 8-second degradation budget, so graph cold starts do not block specification planning. Automatic index refresh is disabled by default; set `MCP_GITNEXUS_AUTO_REFRESH=1` when the MCP process should refresh the index before graph queries.
 
