@@ -21,5 +21,17 @@ describe("mcp-tool-skill-registry", () => {
     for (const name of listMcpToolSkillRegistryNames()) {
       expect(content).toContain(`\`${name}\``);
     }
+    expect(content).toContain("## 参数构造纪律");
+    expect(content).toContain("禁止把短确认语原样传给");
+    expect(content).toContain("spec_layout=auto");
+    expect(content).toContain("不得直接调用 `add_feature`");
+  });
+
+  it("关键工具的顶层描述明确复杂功能路由与上下文汇总要求", () => {
+    const byName = new Map(allToolSchemas.map((tool) => [tool.name, tool]));
+    expect(byName.get("start_feature")?.description).toContain("parent-child");
+    expect(byName.get("start_feature")?.description).toContain("当前对话已确认的完整");
+    expect(byName.get("workflow")?.description).toContain("完整任务意图");
+    expect(byName.get("add_feature")?.description).toContain("不是复杂功能的首个入口");
   });
 });

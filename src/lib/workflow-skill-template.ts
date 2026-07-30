@@ -6,6 +6,7 @@
 import { VERSION } from "../version.js";
 import {
   MCP_INTENT_QUICK_LOOKUP,
+  MCP_SKILL_ARGUMENT_RULES,
   MCP_SKILL_AVOID_RULES,
   MCP_SKILL_COMMON_FLOWS,
   MCP_TOOL_SKILL_GROUPS,
@@ -50,17 +51,25 @@ function renderAvoidRules(): string {
   return MCP_SKILL_AVOID_RULES.map((rule) => `- ${rule}`).join("\n");
 }
 
+function renderArgumentRules(): string {
+  return MCP_SKILL_ARGUMENT_RULES.map((rule) => `- ${rule}`).join("\n");
+}
+
 export function generateWorkflowSkillBody(skillVersion: string = VERSION): string {
   return `# MCP 调用时机 — mcp-probe-kit
 
-> 本 Skill 只回答一件事：**什么情况 → 调哪个 MCP**。不是开发流程剧本。
+> 本 Skill 负责：**什么情况调哪个 MCP，以及调用前如何构造完整参数**。不是开发流程剧本。
 > 由 mcp-probe-kit 自动安装；支持 MCP 的 Agent 客户端可从 \`.agents/skills/\` 加载。
 
 ## 总规则
 
 1. **先查下表**，有对应 MCP 就先调，再写代码 / 改文件
-2. **拿不准** → \`workflow\`：\`{ "intent": "<用户原话>" }\`
+2. **拿不准** → \`workflow\`：\`{ "intent": "<结合当前对话整理的完整任务摘要>" }\`
 3. \`start_*\` 会列出后续该调的 MCP；按返回逐步调用即可
+
+## 参数构造纪律
+
+${renderArgumentRules()}
 
 ---
 
@@ -94,7 +103,7 @@ ${renderAvoidRules()}
 
 export const MCP_PROBE_SKILL_NAME = "mcp-probe-kit";
 
-export const MCP_PROBE_SKILL_DESCRIPTION = `将用户意图路由到 mcp-probe-kit MCP 工具（start_feature、start_bugfix、code_insight、workflow、gencommit 等）。在已配置 MCP 且准备写代码前读取；仅说明调哪个 MCP，不是项目研发流程本身。Routes intent to mcp-probe-kit MCP tools; read before coding when MCP is configured.`;
+export const MCP_PROBE_SKILL_DESCRIPTION = `在已配置 mcp-probe-kit 的项目中，于新功能、Bug、UI、重构或提交前读取；统一选择首个 MCP、汇总当前对话构造完整参数，并让复杂功能通过 start_feature 自动采用 flat 或 parent-child Spec。仅负责工具路由与参数纪律，不承载完整研发流程。Routes coding intent, builds complete MCP arguments, and selects flat or parent-child specs for complex features.`;
 
 export function formatSkillFrontmatter(skillVersion: string = VERSION): string {
   return `---

@@ -8,13 +8,14 @@ export const projectToolSchemas = [
   {
     name: "workflow",
     description:
-      "当不确定该用哪个 MCP 工具时使用。根据意图返回分阶段 MCP 指南（firstTool + phases）。同时确保用户项目已存在 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 中的 Skill 引用（缺失则自动创建/更新）。",
+      "当不确定该用哪个 MCP 工具时使用。根据完整任务意图返回分阶段 MCP 指南（firstTool + phases）和下一工具参数提示。调用方必须汇总当前对话已确认的目标与约束，不得只传“继续/开始”等最后一句。新功能场景会提示 start_feature 并默认携带 spec_layout=auto。同时确保用户项目已存在 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 中的 Skill 引用（缺失则自动创建/更新）。",
     inputSchema: {
       type: "object",
       properties: {
         intent: {
           type: "string",
-          description: "用户目标或任务描述（自然语言）",
+          description:
+            "当前任务的完整意图摘要，应包含本轮对话已确认的目标、范围、模块、阶段和关键约束；用户只说“继续/开始/往下做”时，先结合前文重建任务摘要，禁止原样传入短确认语。",
         },
         scenario: {
           type: "string",
@@ -70,7 +71,8 @@ export const projectToolSchemas = [
   },
   {
     name: "add_feature",
-    description: "当用户需要添加新功能、生成功能规格文档时使用。生成新功能规格文档（需求/设计/任务清单），基于项目上下文",
+    description:
+      "原子规格生成工具：根据已经确定的 feature_name、description、spec_layout 和可选 subspecs，返回 flat 或 parent-child 规格模板与落盘计划。它不负责判断需求复杂度，也不是复杂功能的首个入口。新功能、跨模块升级或布局未确定时必须先调用 start_feature；通常仅按 start_feature 返回的 delegated plan 调用本工具。",
     inputSchema: {
       type: "object",
       properties: {
@@ -82,7 +84,8 @@ export const projectToolSchemas = [
         },
         description: {
           type: "string",
-          description: "功能详细描述。可以是简短的自然语言（如'添加用户认证功能'）或详细的需求说明",
+          description:
+            "已经收敛的功能描述。简单 flat 规格可使用简短描述；parent-child 必须包含完整范围、跨模块契约和边界，并同时提供 subspecs。复杂需求若尚未完成布局和子规格拆分，请先调用 start_feature。",
         },
         docs_dir: {
           type: "string",

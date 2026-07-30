@@ -45,6 +45,14 @@ export const MCP_INTENT_QUICK_LOOKUP: McpIntentQuickEntry[] = [
   { signal: "不确定用哪个 MCP", firstTool: "workflow" },
 ];
 
+/** Agent 调 MCP 前的参数构造纪律。 */
+export const MCP_SKILL_ARGUMENT_RULES = [
+  "用户只说“继续 / 开始 / 往下做”时，先结合当前对话、已有 Spec 和用户已确认决定，重建完整任务摘要；禁止把短确认语原样传给 `workflow.intent` 或 `start_*.description`。",
+  "新功能默认调用 `start_feature`，并传 `description=<完整范围摘要>`、`spec_layout=auto` 和明确的 `project_root`；让编排器决定 flat 或 parent-child。",
+  "跨模块、多阶段、大版本或架构升级不得直接调用 `add_feature`；只有布局和 `subspecs` 已明确时，才按 `start_feature` 返回的 plan 调用它。",
+  "工具参数必须表达当前任务事实，不要只复制用户最后一条消息；当前项目代码和已落盘 Spec 优先于历史记忆。",
+] as const;
+
 export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = [
   {
     id: "orchestration",
@@ -53,7 +61,7 @@ export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = [
       {
         name: "start_feature",
         whenToCall:
-          "任何**新功能 / 增强**；description 应汇总当前对话已确认的完整范围，默认自动判断 flat / parent-child，复杂多模块需求先拆子规格，再指引 `add_feature` → `check_spec` → 实现",
+          "任何**新功能 / 增强 / 大版本升级**的首选入口；先把当前对话已确认的完整范围汇总到 description，默认 `spec_layout=auto`，复杂多模块需求先拆 parent-child 子规格，再指引 `add_feature` → `check_spec` → 实现",
       },
       {
         name: "start_bugfix",
@@ -83,7 +91,7 @@ export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = [
     tools: [
       {
         name: "workflow",
-        whenToCall: "**不确定**该用哪个 MCP；或担心 Agent 跳过 MCP 直接写代码时",
+        whenToCall: "**不确定**该用哪个 MCP；或担心 Agent 跳过 MCP 直接写代码时。intent 必须是完整任务摘要，不是“继续/开始”等最后一句",
       },
     ],
   },
@@ -102,7 +110,7 @@ export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = [
       },
       {
         name: "add_feature",
-        whenToCall: "需要生成 `docs/specs/<feature>/` 规格（通常由 `start_feature` 触发）",
+        whenToCall: "仅在规格布局已确定时生成 `docs/specs/<feature>/`；复杂需求不得把它当首个入口，通常由 `start_feature` 的 plan 触发",
       },
       {
         name: "check_spec",
@@ -240,6 +248,7 @@ export const MCP_SKILL_COMMON_FLOWS = [
 
 export const MCP_SKILL_AVOID_RULES = [
   "有对应 MCP 却**直接大段写实现**",
+  "把用户的“继续 / 开始 / 往下做”原样当作 `workflow.intent` 或 `start_feature.description`",
   "大型跨模块需求绕过 `start_feature` 直接手写单体 Spec",
   "`check_spec` **未通过**就写功能代码",
   "Bug 修完**不** `memorize_asset`",

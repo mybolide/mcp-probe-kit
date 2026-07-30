@@ -17,6 +17,8 @@ describe("workflow-skill frontmatter", () => {
     expect(content.startsWith("---\n")).toBe(true);
     expect(content).toContain(`name: ${MCP_PROBE_SKILL_NAME}`);
     expect(content).toContain("description: >-");
+    expect(content).toContain("构造完整参数");
+    expect(content).toContain("parent-child Spec");
     expect(content).toContain('mcp-probe-kit-version: "3.6.6"');
     expect(content).toContain("# MCP 调用时机");
     expect(content).not.toContain(formatSkillVersionMarker("3.6.6"));

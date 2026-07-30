@@ -28,7 +28,12 @@ describe('workflow 工具', () => {
     }
     expect(result.structuredContent.firstTool).toBe('start_feature');
     expect(result.structuredContent.scenario).toBe('feature');
+    expect(result.structuredContent.firstToolArgsHint).toEqual({
+      description: '实现订单导出功能',
+      spec_layout: 'auto',
+    });
     expect(result.content[0].text).toContain('start_feature');
+    expect(result.content[0].text).toContain('spec_layout');
     expect(result.structuredContent.handles?.next_tool).toBe('start_feature');
     expect(fs.existsSync(path.join(projectRoot, '.agents/skills/mcp-probe-kit/SKILL.md'))).toBe(true);
   });

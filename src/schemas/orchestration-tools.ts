@@ -5,7 +5,8 @@
 export const orchestrationToolSchemas = [
   {
     name: "start_feature",
-    description: "当用户需要完整的新功能开发流程时使用。编排：检查上下文→生成规格→估算工作量。若只需规格文档请用 add_feature",
+    description:
+      "新功能、功能增强、大版本升级或跨模块研发的首选入口。Agent 必须把当前对话已确认的完整目标、范围、模块、阶段和约束汇总到 description；用户只说“继续/开始/往下做”时不得原样透传。默认 spec_layout=auto，复杂多模块或多阶段需求会先生成 parent-child 子规格拆分计划，再进入 add_feature→check_spec→实现。仅在规格布局和子规格已明确、且只需渲染规格模板时才直接用 add_feature。",
     inputSchema: {
       type: "object",
       properties: {

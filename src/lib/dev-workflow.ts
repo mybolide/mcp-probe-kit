@@ -475,7 +475,7 @@ function buildPlanForScenario(scenario: WorkflowScenario, intent: string): DevWo
         confidence: 'high',
         summary: '规格驱动开发：start_feature → add_feature → check_spec → 再实现',
         firstTool: 'start_feature',
-        firstToolArgsHint: { description: intent },
+        firstToolArgsHint: { description: intent, spec_layout: 'auto' },
         phases: [
           baseContextPhase(),
           {
@@ -487,7 +487,7 @@ function buildPlanForScenario(scenario: WorkflowScenario, intent: string): DevWo
                 tool: 'start_feature',
                 required: true,
                 when: '新功能、增强、模块开发',
-                note: '返回 plan：add_feature → check_spec → estimate',
+                note: 'description 必须汇总完整对话范围，不得只传“继续”；默认 spec_layout=auto，返回 plan：必要时拆子规格 → add_feature → check_spec → estimate',
               },
               {
                 tool: 'code_insight',
