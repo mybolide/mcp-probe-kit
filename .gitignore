@@ -46,7 +46,6 @@ docs/project-context
 skills
 
 test-*
-vitest.config.ts
 test-output.txt
 
 tests/

@@ -30,6 +30,10 @@ describe('start_feature 单元测试', () => {
     const plan = structured?.metadata?.plan;
     expect(plan).toBeTruthy();
     expect(plan.mode).toBe('delegated');
+    expect(plan.contractVersion).toBe('2.0.0');
+    expect(plan.workflow).toBe('feature');
+    expect(plan.planId).toMatch(/^feature-/);
+    expect(plan.globalRules).toContain('check_spec 未通过前不得进入实现阶段');
     expect(Array.isArray(plan.steps)).toBe(true);
     expect(plan.steps.length).toBeGreaterThanOrEqual(3);
 
@@ -39,6 +43,8 @@ describe('start_feature 单元测试', () => {
     expect(tools).toContain('estimate');
 
     const contextStep = plan.steps.find((step: any) => step.tool === 'init_project_context');
+    expect(contextStep.type).toBe('tool');
+    expect(contextStep.expectedOutputs).toEqual(contextStep.outputs);
     expect(contextStep.outputs).toContain('AGENTS.md');
     expect(contextStep.outputs).toContain('docs/graph-insights/latest.md');
     expect(contextStep.outputs).toContain('docs/graph-insights/latest.json');
@@ -139,6 +145,8 @@ describe('start_feature 单元测试', () => {
     expect(loop.maxRounds).toBeGreaterThanOrEqual(1);
     expect(Array.isArray(loop.openQuestions)).toBe(true);
     expect(loop.openQuestions.length).toBeLessThanOrEqual(3);
+    expect(loop.metadata.plan.workflow).toBe('feature');
+    expect(loop.metadata.plan.contractVersion).toBe('2.0.0');
   });
 
   test('拒绝会逃出规格目录的 feature_name', async () => {

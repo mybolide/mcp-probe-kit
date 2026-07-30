@@ -52,16 +52,23 @@ async function main() {
   const bad: any = await checkSpec({ feature_name: 'bad-feature', project_root: tmp });
   log(`  passed=${bad.structuredContent.passed}  errors=${bad.structuredContent.errorCount}  warnings=${bad.structuredContent.warningCount}`);
   bad.structuredContent.issues.forEach((it: any) => log(`    - [${it.severity}] (${it.file}) ${it.message}`));
+  if (bad.structuredContent.passed) {
+    throw new Error('功能校验失败：半成品规格不应通过 check_spec');
+  }
 
   hr('③b check_spec —— 完整规格（应通过）');
   mk('good-feature', {
     'requirements.md': '# 需求文档\n\n## 功能概述\n登录功能\n\n## 需求列表\n### FR-1: 登录\n**用户故事:** 作为用户，我想登录，以便访问系统。\n#### 验收标准（EARS）\n1. WHEN 提交正确凭证 THEN 系统 SHALL 登录成功\n\n## 非功能需求\n- NFR-1: 响应<1s\n\n## 依赖关系\n- 无\n',
     'design.md': '# 设计\n\n## 概述\n登录设计\n**对应需求:** FR-1\n\n## 技术方案\nJWT\n\n## 数据模型\n不涉及\n\n## API 设计\nPOST /api/login\n\n## 文件结构\nsrc/login.ts\n\n## 设计决策\n用 JWT\n\n## 风险评估\n无\n',
-    'tasks.md': '# 任务\n\n## 任务列表\n- [ ] 2.1 实现登录接口 — _需求: FR-1_\n\n## 检查点\n- [ ] 登录可用\n\n## 需求覆盖矩阵\n| 需求 ID | 任务编号 |\n| FR-1 | 2.1 |\n\n## 文件变更清单\n| 文件 | 操作 |\n| src/login.ts | 新建 |\n',
+    'tasks.md': '# 任务\n\n## 任务列表\n- [ ] 2.1 实现登录接口 — _需求: FR-1_\n  - 证据：接口测试通过，错误凭证返回明确错误\n\n## 检查点\n- [ ] 登录可用\n\n## 交付物清单\n- src/login.ts\n- 登录接口测试\n\n## 需求覆盖矩阵\n| 需求 ID | 任务编号 |\n| FR-1 | 2.1 |\n\n## 文件变更清单\n| 文件 | 操作 |\n| src/login.ts | 新建 |\n',
   });
   const good: any = await checkSpec({ feature_name: 'good-feature', project_root: tmp });
   log(`  passed=${good.structuredContent.passed}  errors=${good.structuredContent.errorCount}  FR=${good.structuredContent.frIds.join(',')}`);
   log('  通过文案首行: ' + good.content[0].text.split('\n')[0]);
+  if (!good.structuredContent.passed) {
+    good.structuredContent.issues.forEach((it: any) => log(`    - [${it.severity}] (${it.file}) ${it.message}`));
+    throw new Error('功能校验失败：完整规格应通过 check_spec');
+  }
 
   fs.rmSync(tmp, { recursive: true, force: true });
 

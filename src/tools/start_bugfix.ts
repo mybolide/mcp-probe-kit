@@ -30,6 +30,11 @@ import {
   renderSpecGatePromptSection,
   resolveBugfixSpecGate,
 } from "../lib/spec-gate.js";
+import {
+  buildDelegatedPlanContract,
+  createDelegatedPlanId,
+  type DelegatedPlanStep,
+} from "../lib/delegated-plan-contract.js";
 
 /**
  * start_bugfix 智能编排工具
@@ -543,7 +548,34 @@ ${graphContext.highlights.length > 0
         }
       }
 
-      return src8Plan;
+      const contract = buildDelegatedPlanContract({
+        planId: createDelegatedPlanId('bugfix', `${errorMessage}:${requirementsMode}`),
+        workflow: 'bugfix',
+        workflowVersion: '4.0.0',
+        objective: `定位真因并修复 Bug：${errorMessage}`,
+        globalRules: [
+          '未完成 SRC-8 真因收敛前不得直接实施猜测性修复',
+          'Agent 必须使用宿主能力完成真实代码修改和测试执行',
+          '修复完成必须包含回归验证与防复发措施',
+          '历史记忆仅作为候选证据，当前项目事实与代码优先',
+        ],
+        completionCriteria: [
+          '真因能够解释全部关键现象并排除主要竞争假设',
+          '修复方案作用于原因层而不是仅隐藏症状',
+          '回归测试与关联规格闸门通过',
+          '可复用的成功或失败经验已评估是否沉淀',
+        ],
+        memoryPolicy: {
+          recallBeforeExecution: memoryContext.enabled,
+          extractAfterValidation: memoryContext.enabled,
+        },
+        steps: src8Plan.steps as DelegatedPlanStep[],
+      });
+
+      return {
+        ...src8Plan,
+        ...contract,
+      };
     };
 
     if (requirementsMode === "loop") {

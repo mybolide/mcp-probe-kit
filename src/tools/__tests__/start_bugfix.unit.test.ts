@@ -57,12 +57,17 @@ describe('start_bugfix 单元测试', () => {
     const plan = structured?.metadata?.plan;
     expect(plan).toBeTruthy();
     expect(plan.mode).toBe('delegated');
+    expect(plan.contractVersion).toBe('2.0.0');
+    expect(plan.workflow).toBe('bugfix');
+    expect(plan.planId).toMatch(/^bugfix-/);
+    expect(plan.methodology).toBe('src8');
     expect(Array.isArray(plan.steps)).toBe(true);
     expect(structured.analysisMode).toBe('src8');
     expect(structured.tbp.rootCauseStatement).toMatch(/A \+ B|因果句|待形成/);
 
     const fixStep = plan.steps.find((step: any) => step.id === 'src8-4');
     expect(fixStep).toBeTruthy();
+    expect(fixStep.type).toBe('agent_action');
     expect(fixStep.action).toMatch(/把握真因/);
     const gentestStep = plan.steps.find((step: any) => step.id === 'src8-7');
     expect(gentestStep?.tool).toBe('gentest');
@@ -117,6 +122,8 @@ describe('start_bugfix 单元测试', () => {
     expect(loop.round).toBe(1);
     expect(Array.isArray(loop.openQuestions)).toBe(true);
     expect(loop.openQuestions.length).toBeLessThanOrEqual(2);
+    expect(loop.metadata.plan.workflow).toBe('bugfix');
+    expect(loop.metadata.plan.contractVersion).toBe('2.0.0');
   });
 
   test('template_profile 自动选择 strict（结构化输入）', async () => {

@@ -32,6 +32,11 @@ import {
   type SpecLayout,
   type SubspecDefinition,
 } from "../lib/parent-child-spec.js";
+import {
+  buildDelegatedPlanContract,
+  createDelegatedPlanId,
+  type DelegatedPlanStep,
+} from "../lib/delegated-plan-contract.js";
 
 /**
  * start_feature 智能编排工具
@@ -443,8 +448,25 @@ ${graphContext.highlights.length > 0
       const missingFields = openQuestions.map((q) => q.context || q.question);
       const stopReady = openQuestions.length === 0 && assumptions.length === 0;
 
-      const plan = {
-        mode: 'delegated',
+      const plan = buildDelegatedPlanContract({
+        planId: createDelegatedPlanId('feature', `${featureName}:loop`),
+        workflow: 'feature',
+        workflowVersion: '4.0.0',
+        objective: `澄清并规划新功能：${featureName}`,
+        globalRules: [
+          'Agent 必须按步骤顺序调用 MCP，并使用宿主能力完成真实文件与代码操作',
+          'check_spec 未通过前不得进入实现阶段',
+          '历史记忆仅作为参考，当前项目事实与代码优先',
+        ],
+        completionCriteria: [
+          '关键需求问题已关闭或被明确记录为假设',
+          '规格文档已生成并通过 check_spec',
+          '工作量与主要风险已完成评估',
+        ],
+        memoryPolicy: {
+          recallBeforeExecution: memoryContext.enabled,
+          extractAfterValidation: memoryContext.enabled,
+        },
         steps: [
           ...memoryRecallStep,
           {
@@ -508,8 +530,8 @@ ${graphContext.highlights.length > 0
             outputs: [],
           },
           ...(memoryContext.enabled ? [buildMemoryPlanStep('feature')] : []),
-        ],
-      };
+        ] as DelegatedPlanStep[],
+      });
 
       const header = renderOrchestrationHeader({
         tool: 'start_feature',
@@ -604,8 +626,26 @@ ${graphContext.highlights.length > 0
       .replace(/{spec_output_list}/g, specOutputs.map((specPath) => `- \`${specPath}\``).join('\n'));
     const guide = header + memoryGuideSection + renderedPrompt + graphGuideSection;
 
-    const plan = {
-      mode: 'delegated',
+    const plan = buildDelegatedPlanContract({
+      planId: createDelegatedPlanId('feature', `${featureName}:steady`),
+      workflow: 'feature',
+      workflowVersion: '4.0.0',
+      objective: `规划并实施新功能：${featureName}`,
+      globalRules: [
+        'Agent 必须按步骤顺序调用 MCP，并使用宿主能力完成真实文件与代码操作',
+        'check_spec 未通过前不得进入实现阶段',
+        '不得把 delegated plan 的输出误认为代码已经实施',
+        '历史记忆仅作为参考，当前项目事实与代码优先',
+      ],
+      completionCriteria: [
+        '规格文档已生成并通过 check_spec',
+        '工作量与主要风险已完成评估',
+        'Agent 已按 tasks.md 完成实现、测试与必要审查',
+      ],
+      memoryPolicy: {
+        recallBeforeExecution: memoryContext.enabled,
+        extractAfterValidation: memoryContext.enabled,
+      },
       steps: [
         ...memoryRecallStep,
         {
@@ -650,8 +690,8 @@ ${graphContext.highlights.length > 0
           outputs: [],
         },
         ...(memoryContext.enabled ? [buildMemoryPlanStep('feature')] : []),
-      ],
-    };
+      ] as DelegatedPlanStep[],
+    });
 
     // 创建结构化的功能开发报告
     const featureReport: FeatureReport = {

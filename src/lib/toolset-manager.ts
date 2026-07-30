@@ -72,6 +72,14 @@ export const TOOLSET_DEFINITIONS = {
     'ui_design_system',
     'ui_search',
     'sync_ui_data',
+
+    // 记忆工具（start_* delegated plan 会直接引用）
+    'search_memory',
+    'read_memory_asset',
+    'memorize_asset',
+    'update_memory_asset',
+    'delete_memory_asset',
+    'scan_and_extract_patterns',
   ],
 
   // 完整工具集 - 所有工具
