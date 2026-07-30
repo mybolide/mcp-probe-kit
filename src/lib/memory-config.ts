@@ -14,6 +14,8 @@ export interface MemoryConfig {
   searchMinScore: number;
   /** When set, show sourcePath only if payload.sourceProject matches */
   repoId: string;
+  /** Small relevance boost for memories sourced from the current project */
+  projectPriorityBoost: number;
   /** Max chars of each asset content injected into start_* guides */
   injectionContentMaxChars: number;
   /** Max chars of content in search_memory text; 0 = omit content block */
@@ -66,6 +68,7 @@ export function getMemoryConfig(): MemoryConfig {
     searchShowSource: getBooleanEnv('MEMORY_SEARCH_SHOW_SOURCE', false),
     searchMinScore: getOptionalNumberEnv('MEMORY_SEARCH_MIN_SCORE', 0),
     repoId: (process.env.MEMORY_REPO_ID || '').trim(),
+    projectPriorityBoost: getOptionalNumberEnv('MEMORY_PROJECT_PRIORITY_BOOST', 0.08),
     injectionContentMaxChars: getNumberEnv('MEMORY_INJECTION_CONTENT_MAX_CHARS', 1500),
     searchContentMaxChars: getOptionalNumberEnv('MEMORY_SEARCH_CONTENT_MAX_CHARS', 1500),
   };

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { getMemoryConfig, isMemoryEnabled, isMemoryReadEnabled, type MemoryConfig } from './memory-config.js';
 import { normalizeMemoryPayload, payloadToMemoryFields } from './memory-payload.js';
-
+import { rankMemorySearchResults } from './memory-ranking.js';
 export interface MemoryAsset {
   id: string;
   name: string;
@@ -19,7 +19,6 @@ export interface MemoryAsset {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface MemorySearchResult {
   id: string;
   score: number;
@@ -30,24 +29,22 @@ export interface MemorySearchResult {
   /** Full payload content from Qdrant (may be empty on legacy points) */
   content: string;
   tags: string[];
+  confidence?: number;
   sourceProject?: string;
   sourcePath?: string;
 }
-
 export interface MemorySearchOptions {
   limit?: number;
   minScore?: number;
   preferTypes?: string[];
   preferTags?: string[];
 }
-
 interface QdrantPoint {
   id: string;
   score?: number;
   payload?: Record<string, unknown>;
   vector?: number[];
 }
-
 function truncate(value: string, maxChars: number): string {
   if (value.length <= maxChars) {
     return value;
@@ -61,7 +58,6 @@ function ensureArray(value: unknown): string[] {
   }
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 }
-
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
@@ -353,12 +349,17 @@ export class MemoryClient {
         summary: truncate(fields.summary, this.config.summaryMaxChars),
         content: fields.content,
         tags: fields.tags,
+        confidence: fields.confidence,
         sourceProject: fields.sourceProject,
         sourcePath: fields.sourcePath,
       };
     });
 
-    const ranked = rankSearchResults(mapped, options.preferTypes, options.preferTags);
+    const ranked = rankMemorySearchResults(mapped, {
+      preferTypes: options.preferTypes,
+      preferTags: options.preferTags,
+      config: this.config,
+    });
     const filtered =
       minScore > 0 ? ranked.filter((item) => item.score >= minScore) : ranked;
 
@@ -493,39 +494,6 @@ export class MemoryClient {
     return { updated: true, asset };
   }
 }
-
-function rankSearchResults(
-  results: MemorySearchResult[],
-  preferTypes: string[] = [],
-  preferTags: string[] = []
-): MemorySearchResult[] {
-  if (preferTypes.length === 0 && preferTags.length === 0) {
-    return [...results].sort((a, b) => b.score - a.score);
-  }
-
-  const preferredTypes = new Set(preferTypes.map((item) => item.toLowerCase()));
-  const preferredTags = new Set(preferTags.map((item) => item.toLowerCase()));
-
-  const scoreBoost = (item: MemorySearchResult): number => {
-    let boost = 0;
-    if (preferredTypes.has(item.type.toLowerCase())) {
-      boost += 2;
-    }
-    if (item.tags.some((tag) => preferredTags.has(tag.toLowerCase()))) {
-      boost += 1;
-    }
-    return boost;
-  };
-
-  return [...results].sort((a, b) => {
-    const boostDiff = scoreBoost(b) - scoreBoost(a);
-    if (boostDiff !== 0) {
-      return boostDiff;
-    }
-    return b.score - a.score;
-  });
-}
-
 export function createMemoryClient(): MemoryClient {
   return new MemoryClient();
 }

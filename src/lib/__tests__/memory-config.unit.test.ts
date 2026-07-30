@@ -45,11 +45,13 @@ describe('memory-config 单元测试', () => {
     vi.stubEnv('MEMORY_SEARCH_SHOW_SOURCE', 'true');
     vi.stubEnv('MEMORY_SEARCH_MIN_SCORE', '0.72');
     vi.stubEnv('MEMORY_REPO_ID', 'my-org/my-repo');
+    vi.stubEnv('MEMORY_PROJECT_PRIORITY_BOOST', '0.12');
 
     const config = getMemoryConfig();
 
     expect(config.searchShowSource).toBe(true);
     expect(config.searchMinScore).toBe(0.72);
     expect(config.repoId).toBe('my-org/my-repo');
+    expect(config.projectPriorityBoost).toBe(0.12);
   });
 });

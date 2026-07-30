@@ -1,6 +1,7 @@
 import type { MemoryAsset, MemorySearchResult } from './memory-client.js';
 import { createMemoryClient } from './memory-client.js';
 import { getMemoryConfig, type MemoryConfig } from './memory-config.js';
+import { classifyMemoryScope, rankMemorySearchResults } from './memory-ranking.js';
 import {
   buildMemoryAssetHandles,
   DEFAULT_GRAPH_RESOURCE_URI,
@@ -19,6 +20,32 @@ export interface MemoryInjectionContext {
   /** Full assets keyed by search hit id (auto-loaded for start_* injection) */
   assetsById: Record<string, MemoryAsset>;
   error?: string;
+}
+
+function formatMemoryScopeLabel(
+  item: MemorySearchResult,
+  config: MemoryConfig
+): string {
+  return classifyMemoryScope(item, config) === 'project'
+    ? '当前项目（优先）'
+    : '跨项目经验（参考）';
+}
+
+interface MemoryLookupClient {
+  isEnabled(): boolean;
+  isReadEnabled(): boolean;
+  search(query: string, options?: {
+    limit?: number;
+    minScore?: number;
+    preferTypes?: string[];
+    preferTags?: string[];
+  }): Promise<MemorySearchResult[]>;
+  getAsset(assetId: string): Promise<MemoryAsset | null>;
+}
+
+export interface MemoryInjectionOptions {
+  client?: MemoryLookupClient;
+  config?: MemoryConfig;
 }
 
 function kindSearchPreferences(kind: MemoryPlanKind): {
@@ -47,9 +74,9 @@ export function truncateInjectionText(value: string, maxChars: number): string {
 }
 
 async function loadFullAssets(
-  results: MemorySearchResult[]
+  results: MemorySearchResult[],
+  client: MemoryLookupClient
 ): Promise<Record<string, MemoryAsset>> {
-  const client = createMemoryClient();
   if (!client.isReadEnabled() || results.length === 0) {
     return {};
   }
@@ -66,9 +93,11 @@ async function loadFullAssets(
 
 export async function loadMemoryInjectionContext(
   query: string,
-  kind: MemoryPlanKind = 'default'
+  kind: MemoryPlanKind = 'default',
+  options: MemoryInjectionOptions = {}
 ): Promise<MemoryInjectionContext> {
-  const client = createMemoryClient();
+  const client = options.client ?? createMemoryClient();
+  const config = options.config ?? getMemoryConfig();
   if (!client.isEnabled()) {
     return {
       enabled: false,
@@ -83,14 +112,19 @@ export async function loadMemoryInjectionContext(
   try {
     const prefs = kindSearchPreferences(kind);
     // feature/ui 同时要「经验」与「坑」两类，默认条数偏少容易只剩一类；放宽下限让两组都有空间
-    const baseLimit = getMemoryConfig().searchLimit;
+    const baseLimit = config.searchLimit;
     const injectionLimit = (kind === 'feature' || kind === 'ui') ? Math.max(baseLimit, 5) : baseLimit;
-    const results = await client.search(query, {
+    const searchResults = await client.search(query, {
       limit: injectionLimit,
       preferTypes: prefs.preferTypes,
       preferTags: prefs.preferTags,
     });
-    const assetsById = await loadFullAssets(results);
+    const results = rankMemorySearchResults(searchResults, {
+      preferTypes: prefs.preferTypes,
+      preferTags: prefs.preferTags,
+      config,
+    }).slice(0, injectionLimit);
+    const assetsById = await loadFullAssets(results, client);
 
     return {
       enabled: true,
@@ -139,6 +173,7 @@ export function formatSearchMemoryResultsText(
       item.summary ? `   - 摘要: ${item.summary}` : '',
       item.description ? `   - 描述: ${item.description}` : '',
       item.tags.length > 0 ? `   - 标签: ${item.tags.join(', ')}` : '',
+      `   - 范围: ${formatMemoryScopeLabel(item, config)}`,
     ];
     if (shouldShowSourceInSearch(item, config) && item.sourcePath) {
       lines.push(`   - 来源: ${item.sourcePath}`);
@@ -225,12 +260,13 @@ function formatResultBlock(
   const label = formatMemoryResultLabel(item);
   const asset = context.assetsById[item.id];
   const header = `${index + 1}. ${label} score=${item.score.toFixed(3)}\n   - 摘要: ${item.summary}${formatSourceHint(item, config)}`;
+  const scopedHeader = `${header}\n   - 范围: ${formatMemoryScopeLabel(item, config)}`;
 
   if (asset) {
-    return `${header}\n\n${formatAssetBody(asset, config)}\n`;
+    return `${scopedHeader}\n\n${formatAssetBody(asset, config)}\n`;
   }
 
-  return `${header}\n   - 全文加载失败，可手动: read_memory_asset {"asset_id": "${item.id}"}\n`;
+  return `${scopedHeader}\n   - 全文加载失败，可手动: read_memory_asset {"asset_id": "${item.id}"}\n`;
 }
 
 function isPitfallResult(item: MemorySearchResult): boolean {
@@ -262,6 +298,7 @@ export function renderMemoryGuideSection(context: MemoryInjectionContext): strin
     `\n\n## 🧠 历史经验与坑（记忆库）`,
     `- 状态: 已启用`,
     `- 指令: 下列为已自动加载的历史经验全文（${loadedCount}/${context.results.length} 条）；开干前直接复用，无需再调 \`read_memory_asset\``,
+    `- 权威规则: 当前项目代码、规格和当前项目记忆优先；跨项目经验只用于启发，不得覆盖当前项目事实`,
     `- 用法: 先逐条核对「历史坑」是否已在本次设计中规避，再复用「可复用经验」，据此收敛需求范围`,
   ];
 

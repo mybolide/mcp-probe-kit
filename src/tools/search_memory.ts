@@ -7,6 +7,7 @@ import {
 } from '../lib/memory-orchestration.js';
 import { attachHandles, buildMemoryAssetHandles } from '../lib/handles.js';
 import { getMemoryConfig } from '../lib/memory-config.js';
+import { classifyMemoryScope, rankMemorySearchResults } from '../lib/memory-ranking.js';
 import { handleToolError } from '../utils/error-handler.js';
 
 export async function searchMemory(args: unknown) {
@@ -44,11 +45,16 @@ export async function searchMemory(args: unknown) {
       ? parsed.tags.filter((item): item is string => typeof item === 'string')
       : [];
 
-    const results = await client.search(query, {
+    const rawResults = await client.search(query, {
       limit,
       preferTypes: typeFilter ? [typeFilter] : [],
       preferTags: tags,
     });
+    const results = rankMemorySearchResults(rawResults, {
+      preferTypes: typeFilter ? [typeFilter] : [],
+      preferTags: tags,
+      config,
+    }).slice(0, limit);
 
     const items = results.map((item) => ({
       id: item.id,
@@ -59,6 +65,7 @@ export async function searchMemory(args: unknown) {
       summary: item.summary,
       content: item.content,
       tags: item.tags,
+      scope: classifyMemoryScope(item, config),
       sourcePath: shouldShowSourceInSearch(item, config) ? item.sourcePath : undefined,
     }));
 
