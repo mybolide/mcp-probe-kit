@@ -2,155 +2,21 @@
  * 开发工作流路由：根据用户意图生成「何时调哪个 MCP 工具」的委托式指南。
  * 解决 Agent 直接写代码、跳过 start_* / code_insight / check_spec 的问题。
  */
+import {
+  SCENARIO_LABELS,
+  detectWorkflowScenario,
+  type DevWorkflowPlan,
+  type WorkflowPhase,
+  type WorkflowScenario,
+} from './dev-workflow-routing.js';
 
-export type WorkflowScenario =
-  | 'feature'
-  | 'bugfix'
-  | 'ui'
-  | 'explore'
-  | 'commit'
-  | 'review'
-  | 'refactor'
-  | 'onboard'
-  | 'spec'
-  | 'memory'
-  | 'unknown';
-
-export interface WorkflowToolStep {
-  tool: string;
-  required: boolean;
-  when: string;
-  note?: string;
-}
-
-export interface WorkflowPhase {
-  id: string;
-  title: string;
-  when: string;
-  steps: WorkflowToolStep[];
-}
-
-export interface DevWorkflowPlan {
-  scenario: WorkflowScenario;
-  scenarioLabel: string;
-  confidence: 'high' | 'medium' | 'low';
-  summary: string;
-  firstTool: string;
-  firstToolArgsHint?: Record<string, unknown>;
-  phases: WorkflowPhase[];
-  avoid: string[];
-  memoryNotes: string[];
-}
-
-const SCENARIO_PATTERNS: Array<{ scenario: WorkflowScenario; patterns: RegExp[] }> = [
-  {
-    scenario: 'bugfix',
-    patterns: [/bug|错误|异常|报错|修复|排查|回归|失败|crash|堆栈|stack|不生效|白屏|typeerror|referenceerror|error/i],
-  },
-  {
-    scenario: 'ui',
-    patterns: [/ui|界面|页面|组件|布局|样式|tailwind|shadcn|设计系统|交互/i],
-  },
-  {
-    scenario: 'explore',
-    patterns: [/架构|调用链|影响面|不熟|读懂|图谱|依赖|入口|code_insight|上下文/i],
-  },
-  {
-    scenario: 'commit',
-    patterns: [/提交|commit|changelog|写提交/i],
-  },
-  {
-    scenario: 'review',
-    patterns: [/审查|review|代码评审|安全检查/i],
-  },
-  {
-    scenario: 'refactor',
-    patterns: [/重构|refactor|整理代码|降复杂度/i],
-  },
-  {
-    scenario: 'onboard',
-    patterns: [/上手|onboard|新项目|熟悉项目|项目概览/i],
-  },
-  {
-    scenario: 'spec',
-    patterns: [/规格|spec|requirements|check_spec|验收/i],
-  },
-  {
-    scenario: 'memory',
-    patterns: [/记忆|沉淀|memorize|search_memory|历史经验|踩坑/i],
-  },
-  {
-    scenario: 'feature',
-    patterns: [/新功能|添加|实现|开发|feature|需求|做一?个/i],
-  },
-];
-
-const SCENARIO_LABELS: Record<WorkflowScenario, string> = {
-  feature: '新功能开发',
-  bugfix: 'Bug 修复',
-  ui: 'UI 开发',
-  explore: '代码探索 / 影响分析',
-  commit: '生成提交',
-  review: '代码审查',
-  refactor: '重构',
-  onboard: '项目上手',
-  spec: '规格校验',
-  memory: '记忆检索 / 沉淀',
-  unknown: '未明确（需先澄清）',
-};
-
-function scoreScenario(text: string, scenario: WorkflowScenario): number {
-  const entry = SCENARIO_PATTERNS.find((item) => item.scenario === scenario);
-  if (!entry) {
-    return 0;
-  }
-  return entry.patterns.reduce((score, pattern) => score + (pattern.test(text) ? 1 : 0), 0);
-}
-
-export function detectWorkflowScenario(intent: string, explicit?: string): {
-  scenario: WorkflowScenario;
-  confidence: 'high' | 'medium' | 'low';
-} {
-  const normalizedExplicit = (explicit || '').trim().toLowerCase();
-  const explicitMap: Record<string, WorkflowScenario> = {
-    feature: 'feature',
-    bugfix: 'bugfix',
-    bug: 'bugfix',
-    ui: 'ui',
-    explore: 'explore',
-    commit: 'commit',
-    review: 'review',
-    refactor: 'refactor',
-    onboard: 'onboard',
-    spec: 'spec',
-    memory: 'memory',
-    auto: 'unknown',
-  };
-
-  if (normalizedExplicit && normalizedExplicit !== 'auto' && explicitMap[normalizedExplicit]) {
-    return { scenario: explicitMap[normalizedExplicit], confidence: 'high' };
-  }
-
-  const text = intent.trim();
-  if (!text) {
-    return { scenario: 'unknown', confidence: 'low' };
-  }
-
-  const scores = SCENARIO_PATTERNS.map((item) => ({
-    scenario: item.scenario,
-    score: scoreScenario(text, item.scenario),
-  })).sort((a, b) => b.score - a.score);
-
-  const top = scores[0];
-  const second = scores[1];
-  if (!top || top.score === 0) {
-    return { scenario: 'feature', confidence: 'low' };
-  }
-  if (second && top.score === second.score) {
-    return { scenario: top.scenario, confidence: 'medium' };
-  }
-  return { scenario: top.scenario, confidence: top.score >= 2 ? 'high' : 'medium' };
-}
+export {
+  detectWorkflowScenario,
+  type DevWorkflowPlan,
+  type WorkflowPhase,
+  type WorkflowScenario,
+  type WorkflowToolStep,
+} from './dev-workflow-routing.js';
 
 function baseContextPhase(): WorkflowPhase {
   return {
@@ -182,8 +48,8 @@ function memoryPhase(): WorkflowPhase {
       {
         tool: 'memorize_asset',
         required: false,
-        when: 'Bug 验证通过 / 有可复用产出后沉淀',
-        note: 'Bug → type=bugfix；功能/UI → pattern/component',
+        when: 'converge passed=true，且已有已验证的 MemoryCandidate',
+        note: 'Bug → bugfix/failed_approach/false_root_cause/regression_case；功能/UI → pattern/component',
       },
     ],
   };
@@ -198,7 +64,7 @@ function buildPlanForScenario(scenario: WorkflowScenario, intent: string): DevWo
 
   const commonMemory = [
     'start_* 会自动注入记忆；仍可用 search_memory 补查',
-    'Bug 修完验证通过 → 必须 memorize_asset type=bugfix',
+    'Bug 每轮验证后准备成功或负面记忆候选；converge 通过后再 memorize_asset',
   ];
 
   switch (scenario) {
@@ -207,7 +73,7 @@ function buildPlanForScenario(scenario: WorkflowScenario, intent: string): DevWo
         scenario,
         scenarioLabel: SCENARIO_LABELS[scenario],
         confidence: 'high',
-        summary: '先 TBP 真因分析再修，修复后回归测试 + 可选规格闸门 + 沉淀记忆',
+        summary: '先 TBP 真因分析再修，修复后回归测试、收敛闸门，再沉淀已验证记忆',
         firstTool: 'start_bugfix',
         firstToolArgsHint: { error_message: intent },
         phases: [
@@ -242,9 +108,14 @@ function buildPlanForScenario(scenario: WorkflowScenario, intent: string): DevWo
                 when: 'Bug 关联 docs/specs/<feature>/ 时（可传 feature_name）',
               },
               {
+                tool: 'converge',
+                required: true,
+                when: '所有步骤完成且需求/规格/实现/测试/审查证据已写入 plan_heartbeat',
+              },
+              {
                 tool: 'gencommit',
                 required: false,
-                when: '准备提交时',
+                when: 'converge 通过并完成必要记忆沉淀后',
               },
             ],
           },
@@ -273,7 +144,7 @@ function buildPlanForScenario(scenario: WorkflowScenario, intent: string): DevWo
           memoryPhase(),
         ],
         avoid: [...commonAvoid, '不要跳过 ui_design_system / 一致性约束'],
-        memoryNotes: [...commonMemory, '可复用 UI 模式 → memorize_asset type=component'],
+        memoryNotes: [...commonMemory, '可复用 UI 模式先形成候选；converge 通过后 → memorize_asset type=component'],
       };
 
     case 'explore':
@@ -511,7 +382,7 @@ function buildPlanForScenario(scenario: WorkflowScenario, intent: string): DevWo
           memoryPhase(),
         ],
         avoid: [...commonAvoid, '不要 check_spec 未通过就写实现', '不要跳过 estimate/tasks.md'],
-        memoryNotes: [...commonMemory, '可复用实现 → memorize_asset type=pattern'],
+        memoryNotes: [...commonMemory, '可复用实现先形成候选；converge 通过后 → memorize_asset type=pattern'],
       };
   }
 }

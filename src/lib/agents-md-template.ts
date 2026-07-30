@@ -35,8 +35,8 @@ function memorySection(locale: DocumentLocale): string {
 - 沉淀：跨仓库共享**勿填** source_project/source_path；路径写进 content；summary 写检索关键词
 - 修正：已有资产可用 \`update_memory_asset\` 按 asset_id 原地更新（保留 ID）
 - 清理：过时/错误/重复沉淀可用 \`delete_memory_asset\`（删除前建议 \`read_memory_asset\` 确认）
-- Bug 修完验证通过 → **必须** \`memorize_asset\` type=\`bugfix\` tags=\`bugfix,root-cause\`（content 含【现象】【根因】【修复】【验证】）
-- 功能/UI 可复用产出 → \`memorize_asset\` type=\`pattern\`/\`component\``;
+- Bug 每轮验证后先准备成功/失败/证伪/回归候选并写入 \`plan_heartbeat\`；\`converge\` 通过后再 \`memorize_asset\`
+- 功能/UI 验证后先准备候选并写入 \`plan_heartbeat\`；\`converge\` 通过后再 \`memorize_asset\` type=\`pattern\`/\`component\``;
   }
 
   return `
@@ -45,8 +45,8 @@ Memory (requires MEMORY_* env):
 - Store: do NOT use source_project/source_path for cross-repo pools; put paths in content; write keyword-rich summary
 - Update: fix existing entries in place with \`update_memory_asset\` by asset_id (preserves ID)
 - Cleanup: remove stale/wrong/duplicate entries with \`delete_memory_asset\` (confirm via \`read_memory_asset\` first)
-- After verified bugfix → MUST \`memorize_asset\` type=\`bugfix\` (sections: symptom, root cause, fix, verification)
-- Reusable feature/UI → \`memorize_asset\` type=\`pattern\`/\`component\``;
+- After each verification, prepare successful or negative memory candidates and record them in \`plan_heartbeat\`; persist with \`memorize_asset\` only after \`converge\` passes
+- For reusable feature/UI output, prepare a candidate first; after convergence persist it as \`pattern\`/\`component\``;
 }
 
 /**

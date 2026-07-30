@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> 知时MCP 是专为极客打造的协议级探测与上下文补给工具箱。它不仅仅是 30 个工具的堆砌，更是一套让 AI 真正"读懂"你项目意图的感知系统。
+> 知时MCP 是专为极客打造的协议级探测与上下文补给工具箱。它不仅仅是 33 个工具的堆砌，更是一套让 AI 真正"读懂"你项目意图的感知系统。
 
 **Languages**: [English](../README.md) | **简体中文** | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **30 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，提供 **33 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
 
 **🎉 v3.0 重大更新**：精简工具数量，专注核心竞争力，消除选择困难，让 AI 做更多原生工作
 
@@ -36,7 +36,7 @@
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
 - [本地记忆栈（Qdrant + Nomic Embed）](../docs/memory-local-setup.zh-CN.md) - Docker Compose、端口 50008/50012、MCP 配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 30个工具完整列表
+- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 33个工具完整列表
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
 - [v3.0 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x → v3.0 升级指南
 
@@ -44,8 +44,12 @@
 
 ## ✨ 核心特性
 
-### 📦 30 个工具
+### 📦 33 个工具
 
+- **🧭 路由** (1个) - 根据完整任务摘要选择正确的 MCP 工作流
+  - `workflow`
+- **🔁 计划状态与收敛** (3个) - 为委托计划记录检查点、恢复执行并执行证据闸门
+  - `plan_heartbeat`, `resume_plan`, `converge`
 - **🔄 工作流编排** (6个) - 一键完成复杂开发流程
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
 - **🔍 代码分析** (4个) - 代码质量、重构与图谱洞察
@@ -60,6 +64,14 @@
   - `ui_design_system`, `ui_search`, `sync_ui_data`
 - **🧠 记忆** (6个) - 资产记忆沉淀
   - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
+
+### 🔁 委托计划状态、恢复与收敛
+
+- 每个 v4 Delegated Plan 都包含 `executionStatePolicy`，要求 Agent 首次执行时建立本地检查点。
+- `plan_heartbeat` 将完成/跳过步骤、未决事项、验证证据和最后确认的 revision 写入 `.mcp-probe-kit/plans/`。
+- `resume_plan` 在会话中断、服务重启或切换 Agent 后，依据原计划依赖重新计算可执行步骤和阻塞步骤。
+- `converge` 在步骤、未决事项或需求/规格/实现/测试/审查证据不完整时拒绝关闭；只有通过后才允许正式写入长期记忆。
+- 三项工具只负责记录与验证 Agent 的执行，不把文件、Shell、Git 或代码实施职责移入 MCP 服务端。
 
 ### 🧠 代码图谱桥接 (GitNexus)
 
@@ -91,7 +103,7 @@
 
 **记忆工具：**
 - `search_memory` - 语义检索共享记忆库；文本输出与 `structuredContent` 均含 `id`、`score`、`summary`、`description`
-- `memorize_asset` - 将高价值代码/规范/模式沉淀到向量记忆库
+- `memorize_asset` - 将已验证的 `MemoryCandidate` 沉淀到向量记忆库；委托式长流程仅在 `converge` 通过后调用
 - `read_memory_asset` - 按 `asset_id` 读取完整记忆内容
 - `update_memory_asset` - 按 `asset_id` 原地更新已有记忆（保留 ID；`content` 变更会重新向量化）
 - `delete_memory_asset` - 按 `asset_id` 从共享记忆库删除

@@ -25,6 +25,8 @@ describe("mcp-tool-skill-registry", () => {
     expect(content).toContain("禁止把短确认语原样传给");
     expect(content).toContain("spec_layout=auto");
     expect(content).toContain("不得直接调用 `add_feature`");
+    expect(content).toContain("`converge` 未通过就把候选经验正式写入 `memorize_asset`");
+    expect(content).toContain("已有已验证 MemoryCandidate，且 **converge passed=true** 后正式沉淀");
   });
 
   it("关键工具的顶层描述明确复杂功能路由与上下文汇总要求", () => {

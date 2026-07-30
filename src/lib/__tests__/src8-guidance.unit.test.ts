@@ -68,6 +68,10 @@ describe("src8-guidance 单元测试", () => {
       "src8-8",
     ]);
     expect(plan.steps.find((s) => s.id === "src8-4")?.dependsOn).toContain("src8-3");
+    const memoryCandidate = plan.steps.find((s) => s.id === "src8-8");
+    expect(memoryCandidate?.tool).toBeUndefined();
+    expect(memoryCandidate?.action).toContain("准备");
+    expect(memoryCandidate?.note).toContain("converge passed=true");
   });
 
   test("mergeBugfixOrchestrationPlan 可前置上下文步骤", () => {

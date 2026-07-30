@@ -65,6 +65,7 @@ const GIT = "Git";
 const UI = "UI 子工具（通常由 `start_ui` 串联）";
 const MEMORY = "记忆（需 MEMORY 已配置）";
 const INTERACTIVE = "交互";
+const PLAN = "计划状态、恢复与收敛";
 
 export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
   tool({
@@ -344,7 +345,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "memory",
     groupTitle: MEMORY,
-    whenToCall: "Bug **验证通过**后沉淀；有可复用 pattern/component",
+    whenToCall: "已有已验证 MemoryCandidate，且 **converge passed=true** 后正式沉淀成功或负面经验",
   }),
   tool({
     name: "update_memory_asset",
@@ -380,6 +381,39 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "memory",
     groupTitle: MEMORY,
     whenToCall: "从代码库**批量提取**可复用模式并建议沉淀",
+  }),
+  tool({
+    name: "plan_heartbeat",
+    title: "记录计划检查点",
+    readOnly: false,
+    idempotent: true,
+    openWorld: false,
+    toolsets: ["workflow"],
+    groupId: "plan-control",
+    groupTitle: PLAN,
+    whenToCall: "执行 Delegated Plan 后记录完成步骤、证据、未决事项和 revision；首次调用附完整 plan",
+  }),
+  tool({
+    name: "resume_plan",
+    title: "恢复计划",
+    readOnly: true,
+    idempotent: true,
+    openWorld: false,
+    toolsets: ["workflow"],
+    groupId: "plan-control",
+    groupTitle: PLAN,
+    whenToCall: "会话中断、重启或切换 Agent 后，按 plan_id 恢复下一可执行步骤",
+  }),
+  tool({
+    name: "converge",
+    title: "计划收敛闸门",
+    readOnly: false,
+    idempotent: true,
+    openWorld: false,
+    toolsets: ["workflow"],
+    groupId: "plan-control",
+    groupTitle: PLAN,
+    whenToCall: "实现与验证完成后，检查需求/规格/实现/测试/审查证据；通过后才正式沉淀记忆",
   }),
   tool({
     name: "ask_user",

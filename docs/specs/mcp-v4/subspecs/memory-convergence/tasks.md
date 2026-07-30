@@ -7,10 +7,17 @@
   - 涉及文件：`src/lib/memory-config.ts`、`src/lib/memory-ranking.ts`、`src/lib/memory-client.ts`、`src/lib/memory-orchestration.ts`、`src/tools/search_memory.ts`。
 - [x] 1.2 扩展成功与负面记忆数据模型 — _需求: FR-3_
   - 证据块：failed_approach、false_root_cause、regression_case 均支持写入、检索、更新和生命周期失效；默认检索排除 expired、superseded、retracted，维护时可显式 include_inactive。
-  - 实现：记忆对象增加 evidence、applicability、status、expiresAt、supersedes、supersededBy；负面记忆强制 evidence，自动补 negative-memory 标签，并接入 start_* 检索偏好和 bugfix 沉淀步骤。
+  - 实现：记忆对象增加 evidence、applicability、status、expiresAt、supersedes、supersededBy；负面记忆强制 evidence，自动补 negative-memory 标签，并接入 start_* 检索偏好和 bugfix 候选提取步骤。
   - 去重：由单纯正文 Hash 收敛为“正文 + 类型 + 项目范围”，避免成功经验与失败方案、项目记忆与共享经验错误合并。
-  - 验证：Memory 定向 9 文件/40 项、全量 75 文件/368 项、生产构建与 30 工具 Skill 校验通过。
+  - 验证：Memory 定向 9 文件/40 项、全量 75 文件/368 项、生产构建与 33 工具 Skill 校验通过。
   - 涉及文件：`src/lib/memory-model.ts`、`src/lib/memory-embedding.ts`、`src/lib/memory-client.ts`、`src/lib/memory-payload.ts`、Memory Schema 与 CRUD 工具。
-- [ ] 2.1 实现 Converge、Plan Heartbeat 与 resume_plan — _需求: FR-8_
-  - 证据块：不完整实现被拦截、完整实现通过、会话中断后恢复到正确步骤的集成测试。
-  - 涉及文件：`src/tools/converge.ts`、`src/plans/plan-heartbeat.ts`、`src/plans/plan-resume.ts`。
+- [x] 2.1 实现 Converge、Plan Heartbeat 与 resume_plan — _需求: FR-8_
+  - 证据块：步骤、未决事项或需求/规格/实现/测试/审查证据不完整时拒绝收敛；完整证据通过后状态锁定为 converged，并开放正式长期记忆写入。
+  - 持久化：首次 `plan_heartbeat` 附完整 Delegated Plan，后续原子合并完成/跳过步骤、证据与 revision，写入 `.mcp-probe-kit/plans/<planId>.json`。
+  - 恢复：`resume_plan` 按原始步骤依赖计算 ready/blocked/next step，不依赖原始完整对话；收敛或取消后的计划拒绝继续写入 Heartbeat。
+  - 协议：`plan_heartbeat`、`resume_plan`、`converge` 已进入 Tool Registry、Manifest、Canonical Skill 与 Legacy/Modern tools/list，总工具数 33。
+  - 记忆顺序：计划内只准备 `MemoryCandidate` 并通过 Heartbeat 留证；`converge` 通过后才允许调用 `memorize_asset` 正式写入长期记忆。
+  - 构建可靠性：构建期 UI 上游同步增加 60 秒有界超时；仅网络/取消类故障且仓库已有内嵌数据时降级使用缓存，本地数据或解析错误仍会阻断构建。
+  - 验证：Plan/Workflow/SRC-8 定向 14 文件/61 项；最终全量 78 文件/375 项；生产构建、33 工具 Skill 校验、功能校验和 `build/index.js` Legacy/Modern Plan 闭环冒烟通过。
+  - 代码质量：本批修改的生产模块均低于 500 行；`dev-workflow`、`start_bugfix` 与 SRC-8 分别按路由、模板/报告、计划/Prompt 职责拆分。
+  - 涉及文件：`src/plans/`、`src/tools/plan_heartbeat.ts`、`src/tools/resume_plan.ts`、`src/tools/converge.ts`、Plan Schema、Tool Registry、Canonical Skill 与构建同步脚本。

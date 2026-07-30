@@ -37,7 +37,7 @@ export const memoryToolSchemas = [
   {
     name: 'memorize_asset',
     description:
-      '沉淀可检索记忆资产。支持成功经验及 failed_approach、false_root_cause、regression_case 负面记忆；负面记忆必须附 evidence，并建议填写 applicability。正式经验应在验证通过后写入。',
+      '沉淀可检索记忆资产。支持成功经验及 failed_approach、false_root_cause、regression_case 负面记忆；负面记忆必须附 evidence，并建议填写 applicability。长流程应先准备 MemoryCandidate，并仅在 converge passed=true 后正式写入。',
     inputSchema: {
       type: 'object',
       properties: {

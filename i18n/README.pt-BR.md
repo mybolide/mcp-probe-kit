@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit é um kit de ferramentas em nível de protocolo projetado para desenvolvedores que querem que a IA entenda verdadeiramente a intenção do seu projeto. Não é apenas uma coleção de 30 ferramentas — é um sistema consciente do contexto que ajuda os agentes de IA a compreender o que você está construindo.
+> mcp-probe-kit é um kit de ferramentas em nível de protocolo projetado para desenvolvedores que querem que a IA entenda verdadeiramente a intenção do seu projeto. Não é apenas uma coleção de 33 ferramentas — é um sistema consciente do contexto que ajuda os agentes de IA a compreender o que você está construindo.
 
 **Idiomas**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | **Português (BR)**
 
@@ -26,7 +26,7 @@
 
 > 🚀 Kit de Ferramentas de Desenvolvimento Completo Impulsionado por IA - Cobrindo Todo o Ciclo de Vida do Desenvolvimento
 
-Um poderoso servidor MCP (Model Context Protocol) fornecendo **30 ferramentas** cobrindo o fluxo de trabalho completo da análise do produto ao lançamento final (Requisitos → Design → Desenvolvimento → Qualidade → Lançamento), todas as ferramentas suportam **saída estruturada**.
+Um poderoso servidor MCP (Model Context Protocol) fornecendo **33 ferramentas** cobrindo o fluxo de trabalho completo da análise do produto ao lançamento final (Requisitos → Design → Desenvolvimento → Qualidade → Lançamento), todas as ferramentas suportam **saída estruturada**.
 
 **🎉 Atualização Maior v3.0**: Número de ferramentas simplificado, foco em competências centrais, eliminação de paralisia de escolha, mais trabalho nativo para a IA
 
@@ -41,7 +41,7 @@ Um poderoso servidor MCP (Model Context Protocol) fornecendo **30 ferramentas** 
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Início Rápido](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Configuração em 5 minutos
-- [Todas as Ferramentas](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Lista completa de 30 ferramentas
+- [Todas as Ferramentas](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Lista completa de 33 ferramentas
 - [Melhores Práticas](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Guia completo do fluxo de trabalho
 - [Guia de Migração v3.0](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Atualização de v2.x para v3.0
 
@@ -49,8 +49,12 @@ Um poderoso servidor MCP (Model Context Protocol) fornecendo **30 ferramentas** 
 
 ## ✨ Recursos Principais
 
-### 📦 30 Ferramentas
+### 📦 33 Ferramentas
 
+- **🧭 Roteamento** (1 ferramenta) - Seleciona o fluxo MCP correto a partir de um resumo completo
+  - `workflow`
+- **🔁 Estado e convergência do plano** (3 ferramentas) - Checkpoints, retomada e encerramento com evidências
+  - `plan_heartbeat`, `resume_plan`, `converge`
 - **🔄 Orquestração de Fluxos de Trabalho** (6 ferramentas) - Fluxos complexos com um clique
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
 - **🔍 Análise de Código** (4 ferramentas) - Qualidade, refatoração e graph insight

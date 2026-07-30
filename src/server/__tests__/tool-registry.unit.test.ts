@@ -38,9 +38,13 @@ describe("Tool Registry", () => {
   test("工具集过滤保持既有数量与成员关系", () => {
     expect(listToolDefinitionsForToolset("core")).toHaveLength(12);
     expect(listToolDefinitionsForToolset("ui")).toHaveLength(4);
-    expect(listToolDefinitionsForToolset("workflow")).toHaveLength(29);
+    expect(listToolDefinitionsForToolset("workflow")).toHaveLength(32);
     expect(listToolDefinitionsForToolset("full")).toHaveLength(allToolSchemas.length);
     expect(getToolDefinition("git_work_report")?.toolsets).toEqual([]);
+    expect(getToolDefinition("plan_heartbeat")?.annotations?.readOnlyHint).toBe(false);
+    expect(getToolDefinition("resume_plan")?.annotations?.readOnlyHint).toBe(true);
+    expect(getToolDefinition("converge")?.annotations?.readOnlyHint).toBe(false);
+    expect(getToolDefinition("memorize_asset")?.skillRoute.whenToCall).toContain("converge passed=true");
   });
 
   test("tools/list 形态保留 Schema 与 Annotation", () => {

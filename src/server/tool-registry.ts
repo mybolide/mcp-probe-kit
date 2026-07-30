@@ -29,6 +29,9 @@ import {
   deleteMemoryAsset,
   updateMemoryAsset,
   scanAndExtractPatterns,
+  planHeartbeat,
+  resumePlanTool,
+  converge,
 } from "../tools/index.js";
 import { ToolSchema } from "@modelcontextprotocol/core";
 import type { Tool } from "@modelcontextprotocol/server";
@@ -73,6 +76,9 @@ const handlers: Record<string, RegisteredToolHandler> = {
   delete_memory_asset: async (args) => deleteMemoryAsset(args as never),
   update_memory_asset: async (args) => updateMemoryAsset(args as never),
   scan_and_extract_patterns: async (args) => scanAndExtractPatterns(args as never),
+  plan_heartbeat: async (args) => planHeartbeat(args),
+  resume_plan: async (args) => resumePlanTool(args),
+  converge: async (args) => converge(args),
 };
 
 function buildRegistry(): ToolDefinition[] {

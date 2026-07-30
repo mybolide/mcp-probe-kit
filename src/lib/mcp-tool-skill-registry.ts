@@ -51,6 +51,7 @@ export const MCP_SKILL_ARGUMENT_RULES = [
   "新功能默认调用 `start_feature`，并传 `description=<完整范围摘要>`、`spec_layout=auto` 和明确的 `project_root`；让编排器决定 flat 或 parent-child。",
   "跨模块、多阶段、大版本或架构升级不得直接调用 `add_feature`；只有布局和 `subspecs` 已明确时，才按 `start_feature` 返回的 plan 调用它。",
   "工具参数必须表达当前任务事实，不要只复制用户最后一条消息；当前项目代码和已落盘 Spec 优先于历史记忆。",
+  "拿到 Delegated Plan 后首次调用 `plan_heartbeat` 时附完整 plan；每完成、跳过或阻塞步骤后更新检查点。",
 ] as const;
 
 export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = (() => {
@@ -73,11 +74,11 @@ export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = (() => {
 export const MCP_SKILL_COMMON_FLOWS = [
   {
     label: "新功能",
-    chain: "start_feature → add_feature → check_spec（通过）→ 写代码 → gentest → gencommit",
+    chain: "start_feature → plan_heartbeat → add_feature → check_spec（通过）→ 写代码 → gentest → code_review → converge（通过）→ memorize_asset（可选）→ gencommit",
   },
   {
     label: "修 Bug",
-    chain: "start_bugfix → fix_bug → 改代码 → gentest → 跑测试 → memorize_asset（type=bugfix）",
+    chain: "start_bugfix → plan_heartbeat → fix_bug → 改代码 → gentest → 跑测试 → code_review → converge（通过）→ memorize_asset（成功或负面记忆）",
   },
   {
     label: "不熟代码",
@@ -85,7 +86,11 @@ export const MCP_SKILL_COMMON_FLOWS = [
   },
   {
     label: "大重构",
-    chain: "code_insight（impact）→ refactor → gentest → code_review",
+    chain: "code_insight（impact）→ refactor → plan_heartbeat → gentest → code_review → converge",
+  },
+  {
+    label: "会话中断后继续",
+    chain: "resume_plan → 执行 nextStepId → plan_heartbeat → 最终 converge",
   },
 ] as const;
 
@@ -94,7 +99,8 @@ export const MCP_SKILL_AVOID_RULES = [
   "把用户的“继续 / 开始 / 往下做”原样当作 `workflow.intent` 或 `start_feature.description`",
   "大型跨模块需求绕过 `start_feature` 直接手写单体 Spec",
   "`check_spec` **未通过**就写功能代码",
-  "Bug 修完**不** `memorize_asset`",
+  "长流程执行步骤后**不** `plan_heartbeat`，导致中断后无法恢复",
+  "`converge` 未通过就把候选经验正式写入 `memorize_asset`",
   "`delete_memory_asset` 不带 `confirm: true`",
 ] as const;
 

@@ -28,6 +28,10 @@ export { memorizeAsset } from "./memorize_asset.js";
 export { deleteMemoryAsset } from "./delete_memory_asset.js";
 export { updateMemoryAsset } from "./update_memory_asset.js";
 export { scanAndExtractPatterns } from "./scan_and_extract_patterns.js";
+// 计划状态与收敛
+export { planHeartbeat } from "./plan_heartbeat.js";
+export { resumePlanTool } from "./resume_plan.js";
+export { converge } from "./converge.js";
 // 产品设计工作流
 export { startProduct } from "./start_product.js";
 // Git 工具

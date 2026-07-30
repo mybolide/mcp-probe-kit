@@ -10,7 +10,7 @@
   - 证据块：母规格、`spec-manifest.json`、四个子规格及 `check_spec` 校验结果。
   - 涉及文件：`docs/specs/mcp-v4/`。
 - [x] 2.1 定义统一 ToolDefinition 与 Registry — _需求: FR-7_
-  - 证据块：`src/server/tool-catalog.ts` 统一 Toolset、Skill Route、Annotation、Task/Protocol Policy；`src/server/tool-registry.ts` 组合 Schema 与 Handler，并在加载时校验 30 个工具一一覆盖。
+  - 证据块：`src/server/tool-catalog.ts` 统一 Toolset、Skill Route、Annotation、Task/Protocol Policy；`src/server/tool-registry.ts` 组合 Schema 与 Handler，并在加载时校验 33 个工具一一覆盖。
   - 涉及文件：`src/server/tool-definition.ts`、`src/server/tool-catalog.ts`、`src/server/tool-registry.ts`、`src/lib/tool-annotations.ts`、`src/lib/toolset-manager.ts`、`src/lib/task-defaults.ts`。
 - [x] 2.2 从 Registry 生成 tools/list、dispatcher、manifest 与 Skill 路由 — _需求: FR-7_
   - 证据块：`src/index.ts` 已通过 Registry 生成 `tools/list` 并执行 Handler，原 30 分支 switch 已删除；Manifest/Skill/Toolset/Annotation 均由 Catalog 生成；逐工具 tools/list 等价测试通过。

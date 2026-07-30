@@ -29,6 +29,15 @@ describe('delegated-plan-contract', () => {
     expect(plan.steps[0].type).toBe('tool');
     expect(plan.steps[1].type).toBe('agent_action');
     expect(plan.memoryPolicy.allowNegativeMemory).toBe(true);
+    expect(plan.executionStatePolicy).toMatchObject({
+      heartbeatTool: 'plan_heartbeat',
+      resumeTool: 'resume_plan',
+      convergenceTool: 'converge',
+      heartbeatAfterEachStep: true,
+    });
+    expect(plan.globalRules.join('\n')).toContain('plan_heartbeat');
+    expect(plan.globalRules.join('\n')).toContain('resume_plan');
+    expect(plan.globalRules.join('\n')).toContain('converge');
   });
 
   it('为相同工作流与输入生成稳定且不泄露完整内容的 planId', () => {

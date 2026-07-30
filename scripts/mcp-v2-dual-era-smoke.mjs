@@ -20,6 +20,62 @@ try {
   );
 }
 
+async function runPlanLifecycleSmoke(client, projectRoot) {
+  const planId = "feature-production-smoke-abc123";
+  const plan = {
+    planId,
+    mode: "delegated",
+    contractVersion: "2.0.0",
+    workflow: "feature",
+    workflowVersion: "4.0.0",
+    objective: "验证生产版 Plan 状态闭环",
+    steps: [{ id: "verify", action: "verify" }],
+    globalRules: [],
+    completionCriteria: ["步骤与证据一致"],
+    memoryPolicy: {
+      recallBeforeExecution: true,
+      extractAfterValidation: true,
+      writeOnlyReusableKnowledge: true,
+      allowNegativeMemory: true,
+    },
+  };
+  const heartbeat = await client.callTool({
+    name: "plan_heartbeat",
+    arguments: {
+      plan_id: planId,
+      project_root: projectRoot,
+      plan,
+      completed_step_ids: ["verify"],
+      evidence: [
+        { kind: "requirements", summary: "范围已确认" },
+        { kind: "spec", summary: "规格已确认", reference: "smoke-spec" },
+        { kind: "implementation", summary: "实现完成", revision: "abc123" },
+        { kind: "test", summary: "测试通过", reference: "smoke-test" },
+        { kind: "review", summary: "审查通过", reference: "smoke-review" },
+      ],
+    },
+  });
+  assert(heartbeat.structuredContent?.stored === true, "Plan heartbeat was not stored");
+
+  const resumed = await client.callTool({
+    name: "resume_plan",
+    arguments: { plan_id: planId, project_root: projectRoot },
+  });
+  assert(resumed.structuredContent?.found === true, "Plan resume did not find checkpoint");
+
+  const converged = await client.callTool({
+    name: "converge",
+    arguments: { plan_id: planId, project_root: projectRoot },
+  });
+  assert(converged.structuredContent?.passed === true, "Plan did not converge");
+  return {
+    stored: heartbeat.structuredContent?.stored,
+    readySteps: resumed.structuredContent?.readyStepIds?.length,
+    converged: converged.structuredContent?.passed,
+    memoryWriteAllowed: converged.structuredContent?.memoryWriteAllowed,
+  };
+}
+
 async function runLegacySmoke() {
   const projectRoot = await createProjectRoot("legacy");
   const { client, transport, stderr } = await connect("legacy", false);
@@ -27,7 +83,7 @@ async function runLegacySmoke() {
   try {
     assert(client.getProtocolEra() === "legacy", "Legacy era negotiation failed");
     const tools = await client.listTools();
-    assert(tools.tools.length === 30, "Legacy tools/list count mismatch");
+    assert(tools.tools.length === 33, "Legacy tools/list count mismatch");
 
     const created = CallToolResultSchema.parse(
       await client.request(
@@ -87,7 +143,13 @@ async function runModernSmoke() {
   try {
     assert(client.getProtocolEra() === "modern", "Modern era negotiation failed");
     const tools = await client.listTools();
-    assert(tools.tools.length === 30, "Modern tools/list count mismatch");
+    assert(tools.tools.length === 33, "Modern tools/list count mismatch");
+    for (const toolName of ["plan_heartbeat", "resume_plan", "converge"]) {
+      assert(
+        tools.tools.some((tool) => tool.name === toolName),
+        `Modern tools/list missing ${toolName}`
+      );
+    }
 
     const status = await client.readResource({ uri: "probe://status" });
     const statusContent = status.contents[0];
@@ -142,6 +204,8 @@ async function runModernSmoke() {
       "Modern task sync fallback result mismatch"
     );
 
+    const planState = await runPlanLifecycleSmoke(client, projectRoot);
+
     return {
       era: client.getProtocolEra(),
       tools: tools.tools.length,
@@ -149,6 +213,7 @@ async function runModernSmoke() {
       elicitationCalls: elicitationCalls(),
       modernTasks: statusPayload.protocol.features.modernTasks,
       taskFallbackFirstTool: fallback.structuredContent?.firstTool,
+      planState,
       started: stderr().includes("v4-sdk2-dual-era-20260730"),
     };
   } finally {

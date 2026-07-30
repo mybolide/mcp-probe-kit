@@ -108,9 +108,13 @@ describe('memory-orchestration', () => {
   test('bugfix 记忆步骤覆盖成功、失败、证伪和回归结论', () => {
     const step = buildMemoryPlanStep('bugfix');
 
+    expect(step).not.toHaveProperty('tool');
+    expect(step.action).toBe('prepare_memory_candidate');
     expect(step.when).toContain('failed_approach');
     expect(step.when).toContain('false_root_cause');
     expect(step.when).toContain('regression_case');
+    expect(step.note).toContain('converge passed=true');
+    expect(step.outputs).toContain('MemoryCandidate（成功、失败、证伪或回归）');
     expect(step.args).toMatchObject({
       evidence: expect.any(Array),
       applicability: expect.any(String),

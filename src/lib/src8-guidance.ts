@@ -1,3 +1,22 @@
+import { SRC8_METHODOLOGY, TBP8_ALIAS } from './src8-core.js';
+import { buildSrc8EvidenceFromInput } from './src8-plan.js';
+
+export { SRC8_METHODOLOGY, TBP8_ALIAS } from './src8-core.js';
+export {
+  buildSrc8DelegatedPlan,
+  buildSrc8EvidenceFromInput,
+  mergeBugfixOrchestrationPlan,
+  renderSrc8PlanSummaryMarkdown,
+  resolveAnalysisMode,
+} from './src8-plan.js';
+export type {
+  BuildSrc8DelegatedPlanInput,
+  MergeBugfixOrchestrationPlanInput,
+  Src8ExecutionPlan,
+  Src8ExecutionPlanStep,
+  Src8InputEvidence,
+} from './src8-plan.js';
+
 /**
  * SRC-8（Software Root-Cause 8-step）
  *
@@ -7,10 +26,6 @@
  * @see docs/src8-methodology.md
  * @see docs/src8-methodology.zh-CN.md
  */
-
-export const SRC8_METHODOLOGY = "src8" as const;
-/** @deprecated 使用 src8；保留兼容旧调用方 */
-export const TBP8_ALIAS = "tbp8" as const;
 
 export type Src8StepId =
   | "clarify_gap"
@@ -172,7 +187,7 @@ export const SRC8_STEPS: Omit<Src8ChecklistItem, "status">[] = [
     question: "如何防复发？经验如何跨项目复用（yokoten）？",
     techniques: [
       "补回归测试锁定边界",
-      "memorize_asset type=bugfix：【现象】【根因】【修复】【验证】",
+      "准备记忆候选：【现象】【根因】【修复】【验证】；converge 通过后再写入",
       "同类路径/模块排查",
     ],
     antiPatterns: ["修完即走", "不沉淀记忆", "不补测试"],
@@ -286,7 +301,7 @@ SRC-8 **不是**丰田 TBP 的逐字翻译，而是继承其 **PDCA 科学思维
 | 5 制定对策 | 5 制定对策 | 最小 patch + 三维评估 |
 | 6 贯彻实施 | 6 贯彻修复 | **复现门禁** + 三次失败升级 |
 | 7 评价结果和过程 | 7 评价双轨 | 结果 + 过程双评 |
-| 8 巩固成果（yokoten） | 8 巩固传播 | 回归测试 + **memorize 跨仓库记忆** |
+| 8 巩固成果（yokoten） | 8 巩固传播 | 回归测试 + **准备记忆候选，Converge 后写入** |
 
 **继承的不变量**（来自 [Toyota TBP](https://artoflean.com/reference/tbp/)）：
 - 差距思维、先 Plan 后 Do、禁止跳步、基于事实、对策针对真因、评价后巩固
@@ -409,7 +424,7 @@ export function renderSrc8GateRules(): string {
 3. **Step 4 子步 4a~4e 均须由 Agent 填写** — 见 rootCauseWorksheet
 4. **Step 6 前须满足复现门禁** — failing test / repro / 或说明不可复现的技术原因
 5. **三次修复仍失败** — 回 Step 2/4，不得盲试
-6. **Step 8 须 memorize_asset** — 【现象】【根因】【修复】【验证】`;
+6. **Step 8 须准备记忆候选** — 【现象】【根因】【修复】【验证】；只有 converge 通过后才调用 memorize_asset`;
 }
 
 export function renderReproductionGate(): string {
@@ -450,320 +465,6 @@ export function renderSrc8AgentOutputFormat(): string {
 > 字段 \`tbp\` 为历史兼容名，语义对齐 SRC-8 各步产出。`;
 }
 
-export type Src8InputEvidence = {
-  type: "symptom" | "timeline" | "stack" | "code" | "comparison";
-  detail: string;
-  source: string;
-};
-
-export type Src8ExecutionPlanStep = {
-  id: string;
-  tool?: string;
-  action?: string;
-  args?: Record<string, unknown>;
-  outputs?: string[];
-  when?: string;
-  dependsOn?: string[];
-  note?: string;
-};
-
-export type Src8ExecutionPlan = {
-  mode: "delegated";
-  methodology: typeof SRC8_METHODOLOGY;
-  steps: Src8ExecutionPlanStep[];
-};
-
-export type BuildSrc8DelegatedPlanInput = {
-  error_message: string;
-  stack_trace?: string;
-  analysis_mode?: string;
-  code_context?: string;
-  project_root?: string;
-  file_path?: string;
-  /** 默认 true；start_bugfix 外层若单独编排可设为 false */
-  includeGentest?: boolean;
-  includeMemorize?: boolean;
-};
-
-export function buildSrc8DelegatedPlan(input: BuildSrc8DelegatedPlanInput): Src8ExecutionPlan {
-  const analysisMode = resolveAnalysisMode(input.analysis_mode);
-  const includeGentest = input.includeGentest !== false;
-  const includeMemorize = input.includeMemorize !== false;
-
-  const steps: Src8ExecutionPlanStep[] = [
-    {
-      id: "src8-1",
-      action:
-        "SRC-1 明确差距（PLAN）：写清理想行为、实际行为、可观察 gap；禁止只有情绪无差距",
-      outputs: ["BugAnalysis.tbp.phenomenon", "BugAnalysis.summary"],
-      note: "写入 structuredContent.bugfixInput.phenomenon；反模式：「坏了/卡了」",
-    },
-    {
-      id: "src8-2",
-      tool: "code_insight",
-      when: "边界/调用链不清，或需收敛影响面",
-      args: {
-        mode: "auto",
-        query: input.error_message,
-        ...(input.stack_trace ? { task_context: input.stack_trace } : {}),
-        ...(input.project_root ? { project_root: input.project_root } : {}),
-      },
-      outputs: ["BugAnalysis.tbp.boundary", "BugAnalysis.tbp.timeline"],
-      dependsOn: ["src8-1"],
-      note: "图谱缺失时先执行 init_project_context；再读本步输出收敛边界",
-    },
-    {
-      id: "src8-3",
-      action: "SRC-3 验收契约（PLAN）：定义 SMART 验收（failing test 变绿 / repro 命令 / 明确手动步骤）",
-      outputs: ["BugAnalysis.testPlan"],
-      dependsOn: ["src8-1"],
-    },
-    {
-      id: "src8-4",
-      action:
-        "SRC-4 把握真因（PLAN）：按 rootCauseWorksheet 完成 4a~4e，输出 rootCauseAnalysis 与因果句",
-      outputs: [
-        "rootCauseAnalysis",
-        "BugAnalysis.rootCause",
-        "BugAnalysis.tbp.rootCauseStatement",
-        "BugAnalysis.tbp.ruledOut",
-      ],
-      dependsOn: ["src8-1", "src8-2", "src8-3"],
-      note: "硬门禁：本步闭合前禁止改代码；见 structuredContent.rootCauseWorksheet",
-    },
-    {
-      id: "src8-5",
-      action: "SRC-5 制定对策（PLAN）：最小 patch，评估有效性/可行性/回归风险",
-      outputs: ["BugAnalysis.fixPlan", "BugAnalysis.tbp.repair"],
-      dependsOn: ["src8-4"],
-    },
-    {
-      id: "src8-6",
-      action: "SRC-6 贯彻修复（DO）：复现门禁通过后改代码，改动仅限 Bug 范围",
-      when: "rootCauseWorksheet 已闭合且复现/failing test 已就绪",
-      outputs: ["BugAnalysis.affectedFiles", "代码补丁"],
-      dependsOn: ["src8-5"],
-      note: "三次修复仍失败 → 回 src8-2 或 src8-4，不得盲试",
-    },
-  ];
-
-  if (includeGentest) {
-    steps.push({
-      id: "src8-7",
-      tool: "gentest",
-      when: "SRC-6 代码已修改",
-      args: {
-        code: "[修复后的代码]",
-        framework: "[按项目上下文选择 vitest/jest/mocha]",
-        ...(input.file_path ? { file_path: input.file_path } : {}),
-        ...(input.project_root ? { project_root: input.project_root } : {}),
-      },
-      outputs: ["回归测试代码"],
-      dependsOn: ["src8-6"],
-      note: "SRC-7 评价双轨（结果轨）：对照 Step 3 验收契约",
-    });
-  } else {
-    steps.push({
-      id: "src8-7",
-      action: "SRC-7 评价双轨（CHECK）：对照验收契约验证，并复盘过程证据缺口",
-      outputs: ["BugAnalysis.summary（含验证结论）"],
-      dependsOn: ["src8-6"],
-    });
-  }
-
-  if (includeMemorize) {
-    steps.push({
-      id: "src8-8",
-      tool: "memorize_asset",
-      when: "验证通过",
-      args: {
-        type: "bugfix",
-        tags: "bugfix,root-cause",
-        summary: `[关键词] ${input.error_message.slice(0, 80)}`,
-        content: "【现象】【根因】【修复】【验证】",
-      },
-      outputs: ["记忆库 bugfix 条目"],
-      dependsOn: ["src8-7"],
-      note: "SRC-8 巩固传播（ACT）",
-    });
-  } else {
-    steps.push({
-      id: "src8-8",
-      action: "SRC-8 巩固传播（ACT）：补回归测试并写 preventionMeasures",
-      outputs: ["BugAnalysis.preventionMeasures"],
-      dependsOn: ["src8-7"],
-    });
-  }
-
-  return {
-    mode: "delegated",
-    methodology: analysisMode,
-    steps,
-  };
-}
-
-export type MergeBugfixOrchestrationPlanInput = {
-  src8Input: BuildSrc8DelegatedPlanInput;
-  preambleSteps?: Src8ExecutionPlanStep[];
-  appendSteps?: Src8ExecutionPlanStep[];
-  /** 为 true 时不在 src8 内嵌 memorize，由 appendSteps 提供 */
-  deferMemorize?: boolean;
-};
-
-/** start_bugfix / loop 外层：上下文步骤 + SRC-8 八步 + 可选闸门/记忆 */
-export function mergeBugfixOrchestrationPlan(input: MergeBugfixOrchestrationPlanInput): Src8ExecutionPlan {
-  const src8 = buildSrc8DelegatedPlan({
-    ...input.src8Input,
-    includeMemorize: input.deferMemorize ? false : input.src8Input.includeMemorize,
-  });
-  return {
-    mode: "delegated",
-    methodology: resolveAnalysisMode(input.src8Input.analysis_mode),
-    steps: [
-      ...(input.preambleSteps ?? []),
-      ...src8.steps,
-      ...(input.appendSteps ?? []),
-    ],
-  };
-}
-
-export function renderSrc8PlanSummaryMarkdown(plan: Src8ExecutionPlan): string {
-  const lines = [
-    "## 📋 SRC-8 执行计划（delegated）",
-    "",
-    "严格按 `structuredContent.metadata.plan.steps` 顺序执行，完成每步 `outputs` 后再进入下一步：",
-    "",
-  ];
-
-  for (const step of plan.steps) {
-    const kind = step.tool ? `tool: \`${step.tool}\`` : "action";
-    lines.push(`### ${step.id} — ${kind}`);
-    if (step.action) {
-      lines.push(step.action);
-    }
-    if (step.tool && step.args) {
-      lines.push("```json");
-      lines.push(JSON.stringify(step.args, null, 2));
-      lines.push("```");
-    }
-    if (step.when) {
-      lines.push(`- **when**: ${step.when}`);
-    }
-    if (step.dependsOn?.length) {
-      lines.push(`- **dependsOn**: ${step.dependsOn.join(", ")}`);
-    }
-    if (step.outputs?.length) {
-      lines.push(`- **outputs**: ${step.outputs.join(", ")}`);
-    }
-    if (step.note) {
-      lines.push(`- **note**: ${step.note}`);
-    }
-    lines.push("");
-  }
-
-  return lines.join("\n");
-}
-
-export function buildSrc8EvidenceFromInput(input: {
-  error_message: string;
-  stack_trace?: string;
-  code_context?: string;
-  steps_to_reproduce?: string;
-  expected_behavior?: string;
-  actual_behavior?: string;
-  success_sample?: string;
-  verification_target?: string;
-}): Src8InputEvidence[] {
-  const evidence: Src8InputEvidence[] = [
-    { type: "symptom", detail: input.error_message, source: "error_message" },
-  ];
-  if (input.steps_to_reproduce) {
-    evidence.push({ type: "timeline", detail: input.steps_to_reproduce, source: "steps_to_reproduce" });
-  }
-  if (input.stack_trace) {
-    evidence.push({ type: "stack", detail: input.stack_trace, source: "stack_trace" });
-  }
-  if (input.code_context) {
-    evidence.push({ type: "code", detail: input.code_context, source: "code_context" });
-  }
-  if (input.expected_behavior) {
-    evidence.push({ type: "comparison", detail: `期望: ${input.expected_behavior}`, source: "expected_behavior" });
-  }
-  if (input.actual_behavior) {
-    evidence.push({ type: "comparison", detail: `实际: ${input.actual_behavior}`, source: "actual_behavior" });
-  }
-  if (input.success_sample) {
-    evidence.push({ type: "comparison", detail: `成功样本: ${input.success_sample}`, source: "success_sample" });
-  }
-  if (input.verification_target) {
-    evidence.push({ type: "comparison", detail: `验收目标: ${input.verification_target}`, source: "verification_target" });
-  }
-  return evidence;
-}
-
-export function renderFixBugAgentPromptBody(sections: {
-  error_message: string;
-  stack_trace_section: string;
-  reproduce_section: string;
-  behavior_section: string;
-  comparison_section: string;
-  verification_target_section: string;
-  code_context_section: string;
-  plan: Src8ExecutionPlan;
-}): string {
-  return `# SRC-8 Bug 真因分析与修复
-
-## 🐛 Bug 信息
-
-**错误信息**:
-\`\`\`
-${sections.error_message}
-\`\`\`
-
-${sections.stack_trace_section}
-
-${sections.reproduce_section}
-
-${sections.behavior_section}
-
-${sections.comparison_section}
-
-${sections.verification_target_section}
-
-${sections.code_context_section}
-
----
-
-${renderSrc8PlanSummaryMarkdown(sections.plan)}
-
----
-
-${renderRootCauseWorksheetMarkdown()}
-
----
-
-${renderReproductionGate()}
-
----
-
-${renderSrc8GateRules()}
-
-*方法论: SRC-8 | 执行: metadata.plan*`;
-}
-
-/** @deprecated 使用 renderFixBugAgentPromptBody；完整 TBP 对照版见 docs */
-export function renderFixBugPromptBody(sections: Parameters<typeof renderFixBugAgentPromptBody>[0]): string {
-  return renderFixBugAgentPromptBody(sections);
-}
-
-export function resolveAnalysisMode(raw?: string): typeof SRC8_METHODOLOGY {
-  const n = (raw || "").trim().toLowerCase();
-  if (n === TBP8_ALIAS || n === SRC8_METHODOLOGY || !n) {
-    return SRC8_METHODOLOGY;
-  }
-  return SRC8_METHODOLOGY;
-}
-
 // --- 向后兼容导出（旧模块名 tbp8-guidance） ---
 export const TBP8_STEPS = SRC8_STEPS;
 export type TbpStepId = Src8StepId;
@@ -776,4 +477,3 @@ export const renderTbpGateRules = renderSrc8GateRules;
 export const renderTbpReproductionGate = renderReproductionGate;
 export const renderTbpAgentOutputFormat = renderSrc8AgentOutputFormat;
 export const renderTbpFiveWhyTemplate = () => renderRootCauseWorksheetMarkdown();
-export const renderTbpBugInfoSections = renderFixBugPromptBody;

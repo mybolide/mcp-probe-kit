@@ -320,7 +320,7 @@ export function renderMemoryGuideSection(context: MemoryInjectionContext): strin
   }
 
   if (context.results.length === 0) {
-    return `\n\n## 🧠 历史经验与坑（记忆库）\n- 状态: 已启用\n- 检索结果: 未找到高相关记录（含历史 Bug 修复与可复用模式）\n- 处理: 继续主流程；Bug 修复验证通过后必须 \`memorize_asset\` 沉淀；功能/UI 有可复用产出再沉淀\n`;
+    return `\n\n## 🧠 历史经验与坑（记忆库）\n- 状态: 已启用\n- 检索结果: 未找到高相关记录（含历史 Bug 修复与可复用模式）\n- 处理: 继续主流程；验证后先准备成功或负面记忆候选并写入 \`plan_heartbeat\`，只有 \`converge\` 通过后才正式调用 \`memorize_asset\`\n`;
   }
 
   const loadedCount = context.results.filter((item) => Boolean(context.assetsById[item.id])).length;
@@ -377,9 +377,9 @@ export function buildOrchestrationHandles(
 export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
   if (kind === 'bugfix') {
     return {
-      id: 'memorize-bugfix',
-      tool: 'memorize_asset',
-      when: '每轮验证后：修复成功写 bugfix；方案失败写 failed_approach；根因被证伪写 false_root_cause；发现回归写 regression_case',
+      id: 'prepare-memory-candidate-bugfix',
+      action: 'prepare_memory_candidate',
+      when: '每轮验证后整理候选：修复成功为 bugfix；方案失败为 failed_approach；根因被证伪为 false_root_cause；发现回归为 regression_case',
       args: {
         name: '[问题简述，如 登录超时-Redis连接池]',
         type: '[bugfix | failed_approach | false_root_cause | regression_case]',
@@ -393,15 +393,16 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
         tags: ['[按结论填写 bugfix/root-cause/negative-memory]'],
         confidence: 0.85,
       },
-      outputs: [],
+      outputs: ['MemoryCandidate（成功、失败、证伪或回归）'],
+      note: '本步只准备候选并通过 plan_heartbeat 记录证据；converge passed=true 后再调用 memorize_asset 正式写入',
     };
   }
 
   if (kind === 'ui') {
     return {
-      id: 'memorize-ui',
-      tool: 'memorize_asset',
-      when: 'UI 实现完成且存在可复用组件/布局/交互模式',
+      id: 'prepare-memory-candidate-ui',
+      action: 'prepare_memory_candidate',
+      when: 'UI 实现与验证完成后，评估是否存在可复用组件/布局/交互模式',
       args: {
         name: '[UI 资产名称]',
         type: 'component',
@@ -412,15 +413,16 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
         tags: ['ui', 'pattern'],
         confidence: 0.75,
       },
-      outputs: [],
+      outputs: ['MemoryCandidate（UI 组件/布局/交互模式）'],
+      note: '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
     };
   }
 
   if (kind === 'feature') {
     return {
-      id: 'memorize-feature',
-      tool: 'memorize_asset',
-      when: '功能完成且存在可复用实现/规范',
+      id: 'prepare-memory-candidate-feature',
+      action: 'prepare_memory_candidate',
+      when: '功能实现与验证完成后，评估是否存在可复用实现/规范',
       args: {
         name: '[功能/模式名称]',
         type: 'pattern',
@@ -431,14 +433,15 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
         tags: ['feature', 'pattern'],
         confidence: 0.75,
       },
-      outputs: [],
+      outputs: ['MemoryCandidate（功能实现/规范）'],
+      note: '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
     };
   }
 
   return {
-    id: 'memorize',
-    tool: 'memorize_asset',
-    when: '本次实现完成且确认存在可复用资产',
+    id: 'prepare-memory-candidate',
+    action: 'prepare_memory_candidate',
+    when: '本次实现与验证完成后，评估是否存在可复用资产',
     args: {
       name: '[资产名称]',
       type: 'pattern',
@@ -449,6 +452,7 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
       tags: ['pattern'],
       confidence: 0.7,
     },
-    outputs: [],
+    outputs: ['MemoryCandidate（可复用资产）'],
+    note: '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
   };
 }

@@ -16,9 +16,9 @@ import {
   buildSrc8Checklist,
   buildSrc8DelegatedPlan,
   buildSrc8EvidenceFromInput,
-  renderFixBugAgentPromptBody,
   resolveAnalysisMode,
 } from "../lib/src8-guidance.js";
+import { renderFixBugAgentPromptBody } from "../lib/src8-prompt.js";
 
 function extractFilePaths(text: string): string[] {
   if (!text) return [];
@@ -169,7 +169,7 @@ export async function fixBug(args: any) {
       tasks: [
         "严格按 structuredContent.metadata.plan.steps 顺序执行（禁止从 src8-4 跳起）",
         "src8-4 闭合 rootCauseWorksheet 并输出 rootCauseAnalysis 后才可进入 src8-5/6",
-        "src8-6 前满足复现门禁；src8-8 用 memorize_asset 沉淀",
+        "src8-6 前满足复现门禁；src8-8 只准备记忆候选，converge 通过后再用 memorize_asset 沉淀",
       ],
       notes: [
         "MCP 为 guidance-only，不自动修 Bug",

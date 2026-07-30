@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 30 tools—it's a context-aware system that helps AI agents grasp what you're building.
+> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 33 tools—it's a context-aware system that helps AI agents grasp what you're building.
 
 **Languages**: [English](README.md) | [简体中文](i18n/README.zh-CN.md) | [日本語](i18n/README.ja-JP.md) | [한국어](i18n/README.ko-KR.md) | [Español](i18n/README.es-ES.md) | [Français](i18n/README.fr-FR.md) | [Deutsch](i18n/README.de-DE.md) | [Português (BR)](i18n/README.pt-BR.md)
 
@@ -27,7 +27,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server providing **30 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
+A powerful MCP (Model Context Protocol) server providing **33 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
 
 **🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
@@ -45,7 +45,7 @@ A powerful MCP (Model Context Protocol) server providing **30 tools** covering t
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 30 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 33 tools
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -53,8 +53,12 @@ A powerful MCP (Model Context Protocol) server providing **30 tools** covering t
 
 ## ✨ Core Features
 
-### 📦 30 Tools
+### 📦 33 Tools
 
+- **🧭 Routing** (1 tool) - Select the correct MCP workflow from a complete task summary
+  - `workflow`
+- **🔁 Plan State & Convergence** (3 tools) - Checkpoint, resume, and close delegated plans with evidence gates
+  - `plan_heartbeat`, `resume_plan`, `converge`
 - **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
   - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
 - **🔍 Code Analysis** (4 tools) - Code quality, refactoring, and graph insight
@@ -69,6 +73,14 @@ A powerful MCP (Model Context Protocol) server providing **30 tools** covering t
   - `ui_design_system`, `ui_search`, `sync_ui_data`
 - **🧠 Memory** (6 tools) - Reusable asset memory
   - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
+
+### 🔁 Delegated Plan State, Recovery, and Convergence
+
+- Every v4 delegated plan declares `executionStatePolicy` and instructs the Agent to create a local checkpoint on the first step.
+- `plan_heartbeat` persists completed/skipped steps, unresolved items, evidence, and the last verified revision under `.mcp-probe-kit/plans/`.
+- `resume_plan` recalculates ready and blocked steps from stored dependencies after interruption, restart, or Agent handoff.
+- `converge` refuses closure while steps, unresolved items, or requirements/spec/implementation/test/review evidence are incomplete. Formal long-term memory writes are allowed only after convergence passes.
+- These tools track and validate Agent execution; they do not move file, shell, Git, or implementation work into the MCP server.
 
 ### 🛡️ Quality Constraints (single source of truth)
 
@@ -114,7 +126,7 @@ All hard quality rules live in one module (`src/lib/quality-constraints.ts`) and
 
 **Memory tools:**
 - `search_memory` - Semantic search across the shared memory pool (optionally prefer `type` / `tags`); text output includes `id`, `score`, summary, description, and a `--- content ---` body (default up to 1500 chars via `MEMORY_SEARCH_CONTENT_MAX_CHARS`)
-- `memorize_asset` - Persist reusable code/spec/pattern assets into vector memory
+- `memorize_asset` - Persist an already validated `MemoryCandidate` into vector memory; for delegated workflows, call it only after `converge` passes
 - `read_memory_asset` - Read full asset content by `asset_id` (text output includes the full `content` body)
 - `update_memory_asset` - Update an existing asset by `asset_id` (preserves ID; `content` changes re-embed)
 - `delete_memory_asset` - Delete an asset by `asset_id` from the shared pool
@@ -733,7 +745,7 @@ npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
 
 ### Q2b: Cursor shows connected but **0 tools** / Agent says **No MCP servers available**?
 
-This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connected-green-dot-and-tools-discovered-in-logs-but-0-tools-in-ui-and-agent/160620): stderr may log `tools/list` with 30 tools, while **Mcp FileSystem Writer** shows `lease returned 0 tools` and `toolCount=0` — the Agent lease layer silently dropped the tool list.
+This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connected-green-dot-and-tools-discovered-in-logs-but-0-tools-in-ui-and-agent/160620): stderr may log `tools/list` with 33 tools, while **Mcp FileSystem Writer** shows `lease returned 0 tools` and `toolCount=0` — the Agent lease layer silently dropped the tool list.
 
 **Common causes:**
 
@@ -761,7 +773,7 @@ This folder is **written by Cursor** (Mcp FileSystem Writer), not by mcp-probe-k
 mcps/user-mcp-probe-kit/
 ├── SERVER_METADATA.json
 ├── STATUS.md
-├── tools/           ← one JSON per tool (~30); Agent reads these for CallMcpTool
+├── tools/           ← one JSON per tool (~33); Agent reads these for CallMcpTool
 │   ├── init_project.json
 │   └── ...
 └── resources/       ← from resources/list (may exist even when tools/ is empty)
@@ -770,7 +782,7 @@ mcps/user-mcp-probe-kit/
 | State | Meaning |
 |-------|---------|
 | `resources/` exists, `tools/` missing or empty | `resources/list` OK but **tools lease failed** (matches `lease returned 0 tools`) |
-| `tools/` has some files but not 30 | Partial write or session interrupted; Reload MCP |
+| `tools/` has some files but not 33 | Partial write or session interrupted; Reload MCP |
 | `STATUS.md` says server errored | Cursor marked the server unhealthy for Agent even if Settings is green |
 
 Healthy session: `tools/` should auto-populate within seconds of MCP connect — no manual setup, no repo config.

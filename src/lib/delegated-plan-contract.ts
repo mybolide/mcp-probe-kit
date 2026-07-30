@@ -31,6 +31,14 @@ export interface DelegatedPlanStep extends PlanStep {
   };
 }
 
+export interface DelegatedExecutionStatePolicy {
+  heartbeatTool: 'plan_heartbeat';
+  resumeTool: 'resume_plan';
+  convergenceTool: 'converge';
+  heartbeatAfterEachStep: boolean;
+  persistPlanOnFirstHeartbeat: boolean;
+}
+
 export interface DelegatedMemoryPolicy {
   recallBeforeExecution: boolean;
   extractAfterValidation: boolean;
@@ -56,6 +64,7 @@ export interface DelegatedPlanContract {
   globalRules: string[];
   completionCriteria: string[];
   memoryPolicy: DelegatedMemoryPolicy;
+  executionStatePolicy: DelegatedExecutionStatePolicy;
   resumeContext?: DelegatedResumeContext;
 }
 
@@ -77,6 +86,21 @@ const DEFAULT_MEMORY_POLICY: DelegatedMemoryPolicy = {
   writeOnlyReusableKnowledge: true,
   allowNegativeMemory: true,
 };
+
+const DEFAULT_EXECUTION_STATE_POLICY: DelegatedExecutionStatePolicy = {
+  heartbeatTool: 'plan_heartbeat',
+  resumeTool: 'resume_plan',
+  convergenceTool: 'converge',
+  heartbeatAfterEachStep: true,
+  persistPlanOnFirstHeartbeat: true,
+};
+
+const DEFAULT_STATE_RULES = [
+  '首次执行计划时调用 plan_heartbeat 并附完整 plan，建立本地检查点',
+  '每完成、跳过或阻塞一个步骤后调用 plan_heartbeat 更新证据与状态',
+  '会话中断或切换 Agent 后先调用 resume_plan，再继续未完成步骤',
+  '只有 converge 返回 passed=true 后，才能将本次结论正式写入长期记忆',
+];
 
 export function createDelegatedPlanId(
   workflow: DelegatedWorkflowKind,
@@ -142,12 +166,13 @@ export function buildDelegatedPlanContract(
     workflowVersion: input.workflowVersion,
     objective: input.objective,
     steps: normalizedSteps,
-    globalRules: input.globalRules ?? [],
+    globalRules: [...new Set([...DEFAULT_STATE_RULES, ...(input.globalRules ?? [])])],
     completionCriteria: input.completionCriteria ?? [],
     memoryPolicy: {
       ...DEFAULT_MEMORY_POLICY,
       ...input.memoryPolicy,
     },
+    executionStatePolicy: DEFAULT_EXECUTION_STATE_POLICY,
     ...(input.resumeContext ? { resumeContext: input.resumeContext } : {}),
   };
 }

@@ -40,6 +40,11 @@ import {
   PatternExtractionSchema,
 } from '../schemas/output/memory-tools.js';
 import { CodeInsightSchema } from '../schemas/output/code-insight-tools.js';
+import {
+  ConvergeResultSchema,
+  PlanHeartbeatResultSchema,
+  ResumePlanResultSchema,
+} from '../schemas/output/plan-tools.js';
 import { withToolAnnotations } from './tool-annotations.js';
 
 type JsonSchema = Record<string, unknown>;
@@ -108,6 +113,9 @@ const OUTPUT_SCHEMA_BY_TOOL: Record<string, JsonSchema> = {
   delete_memory_asset: DeleteMemoryResultSchema as JsonSchema,
   update_memory_asset: UpdateMemoryResultSchema as JsonSchema,
   scan_and_extract_patterns: PatternExtractionSchema as JsonSchema,
+  plan_heartbeat: PlanHeartbeatResultSchema as JsonSchema,
+  resume_plan: ResumePlanResultSchema as JsonSchema,
+  converge: ConvergeResultSchema as JsonSchema,
 };
 
 export function getOutputSchemaForTool(toolName: string): JsonSchema | undefined {

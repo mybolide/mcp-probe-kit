@@ -5,10 +5,13 @@ describe("Tool Manifest", () => {
   test("由 Catalog 生成真实工具集数量和成员", () => {
     const sections = buildToolManifestSections();
 
-    expect(sections.totalTools).toBe(30);
+    expect(sections.totalTools).toBe(33);
     expect(sections.toolsets.core.count).toBe(12);
-    expect(sections.toolsets.workflow.count).toBe(29);
+    expect(sections.toolsets.workflow.count).toBe(32);
     expect(sections.toolsets.workflow.tools).toContain("workflow");
+    expect(sections.toolsets.workflow.tools).toEqual(
+      expect.arrayContaining(["plan_heartbeat", "resume_plan", "converge"])
+    );
     expect(sections.toolsets.workflow.tools).not.toContain("git_work_report");
     expect(sections.categories.routing.tools).toEqual(["workflow"]);
   });

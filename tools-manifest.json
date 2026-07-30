@@ -1,7 +1,7 @@
 {
   "version": "3.7.0",
   "protocol": "2025-11-25",
-  "totalTools": 30,
+  "totalTools": 33,
   "toolsets": {
     "core": {
       "description": "12 core tools (daily high-frequency)",
@@ -44,8 +44,8 @@
       ]
     },
     "workflow": {
-      "description": "29 workflow tools (includes core + orchestration + interactive + UI + memory)",
-      "count": 29,
+      "description": "32 workflow tools (includes core + orchestration + interactive + UI + memory)",
+      "count": 32,
       "tools": [
         "init_project",
         "gencommit",
@@ -75,12 +75,15 @@
         "memorize_asset",
         "delete_memory_asset",
         "update_memory_asset",
-        "scan_and_extract_patterns"
+        "scan_and_extract_patterns",
+        "plan_heartbeat",
+        "resume_plan",
+        "converge"
       ]
     },
     "full": {
-      "description": "All 30 tools",
-      "count": 30,
+      "description": "All 33 tools",
+      "count": 33,
       "note": "Default toolset, includes all tools"
     }
   },
@@ -146,6 +149,14 @@
         "delete_memory_asset",
         "update_memory_asset",
         "scan_and_extract_patterns"
+      ]
+    },
+    "plan-control": {
+      "description": "计划状态、恢复与收敛 (3)",
+      "tools": [
+        "plan_heartbeat",
+        "resume_plan",
+        "converge"
       ]
     },
     "interactive": {
