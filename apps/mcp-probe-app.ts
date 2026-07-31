@@ -30,7 +30,6 @@ let selectedMemory: Dict | null = null;
 let basePlan: Dict = {};
 let planSnapshot: Dict | null = null;
 let planPollTimer: number | undefined;
-let descriptionExpanded = false;
 let busy = false;
 let notice = '';
 
@@ -84,6 +83,14 @@ function statusClass(status: unknown): string {
   return 'warn';
 }
 
+function lifecycleLabel(status: unknown): string {
+  const normalized = text(status, 'active').toLowerCase();
+  if (normalized === 'active') return '有效';
+  if (normalized === 'stale') return '已过期';
+  if (['invalid', 'deleted', 'expired'].includes(normalized)) return '已失效';
+  return normalized || '未知';
+}
+
 function formatDate(value: unknown): string {
   const raw = text(value);
   if (!raw) return '—';
@@ -131,52 +138,37 @@ async function callTool(name: string, args: Dict, silent = false): Promise<ToolR
 
 function memoryCard(item: Dict): string {
   const id = text(item.id);
-  const tags = stringArray(item.tags).slice(0, 4);
   const selected = text(selectedMemory?.id) === id;
   return `<button class="memory-card${selected ? ' selected' : ''}" data-action="open-memory" data-id="${escapeHtml(id)}">
-    <span class="card-head"><strong>${escapeHtml(text(item.name, id || '未命名记忆'))}</strong><span class="status-dot ${statusClass(item.status)}"></span></span>
+    <span class="card-head"><strong>${escapeHtml(text(item.name, id || '未命名'))}</strong><span class="status-dot ${statusClass(item.status)}"></span></span>
     <span class="summary">${escapeHtml(text(item.summary, text(item.description, '无摘要')))}</span>
     <span class="meta-line"><span>${escapeHtml(text(item.type, 'unknown'))}</span><span>${escapeHtml(formatDate(item.updatedAt))}</span></span>
-    ${tags.length ? `<span class="tags">${tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</span>` : ''}
   </button>`;
 }
 
 function renderMemoryDetail(): string {
-  if (!selectedMemory) {
-    return `<section class="panel memory-detail empty-detail"><div class="empty-visual">${icon('memory')}</div><div><h2>选择一条记忆</h2><p>在左侧选择记录，查看完整内容、来源、证据和生命周期状态。</p></div></section>`;
-  }
+  if (!selectedMemory) return `<section class="panel memory-detail empty-detail"><span>选择一条记忆</span></section>`;
   const item = selectedMemory;
   const evidence = stringArray(item.evidence);
-  const tags = stringArray(item.tags);
+  const applicability = text(item.applicability);
   return `<section class="panel memory-detail">
-    <div class="detail-title"><div><div class="section-kicker">记忆详情</div><h2>${escapeHtml(text(item.name, '未命名记忆'))}</h2><p>${escapeHtml(text(item.description))}</p></div><span class="pill ${statusClass(item.status)}">${escapeHtml(text(item.status, 'active'))}</span></div>
-    <dl class="facts compact">
-      <div><dt>类型</dt><dd>${escapeHtml(text(item.type, 'unknown'))}</dd></div>
-      <div><dt>可信度</dt><dd>${escapeHtml(item.confidence ?? '—')}</dd></div>
-      <div><dt>来源范围</dt><dd>${escapeHtml(text(item.sourceProject, '共享记忆'))}</dd></div>
-      <div><dt>更新时间</dt><dd>${escapeHtml(formatDate(item.updatedAt))}</dd></div>
-    </dl>
-    ${tags.length ? `<div class="tags detail-tags">${tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
-    <div class="content-section"><h3>摘要</h3><p>${escapeHtml(text(item.summary, '无摘要'))}</p></div>
-    <div class="content-section"><h3>完整内容</h3><div class="document-body">${escapeHtml(text(item.content, '无内容'))}</div></div>
-    ${text(item.applicability) ? `<div class="content-section"><h3>适用边界</h3><p>${escapeHtml(item.applicability)}</p></div>` : ''}
-    ${evidence.length ? `<div class="content-section"><h3>验证证据</h3><ul class="evidence-list">${evidence.map((entry) => `<li>${icon('check')}<span>${escapeHtml(entry)}</span></li>`).join('')}</ul></div>` : ''}
-    <div class="detail-actions"><button data-action="mark-stale" data-id="${escapeHtml(text(item.id))}">标记过期</button><button class="danger" data-action="delete-memory" data-id="${escapeHtml(text(item.id))}">删除记忆</button></div>
+    <div class="detail-heading"><h2>${escapeHtml(text(item.name, '未命名记忆'))}</h2><span class="lifecycle-status ${statusClass(item.status)}"><span></span>${escapeHtml(lifecycleLabel(item.status))}</span></div>
+    <div class="memory-meta"><span>${escapeHtml(text(item.type, 'unknown'))}</span><span>${escapeHtml(text(item.sourceProject, '共享'))}</span><span>${escapeHtml(formatDate(item.updatedAt))}</span></div>
+    <div class="document-body">${escapeHtml(text(item.content, text(item.summary, '无内容')))}</div>
+    ${(applicability || evidence.length) ? `<details class="detail-extra"><summary>边界与证据${evidence.length ? ` · ${evidence.length}` : ''}</summary>${applicability ? `<p>${escapeHtml(applicability)}</p>` : ''}${evidence.length ? `<ul class="evidence-list">${evidence.map((entry) => `<li>${icon('check')}<span>${escapeHtml(entry)}</span></li>`).join('')}</ul>` : ''}</details>` : ''}
+    <div class="detail-actions"><button data-action="mark-stale" data-id="${escapeHtml(text(item.id))}">过期</button><button class="danger" data-action="delete-memory" data-id="${escapeHtml(text(item.id))}">删除</button></div>
   </section>`;
 }
 
 function renderMemoryCenter(): string {
-  const activeCount = memoryItems.filter((item) => text(item.status, 'active') === 'active').length;
-  const inactiveCount = Math.max(0, memoryItems.length - activeCount);
   const visible = memoryItems.slice(0, visibleMemoryCount);
-  return `<header class="app-header"><div class="brand-block"><div class="app-mark">${icon('memory')}</div><div><p class="eyebrow">Memory Center</p><h1>记忆中心</h1><p>搜索、审阅和治理可复用的项目经验。</p></div></div><span class="connection"><span></span>${busy ? '处理中' : '已连接'}</span></header>
+  return `<header class="minimal-header"><h1>记忆</h1><span>${memoryTotal || memoryItems.length}</span></header>
   <section class="panel memory-toolbar">
-    <form id="memory-search" class="search-box">${icon('search')}<input id="memory-query" name="query" placeholder="搜索错误信息、模块、方案或经验" autocomplete="off"><button class="primary" type="submit">搜索</button></form>
-    <div class="toolbar-actions"><button data-action="list-memory">全部记忆</button><label class="check-control"><input id="include-inactive" type="checkbox" checked><span>包含失效记录</span></label></div>
+    <form id="memory-search" class="search-box">${icon('search')}<input id="memory-query" name="query" placeholder="搜索" autocomplete="off"><button class="primary" type="submit">搜索</button></form>
+    <div class="toolbar-actions"><button data-action="list-memory">全部</button><label class="check-control"><input id="include-inactive" type="checkbox" checked><span>含失效</span></label></div>
   </section>
   ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ''}
-  <section class="memory-stats"><div><strong>${memoryTotal || memoryItems.length}</strong><span>记录总数</span></div><div><strong>${activeCount}</strong><span>当前活跃</span></div><div><strong>${inactiveCount}</strong><span>过期或失效</span></div></section>
-  <main class="memory-layout"><section class="panel memory-index"><div class="section-head"><div><div class="section-kicker">知识索引</div><h2>历史记忆</h2></div><span>${memoryItems.length} 条结果</span></div><div class="memory-list">${visible.length ? visible.map(memoryCard).join('') : `<div class="empty-state">${icon('empty')}<strong>暂无匹配结果</strong><span>调整关键词，或点击“全部记忆”重新加载。</span></div>`}</div>${memoryItems.length > visible.length ? `<button class="load-more" data-action="load-more">再显示 ${Math.min(18, memoryItems.length - visible.length)} 条</button>` : ''}</section>${renderMemoryDetail()}</main>`;
+  <main class="memory-layout"><section class="panel memory-index"><div class="memory-list">${visible.length ? visible.map(memoryCard).join('') : `<div class="empty-state compact-empty"><strong>无结果</strong></div>`}</div>${memoryItems.length > visible.length ? `<button class="load-more" data-action="load-more">更多 ${Math.min(18, memoryItems.length - visible.length)}</button>` : ''}</section>${renderMemoryDetail()}</main>`;
 }
 
 function resultPlan(result: ToolResult = lastResult): Dict {
@@ -225,38 +217,32 @@ function renderStepper(state: ReturnType<typeof currentPlanState>): string {
   return `<div class="stepper" style="--step-count:${Math.max(1, state.steps.length)}">${state.steps.map((step, index) => {
     const status = stepState(step, state);
     const marker = status === 'completed' ? '✓' : status === 'blocked' ? '!' : index + 1;
-    return `<div class="step-node ${status}"><div class="step-track"><span>${marker}</span></div><strong>${escapeHtml(stepLabel(step, index))}</strong><small>${status === 'completed' ? '已完成' : status === 'running' ? '进行中' : status === 'blocked' ? '已阻断' : status === 'skipped' ? '已跳过' : '等待中'}</small></div>`;
+    return `<div class="step-node ${status}"><div class="step-track"><span>${marker}</span></div><strong>${escapeHtml(stepLabel(step, index))}</strong></div>`;
   }).join('')}</div>`;
 }
 
 function renderTaskWorkbench(): string {
   const state = currentPlanState();
   const plan = state.plan;
-  const layout = asDict(asDict(lastResult.structuredContent).metadata).layoutDecision;
   const completedCount = state.steps.filter((step) => ['completed', 'skipped'].includes(stepState(step, state))).length;
-  const progress = state.steps.length ? Math.round((completedCount / state.steps.length) * 100) : 0;
   const highlightedStepId = state.status === 'blocked'
     ? (state.currentStepId || state.nextStepId)
     : (state.nextStepId || state.currentStepId);
   const currentIndex = state.steps.findIndex((step) => text(step.id) === highlightedStepId);
   const currentStep = currentIndex >= 0 ? state.steps[currentIndex] : state.steps.find((step) => stepState(step, state) === 'pending');
-  const currentVisualState = currentStep ? stepState(currentStep, state) : 'completed';
-  const currentStatusLabel = currentVisualState === 'blocked'
-    ? '已阻断'
-    : currentVisualState === 'running'
-      ? '进行中'
-      : currentStep
-        ? '下一步'
-        : '完成';
-  const planId = text(plan.planId, '—');
-  const objective = text(lastInput.description, text(plan.objective, '等待工具结果…'));
-  const workflow = text(plan.workflow, kind === 'bug-workbench' ? 'bugfix' : 'feature');
+  const objective = text(plan.objective, text(lastInput.description, kind === 'bug-workbench' ? '修复问题' : '实施功能'));
   const outputs = stringArray(currentStep?.outputs);
-  return `<header class="app-header workbench-header"><div><p class="eyebrow">Development Workbench</p><h1>${kind === 'bug-workbench' ? 'Bug 修复工作台' : '功能开发工作台'}</h1><div class="objective${descriptionExpanded ? ' expanded' : ''}">${escapeHtml(objective)}</div><button class="text-button" data-action="toggle-description">${descriptionExpanded ? '收起需求' : '展开完整需求'}</button></div><span class="pill ${statusClass(state.status)}">${escapeHtml(workflow)}</span></header>
+  const planId = text(plan.planId);
+  const primaryLabel = state.status === 'blocked' ? '处理阻断' : completedCount === state.steps.length && state.steps.length ? '查看结果' : '继续';
+  return `<header class="minimal-header task-title"><h1 title="${escapeHtml(objective)}">${kind === 'bug-workbench' ? 'Bug 修复' : '功能开发'} · ${escapeHtml(truncate(objective, 54))}</h1><span>${completedCount}/${state.steps.length || 0}</span></header>
   ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ''}
-  <section class="panel progress-panel"><div class="progress-head"><div><span>计划进度</span><strong>${completedCount} / ${state.steps.length || 0}</strong></div><span>${progress}%</span></div><div class="progress-bar"><span style="width:${progress}%"></span></div>${renderStepper(state)}</section>
-  <main class="workbench-grid"><section class="panel plan-overview"><div class="section-kicker">计划概览</div><h2>${escapeHtml(text(plan.objective, kind === 'bug-workbench' ? '定位并修复问题' : '实施新功能'))}</h2><div class="plan-chips"><span>${escapeHtml(text(asDict(layout).resolved, text(lastInput.spec_layout, 'auto')))}</span><span>${escapeHtml(text(plan.mode, 'delegated'))}</span><span>${state.steps.length} 个步骤</span></div><div class="plan-id"><span>Plan ID</span><code>${escapeHtml(truncate(planId, 42))}</code><button data-action="copy-plan" data-id="${escapeHtml(planId)}">复制</button></div><div class="actions stacked"><button class="primary" data-action="continue-chat">${state.status === 'blocked' ? '处理阻断项' : progress === 100 ? '查看完成结果' : '继续执行'}</button><button data-action="resume-plan" data-id="${escapeHtml(planId)}">刷新进度</button><button data-action="check-converge" data-id="${escapeHtml(planId)}">检查收敛</button></div></section>
-  <section class="panel current-step"><div class="section-head"><div><div class="section-kicker">当前步骤</div><h2>${currentStep ? escapeHtml(stepLabel(currentStep, Math.max(currentIndex, 0))) : '计划已完成'}</h2></div><span class="pill ${currentVisualState === 'blocked' ? 'bad' : currentVisualState === 'completed' ? 'ok' : 'warn'}">${currentStatusLabel}</span></div>${currentStep ? `<div class="step-command"><span>${currentStep.tool ? 'MCP 工具' : 'Agent 动作'}</span><code>${escapeHtml(text(currentStep.tool, text(currentStep.action, 'host action')))}</code></div>${text(currentStep.note) ? `<p class="step-note">${escapeHtml(currentStep.note)}</p>` : ''}${outputs.length ? `<div class="output-list"><h3>预期产出</h3>${outputs.map((item) => `<div>${icon('check')}<span>${escapeHtml(item)}</span></div>`).join('')}</div>` : ''}` : `<div class="empty-state compact-empty">${icon('check')}<strong>全部步骤已完成</strong><span>运行收敛检查，确认规格、实现、测试和审查证据。</span></div>`}</section></main>`;
+  <section class="panel task-shell">
+    ${renderStepper(state)}
+    <div class="task-current"><h2>${currentStep ? escapeHtml(stepLabel(currentStep, Math.max(currentIndex, 0))) : '已完成'}</h2>
+      ${currentStep ? `<div class="step-command"><code>${escapeHtml(text(currentStep.tool, text(currentStep.action, 'host action')))}</code>${text(currentStep.note) ? `<span>${escapeHtml(currentStep.note)}</span>` : ''}</div>${outputs.length ? `<div class="compact-outputs">${outputs.map((item) => `<span>${escapeHtml(item)}</span>`).join('')}</div>` : ''}` : ''}
+    </div>
+    <div class="task-actions task-actions-end"><button data-action="resume-plan" data-id="${escapeHtml(planId)}">刷新</button><button data-action="check-converge" data-id="${escapeHtml(planId)}">收敛</button><button class="primary" data-action="continue-chat">${primaryLabel}</button></div>
+  </section>`;
 }
 
 function renderProductWorkbench(): string {
@@ -264,9 +250,10 @@ function renderProductWorkbench(): string {
   const metadata = asDict(structured.metadata);
   const plan = asDict(metadata.plan ?? structured.plan);
   const steps = asArray(plan.steps);
-  return `<header class="app-header"><div><p class="eyebrow">Product Workbench</p><h1>产品设计工作台</h1><p>${escapeHtml(text(lastInput.description, text(structured.summary, '从目标、用户和约束形成可执行产品方案。')))}</p></div><span class="pill warn">product</span></header>
+  const productName = text(lastInput.product_name, text(lastInput.name, '产品方案'));
+  return `<header class="minimal-header task-title"><h1 title="${escapeHtml(productName)}">产品设计 · ${escapeHtml(truncate(productName, 54))}</h1><span>${steps.length} 步</span></header>
   ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ''}
-  <main class="product-grid"><section class="panel"><div class="section-kicker">产品定义</div><h2>${escapeHtml(text(lastInput.product_name, text(lastInput.name, '当前产品方案')))}</h2><dl class="facts compact"><div><dt>目标用户</dt><dd>${escapeHtml(text(lastInput.target_users, '待明确'))}</dd></div><div><dt>约束条件</dt><dd>${escapeHtml(text(lastInput.constraints, '按当前输入'))}</dd></div></dl><details><summary>查看原始输入</summary><pre>${escapeHtml(pretty(lastInput))}</pre></details></section><section class="panel"><div class="section-head"><div><div class="section-kicker">交付路径</div><h2>产品到开发</h2></div><span>${steps.length} 步</span></div><div class="compact-timeline">${steps.length ? steps.map((step, index) => `<div><span>${index + 1}</span><p><strong>${escapeHtml(stepLabel(step, index))}</strong><small>${escapeHtml(text(step.tool, text(step.action)))}</small></p></div>`).join('') : '<div class="empty-state compact-empty">等待产品计划结果。</div>'}</div><div class="actions"><button data-action="continue-chat">继续完善</button><button class="primary" data-action="start-feature-chat">进入功能开发</button></div></section></main>`;
+  <section class="panel product-compact"><dl class="inline-facts"><div><dt>用户</dt><dd>${escapeHtml(text(lastInput.target_users, '待明确'))}</dd></div><div><dt>约束</dt><dd>${escapeHtml(text(lastInput.constraints, '无'))}</dd></div></dl><div class="compact-timeline">${steps.length ? steps.map((step, index) => `<div><span>${index + 1}</span><p><strong>${escapeHtml(stepLabel(step, index))}</strong><small>${escapeHtml(text(step.tool, text(step.action)))}</small></p></div>`).join('') : '<div class="empty-state compact-empty">等待计划</div>'}</div><div class="task-actions task-actions-end"><button data-action="continue-chat">继续完善</button><button class="primary" data-action="start-feature-chat">进入开发</button></div></section>`;
 }
 
 function renderConvergence(): string {
@@ -275,10 +262,16 @@ function renderConvergence(): string {
   const blockers = Array.isArray(structured.blockers) ? structured.blockers : [];
   const incomplete = stringArray(structured.incompleteStepIds);
   const missingEvidence = stringArray(structured.missingEvidenceKinds);
-  return `<header class="app-header"><div><p class="eyebrow">Quality Gate</p><h1>计划收敛闸门</h1><p>以规格、实现、测试和审查证据判断计划是否真正完成。</p></div><span class="pill ${passed ? 'ok' : 'bad'}">${passed ? '已通过' : '未通过'}</span></header>
+  const convergencePlanId = text(structured.planId, text(lastInput.plan_id, text(asDict(structured.plan).planId)));
+  return `<header class="minimal-header"><h1>收敛</h1><span class="gate-state ${passed ? 'ok' : 'bad'}">${passed ? '通过' : '未通过'}</span></header>
   ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ''}
-  <section class="panel convergence-hero ${passed ? 'passed' : 'blocked'}"><div class="gate-icon">${icon(passed ? 'check' : 'alert')}</div><div><div class="section-kicker">收敛结果</div><h2>${passed ? '计划已具备完成证据' : '仍有事项阻止计划完成'}</h2><p>${escapeHtml(text(structured.nextAction, passed ? '可以进入交付与记忆沉淀。' : '处理下列阻断项后重新检查。'))}</p></div><dl><div><dt>未完成步骤</dt><dd>${incomplete.length}</dd></div><div><dt>缺失证据</dt><dd>${missingEvidence.length}</dd></div><div><dt>记忆写入</dt><dd>${bool(structured.memoryWriteAllowed) ? '允许' : '禁止'}</dd></div></dl></section>
-  <main class="convergence-grid"><section class="panel"><div class="section-kicker">阻断项</div><h2>${blockers.length ? `${blockers.length} 项待处理` : '没有阻断项'}</h2>${blockers.length ? `<ul class="blocker-list">${blockers.map((item) => `<li>${icon('alert')}<span>${escapeHtml(typeof item === 'string' ? item : pretty(item))}</span></li>`).join('')}</ul>` : `<div class="empty-state compact-empty">${icon('check')}<strong>闸门已清空</strong></div>`}</section><section class="panel"><div class="section-kicker">证据缺口</div><h2>验证覆盖</h2><div class="evidence-chips">${missingEvidence.length ? missingEvidence.map((item) => `<span>${escapeHtml(item)}</span>`).join('') : '<span class="complete">证据类型齐全</span>'}</div>${incomplete.length ? `<h3>未完成步骤</h3><div class="evidence-chips">${incomplete.map((item) => `<span>${escapeHtml(item)}</span>`).join('')}</div>` : ''}</section></main>`;
+  <section class="panel gate-compact">
+    ${blockers.length ? `<div class="gate-section"><h2>阻断</h2><ul class="blocker-list">${blockers.map((item) => `<li>${icon('alert')}<span>${escapeHtml(typeof item === 'string' ? item : pretty(item))}</span></li>`).join('')}</ul></div>` : ''}
+    ${incomplete.length ? `<div class="gate-section"><h2>未完成</h2><div class="evidence-chips">${incomplete.map((item) => `<span>${escapeHtml(item)}</span>`).join('')}</div></div>` : ''}
+    ${missingEvidence.length ? `<div class="gate-section"><h2>缺证据</h2><div class="evidence-chips">${missingEvidence.map((item) => `<span>${escapeHtml(item)}</span>`).join('')}</div></div>` : ''}
+    ${passed && !blockers.length && !incomplete.length && !missingEvidence.length ? '<div class="gate-clear">可交付</div>' : ''}
+    <div class="gate-footer"><span>记忆写入：${bool(structured.memoryWriteAllowed) ? '允许' : '禁止'}</span><div class="task-actions">${passed ? '<button data-action="continue-chat">查看结果</button>' : '<button class="primary" data-action="return-plan">继续执行</button>'}${convergencePlanId ? `<button data-action="rerun-converge" data-id="${escapeHtml(convergencePlanId)}">重检</button>` : ''}</div></div>
+  </section>`;
 }
 
 function render(): void {
@@ -359,8 +352,6 @@ root.addEventListener('click', (event) => {
   if (action === 'list-memory') void loadMemoryList();
   if (action === 'load-more') { visibleMemoryCount += 18; render(); }
   if (action === 'open-memory') void openMemory(id);
-  if (action === 'toggle-description') { descriptionExpanded = !descriptionExpanded; render(); }
-  if (action === 'copy-plan' && id) void navigator.clipboard.writeText(id).then(() => { notice = 'Plan ID 已复制'; render(); });
   if (action === 'mark-stale') void (async () => {
     await callTool('update_memory_asset', { asset_id: id, status: 'stale' });
     await openMemory(id);
@@ -375,6 +366,8 @@ root.addEventListener('click', (event) => {
   })();
   if (action === 'resume-plan' && id) void refreshPlanState(true);
   if (action === 'check-converge' && id) void callTool('converge', { plan_id: id, project_root: text(lastInput.project_root) }).then((result) => { lastResult = result; render(); });
+  if (action === 'rerun-converge' && id) void callTool('converge', { plan_id: id, project_root: text(lastInput.project_root) }).then((result) => { lastResult = result; render(); });
+  if (action === 'return-plan') void app.sendMessage({ role: 'user', content: [{ type: 'text', text: '返回当前计划继续执行未完成步骤，补齐缺失证据。每完成一步调用 plan_heartbeat，完成后重新运行 converge。' }] });
   if (action === 'continue-chat') void app.sendMessage({ role: 'user', content: [{ type: 'text', text: '继续执行当前工作台中的计划。每完成一步都调用 plan_heartbeat 写入真实步骤状态和证据，最后运行测试并检查收敛。' }] });
   if (action === 'start-feature-chat') void app.sendMessage({ role: 'user', content: [{ type: 'text', text: '基于当前产品方案进入功能开发，使用 start_feature 创建规格和执行计划。' }] });
 });

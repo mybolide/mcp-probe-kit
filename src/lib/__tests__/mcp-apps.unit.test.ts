@@ -75,10 +75,24 @@ describe('mcp-apps', () => {
     expect(html).toContain('MCP Probe Kit Memory Center');
     expect(html).toContain('list_memory_assets');
     expect(html).toContain('ui/initialize');
-    expect(html).toContain('memory-stats');
-    expect(html).toContain('progress-bar');
+    expect(html).toContain('minimal-header');
+    expect(html).toContain('task-actions-end');
     expect(html).toContain('resume_plan');
     expect(html).not.toContain('max-height: 690px');
+    expect(html).toContain('container-type: inline-size');
+    expect(html).toContain('@media (max-width: 660px)');
+    expect(html).toContain('@container mcp-app (max-width: 660px)');
+    expect(html).toContain('grid-template-columns: 28px minmax(0, 1fr)');
+    expect(html).toContain('@media (max-width: 460px)');
+    expect(html).toContain('lifecycle-status');
+    expect(html).toContain('gate-footer');
+    expect(html).toContain('max-width: 1080px');
+    expect(html).toContain('min-height: 26px');
+    expect(html).toContain('ui-sans-serif, system-ui');
+    expect(html).toContain('font-size: 14px');
+    expect(html).not.toContain('Development Workbench');
+    expect(html).not.toContain('Product Workbench');
+    expect(html).not.toContain('Quality Gate');
   });
 
   test('maps model tools to stable app resources', () => {

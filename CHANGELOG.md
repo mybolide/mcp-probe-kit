@@ -11,32 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [4.0.0-rc.3] - 2026-07-31
+## [4.0.0-rc.3] - 2026-08-01
 
 ### Added
 
-- Added live delegated-plan progress to Feature and Bug Workbenches. The App polls `resume_plan` while visible and advances the stepper only after real `plan_heartbeat` state is stored.
-- Added compact Memory Center statistics, selected-record state, incremental result expansion, lifecycle-aware details, and clearer empty states.
+- Added live delegated-plan progress to Feature and Bug workbenches. The App polls `resume_plan` while visible and advances only after persisted `plan_heartbeat` state changes.
+- Added a text-only Memory CRUD integration test that parses `asset_id` from `content[].text` and completes create, search, read, update, delete, and final absence verification without reading `structuredContent`.
 
 ### Changed
 
-- Rebuilt all five MCP Apps around one shared developer-console visual system with stronger hierarchy, responsive layouts, consistent buttons, status treatments, and reduced raw JSON exposure.
-- Replaced the static Feature/Bug step list with a progress bar, horizontal stepper, current-step panel, explicit MCP-tool versus Agent-action labels, and convergence controls.
-- Removed the Memory Center list's nested fixed-height scrollbar. The list now grows in bounded batches while the detail panel remains independently readable.
-- Product Workbench and Convergence Gate now present structured summaries, delivery steps, blockers, and evidence gaps instead of relying on large raw-data panels.
+- Rebuilt all five MCP Apps as compact, Host-themed command panels rather than standalone dashboard pages.
+- Feature and Bug workbenches now retain only the task title, completed-step count, stepper, current executable action, required outputs, and `refresh / converge / continue` controls.
+- Memory Center now retains only search, result list, selected content, optional evidence/boundary details, and lifecycle actions. Decorative statistics, repeated descriptions, large status blocks, and tag clutter were removed.
+- Product Workbench now retains only target users, constraints, delivery steps, and the handoff action. Convergence Gate now retains only pass state, blockers, incomplete steps, missing evidence, memory-write permission, and corrective actions.
+- Layout, typography, spacing, buttons, colors, fonts, radii, shadows, and narrow-container behavior follow Host variables when available and fall back to system UI defaults.
 
 ### Fixed
 
 - `memorize_asset` now includes `asset_id`, lifecycle status, and an executable `read_memory_asset` hint in model-readable text so Hosts that hide `structuredContent` can continue the CRUD chain.
-- `search_memory` no longer injects `limit=0` when the optional limit is omitted. Limits now fall back to `MEMORY_SEARCH_LIMIT` and are normalized to an integer from 1 to 50.
+- `search_memory` no longer injects `limit=0` when the optional limit is omitted. Limits fall back to `MEMORY_SEARCH_LIMIT`, invalid non-positive values are normalized, and explicit values are capped at 50.
 
 ### Compatibility
 
-- Cursor successfully rendered the rc.2 MCP Apps and completed real `workflow`, `start_feature`, `start_bugfix`, and Memory CRUD calls. rc.3 keeps the same official `io.modelcontextprotocol/ui` contract while improving Host-visible presentation and text fallback behavior.
-- Plain MCP clients still receive the same readable text and structured responses without requiring MCP Apps support.
+- The approved 23/29/33 model-tool surfaces and the official `io.modelcontextprotocol/ui` contract are unchanged.
+- Plain MCP clients continue to receive readable text and structured responses without requiring MCP Apps support.
+- Cursor rc.2 proved real core-tool execution and MCP Apps rendering. The rc.3 interface is a presentation and text-contract revision; named-Host visual verification remains recorded separately and is not generalized to every Agent.
 
 ---
-
 ## [4.0.0-rc.2] - 2026-07-31
 
 ### Added
