@@ -245,6 +245,18 @@ v4.0.0-rc.2 uses the official `@modelcontextprotocol/ext-apps` SDK and the stabl
 - Clients without MCP Apps support continue to receive the normal text and `structuredContent` responses; no GUI capability is required for existing workflows.
 - Trace metadata passthrough remains available through `MCP_ENABLE_EXTENSIONS_CAPABILITY=1`.
 
+### 🧪 Tool and Real-Agent Contract Verification
+
+```bash
+# Deterministic server-side audit across compact, Memory, full, App-only, and Legacy surfaces
+npm run audit:tools
+
+# Optional real-host audit: Claude Code calls and evaluates all 33 model tools
+npm run audit:tools:agent
+```
+
+The direct audit verifies non-empty readable text, `structuredContent`, and that every referenced MCP tool exists on the active surface. The real-Agent audit additionally checks whether an Agent understands each tool, can follow the returned guidance, sees no text/structured contradiction, and can execute the stated next step. It is intentionally separate from `release:verify` because it requires a configured Claude Code account and incurs model usage.
+
 ### 🧭 Delegated Orchestration Protocol
 
 All `start_*` orchestration tools return an **execution plan** in `structuredContent.metadata.plan`.  

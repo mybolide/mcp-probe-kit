@@ -98,14 +98,17 @@ export function buildSkillHeaderNote(status: SkillBridgeStatus): string {
 export function buildSkillBridgePlanStep(status: SkillBridgeStatus) {
   return {
     id: "skill-bridge",
-    tool: "manual",
-    action: "invoke_skills",
-    when: "在宿主支持 skill 调用时优先执行",
-    args: {
-      order: status.skills.map((item) => item.name),
-      available: status.skills.filter((item) => item.installed).map((item) => item.name),
-      missing: status.skills.filter((item) => !item.installed).map((item) => item.name),
-    },
+    type: "agent_action" as const,
+    action: "invoke_installed_skills",
+    when: "宿主支持 skill 调用且对应 skill 已安装时优先执行",
+    requiredInputs: [
+      `按顺序检查可用 skill：${status.skills.map((item) => item.name).join(", ")}`,
+    ],
+    expectedOutputs: ["可用 skill 的设计约束与建议已合并进当前任务上下文"],
+    note:
+      status.missingCount === 0
+        ? "全部增强 skill 可用"
+        : `缺失 ${status.skills.filter((item) => !item.installed).map((item) => item.name).join(", ")}；继续执行 MCP 主流程，不得把缺失 skill 当成阻塞`,
     outputs: [],
   };
 }

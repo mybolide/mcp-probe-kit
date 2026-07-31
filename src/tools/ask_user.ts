@@ -5,6 +5,8 @@
 
 import { parseArgs } from "../utils/parseArgs.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
+import { okStructured } from "../lib/response.js";
+import { handleToolError } from "../utils/error-handler.js";
 
 interface Question {
   question: string;
@@ -34,11 +36,7 @@ export async function askUser(args: any) {
         tasks: ["按示例提供问题参数，或直接回答问题"],
         outputs: ["清晰的回答或可执行的参数"],
       });
-      return {
-        content: [
-          {
-            type: "text",
-            text: `${header}# ❓ 向用户提问工具
+      const text = `${header}# ❓ 向用户提问工具
 
 ## 使用方法
 
@@ -73,10 +71,13 @@ ask_user "是否需要支持移动端？" --context "当前只有 PC 端实现"
 1. **问题要具体** - 避免过于宽泛的问题
 2. **提供上下文** - 说明为什么要问这个问题
 3. **给出选项** - 如果有明确的选项，列出来
-4. **标注重要性** - 区分必答和可选问题`,
-          },
-        ],
-      };
+4. **标注重要性** - 区分必答和可选问题`;
+      return okStructured(text, {
+        question: "请提供 question 或 questions 参数",
+        options: [],
+        context: "ask_user 是 full 兼容工具；普通 Agent 可直接向用户提问",
+        questions: [],
+      });
     }
 
     const lines: string[] = [];
@@ -146,14 +147,25 @@ ask_user "是否需要支持移动端？" --context "当前只有 PC 端实现"
     lines.push("");
     lines.push("💡 **提示**: 请回答上述问题，我会根据你的回答继续工作。");
 
-    return {
-      content: [{ type: "text", text: lines.join("\n") }],
-    };
+    const normalizedQuestions = Array.isArray(questions)
+      ? questions.map((item) => ({
+          question: String(item.question ?? ''),
+          context: item.context ? String(item.context) : undefined,
+          options: Array.isArray(item.options) ? item.options.map(String) : [],
+          required: item.required !== false,
+        }))
+      : [];
+    const primaryQuestion = question
+      ? String(question)
+      : normalizedQuestions.map((item) => item.question).filter(Boolean).join('；');
+
+    return okStructured(lines.join("\n"), {
+      question: primaryQuestion,
+      options: Array.isArray(parsed.options) ? parsed.options.map(String) : [],
+      context: context ? String(context) : reason ? String(reason) : '',
+      questions: normalizedQuestions,
+    });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `❌ 提问失败: ${errorMsg}` }],
-      isError: true,
-    };
+    return handleToolError(error, 'ask_user');
   }
 }

@@ -3,17 +3,12 @@
  * 工具元数据主入口为 Tool Registry；本文件暂时保留输出 Schema 的独立映射。
  */
 
-import {
-  CodeReviewReportSchema,
-  BugAnalysisSchema,
-  TestSuiteSchema,
-  RefactorPlanSchema,
-} from '../schemas/output/core-tools.js';
+import { BugAnalysisSchema } from '../schemas/output/core-tools.js';
+import { GuidanceResultSchema } from '../schemas/output/guidance-tools.js';
 import {
   FeatureSpecSchema,
   ProjectInitSchema,
   ProjectContextSchema,
-  EstimateSchema,
 } from '../schemas/output/project-tools.js';
 import {
   DesignSystemSchema,
@@ -86,14 +81,15 @@ const UserQuestionSchema: JsonSchema = {
 
 const OUTPUT_SCHEMA_BY_TOOL: Record<string, JsonSchema> = {
   gencommit: CommitGuidanceSchema as JsonSchema,
+  git_work_report: GuidanceResultSchema as JsonSchema,
   code_insight: CodeInsightSchema as JsonSchema,
-  code_review: CodeReviewReportSchema as JsonSchema,
+  code_review: GuidanceResultSchema as JsonSchema,
   fix_bug: BugAnalysisSchema as JsonSchema,
-  gentest: TestSuiteSchema as JsonSchema,
-  refactor: RefactorPlanSchema as JsonSchema,
+  gentest: GuidanceResultSchema as JsonSchema,
+  refactor: GuidanceResultSchema as JsonSchema,
   add_feature: FeatureSpecSchema as JsonSchema,
   check_spec: SpecValidationReportSchema as JsonSchema,
-  estimate: EstimateSchema as JsonSchema,
+  estimate: GuidanceResultSchema as JsonSchema,
   start_feature: FeatureReportSchema as JsonSchema,
   start_bugfix: BugFixReportSchema as JsonSchema,
   start_onboard: OnboardingReportSchema as JsonSchema,

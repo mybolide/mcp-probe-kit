@@ -836,14 +836,14 @@ ${normalScript}
       steps: [
         {
           id: 'create-dir',
-          tool: 'manual',
+          type: 'agent_action',
           action: 'create_directory',
           args: { path: '.ralph' },
           outputs: ['.ralph/'],
         },
         {
           id: 'write-files',
-          tool: 'manual',
+          type: 'agent_action',
           action: 'write_files',
           outputs: [
             '.ralph/PROMPT.md',
@@ -855,14 +855,14 @@ ${normalScript}
         },
         {
           id: 'chmod',
-          tool: 'manual',
+          type: 'agent_action',
           action: 'set_executable',
           when: '非 Windows 环境',
           outputs: [],
         },
         {
           id: 'run-loop',
-          tool: 'manual',
+          type: 'agent_action',
           action: 'run_script',
           outputs: [],
         },

@@ -27,7 +27,7 @@
     "acceptance:agent": "node scripts/agent-local-acceptance.mjs",
     "eval:agents": "tsx scripts/run-agent-evals.ts",
     "release:static": "tsx scripts/verify-release-readiness.ts",
-    "release:verify": "npm run release:static && npm test && npm run build && npm run smoke:protocol && npm run acceptance:agent && npm run stability:soak && npm run eval:agents && npm run smoke:package && npm run smoke:rollback && npm run smoke:inspector && npm run security:audit",
+    "release:verify": "npm run release:static && npm test && npm run build && npm run audit:tools && npm run smoke:protocol && npm run acceptance:agent && npm run stability:soak && npm run eval:agents && npm run smoke:package && npm run smoke:rollback && npm run smoke:inspector && npm run security:audit",
     "verify-workflow-skill": "tsx scripts/verify-workflow-skill.ts",
     "sync-workflow-skill": "tsx scripts/sync-workflow-skill.ts",
     "prebuild": "npm run sync-version && npm run sync-ui-data && npm run sync-tool-manifest && npm run verify-workflow-skill && npm run sync-workflow-skill && npm run build-mcp-apps",
@@ -36,7 +36,9 @@
     "smoke:rollback": "node scripts/rollback-smoke.mjs",
     "smoke:inspector": "node scripts/inspector-smoke.mjs",
     "security:audit": "npm audit --omit=dev --audit-level=high",
-    "build-mcp-apps": "node scripts/build-mcp-apps.mjs"
+    "build-mcp-apps": "node scripts/build-mcp-apps.mjs",
+    "audit:tools": "node scripts/tool-contract-audit.mjs",
+    "audit:tools:agent": "node scripts/claude-tool-contract-audit.mjs"
   },
   "keywords": [
     "mcp",

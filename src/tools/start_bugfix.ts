@@ -233,15 +233,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
 
     const buildOrchestrationPlan = (options?: {
       src8When?: string;
-      loopSteps?: Array<{
-        id: string;
-        tool?: string;
-        action?: string;
-        args?: Record<string, unknown>;
-        outputs?: string[];
-        when?: string;
-        note?: string;
-      }>;
+      loopSteps?: DelegatedPlanStep[];
     }) => {
       const contextStep = {
         id: 'context',
@@ -340,16 +332,21 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         loopSteps: [
           {
             id: 'loop-1',
-            tool: 'ask_user',
-            args: { questions: openQuestions.map(({ question, context, required }) => ({ question, context, required })) },
+            type: 'agent_action',
+            action: 'collect_bug_evidence_from_user',
+            requiredInputs: openQuestions.map(({ question }) => question),
+            expectedOutputs: ['补全后的现象、复现、期望、实际、环境与验收目标'],
             outputs: [],
+            note: '支持 elicitation 的 Host 会直接收集；其他 Host 由 Agent 原生向用户提问，不调用隐藏的 ask_user',
           },
           ...(maxRounds > 1
             ? [{
                 id: 'loop-2',
-                tool: 'ask_user',
-                when: '仍存在 openQuestions 或 assumptions',
-                args: { questions: '[根据上一轮补全结果生成问题]' },
+                type: 'agent_action' as const,
+                action: 'resolve_remaining_bug_questions',
+                when: '仍存在 openQuestions 或高风险 assumptions',
+                requiredInputs: ['上一轮未关闭的问题与假设'],
+                expectedOutputs: ['可执行的 Bug 证据摘要'],
                 outputs: [],
               }]
             : []),
@@ -422,7 +419,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         attachHandles(loopReport, buildOrchestrationHandles(memoryContext)),
         {
           schema: RequirementsLoopSchema,
-          note: 'AI 应按轮次澄清 Bug 需求并更新结构化输出，满足结束条件后再进入 fix_bug / gentest',
+          note: 'AI 应逐轮补齐 Bug 证据；支持 elicitation 时由 Host 收集，否则使用原生对话，再按 SRC-8 plan 执行',
         }
       );
     }

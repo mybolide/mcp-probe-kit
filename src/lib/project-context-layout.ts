@@ -347,6 +347,7 @@ export function patchLayoutManifestHarness(
     ...existing,
     harness,
   };
+  fs.mkdirSync(path.dirname(absoluteManifest), { recursive: true });
   fs.writeFileSync(absoluteManifest, `${JSON.stringify(updated, null, 2)}\n`, "utf8");
   return manifestRel;
 }

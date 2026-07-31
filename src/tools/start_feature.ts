@@ -12,13 +12,15 @@ import {
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
 import { buildFeatureGraphContext } from "../lib/gitnexus-bridge.js";
+import { renderDelegatedPlanSteps } from "../lib/delegated-plan-renderer.js";
+import { addFeature } from "./add_feature.js";
 import {
   buildMemoryPlanStep,
   loadMemoryInjectionContext,
   renderMemoryGuideSection,
   buildOrchestrationHandles,
 } from "../lib/memory-orchestration.js";
-import { resolveWorkspaceRoot, toWorkspacePath, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
+import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
 import {
   layoutAbsPath,
   parseLayoutArgsFromRecord,
@@ -44,7 +46,7 @@ import {
  * start_feature 智能编排工具
  * 
  * 场景：开发新功能
- * 编排：[检查上下文] → add_feature → estimate
+ * 编排：[检查上下文] → 内嵌规格草稿 → check_spec → estimate
  */
 
 /**
@@ -94,124 +96,6 @@ function extractFeatureInfo(input: string): { name: string; description: string 
   };
 }
 
-const PROMPT_TEMPLATE = `# 🚀 新功能开发编排（委托式）
-
-本工具仅生成 **执行计划（steps）**。AI 需要按顺序调用对应工具并落盘文档。
-
-## 🎯 目标
-开发新功能：**{feature_name}**
-功能描述：{description}
-
----
-
-## ✅ 执行计划（按顺序）
-
-### 0) 项目上下文（如缺失）
-**检查**:
-- \`{docs_dir}/project-context.md\`
-- \`{docs_dir}/graph-insights/latest.md\`
-- \`{docs_dir}/graph-insights/latest.json\`
-**缺失则调用**: \`init_project_context\`
-\`\`\`json
-{ "docs_dir": "{docs_dir}", "project_root": "{project_root}" }
-\`\`\`
-
-### 1) 生成功能规格
-**调用**: \`add_feature\`
-\`\`\`json
-{
-  "feature_name": "{feature_name}",
-  "description": "{description}",
-  "docs_dir": "{docs_dir}",
-  "template_profile": "{template_profile}",
-  "spec_layout": "{spec_layout}",
-  "subspecs": {subspecs_json}
-}
-\`\`\`
-**预期输出**:
-{spec_output_list}
-
-### 2) 校验规格完整性（闸门）
-**调用**: \`check_spec\`
-\`\`\`json
-{ "feature_name": "{feature_name}", "docs_dir": "{docs_dir}" }
-\`\`\`
-**未通过**：按报告逐条补全 requirements/design/tasks 后**重跑 check_spec**；**通过前不要写实现代码**。
-
-### 3) 工作量估算
-**调用**: \`estimate\`
-\`\`\`json
-{
-  "task_description": "实现 {feature_name} 功能：{description}",
-  "code_context": "参考生成的 tasks.md 中的任务列表"
-}
-\`\`\`
-
----
-
-## ✅ 输出汇总（执行完成后）
-1. 规格文档位置: \`{docs_dir}/specs/{feature_name}/\`
-2. 图谱入口: \`{docs_dir}/graph-insights/latest.md\`
-3. 估算结果: 故事点 + 时间区间
-4. 主要风险（如有）
-5. 下一步: 按 tasks.md 开始开发
-
----
-
-*编排工具: MCP Probe Kit - start_feature*`;
-
-const LOOP_PROMPT_TEMPLATE = `# 🧭 需求澄清与补全（Requirements Loop）
-
-本模式用于**生产级稳健补全**：在不改变用户意图的前提下补齐关键要素，并输出可审计的结构化结果。
-
-## 🎯 目标
-开发新功能：**{feature_name}**  
-功能描述：{description}
-
-## ✅ 规则
-1. **不覆盖用户原始需求**
-2. **补全内容必须标注来源**（User / Derived / Assumption）
-3. **假设必须进入待确认列表**
-4. **每轮问题 ≤ {question_budget}，假设 ≤ {assumption_cap}**
-
----
-
-## 🔁 执行步骤（每轮）
-
-### 1) 生成待确认问题
-使用 \`ask_user\` 提问，问题来源于“功能需求补全清单”（角色/触发/约束/异常/依赖等）。
-
-**调用示例**:
-\`\`\`json
-{
-  "questions": [
-    { "question": "目标用户或角色是谁？", "context": "角色定义", "required": true },
-    { "question": "触发场景是什么？", "context": "业务场景", "required": true }
-  ]
-}
-\`\`\`
-
-### 2) 更新结构化输出
-将回答补入 \`requirements\`，并标注来源：
-- User：用户明确回答
-- Derived：合理推导
-- Assumption：无法确认但补全（需确认）
-
-### 3) 自检与结束
-若 \`openQuestions\` 为空且无高风险假设，则结束 loop，进入规格生成与估算。
-
----
-
-## ✅ 结束后继续
-当满足结束条件时，执行：
-1. 调用 \`add_feature\` 生成规格文档
-2. 调用 \`estimate\` 进行工作量估算
-
----
-
-*编排工具: MCP Probe Kit - start_feature (requirements loop)*
-`;
-
 function buildOpenQuestions(questionBudget: number) {
   const base = [
     { question: "目标用户或角色是谁？", context: "角色定义", required: true },
@@ -260,8 +144,8 @@ function buildSubspecDecompositionStep(
   return [{
     id: 'decompose-spec',
     type: 'agent_action',
-    action: `根据已确认需求把 ${featureName} 拆分为 2-8 个职责单一、可独立验收的子规格，并生成 SubspecDefinition[] 后再调用 add_feature`,
-    when: '需求范围与 FR-n 已明确后、调用 add_feature 前',
+    action: `根据已确认需求把 ${featureName} 拆分为 2-8 个职责单一、可独立验收的子规格，并生成 SubspecDefinition[] 后重新调用 start_feature`,
+    when: '需求范围与 FR-n 已明确后、生成 parent-child 规格草稿前',
     requiredInputs: ['已确认的功能需求与范围边界', '代码图谱与模块边界', 'FR-n 需求编号'],
     expectedOutputs: ['subspecs 数组：每项包含 id、title、fr 和可选 dependsOn'],
     completionEvidence: [
@@ -402,10 +286,31 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       ...layoutDecision,
       requiresSubspecDefinition: specLayout === 'parent-child' && subspecs.length === 0,
     });
-    const delegatedSubspecs = subspecs.length > 0
-      ? subspecs
-      : '[先执行 decompose-spec，并将生成的 SubspecDefinition[] 填入此参数]';
     const specOutputs = buildSpecOutputs(docsDir, featureName, specLayout, subspecs);
+    const canBuildEmbeddedSpecDraft = specLayout === 'flat' || subspecs.length > 0;
+    const embeddedSpecResult = canBuildEmbeddedSpecDraft
+      ? await addFeature({
+          feature_name: featureName,
+          description,
+          docs_dir: docsDir,
+          template_profile: templateProfile,
+          spec_layout: specLayout,
+          ...(specLayout === 'parent-child' ? { subspecs } : {}),
+        })
+      : null;
+    const embeddedSpecDraft = embeddedSpecResult
+      ? {
+          templateProfile,
+          specLayout,
+          subspecs,
+          specOutputs,
+          guidance: embeddedSpecResult.content.find((item) => item.type === 'text')?.text ?? '',
+          structuredContent:
+            'structuredContent' in embeddedSpecResult
+              ? embeddedSpecResult.structuredContent ?? null
+              : null,
+        }
+      : null;
 
     throwIfAborted(context?.signal, "start_feature 已取消");
     await reportToolProgress(context, 55, "start_feature: 刷新图谱并收敛需求范围");
@@ -540,53 +445,43 @@ ${graphContext.highlights.length > 0
           },
           {
             id: 'loop-1',
-            tool: 'ask_user',
-            args: { questions: openQuestions.map(({ question, context, required }) => ({ question, context, required })) },
+            type: 'agent_action',
+            action: 'collect_requirements_from_user',
+            requiredInputs: openQuestions.map(({ question }) => question),
+            expectedOutputs: ['合并用户回答后的完整需求摘要', '已关闭或明确保留的 openQuestions'],
             outputs: [],
+            note: '支持 elicitation 的 Host 会在本次工具调用中直接收集；不支持时由 Agent 原生向用户提问，不调用隐藏的 ask_user 工具',
           },
           ...(maxRounds > 1
             ? [
                 {
                   id: 'loop-2',
-                  tool: 'ask_user',
-                  when: '仍存在 openQuestions 或 assumptions',
-                  args: { questions: '[根据上一轮补全结果生成问题]' },
+                  type: 'agent_action' as const,
+                  action: 'resolve_remaining_requirements',
+                  when: '仍存在 openQuestions 或高风险 assumptions',
+                  requiredInputs: ['上一轮未关闭的问题与假设'],
+                  expectedOutputs: ['可执行的完整需求摘要'],
                   outputs: [],
                 },
               ]
             : []),
-          ...subspecDecompositionSteps,
           {
-            id: 'spec',
-            tool: 'add_feature',
-            when: 'stopConditions.ready=true',
+            id: 'resume-feature',
+            type: 'tool',
+            tool: 'start_feature',
+            when: '关键问题已关闭后',
             args: {
               feature_name: featureName,
-              description,
+              description: '[将用户确认答案合并进原始 description 后传入]',
               docs_dir: docsDir,
               template_profile: templateProfile,
               spec_layout: specLayout,
-              ...(specLayout === 'parent-child' ? { subspecs: delegatedSubspecs } : {}),
+              requirements_mode: 'steady',
+              ...(projectRoot ? { project_root: projectRoot } : {}),
+              ...(specLayout === 'parent-child' && subspecs.length > 0 ? { subspecs } : {}),
             },
             outputs: specOutputs,
-          },
-          {
-            id: 'check-spec',
-            tool: 'check_spec',
-            when: 'stopConditions.ready=true 且 requirements/design/tasks 已落盘',
-            args: { feature_name: featureName, docs_dir: docsDir, ...(projectRoot ? { project_root: projectRoot } : {}) },
-            outputs: [],
-            note: '未通过则按报告补全规格后重跑 check_spec；通过前不要写实现代码',
-          },
-          {
-            id: 'estimate',
-            tool: 'estimate',
-            when: 'stopConditions.ready=true',
-            args: {
-              task_description: `实现 ${featureName} 功能：${description}`,
-              code_context: estimateCodeContext,
-            },
-            outputs: [],
+            note: '第二次 start_feature 会返回内嵌规格草稿、check_spec 与 estimate 的闭环计划',
           },
           ...(memoryContext.enabled ? [buildMemoryPlanStep('feature')] : []),
         ] as DelegatedPlanStep[],
@@ -608,13 +503,17 @@ ${graphContext.highlights.length > 0
         ],
       });
 
-      const renderedLoopPrompt = LOOP_PROMPT_TEMPLATE
-        .replace(/{feature_name}/g, featureName)
-        .replace(/{description}/g, description)
-        .replace(/{project_root}/g, toWorkspacePath(projectRoot))
-        .replace(/{question_budget}/g, String(questionBudget))
-        .replace(/{assumption_cap}/g, String(assumptionCap));
-      const guide = header + memoryGuideSection + renderedLoopPrompt + graphGuideSection;
+      const guide = `${header}${memoryGuideSection}
+# Requirements Loop
+
+本次需要先补齐需求。支持 MCP elicitation 的 Host 会直接弹出结构化表单；其他 Host 由 Agent 使用原生对话向用户提问。不要调用 compact 模式中不可见的 \`ask_user\`。
+
+## 当前问题
+${openQuestions.map((item) => `- ${item.question}`).join('\n')}
+
+## 与 structuredContent 对称的执行计划
+${renderDelegatedPlanSteps(plan.steps)}
+${graphGuideSection}`;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -658,7 +557,7 @@ ${graphContext.highlights.length > 0
         attachHandles(loopReport, buildOrchestrationHandles(memoryContext)),
         {
           schema: RequirementsLoopSchema,
-          note: 'AI 应按轮次澄清需求并更新结构化输出，满足结束条件后再进入 add_feature / estimate',
+          note: 'Agent 应逐轮澄清需求；支持 elicitation 时由 Host 收集，否则使用原生对话，再重新调用 start_feature 进入 steady 计划',
         }
       );
     }
@@ -677,16 +576,58 @@ ${graphContext.highlights.length > 0
         ],
     });
 
-    const renderedPrompt = PROMPT_TEMPLATE
-      .replace(/{feature_name}/g, featureName)
-      .replace(/{description}/g, description)
-      .replace(/{docs_dir}/g, docsDir)
-      .replace(/{project_root}/g, (projectRoot || process.cwd()).replace(/\\/g, "/"))
-      .replace(/{template_profile}/g, templateProfile)
-      .replace(/{spec_layout}/g, specLayout)
-      .replace(/{subspecs_json}/g, JSON.stringify(delegatedSubspecs, null, 2))
-      .replace(/{spec_output_list}/g, specOutputs.map((specPath) => `- \`${specPath}\``).join('\n'));
-    const guide = header + memoryGuideSection + renderedPrompt + graphGuideSection;
+    const specPlanSteps: DelegatedPlanStep[] = embeddedSpecDraft
+      ? [
+          {
+            id: 'write-spec',
+            type: 'agent_action',
+            action: 'write_embedded_feature_spec',
+            requiredInputs: ['structuredContent.metadata.specDraft'],
+            expectedOutputs: specOutputs,
+            outputs: specOutputs,
+            note: '规格模板已经由 start_feature 内部生成；Agent 直接按内嵌草稿写入并补全占位',
+          },
+          {
+            id: 'check-spec',
+            type: 'tool',
+            tool: 'check_spec',
+            when: 'requirements/design/tasks 落盘后、进入估算或实现前',
+            args: { feature_name: featureName, docs_dir: docsDir, ...(projectRoot ? { project_root: projectRoot } : {}) },
+            outputs: [],
+            note: '未通过则按报告补全后重跑；通过前不要写实现代码',
+          },
+          {
+            id: 'estimate',
+            type: 'tool',
+            tool: 'estimate',
+            args: {
+              task_description: `实现 ${featureName} 功能：${description}`,
+              code_context: estimateCodeContext,
+            },
+            outputs: [],
+          },
+        ]
+      : [
+          {
+            id: 'resume-with-subspecs',
+            type: 'tool',
+            tool: 'start_feature',
+            when: 'decompose-spec 已产生完整 SubspecDefinition[] 后',
+            args: {
+              feature_name: featureName,
+              description,
+              docs_dir: docsDir,
+              template_profile: templateProfile,
+              spec_layout: 'parent-child',
+              subspecs: '[填入 decompose-spec 产生的 SubspecDefinition[]]',
+              requirements_mode: 'steady',
+              ...(projectRoot ? { project_root: projectRoot } : {}),
+            },
+            outputs: specOutputs,
+            note: '再次调用 start_feature 以生成内嵌 parent-child 规格草稿',
+          },
+        ];
+
 
     const plan = buildDelegatedPlanContract({
       planId: createDelegatedPlanId('feature', `${featureName}:steady`),
@@ -722,39 +663,31 @@ ${graphContext.highlights.length > 0
           note: `兼容老项目：即使已有旧版 project-context，只要缺少图谱文档，也要先补齐 ${graphDocs.latestMarkdownPath}`,
         },
         ...subspecDecompositionSteps,
-        {
-          id: 'spec',
-          tool: 'add_feature',
-          args: {
-            feature_name: featureName,
-            description,
-            docs_dir: docsDir,
-            template_profile: templateProfile,
-            spec_layout: specLayout,
-            ...(specLayout === 'parent-child' ? { subspecs: delegatedSubspecs } : {}),
-          },
-          outputs: specOutputs,
-        },
-        {
-          id: 'check-spec',
-          tool: 'check_spec',
-          when: 'requirements/design/tasks 落盘后、进入估算/实现前',
-          args: { feature_name: featureName, docs_dir: docsDir, ...(projectRoot ? { project_root: projectRoot } : {}) },
-          outputs: [],
-          note: '未通过则按报告逐条补全规格后重跑 check_spec；通过前不要写实现代码',
-        },
-        {
-          id: 'estimate',
-          tool: 'estimate',
-          args: {
-            task_description: `实现 ${featureName} 功能：${description}`,
-            code_context: estimateCodeContext,
-          },
-          outputs: [],
-        },
+        ...specPlanSteps,
         ...(memoryContext.enabled ? [buildMemoryPlanStep('feature')] : []),
       ] as DelegatedPlanStep[],
     });
+
+    const specDraftSection = embeddedSpecDraft
+      ? `
+## 内嵌规格草稿
+
+规格模板已放在 \`structuredContent.metadata.specDraft\`。Agent 必须据此写入并补全 ${specOutputs.length} 个规格文件，不要重复生成规格草稿。`
+      : `
+## Parent-Child 分解
+
+当前尚未提供子规格定义。先完成 \`decompose-spec\`，再按计划重新调用 \`start_feature\` 并传入 SubspecDefinition[]。`;
+    const guide = `${header}${memoryGuideSection}
+# 新功能开发闭环
+
+- 功能：${featureName}
+- 布局：${specLayout}（请求：${layoutDecision.requested}）
+- 规则：文本步骤与 \`structuredContent.metadata.plan.steps\` 来自同一份计划。
+${specDraftSection}
+
+## 执行计划
+${renderDelegatedPlanSteps(plan.steps)}
+${graphGuideSection}`;
 
     // 创建结构化的功能开发报告
     const featureReport: FeatureReport = {
@@ -769,7 +702,7 @@ ${graphContext.highlights.length > 0
         {
           name: '生成功能规格',
           status: 'pending',
-          description: '调用 add_feature 工具生成需求、设计和任务文档',
+          description: '使用 start_feature 内嵌的 specDraft 写入并补全需求、设计和任务文档',
         },
         {
           name: '工作量估算',
@@ -782,7 +715,7 @@ ${graphContext.highlights.length > 0
         '检查并读取项目上下文文档',
         `如果缺少 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}，先调用 init_project_context 补齐图谱初始化`,
         `优先读取 ${graphDocs.latestMarkdownPath} 获取模块依赖与调用链摘要`,
-        '调用 add_feature 工具生成功能规格文档',
+        '使用 structuredContent.metadata.specDraft 写入并补全功能规格文档',
         '调用 check_spec 校验规格完整性，未通过先补全再重跑（通过前不要写实现代码）',
         '调用 estimate 工具进行工作量估算',
         '按照 tasks.md 开始开发',
@@ -809,6 +742,7 @@ ${graphContext.highlights.length > 0
       dependencies: [],
       metadata: {
         plan,
+        specDraft: embeddedSpecDraft,
         layoutDecision,
         graphDocs,
         bootstrapState: {

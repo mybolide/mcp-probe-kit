@@ -275,7 +275,10 @@ async function executeTool(
     ? null
     : ensureMcpProbeKitBootstrapForToolCall(name, args);
   logBootstrap(bootstrap);
-  const result = (await executeRegisteredTool(name, args, context)) as ToolResult;
+  const result = (await executeRegisteredTool(name, args, {
+    ...context,
+    bootstrap,
+  })) as ToolResult;
   return { bootstrap, result };
 }
 

@@ -14,6 +14,7 @@ import { DesignRequest } from "../utils/design-reasoning-engine.js";
 import { okStructured } from "../lib/response.js";
 import { attachHandles } from "../lib/handles.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
+import { renderDelegatedPlanSteps } from "../lib/delegated-plan-renderer.js";
 import {
   buildSkillBridgePlanStep,
   buildSkillHeaderNote,
@@ -147,311 +148,6 @@ function resolveTemplateProfile(rawProfile: string, description: string): {
     warning: `模板档位 \"${rawProfile}\" 不支持，已回退为 ${fallback}`,
   };
 }
-
-const PROMPT_TEMPLATE_GUIDED = `# 快速开始
-
-**职责说明**: 本工具仅提供执行指导，不执行实际操作。请按顺序调用以下 MCP 工具。
-
-执行以下工具：
-
-1. 检查 \`docs/project-context.md\` 是否存在，不存在则调用 \`init_project_context\`
-2. 检查 \`docs/design-system.md\` 是否存在，不存在则调用 \`ui_design_system --product_type="{productType}" --stack="{framework}"\`
-3. 检查 \`docs/ui/component-catalog.json\` 是否存在，不存在则调用 \`init_component_catalog\`
-4. \`ui_search --mode=template --query="{description}"\`
-5. 选择模板并保存到 \`docs/ui/{templateName}.json\`
-6. \`render_ui --template="docs/ui/{templateName}.json" --framework="{framework}"\`
-7. 将生成的 UI 文档添加到 \`docs/project-context.md\` 索引中
-
----
-
-## 步骤 1: 生成项目上下文（如不存在）📋
-
-**检查**: 查看 \`docs/project-context.md\` 是否存在
-
-**如果不存在，调用工具**: \`init_project_context\`
-**参数**: 无（使用默认配置）
-
-**预期输出**: 
-- \`docs/project-context.md\` - 项目上下文索引文件
-- \`docs/project-context/\` - 项目文档目录
-
-**失败处理**: 确保 docs 目录存在且有写入权限
-
----
-
-## 步骤 2: 生成设计系统（如不存在）🎨
-
-**检查**: 查看 \`docs/design-system.md\` 是否存在
-
-**如果不存在，调用工具**: \`ui_design_system\`
-**参数**:
-\`\`\`json
-{
-  "product_type": "{productType}",
-  "stack": "{framework}",
-  "description": "{description}"
-}
-\`\`\`
-
-**预期输出**: \`docs/design-system.json\` 和 \`docs/design-system.md\`
-**失败处理**: 检查 docs 目录是否存在，确保有写入权限
-
----
-
-## 步骤 3: 生成组件目录（如不存在）📦
-
-**检查**: 查看 \`docs/ui/component-catalog.json\` 是否存在
-
-**如果不存在，调用工具**: \`init_component_catalog\`
-**参数**: 无
-
-**预期输出**: \`docs/ui/component-catalog.json\`
-**失败处理**: 确保步骤 2 的设计系统文件已生成
-
----
-
-## 步骤 4: 搜索 UI 模板 🔍
-
-**工具**: \`ui_search\`
-**参数**:
-\`\`\`json
-{
-  "mode": "template",
-  "query": "{description}"
-}
-\`\`\`
-
-**预期输出**: 匹配的模板列表（可能为空）
-**失败处理**: 如果没有找到模板，创建最小模板文件再进入渲染步骤
-
----
-
-## 步骤 5: 保存模板文件 🧩
-
-**操作**: 从搜索结果选择模板或创建最小模板
-
-**保存路径**: \`docs/ui/{templateName}.json\`
-
-**最小模板示例**:
-\`\`\`json
-{
-  "name": "UiTemplate",
-  "description": "{description}",
-  "layout": "sectioned"
-}
-\`\`\`
-
----
-
-## 步骤 6: 渲染最终代码 💻
-
-**工具**: \`render_ui\`
-**参数**:
-\`\`\`json
-{
-  "template": "docs/ui/{templateName}.json",
-  "framework": "{framework}"
-}
-\`\`\`
-
-**预期输出**: 完整的 {framework} 组件代码
-**失败处理**: 如果模板不存在，请先完成步骤 5 保存模板文件
-
----
-
-## 步骤 7: 更新项目上下文索引 📝
-
-**操作**: 将生成的 UI 文档添加到 \`docs/project-context.md\` 中
-
-**添加内容**:
-在 "## 📚 文档导航" 部分添加：
-
-\`\`\`markdown
-### [UI 设计系统](./design-system.md)
-项目的 UI 设计规范，包括颜色、字体、组件样式等
-
-### [UI 组件目录](./ui/component-catalog.json)
-可用的 UI 组件及其属性定义
-\`\`\`
-
-在 "## 💡 开发时查看对应文档" 部分的 "添加新功能" 下添加：
-\`\`\`markdown
-- **UI 设计系统**: [design-system.md](./design-system.md) - 查看设计规范
-- **UI 组件目录**: [ui/component-catalog.json](./ui/component-catalog.json) - 查看可用组件
-\`\`\`
-
-**预期结果**: \`docs/project-context.md\` 包含 UI 相关文档的链接
-**失败处理**: 如果文件不存在，跳过此步骤
-
----
-
-## 高级选项
-
-### 自定义设计系统
-编辑 \`docs/design-system.json\` 修改颜色、字体等，然后重新运行。
-
-### 自定义组件
-编辑 \`docs/ui/component-catalog.json\` 添加新组件定义。
-
-### 常见问题
-
-**Q: 设计系统文件已存在，还需要重新生成吗？**
-A: 不需要。如果文件已存在，直接跳过步骤 1。
-
-**Q: 如何使用自定义模板？**
-A: 在 \`docs/ui/\` 目录创建 JSON 模板文件，然后在步骤 4 中指定模板路径。
-
----
-
-${UI_CONSTRAINTS_BLOCK}
-`;
-
-const PROMPT_TEMPLATE_STRICT = `# UI 开发编排（严格）
-
-**职责说明**: 本工具仅提供执行指导，不执行实际操作。请按顺序调用以下 MCP 工具。
-
-## ✅ 执行计划
-
-1. 检查 \`docs/project-context.md\`，缺失则调用 \`init_project_context\`
-2. 检查 \`docs/design-system.md\`，缺失则调用 \`ui_design_system --product_type="{productType}" --stack="{framework}"\`
-3. 检查 \`docs/ui/component-catalog.json\`，缺失则调用 \`init_component_catalog\`
-4. \`ui_search --mode=template --query="{description}"\`
-5. 选择模板并保存到 \`docs/ui/{templateName}.json\`
-6. \`render_ui --template="docs/ui/{templateName}.json" --framework="{framework}"\`
-7. 将生成的 UI 文档添加到 \`docs/project-context.md\` 索引中
-
----
-
-## 步骤 1: 生成项目上下文（如不存在）
-
-**检查**: \`docs/project-context.md\`
-**缺失则调用**: \`init_project_context\`
-**预期输出**: \`docs/project-context.md\`
-
----
-
-## 步骤 2: 生成设计系统（如不存在）
-
-**检查**: \`docs/design-system.md\`
-**缺失则调用**: \`ui_design_system\`
-\`\`\`json
-{
-  "product_type": "{productType}",
-  "stack": "{framework}",
-  "description": "{description}"
-}
-\`\`\`
-**预期输出**: \`docs/design-system.json\`、\`docs/design-system.md\`
-
----
-
-## 步骤 3: 生成组件目录（如不存在）
-
-**检查**: \`docs/ui/component-catalog.json\`
-**缺失则调用**: \`init_component_catalog\`
-**预期输出**: \`docs/ui/component-catalog.json\`
-
----
-
-## 步骤 4: 搜索模板
-
-**工具**: \`ui_search\`
-\`\`\`json
-{ "mode": "template", "query": "{description}" }
-\`\`\`
-
----
-
-## 步骤 5: 保存模板文件
-
-**操作**: 从搜索结果选择模板或创建最小模板
-
-**保存路径**: \`docs/ui/{templateName}.json\`
-
----
-
-## 步骤 6: 渲染代码
-
-**工具**: \`render_ui\`
-\`\`\`json
-{ "template": "docs/ui/{templateName}.json", "framework": "{framework}" }
-\`\`\`
-
----
-
-## 步骤 7: 更新项目上下文索引
-
-将 UI 文档链接添加到 \`docs/project-context.md\`
-
-${UI_CONSTRAINTS_BLOCK}
-`;
-
-const LOOP_PROMPT_TEMPLATE_GUIDED = `# 🧭 UI 需求澄清与补全（Requirements Loop）
-
-本模式用于**生产级稳健补全**：在不改变用户意图的前提下补齐 UI 需求关键要素。
-
-## 🎯 目标
-UI 需求：{description}
-
-## ✅ 规则
-1. **不覆盖用户原始描述**
-2. **补全内容必须标注来源**（User / Derived / Assumption）
-3. **假设必须进入待确认列表**
-4. **每轮问题 ≤ {question_budget}，假设 ≤ {assumption_cap}**
-
----
-
-## 🔁 执行步骤（每轮）
-
-### 1) 生成待确认问题
-使用 \`ask_user\` 提问，问题来源于 UI 需求补全清单（目标/交互/状态/设备/可访问性）。
-
-### 2) 更新结构化输出
-将回答补入 \`requirements\`，并标注来源。
-
-### 3) 自检与结束
-若 \`openQuestions\` 为空且无高风险假设，则结束 loop，进入 UI 执行计划。
-
----
-
-## ✅ 结束后继续
-当满足结束条件时，按 delegated plan 执行：
-- 设计系统 → 组件目录 → 模板搜索 → 保存模板 → 渲染代码 → 更新上下文
-
----
-
-*编排工具: MCP Probe Kit - start_ui (requirements loop)*
-`;
-
-const LOOP_PROMPT_TEMPLATE_STRICT = `# 🧭 UI 需求澄清与补全（Requirements Loop | 严格）
-
-本模式用于稳健补全 UI 需求关键要素，不改变用户意图。
-
-## 🎯 目标
-UI 需求：{description}
-
-## ✅ 规则
-1. 不覆盖用户原始描述
-2. 补全内容必须标注来源（User / Derived / Assumption）
-3. 假设必须进入待确认列表
-4. 每轮问题 ≤ {question_budget}，假设 ≤ {assumption_cap}
-
----
-
-## 🔁 执行步骤（每轮）
-1) 使用 \`ask_user\` 提问补全关键信息
-2) 更新结构化输出并标注来源
-3) 若 \`openQuestions\` 为空且无高风险假设则结束
-
----
-
-## ✅ 结束后继续
-当满足结束条件时，按 delegated plan 执行 UI 计划
-
----
-
-*编排工具: MCP Probe Kit - start_ui (requirements loop)*
-`;
 
 function buildUiQuestions(questionBudget: number) {
   const base = [
@@ -720,17 +416,22 @@ start_ui <描述> --requirements_mode=loop
           skillBridgeStep,
           {
             id: 'loop-1',
-            tool: 'ask_user',
-            args: { questions: openQuestions.map(({ question, context, required }) => ({ question, context, required })) },
+            type: 'agent_action',
+            action: 'collect_ui_requirements_from_user',
+            requiredInputs: openQuestions.map(({ question }) => question),
+            expectedOutputs: ['补全后的页面目标、交互、状态、数据、权限、响应式与可访问性要求'],
             outputs: [],
+            note: '支持 elicitation 的 Host 会直接收集；其他 Host 由 Agent 原生向用户提问，不调用隐藏的 ask_user',
           },
           ...(maxRounds > 1
             ? [
                 {
                   id: 'loop-2',
-                  tool: 'ask_user',
-                  when: '仍存在 openQuestions 或 assumptions',
-                  args: { questions: '[根据上一轮补全结果生成问题]' },
+                  type: 'agent_action' as const,
+                  action: 'resolve_remaining_ui_questions',
+                  when: '仍存在 openQuestions 或高风险 assumptions',
+                  requiredInputs: ['上一轮未关闭的问题与假设'],
+                  expectedOutputs: ['可执行的 UI 需求摘要'],
                   outputs: [],
                 },
               ]
@@ -755,10 +456,13 @@ start_ui <描述> --requirements_mode=loop
           },
           {
             id: 'catalog',
-            tool: 'init_component_catalog',
+            type: 'agent_action',
+            action: 'create_component_catalog',
             when: '缺少 docs/ui/component-catalog.json',
-            args: {},
+            requiredInputs: ['docs/design-system.json 或当前设计系统结果', '现有组件与页面需求'],
+            expectedOutputs: ['docs/ui/component-catalog.json'],
             outputs: ['docs/ui/component-catalog.json'],
+            note: '由 Agent 使用宿主文件能力生成组件目录；该步骤不是 MCP 工具调用',
           },
           ...buildShadcnBlocksPlanStep(description, framework),
           {
@@ -769,23 +473,27 @@ start_ui <描述> --requirements_mode=loop
           },
           {
             id: 'save-template',
-            tool: 'manual',
+            type: 'agent_action',
             action: 'save_ui_template',
+            requiredInputs: ['ui_search 返回的模板候选或 Agent 创建的最小模板'],
+            expectedOutputs: [`docs/ui/${templateName}.json`],
             outputs: [`docs/ui/${templateName}.json`],
           },
           {
             id: 'render',
-            tool: 'render_ui',
-            args: {
-              template: `docs/ui/${templateName}.json`,
-              framework,
-            },
+            type: 'agent_action',
+            action: 'implement_ui_from_template',
+            requiredInputs: [`docs/ui/${templateName}.json`, 'docs/design-system.md', `目标框架：${framework}`],
+            expectedOutputs: ['可运行的 UI 代码与必要测试'],
             outputs: [],
+            note: '由 Agent 使用宿主代码与文件能力实施；该步骤不是 MCP 工具调用',
           },
           {
             id: 'update-context',
-            tool: 'manual',
+            type: 'agent_action',
             action: 'update_project_context',
+            requiredInputs: ['已生成的设计系统、组件目录、模板和 UI 实现路径'],
+            expectedOutputs: ['docs/project-context.md 中的 UI 文档索引已更新'],
             outputs: ['docs/project-context.md'],
           },
           ...(memoryContext.enabled ? [buildMemoryPlanStep('ui')] : []),
@@ -805,15 +513,25 @@ start_ui <描述> --requirements_mode=loop
         ],
       });
 
-      const loopTemplate = profileDecision.resolved === 'strict'
-        ? LOOP_PROMPT_TEMPLATE_STRICT
-        : LOOP_PROMPT_TEMPLATE_GUIDED;
+      const guide = `${header}${memoryGuideSection}${skillBridgeSection}
+# 快速开始
 
-      const renderedLoopPrompt = loopTemplate
-        .replace(/{description}/g, description)
-        .replace(/{question_budget}/g, String(questionBudget))
-        .replace(/{assumption_cap}/g, String(assumptionCap));
-      const guide = header + memoryGuideSection + skillBridgeSection + renderedLoopPrompt;
+## 职责说明
+MCP 只提供指导、设计结果与执行计划；Agent 负责使用宿主对话、文件、代码和测试能力完成真实实施。
+
+## 失败处理
+工具调用失败时记录原因并按 plan 的条件重试；需求不完整时继续原生对话，不得伪造完成状态。
+
+# UI Requirements Loop
+
+支持 MCP elicitation 的 Host 会直接弹出结构化表单；其他 Host 由 Agent 使用原生对话提问。不要调用 compact 模式不可见的 \`ask_user\`。
+
+## 当前问题
+${openQuestions.map((item) => `- ${item.question}`).join('\n')}
+
+## 与 structuredContent 对称的执行计划
+${renderDelegatedPlanSteps(plan.steps)}`;
+
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -852,7 +570,7 @@ start_ui <描述> --requirements_mode=loop
         attachHandles(loopReport, buildOrchestrationHandles(memoryContext)),
         {
           schema: RequirementsLoopSchema,
-          note: 'AI 应按轮次澄清 UI 需求并更新结构化输出，满足结束条件后再执行 UI 计划',
+          note: 'AI 应逐轮补齐 UI 需求；支持 elicitation 时由 Host 收集，否则使用原生对话，再执行结构化 UI 计划',
         }
       );
     }
@@ -885,87 +603,6 @@ start_ui <描述> --requirements_mode=loop
 
       // 5. 生成智能执行计划
       const searchQuery = description || templateName;
-      const smartPlanGuided = `# 🚀 智能 UI 开发计划
-
-基于您的描述 "**${description}**"，AI 引擎已为您规划了最佳开发路径。
-
-## 🧠 智能分析结果
-
-- **产品类型**: ${inferredProductType}
-- **推荐风格**: ${recommendation.style.primary}
-- **关键特性**: ${inferredKeywords}
-- **技术栈**: ${inferredStack}
-
----
-
-## 📋 执行步骤（已自动优化参数）
-
-请按顺序执行以下命令：
-
-### 1. 生成项目上下文 📋
-\`\`\`bash
-init_project_context
-\`\`\`
-
-### 2. 生成设计系统 🎨
-\`\`\`bash
-ui_design_system --product_type="${inferredProductType}" --stack="${inferredStack}" --keywords="${inferredKeywords}" --description="${description}"
-\`\`\`
-
-### 3. 生成组件目录 📦
-\`\`\`bash
-init_component_catalog
-\`\`\`
-
-### 4. 生成 UI 模板 📄
-\`\`\`bash
-# 搜索现有模板或生成新模板
-ui_search --mode=template --query="${searchQuery}"
-\`\`\`
-
-### 5. 保存模板文件 🧩
-\`\`\`bash
-# 将选中的模板保存到本地
-# 目标路径：docs/ui/${templateName}.json
-\`\`\`
-
-### 6. 渲染代码 💻
-\`\`\`bash
-render_ui docs/ui/${templateName}.json --framework="${inferredStack}"
-\`\`\`
-
-### 7. 更新项目上下文 📝
-将生成的 UI 文档链接添加到 \`docs/project-context.md\` 的文档导航部分。
-
----
-
-## 💡 为什么选择这个方案？
-
-${recommendation.reasoning}
-`;
-
-      const smartPlanStrict = `# 🚀 智能 UI 开发计划（严格）
-
-## 🧠 智能分析结果
-
-- **产品类型**: ${inferredProductType}
-- **推荐风格**: ${recommendation.style.primary}
-- **关键特性**: ${inferredKeywords}
-- **技术栈**: ${inferredStack}
-
----
-
-## 📋 执行步骤
-
-1) init_project_context
-2) ui_design_system --product_type="${inferredProductType}" --stack="${inferredStack}" --keywords="${inferredKeywords}" --description="${description}"
-3) init_component_catalog
-4) ui_search --mode=template --query="${searchQuery}"
-5) 保存模板到 docs/ui/${templateName}.json
-6) render_ui docs/ui/${templateName}.json --framework="${inferredStack}"
-7) 更新 project-context.md 索引
-`;
-
       const plan = {
         mode: 'delegated',
         steps: [
@@ -992,10 +629,13 @@ ${recommendation.reasoning}
           },
           {
             id: 'catalog',
-            tool: 'init_component_catalog',
+            type: 'agent_action',
+            action: 'create_component_catalog',
             when: '缺少 docs/ui/component-catalog.json',
-            args: {},
+            requiredInputs: ['docs/design-system.json 或当前设计系统结果', '现有组件与页面需求'],
+            expectedOutputs: ['docs/ui/component-catalog.json'],
             outputs: ['docs/ui/component-catalog.json'],
+            note: '由 Agent 使用宿主文件能力生成组件目录；该步骤不是 MCP 工具调用',
           },
           ...buildShadcnBlocksPlanStep(description, inferredStack),
           {
@@ -1006,23 +646,27 @@ ${recommendation.reasoning}
           },
           {
             id: 'save-template',
-            tool: 'manual',
+            type: 'agent_action',
             action: 'save_ui_template',
+            requiredInputs: ['ui_search 返回的模板候选或 Agent 创建的最小模板'],
+            expectedOutputs: [`docs/ui/${templateName}.json`],
             outputs: [`docs/ui/${templateName}.json`],
           },
           {
             id: 'render',
-            tool: 'render_ui',
-            args: {
-              template: `docs/ui/${templateName}.json`,
-              framework: inferredStack,
-            },
+            type: 'agent_action',
+            action: 'implement_ui_from_template',
+            requiredInputs: [`docs/ui/${templateName}.json`, 'docs/design-system.md', `目标框架：${inferredStack}`],
+            expectedOutputs: ['可运行的 UI 代码与必要测试'],
             outputs: [],
+            note: '由 Agent 使用宿主代码与文件能力实施；该步骤不是 MCP 工具调用',
           },
           {
             id: 'update-context',
-            tool: 'manual',
+            type: 'agent_action',
             action: 'update_project_context',
+            requiredInputs: ['已生成的设计系统、组件目录、模板和 UI 实现路径'],
+            expectedOutputs: ['docs/project-context.md 中的 UI 文档索引已更新'],
             outputs: ['docs/project-context.md'],
           },
           ...(memoryContext.enabled ? [buildMemoryPlanStep('ui')] : []),
@@ -1042,7 +686,27 @@ ${recommendation.reasoning}
         ],
       });
 
-      const smartPlan = header + memoryGuideSection + skillBridgeSection + (profileDecision.resolved === 'strict' ? smartPlanStrict : smartPlanGuided);
+      const smartPlan = `${header}${memoryGuideSection}${skillBridgeSection}
+# 快速开始
+
+## 职责说明
+MCP 工具只提供指导并负责设计系统、检索与编排；Agent 负责组件目录、模板落盘、代码实施和测试。
+
+## 失败处理
+任一步失败时保留已完成产物、记录失败原因并从该步骤重试；不得跳过失败步骤宣称完成。
+
+## 高级选项
+可通过 mode、framework、template 和 template_profile 控制编排方式；未指定时采用安全默认值。
+
+# UI 开发闭环
+
+- 模式：auto
+- 目标框架：${inferredStack}
+- 设计方向：${recommendation.style.primary}
+- 规则：文本步骤与 \`structuredContent.metadata.plan.steps\` 来自同一份计划。
+
+## 步骤
+${renderDelegatedPlanSteps(plan.steps)}`;
 
       // Create structured UI report for auto mode
       const uiReport: UIReport = {
@@ -1062,7 +726,7 @@ ${recommendation.reasoning}
           {
             name: '生成组件目录',
             status: 'pending',
-            description: '调用 init_component_catalog 生成组件目录',
+            description: '由 Agent 生成组件目录文件',
           },
           {
             name: '搜索 UI 模板',
@@ -1077,7 +741,7 @@ ${recommendation.reasoning}
           {
             name: '渲染最终代码',
             status: 'pending',
-            description: '调用 render_ui 生成组件代码',
+            description: '由 Agent 根据模板和设计系统实施 UI 代码',
           },
           {
             name: '更新项目上下文',
@@ -1089,10 +753,10 @@ ${recommendation.reasoning}
         nextSteps: [
           '调用 init_project_context',
           `调用 ui_design_system --product_type="${inferredProductType}" --stack="${inferredStack}"`,
-          '调用 init_component_catalog',
+          '由 Agent 创建 docs/ui/component-catalog.json',
           `调用 ui_search --mode=template --query="${description}"`,
           `保存模板到 docs/ui/${templateName}.json`,
-          `调用 render_ui --framework="${inferredStack}"`,
+          `由 Agent 按 ${inferredStack} 实施 UI 代码与测试`,
           '更新 docs/project-context.md 添加 UI 文档链接',
         ],
         designSystem: {
@@ -1157,44 +821,19 @@ start_ui "设置页面" --framework=react
       };
     }
 
-    // 转义 JSON 字符串中的特殊字符
-    const escapeJson = (str: string) => {
-      return str
-        .replace(/\\/g, '\\\\')
-        .replace(/"/g, '\\"')
-        .replace(/\n/g, '\\n')
-        .replace(/\r/g, '\\r')
-        .replace(/\t/g, '\\t');
-    };
-
-    // 安全的字符串替换，避免 $& 等特殊字符被解释为替换模式
-    const safeReplace = (template: string, placeholder: string, value: string) => {
-      return template.split(placeholder).join(value);
-    };
-
     const header = renderOrchestrationHeader({
       tool: 'start_ui',
-      goal: `UI 需求：${description}`,
+      goal: `UI 开发：${description}`,
       tasks: [
-        '按 delegated plan 顺序调用工具',
-        '生成设计系统、模板并渲染 UI 代码',
+        '按 delegated plan 顺序调用可见 MCP 工具并执行 Agent 操作',
+        '生成设计系统、组件目录、模板并实施 UI 代码',
       ],
       notes: [
         ...headerNotes,
-        ...(memoryContext.enabled ? ['记忆优先: 已自动注入相似历史 UI 资产与坑（见顶部），先复用并规避同类坑'] : []),
+        ...(memoryContext.enabled ? ['记忆增强：已注入相关历史 UI 资产候选'] : []),
       ],
     });
 
-    const baseTemplate = profileDecision.resolved === 'strict'
-      ? PROMPT_TEMPLATE_STRICT
-      : PROMPT_TEMPLATE_GUIDED;
-
-    let body = skillBridgeSection + baseTemplate;
-    body = safeReplace(body, '{description}', escapeJson(description));
-    body = safeReplace(body, '{productType}', productType);
-    body = safeReplace(body, '{framework}', framework);
-    body = safeReplace(body, '{templateName}', templateName);
-    const guide = header + memoryGuideSection + body;
 
     const plan = {
       mode: 'delegated',
@@ -1221,10 +860,13 @@ start_ui "设置页面" --framework=react
         },
         {
           id: 'catalog',
-          tool: 'init_component_catalog',
+          type: 'agent_action',
+          action: 'create_component_catalog',
           when: '缺少 docs/ui/component-catalog.json',
-          args: {},
+          requiredInputs: ['docs/design-system.json 或当前设计系统结果', '现有组件与页面需求'],
+          expectedOutputs: ['docs/ui/component-catalog.json'],
           outputs: ['docs/ui/component-catalog.json'],
+          note: '由 Agent 使用宿主文件能力生成组件目录；该步骤不是 MCP 工具调用',
         },
         ...buildShadcnBlocksPlanStep(description, framework),
         {
@@ -1235,28 +877,54 @@ start_ui "设置页面" --framework=react
         },
         {
           id: 'save-template',
-          tool: 'manual',
+          type: 'agent_action',
           action: 'save_ui_template',
+          requiredInputs: ['ui_search 返回的模板候选或 Agent 创建的最小模板'],
+          expectedOutputs: [`docs/ui/${templateName}.json`],
           outputs: [`docs/ui/${templateName}.json`],
         },
         {
           id: 'render',
-          tool: 'render_ui',
-          args: {
-            template: `docs/ui/${templateName}.json`,
-            framework,
-          },
+          type: 'agent_action',
+          action: 'implement_ui_from_template',
+          requiredInputs: [`docs/ui/${templateName}.json`, 'docs/design-system.md', `目标框架：${framework}`],
+          expectedOutputs: ['可运行的 UI 代码与必要测试'],
           outputs: [],
+          note: '由 Agent 使用宿主代码与文件能力实施；该步骤不是 MCP 工具调用',
         },
         {
           id: 'update-context',
-          tool: 'manual',
+          type: 'agent_action',
           action: 'update_project_context',
+          requiredInputs: ['已生成的设计系统、组件目录、模板和 UI 实现路径'],
+          expectedOutputs: ['docs/project-context.md 中的 UI 文档索引已更新'],
           outputs: ['docs/project-context.md'],
         },
         ...(memoryContext.enabled ? [buildMemoryPlanStep('ui')] : []),
       ],
     };
+
+    const guide = `${header}${memoryGuideSection}${skillBridgeSection}
+# 快速开始
+
+## 职责说明
+MCP 工具只提供指导并负责设计系统、检索与编排；Agent 负责组件目录、模板落盘、代码实施和测试。
+
+## 失败处理
+任一步失败时保留已完成产物、记录失败原因并从该步骤重试；不得跳过失败步骤宣称完成。
+
+## 高级选项
+可通过 mode、framework、template 和 template_profile 控制编排方式；未指定时采用安全默认值。
+
+# UI 开发闭环
+
+- 模式：manual
+- 目标框架：${framework}
+- 模板：docs/ui/${templateName}.json
+- 规则：文本步骤与 \`structuredContent.metadata.plan.steps\` 来自同一份计划。
+
+## 步骤
+${renderDelegatedPlanSteps(plan.steps)}`;
 
     // Create structured UI report for manual mode
     const uiReport: UIReport = {
@@ -1291,7 +959,7 @@ start_ui "设置页面" --framework=react
         {
           name: '渲染最终代码',
           status: 'pending',
-          description: '调用 render_ui 生成组件代码',
+          description: '由 Agent 根据模板和设计系统实施 UI 代码',
         },
         {
           name: '更新项目上下文',
@@ -1303,13 +971,13 @@ start_ui "设置页面" --framework=react
       nextSteps: [
         '检查 docs/project-context.md，如不存在则调用 init_project_context',
         '检查 docs/design-system.md，如不存在则调用 ui_design_system',
-        '检查 docs/ui/component-catalog.json，如不存在则调用 init_component_catalog',
+        '检查 docs/ui/component-catalog.json，如不存在则由 Agent 创建 docs/ui/component-catalog.json',
         ...(isShadcnStack(framework)
           ? [`调用 ui_search --category=shadcn-blocks --query="${description}" 匹配 shadcn block`]
           : []),
         `调用 ui_search --mode=template --query="${description}"`,
         `保存模板到 docs/ui/${templateName}.json`,
-        `调用 render_ui --framework="${framework}"`,
+        `由 Agent 按 ${framework} 实施 UI 代码与测试`,
         '更新 docs/project-context.md 添加 UI 文档链接',
       ],
       designSystem: {

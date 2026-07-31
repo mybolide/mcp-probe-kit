@@ -141,7 +141,10 @@ describe('start_ui 单元测试', () => {
       });
       
       expect(result.isError).toBe(false);
-      expect(result.content[0].text).toMatch(/智能 UI 开发计划|智能分析结果/i);
+      expect('structuredContent' in result).toBe(true);
+      const structured = (result as any).structuredContent;
+      expect(structured.summary).toMatch(/智能 UI 开发/i);
+      expect(structured.metadata.plan.steps.length).toBeGreaterThanOrEqual(7);
     });
   });
 
@@ -161,16 +164,20 @@ describe('start_ui 单元测试', () => {
     test('包含所有必需的步骤', async () => {
       const result = await startUi({ description: '测试' });
       
-      const text = result.content[0].text;
-      
-      // 应该包含 7 个步骤
-      expect(text).toMatch(/步骤 1/);
-      expect(text).toMatch(/步骤 2/);
-      expect(text).toMatch(/步骤 3/);
-      expect(text).toMatch(/步骤 4/);
-      expect(text).toMatch(/步骤 5/);
-      expect(text).toMatch(/步骤 6/);
-      expect(text).toMatch(/步骤 7/);
+      expect('structuredContent' in result).toBe(true);
+      const structured = (result as any).structuredContent;
+      const stepIds = structured.metadata.plan.steps.map((step: any) => step.id);
+
+      expect(stepIds).toEqual(expect.arrayContaining([
+        'context',
+        'design-system',
+        'catalog',
+        'template',
+        'save-template',
+        'render',
+        'update-context',
+      ]));
+      expect(result.content[0].text).toContain('structuredContent.metadata.plan.steps');
     });
 
     test('包含高级选项部分', async () => {

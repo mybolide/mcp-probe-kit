@@ -1,7 +1,10 @@
+import type { McpProbeKitBootstrapResult } from "./workflow-skill-installer.js";
+
 export interface ToolExecutionContext {
   signal?: AbortSignal;
   reportProgress?: (progress: number, message: string) => Promise<void> | void;
   traceMeta?: unknown;
+  bootstrap?: McpProbeKitBootstrapResult | null;
 }
 
 export function isAbortError(error: unknown): boolean {

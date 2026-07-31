@@ -103,7 +103,15 @@ function evalDefinitions(): EvalDefinition[] {
     routeCase('route-refactor', 'refactor', 'refactor'),
     routeCase('route-onboard', 'onboard', 'start_onboard'),
     routeCase('route-spec', 'spec', 'check_spec'),
-    routeCase('route-memory', 'memory', 'search_memory'),
+    routeCase('route-memory', 'memory', 'search_memory', true),
+    {
+      id: 'route-memory-disabled',
+      category: 'routing',
+      description: 'Memory 未配置时不得路由到不可见的 search_memory',
+      expected: null,
+      evaluate: () => buildDevWorkflow('eval memory disabled', { scenario: 'memory', memoryAvailable: false }).firstTool,
+      matches: (actual) => actual === null,
+    },
     {
       id: 'feature-args-complete',
       category: 'parameter-construction',
@@ -235,13 +243,18 @@ function evalDefinitions(): EvalDefinition[] {
   ];
 }
 
-function routeCase(id: string, scenario: string, expectedTool: string): EvalDefinition {
+function routeCase(
+  id: string,
+  scenario: string,
+  expectedTool: string,
+  memoryAvailable = false
+): EvalDefinition {
   return {
     id,
     category: 'routing',
     description: `${scenario} 场景必须路由到 ${expectedTool}`,
     expected: expectedTool,
-    evaluate: () => buildDevWorkflow(`eval ${scenario}`, { scenario }).firstTool,
+    evaluate: () => buildDevWorkflow(`eval ${scenario}`, { scenario, memoryAvailable }).firstTool,
     matches: (actual) => actual === expectedTool,
   };
 }

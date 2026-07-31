@@ -4,6 +4,8 @@ import { handleToolError } from '../utils/error-handler.js';
 import { buildDevWorkflow, renderWorkflowMarkdown } from '../lib/dev-workflow.js';
 import { ensureMcpProbeKitBootstrap } from '../lib/workflow-skill-installer.js';
 import { resolveWorkspaceRoot } from '../lib/workspace-root.js';
+import { isMemoryEnabled } from '../lib/memory-config.js';
+import type { ToolExecutionContext } from '../lib/tool-execution-context.js';
 
 /**
  * workflow — 开发工作流路由（只读指南）
@@ -11,7 +13,7 @@ import { resolveWorkspaceRoot } from '../lib/workspace-root.js';
  * 根据用户意图生成「何时调哪个 MCP 工具」的分阶段计划，
  * 用于约束 Agent 先走 start_* / code_insight / check_spec，而不是直接写代码。
  */
-export async function workflow(args: unknown) {
+export async function workflow(args: unknown, context?: ToolExecutionContext) {
   try {
     const parsed = parseArgs<{
       intent?: string;
@@ -40,10 +42,10 @@ export async function workflow(args: unknown) {
       getString(parsed.description);
     const scenario = getString(parsed.scenario) || 'auto';
 
-    const plan = buildDevWorkflow(intent, { scenario });
+    const plan = buildDevWorkflow(intent, { scenario, memoryAvailable: isMemoryEnabled() });
     const text = renderWorkflowMarkdown(plan, intent);
     const projectRoot = resolveWorkspaceRoot(getString(parsed.project_root));
-    const bootstrap = ensureMcpProbeKitBootstrap(projectRoot);
+    const bootstrap = context?.bootstrap ?? ensureMcpProbeKitBootstrap(projectRoot);
 
     return okStructured(text, {
       scenario: plan.scenario,
@@ -69,10 +71,16 @@ export async function workflow(args: unknown) {
         created: bootstrap.agentsMd.created,
         updated: bootstrap.agentsMd.updated,
       },
-      handles: {
-        next_tool: plan.firstTool,
-        next_args: plan.firstToolArgsHint ?? {},
-      },
+      handles: plan.firstTool
+        ? {
+            next_tool: plan.firstTool,
+            next_args: plan.firstToolArgsHint ?? {},
+          }
+        : {
+            next_tool: null,
+            next_args: {},
+            next_action: 'clarify_or_configure',
+          },
     });
   } catch (error) {
     return handleToolError(error, 'workflow');

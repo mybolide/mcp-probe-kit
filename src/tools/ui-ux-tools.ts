@@ -639,7 +639,7 @@ ${componentList}
         
         return okStructured(`❌ 未找到组件目录文件
 
-请先运行 \`init_component_catalog\` 生成组件目录。
+请先由 Agent 根据设计系统与现有组件生成组件目录文件。
 `, errorData, {
           schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
         });
@@ -761,7 +761,7 @@ ${templateList}
 
 **使用方法**:
 \`\`\`
-render_ui docs/ui/pages/<文件名>.json --framework=react
+由 Agent 根据页面模板和设计系统实施 React UI 代码并运行测试
 \`\`\`
 `;
 
@@ -954,6 +954,35 @@ export async function syncUiData(args: any, context?: ToolExecutionContext) {
 
     const force = args.force || false;
     const verbose = args.verbose || false;
+    const checkOnly = args.check_only === true || args.dry_run === true;
+
+    if (checkOnly) {
+      const loader = await getDataLoader();
+      const metadata = loader.getCacheManager().getMetadata();
+      const searchEngine = loader.getSearchEngine();
+      const localStatus: SyncReport = {
+        summary: "UI/UX 本地缓存状态检查完成",
+        status: 'success',
+        synced: {
+          colors: (searchEngine.getCategoryData('colors') || []).length,
+          icons: (searchEngine.getCategoryData('icons') || []).length,
+          components: (searchEngine.getCategoryData('products') || []).length,
+          patterns: (searchEngine.getCategoryData('landing') || []).length,
+          shadcnBlocks: (searchEngine.getCategoryData('shadcn-blocks') || []).length,
+          shadcnComponents: (searchEngine.getCategoryData('shadcn-components') || []).length,
+          themes: (searchEngine.getCategoryData('ui-themes') || []).length,
+          vercelGuidelines: (searchEngine.getCategoryData('ui-guidelines-vercel') || []).length,
+        },
+        version: metadata?.version,
+        timestamp: new Date().toISOString(),
+      };
+      await reportToolProgress(context, 100, 'sync_ui_data: 本地状态检查完成');
+      return okStructured(
+        'UI/UX 本地缓存状态检查完成；check_only 未访问网络且未写入缓存。',
+        localStatus,
+        { schema: (await import('../schemas/output/ui-ux-tools.js')).SyncReportSchema },
+      );
+    }
 
     // 检查是否需要更新
     if (!force) {

@@ -77,4 +77,22 @@ describe('git_work_report', () => {
       expect(text).toContain('daily-report.md');
     });
   });
+
+  describe('structured guidance contract', () => {
+    it('returns executable date range and honest boundaries', async () => {
+      const result = await gitWorkReport({
+        start_date: '2026-2-1',
+        end_date: '2026-2-6',
+      });
+      const structured = (result as any).structuredContent;
+
+      expect(result.isError).toBe(false);
+      expect(structured.mode).toBe('guidance');
+      expect(structured.input.sinceDate).toBe('2026-02-01');
+      expect(structured.input.untilDate).toBe('2026-02-06');
+      expect(structured.instructions.join(' ')).toContain('git log');
+      expect(structured.boundaries.join(' ')).toContain('不声称');
+    });
+  });
+
 });

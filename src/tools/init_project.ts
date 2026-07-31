@@ -5,6 +5,7 @@ import { MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
 import { resolveWorkspaceRootWithMeta } from "../lib/workspace-root.js";
 import { toPosixPath } from "../lib/project-context-layout.js";
 import type { ProjectInit } from "../schemas/output/project-tools.js";
+import type { ToolExecutionContext } from "../lib/tool-execution-context.js";
 
 const AGENT_MANUAL_WRITE_NOTICE =
   "MCP 仅写入 Skill 与 AGENTS.md；Agent 须按指南手动落盘 pendingFiles 中的 docs、specs、scripts、src。";
@@ -15,7 +16,7 @@ const AGENT_MANUAL_WRITE_NOTICE =
  * 功能：按照 Spec-Driven Development 方式初始化项目
  * 输出：项目结构、文档模板和初始化指南
  */
-export async function initProject(args: any) {
+export async function initProject(args: any, context?: ToolExecutionContext) {
   try {
     // 智能参数解析，支持自然语言输入
     const parsedArgs = parseArgs<{
@@ -40,7 +41,7 @@ export async function initProject(args: any) {
     const projectName = getString(parsedArgs.project_name) || "新项目";
     const rootResolution = resolveWorkspaceRootWithMeta(getString(parsedArgs.project_root));
     const projectRoot = rootResolution.root;
-    const bootstrap = ensureMcpProbeKitBootstrap(projectRoot);
+    const bootstrap = context?.bootstrap ?? ensureMcpProbeKitBootstrap(projectRoot);
     const pathWarnings = [rootResolution.warning, bootstrap.workspaceWarning].filter(
       (item): item is string => Boolean(item)
     );

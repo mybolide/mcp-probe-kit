@@ -86,6 +86,11 @@ export const syncUiDataSchema = {
         description: "是否显示详细日志（默认 false）",
         default: false,
       },
+      check_only: {
+        type: "boolean",
+        description: "仅读取本地缓存状态，不访问网络也不写入缓存。适合诊断和自动化验收。",
+        default: false,
+      },
     },
   },
 };

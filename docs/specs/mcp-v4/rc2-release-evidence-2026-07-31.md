@@ -39,8 +39,8 @@ The six Memory tools are conditionally added to compact only when both Memory st
 
 ## Tests and build
 
-- Test files: 83 passed
-- Tests: 393 passed
+- Test files: 85 passed
+- Tests: 400 passed
 - TypeScript build: passed
 - Generated MCP App bundle: passed
 - Production modules remained under the repository line-count gate
@@ -97,8 +97,8 @@ Local process-level Agent acceptance:
 
 Agent Evals:
 
-- 24/24 passed
-- routing: 9/9
+- 25/25 passed
+- routing: 10/10
 - parameter construction: 2/2
 - plan compliance: 3/3
 - Memory safety: 4/4
@@ -113,9 +113,9 @@ Agent Evals:
 
 Observed latency for this run:
 
-- p50: 1010 ms
-- p95: 13578 ms
-- max: 13578 ms
+- p50: 759 ms
+- p95: 3279 ms
+- max: 3279 ms
 
 These values are environment observations, not a cross-platform performance guarantee.
 
@@ -124,8 +124,8 @@ These values are environment observations, not a cross-platform performance guar
 Package smoke:
 
 - tarball: `mcp-probe-kit-4.0.0-rc.2.tgz`
-- entries: 370
-- packed size: 716643 bytes
+- entries: 374
+- packed size: 719040 bytes
 - clean install started successfully
 - installed server exposed 23 compact model tools
 - `workflow` routed to `start_feature`
@@ -153,22 +153,28 @@ Security:
 
 ## Real host acceptance
 
-Claude Code 2.1.179 was run against the local rc.2 production build using a strict one-server MCP configuration and `MCP_PROTOCOL_MODE=auto`:
+Claude Code 2.1.179 was run against the local rc.2 production build using a strict one-server MCP configuration and `MCP_PROTOCOL_MODE=auto`.
 
-- negotiated Legacy protocol `2025-11-25`; forcing Modern correctly failed because this Host does not advertise the Modern protocol version;
-- `workflow` returned `scenario=feature`, `firstTool=start_feature`, `spec_layout=auto`;
-- `plan_heartbeat` returned stored=true;
-- `resume_plan` returned found=true;
-- `converge` returned passed=true and memoryWriteAllowed=true.
+Full real-Agent contract audit (`npm run audit:tools:agent`):
 
-This validates core tool discovery and execution. Claude Code did not negotiate MCP Apps, so no GUI claim is made for this Host.
+- 33 expected model tools;
+- 33 distinct model tools actually called;
+- 7/7 audit batches passed;
+- 0 contract assessment failures;
+- 0 missing tools;
+- 0 unexpected tools;
+- 0 duplicate-call warnings in the final run.
+
+For every tool, the Agent checked purpose understanding, guidance readability, text/`structuredContent` consistency, executable next steps, and false-completion claims. The initial audit found bootstrap contradictions and incomplete guidance contracts in `estimate`, `git_work_report`, `code_review`, `refactor`, and `gentest`; those issues were fixed before the final passing run.
+
+The Host negotiated Legacy protocol `2025-11-25`; forcing Modern correctly failed because this Host does not advertise the Modern protocol version. Claude Code did not negotiate MCP Apps, so no GUI claim is made for this Host.
 
 ## Remaining manual host work
 
 Current rc.2 status:
 
 - MCP Inspector 2.0.0: passed, including Apps metadata/resource and App-only surface tests
-- Claude Code 2.1.179: passed for core Workflow and Plan lifecycle; Apps GUI not supported/claimed
+- Claude Code 2.1.179: passed for all 33 model-tool contracts and core Workflow/Plan lifecycle; Apps GUI not negotiated or claimed
 - Cursor 3.0.16: blocked pending GUI/manual Agent acceptance
 - VS Code Copilot: blocked by host installation state
 - Cline: blocked because no client version is installed

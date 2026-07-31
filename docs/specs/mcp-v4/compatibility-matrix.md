@@ -65,12 +65,14 @@ App-only 动作使用 `_meta.ui.visibility=["app"]`，不计入模型可见工�
 | Memory Center 浏览动作 | passed | `src/tools/__tests__/list_memory_assets.unit.test.ts` |
 | Agent Routing / Plan Compliance / Memory Safety | passed | Agent Evals 24/24 |
 | 本地真实 Agent 调用 | passed | `npm run acceptance:agent`，默认 23 个模型工具 |
-| npm tarball 安装启动 | passed | 370 entries，安装后 23 个模型工具 |
+| Tool Contract Audit | passed | 38/38 调用；compact 23、Memory 29、full 33、App-only 与 Legacy sample 全部闭环 |
+| Claude Code 全工具真实 Agent 审计 | passed | 33/33 工具、7/7 批次、0 契约失败、0 missing/unexpected |
+| npm tarball 安装启动 | passed | 374 entries，安装后 23 个模型工具 |
 | 稳定性循环 | passed | 16 场景、81 次 Workflow 调用、0 失败 |
 | MCP Inspector 2.0.0 | passed | compact 24 raw/23 model；full 34 raw/33 model |
 | 生产依赖安全审计 | passed | 0 vulnerabilities |
 | v3.7.0 回退 | passed | Legacy 发现 30 个工具及核心工具 |
-| 完整发布闸门 | passed | 83 个测试文件、393 项测试，`npm run release:verify` exit 0 |
+| 完整发布闸门 | passed | 85 个测试文件、400 项测试，`npm run release:verify` exit 0 |
 
 详细自动化证据见 `docs/specs/mcp-v4/rc2-release-evidence-2026-07-31.md`。
 
@@ -81,7 +83,7 @@ Reference client、Inspector 和本地脚本通过，不等同于所有真实编
 | 客户端 | 客户端版本 | 当前 rc.2 状态 | 已有证据 | 备注 |
 |---|---|---|---|---|
 | MCP Inspector | 2.0.0 | passed | `npm run smoke:inspector` | 已验证 Apps 协商、App-only 与 compact/full 工具面 |
-| Claude Code | 2.1.179 | passed | rc.2 实际调用 `workflow`、`plan_heartbeat`、`resume_plan`、`converge` | `auto` 协商为 Legacy 2025-11-25；未宣称支持 MCP Apps GUI |
+| Claude Code | 2.1.179 | passed | `npm run audit:tools:agent`：全部 33 个模型工具真实调用，7/7 批次通过 | `auto` 协商为 Legacy 2025-11-25；Host 未协商 MCP Apps，未宣称 GUI 通过 |
 | Cursor | 3.0.16 | blocked | 同上 | 需要 GUI/人工 Agent 验收 |
 | VS Code Copilot | VS Code 1.104.1 / Copilot Chat 0.31.5 | blocked | 同上 | 当前配置缺少基础 Copilot 扩展 |
 | Cline | 未安装 | blocked | 同上 | 需安装具体版本后验证 |
@@ -94,5 +96,5 @@ Reference client、Inspector 和本地脚本通过，不等同于所有真实编
 - `v4.0.0-rc.2` 本地自动发布闸门已经通过。
 - RC 只能发布到 npm `next` 并创建 GitHub prerelease；不得更新 `latest` 或正式 MCP Registry。
 - MCP Inspector 2.0.0 已通过当前候选版本。
-- Claude Code 2.1.179 已完成当前 rc.2 的核心 Workflow 与 Plan 生命周期实机验证；其 Host 未协商 MCP Apps，因此不宣称 GUI 通过。
+- Claude Code 2.1.179 已完成当前 rc.2 全部 33 个模型工具的真实 Agent 契约审计，并通过核心 Workflow 与 Plan 生命周期验证；其 Host 未协商 MCP Apps，因此不宣称 GUI 通过。
 - Cursor、VS Code Copilot、Cline 和 OpenCode 保持 `blocked`，不能在发布说明中宣称已兼容验证。

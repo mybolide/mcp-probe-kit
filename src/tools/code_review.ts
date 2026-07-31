@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import type { GuidanceResult } from "../schemas/output/guidance-tools.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
 import { renderCodeLimits, renderBannedPatterns, CODE_LIMITS } from "../lib/quality-constraints.js";
@@ -42,20 +43,31 @@ export async function codeReview(args: any) {
     });
 
     if (resolved.error) {
-      return okStructured(
-        `❌ code_review 无法读取输入: ${resolved.error}`,
-        {
-          mode: "guidance",
-          reviewInput: {
-            received: false,
-            error: resolved.error,
-            file: filePath || null,
-          },
+      const structured: GuidanceResult & { reviewInput: Record<string, unknown> } = {
+        mode: "guidance",
+        summary: `无法读取待审查代码：${resolved.error}`,
+        input: { focus, file: filePath || null },
+        reviewInput: {
+          received: false,
+          error: resolved.error,
+          file: filePath || null,
         },
-        {
-          note: "指南型工具：请修正 file_path / project_root 或传入 code 后，由 Agent 按清单完成审查并输出 issues JSON",
-        }
-      );
+        instructions: [
+          "提供 code，或提供 file_path 与 project_root 让 Agent 读取目标文件",
+          "拿到代码后按质量、安全、性能和规范四个维度逐项审查",
+        ],
+        outputContract: {
+          summary: "string",
+          overallScore: "number",
+          issues: [{ severity: "critical|high|medium|low", category: "quality|security|performance|style", message: "string", suggestion: "string" }],
+          strengths: ["string"],
+        },
+        boundaries: ["该工具返回审查方法，不声称已经完成静态扫描"],
+        nextSteps: ["补充可读取的代码后重新调用 code_review"],
+      };
+      return okStructured(`code_review 无法读取代码：${resolved.error}`, structured, {
+        schema: (await import("../schemas/output/guidance-tools.js")).GuidanceResultSchema,
+      });
     }
 
     const hasCode = Boolean(resolved.code.trim());
@@ -169,24 +181,53 @@ ${renderBannedPatterns()}
 
 现在请开始审查并输出问题清单。`;
 
-    return okStructured(
-      message,
-      {
-        mode: "guidance",
-        reviewInput: {
-          received: hasCode,
-          focus,
-          file: resolved.file ?? null,
-          lineCount: hasCode ? resolved.code.split("\n").length : 0,
-          code: hasCode ? resolved.code : null,
-          truncatedInPrompt: hasCode && resolved.code.length !== promptCode.length,
-        },
+    const structured: GuidanceResult & { reviewInput: Record<string, unknown> } = {
+      mode: "guidance",
+      summary: `代码审查指南：${focus}`,
+      input: {
+        focus,
+        file: resolved.file ?? null,
+        lineCount: hasCode ? resolved.code.split("\n").length : 0,
       },
-      {
-        schema: (await import("../schemas/output/core-tools.js")).CodeReviewReportSchema,
-        note: "指南型工具：issues 须由 Agent 按清单审查后生成；MCP 不返回静态扫描结果",
-      }
-    );
+      reviewInput: {
+        received: hasCode,
+        focus,
+        file: resolved.file ?? null,
+        lineCount: hasCode ? resolved.code.split("\n").length : 0,
+        code: hasCode ? resolved.code : null,
+        truncatedInPrompt: hasCode && resolved.code.length !== promptCode.length,
+      },
+      instructions: [
+        "完整阅读 reviewInput.code 或 file_path 对应文件，不要只机械勾选清单",
+        "检查代码质量、SOLID、常见安全漏洞、性能风险和项目规范",
+        "每个问题必须有代码证据、严重级别、类别、位置和可执行修复建议",
+        "同时记录做得好的地方；没有证据的问题不要报告",
+      ],
+      outputContract: {
+        summary: "string",
+        overallScore: "number 0-100",
+        issues: [{
+          severity: "critical|high|medium|low",
+          category: "quality|security|performance|style",
+          file: "string|null",
+          line: "number|null",
+          code: "string|null",
+          message: "string",
+          suggestion: "string",
+        }],
+        strengths: ["string"],
+      },
+      boundaries: [
+        "该工具提供审查清单和代码输入，不声称已运行静态扫描器",
+        "最终 issues 必须由 Agent 基于实际代码分析生成",
+      ],
+      nextSteps: ["Agent 按 instructions 审查代码并输出符合 outputContract 的报告"],
+    };
+
+    return okStructured(message, structured, {
+      schema: (await import("../schemas/output/guidance-tools.js")).GuidanceResultSchema,
+      note: "指导型工具：structuredContent 包含完整审查清单、边界和输出契约，由 Agent 基于实际代码生成 issues",
+    });
   } catch (error) {
     return handleToolError(error, "code_review");
   }

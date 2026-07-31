@@ -1,5 +1,6 @@
 import { parseArgs, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
+import type { GuidanceResult } from "../schemas/output/guidance-tools.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
 import { resolveGuidanceCode, trimCodeForPrompt } from "../lib/code-review-input.js";
@@ -41,21 +42,22 @@ export async function gentest(args: any) {
     });
 
     if (resolved.error) {
-      return okStructured(
-        `❌ gentest 无法读取输入: ${resolved.error}`,
-        {
-          mode: "guidance",
-          gentestInput: {
-            received: false,
-            error: resolved.error,
-            file: filePath || null,
-            framework,
-          },
-        },
-        {
-          note: "指南型工具：请修正 file_path / project_root 或传入 code 后，由 Agent 生成完整测试代码",
-        }
-      );
+      const structured: GuidanceResult & { gentestInput: Record<string, unknown> } = {
+        mode: "guidance",
+        summary: `无法读取待测试代码：${resolved.error}`,
+        input: { framework, file: filePath || null },
+        gentestInput: { received: false, error: resolved.error, file: filePath || null, framework },
+        instructions: [
+          "提供 code，或提供 file_path 与 project_root 让 Agent 读取目标文件",
+          "拿到代码后覆盖正常、边界、异常和依赖交互场景",
+        ],
+        outputContract: { framework: "string", testFile: "complete source code", coveredScenarios: ["string"] },
+        boundaries: ["该工具返回测试设计指南，不声称已生成或运行测试文件"],
+        nextSteps: ["补充可读取的代码后重新调用 gentest"],
+      };
+      return okStructured(`gentest 无法读取代码：${resolved.error}`, structured, {
+        schema: (await import("../schemas/output/guidance-tools.js")).GuidanceResultSchema,
+      });
     }
 
     const hasCode = Boolean(resolved.code.trim());
@@ -169,24 +171,46 @@ describe('函数/模块名称', () => {
 
 现在请生成完整的测试代码。`;
 
-    return okStructured(
-      message,
-      {
-        mode: "guidance",
-        gentestInput: {
-          received: hasCode,
-          framework,
-          file: resolved.file ?? null,
-          lineCount: hasCode ? resolved.code.split("\n").length : 0,
-          code: hasCode ? resolved.code : null,
-          truncatedInPrompt: hasCode && resolved.code.length !== promptCode.length,
-        },
+    const structured: GuidanceResult & { gentestInput: Record<string, unknown> } = {
+      mode: "guidance",
+      summary: `${framework} 测试生成指南`,
+      input: {
+        framework,
+        file: resolved.file ?? null,
+        lineCount: hasCode ? resolved.code.split("\n").length : 0,
       },
-      {
-        schema: (await import("../schemas/output/core-tools.js")).TestSuiteSchema,
-        note: "指南型工具：测试代码须由 Agent 按清单生成；MCP 不返回自动生成的测试文件",
-      }
-    );
+      gentestInput: {
+        received: hasCode,
+        framework,
+        file: resolved.file ?? null,
+        lineCount: hasCode ? resolved.code.split("\n").length : 0,
+        code: hasCode ? resolved.code : null,
+        truncatedInPrompt: hasCode && resolved.code.length !== promptCode.length,
+      },
+      instructions: [
+        "完整阅读 gentestInput.code，识别公开行为、输入输出、依赖和失败路径",
+        "覆盖正常流程、边界值、空值、无效输入、异常和外部依赖交互",
+        "沿用项目现有测试框架、命名、目录和 mock 习惯；默认使用 AAA 结构",
+        "输出可直接落盘的完整测试代码，并说明覆盖场景；不要声称已经运行",
+      ],
+      outputContract: {
+        framework,
+        fileName: "*.test.* or *.spec.*",
+        testFile: "complete source code with imports, describe/test blocks and mocks",
+        coveredScenarios: ["happy path", "boundary", "error path"],
+        verificationCommand: "project-specific test command",
+      },
+      boundaries: [
+        "该工具提供测试设计和代码生成契约，不自动运行测试",
+        "不得修改被测源代码来迎合测试；实际通过状态必须由运行结果证明",
+      ],
+      nextSteps: ["Agent 生成测试文件、落盘并运行项目测试命令验证"],
+    };
+
+    return okStructured(message, structured, {
+      schema: (await import("../schemas/output/guidance-tools.js")).GuidanceResultSchema,
+      note: "指导型工具：structuredContent 包含完整测试清单、边界和输出契约",
+    });
   } catch (error) {
     return handleToolError(error, "gentest");
   }

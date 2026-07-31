@@ -83,4 +83,24 @@ describe("harness-adapters", () => {
     const patchedAgain = patchLayoutManifestHarness(root, harnessResult.layoutHarness);
     expect(patchedAgain).toBeNull();
   });
+
+  test("patchLayoutManifestHarness creates the target directory for a nested explicit root", () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "harness-adapter-parent-"));
+    tempDirs.push(parent);
+    const parentLayout = resolveProjectContextLayout(parent, {});
+    writeLayoutManifest(parent, parentLayout, {
+      detected: ["agents"],
+      skillCanonical: ".agents/skills/mcp-probe-kit/SKILL.md",
+      adapters: [],
+    });
+
+    const nested = path.join(parent, "nested-project");
+    fs.mkdirSync(path.join(nested, ".claude"), { recursive: true });
+    const harnessResult = ensureHarnessAdapters(nested, generateWorkflowSkillContent(VERSION));
+    const patched = patchLayoutManifestHarness(nested, harnessResult.layoutHarness);
+
+    expect(patched).toBe("docs/.mcp-probe/layout.json");
+    expect(fs.existsSync(path.join(nested, "docs", ".mcp-probe", "layout.json"))).toBe(true);
+  });
+
 });

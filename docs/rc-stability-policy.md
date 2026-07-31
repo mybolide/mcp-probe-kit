@@ -10,7 +10,7 @@
 
 1. package、Git Tag、package-lock、server metadata、Tool Manifest 与 CHANGELOG 版本完全一致。
 2. Node.js 20 最低运行时与 Node.js 22 当前运行时均通过构建、测试和协议冒烟。
-3. 全量测试、Legacy/Modern 双协议、真实 Agent 调用、Agent Evals 与 Parent-Child Spec Gate 全部通过。
+3. 全量测试、Legacy/Modern 双协议、直接 Tool Contract Audit、真实 Agent 全工具契约审计、Agent Evals 与 Parent-Child Spec Gate 全部通过。
 4. 稳定性循环保持 0 失败，覆盖冷启动、热调用、并发客户端、Memory 故障降级和协议模式拒绝。
 5. npm tarball 能在干净临时项目中安装并启动。
 6. npm 生产依赖高危漏洞为 0。

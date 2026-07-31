@@ -137,9 +137,8 @@ describe('start_ui 属性测试', () => {
           // 应该包含有效的工具名称
           const validTools = [
             'ui_design_system',
-            'init_component_catalog',
-            'ui_search',
-            'render_ui'
+            'init_project_context',
+            'ui_search'
           ];
           
           let foundTool = false;
@@ -279,8 +278,8 @@ describe('start_ui 属性测试', () => {
           expect(result2.content[0].text).toMatch(/快速开始|Quick Start/i);
           
           // 应该包含工具调用
-          expect(result1.content[0].text).toMatch(/ui_design_system|init_component_catalog/);
-          expect(result2.content[0].text).toMatch(/ui_design_system|init_component_catalog/);
+          expect(result1.content[0].text).toMatch(/ui_design_system|create_component_catalog/);
+          expect(result2.content[0].text).toMatch(/ui_design_system|create_component_catalog/);
         }
       ),
       { numRuns: 100 }
@@ -326,9 +325,9 @@ describe('start_ui 属性测试', () => {
           // 应该包含明确的工具名称
           const hasToolNames = 
             text.includes('ui_design_system') ||
-            text.includes('init_component_catalog') ||
+            text.includes('init_project_context') ||
             text.includes('ui_search') ||
-            text.includes('render_ui');
+            text.includes('create_component_catalog');
           
           expect(hasToolNames).toBe(true);
           

@@ -1,538 +1,261 @@
-import { parseArgs, getString, getBoolean } from "../utils/parseArgs.js";
-import { promises as fs } from "fs";
-import { okStructured } from "../lib/response.js";
-import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import { parseArgs, getString, getBoolean } from '../utils/parseArgs.js';
+import { okStructured } from '../lib/response.js';
+import { renderOrchestrationHeader } from '../lib/orchestration-guidance.js';
+import { renderDelegatedPlanSteps } from '../lib/delegated-plan-renderer.js';
 import {
   buildSkillBridgePlanStep,
   buildSkillHeaderNote,
   detectSkillBridge,
   renderSkillBridgeSection,
-} from "../lib/skill-bridge.js";
-import { WorkflowReportSchema } from "../schemas/structured-output.js";
-import type { WorkflowReport, WorkflowStep, Artifact } from "../schemas/structured-output.js";
+} from '../lib/skill-bridge.js';
+import {
+  buildDelegatedPlanContract,
+  createDelegatedPlanId,
+  type DelegatedPlanStep,
+} from '../lib/delegated-plan-contract.js';
+import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from '../lib/workspace-root.js';
+import { WorkflowReportSchema } from '../schemas/structured-output.js';
+import type { Artifact, WorkflowReport, WorkflowStep } from '../schemas/structured-output.js';
 import {
   reportToolProgress,
   throwIfAborted,
   type ToolExecutionContext,
-} from "../lib/tool-execution-context.js";
+} from '../lib/tool-execution-context.js';
 
-/**
- * start_product - 产品设计完整工作流指导
- * 
- * 返回从需求到 HTML 原型的完整工作流执行指导，由 AI 按步骤调用工具并创建文件
- */
-
-export async function startProduct(args: any, context?: ToolExecutionContext) {
+/** Product workflow entry. It exposes one closed delegated plan, not phantom sub-tools. */
+export async function startProduct(args: unknown, context?: ToolExecutionContext) {
   try {
-    throwIfAborted(context?.signal, "start_product 已取消");
-    await reportToolProgress(context, 10, "start_product: 解析参数");
+    throwIfAborted(context?.signal, 'start_product 已取消');
+    await reportToolProgress(context, 10, 'start_product: 解析产品输入');
 
-    // 使用智能参数解析
-    const parsedArgs = parseArgs<{
+    const parsed = parseArgs<{
       description?: string;
       requirements_file?: string;
       product_name?: string;
       product_type?: string;
       skip_design_system?: boolean;
       docs_dir?: string;
+      project_root?: string;
     }>(args, {
       defaultValues: {
-        description: "",
-        requirements_file: "",
-        product_name: "新产品",
-        product_type: "SaaS",
+        description: '',
+        requirements_file: '',
+        product_name: '新产品',
+        product_type: 'SaaS',
         skip_design_system: false,
-        docs_dir: "docs",
+        docs_dir: 'docs',
+        project_root: '',
       },
-      primaryField: "description",
+      primaryField: 'description',
       fieldAliases: {
-        description: ["desc", "需求", "描述"],
-        requirements_file: ["req_file", "需求文件"],
-        product_name: ["name", "产品名称"],
-        product_type: ["type", "产品类型"],
-        skip_design_system: ["skip_design"],
-        docs_dir: ["dir", "目录"],
+        description: ['desc', '需求', '描述'],
+        requirements_file: ['req_file', '需求文件'],
+        product_name: ['name', '产品名称'],
+        product_type: ['type', '产品类型'],
+        skip_design_system: ['skip_design'],
+        docs_dir: ['dir', '目录'],
+        project_root: ['projectRoot', 'project_path', 'projectPath', 'root', '项目路径', '项目根目录'],
       },
     });
 
-    let description = getString(parsedArgs.description);
-    const requirementsFile = getString(parsedArgs.requirements_file);
-    const productName = getString(parsedArgs.product_name) || "新产品";
-    const productType = getString(parsedArgs.product_type) || "SaaS";
-    const skipDesignSystem = getBoolean(parsedArgs.skip_design_system);
-    const docsDir = getString(parsedArgs.docs_dir) || "docs";
-
-    throwIfAborted(context?.signal, "start_product 已取消");
-    await reportToolProgress(context, 35, "start_product: 参数解析完成");
-
-    // 如果提供了需求文件，读取文件内容
-    let requirementsSource = '';
-    if (requirementsFile) {
-      throwIfAborted(context?.signal, "start_product 已取消");
-      await reportToolProgress(context, 55, "start_product: 读取需求文档");
-
-      try {
-        description = await fs.readFile(requirementsFile, 'utf-8');
-        requirementsSource = `需求文档文件: ${requirementsFile}`;
-      } catch (error) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `❌ 无法读取需求文档文件: ${requirementsFile}\n错误: ${(error as Error).message}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-    } else {
-      requirementsSource = '用户提供的描述';
-    }
-
-    if (!description || description.trim() === "") {
+    const explicitProjectRoot = getString(parsed.project_root);
+    if (isLikelyProjectNamedRelativePath(explicitProjectRoot)) {
       return {
-        content: [
-          {
-            type: "text",
-            text: "❌ 缺少必需参数：必须提供 description 或 requirements_file",
-          },
-        ],
+        content: [{
+          type: 'text',
+          text: `拒绝执行产品编排：project_root 可能是带项目名的半相对路径（${explicitProjectRoot}）。请改为目标项目根目录绝对路径。`,
+        }],
         isError: true,
+        structuredContent: {
+          error_code: 'INVALID_PROJECT_ROOT',
+          rejected_project_root: explicitProjectRoot,
+          retry_hint: buildProjectRootRetryHint(explicitProjectRoot),
+        },
       };
     }
 
+    const projectRoot = resolveWorkspaceRoot(explicitProjectRoot);
+    const requirementsFile = getString(parsed.requirements_file);
+    const productName = getString(parsed.product_name) || '新产品';
+    const productType = getString(parsed.product_type) || 'SaaS';
+    const skipDesignSystem = getBoolean(parsed.skip_design_system);
+    const docsDir = getString(parsed.docs_dir) || 'docs';
+    let description = getString(parsed.description);
+    let requirementsSource = '用户提供的描述';
+
+    if (requirementsFile) {
+      const resolvedFile = path.isAbsolute(requirementsFile)
+        ? requirementsFile
+        : path.join(projectRoot, requirementsFile);
+      description = await fs.readFile(resolvedFile, 'utf8');
+      requirementsSource = `需求文件：${resolvedFile}`;
+    }
+    if (!description.trim()) {
+      return {
+        content: [{ type: 'text', text: '缺少产品描述：请提供 description 或 requirements_file。' }],
+        isError: true,
+        structuredContent: { error_code: 'MISSING_PRODUCT_DESCRIPTION' },
+      };
+    }
+
+    throwIfAborted(context?.signal, 'start_product 已取消');
+    await reportToolProgress(context, 45, 'start_product: 构建闭环计划');
+
     const skillBridge = detectSkillBridge('start_product');
-    const skillBridgeStep = buildSkillBridgePlanStep(skillBridge);
-    const skillBridgeSection = renderSkillBridgeSection(skillBridge);
+    const includeDesignSystem = !skipDesignSystem;
+    const steps: DelegatedPlanStep[] = [
+      buildSkillBridgePlanStep(skillBridge),
+      {
+        id: 'context',
+        type: 'tool',
+        tool: 'init_project_context',
+        when: `缺少 AGENTS.md 或 ${docsDir}/project-context.md`,
+        args: { docs_dir: docsDir, project_root: projectRoot },
+        outputs: ['AGENTS.md', `${docsDir}/project-context.md`],
+      },
+      {
+        id: 'prd',
+        type: 'agent_action',
+        action: 'generate_product_requirements_document',
+        requiredInputs: [requirementsSource, '产品目标、用户、问题、范围、约束、页面与验收标准'],
+        expectedOutputs: [`${docsDir}/prd/product-requirements.md`],
+        outputs: [`${docsDir}/prd/product-requirements.md`],
+        note: '由 Agent 使用宿主文件能力生成 PRD；该步骤不是 MCP 工具调用',
+      },
+      {
+        id: 'prototype-docs',
+        type: 'agent_action',
+        action: 'generate_prototype_documents',
+        dependsOn: ['prd'],
+        requiredInputs: [`${docsDir}/prd/product-requirements.md`],
+        expectedOutputs: [
+          `${docsDir}/prototype/prototype-index.md`,
+          `${docsDir}/prototype/page-*.md`,
+        ],
+        outputs: [
+          `${docsDir}/prototype/prototype-index.md`,
+          `${docsDir}/prototype/page-*.md`,
+        ],
+        note: '由 Agent 从 PRD 的页面与流程定义生成原型文档；该步骤不是 MCP 工具调用',
+      },
+      ...(includeDesignSystem
+        ? [{
+            id: 'design-system',
+            type: 'tool' as const,
+            tool: 'ui_design_system',
+            dependsOn: ['prd'],
+            args: { product_type: productType, description: productName, stack: 'html' },
+            outputs: [`${docsDir}/design-system.json`, `${docsDir}/design-system.md`],
+          }]
+        : []),
+      {
+        id: 'html-prototype',
+        type: 'tool',
+        tool: 'start_ui',
+        dependsOn: includeDesignSystem ? ['prototype-docs', 'design-system'] : ['prototype-docs'],
+        args: {
+          description: `根据 ${docsDir}/prototype/ 下的页面原型文档，为 ${productName} 生成可交互 HTML 原型；输出到 ${docsDir}/html-prototype/，并遵守现有设计系统`,
+          framework: 'html',
+          project_root: projectRoot,
+          mode: 'manual',
+        },
+        outputs: [`${docsDir}/html-prototype/index.html`, `${docsDir}/html-prototype/page-*.html`],
+      },
+      {
+        id: 'update-context',
+        type: 'agent_action',
+        action: 'update_project_context',
+        dependsOn: ['html-prototype'],
+        requiredInputs: [
+          `${docsDir}/prd/product-requirements.md`,
+          `${docsDir}/prototype/prototype-index.md`,
+          `${docsDir}/html-prototype/index.html`,
+        ],
+        expectedOutputs: [`${docsDir}/project-context.md 中已加入产品设计与原型索引`],
+        outputs: [`${docsDir}/project-context.md`],
+      },
+    ];
+
+    const plan = buildDelegatedPlanContract({
+      planId: createDelegatedPlanId('product', `${productName}:${description}`),
+      workflow: 'product',
+      workflowVersion: '4.0.0-rc.2',
+      objective: `完成 ${productName} 的 PRD、原型文档、设计系统与 HTML 原型`,
+      steps,
+      globalRules: [
+        '文本指导与 structuredContent.metadata.plan.steps 必须保持一致',
+        '不得把 Agent 操作伪装成 MCP 工具调用',
+        '所有文档和原型必须由 Agent 使用宿主文件能力真实落盘',
+      ],
+      completionCriteria: [
+        'PRD 已落盘且覆盖目标用户、范围、页面、流程与验收标准',
+        '原型文档与 HTML 原型页面一致',
+        '项目上下文索引已更新',
+      ],
+      memoryPolicy: { recallBeforeExecution: false, extractAfterValidation: false },
+    });
 
     const header = renderOrchestrationHeader({
       tool: 'start_product',
-      goal: `完成产品设计工作流：${productName}`,
-      tasks: [
-        '按 delegated plan 顺序调用工具',
-        '生成 PRD、原型、设计系统与 HTML 原型',
-      ],
-      notes: [buildSkillHeaderNote(skillBridge)],
+      goal: `产品设计：${productName}`,
+      tasks: ['按 delegated plan 生成 PRD、原型文档、设计系统与 HTML 原型'],
+      notes: [buildSkillHeaderNote(skillBridge), requirementsSource],
     });
+    const guidance = `${header}${renderSkillBridgeSection(skillBridge)}
+# 产品设计闭环
 
-    const guidanceText = header + skillBridgeSection + `# 🚀 产品设计工作流执行指导
+- 产品：${productName}
+- 类型：${productType}
+- 文档目录：${docsDir}
+- 规则：以下文字直接由 \`structuredContent.metadata.plan.steps\` 渲染。
 
-基于${requirementsSource}，请按照以下步骤完成从需求到 HTML 原型的完整产品设计流程。
+## 执行计划
+${renderDelegatedPlanSteps(plan.steps)}`;
 
-## 📋 需求信息
-
-- **产品名称**: ${productName}
-- **产品类型**: ${productType}
-- **文档目录**: ${docsDir}
-- **需求来源**: ${requirementsSource}
-- **跳过设计系统**: ${skipDesignSystem ? '是' : '否'}
-
-${requirementsFile ? `\n**📄 需求文档内容**:\n\n${description.substring(0, 500)}${description.length > 500 ? '...\n\n（完整内容已读取，共 ' + description.length + ' 字符）' : ''}` : `\n**📄 产品描述**:\n\n${description}`}
-
----
-
-## 🎯 执行步骤
-
-请按顺序执行以下步骤：
-
-### 步骤 1: 检查/生成项目上下文 📋
-
-**检查**: 查看 \`${docsDir}/project-context.md\` 是否存在
-
-**如果不存在，调用 MCP 工具**: \`init_project_context\`
-\`\`\`json
-{
-  "docs_dir": "${docsDir}"
-}
-\`\`\`
-
-**预期输出**: 
-- \`${docsDir}/project-context.md\` - 项目上下文索引文件
-
----
-
-### 步骤 2: 生成产品需求文档（PRD） 📝
-
-**调用 MCP 工具**: \`gen_prd\`
-\`\`\`json
-{
-  "description": "${description.replace(/"/g, '\\"').replace(/\n/g, '\\n').substring(0, 200)}...",
-  "product_name": "${productName}",
-  "docs_dir": "${docsDir}"
-}
-\`\`\`
-
-**重要**: 
-- 工具会返回 PRD 文档模板和创建指导
-- 请根据指导创建 \`${docsDir}/prd/product-requirements.md\` 文件
-- 智能填充所有标记为 [请根据产品描述填写] 的部分
-- 确保 PRD 包含完整的页面清单（第 5 章节）
-
-**预期输出**: 
-- \`${docsDir}/prd/product-requirements.md\` - 完整的 PRD 文档
-
----
-
-### 步骤 3: 生成原型设计文档 🎨
-
-**调用 MCP 工具**: \`gen_prototype\`
-\`\`\`json
-{
-  "prd_path": "${docsDir}/prd/product-requirements.md",
-  "docs_dir": "${docsDir}"
-}
-\`\`\`
-
-**重要**: 
-- 工具会返回原型设计文档模板和创建指导
-- 请根据指导创建原型索引和各页面原型文档
-- 从 PRD 的页面清单中提取所有页面
-- 为每个页面创建 \`${docsDir}/prototype/page-[页面名称].md\` 文件
-
-**预期输出**: 
-- \`${docsDir}/prototype/prototype-index.md\` - 原型索引
-- \`${docsDir}/prototype/page-*.md\` - 各页面原型文档
-
----
-
-${!skipDesignSystem ? `### 步骤 4: 生成设计系统 🎨
-
-**调用 MCP 工具**: \`ui_design_system\`
-\`\`\`json
-{
-  "product_type": "${productType}",
-  "description": "${productName}",
-  "stack": "html"
-}
-\`\`\`
-
-**预期输出**: 
-- \`${docsDir}/design-system.json\` - 设计系统配置
-- \`${docsDir}/design-system.md\` - 设计系统文档
-
----
-
-### 步骤 5: 生成 HTML 原型 🌐
-
-**调用 MCP 工具**: \`start_ui\`
-\`\`\`json
-{
-  "description": "基于原型文档生成所有页面的 HTML 原型"
-}
-\`\`\`
-
-**说明**: 
-- \`start_ui\` 工具会自动读取 \`${docsDir}/prototype/\` 目录下的所有页面原型文档
-- 自动读取 \`${docsDir}/design-system.json\` 获取设计规范
-- 为每个页面生成对应的 HTML 文件到 \`${docsDir}/html-prototype/\` 目录
-- 生成索引页面 \`${docsDir}/html-prototype/index.html\`
-
-**预期输出**:
-- \`${docsDir}/html-prototype/index.html\` - HTML 原型索引
-- \`${docsDir}/html-prototype/page-*.html\` - 各页面 HTML 文件
-
----
-
-### 步骤 6: 更新项目上下文 📚
-
-**操作**: 将生成的文档添加到 \`${docsDir}/project-context.md\` 索引中
-
-**在文件末尾添加**:
-\`\`\`markdown
-## 产品设计
-
-### 产品需求文档（PRD）
-- [产品需求文档](./prd/product-requirements.md)
-
-### 原型设计
-- [原型设计索引](./prototype/prototype-index.md)
-- [HTML 原型演示](./html-prototype/index.html)
-
-### 设计系统
-- [设计系统](./design-system.md)
-\`\`\`
-
----
-
-` : `### 步骤 4: 生成 HTML 原型 🌐
-
-**说明**: 基于原型文档生成简单的 HTML 文件（跳过设计系统）
-
-**操作**: 
-1. 读取 \`${docsDir}/prototype/\` 目录下的所有 \`page-*.md\` 文件
-2. 为每个页面生成对应的 HTML 文件到 \`${docsDir}/html-prototype/\` 目录
-3. 生成索引页面 \`${docsDir}/html-prototype/index.html\`
-4. 使用默认的颜色和样式
-
-**HTML 生成要求**:
-- 使用默认的颜色方案（主色: #3B82F6, 辅色: #10B981）
-- 包含页面导航（所有页面的链接）
-- 响应式设计
-- 可直接在浏览器中打开查看
-
----
-
-### 步骤 5: 更新项目上下文 📚
-
-**操作**: 将生成的文档添加到 \`${docsDir}/project-context.md\` 索引中
-
-**在文件末尾添加**:
-\`\`\`markdown
-## 产品设计
-
-### 产品需求文档（PRD）
-- [产品需求文档](./prd/product-requirements.md)
-
-### 原型设计
-- [原型设计索引](./prototype/prototype-index.md)
-- [HTML 原型演示](./html-prototype/index.html)
-\`\`\`
-
----
-
-`}## ✅ 完成后
-
-所有文档应该已经生成在 \`${docsDir}\` 目录下：
-- ✅ PRD 文档
-- ✅ 原型设计文档
-${!skipDesignSystem ? '- ✅ 设计系统\n' : ''}- ✅ HTML 可交互原型
-
-**查看原型**: 在浏览器中打开 \`${docsDir}/html-prototype/index.html\`
-
----
-
-## 📁 预期文件结构
-
-\`\`\`
-${docsDir}/
-├── project-context.md          # 项目上下文索引
-├── prd/
-│   └── product-requirements.md # PRD 文档
-├── prototype/
-│   ├── prototype-index.md      # 原型索引
-│   ├── page-首页.md
-│   ├── page-登录页.md
-│   └── page-*.md               # 其他页面原型
-${!skipDesignSystem ? `├── design-system.json          # 设计系统配置
-├── design-system.md            # 设计系统文档
-` : ''}└── html-prototype/
-    ├── index.html              # HTML 原型索引
-    ├── page-首页.html
-    ├── page-登录页.html
-    └── page-*.html             # 其他页面 HTML
-\`\`\`
-
----
-
-## 🎯 下一步建议
-
-1. 与团队评审 HTML 原型
-2. 根据反馈调整原型文档
-3. 使用 \`start_ui\` 工具开始实际开发
-4. 使用 \`start_feature\` 工具开始功能开发
-
----
-
-💡 **提示**: 这是一个完整的工作流指导，AI 需要按步骤调用 MCP 工具并创建所有文件。每个步骤都很重要，请确保按顺序执行。
-`;
-
-    const includeDesignSystem = !skipDesignSystem;
-    const plan = {
-      mode: 'delegated',
-      steps: [
-        skillBridgeStep,
-        {
-          id: 'context',
-          tool: 'init_project_context',
-          when: `缺少 ${docsDir}/project-context.md`,
-          args: { docs_dir: docsDir },
-          outputs: [`${docsDir}/project-context.md`],
-        },
-        {
-          id: 'prd',
-          tool: 'gen_prd',
-          args: {
-            description,
-            product_name: productName,
-            docs_dir: docsDir,
-          },
-          outputs: [`${docsDir}/prd/product-requirements.md`],
-        },
-        {
-          id: 'prototype',
-          tool: 'gen_prototype',
-          args: {
-            prd_path: `${docsDir}/prd/product-requirements.md`,
-            docs_dir: docsDir,
-          },
-          outputs: [
-            `${docsDir}/prototype/prototype-index.md`,
-            `${docsDir}/prototype/page-*.md`,
-          ],
-        },
-        ...(includeDesignSystem
-          ? [
-              {
-                id: 'design-system',
-                tool: 'ui_design_system',
-                args: {
-                  product_type: productType,
-                  description: productName,
-                  stack: 'html',
-                },
-                outputs: [
-                  `${docsDir}/design-system.json`,
-                  `${docsDir}/design-system.md`,
-                ],
-              },
-              {
-                id: 'html-prototype',
-                tool: 'start_ui',
-                args: {
-                  description: '基于原型文档生成所有页面的 HTML 原型',
-                  framework: 'html',
-                },
-                outputs: [
-                  `${docsDir}/html-prototype/index.html`,
-                  `${docsDir}/html-prototype/page-*.html`,
-                ],
-              },
-            ]
-          : [
-              {
-                id: 'html-prototype',
-                tool: 'manual',
-                action: 'generate_html_prototype',
-                outputs: [
-                  `${docsDir}/html-prototype/index.html`,
-                  `${docsDir}/html-prototype/page-*.html`,
-                ],
-              },
-            ]),
-        {
-          id: 'update-context',
-          tool: 'manual',
-          action: 'update_project_context',
-          outputs: [`${docsDir}/project-context.md`],
-        },
-      ],
-    };
-
-    const pendingStatus: WorkflowStep['status'] = 'pending';
-    const steps: WorkflowStep[] = [
-      {
-        name: '检查/生成项目上下文',
-        status: pendingStatus,
-        description: `检查 ${docsDir}/project-context.md，不存在则调用 init_project_context`,
-      },
-      {
-        name: '生成 PRD',
-        status: pendingStatus,
-        description: '调用 gen_prd 生成产品需求文档',
-      },
-      {
-        name: '生成原型文档',
-        status: pendingStatus,
-        description: '调用 gen_prototype 生成原型设计文档',
-      },
+    const pending: WorkflowStep['status'] = 'pending';
+    const reportSteps: WorkflowStep[] = plan.steps.map((step) => ({
+      name: step.id,
+      status: pending,
+      description: step.tool
+        ? `调用 ${step.tool}`
+        : `Agent 操作：${step.action ?? step.id}`,
+    }));
+    const artifacts: Artifact[] = [
+      { path: `${docsDir}/prd/product-requirements.md`, type: 'doc', purpose: '产品需求文档' },
+      { path: `${docsDir}/prototype/prototype-index.md`, type: 'doc', purpose: '原型索引' },
+      { path: `${docsDir}/prototype/page-*.md`, type: 'doc', purpose: '页面原型文档' },
+      { path: `${docsDir}/html-prototype/index.html`, type: 'doc', purpose: 'HTML 原型入口' },
       ...(includeDesignSystem
         ? [
-            {
-              name: '生成设计系统',
-              status: pendingStatus,
-              description: '调用 ui_design_system 生成设计系统',
-            },
-            {
-              name: '生成 HTML 原型',
-              status: pendingStatus,
-              description: '调用 start_ui 生成 HTML 可交互原型',
-            },
+            { path: `${docsDir}/design-system.json`, type: 'doc' as const, purpose: '设计系统配置' },
+            { path: `${docsDir}/design-system.md`, type: 'doc' as const, purpose: '设计系统文档' },
           ]
-        : [
-            {
-              name: '生成 HTML 原型',
-              status: pendingStatus,
-              description: '基于原型文档手动生成 HTML 文件',
-            },
-          ]),
-      {
-        name: '更新项目上下文',
-        status: pendingStatus,
-        description: `将产品设计文档链接添加到 ${docsDir}/project-context.md`,
-      },
+        : []),
     ];
-
-    const artifacts: Artifact[] = [
-      {
-        path: `${docsDir}/prd/product-requirements.md`,
-        type: 'doc',
-        purpose: '产品需求文档（PRD）',
-      },
-      {
-        path: `${docsDir}/prototype/prototype-index.md`,
-        type: 'doc',
-        purpose: '原型设计索引',
-      },
-      {
-        path: `${docsDir}/prototype/page-*.md`,
-        type: 'doc',
-        purpose: '页面原型文档',
-      },
-      {
-        path: `${docsDir}/html-prototype/index.html`,
-        type: 'doc',
-        purpose: 'HTML 原型索引',
-      },
-    ];
-
-    if (includeDesignSystem) {
-      artifacts.push(
-        {
-          path: `${docsDir}/design-system.json`,
-          type: 'doc',
-          purpose: '设计系统配置',
-        },
-        {
-          path: `${docsDir}/design-system.md`,
-          type: 'doc',
-          purpose: '设计系统文档',
-        }
-      );
-    }
-
     const report: WorkflowReport = {
       summary: `产品设计工作流：${productName}`,
       status: 'pending',
-      steps,
+      steps: reportSteps,
       artifacts,
-      nextSteps: [
-        '按顺序执行执行计划中的步骤',
-        `生成并检查 ${docsDir}/prd/product-requirements.md`,
-        `生成并检查 ${docsDir}/prototype/prototype-index.md`,
-        `查看 ${docsDir}/html-prototype/index.html 进行评审`,
-      ],
-      metadata: {
-        plan,
-        skills: skillBridge,
-      },
+      nextSteps: plan.steps.map((step) =>
+        step.tool ? `调用 ${step.tool}` : `执行 Agent 操作 ${step.action ?? step.id}`
+      ),
+      metadata: { plan, skills: skillBridge, projectRoot, requirementsSource },
     };
 
-    await reportToolProgress(context, 95, "start_product: 工作流输出已生成");
-
-    return okStructured(guidanceText, report, {
+    await reportToolProgress(context, 95, 'start_product: 闭环计划已生成');
+    return okStructured(guidance, report, {
       schema: WorkflowReportSchema,
-      note: 'AI 应该严格按照执行计划调用工具并创建文档',
+      note: 'Agent 应严格执行 metadata.plan；所有工具引用均必须存在于当前工具面',
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
     return {
-      content: [
-        {
-          type: "text",
-          text: `❌ 生成工作流指导失败: ${errorMessage}`,
-        },
-      ],
+      content: [{ type: 'text', text: `产品工作流生成失败：${message}` }],
       isError: true,
+      structuredContent: { error_code: 'START_PRODUCT_FAILED', message },
     };
   }
 }

@@ -29,6 +29,10 @@ export const startProductSchema = {
       type: "string",
       description: "文档输出目录（可选）。默认为 'docs'。所有文档将保存到此目录下的子目录中。",
     },
+    project_root: {
+      type: "string",
+      description: "目标项目根目录绝对路径。建议显式传入，避免文档和 Skill 写入 MCP 包安装目录。",
+    },
   },
   required: [],
 };
@@ -36,7 +40,7 @@ export const startProductSchema = {
 export const productDesignSchemas = [
   {
     name: "start_product",
-    description: "产品设计完整工作流编排。一键完成从需求到 HTML 原型的全流程：生成 PRD → 生成原型文档 → 生成设计系统 → 生成 HTML 可交互原型 → 更新项目上下文。生成的 HTML 原型可以直接在浏览器中查看和演示。",
+    description: "产品设计完整工作流入口。返回闭环 delegated plan：Agent 生成 PRD 与原型文档，调用 ui_design_system 和 start_ui 完成设计系统及可交互 HTML 原型，并更新项目上下文；不会引用不存在的 gen_prd/gen_prototype 工具。",
     inputSchema: startProductSchema,
   },
 ];

@@ -30,7 +30,7 @@ export interface DevWorkflowPlan {
   scenarioLabel: string;
   confidence: 'high' | 'medium' | 'low';
   summary: string;
-  firstTool: string;
+  firstTool: string | null;
   firstToolArgsHint?: Record<string, unknown>;
   phases: WorkflowPhase[];
   avoid: string[];

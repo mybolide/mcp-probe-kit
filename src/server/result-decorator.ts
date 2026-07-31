@@ -42,22 +42,15 @@ export class ResultDecorator {
   }
 }
 
-function withBootstrapMeta(
+export function withBootstrapMeta(
   result: ToolResult,
   bootstrap: McpProbeKitBootstrapResult | null
 ): ToolResult {
   if (!bootstrap) return result;
-  const base =
-    result.structuredContent &&
-    typeof result.structuredContent === "object" &&
-    !Array.isArray(result.structuredContent)
-      ? (result.structuredContent as Record<string, unknown>)
-      : {};
-
   return {
     ...result,
-    structuredContent: {
-      ...base,
+    _meta: {
+      ...(result._meta ?? {}),
       mcp_probe_bootstrap: {
         projectRoot: bootstrap.projectRoot,
         skill: bootstrap.skill,

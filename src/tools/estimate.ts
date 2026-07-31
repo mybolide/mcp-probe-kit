@@ -1,5 +1,6 @@
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
-import { okText } from "../lib/response.js";
+import { okStructured } from "../lib/response.js";
+import type { GuidanceResult } from "../schemas/output/guidance-tools.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
 
@@ -284,9 +285,38 @@ export async function estimate(args: any) {
       .replace(/{experience_level}/g, expLevelMap[experienceLevel] || experienceLevel)
       .replace(/{code_context_section}/g, codeContextSection)}`;
 
-    return okText(guide, {
-      schema: (await import("../schemas/output/project-tools.js")).EstimateSchema,
-      note: "本工具返回工作量估算指南，AI 应根据指南分析任务复杂度并给出估算结果（乐观/正常/悲观）",
+    const structured: GuidanceResult = {
+      mode: 'guidance',
+      summary: `工作量估算指南：${taskDescription}`,
+      input: {
+        taskDescription,
+        codeContext: codeContext || null,
+        teamSize,
+        experienceLevel,
+      },
+      instructions: [
+        '把任务拆成需求、设计、开发、单元测试、审查、集成测试和文档活动',
+        '分别评估代码量、技术难度、依赖和测试复杂度（1-5）',
+        '给出乐观、正常、悲观时间并使用 PERT 计算期望值',
+        '映射故事点，列出风险、假设和必要的拆分建议',
+      ],
+      outputContract: {
+        summary: '一句话估算结论',
+        storyPoints: 'number',
+        timeEstimates: { optimistic: 'string', normal: 'string', pessimistic: 'string' },
+        breakdown: [{ task: 'string', hours: 'number', complexity: 'low|medium|high' }],
+        risks: [{ risk: 'string', impact: 'low|medium|high', mitigation: 'string' }],
+        assumptions: ['string'],
+      },
+      boundaries: [
+        '该工具提供估算方法和输出契约，不声称已经执行真实开发',
+        '估算必须基于当前输入；信息不足时降低置信度并明确假设',
+      ],
+      nextSteps: ['Agent 按 instructions 完成估算并输出符合 outputContract 的结果'],
+    };
+    return okStructured(guide, structured, {
+      schema: (await import('../schemas/output/guidance-tools.js')).GuidanceResultSchema,
+      note: '指导型工具：structuredContent 包含完整估算方法和输出契约',
     });
   } catch (error) {
     return handleToolError(error, 'estimate');

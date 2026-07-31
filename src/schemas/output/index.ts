@@ -21,6 +21,9 @@ export * from './product-design-tools.js';
 // 辅助工具
 export * from './helper-tools.js';
 
+// 指导型工具
+export * from './guidance-tools.js';
+
 // 从主 Schema 文件导出基础 Schema（P0 工具）
 export {
   CommitMessageSchema,
@@ -61,14 +64,15 @@ export const SCHEMA_MAP = {
   
   // 日常工具（9 个）
   gencommit: 'CommitGuidanceSchema',
-  code_review: 'CodeReviewReportSchema',
-  gentest: 'TestSuiteSchema',
-  refactor: 'RefactorPlanSchema',
+  git_work_report: 'GuidanceResultSchema',
+  code_review: 'GuidanceResultSchema',
+  gentest: 'GuidanceResultSchema',
+  refactor: 'GuidanceResultSchema',
   fix_bug: 'BugAnalysisSchema',
   add_feature: 'FeatureSpecSchema',
   init_project: 'ProjectInitSchema',
   init_project_context: 'ProjectContextSchema',
-  estimate: 'EstimateSchema',
+  estimate: 'GuidanceResultSchema',
   
   // 交互工具（2 个）
   interview: 'InterviewReportSchema',

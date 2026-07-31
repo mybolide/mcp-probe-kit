@@ -1,4 +1,6 @@
-import { okText } from "../lib/response.js";
+import { okStructured } from "../lib/response.js";
+import type { GuidanceResult } from "../schemas/output/guidance-tools.js";
+import { handleToolError } from "../utils/error-handler.js";
 
 /**
  * Git 工作报告生成工具
@@ -253,11 +255,48 @@ export async function gitWorkReport(args: GitWorkReportArgs) {
     // 2. 构建指导文本
     const guidance = buildGuidance(args);
 
-    // 3. 返回指导文本（AI 会根据指导执行 Git 命令并分析）
-    return okText(guidance);
+
+    const isDaily = Boolean(args.date);
+    const sinceDate = normalizeDate(isDaily ? args.date! : args.start_date!);
+    const untilDate = normalizeDate(isDaily ? args.date! : args.end_date!);
+    const structured: GuidanceResult = {
+      mode: 'guidance',
+      summary: isDaily
+        ? `Git 日报生成指南：${sinceDate}`
+        : `Git 工作报告生成指南：${sinceDate} 至 ${untilDate}`,
+      input: {
+        mode: isDaily ? 'daily' : 'period',
+        sinceDate,
+        untilDate,
+        outputFile: args.output_file ?? null,
+      },
+      instructions: [
+        `在目标仓库执行 git log --since=${sinceDate}T00:00:00 --until=${untilDate}T23:59:59 --format=%H`,
+        '对每个提交执行 git show <commit_hash>，读取真实 diff 和提交说明',
+        '仅根据已读取的提交和 diff 提取实际完成事项，不推测未验证工作',
+        args.output_file
+          ? `将最终报告写入 ${args.output_file}`
+          : '将最终报告直接返回给用户',
+      ],
+      outputContract: {
+        format: 'markdown-bullets',
+        itemPattern: '完成了什么 + 解决什么问题或达到什么效果',
+        emptyRangeMessage: '- 该日期范围内无代码提交（Git 无 commit 记录）',
+        forbiddenContent: ['提交哈希堆砌', '原始文件列表', '未经 diff 支撑的工作结论'],
+      },
+      boundaries: [
+        '该工具返回执行指南，不声称已经读取或分析目标仓库的 Git 历史',
+        'Agent 必须在目标仓库实际执行命令后才能生成工作报告',
+      ],
+      nextSteps: ['Agent 执行 instructions 中的 Git 命令并按 outputContract 生成报告'],
+    };
+
+    return okStructured(guidance, structured, {
+      schema: (await import('../schemas/output/guidance-tools.js')).GuidanceResultSchema,
+      note: '指导型工具：structuredContent 与文本共同描述执行步骤、边界和输出契约',
+    });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return okText(`错误: ${errorMessage}`);
+    return handleToolError(error, 'git_work_report');
   }
 }
