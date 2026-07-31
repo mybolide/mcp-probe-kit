@@ -16,17 +16,17 @@
 6. npm 生产依赖高危审计必须为 0。
 7. 固定回退版本 `3.7.0` 必须仍可从 npm 安装、完成 Legacy 握手并暴露核心工具。
 8. 固定版本 MCP Inspector 必须真实连接生产构建并发现 33 个工具。
-9. 未实机验证的宿主客户端必须保持 `pending`，不得在发布说明中宣称已认证。
+9. 未完成实机验证的宿主客户端必须保持 `pending` 或 `blocked`，不得在发布说明中宣称已认证。
 
-## 当前 RC 允许的 pending
+## 当前 RC 允许的未完成宿主验证
 
-Cursor、Claude Code、VS Code Copilot、Cline 和 OpenCode 可在 RC 发布时保持 `pending`，前提是：
+Claude Code 2.1.179 已完成真实宿主工具调用与 Plan 生命周期验证。Cursor、VS Code Copilot、Cline 和 OpenCode 可在 RC 发布时保持 `pending` 或 `blocked`，前提是：
 
 - Reference client、MCP Inspector 和协议降级路径已通过；
 - 对应客户端不支持扩展时核心 `start_*`、Memory、Spec Gate 和代码分析仍有同步或 Legacy 降级；
-- 发布说明明确这些宿主尚未认证。
+- 发布说明准确区分 `passed`、`pending` 与 `blocked`，不得把仅连接成功写成完整认证。
 
-这些 pending 会阻断稳定版 `4.0.0` 的兼容性宣传，但不阻断内部或公开 RC 的 `next` 发布。
+这些未完成项会阻断稳定版 `4.0.0` 的全面兼容性宣传，但不阻断内部或公开 RC 的 `next` 发布。
 
 ## RC 发布后观察
 

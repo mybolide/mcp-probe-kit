@@ -41,12 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reference Legacy and Modern protocol matrix.
 - Full unit and integration suite, production build, protocol smoke tests, Agent Evals, package-content check, functional Spec checks, Parent-Child Spec gate, 81-call stability soak, Node 20 minimum-runtime validation, Inspector 2.0.0, production audit, and rollback drill.
-- Real host-client certification remains explicitly tracked as `pending` until tested in the named client and version.
+- Real host-client certification is tracked by named client and version: MCP Inspector 2.0.0 and Claude Code 2.1.179 have passed real-host acceptance; unresolved clients remain `pending` or `blocked`.
 
 ### Known limitations
 
 - Modern Tasks Extension is not yet advertised as a native wire capability; Modern task requests use the validated synchronous fallback.
-- Cursor, Claude Code, VS Code Copilot, Cline, OpenCode, and MCP Inspector require separate real-client RC acceptance before the stable `4.0.0` release.
+- Cursor, VS Code Copilot, Cline, and OpenCode still require completed real-client RC acceptance before broad stable `4.0.0` compatibility claims; MCP Inspector 2.0.0 and Claude Code 2.1.179 already have recorded evidence.
 
 ---
 
