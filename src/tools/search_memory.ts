@@ -23,7 +23,6 @@ export async function searchMemory(args: unknown) {
       defaultValues: {
         query: '',
         type: '',
-        limit: 0,
       },
     });
 
@@ -41,7 +40,10 @@ export async function searchMemory(args: unknown) {
     }
 
     const config = getMemoryConfig();
-    const limit = getNumber(parsed.limit, config.searchLimit);
+    const requestedLimit = getNumber(parsed.limit, config.searchLimit);
+    const limit = requestedLimit > 0
+      ? Math.min(Math.trunc(requestedLimit), 50)
+      : config.searchLimit;
     const typeFilter = getString(parsed.type);
     const tags = Array.isArray(parsed.tags)
       ? parsed.tags.filter((item): item is string => typeof item === 'string')

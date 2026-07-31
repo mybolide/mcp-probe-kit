@@ -235,12 +235,14 @@ Core and orchestration tools support **structured output**, returning machine-re
 
 ### 🔌 Official MCP Apps and Memory Center
 
-v4.0.0-rc.2 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
+v4.0.0-rc.3 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
 
 - MCP Apps are enabled by default and can be disabled with `MCP_ENABLE_UI_APPS=0`.
 - UI metadata and `ui://` resources are exposed only after the client advertises support for `text/html;profile=mcp-app`.
 - Five stable Apps are included: **Memory Center**, **Feature Workbench**, **Bug Workbench**, **Product Workbench**, and **Convergence Gate**.
-- Memory Center can browse historical memories, run semantic search, inspect full content, mark an asset stale, and confirm deletion.
+- Memory Center uses a responsive master-detail layout for historical browsing, semantic search, full-content inspection, lifecycle state, evidence, stale marking, and confirmed deletion.
+- Feature and Bug Workbenches render a live plan stepper. The App polls `resume_plan` while visible, and progress advances only after the Agent records real step state through `plan_heartbeat`.
+- Product Workbench and Convergence Gate use the same developer-console design system for delivery paths, blockers, and evidence gaps.
 - `list_memory_assets` is an App-only action with `_meta.ui.visibility=["app"]`. It may appear in the raw `tools/list` response of an Apps-capable host, but compliant hosts must not offer it to the model. The model-visible count remains 23 or 29.
 - Clients without MCP Apps support continue to receive the normal text and `structuredContent` responses; no GUI capability is required for existing workflows.
 - Trace metadata passthrough remains available through `MCP_ENABLE_EXTENSIONS_CAPABILITY=1`.
@@ -769,7 +771,7 @@ This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connec
 | `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
 | Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
 
-**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0-rc.2 defaults to the 23-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 33-tool compatibility surface with `MCP_TOOLSET=full`.
+**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0-rc.3 defaults to the 23-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 33-tool compatibility surface with `MCP_TOOLSET=full`.
 
 **What you can try:**
 

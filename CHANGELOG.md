@@ -11,6 +11,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.3] - 2026-07-31
+
+### Added
+
+- Added live delegated-plan progress to Feature and Bug Workbenches. The App polls `resume_plan` while visible and advances the stepper only after real `plan_heartbeat` state is stored.
+- Added compact Memory Center statistics, selected-record state, incremental result expansion, lifecycle-aware details, and clearer empty states.
+
+### Changed
+
+- Rebuilt all five MCP Apps around one shared developer-console visual system with stronger hierarchy, responsive layouts, consistent buttons, status treatments, and reduced raw JSON exposure.
+- Replaced the static Feature/Bug step list with a progress bar, horizontal stepper, current-step panel, explicit MCP-tool versus Agent-action labels, and convergence controls.
+- Removed the Memory Center list's nested fixed-height scrollbar. The list now grows in bounded batches while the detail panel remains independently readable.
+- Product Workbench and Convergence Gate now present structured summaries, delivery steps, blockers, and evidence gaps instead of relying on large raw-data panels.
+
+### Fixed
+
+- `memorize_asset` now includes `asset_id`, lifecycle status, and an executable `read_memory_asset` hint in model-readable text so Hosts that hide `structuredContent` can continue the CRUD chain.
+- `search_memory` no longer injects `limit=0` when the optional limit is omitted. Limits now fall back to `MEMORY_SEARCH_LIMIT` and are normalized to an integer from 1 to 50.
+
+### Compatibility
+
+- Cursor successfully rendered the rc.2 MCP Apps and completed real `workflow`, `start_feature`, `start_bugfix`, and Memory CRUD calls. rc.3 keeps the same official `io.modelcontextprotocol/ui` contract while improving Host-visible presentation and text fallback behavior.
+- Plain MCP clients still receive the same readable text and structured responses without requiring MCP Apps support.
+
+---
+
 ## [4.0.0-rc.2] - 2026-07-31
 
 ### Added

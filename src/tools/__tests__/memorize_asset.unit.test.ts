@@ -57,6 +57,7 @@ describe('memorize_asset 单元测试', () => {
       confidence: 0.7,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
+      status: 'active',
     });
 
     const result = await memorizeAsset(validArgs);
@@ -67,6 +68,9 @@ describe('memorize_asset 单元测试', () => {
       throw new Error('structuredContent 缺失');
     }
     expect(result.content[0].text).toContain('已沉淀记忆资产: AppError');
+    expect(result.content[0].text).toContain('asset_id: asset-1');
+    expect(result.content[0].text).toContain('status: active');
+    expect(result.content[0].text).toContain('read_memory_asset {"asset_id": "asset-1"}');
     expect(result.structuredContent.enabled).toBe(true);
     expect(result.structuredContent.stored).toBe(true);
     expect(upsertAssetMock).toHaveBeenCalledTimes(1);

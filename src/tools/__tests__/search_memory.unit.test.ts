@@ -67,6 +67,19 @@ describe('search_memory 单元测试', () => {
     expect(searchMock).not.toHaveBeenCalled();
   });
 
+
+  test('省略或传入无效 limit 时使用正数默认值', async () => {
+    isEnabledMock.mockReturnValue(true);
+    searchMock.mockResolvedValue([]);
+
+    await searchMemory({ query: 'default-limit' });
+    expect(searchMock.mock.calls[0][1].limit).toBeGreaterThan(0);
+
+    searchMock.mockClear();
+    await searchMemory({ query: 'zero-limit', limit: 0 });
+    expect(searchMock.mock.calls[0][1].limit).toBeGreaterThan(0);
+  });
+
   test('命中结果时文本输出包含 asset 字段', async () => {
     isEnabledMock.mockReturnValue(true);
     searchMock.mockResolvedValue([

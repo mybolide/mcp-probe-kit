@@ -75,6 +75,10 @@ describe('mcp-apps', () => {
     expect(html).toContain('MCP Probe Kit Memory Center');
     expect(html).toContain('list_memory_assets');
     expect(html).toContain('ui/initialize');
+    expect(html).toContain('memory-stats');
+    expect(html).toContain('progress-bar');
+    expect(html).toContain('resume_plan');
+    expect(html).not.toContain('max-height: 690px');
   });
 
   test('maps model tools to stable app resources', () => {

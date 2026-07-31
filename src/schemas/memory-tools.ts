@@ -9,7 +9,7 @@ export const memoryToolSchemas = [
         query: { type: 'string', description: '检索 query（现象、报错、关键词、功能描述等）' },
         type: { type: 'string', description: '优先匹配的资产类型，如 bugfix、pattern、component' },
         tags: { type: 'array', items: { type: 'string' }, description: '优先匹配的标签' },
-        limit: { type: 'number', description: '返回条数，默认 MEMORY_SEARCH_LIMIT' },
+        limit: { type: 'integer', minimum: 1, maximum: 50, description: '返回条数，默认 MEMORY_SEARCH_LIMIT（1-50）' },
         include_inactive: {
           type: 'boolean',
           description: '维护/审计时设为 true，可返回 expired、superseded、retracted 资产；正常研发不要开启',

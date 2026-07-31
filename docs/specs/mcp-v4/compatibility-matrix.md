@@ -2,7 +2,7 @@
 
 ## 1. 协议能力
 
-| 能力 | Legacy MCP | Modern MCP | v4.0.0-rc.2 行为 |
+| 能力 | Legacy MCP | Modern MCP | v4.0.0-rc.3 行为 |
 |---|---|---|---|
 | 工具发现 | initialize + tools/list | Modern opening + tools/list | 共用 Tool Registry 与工具顺序 |
 | 工具调用 | tools/call | tools/call | 共用业务 Handler |
@@ -52,7 +52,7 @@ App-only 动作使用 `_meta.ui.visibility=["app"]`，不计入模型可见工�
 
 ## 5. Reference client 自动验证状态
 
-| 验证项 | 状态 | v4.0.0-rc.2 证据 |
+| 验证项 | 状态 | v4.0.0-rc.3 证据 |
 |---|---|---|
 | Legacy tools/resources | passed | `src/protocol/__tests__/dual-era-stdio.integration.test.ts` |
 | Modern tools/resources | passed | 同上 |
@@ -72,19 +72,19 @@ App-only 动作使用 `_meta.ui.visibility=["app"]`，不计入模型可见工�
 | MCP Inspector 2.0.0 | passed | compact 24 raw/23 model；full 34 raw/33 model |
 | 生产依赖安全审计 | passed | 0 vulnerabilities |
 | v3.7.0 回退 | passed | Legacy 发现 30 个工具及核心工具 |
-| 完整发布闸门 | passed | 85 个测试文件、400 项测试、38/38 Tool Contract Audit、25/25 Agent Evals，`npm run release:verify` exit 0 |
+| 完整发布闸门 | passed | 85 个测试文件、401 项测试、38/38 Tool Contract Audit、25/25 Agent Evals，`npm run release:verify` exit 0 |
 
-详细自动化证据见 `docs/specs/mcp-v4/rc2-release-evidence-2026-07-31.md`。
+详细自动化证据见 `docs/specs/mcp-v4/rc3-release-evidence-2026-07-31.md`；rc.2 历史证据保留在同目录。
 
 ## 6. 真实客户端人工验证矩阵
 
 Reference client、Inspector 和本地脚本通过，不等同于所有真实编辑器 Host 已通过当前 RC。状态必须绑定候选版本。
 
-| 客户端 | 客户端版本 | 当前 rc.2 状态 | 已有证据 | 备注 |
+| 客户端 | 客户端版本 | 当前 rc.3 状态 | 已有证据 | 备注 |
 |---|---|---|---|---|
 | MCP Inspector | 2.0.0 | passed | `npm run smoke:inspector` | 已验证 Apps 协商、App-only 与 compact/full 工具面 |
 | Claude Code | 2.1.179 | passed | `npm run audit:tools:agent`：全部 33 个模型工具真实调用，7/7 批次通过 | 0 契约失败、0 missing/unexpected；一次非阻塞重复 `start_ralph`；Host 未协商 MCP Apps，未宣称 GUI 通过 |
-| Cursor | 3.0.16 | blocked | 同上 | 需要 GUI/人工 Agent 验收 |
+| Cursor | 3.0.16 | pending | rc.2 已真实调用 `workflow`、`start_feature`、`start_bugfix`、Memory CRUD，并成功渲染 Feature Workbench 与 Memory Center | rc.3 已重做视觉与进度交互，发布后需复核新界面；不得用 rc.2 截图冒充 rc.3 通过证据 |
 | VS Code Copilot | VS Code 1.104.1 / Copilot Chat 0.31.5 | blocked | 同上 | 当前配置缺少基础 Copilot 扩展 |
 | Cline | 未安装 | blocked | 同上 | 需安装具体版本后验证 |
 | Codex CLI | 0.144.1 | passed | 本地 rc.2 `workflow` 实际调用 | 返回 `scenario=feature`、`firstTool=start_feature`；文本与 structuredContent 对称且下一步可执行 |
@@ -94,8 +94,8 @@ Reference client、Inspector 和本地脚本通过，不等同于所有真实编
 
 ## 7. 发布判断
 
-- `v4.0.0-rc.2` 本地自动发布闸门已经通过。
+- `v4.0.0-rc.3` 本地自动发布闸门已经通过。
 - RC 只能发布到 npm `next` 并创建 GitHub prerelease；不得更新 `latest` 或正式 MCP Registry。
 - MCP Inspector 2.0.0 已通过当前候选版本。
-- Claude Code 2.1.179 已完成当前 rc.2 全部 33 个模型工具的真实 Agent 契约审计；Codex CLI 0.144.1 已完成本地 rc.2 `workflow` 实际调用。两者均未形成 MCP Apps GUI 通过声明。
-- Cursor、VS Code Copilot、Cline 和 OpenCode 保持 `blocked`；OpenCode 仅确认 MCP 连接成功，模型/Provider 未返回响应，不能宣称工具执行通过。
+- Claude Code 2.1.179 的 33/33 工具审计与 Codex CLI 0.144.1 的 `workflow` 调用来自 rc.2 基线；rc.3 未改变模型工具面与协议契约，自动回归已通过，但命名 Host 的 rc.3 复核仍应单独记录。
+- Cursor 的 rc.2 核心工具与 MCP Apps 基础渲染已通过，rc.3 新视觉待发布后复核；VS Code Copilot、Cline 和 OpenCode 仍为 `blocked`，OpenCode 仅确认 MCP 连接成功。

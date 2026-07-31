@@ -134,7 +134,12 @@ export async function memorizeAsset(args: any) {
     });
 
     return okStructured(
-      `已沉淀记忆资产: ${asset.name}`,
+      [
+        `已沉淀记忆资产: ${asset.name}`,
+        `asset_id: ${asset.id}`,
+        `status: ${asset.status || 'active'}`,
+        `下一步读取: read_memory_asset {"asset_id": "${asset.id}"}`,
+      ].join('\n'),
       {
         enabled: true,
         stored: true,
