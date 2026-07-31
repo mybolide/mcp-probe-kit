@@ -34,16 +34,49 @@ import {
   converge,
 } from "../tools/index.js";
 import { ToolSchema } from "@modelcontextprotocol/core";
+import { listMemoryAssets } from "../tools/list_memory_assets.js";
 import type { Tool } from "@modelcontextprotocol/server";
 import { allToolSchemas } from "../schemas/index.js";
 import { getOutputSchemaForTool, shouldIncludeOutputSchemaInToolsList } from "../lib/output-schema-registry.js";
 import { TOOL_CATALOG } from "./tool-catalog.js";
+import { resolveToolsetNames, type ToolsetResolutionOptions } from "../lib/toolset-manager.js";
+import { buildMcpAppToolMeta } from "../lib/mcp-apps.js";
+import { APP_ONLY_TOOL_NAME_SET } from "./tool-visibility.js";
 import type {
   RegisteredToolHandler,
   RegisteredToolSchema,
   ToolDefinition,
   ToolsetType,
 } from "./tool-definition.js";
+
+const appOnlyHandlers: Record<string, RegisteredToolHandler> = {
+  list_memory_assets: async (args) => listMemoryAssets(args),
+};
+
+const appOnlySchemas: Record<string, RegisteredToolSchema> = {
+  list_memory_assets: {
+    name: 'list_memory_assets',
+    description:
+      'Memory Center 专用浏览动作。按更新时间列出记忆摘要，支持类型、状态、项目、标签和分页过滤；仅供 MCP App 调用。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: '每页数量，默认 50，最大 200' },
+        offset: { type: 'number', description: '分页偏移量，默认 0' },
+        type: { type: 'string', description: '按记忆类型过滤' },
+        status: {
+          type: 'string',
+          enum: ['active', 'stale', 'expired', 'superseded', 'retracted'],
+          description: '按记忆状态过滤',
+        },
+        source_project: { type: 'string', description: '按来源项目过滤' },
+        tags: { type: 'array', items: { type: 'string' }, description: '必须同时包含的标签' },
+        include_inactive: { type: 'boolean', description: '是否包含非 active 记忆，默认 true' },
+      },
+      additionalProperties: true,
+    },
+  },
+};
 
 const handlers: Record<string, RegisteredToolHandler> = {
   init_project: async (args) => initProject(args as never),
@@ -150,20 +183,38 @@ export function requireToolDefinition(name: string): ToolDefinition {
   return definition;
 }
 
-export function listToolDefinitionsForToolset(toolset: ToolsetType): readonly ToolDefinition[] {
-  if (toolset === "full") {
-    return TOOL_DEFINITIONS;
-  }
-  return TOOL_DEFINITIONS.filter((definition) => definition.toolsets.includes(toolset));
+export function listToolDefinitionsForToolset(
+  toolset: ToolsetType,
+  options: ToolsetResolutionOptions = {},
+): readonly ToolDefinition[] {
+  const names = resolveToolsetNames(toolset, options);
+  if (names === "all") return TOOL_DEFINITIONS;
+  const allowed = new Set(names);
+  return TOOL_DEFINITIONS.filter((definition) => allowed.has(definition.name));
 }
 
-export function prepareRegisteredToolForList(definition: ToolDefinition): Tool {
+export interface PrepareRegisteredToolOptions {
+  clientCapabilities?: unknown;
+  uiAppsEnabled?: boolean;
+}
+
+export function prepareRegisteredToolForList(
+  definition: ToolDefinition,
+  options: PrepareRegisteredToolOptions = {},
+): Tool {
+  const appMeta = buildMcpAppToolMeta(
+    definition.name,
+    options.clientCapabilities,
+    options.uiAppsEnabled === true,
+  );
   const tool: RegisteredToolSchema & {
     annotations?: ToolDefinition["annotations"];
     outputSchema?: ToolDefinition["outputSchema"];
+    _meta?: Record<string, unknown>;
   } = {
     ...definition.schema,
     ...(definition.annotations ? { annotations: definition.annotations } : {}),
+    ...(appMeta ? { _meta: appMeta } : {}),
   };
 
   if (shouldIncludeOutputSchemaInToolsList() && definition.outputSchema) {
@@ -179,10 +230,41 @@ export function prepareRegisteredToolForList(definition: ToolDefinition): Tool {
   return parsed.data;
 }
 
+export function prepareAppOnlyToolsForList(
+  options: PrepareRegisteredToolOptions = {},
+): Tool[] {
+  return Object.entries(appOnlySchemas).flatMap(([name, schema]) => {
+    const appMeta = buildMcpAppToolMeta(
+      name,
+      options.clientCapabilities,
+      options.uiAppsEnabled === true,
+      ['app'],
+    );
+    if (!appMeta) return [];
+    const parsed = ToolSchema.safeParse({ ...schema, _meta: appMeta });
+    if (!parsed.success) {
+      throw new Error(
+        `App-only 工具 ${name} 不符合 MCP v2 Tool Schema: ${parsed.error.message}`,
+      );
+    }
+    return [parsed.data];
+  });
+}
+
+export function listAppOnlyToolNames(): readonly string[] {
+  return Object.keys(appOnlyHandlers);
+}
+
+export function isAppOnlyTool(name: string): boolean {
+  return APP_ONLY_TOOL_NAME_SET.has(name) && Boolean(appOnlyHandlers[name]);
+}
+
 export async function executeRegisteredTool(
   name: string,
   args: unknown,
   context?: Parameters<RegisteredToolHandler>[1]
 ) {
+  const appOnlyHandler = appOnlyHandlers[name];
+  if (appOnlyHandler) return appOnlyHandler(args, context);
   return requireToolDefinition(name).handler(args, context);
 }

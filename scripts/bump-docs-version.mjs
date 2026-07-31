@@ -1,61 +1,49 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const version = packageJson.version;
 
 const versionPatterns = [
-  [/v3\.6\.2/g, 'v3.6.3'],
-  [/MCP Probe Kit v3\.6\.2/g, 'MCP Probe Kit v3.6.3'],
-  [/"version": "v3\.6\.2"/g, '"version": "v3.6.3"'],
+  [/mcp-probe-kit@4\.0\.0-rc\.\d+/g, `mcp-probe-kit@${version}`],
+  [/MCP Probe Kit v4\.0\.0-rc\.\d+/g, `MCP Probe Kit v${version}`],
+  [/"version": "4\.0\.0-rc\.\d+"/g, `"version": "${version}"`],
 ];
 
-const toolPatterns = [
-  [/30 tools/g, '33 tools'],
-  [/30 Tools/g, '33 Tools'],
-  [/30 outils/g, '33 outils'],
-  [/30 Outils/g, '33 Outils'],
-  [/30 herramientas/g, '33 herramientas'],
-  [/30 Herramientas/g, '33 Herramientas'],
-  [/30 ferramentas/g, '33 ferramentas'],
-  [/30 Ferramentas/g, '33 Ferramentas'],
-  [/30 个工具/g, '33 个工具'],
-  [/30个工具/g, '33个工具'],
-  [/30개 도구/g, '33개 도구'],
-  [/30個のツール/g, '33個のツール'],
-  [/30のツール/g, '33のツール'],
-  [/30ツール/g, '33ツール'],
-  [/currently 30 tools/g, 'currently 33 tools'],
-  [/当前提供 30 个工具/g, '当前提供 33 个工具'],
-  [/\(currently 30 tools\)/g, '(currently 33 tools)'],
-];
-
-function walk(dir, acc = []) {
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    const st = statSync(p);
-    if (st.isDirectory()) {
-      if (['node_modules', 'build', '.git'].includes(name)) continue;
-      walk(p, acc);
+function walk(directory, files = []) {
+  for (const name of readdirSync(directory)) {
+    const path = join(directory, name);
+    const stats = statSync(path);
+    if (stats.isDirectory()) {
+      if (['node_modules', 'build', '.git', 'history-session'].includes(name)) continue;
+      walk(path, files);
     } else if (/\.(md|json|html)$/.test(name)) {
-      acc.push(p);
+      files.push(path);
     }
   }
-  return acc;
+  return files;
 }
 
-const files = ['docs', 'i18n'].flatMap((d) => walk(join(root, d)));
+const files = ['docs', 'i18n']
+  .map((directory) => join(root, directory))
+  .filter((directory) => statSync(directory).isDirectory())
+  .flatMap((directory) => walk(directory));
+
 let changed = 0;
 for (const file of files) {
   let text = readFileSync(file, 'utf8');
   const before = text;
-  for (const [re, rep] of versionPatterns) text = text.replace(re, rep);
-  for (const [re, rep] of toolPatterns) text = text.replace(re, rep);
-  if (text !== before) {
-    writeFileSync(file, text, 'utf8');
-    changed++;
-    console.log('updated:', file.slice(root.length + 1));
+  for (const [pattern, replacement] of versionPatterns) {
+    text = text.replace(pattern, replacement);
   }
+  if (text === before) continue;
+  writeFileSync(file, text, 'utf8');
+  changed += 1;
+  console.log('updated:', file.slice(root.length + 1));
 }
-console.log(`total files updated: ${changed}`);
+
+console.log(`documentation version: ${version}; files updated: ${changed}`);
+console.log('tool-surface counts are generated from tools-manifest.json and are not rewritten here.');

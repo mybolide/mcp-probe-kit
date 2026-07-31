@@ -19,6 +19,10 @@ import {
 } from "../protocol/protocol-capabilities.js";
 import { LegacyTaskWireStore } from "../protocol/legacy-task-wire-store.js";
 import { registerLegacyTaskHandlers } from "../protocol/register-legacy-task-handlers.js";
+import {
+  MCP_APPS_EXTENSION_ID,
+  MCP_APP_MIME_TYPE,
+} from "../lib/mcp-apps.js";
 
 const EXTENSIONS_CAPABILITY_KEY = "io.github.mybolide/extensions";
 
@@ -40,7 +44,7 @@ export function createProbeServer(
 ): ProbeServerRuntime {
   const protocolMode = options.protocolMode ?? getProtocolModeFromEnv();
   const extensionsCapabilityEnabled = envEnabled("MCP_ENABLE_EXTENSIONS_CAPABILITY");
-  const uiAppsEnabled = envEnabled("MCP_ENABLE_UI_APPS");
+  const uiAppsEnabled = envEnabledDefault("MCP_ENABLE_UI_APPS", true);
   const traceMetaKey = process.env.MCP_TRACE_META_KEY || "trace";
   const graphSnapshotDir = resolveGraphSnapshotDir();
   const graphStore = new GraphSnapshotStore(graphSnapshotDir);
@@ -60,6 +64,13 @@ export function createProbeServer(
       requests: { tools: { call: {} } },
     },
   };
+  if (uiAppsEnabled) {
+    capabilities.extensions = {
+      [MCP_APPS_EXTENSION_ID]: {
+        mimeTypes: [MCP_APP_MIME_TYPE],
+      },
+    };
+  }
   if (extensionsCapabilityEnabled) {
     capabilities.experimental = {
       [EXTENSIONS_CAPABILITY_KEY]: {
@@ -67,6 +78,8 @@ export function createProbeServer(
         traceMetaKey,
         uiApps: uiAppsEnabled,
         uiAppsMetaKey: "ui.resourceUri",
+        uiAppsExtensionId: MCP_APPS_EXTENSION_ID,
+        uiAppsMimeType: MCP_APP_MIME_TYPE,
       },
     };
   }
@@ -80,6 +93,7 @@ export function createProbeServer(
 
   registerToolHandlers(server, decorator, {
     progressNotificationsEnabled: envEnabled("MCP_PROGRESS_NOTIFICATIONS"),
+    uiAppsEnabled,
     taskRuntime,
     legacyTaskStore,
   });
@@ -105,6 +119,13 @@ export function createProbeServer(
 function envEnabled(name: string): boolean {
   const raw = process.env[name];
   return raw !== undefined && /^(1|true|yes|on)$/i.test(raw.trim());
+}
+
+
+function envEnabledDefault(name: string, defaultValue: boolean): boolean {
+  const raw = process.env[name];
+  if (raw === undefined) return defaultValue;
+  return /^(1|true|yes|on)$/i.test(raw.trim());
 }
 
 function resolveGraphSnapshotDir(): string {

@@ -11,7 +11,17 @@ import {
   readProjectResourceContent,
 } from "../lib/project-mcp-resources.js";
 import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
-import { listToolDefinitions } from "../server/tool-registry.js";
+import {
+  listAppOnlyToolNames,
+  listToolDefinitions,
+  listToolDefinitionsForToolset,
+} from "../server/tool-registry.js";
+import { getToolsetFromEnv } from "../lib/toolset-manager.js";
+import {
+  MCP_APPS_EXTENSION_ID,
+  MCP_APP_MIME_TYPE,
+  supportsMcpApps,
+} from "../lib/mcp-apps.js";
 import { GraphSnapshotStore } from "./graph-snapshot-store.js";
 import { UiAppResourceStore } from "./ui-app-resource-store.js";
 import {
@@ -33,7 +43,7 @@ export function registerResourceHandlers(
   server: Server,
   options: ResourceHandlerOptions
 ): void {
-  server.setRequestHandler("resources/list", async (): Promise<ListResourcesResult> => {
+  server.setRequestHandler("resources/list", async (_request, ctx): Promise<ListResourcesResult> => {
     const resources = [
       {
         uri: "probe://status",
@@ -50,11 +60,18 @@ export function registerResourceHandlers(
       },
     ];
 
-    try {
-      resources.push(...options.uiStore.list());
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`[MCP Probe Kit] resources/list UI 资源合并失败: ${message}`);
+    const clientCapabilities =
+      server.getClientCapabilities() ??
+      (ctx.mcpReq.envelope as Record<string, unknown> | undefined)?.[
+        CLIENT_CAPABILITIES_META_KEY
+      ];
+    if (options.uiStore.enabled && supportsMcpApps(clientCapabilities)) {
+      try {
+        resources.push(...options.uiStore.list());
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[MCP Probe Kit] resources/list UI 资源合并失败: ${message}`);
+      }
     }
     return { resources };
   });
@@ -95,6 +112,14 @@ export function registerResourceHandlers(
       }
 
       if (uri.startsWith("ui://")) {
+        const clientCapabilities =
+          server.getClientCapabilities() ??
+          (ctx.mcpReq.envelope as Record<string, unknown> | undefined)?.[
+            CLIENT_CAPABILITIES_META_KEY
+          ];
+        if (!options.uiStore.enabled || !supportsMcpApps(clientCapabilities)) {
+          throw new Error(`客户端未协商 MCP Apps，不能读取 UI 资源: ${uri}`);
+        }
         const content = options.uiStore.read(uri);
         if (!content) throw new Error(`未知 UI 资源: ${uri}`);
         return { contents: [content] };
@@ -115,6 +140,9 @@ function buildStatus(
 ) {
   const negotiatedVersion = server.getNegotiatedProtocolVersion();
   const era = resolveProtocolEra(negotiatedVersion);
+  const clientCapabilities = server.getClientCapabilities() ?? envelopeCapabilities;
+  const toolset = getToolsetFromEnv();
+  const visibleToolCount = listToolDefinitionsForToolset(toolset).length;
   const features = resolveProtocolFeatures({
     era,
     formElicitationSupported: supportsFormElicitation(
@@ -122,7 +150,7 @@ function buildStatus(
       envelopeCapabilities
     ),
     progressEnabled: envEnabled("MCP_PROGRESS_NOTIFICATIONS"),
-    appsEnabled: options.uiStore.enabled,
+    appsEnabled: options.uiStore.enabled && supportsMcpApps(clientCapabilities),
     modernTasksEnabled: false,
   });
   return {
@@ -137,6 +165,9 @@ function buildStatus(
       enabled: options.extensionsCapabilityEnabled,
       traceMetaKey: options.traceMetaKey,
       uiAppsEnabled: options.uiStore.enabled,
+      uiAppsNegotiated: options.uiStore.enabled && supportsMcpApps(clientCapabilities),
+      uiAppsExtensionId: MCP_APPS_EXTENSION_ID,
+      uiAppsMimeType: MCP_APP_MIME_TYPE,
     },
     protocol: {
       mode: options.protocolMode,
@@ -145,7 +176,13 @@ function buildStatus(
       features,
     },
     graphSnapshots: options.graphStore.status(),
-    toolCount: listToolDefinitions().length,
+    tools: {
+      toolset,
+      visibleModelToolCount: visibleToolCount,
+      registeredModelToolCount: listToolDefinitions().length,
+      appOnlyToolCount: listAppOnlyToolNames().length,
+    },
+    toolCount: visibleToolCount,
     projectResources: discoverProjectResourceStatus(),
   };
 }

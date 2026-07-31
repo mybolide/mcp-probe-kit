@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP는 기크를 위해 제작된 프로토콜 수준의 탐지 및 컨텍스트 공급 도구 상자입니다. 단순히 33개 도구의 집합이 아니라, AI가 프로젝트 의도를 진정으로 "이해"할 수 있게 하는 인식 시스템입니다.
+> Zhishi MCP는 컨텍스트 탐색과 개발 오케스트레이션을 위한 프로토콜 수준 툴킷입니다. v4는 기본적으로 모델에 23개 도구를 노출하고, Memory 완전 구성 시 29개, full 호환 모드에서는 33개 도구를 유지합니다.
 
 **언어**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | **한국어** | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,13 +20,13 @@
 
 > 🚀 AI 기반 완전한 개발 툴킷 - 전체 개발 라이프사이클 커버
 
-제품 분석부터 최종 릴리스까지 전체 워크플로우(요구사항 → 설계 → 개발 → 품질 → 릴리스)를 커버하는 **33개 도구**를 제공하는 강력한 MCP (Model Context Protocol) 서버입니다. 모든 도구가 **구조화된 출력**을 지원합니다.
+강력한 MCP (Model Context Protocol) 서버로, 기본 **23개 모델 가시 도구**, Memory 완전 구성 시 **29개**, `MCP_TOOLSET=full` 사용 시 **33개 호환 도구**를 제공합니다. 구조화 출력, Legacy/Modern 이중 프로토콜, 정식 MCP Apps를 지원합니다.
 
 **🎉 v3.0 주요 업데이트**: 도구 수 간소화, 핵심 역량에 집중, 선택 혼란 제거, AI가 더 많은 네이티브 작업 수행
 
 **모든 MCP 클라이언트 지원**: Cursor, Claude Desktop, Cline, Continue 등
 
-**프로토콜 버전**: MCP 2025-11-25 · **SDK**: @modelcontextprotocol/sdk 1.27.1
+**프로토콜 지원**: Legacy MCP (2025-era) + Modern MCP 2026-07-28 · **SDK**: TypeScript SDK v2 분리 패키지 · **런타임**: Node.js 20+
 
 ---
 
@@ -35,7 +35,7 @@
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [빠른 시작](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5분 안에 설정
-- [모든 도구](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 33개 도구 전체 목록
+- [모든 도구](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 기본, Memory 조건부, App-only 및 full 호환 도구 표면
 - [모범 사례](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 완전한 개발 워크플로우 가이드
 - [v3.0 마이그레이션 가이드](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x에서 v3.0으로 업그레이드
 
@@ -43,26 +43,13 @@
 
 ## ✨ 핵심 기능
 
-### 📦 33개 도구
+### 📦 도구 표면
 
-- **🧭 라우팅** (1개) - 완전한 작업 요약에서 올바른 MCP 워크플로 선택
-  - `workflow`
-- **🔁 계획 상태 및 수렴** (3개) - 체크포인트, 재개 및 증거 게이트 기반 종료
-  - `plan_heartbeat`, `resume_plan`, `converge`
-- **🔄 워크플로우 오케스트레이션** (6개) - 원클릭 복잡한 개발 워크플로우
-  - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 코드 분석** (4개) - 코드 품질, 리팩토링, 그래프 인사이트
-  - `code_review`, `code_insight`, `fix_bug`, `refactor`
-- **📝 Git 도구** (2개) - Git 커밋 및 작업 보고서
-  - `gencommit`, `git_work_report`
-- **⚡ 코드 생성** (1개) - 테스트 생성
-  - `gentest`
-- **📦 프로젝트 관리** (7개) - 프로젝트 초기화, 요구사항, 스펙 검증
-  - `init_project`, `init_project_context`, `add_feature`, `check_spec`, `estimate`, `interview`, `ask_user`
-- **🎨 UI/UX 도구** (3개) - 디자인 시스템 및 UI 데이터 동기화
-  - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory** (6개) - 재사용 가능한 자산 메모리
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
+- **기본 `compact`**: 모델 가시 도구 23개. `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge` 등 독립적인 진입점을 유지합니다.
+- **Memory 완전 구성**: Memory 도구 6개를 동적으로 추가하여 모델 가시 수가 29개가 됩니다.
+- **`MCP_TOOLSET=full`**: 기존 흐름과 진단을 위해 33개 호환 모델 도구를 복원합니다.
+- **MCP Apps**: `list_memory_assets`는 Memory Center 전용이며 `visibility=["app"]`로 표시되어 모델 도구 수에 포함되지 않습니다.
+- `add_feature`, `fix_bug`, `sync_ui_data`, `ask_user`는 기본 표면에서 제외되지만 오케스트레이션, 유지보수 스크립트 또는 full 모드에서 기능이 유지됩니다.
 
 ### 🧠 코드 그래프 브리지 (GitNexus)
 

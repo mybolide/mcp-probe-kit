@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { COMPACT_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
 
 const npmExecPath = process.env.npm_execpath;
 const root = process.cwd();
@@ -27,7 +28,7 @@ try {
   const packResult = JSON.parse(packed.stdout);
   const artifact = packResult[0];
   assert(artifact?.filename, 'npm pack did not return a filename');
-  assert(artifact.version === '4.0.0-rc.1', `unexpected packed version: ${artifact.version}`);
+  assert(artifact.version === PACKAGE_VERSION, `unexpected packed version: ${artifact.version}`);
   assert(
     artifact.files?.some((file) => file.path === 'build/index.js'),
     'packed artifact is missing build/index.js'
@@ -57,7 +58,7 @@ try {
     'package.json'
   );
   const installedPackage = JSON.parse(await readFile(installedPackagePath, 'utf8'));
-  assert(installedPackage.version === '4.0.0-rc.1', 'installed package version mismatch');
+  assert(installedPackage.version === PACKAGE_VERSION, 'installed package version mismatch');
 
   const serverPath = join(
     consumerDir,
@@ -74,6 +75,10 @@ try {
       ...process.env,
       MCP_PROTOCOL_MODE: 'auto',
       MCP_ENABLE_GITNEXUS_BRIDGE: '0',
+      MCP_TOOLSET: 'compact',
+      MEMORY_QDRANT_URL: '',
+      MEMORY_EMBEDDING_URL: '',
+      MEMORY_EMBEDDING_MODEL: '',
     },
     stderr: 'pipe',
   });
@@ -90,7 +95,10 @@ try {
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    assert(tools.tools.length === 33, `packed server exposed ${tools.tools.length} tools`);
+    assert(
+      tools.tools.length === COMPACT_TOOL_COUNT,
+      `packed server exposed ${tools.tools.length} tools, expected ${COMPACT_TOOL_COUNT}`
+    );
     const routed = await client.callTool({
       name: 'workflow',
       arguments: {

@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   filterTools,
   getToolsetFromEnv,
+  resolveToolsetNames,
   TOOLSET_DEFINITIONS,
 } from '../toolset-manager.js';
 
 describe('toolset-manager', () => {
-  it('workflow 工具集包含 delegated plan 依赖的完整记忆链路', () => {
+  it('workflow toolset keeps delegated-plan memory dependencies', () => {
     const workflowTools = TOOLSET_DEFINITIONS.workflow;
     expect(workflowTools).toEqual(
       expect.arrayContaining([
@@ -16,25 +17,35 @@ describe('toolset-manager', () => {
         'update_memory_asset',
         'delete_memory_asset',
         'scan_and_extract_patterns',
-      ])
+      ]),
     );
   });
 
-  it('未知工具集仍安全降级为 full', () => {
+  it('unknown or missing toolset safely defaults to compact', () => {
     vi.stubEnv('MCP_TOOLSET', 'unknown');
-    expect(getToolsetFromEnv()).toBe('full');
+    expect(getToolsetFromEnv()).toBe('compact');
     vi.unstubAllEnvs();
   });
 
-  it('过滤后不返回未声明工具', () => {
+  it('compact exposes 23 model tools and conditionally six memory tools', () => {
+    expect(resolveToolsetNames('compact', { memoryEnabled: false })).toHaveLength(23);
+    expect(resolveToolsetNames('compact', { memoryEnabled: true })).toHaveLength(29);
+    expect(resolveToolsetNames('compact', { memoryEnabled: false })).toEqual(
+      expect.arrayContaining(['start_product', 'gencommit', 'converge']),
+    );
+    expect(resolveToolsetNames('compact', { memoryEnabled: false })).not.toEqual(
+      expect.arrayContaining(['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user']),
+    );
+  });
+
+  it('filtering never returns undeclared tools', () => {
     const tools = [
       { name: 'workflow', description: '', inputSchema: {} },
       { name: 'search_memory', description: '', inputSchema: {} },
       { name: 'not_registered', description: '', inputSchema: {} },
     ];
-    expect(filterTools(tools, 'workflow').map((tool) => tool.name)).toEqual([
-      'workflow',
-      'search_memory',
-    ]);
+    expect(
+      filterTools(tools, 'compact', { memoryEnabled: true }).map((tool) => tool.name),
+    ).toEqual(['workflow', 'search_memory']);
   });
 });

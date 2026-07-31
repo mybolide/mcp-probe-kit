@@ -15,9 +15,9 @@
   - 证据块：步骤、未决事项或需求/规格/实现/测试/审查证据不完整时拒绝收敛；完整证据通过后状态锁定为 converged，并开放正式长期记忆写入。
   - 持久化：首次 `plan_heartbeat` 附完整 Delegated Plan，后续原子合并完成/跳过步骤、证据与 revision，写入 `.mcp-probe-kit/plans/<planId>.json`。
   - 恢复：`resume_plan` 按原始步骤依赖计算 ready/blocked/next step，不依赖原始完整对话；收敛或取消后的计划拒绝继续写入 Heartbeat。
-  - 协议：`plan_heartbeat`、`resume_plan`、`converge` 已进入 Tool Registry、Manifest、Canonical Skill 与 Legacy/Modern tools/list，总工具数 33。
+  - 协议：`plan_heartbeat`、`resume_plan`、`converge` 已进入 Tool Registry、Manifest、Canonical Skill 与 Legacy/Modern tools/list；默认 compact 模型工具面为 23，完整配置 Memory 后为 29，full 兼容面为 33。
   - 记忆顺序：计划内只准备 `MemoryCandidate` 并通过 Heartbeat 留证；`converge` 通过后才允许调用 `memorize_asset` 正式写入长期记忆。
   - 构建可靠性：构建期 UI 上游同步增加 60 秒有界超时；仅网络/取消类故障且仓库已有内嵌数据时降级使用缓存，本地数据或解析错误仍会阻断构建。
   - 验证：Plan/Workflow/SRC-8 定向 14 文件/61 项；最终全量 78 文件/375 项；生产构建、33 工具 Skill 校验、功能校验和 `build/index.js` Legacy/Modern Plan 闭环冒烟通过。
   - 代码质量：本批修改的生产模块均低于 500 行；`dev-workflow`、`start_bugfix` 与 SRC-8 分别按路由、模板/报告、计划/Prompt 职责拆分。
-  - 涉及文件：`src/plans/`、`src/tools/plan_heartbeat.ts`、`src/tools/resume_plan.ts`、`src/tools/converge.ts`、Plan Schema、Tool Registry、Canonical Skill 与构建同步脚本。
+  - 协议：`plan_heartbeat`、`resume_plan`、`converge` 已进入 Tool Registry、Manifest、Canonical Skill 与 Legacy/Modern tools/list；默认 compact 模型工具面为 23，完整配置 Memory 后为 29，full 兼容面为 33。

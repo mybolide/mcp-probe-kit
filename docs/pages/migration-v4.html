@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>v3 → v4 迁移指南 | MCP Probe Kit</title>
-  <meta name="description" content="MCP Probe Kit v3 升级到 v4：Node.js 20、Legacy/Modern 双协议、Plan Heartbeat、Converge 和 Memory 迁移说明。">
+  <meta name="description" content="MCP Probe Kit v3 升级到 v4：Node.js 20、23/29/33 工具面、Legacy/Modern 双协议、MCP Apps、计划恢复与 Memory Center。">
   <script src="../assets/js/tailwind.js" data-cfasync="false"></script>
   <script>
     tailwind.config = {
@@ -23,30 +23,22 @@
 </head>
 <body class="bg-bg-page text-text-primary min-h-screen">
   <nav class="h-14 bg-white border-b border-border px-4 flex items-center justify-between">
-    <a href="../index.html" class="font-semibold no-underline">🚀 MCP Probe Kit</a>
+    <a href="../index.html" class="font-semibold no-underline">MCP Probe Kit</a>
     <a href="https://github.com/mybolide/mcp-probe-kit" class="text-sm text-primary no-underline">GitHub ↗</a>
   </nav>
 
   <main class="max-w-4xl mx-auto p-4 sm:p-8">
-    <div class="mb-8">
+    <header class="mb-8">
       <div class="text-sm text-text-secondary mb-3"><a href="../index.html" class="text-primary">文档首页</a> / 迁移指南</div>
       <h1 class="text-3xl font-bold mb-3">MCP Probe Kit v3 → v4</h1>
-      <p class="text-text-secondary">v4 保留现有工具与 delegated workflow，升级重点是 SDK v2 双协议、可恢复计划、收敛闸门和更可靠的记忆治理。</p>
+      <p class="text-text-secondary">v4 保留主要工具能力，同时收敛默认模型工具面，升级双协议、计划恢复、Memory 生命周期与正式 MCP Apps。</p>
       <div class="flex flex-wrap gap-2 mt-4 text-xs">
-        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">33 tools</span>
+        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">23 默认 / 29 Memory / 33 full</span>
         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">Node.js 20+</span>
         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">Legacy + Modern</span>
+        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">MCP Apps</span>
       </div>
-    </div>
-
-    <section class="bg-white border border-border rounded-xl p-5 mb-5">
-      <h2 class="text-xl font-semibold mb-3">升级前</h2>
-      <ol class="list-decimal pl-5 space-y-2 text-sm text-text-secondary">
-        <li>升级到 Node.js 20 或更高版本。</li>
-        <li>记录当前 v3 包版本和 MCP 客户端配置。</li>
-        <li>确认项目 Spec、上下文文档和 Memory 配置可读取。</li>
-      </ol>
-    </section>
+    </header>
 
     <section class="bg-white border border-border rounded-xl p-5 mb-5">
       <h2 class="text-xl font-semibold mb-3">RC 安装</h2>
@@ -57,8 +49,37 @@
 npm install -g mcp-probe-kit@next
 
 # 固定版本
-npm install -g mcp-probe-kit@4.0.0-rc.1</code></pre>
-      <p class="text-sm text-text-secondary mt-3">完成真实客户端验收并发布稳定版后，再切换到 <code>mcp-probe-kit@4</code> 或 <code>latest</code>。</p>
+npm install -g mcp-probe-kit@4.0.0-rc.2</code></pre>
+    </section>
+
+    <section class="bg-white border border-border rounded-xl p-5 mb-5">
+      <h2 class="text-xl font-semibold mb-3">工具面变化</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead><tr class="border-b"><th class="text-left py-2">配置</th><th class="text-left py-2">模型可见</th><th class="text-left py-2">用途</th></tr></thead>
+          <tbody class="text-text-secondary">
+            <tr class="border-b"><td class="py-2">默认 / <code>compact</code></td><td>23</td><td>推荐日常使用</td></tr>
+            <tr class="border-b"><td class="py-2"><code>compact</code> + Memory</td><td>29</td><td>增加 6 个 Memory 工具</td></tr>
+            <tr><td class="py-2"><code>MCP_TOOLSET=full</code></td><td>33</td><td>兼容与诊断</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-sm text-text-secondary mt-3"><code>add_feature</code>、<code>fix_bug</code>、<code>sync_ui_data</code>、<code>ask_user</code> 不再进入默认模型工具面，但能力仍由编排、脚本或 full 模式保留。</p>
+    </section>
+
+    <section class="bg-white border border-border rounded-xl p-5 mb-5">
+      <h2 class="text-xl font-semibold mb-3">正式 MCP Apps</h2>
+      <p class="text-sm text-text-secondary mb-3">客户端协商 <code>io.modelcontextprotocol/ui</code> 且支持 <code>text/html;profile=mcp-app</code> 后，服务端提供五个交互界面：</p>
+      <ul class="list-disc pl-5 space-y-2 text-sm text-text-secondary">
+        <li>Memory Center</li>
+        <li>Feature Workbench</li>
+        <li>Bug Workbench</li>
+        <li>Product Workbench</li>
+        <li>Convergence Gate</li>
+      </ul>
+      <p class="text-sm text-text-secondary mt-3"><code>list_memory_assets</code> 标记为 App-only，不计入 23/29 个模型可见工具。未支持 GUI 的客户端继续使用文本和结构化结果。</p>
+      <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 mt-4 text-sm"><code># 显式关闭 MCP Apps
+MCP_ENABLE_UI_APPS=0</code></pre>
     </section>
 
     <section class="bg-white border border-border rounded-xl p-5 mb-5">
@@ -67,9 +88,9 @@ npm install -g mcp-probe-kit@4.0.0-rc.1</code></pre>
         <table class="w-full text-sm border-collapse">
           <thead><tr class="border-b"><th class="text-left py-2">模式</th><th class="text-left py-2">行为</th></tr></thead>
           <tbody class="text-text-secondary">
-            <tr class="border-b"><td class="py-2"><code>auto</code></td><td>默认；自动识别 Legacy 或 Modern 客户端。</td></tr>
-            <tr class="border-b"><td class="py-2"><code>legacy</code></td><td>客户端不兼容新 opening 时排障。</td></tr>
-            <tr><td class="py-2"><code>modern</code></td><td>仅用于 Modern 协议和扩展验证。</td></tr>
+            <tr class="border-b"><td class="py-2"><code>auto</code></td><td>默认，自动协商 Legacy 或 Modern。</td></tr>
+            <tr class="border-b"><td class="py-2"><code>legacy</code></td><td>固定旧协议，用于兼容诊断。</td></tr>
+            <tr><td class="py-2"><code>modern</code></td><td>拒绝 Legacy opening，用于 Modern 验证。</td></tr>
           </tbody>
         </table>
       </div>
@@ -77,35 +98,25 @@ npm install -g mcp-probe-kit@4.0.0-rc.1</code></pre>
     </section>
 
     <section class="bg-white border border-border rounded-xl p-5 mb-5">
-      <h2 class="text-xl font-semibold mb-3">计划状态与恢复</h2>
+      <h2 class="text-xl font-semibold mb-3">计划恢复与 Memory 写入</h2>
       <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm"><code>start_*
 → plan_heartbeat
-→ 执行与验证
-→ resume_plan（仅中断后）
+→ Agent 执行实现与测试
+→ resume_plan（中断后）
 → converge
-→ memorize_asset（仅收敛通过后）</code></pre>
-      <p class="text-sm text-text-secondary mt-3">检查点保存在项目本地 <code>.mcp-probe-kit/plans/</code>，不会代替 Agent 修改代码。</p>
-    </section>
-
-    <section class="bg-white border border-border rounded-xl p-5 mb-5">
-      <h2 class="text-xl font-semibold mb-3">兼容与降级</h2>
-      <ul class="list-disc pl-5 space-y-2 text-sm text-text-secondary">
-        <li>Legacy Tasks 保持可用。</li>
-        <li>Modern Tasks 尚未默认宣告支持，自动同步降级。</li>
-        <li><code>input_required</code> 仅在客户端声明能力时启用。</li>
-        <li>Apps、Progress 或 Resources 不可用时，核心工具继续运行。</li>
-      </ul>
+→ memorize_asset（仅在通过后）</code></pre>
+      <p class="text-sm text-text-secondary mt-3">检查点保存在项目内 <code>.mcp-probe-kit/plans/</code>。只有 <code>converge passed=true</code> 后才能写入正式长期记忆。</p>
     </section>
 
     <section class="bg-white border border-border rounded-xl p-5 mb-5">
       <h2 class="text-xl font-semibold mb-3">验证与回退</h2>
       <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm"><code>npm run eval:agents
 npm run release:verify</code></pre>
-      <p class="text-sm text-text-secondary mt-3">客户端异常时优先设置 <code>MCP_PROTOCOL_MODE=legacy</code>。只有 SDK v2 存在无法规避的严重回归时，再回退固定的 v3 包版本。</p>
+      <p class="text-sm text-text-secondary mt-3">协议异常时先尝试 <code>MCP_PROTOCOL_MODE=legacy</code>；工具选择异常时可临时使用 <code>MCP_TOOLSET=full</code>。只有确认 v4 兼容层无法接受时再回退 v3。</p>
     </section>
 
     <div class="text-sm text-text-secondary mb-10">
-      完整技术说明见仓库中的 <code>docs/migration-v3-to-v4.md</code>。历史 v2 → v3 指南仍可在 <a href="./migration.html" class="text-primary">此处</a> 查阅。
+      完整说明见仓库中的 <code>docs/migration-v3-to-v4.md</code>。
     </div>
   </main>
 </body>

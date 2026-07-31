@@ -1,28 +1,26 @@
-import { describe, expect, test } from "vitest";
-import { UiAppResourceStore } from "../ui-app-resource-store.js";
+import { describe, expect, test } from 'vitest';
+import { MCP_APP_MIME_TYPE } from '../../lib/mcp-apps.js';
+import { UiAppResourceStore } from '../ui-app-resource-store.js';
 
-describe("UiAppResourceStore", () => {
-  test("禁用时不生成资源或修改结果", () => {
+describe('UiAppResourceStore', () => {
+  test('disabled store exposes no app resources and does not alter results', () => {
     const store = new UiAppResourceStore(false);
     const result = { structuredContent: { ok: true } };
-
-    expect(store.decorate("start_ui", {}, result)).toBe(result);
+    expect(store.decorate('start_ui', {}, result)).toBe(result);
     expect(store.list()).toEqual([]);
+    expect(store.read('ui://mcp-probe-kit/memory-center')).toBeNull();
   });
 
-  test("启用时为 UI 工具生成可读取资源", () => {
+  test('enabled store exposes five stable standards-compliant resources', () => {
     const store = new UiAppResourceStore(true);
-    const result = store.decorate(
-      "start_ui",
-      { description: "创建登录页" },
-      { structuredContent: { summary: "UI plan" } }
-    );
-    const resourceUri = (result._meta?.ui as Record<string, unknown>)?.resourceUri;
+    const resources = store.list();
+    expect(resources).toHaveLength(5);
+    expect(resources.every((item) => item.mimeType === MCP_APP_MIME_TYPE)).toBe(true);
 
-    expect(typeof resourceUri).toBe("string");
-    expect(store.list()).toHaveLength(1);
-    const content = store.read(String(resourceUri));
-    expect(content?.mimeType).toBe("text/html");
-    expect(content?.text).toContain("start_ui");
+    const content = store.read('ui://mcp-probe-kit/memory-center');
+    expect(content?.mimeType).toBe(MCP_APP_MIME_TYPE);
+    expect(content?.text).toContain('data-app-kind="memory-center"');
+    expect(content?.text).toContain('Memory Center');
+    expect(content?._meta?.ui).toBeDefined();
   });
 });

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { COMPACT_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
 
 const coldRounds = positiveInt(process.env.MCP_STABILITY_COLD_ROUNDS, 4);
 const hotCalls = positiveInt(process.env.MCP_STABILITY_HOT_CALLS, 40);
@@ -40,7 +41,7 @@ try {
   const durations = timings.map((item) => item.durationMs).sort((a, b) => a - b);
   console.log(JSON.stringify({
     passed: true,
-    version: '4.0.0-rc.1',
+    version: PACKAGE_VERSION,
     configuration: { coldRounds, hotCalls, concurrentClients, concurrentCalls },
     totals: {
       scenarios: timings.length,
@@ -63,7 +64,10 @@ async function runSession({ era, calls, extraEnv = {} }) {
   const session = await connect({ era, serverMode: 'auto', projectRoot, extraEnv });
   try {
     const tools = await session.client.listTools();
-    assert(tools.tools.length === 33, `${era} tools/list returned ${tools.tools.length}`);
+    assert(
+      tools.tools.length === COMPACT_TOOL_COUNT,
+      `${era} compact tools/list returned ${tools.tools.length}`
+    );
     const status = await session.client.readResource({ uri: 'probe://status' });
     const content = status.contents[0];
     assert(content && 'text' in content, `${era} status resource missing`);
@@ -138,6 +142,10 @@ async function connect({ era, serverMode, projectRoot, extraEnv = {} }) {
     cwd: process.cwd(),
     env: {
       ...process.env,
+      MCP_TOOLSET: 'compact',
+      MEMORY_QDRANT_URL: '',
+      MEMORY_EMBEDDING_URL: '',
+      MEMORY_EMBEDDING_MODEL: '',
       ...extraEnv,
       MCP_PROTOCOL_MODE: serverMode,
       MCP_PROJECT_ROOT: projectRoot,
@@ -148,7 +156,7 @@ async function connect({ era, serverMode, projectRoot, extraEnv = {} }) {
   let stderrText = '';
   transport.stderr?.on('data', (chunk) => { stderrText += chunk.toString(); });
   const client = new Client(
-    { name: `stability-${era}`, version: '4.0.0-rc.1' },
+    { name: `stability-${era}`, version: PACKAGE_VERSION },
     { capabilities: {} }
   );
   client.setVersionNegotiation({ mode: era === 'modern' ? { pin: '2026-07-28' } : 'legacy' });

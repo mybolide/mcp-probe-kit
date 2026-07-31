@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit est une boîte à outils au niveau protocole conçue pour les développeurs qui veulent que l'IA comprenne vraiment l'intention de leur projet. Ce n'est pas seulement une collection de 33 outils — c'est un système conscient du contexte qui aide les agents IA à saisir ce que vous construisez.
+> mcp-probe-kit est une boîte à outils de niveau protocole pour explorer le contexte et orchestrer le développement. v4 expose 23 outils au modèle par défaut, 29 avec Memory entièrement configuré et conserve une surface full compatible de 33 outils.
 
 **Langues**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | **Français** | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -26,13 +26,13 @@
 
 > 🚀 Boîte à Outils de Développement Complète Alimentée par l'IA - Couvrant l'Ensemble du Cycle de Vie du Développement
 
-Un puissant serveur MCP (Model Context Protocol) fournissant **33 outils** couvrant le flux de travail complet de l'analyse produit au lancement final (Exigences → Conception → Développement → Qualité → Lancement), tous les outils supportent la **sortie structurée**.
+Un puissant serveur MCP avec **23 outils visibles par le modèle par défaut**, **29 avec Memory complet** et **33 outils de compatibilité** via `MCP_TOOLSET=full`. Il prend en charge la sortie structurée, les protocoles Legacy/Modern et les MCP Apps officielles.
 
 **🎉 Mise à Jour Majeure v3.0** : Nombre d'outils simplifié, focus sur les compétences clés, élimination de la paralysie du choix, permettant à l'IA de faire plus de travail natif
 
 **Supporte Tous les Clients MCP** : Cursor, Claude Desktop, Cline, Continue, et plus
 
-**Version du Protocole** : MCP 2025-11-25 · **SDK** : @modelcontextprotocol/sdk 1.27.1
+**Protocoles pris en charge** : Legacy MCP (2025-era) + Modern MCP 2026-07-28 · **SDK** : paquets séparés TypeScript SDK v2 · **Runtime** : Node.js 20+
 
 ---
 
@@ -41,7 +41,7 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **33 outils** couvr
 **👉 [https://mcp-probe-kit.bytezonex.com](https://mcp-probe-kit.bytezonex.com/)**
 
 - [Démarrage Rapide](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Configuration en 5 minutes
-- [Tous les Outils](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Liste complète de 33 outils
+- [Tous les Outils](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Surfaces par défaut, Memory conditionnelle, App-only et compatibilité full
 - [Meilleures Pratiques](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Guide complet du flux de travail de développement
 - [Guide de Migration v3.0](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Mise à niveau de v2.x vers v3.0
 
@@ -49,26 +49,13 @@ Un puissant serveur MCP (Model Context Protocol) fournissant **33 outils** couvr
 
 ## ✨ Fonctionnalités Principales
 
-### 📦 33 Outils
+### 📦 Surfaces d’outils
 
-- **🧭 Routage** (1 outil) - Sélectionne le bon workflow MCP à partir d'un résumé complet
-  - `workflow`
-- **🔁 État et convergence du plan** (3 outils) - Checkpoints, reprise et clôture fondée sur les preuves
-  - `plan_heartbeat`, `resume_plan`, `converge`
-- **🔄 Orchestration des Flux de Travail** (6 outils) - Flux de travail de développement complexes en un clic
-  - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 Analyse de Code** (4 outils) - Qualité du code, refactorisation et insight de graphe
-  - `code_review`, `code_insight`, `fix_bug`, `refactor`
-- **📝 Outils Git** (2 outils) - Commits Git et rapports de travail
-  - `gencommit`, `git_work_report`
-- **⚡ Génération de Code** (1 outil) - Génération de tests
-  - `gentest`
-- **📦 Gestion de Projet** (7 outils) - Initialisation, exigences et validation de spec
-  - `init_project`, `init_project_context`, `add_feature`, `check_spec`, `estimate`, `interview`, `ask_user`
-- **🎨 Utilitaires UI/UX** (3 outils) - Systèmes de conception et synchronisation des données UI
-  - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Mémoire** (6 outils) - Mémoire d'actifs réutilisables
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
+- **`compact` par défaut** : 23 outils visibles par le modèle ; les entrées autonomes comme `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan` et `converge` sont conservées.
+- **Memory entièrement configuré** : six outils Memory sont ajoutés dynamiquement, soit 29 outils visibles.
+- **`MCP_TOOLSET=full`** : restaure 33 outils de modèle compatibles pour les anciens flux et le diagnostic.
+- **MCP Apps** : `list_memory_assets` est réservé au Memory Center avec `visibility=["app"]` et ne compte pas dans la surface modèle.
+- `add_feature`, `fix_bug`, `sync_ui_data` et `ask_user` sont masqués par défaut, mais leurs capacités restent disponibles via l’orchestration, les scripts de maintenance ou le mode full.
 
 ### 🧠 Pont de Graphe de Code (GitNexus)
 

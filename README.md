@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to truly understand their project's intent. It's not just a collection of 33 tools—it's a context-aware system that helps AI agents grasp what you're building.
+> mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to understand project intent, choose a precise workflow, and retain validated experience without flooding the model with internal actions.
 
 **Languages**: [English](README.md) | [简体中文](i18n/README.zh-CN.md) | [日本語](i18n/README.ja-JP.md) | [한국어](i18n/README.ko-KR.md) | [Español](i18n/README.es-ES.md) | [Français](i18n/README.fr-FR.md) | [Deutsch](i18n/README.de-DE.md) | [Português (BR)](i18n/README.pt-BR.md)
 
@@ -27,7 +27,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server providing **33 tools** covering the complete workflow from product analysis to final release (Requirements → Design → Development → Quality → Release), all tools support **structured output**.
+A powerful MCP (Model Context Protocol) server with **23 model-visible tools by default**, **29 when Memory is configured**, and a **33-tool compatibility surface** available through `MCP_TOOLSET=full`. It covers the complete workflow from product analysis to final release and supports structured output.
 
 **🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
 
@@ -45,7 +45,7 @@ A powerful MCP (Model Context Protocol) server providing **33 tools** covering t
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Complete list of 33 tools
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Default, conditional Memory, App-only, and full compatibility surfaces
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
 
@@ -53,26 +53,23 @@ A powerful MCP (Model Context Protocol) server providing **33 tools** covering t
 
 ## ✨ Core Features
 
-### 📦 33 Tools
+### 📦 Tool Surfaces
 
-- **🧭 Routing** (1 tool) - Select the correct MCP workflow from a complete task summary
-  - `workflow`
-- **🔁 Plan State & Convergence** (3 tools) - Checkpoint, resume, and close delegated plans with evidence gates
-  - `plan_heartbeat`, `resume_plan`, `converge`
-- **🔄 Workflow Orchestration** (6 tools) - One-click complex development workflows
-  - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 Code Analysis** (4 tools) - Code quality, refactoring, and graph insight
-  - `code_review`, `code_insight`, `fix_bug`, `refactor`
-- **📝 Git Tools** (2 tools) - Git commits and work reports
-  - `gencommit`, `git_work_report`
-- **⚡ Code Generation** (1 tool) - Test generation
-  - `gentest`
-- **📦 Project Management** (7 tools) - Project initialization, requirements, and spec validation
-  - `init_project`, `init_project_context`, `add_feature`, `check_spec`, `estimate`, `interview`, `ask_user`
-- **🎨 UI/UX Utilities** (3 tools) - Design systems and UI data synchronization
-  - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 Memory** (6 tools) - Reusable asset memory
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
+The default `compact` surface keeps every independently useful workflow while removing competing internal and maintenance entries from the model context.
+
+- **🧭 Routing** (1) — `workflow`
+- **🔁 Plan State & Convergence** (3) — `plan_heartbeat`, `resume_plan`, `converge`
+- **🔄 Workflow Orchestration** (6) — `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
+- **📦 Project & Specification** (4) — `init_project`, `init_project_context`, `check_spec`, `estimate`
+- **🔍 Code, Test & Git** (6) — `code_insight`, `gentest`, `code_review`, `refactor`, `gencommit`, `git_work_report`
+- **🎨 UI/UX Utilities** (2) — `ui_design_system`, `ui_search`
+- **🗣️ Structured Interview** (1) — `interview`
+
+That is **23 model-visible tools by default**. When the full Memory stack is configured, six Memory tools are added dynamically, bringing the model-visible surface to **29**:
+
+`search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
+
+For compatibility and diagnostics, `MCP_TOOLSET=full` restores all **33 legacy model tools**. The compact surface deliberately omits `add_feature`, `fix_bug`, `sync_ui_data`, and `ask_user`: their implementations remain available through orchestration, maintenance scripts, or full compatibility mode.
 
 ### 🔁 Delegated Plan State, Recovery, and Convergence
 
@@ -236,12 +233,17 @@ Core and orchestration tools support **structured output**, returning machine-re
 - Long-running orchestration tools (`start_*`) and `sync_ui_data` support cooperative cancellation/progress callbacks
 - Internal task persistence defaults to memory. Set `MCP_TASK_STORE=json` to use `.mcp-probe-kit/tasks.json`, or set `MCP_TASK_STORE_PATH` to choose another JSON path. Interrupted tasks that cannot reconstruct their executor are explicitly marked failed on restart instead of being reported as still running.
 
-### 🔌 Extensions & UI Apps (Optional)
+### 🔌 Official MCP Apps and Memory Center
 
-- Trace metadata passthrough: request `_meta.trace` is preserved in tool responses (`_meta.trace`)
-- Optional extensions capability switch: enable with `MCP_ENABLE_EXTENSIONS_CAPABILITY=1`
-- Optional MCP Apps resource output for UI tools: enable with `MCP_ENABLE_UI_APPS=1`
-- UI tools can expose preview resources via `ui://...` and response `_meta.ui.resourceUri`
+v4.0.0-rc.2 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
+
+- MCP Apps are enabled by default and can be disabled with `MCP_ENABLE_UI_APPS=0`.
+- UI metadata and `ui://` resources are exposed only after the client advertises support for `text/html;profile=mcp-app`.
+- Five stable Apps are included: **Memory Center**, **Feature Workbench**, **Bug Workbench**, **Product Workbench**, and **Convergence Gate**.
+- Memory Center can browse historical memories, run semantic search, inspect full content, mark an asset stale, and confirm deletion.
+- `list_memory_assets` is an App-only action with `_meta.ui.visibility=["app"]`. It may appear in the raw `tools/list` response of an Apps-capable host, but compliant hosts must not offer it to the model. The model-visible count remains 23 or 29.
+- Clients without MCP Apps support continue to receive the normal text and `structuredContent` responses; no GUI capability is required for existing workflows.
+- Trace metadata passthrough remains available through `MCP_ENABLE_EXTENSIONS_CAPABILITY=1`.
 
 ### 🧭 Delegated Orchestration Protocol
 
@@ -745,7 +747,7 @@ npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
 
 ### Q2b: Cursor shows connected but **0 tools** / Agent says **No MCP servers available**?
 
-This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connected-green-dot-and-tools-discovered-in-logs-but-0-tools-in-ui-and-agent/160620): stderr may log `tools/list` with 33 tools, while **Mcp FileSystem Writer** shows `lease returned 0 tools` and `toolCount=0` — the Agent lease layer silently dropped the tool list.
+This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connected-green-dot-and-tools-discovered-in-logs-but-0-tools-in-ui-and-agent/160620): stderr may report a valid compact tool surface, while **Mcp FileSystem Writer** shows `lease returned 0 tools` and `toolCount=0` — the Agent lease layer silently dropped the tool list.
 
 **Common causes:**
 
@@ -755,7 +757,7 @@ This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connec
 | `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
 | Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
 
-**What we do (v3.6.3+):**  `tools/list` **omits `outputSchema` by default** (~50 KB → ~23 KB). Structured output still works via `structuredContent` on `tools/call`. To restore full schemas: `MCP_INCLUDE_OUTPUT_SCHEMA=1`.
+**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0-rc.2 defaults to the 23-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 33-tool compatibility surface with `MCP_TOOLSET=full`.
 
 **What you can try:**
 
@@ -773,7 +775,7 @@ This folder is **written by Cursor** (Mcp FileSystem Writer), not by mcp-probe-k
 mcps/user-mcp-probe-kit/
 ├── SERVER_METADATA.json
 ├── STATUS.md
-├── tools/           ← one JSON per tool (~33); Agent reads these for CallMcpTool
+├── tools/           ← one JSON per model-visible tool (~23 by default); Agent reads these for CallMcpTool
 │   ├── init_project.json
 │   └── ...
 └── resources/       ← from resources/list (may exist even when tools/ is empty)
@@ -782,7 +784,7 @@ mcps/user-mcp-probe-kit/
 | State | Meaning |
 |-------|---------|
 | `resources/` exists, `tools/` missing or empty | `resources/list` OK but **tools lease failed** (matches `lease returned 0 tools`) |
-| `tools/` has some files but not 33 | Partial write or session interrupted; Reload MCP |
+| `tools/` has fewer entries than the selected model surface (23 default, 29 with Memory, 33 full) | Partial write or session interrupted; Reload MCP |
 | `STATUS.md` says server errored | Cursor marked the server unhealthy for Agent even if Settings is green |
 
 Healthy session: `tools/` should auto-populate within seconds of MCP connect — no manual setup, no repo config.

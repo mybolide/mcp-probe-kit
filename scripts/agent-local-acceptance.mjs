@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { COMPACT_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
 
 const projectRoot = await mkdtemp(join(tmpdir(), 'mcp-agent-acceptance-'));
 const transport = new StdioClientTransport({
@@ -13,6 +14,10 @@ const transport = new StdioClientTransport({
     ...process.env,
     MCP_PROTOCOL_MODE: 'auto',
     MCP_ENABLE_GITNEXUS_BRIDGE: '0',
+    MCP_TOOLSET: 'compact',
+    MEMORY_QDRANT_URL: '',
+    MEMORY_EMBEDDING_URL: '',
+    MEMORY_EMBEDDING_MODEL: '',
   },
   stderr: 'pipe',
 });
@@ -23,7 +28,7 @@ transport.stderr?.on('data', (chunk) => {
 });
 
 const client = new Client(
-  { name: 'mcp-probe-local-agent', version: '4.0.0-rc.1' },
+  { name: 'mcp-probe-local-agent', version: PACKAGE_VERSION },
   { capabilities: {} }
 );
 client.setVersionNegotiation({ mode: { pin: '2026-07-28' } });
@@ -31,7 +36,10 @@ client.setVersionNegotiation({ mode: { pin: '2026-07-28' } });
 try {
   await client.connect(transport);
   const tools = await client.listTools();
-  assert(tools.tools.length === 33, `expected 33 tools, got ${tools.tools.length}`);
+  assert(
+    tools.tools.length === COMPACT_TOOL_COUNT,
+    `expected ${COMPACT_TOOL_COUNT} compact tools, got ${tools.tools.length}`
+  );
 
   const shortIntent = await client.callTool({
     name: 'workflow',
@@ -44,7 +52,7 @@ try {
   assert(shortIntent.isError !== true, 'short intent routing returned an error');
 
   const fullIntent = [
-    '继续 MCP Probe Kit v4.0.0-rc.1 发布候选开发：',
+    `继续 MCP Probe Kit v${PACKAGE_VERSION} 发布候选开发：`,
     '- 校验 npm next 标签与 Git Tag/package version 一致性；',
     '- GitHub Release 标记 prerelease，RC 不覆盖 latest；',
     '- Node.js 20、Legacy/Modern 双协议与同步降级；',
@@ -124,7 +132,7 @@ try {
     mode: 'delegated',
     contractVersion: '2.0.0',
     workflow: 'feature',
-    workflowVersion: '4.0.0-rc.1',
+    workflowVersion: PACKAGE_VERSION,
     objective: '验证证据齐全后才允许收敛',
     steps: [{ id: 'verify-release', action: 'verify' }],
     globalRules: [],

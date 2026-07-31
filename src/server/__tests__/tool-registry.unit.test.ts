@@ -5,8 +5,10 @@ import { prepareToolForToolsList } from "../../lib/output-schema-registry.js";
 import { MCP_TOOL_SKILL_GROUPS } from "../../lib/mcp-tool-skill-registry.js";
 import {
   getToolDefinition,
+  listAppOnlyToolNames,
   listToolDefinitions,
   listToolDefinitionsForToolset,
+  prepareAppOnlyToolsForList,
   prepareRegisteredToolForList,
 } from "../tool-registry.js";
 
@@ -36,6 +38,8 @@ describe("Tool Registry", () => {
   });
 
   test("工具集过滤保持既有数量与成员关系", () => {
+    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: false })).toHaveLength(23);
+    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: true })).toHaveLength(29);
     expect(listToolDefinitionsForToolset("core")).toHaveLength(12);
     expect(listToolDefinitionsForToolset("ui")).toHaveLength(4);
     expect(listToolDefinitionsForToolset("workflow")).toHaveLength(32);
@@ -67,4 +71,66 @@ describe("Tool Registry", () => {
       );
     }
   });
+  test("compact omits internal entries and app-only tools stay outside the model registry", () => {
+    const compactNames = listToolDefinitionsForToolset("compact", {
+      memoryEnabled: false,
+    }).map((definition) => definition.name);
+    expect(compactNames).toEqual(
+      expect.arrayContaining(["start_product", "gencommit", "converge"])
+    );
+    expect(compactNames).not.toEqual(
+      expect.arrayContaining(["add_feature", "fix_bug", "sync_ui_data", "ask_user"])
+    );
+    expect(listAppOnlyToolNames()).toEqual(["list_memory_assets"]);
+    expect(listToolDefinitions().some((definition) => definition.name === "list_memory_assets")).toBe(false);
+    const appTools = prepareAppOnlyToolsForList({
+      clientCapabilities: {
+        extensions: {
+          "io.modelcontextprotocol/ui": {
+            mimeTypes: ["text/html;profile=mcp-app"],
+          },
+        },
+      },
+      uiAppsEnabled: true,
+    });
+    expect(appTools).toHaveLength(1);
+    expect(appTools[0]).toMatchObject({
+      name: "list_memory_assets",
+      _meta: {
+        ui: {
+          resourceUri: "ui://mcp-probe-kit/memory-center",
+          visibility: ["app"],
+        },
+      },
+    });
+  });
+
+  test("tools/list attaches official UI metadata only for negotiated app clients", () => {
+    const definition = getToolDefinition("start_feature");
+    expect(definition).toBeDefined();
+    const capabilities = {
+      extensions: {
+        "io.modelcontextprotocol/ui": {
+          mimeTypes: ["text/html;profile=mcp-app"],
+        },
+      },
+    };
+    const listed = prepareRegisteredToolForList(definition!, {
+      clientCapabilities: capabilities,
+      uiAppsEnabled: true,
+    });
+    expect(listed._meta).toMatchObject({
+      ui: {
+        resourceUri: "ui://mcp-probe-kit/feature-workbench",
+        visibility: ["model", "app"],
+      },
+    });
+    expect(
+      prepareRegisteredToolForList(definition!, {
+        clientCapabilities: {},
+        uiAppsEnabled: true,
+      })._meta?.ui
+    ).toBeUndefined();
+  });
+
 });

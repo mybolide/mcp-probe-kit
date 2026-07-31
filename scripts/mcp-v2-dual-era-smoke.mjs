@@ -7,13 +7,18 @@ import {
   CallToolResultSchema,
   GetTaskResultSchema,
 } from "@modelcontextprotocol/core";
+import {
+  COMPACT_TOOL_COUNT,
+  FULL_TOOL_COUNT,
+} from "./release-surface.mjs";
 
 const roots = [];
 
 try {
   const legacy = await runLegacySmoke();
   const modern = await runModernSmoke();
-  console.log(JSON.stringify({ legacy, modern }, null, 2));
+  const full = await runFullSurfaceSmoke();
+  console.log(JSON.stringify({ legacy, modern, full }, null, 2));
 } finally {
   await Promise.all(
     roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))
@@ -83,7 +88,10 @@ async function runLegacySmoke() {
   try {
     assert(client.getProtocolEra() === "legacy", "Legacy era negotiation failed");
     const tools = await client.listTools();
-    assert(tools.tools.length === 33, "Legacy tools/list count mismatch");
+    assert(
+      tools.tools.length === COMPACT_TOOL_COUNT,
+      `Legacy compact tools/list returned ${tools.tools.length}`
+    );
 
     const created = CallToolResultSchema.parse(
       await client.request(
@@ -143,7 +151,10 @@ async function runModernSmoke() {
   try {
     assert(client.getProtocolEra() === "modern", "Modern era negotiation failed");
     const tools = await client.listTools();
-    assert(tools.tools.length === 33, "Modern tools/list count mismatch");
+    assert(
+      tools.tools.length === COMPACT_TOOL_COUNT,
+      `Modern compact tools/list returned ${tools.tools.length}`
+    );
     for (const toolName of ["plan_heartbeat", "resume_plan", "converge"]) {
       assert(
         tools.tools.some((tool) => tool.name === toolName),
@@ -222,7 +233,28 @@ async function runModernSmoke() {
   }
 }
 
-async function connect(mode, elicitationEnabled) {
+async function runFullSurfaceSmoke() {
+  const { client, transport } = await connect("modern", false, "full");
+  try {
+    const tools = await client.listTools();
+    assert(
+      tools.tools.length === FULL_TOOL_COUNT,
+      `Full tools/list returned ${tools.tools.length}`
+    );
+    for (const toolName of ["add_feature", "fix_bug", "sync_ui_data", "ask_user"]) {
+      assert(
+        tools.tools.some((tool) => tool.name === toolName),
+        `Full tools/list missing compatibility tool ${toolName}`
+      );
+    }
+    return { tools: tools.tools.length, compatibilitySurface: true };
+  } finally {
+    await client.close().catch(() => undefined);
+    await transport.close().catch(() => undefined);
+  }
+}
+
+async function connect(mode, elicitationEnabled, toolset = "compact") {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: ["build/index.js"],
@@ -231,6 +263,10 @@ async function connect(mode, elicitationEnabled) {
       ...process.env,
       MCP_PROTOCOL_MODE: "auto",
       MCP_ENABLE_GITNEXUS_BRIDGE: "0",
+      MCP_TOOLSET: toolset,
+      MEMORY_QDRANT_URL: "",
+      MEMORY_EMBEDDING_URL: "",
+      MEMORY_EMBEDDING_MODEL: "",
     },
     stderr: "pipe",
   });

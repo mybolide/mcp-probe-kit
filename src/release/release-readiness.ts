@@ -27,6 +27,7 @@ interface PackageManifest {
   version?: string;
   engines?: { node?: string };
   dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
   files?: string[];
   scripts?: Record<string, string>;
 }
@@ -126,6 +127,14 @@ export function verifyReleaseReadiness(
     ));
   }
   checks.push(check(
+    'sdk-ext-apps',
+    packageJson.devDependencies?.['@modelcontextprotocol/ext-apps'] === '1.7.2',
+    'error',
+    '1.7.2',
+    packageJson.devDependencies?.['@modelcontextprotocol/ext-apps'],
+    'MCP Apps 必须使用已经验证的官方扩展 SDK 精确版本'
+  ));
+  checks.push(check(
     'legacy-sdk-removed',
     !Object.prototype.hasOwnProperty.call(dependencies, '@modelcontextprotocol/sdk'),
     'error',
@@ -141,6 +150,58 @@ export function verifyReleaseReadiness(
     toolManifest.totalTools,
     'Tool Manifest 必须包含 33 个工具'
   ));
+  const compactTools = toolManifest.toolsets?.compact?.tools ?? [];
+  const compactWithMemoryTools =
+    toolManifest.toolsets?.compactWithMemory?.tools ?? [];
+  const memoryConditionalTools =
+    toolManifest.toolsets?.memoryConditional?.tools ?? [];
+  const appOnlyTools = toolManifest.toolsets?.appOnly?.tools ?? [];
+  checks.push(check(
+    'compact-tool-surface',
+    toolManifest.toolsets?.compact?.count === 23 &&
+      compactTools.length === 23 &&
+      ['start_product', 'gencommit', 'converge'].every((name) => compactTools.includes(name)) &&
+      ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'].every(
+        (name) => !compactTools.includes(name)
+      ),
+    'error',
+    { count: 23, required: ['start_product', 'gencommit', 'converge'], hidden: ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'] },
+    { count: toolManifest.toolsets?.compact?.count, tools: compactTools },
+    '默认模型工具面必须固定为审核后的 23 个工具'
+  ));
+  checks.push(check(
+    'memory-conditional-surface',
+    toolManifest.toolsets?.compactWithMemory?.count === 29 &&
+      compactWithMemoryTools.length === 29 &&
+      toolManifest.toolsets?.memoryConditional?.count === 6 &&
+      memoryConditionalTools.length === 6,
+    'error',
+    { compactWithMemory: 29, memoryConditional: 6 },
+    {
+      compactWithMemory: toolManifest.toolsets?.compactWithMemory?.count,
+      memoryConditional: toolManifest.toolsets?.memoryConditional?.count,
+    },
+    'Memory 配置后必须只增量暴露 6 个记忆工具'
+  ));
+  checks.push(check(
+    'app-only-surface',
+    toolManifest.toolsets?.appOnly?.count === 1 &&
+      appOnlyTools.length === 1 &&
+      appOnlyTools[0] === 'list_memory_assets',
+    'error',
+    ['list_memory_assets'],
+    appOnlyTools,
+    'Memory Center 的历史列表动作必须保持 app-only，不计入模型可见工具面'
+  ));
+  checks.push(check(
+    'full-compatibility-surface',
+    toolManifest.toolsets?.full?.count === 33,
+    'error',
+    33,
+    toolManifest.toolsets?.full?.count,
+    'MCP_TOOLSET=full 必须继续保留 33 工具兼容面'
+  ));
+
   checks.push(check(
     'workflow-toolset-plan-tools',
     ['plan_heartbeat', 'resume_plan', 'converge'].every((toolName) =>
@@ -162,6 +223,13 @@ export function verifyReleaseReadiness(
     'npm 包必须包含运行产物、README 和许可证'
   ));
   checks.push(fileCheck(workspaceRoot, 'docs/migration-v3-to-v4.md'));
+  checks.push(fileCheck(workspaceRoot, 'src/protocol/__tests__/mcp-apps.integration.test.ts'));
+  checks.push(contentCheck(
+    workspaceRoot,
+    'src/lib/mcp-apps.ts',
+    ['io.modelcontextprotocol/ui', 'text/html;profile=mcp-app', 'memory-center'],
+    '正式 MCP Apps 扩展、资源 MIME 和 Memory Center 必须进入发布产物源码'
+  ));
   checks.push(contentCheck(
     workspaceRoot,
     'docs/rc-stability-policy.md',
@@ -213,6 +281,7 @@ export function verifyReleaseReadiness(
     'smoke:inspector',
     'security:audit',
     'release:verify',
+    'build-mcp-apps',
   ];
   checks.push(check(
     'release-scripts',

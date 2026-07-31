@@ -1,6 +1,11 @@
 import { TOOL_CATALOG } from "./tool-catalog.js";
 import { allToolSchemas } from "../schemas/index.js";
 import type { ToolsetType } from "./tool-definition.js";
+import {
+  APP_ONLY_TOOL_NAMES,
+  COMPACT_MODEL_TOOL_NAMES,
+  MEMORY_MODEL_TOOL_NAMES,
+} from "./tool-visibility.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -54,6 +59,10 @@ function namesForGroup(groupId: string): string[] {
 }
 
 export function buildToolManifestSections() {
+  const compact = [...COMPACT_MODEL_TOOL_NAMES];
+  const memoryConditional = [...MEMORY_MODEL_TOOL_NAMES];
+  const compactWithMemory = [...compact, ...memoryConditional];
+  const appOnly = [...APP_ONLY_TOOL_NAMES];
   const core = namesForToolset("core");
   const ui = namesForToolset("ui");
   const workflow = namesForToolset("workflow");
@@ -80,6 +89,27 @@ export function buildToolManifestSections() {
   return {
     totalTools: TOOL_CATALOG.length,
     toolsets: {
+      compact: {
+        description: `${compact.length} default model tools`,
+        count: compact.length,
+        tools: compact,
+        note: "Default model-visible surface",
+      },
+      compactWithMemory: {
+        description: `${compactWithMemory.length} model tools when Memory is configured`,
+        count: compactWithMemory.length,
+        tools: compactWithMemory,
+      },
+      memoryConditional: {
+        description: `${memoryConditional.length} conditionally visible Memory tools`,
+        count: memoryConditional.length,
+        tools: memoryConditional,
+      },
+      appOnly: {
+        description: `${appOnly.length} MCP Apps-only tools hidden from the model`,
+        count: appOnly.length,
+        tools: appOnly,
+      },
       core: {
         description: `${core.length} core tools (daily high-frequency)`,
         count: core.length,
@@ -103,7 +133,7 @@ export function buildToolManifestSections() {
       full: {
         description: `All ${TOOL_CATALOG.length} tools`,
         count: TOOL_CATALOG.length,
-        note: "Default toolset, includes all tools",
+        note: "Compatibility/debugging surface selected with MCP_TOOLSET=full",
       },
     },
     categories,

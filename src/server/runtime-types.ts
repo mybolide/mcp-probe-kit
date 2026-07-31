@@ -10,4 +10,5 @@ export interface ResourceContent {
   uri: string;
   mimeType: string;
   text: string;
+  _meta?: Record<string, unknown>;
 }

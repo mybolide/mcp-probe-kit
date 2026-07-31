@@ -32,15 +32,19 @@ import {
 } from "../protocol/requirements-input-bridge.js";
 import {
   executeRegisteredTool,
+  isAppOnlyTool,
   listToolDefinitions,
   listToolDefinitionsForToolset,
+  prepareAppOnlyToolsForList,
   prepareRegisteredToolForList,
 } from "./tool-registry.js";
+import { supportsMcpApps } from "../lib/mcp-apps.js";
 import { ResultDecorator } from "./result-decorator.js";
 import type { ToolResult } from "./runtime-types.js";
 
 export interface ToolHandlerOptions {
   progressNotificationsEnabled: boolean;
+  uiAppsEnabled: boolean;
   taskRuntime: InternalTaskRuntime;
   legacyTaskStore: LegacyTaskWireStore;
 }
@@ -53,19 +57,49 @@ export function registerToolHandlers(
   const legacyTaskAdapter = new LegacyTaskAdapter(options.taskRuntime);
   const syncTaskAdapter = new SyncTaskAdapter(options.taskRuntime);
 
-  server.setRequestHandler("tools/list", async (): Promise<ListToolsResult> => {
+  server.setRequestHandler("tools/list", async (_request, ctx): Promise<ListToolsResult> => {
     const toolset = getToolsetFromEnv();
+    const clientCapabilities =
+      server.getClientCapabilities() ??
+      (ctx.mcpReq.envelope as Record<string, unknown> | undefined)?.[
+        CLIENT_CAPABILITIES_META_KEY
+      ];
     const definitions = listToolDefinitionsForToolset(toolset);
-    const tools = definitions.map(prepareRegisteredToolForList);
+    const modelTools = definitions.map((definition) =>
+      prepareRegisteredToolForList(definition, {
+        clientCapabilities,
+        uiAppsEnabled: options.uiAppsEnabled,
+      })
+    );
+    const appTools = prepareAppOnlyToolsForList({
+      clientCapabilities,
+      uiAppsEnabled: options.uiAppsEnabled,
+    });
+    const tools = [...modelTools, ...appTools];
     const payloadBytes = Buffer.byteLength(JSON.stringify({ tools }), "utf8");
     console.error(
-      `[MCP Probe Kit] 当前工具集: ${toolset} (${tools.length}/${listToolDefinitions().length} 个工具) | tools/list ≈ ${(payloadBytes / 1024).toFixed(1)} KB`
+      `[MCP Probe Kit] 当前工具集: ${toolset} (${modelTools.length}/${listToolDefinitions().length} 模型工具` +
+        `${appTools.length > 0 ? ` + ${appTools.length} App 专用动作` : ''}) | tools/list ≈ ` +
+        `${(payloadBytes / 1024).toFixed(1)} KB`
     );
     return { tools };
   });
 
   server.setRequestHandler("tools/call", async (request, ctx) => {
     const { name, arguments: args } = request.params;
+    const clientCapabilities =
+      server.getClientCapabilities() ??
+      (ctx.mcpReq.envelope as Record<string, unknown> | undefined)?.[
+        CLIENT_CAPABILITIES_META_KEY
+      ];
+    if (
+      isAppOnlyTool(name) &&
+      (!options.uiAppsEnabled || !supportsMcpApps(clientCapabilities))
+    ) {
+      return toProtocolToolResult(
+        makeToolError(`工具 ${name} 仅允许通过已协商的 MCP App 调用`)
+      );
+    }
     let taskRequest = request.params.task;
     const traceMeta = decorator.getTraceMeta(ctx.mcpReq._meta);
     const protocolEra = resolveProtocolEra(server.getNegotiatedProtocolVersion());
@@ -237,7 +271,9 @@ async function executeTool(
   args: unknown,
   context?: ToolExecutionContext
 ): Promise<{ bootstrap: McpProbeKitBootstrapResult | null; result: ToolResult }> {
-  const bootstrap = ensureMcpProbeKitBootstrapForToolCall(name, args);
+  const bootstrap = isAppOnlyTool(name)
+    ? null
+    : ensureMcpProbeKitBootstrapForToolCall(name, args);
   logBootstrap(bootstrap);
   const result = (await executeRegisteredTool(name, args, context)) as ToolResult;
   return { bootstrap, result };

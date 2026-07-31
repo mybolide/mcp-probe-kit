@@ -1,7 +1,7 @@
 {
   "name": "mcp-probe-kit",
-  "version": "4.0.0-rc.1",
-  "description": "AI-Powered Development Toolkit - MCP Server with 33 tools covering code quality, development efficiency, project management, plan recovery, and UI/UX design. Features: Structured Output, Workflow Orchestration, MCP Skill auto-sync, UI/UX Pro Max, and Requirements Interview.",
+  "version": "4.0.0-rc.2",
+  "description": "AI-powered MCP development toolkit with 23 default tools, 29 with Memory, 33-tool compatibility mode, and MCP Apps workbenches",
   "mcpName": "io.github.mybolide/mcp-probe-kit",
   "type": "module",
   "main": "build/index.js",
@@ -30,12 +30,13 @@
     "release:verify": "npm run release:static && npm test && npm run build && npm run smoke:protocol && npm run acceptance:agent && npm run stability:soak && npm run eval:agents && npm run smoke:package && npm run smoke:rollback && npm run smoke:inspector && npm run security:audit",
     "verify-workflow-skill": "tsx scripts/verify-workflow-skill.ts",
     "sync-workflow-skill": "tsx scripts/sync-workflow-skill.ts",
-    "prebuild": "npm run sync-version && npm run sync-ui-data && npm run sync-tool-manifest && npm run verify-workflow-skill && npm run sync-workflow-skill",
+    "prebuild": "npm run sync-version && npm run sync-ui-data && npm run sync-tool-manifest && npm run verify-workflow-skill && npm run sync-workflow-skill && npm run build-mcp-apps",
     "docs:serve": "npx http-server docs -p 8080 -o",
     "stability:soak": "node scripts/stability-soak.mjs",
     "smoke:rollback": "node scripts/rollback-smoke.mjs",
     "smoke:inspector": "node scripts/inspector-smoke.mjs",
-    "security:audit": "npm audit --omit=dev --audit-level=high"
+    "security:audit": "npm audit --omit=dev --audit-level=high",
+    "build-mcp-apps": "node scripts/build-mcp-apps.mjs"
   },
   "keywords": [
     "mcp",
@@ -89,10 +90,12 @@
     "zod": "4.2.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.2",
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "^20.0.0",
     "@types/tar": "^6.1.13",
     "@vitest/ui": "^4.1.10",
+    "esbuild": "^0.25.12",
     "fast-check": "^4.5.3",
     "tsx": "^4.21.0",
     "typescript": "^5.3.0",

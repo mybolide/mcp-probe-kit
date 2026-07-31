@@ -1,6 +1,6 @@
 import type { ToolExecutionContext } from "../lib/tool-execution-context.js";
 
-export type ToolsetType = "core" | "ui" | "workflow" | "full";
+export type ToolsetType = "compact" | "core" | "ui" | "workflow" | "full";
 
 export interface ToolAnnotations {
   title?: string;

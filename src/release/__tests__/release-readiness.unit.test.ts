@@ -51,6 +51,8 @@ function createFixture(options: {
   temporaryDirectories.push(root);
   fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
   fs.mkdirSync(path.join(root, 'docs/specs/mcp-v4'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'src/lib'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'src/protocol/__tests__'), { recursive: true });
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
     version: options.version,
     engines: { node: '>=20.0.0' },
@@ -59,8 +61,11 @@ function createFixture(options: {
       '@modelcontextprotocol/client': '2.0.0',
       '@modelcontextprotocol/core': '2.0.0',
     },
+    devDependencies: {
+      '@modelcontextprotocol/ext-apps': '1.7.2',
+    },
     files: ['build', 'README.md', 'LICENSE'],
-    scripts: { 'eval:agents': 'eval', 'acceptance:agent': 'accept', 'stability:soak': 'soak', 'smoke:package': 'pack', 'smoke:rollback': 'rollback', 'smoke:inspector': 'inspector', 'security:audit': 'audit', 'release:verify': 'verify' },
+    scripts: { 'eval:agents': 'eval', 'acceptance:agent': 'accept', 'stability:soak': 'soak', 'smoke:package': 'pack', 'smoke:rollback': 'rollback', 'smoke:inspector': 'inspector', 'security:audit': 'audit', 'release:verify': 'verify', 'build-mcp-apps': 'build-apps' },
   }));
   fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
     version: options.version,
@@ -70,12 +75,38 @@ function createFixture(options: {
     version: options.version,
     packages: [{ version: options.version }],
   }));
+  const compactTools = [
+    'start_feature', 'start_bugfix', 'start_ui', 'start_onboard', 'start_product',
+    'start_ralph', 'workflow', 'init_project_context', 'init_project', 'check_spec',
+    'estimate', 'code_insight', 'gentest', 'code_review', 'refactor', 'gencommit',
+    'git_work_report', 'ui_design_system', 'ui_search', 'plan_heartbeat',
+    'resume_plan', 'converge', 'interview',
+  ];
+  const memoryTools = [
+    'search_memory', 'read_memory_asset', 'memorize_asset',
+    'update_memory_asset', 'delete_memory_asset', 'scan_and_extract_patterns',
+  ];
   fs.writeFileSync(path.join(root, 'tools-manifest.json'), JSON.stringify({
     version: options.version,
     structuredOutput: { version: options.version },
     totalTools: 33,
-    toolsets: { workflow: { tools: ['plan_heartbeat', 'resume_plan', 'converge'] } },
+    toolsets: {
+      compact: { count: 23, tools: compactTools },
+      compactWithMemory: { count: 29, tools: [...compactTools, ...memoryTools] },
+      memoryConditional: { count: 6, tools: memoryTools },
+      appOnly: { count: 1, tools: ['list_memory_assets'] },
+      workflow: { tools: ['plan_heartbeat', 'resume_plan', 'converge'] },
+      full: { count: 33 },
+    },
   }));
+  fs.writeFileSync(
+    path.join(root, 'src/lib/mcp-apps.ts'),
+    'io.modelcontextprotocol/ui\ntext/html;profile=mcp-app\nmemory-center\n'
+  );
+  fs.writeFileSync(
+    path.join(root, 'src/protocol/__tests__/mcp-apps.integration.test.ts'),
+    'official MCP Apps integration\n'
+  );
   fs.writeFileSync(
     path.join(root, 'CHANGELOG.md'),
     `# Changelog\n\n## [${options.version}] - 2026-07-30\n\n- release candidate\n`

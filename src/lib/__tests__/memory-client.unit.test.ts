@@ -397,4 +397,77 @@ describe('memory-client 去重逻辑', () => {
       'active-1',
     ]);
   });
+  test('listAssets browses history with lifecycle filters and pagination', async () => {
+    vi.stubEnv('MEMORY_QDRANT_URL', 'http://127.0.0.1:50008');
+
+    const points = [
+      {
+        id: 'active-new',
+        payload: {
+          id: 'active-new',
+          name: 'New active memory',
+          type: 'pattern',
+          description: 'new',
+          summary: 'new active',
+          content: 'new content',
+          tags: ['pattern'],
+          confidence: 0.9,
+          status: 'active',
+          sourceProject: 'acme/api',
+          createdAt: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-07-30T00:00:00.000Z',
+        },
+      },
+      {
+        id: 'stale-old',
+        payload: {
+          id: 'stale-old',
+          name: 'Old stale memory',
+          type: 'pattern',
+          description: 'old',
+          summary: 'stale',
+          content: 'old content',
+          tags: ['pattern'],
+          confidence: 0.5,
+          status: 'stale',
+          sourceProject: 'acme/api',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-02-01T00:00:00.000Z',
+        },
+      },
+    ];
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/points/scroll')) {
+        return new Response(JSON.stringify({
+          result: { points, next_page_offset: null },
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = new MemoryClient();
+    const active = await client.listAssets({
+      includeInactive: false,
+      sourceProject: 'acme/api',
+      limit: 10,
+    });
+    const history = await client.listAssets({
+      includeInactive: true,
+      sourceProject: 'acme/api',
+      limit: 1,
+      offset: 1,
+    });
+
+    expect(active.items.map((item) => item.id)).toEqual(['active-new']);
+    expect(history.total).toBe(2);
+    expect(history.items.map((item) => item.id)).toEqual(['stale-old']);
+    expect(history.items[0]?.status).toBe('stale');
+  });
+
 });

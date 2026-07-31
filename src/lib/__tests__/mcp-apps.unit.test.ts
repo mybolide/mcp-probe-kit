@@ -1,67 +1,88 @@
 import { describe, expect, test } from 'vitest';
 import {
-  buildCodeInsightAppHtml,
-  buildSearchMemoryAppHtml,
-  isMcpUiAppTool,
+  MCP_APPS_EXTENSION_ID,
+  MCP_APP_MIME_TYPE,
+  MCP_APP_RESOURCES,
+  buildMcpAppHtml,
+  buildMcpAppToolMeta,
+  getMcpAppResourceUri,
+  supportsMcpApps,
 } from '../mcp-apps.js';
 
+const supportedCapabilities = {
+  extensions: {
+    [MCP_APPS_EXTENSION_ID]: {
+      mimeTypes: [MCP_APP_MIME_TYPE],
+    },
+  },
+};
+
 describe('mcp-apps', () => {
-  test('search_memory 与 code_insight 属于 UI App 工具', () => {
-    expect(isMcpUiAppTool('search_memory')).toBe(true);
-    expect(isMcpUiAppTool('code_insight')).toBe(true);
-    expect(isMcpUiAppTool('gencommit')).toBe(false);
+  test('declares five stable MCP App resources', () => {
+    expect(MCP_APP_RESOURCES).toHaveLength(5);
+    expect(MCP_APP_RESOURCES.map((resource) => resource.uri)).toEqual(
+      expect.arrayContaining([
+        'ui://mcp-probe-kit/memory-center',
+        'ui://mcp-probe-kit/feature-workbench',
+        'ui://mcp-probe-kit/bug-workbench',
+        'ui://mcp-probe-kit/product-workbench',
+        'ui://mcp-probe-kit/convergence',
+      ]),
+    );
   });
 
-  test('search_memory App 渲染命中卡片与 handles', () => {
-    const html = buildSearchMemoryAppHtml(
-      { query: 'proxy bug' },
-      {
-        structuredContent: {
-          query: 'proxy bug',
-          count: 1,
-          results: [
-            {
-              id: 'asset-1',
-              name: 'feishu-proxy',
-              type: 'bugfix',
-              score: 0.88,
-              summary: 'proxy mismatch',
-              content: '【修复】done',
-              tags: ['bugfix'],
-            },
-          ],
-          handles: {
-            memory_assets: [{ id: 'asset-1', tool: 'read_memory_asset' }],
-          },
-        },
-      }
-    );
-
-    expect(html).toContain('search_memory');
-    expect(html).toContain('feishu-proxy');
-    expect(html).toContain('asset-1');
-    expect(html).toContain('read_memory_asset');
-    expect(html).toContain('proxy mismatch');
+  test('detects negotiated official MCP Apps support', () => {
+    expect(supportsMcpApps(supportedCapabilities)).toBe(true);
+    expect(supportsMcpApps({ extensions: {} })).toBe(false);
+    expect(supportsMcpApps(undefined)).toBe(false);
   });
 
-  test('code_insight App 渲染状态与执行表', () => {
-    const html = buildCodeInsightAppHtml(
-      { mode: 'auto' },
-      {
-        structuredContent: {
-          status: 'ok',
-          provider: 'gitnexus',
-          summary: 'login flow analyzed',
-          mode: { requested: 'auto', resolved: 'query' },
-          executions: [{ tool: 'query', ok: true, text: 'found login handler' }],
-          handles: { graph_resource: 'probe://graph/latest' },
-        },
-      }
-    );
+  test('adds UI metadata only after capability negotiation', () => {
+    expect(
+      buildMcpAppToolMeta('start_feature', supportedCapabilities, true),
+    ).toEqual({
+      ui: {
+        resourceUri: 'ui://mcp-probe-kit/feature-workbench',
+        visibility: ['model', 'app'],
+      },
+      'ui/resourceUri': 'ui://mcp-probe-kit/feature-workbench',
+    });
+    expect(buildMcpAppToolMeta('start_feature', {}, true)).toBeUndefined();
+    expect(buildMcpAppToolMeta('start_feature', supportedCapabilities, false)).toBeUndefined();
+    expect(buildMcpAppToolMeta('gencommit', supportedCapabilities, true)).toBeUndefined();
+    expect(
+      buildMcpAppToolMeta(
+        'list_memory_assets',
+        supportedCapabilities,
+        true,
+        ['app'],
+      ),
+    ).toMatchObject({
+      ui: {
+        resourceUri: 'ui://mcp-probe-kit/memory-center',
+        visibility: ['app'],
+      },
+    });
+  });
 
-    expect(html).toContain('code_insight');
-    expect(html).toContain('login flow analyzed');
-    expect(html).toContain('probe://graph/latest');
-    expect(html).toContain('found login handler');
+  test('builds a self-contained Memory Center app document', () => {
+    const resource = MCP_APP_RESOURCES.find(
+      (item) => item.uri === 'ui://mcp-probe-kit/memory-center',
+    );
+    expect(resource).toBeDefined();
+    const html = buildMcpAppHtml(resource!);
+    expect(html).toContain('data-app-kind="memory-center"');
+    expect(html).toContain('MCP Probe Kit Memory Center');
+    expect(html).toContain('list_memory_assets');
+    expect(html).toContain('ui/initialize');
+  });
+
+  test('maps model tools to stable app resources', () => {
+    expect(getMcpAppResourceUri('search_memory')).toBe(
+      'ui://mcp-probe-kit/memory-center',
+    );
+    expect(getMcpAppResourceUri('converge')).toBe(
+      'ui://mcp-probe-kit/convergence',
+    );
   });
 });

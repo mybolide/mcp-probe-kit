@@ -11,6 +11,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.2] - 2026-07-31
+
+### Added
+
+- **Official MCP Apps integration** using `@modelcontextprotocol/ext-apps` and the stable `io.modelcontextprotocol/ui` extension with `text/html;profile=mcp-app` resources.
+- **Five interactive Apps**: Memory Center, Feature Workbench, Bug Workbench, Product Workbench, and Convergence Gate.
+- **Memory Center browsing action**: `list_memory_assets` supports pagination and type, status, project, and tag filters without placing full memory content in list responses.
+- **App-only tool visibility**: App actions use `_meta.ui.visibility=["app"]`; model tools use `["model", "app"]` where an interactive View is available.
+
+### Changed
+
+- The default `MCP_TOOLSET` is now **`compact`**, exposing 23 model tools instead of all 33.
+- When the Memory backend and embedding service are configured, the compact model surface expands dynamically from 23 to 29 tools.
+- `MCP_TOOLSET=full` preserves the previous 33-tool compatibility and diagnostic surface.
+- `add_feature`, `fix_bug`, `sync_ui_data`, and `ask_user` are no longer part of the default model surface. Their underlying capabilities remain available through orchestration, maintenance scripts, or full mode.
+- MCP App resources are predeclared stable `ui://` resources rather than per-call HTML previews.
+
+### Compatibility
+
+- Clients that do not negotiate MCP Apps receive the existing text and `structuredContent` responses and do not receive App metadata or App resources.
+- Apps-capable clients may receive one additional raw `tools/list` entry, `list_memory_assets`, marked App-only. It is not part of the 23/29 model-visible count.
+- The deprecated `_meta["ui/resourceUri"]` alias is emitted alongside `_meta.ui.resourceUri` for older Apps hosts.
+
+### Validation
+
+- Added MCP Apps capability-negotiation, resource MIME, View document, App-only visibility, plain-client degradation, and Memory Center action tests.
+- Release gates now verify the 23/29/33 tool surfaces, official Apps dependency, App-only action manifest, and generated App bundle.
+- `npm run release:verify` passed with 83 test files / 393 tests, 81 stability calls, clean rc.2 package installation, v3.7.0 rollback, Inspector 2.0.0, and zero production vulnerabilities.
+- Claude Code 2.1.179 passed real-host rc.2 core acceptance in `auto` mode: `workflow`, `plan_heartbeat`, `resume_plan`, and `converge`; MCP Apps GUI support is not claimed for that Host.
+
+---
+
 ## [4.0.0-rc.1] - 2026-07-30
 
 ### Added

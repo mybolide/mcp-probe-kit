@@ -14,7 +14,7 @@ describe('dev-workflow', () => {
 
   test('发布候选开发中的实机验收不会误判为 spec', () => {
     const result = detectWorkflowScenario([
-      '继续 MCP Probe Kit v4.0.0-rc.1 发布候选开发：',
+      '继续 MCP Probe Kit v4.0.0-rc.2 发布候选开发：',
       '- 校验 npm next 标签与 Git Tag/package version 一致性；',
       '- Legacy/Modern 双协议与 Agent Evals；',
       '- 真实客户端兼容矩阵保持 pending，完成实机验收前不得发布稳定版。',

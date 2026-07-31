@@ -27,7 +27,7 @@
   - 证据块：Legacy、Modern、同步三路径等价测试；真实 Legacy Task 协议集成；取消/断线/晚到 Progress/并发状态竞态与 JSON 重启恢复测试。
   - 子任务引用：task-runtime/1.1、task-runtime/1.2、task-runtime/2.1。
 - [x] 0.6 完成 Agent Evals 与发布就绪自动化 — _需求: FR-9_
-  - 证据块：24 项 Agent Evals 全部通过；`npm run release:verify` 完成 81 文件/383 项测试、构建、双协议、真实 Agent、81 次稳定性调用、tarball 安装、v3.7.0 回退、Inspector 2.0.0 和生产依赖审计；Node 20.20.2 实际运行同样通过。`4.0.0-rc.1` 映射 npm `next` 且跳过稳定 MCP Registry。
+  - 证据块：24 项 Agent Evals 全部通过；`npm run release:verify` 完成 83 个测试文件/393 项测试、构建、Legacy/Modern 双协议、23/29/33 工具面、本地 Agent 验收、81 次稳定性调用、rc.2 tarball 安装、v3.7.0 回退、Inspector 2.0.0、MCP Apps 协商与生产依赖审计；`4.0.0-rc.2` 对应 npm `next`，不发布正式 MCP Registry。
   - 子任务引用：release-readiness/1.1、release-readiness/1.2、release-readiness/2.1、release-readiness/2.2。
 
 ## 需求覆盖矩阵

@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> 知时MCP 是专为极客打造的协议级探测与上下文补给工具箱。它不仅仅是 33 个工具的堆砌，更是一套让 AI 真正"读懂"你项目意图的感知系统。
+> 知时MCP 是协议级的上下文探测与研发编排工具箱。v4 默认向模型暴露 23 个清晰入口，完整配置 Memory 后为 29 个，并保留 33 个工具的 full 兼容面。
 
 **Languages**: [English](../README.md) | **简体中文** | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,13 +20,13 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，提供 **33 个工具**，覆盖从产品分析到最终发布的全流程（需求 → 设计 → 开发 → 质量 → 发布），所有工具支持**结构化输出**。
+一个强大的 MCP (Model Context Protocol) 服务器，默认提供 **23 个模型可见工具**；完整配置 Memory 后提供 **29 个**；通过 `MCP_TOOLSET=full` 可恢复 **33 个兼容工具**。支持结构化输出、Legacy/Modern 双协议和正式 MCP Apps。
 
 **🎉 v3.0 重大更新**：精简工具数量，专注核心竞争力，消除选择困难，让 AI 做更多原生工作
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
-**协议版本**：MCP 2025-11-25 · **SDK**：@modelcontextprotocol/sdk 1.27.1
+**协议支持**：Legacy MCP（2025-era）+ Modern MCP 2026-07-28 · **SDK**：TypeScript SDK v2 拆分包 · **运行时**：Node.js 20+
 
 ---
 
@@ -36,7 +36,7 @@
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
 - [本地记忆栈（Qdrant + Nomic Embed）](../docs/memory-local-setup.zh-CN.md) - Docker Compose、端口 50008/50012、MCP 配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 33个工具完整列表
+- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 默认、Memory 条件工具、App-only 动作和 full 兼容工具面
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
 - [v3.0 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x → v3.0 升级指南
 
@@ -44,26 +44,13 @@
 
 ## ✨ 核心特性
 
-### 📦 33 个工具
+### 📦 工具面
 
-- **🧭 路由** (1个) - 根据完整任务摘要选择正确的 MCP 工作流
-  - `workflow`
-- **🔁 计划状态与收敛** (3个) - 为委托计划记录检查点、恢复执行并执行证据闸门
-  - `plan_heartbeat`, `resume_plan`, `converge`
-- **🔄 工作流编排** (6个) - 一键完成复杂开发流程
-  - `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **🔍 代码分析** (4个) - 代码质量、重构与图谱洞察
-  - `code_review`, `code_insight`, `fix_bug`, `refactor`
-- **📝 Git 工具** (2个) - Git 提交和工作报告
-  - `gencommit`, `git_work_report`
-- **⚡ 代码生成** (1个) - 测试生成
-  - `gentest`
-- **📦 项目管理** (7个) - 项目初始化、需求与规格校验
-  - `init_project`, `init_project_context`, `add_feature`, `check_spec`, `estimate`, `interview`, `ask_user`
-- **🎨 UI/UX 工具** (3个) - 设计系统与数据同步
-  - `ui_design_system`, `ui_search`, `sync_ui_data`
-- **🧠 记忆** (6个) - 资产记忆沉淀
-  - `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
+- **默认 `compact`**：23 个模型可见工具，保留 `start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge` 等独立入口。
+- **完整配置 Memory**：动态增加 6 个 Memory 工具，模型可见数量为 29。
+- **`MCP_TOOLSET=full`**：恢复 33 个兼容模型工具，用于旧流程和诊断。
+- **MCP Apps**：`list_memory_assets` 仅供 Memory Center 调用，标记为 `visibility=["app"]`，不计入模型工具数量。
+- 默认隐藏 `add_feature`、`fix_bug`、`sync_ui_data`、`ask_user`，但其能力仍由编排、维护脚本或 full 模式保留。
 
 ### 🔁 委托计划状态、恢复与收敛
 

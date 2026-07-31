@@ -1,6 +1,13 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { getMemoryConfig, isMemoryEnabled, isMemoryReadEnabled, type MemoryConfig } from './memory-config.js';
 import { buildMemoryEmbeddingInput } from './memory-embedding.js';
+import { buildMemoryContentHashes } from './memory-hash.js';
+import {
+  listMemoryAssetHistory,
+  normalizeProjectIdentity,
+  type MemoryHistoryOptions,
+  type MemoryHistoryResult,
+} from './memory-history.js';
 import {
   isMemorySearchEligible,
   normalizeMemoryStatus,
@@ -29,24 +36,7 @@ function truncate(value: string, maxChars: number): string {
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
-export function normalizeContentForHash(content: string): string {
-  return content
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .map((line) => line.replace(/[ \t]+$/g, ''))
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-export function sha256Hex(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
-}
-export function buildMemoryContentHashes(content: string): { contentHash: string; normalizedContentHash: string } {
-  return {
-    contentHash: sha256Hex(content),
-    normalizedContentHash: sha256Hex(normalizeContentForHash(content)),
-  };
-}
+export { buildMemoryContentHashes, normalizeContentForHash } from './memory-hash.js';
 export class MemoryClient {
   constructor(private readonly config: MemoryConfig = getMemoryConfig()) {}
 
@@ -338,6 +328,19 @@ export class MemoryClient {
     return filtered.slice(0, limit);
   }
 
+  async listAssets(
+    options: MemoryHistoryOptions = {},
+  ): Promise<MemoryHistoryResult> {
+    if (!this.isReadEnabled()) return { items: [], total: 0 };
+    return listMemoryAssetHistory({
+      config: this.config,
+      headers: this.buildHeaders(),
+      requestJson: <T>(url: string, init?: RequestInit) =>
+        this.requestJson<T>(url, init),
+      options,
+    });
+  }
+
   async getAsset(assetId: string): Promise<MemoryAsset | null> {
     if (!this.isReadEnabled()) {
       return null;
@@ -488,11 +491,4 @@ export class MemoryClient {
 }
 export function createMemoryClient(): MemoryClient {
   return new MemoryClient();
-}
-function normalizeProjectIdentity(value: string | undefined): string {
-  return (value ?? '')
-    .trim()
-    .replace(/\\/g, '/')
-    .replace(/\.git$/i, '')
-    .toLowerCase();
 }

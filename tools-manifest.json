@@ -1,8 +1,92 @@
 {
-  "version": "4.0.0-rc.1",
+  "version": "4.0.0-rc.2",
   "protocol": "2025-11-25",
   "totalTools": 33,
   "toolsets": {
+    "compact": {
+      "description": "23 default model tools",
+      "count": 23,
+      "tools": [
+        "start_feature",
+        "start_bugfix",
+        "start_ui",
+        "start_onboard",
+        "start_product",
+        "start_ralph",
+        "workflow",
+        "init_project_context",
+        "init_project",
+        "check_spec",
+        "estimate",
+        "code_insight",
+        "gentest",
+        "code_review",
+        "refactor",
+        "gencommit",
+        "git_work_report",
+        "ui_design_system",
+        "ui_search",
+        "plan_heartbeat",
+        "resume_plan",
+        "converge",
+        "interview"
+      ],
+      "note": "Default model-visible surface"
+    },
+    "compactWithMemory": {
+      "description": "29 model tools when Memory is configured",
+      "count": 29,
+      "tools": [
+        "start_feature",
+        "start_bugfix",
+        "start_ui",
+        "start_onboard",
+        "start_product",
+        "start_ralph",
+        "workflow",
+        "init_project_context",
+        "init_project",
+        "check_spec",
+        "estimate",
+        "code_insight",
+        "gentest",
+        "code_review",
+        "refactor",
+        "gencommit",
+        "git_work_report",
+        "ui_design_system",
+        "ui_search",
+        "plan_heartbeat",
+        "resume_plan",
+        "converge",
+        "interview",
+        "search_memory",
+        "read_memory_asset",
+        "memorize_asset",
+        "update_memory_asset",
+        "delete_memory_asset",
+        "scan_and_extract_patterns"
+      ]
+    },
+    "memoryConditional": {
+      "description": "6 conditionally visible Memory tools",
+      "count": 6,
+      "tools": [
+        "search_memory",
+        "read_memory_asset",
+        "memorize_asset",
+        "update_memory_asset",
+        "delete_memory_asset",
+        "scan_and_extract_patterns"
+      ]
+    },
+    "appOnly": {
+      "description": "1 MCP Apps-only tools hidden from the model",
+      "count": 1,
+      "tools": [
+        "list_memory_assets"
+      ]
+    },
     "core": {
       "description": "12 core tools (daily high-frequency)",
       "count": 12,
@@ -84,7 +168,7 @@
     "full": {
       "description": "All 33 tools",
       "count": 33,
-      "note": "Default toolset, includes all tools"
+      "note": "Compatibility/debugging surface selected with MCP_TOOLSET=full"
     }
   },
   "categories": {
@@ -169,7 +253,7 @@
   },
   "structuredOutput": {
     "description": "Tools supporting structured output (v2.0+)",
-    "version": "4.0.0-rc.1",
+    "version": "4.0.0-rc.2",
     "guidanceOnly": {
       "description": "Guidance-type tools (return okText) - AI should execute tasks according to guidance, Schema for reference",
       "count": 6,

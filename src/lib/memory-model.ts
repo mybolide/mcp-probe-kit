@@ -6,6 +6,7 @@ export const NEGATIVE_MEMORY_TYPES = [
 
 export const MEMORY_STATUSES = [
   'active',
+  'stale',
   'expired',
   'superseded',
   'retracted',
