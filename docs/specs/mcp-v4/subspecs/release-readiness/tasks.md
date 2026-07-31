@@ -13,7 +13,7 @@
 - [x] 2.1 完成迁移与客户端矩阵 — _需求: FR-9_
   - 证据块：v3 → v4 迁移说明覆盖 Node 20、SDK v2、协议模式、Tasks 与 input_required 降级、Plan 状态、Converge 后置记忆、RC `next` 安装和回退；真实客户端按具名版本和实际证据区分 passed、pending 与 blocked。
   - 实现：新增 `docs/migration-v3-to-v4.md` 与 `docs/pages/migration-v4.html`，文档首页和指南入口切换到 v4；Compatibility Matrix 分离 reference 自动结果和人工客户端状态。
-  - 验证：MCP Inspector 2.0.0 与 Claude Code 2.1.179 均在真实宿主调用通过后标记 passed；Cursor 3.0.16 和 OpenCode 1.17.11 记录为 blocked，VS Code Copilot 与 Cline 保持 pending，未把连接成功伪报为完整验收。
+  - 验证：MCP Inspector 2.0.0 与 Claude Code 2.1.179 均在真实宿主调用通过后标记 passed；Cursor 3.0.16、VS Code 1.104.1 / Copilot Chat 0.31.5、未安装的 Cline 和 OpenCode 1.17.11 均按实际阻断原因记录为 blocked，未把连接成功或客户端缺失伪报为完整验收。
 - [x] 2.2 建立稳定 RC 资格与回退规则 — _需求: FR-9_
   - 证据块：`docs/rc-stability-policy.md` 明确定义 Node 20/22、0 失败稳定性循环、安全审计、干净安装、真实 Inspector、v3.7.0 回退和发布后观察窗口。
   - 实现：新增 Node 20/22 CI、`stability:soak`、`smoke:rollback`、`smoke:inspector` 与 `security:audit`；全部进入 `release:verify`。

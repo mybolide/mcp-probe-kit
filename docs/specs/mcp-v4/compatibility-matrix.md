@@ -75,8 +75,8 @@ Reference client 的 `passed` 不等于真实宿主客户端已验证。以下�
 | MCP Inspector | 2.0.0 | passed | 2026-07-30 | `npm run smoke:inspector`；CLI 连接生产构建并发现 33 个工具 | 已验证 tools/list 与关键 Workflow/Plan 工具发现；其他交互能力继续由 reference matrix 覆盖 |
 | Cursor | 3.0.16 | blocked | 2026-07-31 | `docs/specs/mcp-v4/host-compatibility-evidence-2026-07-31.md`；CLI 暴露 `--add-mcp`，但当前安装无法提供可自动化的终端 Agent 调用 | 需在 Cursor GUI 中完成工具发现、路由和同步降级的人工验收；不视为服务端失败 |
 | Claude Code | 2.1.179 | passed | 2026-07-31 | `docs/specs/mcp-v4/host-compatibility-evidence-2026-07-31.md`；真实 Claude Code Agent 调用本地 RC 的 `workflow`、`plan_heartbeat`、`resume_plan`、`converge` | 已验证完整意图路由为 `start_feature` + `spec_layout=auto`，Plan 可恢复并通过 Converge；不宣称 GUI 专属行为或显式配置外的文件系统 Skill 自动安装 |
-| VS Code Copilot | 待记录 | pending | — | — | 验证工具发现、结构化结果和资源读取 |
-| Cline | 待记录 | pending | — | — | 验证 Legacy/Modern 协商与 Requirements Loop |
+| VS Code Copilot | VS Code 1.104.1 / Copilot Chat 0.31.5 | blocked | 2026-07-31 | `docs/specs/mcp-v4/host-compatibility-evidence-2026-07-31.md`；隔离 MCP 注册成功，但日志显示 `Copilot extension not found` | 当前配置缺少基础 `github.copilot` 扩展，Agent 未进入 MCP 工具执行；补齐宿主后重跑 |
+| Cline | 未安装 | blocked | 2026-07-31 | `docs/specs/mcp-v4/host-compatibility-evidence-2026-07-31.md`；VS Code 扩展列表无 Cline，`cline` CLI 不存在 | 安装并记录具名版本后再验证 Legacy/Modern 协商与 Requirements Loop |
 | OpenCode | 1.17.11 | blocked | 2026-07-31 | `docs/specs/mcp-v4/host-compatibility-evidence-2026-07-31.md`；本地 RC MCP 连接成功，Agent 启动被外部 `models.dev` 超时阻断 | Transport/发现通过，尚未完成模型驱动的工具调用；依赖恢复后重跑 |
 
 状态只允许：`pending`、`passed`、`failed`、`blocked`。任何客户端不支持扩展时，不得导致 `start_feature`、`start_bugfix`、`start_ui`、Memory 和代码分析不可用。
