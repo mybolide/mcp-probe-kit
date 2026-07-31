@@ -41,6 +41,7 @@ The six Memory tools are conditionally added to compact only when both Memory st
 
 - Test files: 85 passed
 - Tests: 400 passed
+- Deterministic Tool Contract Audit: 38/38 passed
 - TypeScript build: passed
 - Generated MCP App bundle: passed
 - Production modules remained under the repository line-count gate
@@ -163,11 +164,15 @@ Full real-Agent contract audit (`npm run audit:tools:agent`):
 - 0 contract assessment failures;
 - 0 missing tools;
 - 0 unexpected tools;
-- 0 duplicate-call warnings in the final run.
+- one non-blocking duplicate-call warning: `start_ralph` was called twice; both calls succeeded.
 
 For every tool, the Agent checked purpose understanding, guidance readability, text/`structuredContent` consistency, executable next steps, and false-completion claims. The initial audit found bootstrap contradictions and incomplete guidance contracts in `estimate`, `git_work_report`, `code_review`, `refactor`, and `gentest`; those issues were fixed before the final passing run.
 
 The Host negotiated Legacy protocol `2025-11-25`; forcing Modern correctly failed because this Host does not advertise the Modern protocol version. Claude Code did not negotiate MCP Apps, so no GUI claim is made for this Host.
+
+Codex CLI 0.144.1 was connected to the same local rc.2 production build and made a real `workflow` call with a feature intent. It received `scenario=feature`, `firstTool=start_feature`, and assessed the text and structured response as readable, symmetric, and executable.
+
+OpenCode 1.17.11 connected to the local rc.2 MCP server. Direct `models.dev` access timed out and proxy access through `127.0.0.1:10808` succeeded, but `openzen-1/deepseek-v4-flash-free`, `cpa/deepseek-v4-flash`, and another configured Provider produced no model response before timeout. OpenCode therefore did not reach a real MCP tool call.
 
 ## Remaining manual host work
 
@@ -175,9 +180,10 @@ Current rc.2 status:
 
 - MCP Inspector 2.0.0: passed, including Apps metadata/resource and App-only surface tests
 - Claude Code 2.1.179: passed for all 33 model-tool contracts and core Workflow/Plan lifecycle; Apps GUI not negotiated or claimed
+- Codex CLI 0.144.1: passed for a real local rc.2 `workflow` call
 - Cursor 3.0.16: blocked pending GUI/manual Agent acceptance
 - VS Code Copilot: blocked by host installation state
 - Cline: blocked because no client version is installed
-- OpenCode 1.17.11: blocked by external model/provider startup
+- OpenCode 1.17.11: local rc.2 MCP connected, but model/provider startup returned no response even after `models.dev` became reachable through the configured proxy
 
 No npm publish, Git tag, GitHub Release or MCP Registry action is asserted by this evidence document.

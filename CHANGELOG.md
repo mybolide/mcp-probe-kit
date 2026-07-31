@@ -43,7 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added MCP Apps capability-negotiation, resource MIME, View document, App-only visibility, plain-client degradation, and Memory Center action tests.
 - Release gates now verify the 23/29/33 tool surfaces, official Apps dependency, App-only action manifest, and generated App bundle.
 - `npm run release:verify` passed with 85 test files / 400 tests, 38/38 direct tool-contract calls, 25/25 Agent Evals, 81 stability calls, clean rc.2 package installation, v3.7.0 rollback, Inspector 2.0.0, and zero production vulnerabilities.
-- Claude Code 2.1.179 called all 33 model tools across 7 real-Agent audit batches: 33/33 tools observed, 7/7 batches passed, 0 contract failures, 0 missing or unexpected tools. Its Host did not negotiate MCP Apps, so GUI support is not claimed for Claude Code.
+- Claude Code 2.1.179 called all 33 model tools across 7 real-Agent audit batches: 33/33 tools observed, 7/7 batches passed, 0 contract failures, 0 missing or unexpected tools. One non-blocking duplicate `start_ralph` call was observed. Its Host did not negotiate MCP Apps, so GUI support is not claimed for Claude Code.
+- Codex CLI 0.144.1 completed a real local `workflow` call and confirmed `scenario=feature`, `firstTool=start_feature`, readable guidance, symmetric text/structured output, and an executable next step. OpenCode 1.17.11 connected to the local rc.2 MCP server, but model/Provider startup produced no response, so OpenCode tool execution is not claimed.
 
 ---
 
@@ -77,12 +78,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reference Legacy and Modern protocol matrix.
 - Full unit and integration suite, production build, protocol smoke tests, Agent Evals, package-content check, functional Spec checks, Parent-Child Spec gate, 81-call stability soak, Node 20 minimum-runtime validation, Inspector 2.0.0, production audit, and rollback drill.
-- Real host-client certification is tracked by named client and version: MCP Inspector 2.0.0 and Claude Code 2.1.179 have passed real-host acceptance; unresolved clients remain `pending` or `blocked`.
+- Real host-client certification is tracked by named client and version: MCP Inspector 2.0.0, Claude Code 2.1.179, and Codex CLI 0.144.1 have passed recorded acceptance scopes; unresolved clients remain `pending` or `blocked`.
 
 ### Known limitations
 
 - Modern Tasks Extension is not yet advertised as a native wire capability; Modern task requests use the validated synchronous fallback.
-- Cursor, VS Code Copilot, Cline, and OpenCode still require completed real-client RC acceptance before broad stable `4.0.0` compatibility claims; MCP Inspector 2.0.0 and Claude Code 2.1.179 already have recorded evidence.
+- Cursor, VS Code Copilot, Cline, and OpenCode still require completed real-client RC acceptance before broad stable `4.0.0` compatibility claims; MCP Inspector 2.0.0, Claude Code 2.1.179, and Codex CLI 0.144.1 already have recorded evidence for their stated scopes.
 
 ---
 
