@@ -6,251 +6,20 @@
  */
 
 import { UIDataLoader } from '../utils/ui-data-loader.js';
-import { DesignReasoningEngine, DesignRequest, DesignSystemRecommendation } from '../utils/design-reasoning-engine.js';
-import { ASCIIBoxFormatter } from '../utils/ascii-box-formatter.js';
 import { UISearchOptions } from '../utils/ui-search-engine.js';
 import { syncUIDataToCache, checkUISourcesUpdate } from '../utils/ui-sync.js';
 import { formatShadcnResult, formatGuidelineResult, formatThemeResult, isGuidelineCategory, isShadcnCategory, isShadcnStack, isThemeCategory, pickThemeForProductType } from '../lib/shadcn-ui.js';
-import { formatDesignSystemJson } from '../utils/design-system-json-formatter.js';
-import { renderUiHardRules, renderUiBannedList, renderPreFlightChecklist } from '../lib/quality-constraints.js';
 import { okStructured } from '../lib/response.js';
 import type { DesignSystem, UISearchResult, SyncReport } from '../schemas/output/ui-ux-tools.js';
+import { buildVisualDirectionContract, renderVisualDirectionBrief } from '../utils/visual-direction-engine.js';
+import { searchUiStructures } from '../utils/ui-structure-search.js';
 import {
   reportToolProgress,
   throwIfAborted,
   type ToolExecutionContext,
 } from '../lib/tool-execution-context.js';
 
-/**
- * 文件索引接口
- * 定义需要创建的文件及其元数据
- */
-export interface FileIndex {
-  path: string;          // 文件路径（如 "docs/design-system.json"）
-  purpose: string;       // 文件用途说明
-  order: number;         // 创建顺序（1, 2, 3...）
-  required: boolean;     // 是否必需
-}
-
-/**
- * 创作指导接口
- * 为 AI 提供文档创作的主题和提示，而非具体内容
- */
-export interface CreationGuidance {
-  principles: string[];      // 设计原则文档应包含的主题
-  interaction: string[];     // 交互规范文档应包含的主题
-  layout: string[];          // 布局规范文档应包含的主题
-  config: string[];          // 技术配置文档应包含的主题
-  tips: string[];            // 创作提示
-  hardRules: string;         // UI 设计硬红线（带数值，可逐条核验）
-  banned: string;            // UI 禁用黑名单（命中即 AI slop）
-  preFlight: string;         // 交付前自检矩阵（Pre-Flight Check）
-}
-
-/**
- * UI 设计系统输出接口（重构版）
- * 返回核心数据和创作指导，而非预生成的文档内容
- */
-export interface UIDesignSystemOutput {
-  asciiBox: string;                           // ASCII Box 格式的核心推荐
-  designSystemJson: object;                   // 机器可读的精确配置
-  fileIndex: FileIndex[];                     // 要创建的文件索引（按顺序）
-  creationGuidance: CreationGuidance;         // 创作指导
-  recommendation: DesignSystemRecommendation; // 原始推荐数据
-}
-
-// 全局数据加载器实例
 let dataLoader: UIDataLoader | null = null;
-let reasoningEngine: DesignReasoningEngine | null = null;
-
-/**
- * 生成文件索引
- * 定义需要创建的文件列表及其创建顺序
- * 
- * @returns FileIndex[] - 按创建顺序排列的文件索引数组
- * 
- * Requirements: 3.1, 3.2, 3.3, 3.4
- */
-export function generateFileIndex(): FileIndex[] {
-  return [
-    {
-      path: 'docs/design-system.json',
-      purpose: '机器可读的设计系统配置文件，包含颜色、字体、间距等精确数值',
-      order: 1,
-      required: true,
-    },
-    {
-      path: 'docs/design-guidelines/README.md',
-      purpose: '设计指南目录文件，提供所有设计文档的索引和导航',
-      order: 2,
-      required: true,
-    },
-    {
-      path: 'docs/design-guidelines/01-principles.md',
-      purpose: '设计原则文档，定义核心设计价值观和指导原则',
-      order: 3,
-      required: true,
-    },
-    {
-      path: 'docs/design-guidelines/02-interaction.md',
-      purpose: '交互规范文档，定义用户交互模式和反馈机制',
-      order: 4,
-      required: true,
-    },
-    {
-      path: 'docs/design-guidelines/03-layout.md',
-      purpose: '布局规范文档，定义栅格系统和页面布局模式',
-      order: 5,
-      required: true,
-    },
-    {
-      path: 'docs/design-guidelines/04-config.md',
-      purpose: '技术配置文档，提供具体技术栈的配置代码示例',
-      order: 6,
-      required: true,
-    },
-    {
-      path: 'docs/design-system.md',
-      purpose: '设计系统主文档，包含 ASCII Box 推荐和完整的设计系统概览',
-      order: 7,
-      required: true,
-    },
-  ];
-}
-
-/**
- * 生成创作指导
- * 为 AI 提供文档创作的主题和提示，而非具体内容
- * 
- * @param productType - 产品类型（如 "SaaS", "E-commerce"）
- * @param stack - 技术栈（如 "react", "vue", "nextjs"）
- * @returns CreationGuidance - 包含各类文档的主题列表和创作提示
- * 
- * Requirements: 4.2, 4.3, 4.4, 4.5, 5.3, 5.4
- */
-export function generateCreationGuidance(
-  productType: string,
-  stack?: string
-): CreationGuidance {
-  // 设计原则文档的主题列表
-  const principles = [
-    '核心设计原则（一致性、反馈、效率、容错性）',
-    '设计价值观和理念',
-    '用户体验目标',
-    '可访问性原则',
-    '设计决策指导',
-    '品牌一致性要求',
-  ];
-
-  // 交互规范文档的主题列表
-  const interaction = [
-    '按钮和链接的交互状态（hover、active、disabled）',
-    '表单交互模式（输入、验证、错误提示）',
-    '反馈机制（成功、错误、警告、信息提示）',
-    '加载状态和骨架屏',
-    '动效和过渡效果规范',
-    '手势和触摸交互（移动端）',
-    '键盘导航和快捷键',
-  ];
-
-  // 布局规范文档的主题列表
-  const layout = [
-    '栅格系统（列数、间距、断点）',
-    '页面布局模式（单栏、双栏、三栏）',
-    '组件布局和对齐规则',
-    '响应式设计策略',
-    '间距系统（margin、padding）',
-    '容器和包装器规范',
-    'Z-index 层级管理',
-  ];
-
-  // 技术配置文档的主题列表
-  const config = [
-    '设计 Token 配置（颜色、字体、间距）',
-    '主题配置代码示例',
-    'CSS Variables 定义',
-    '组件样式实现指南',
-    '工具类和辅助函数',
-    '构建和打包配置',
-  ];
-
-  // 根据技术栈调整配置主题
-  if (stack) {
-    const stackLower = stack.toLowerCase();
-
-    if (stackLower.includes('tailwind')) {
-      config.push('Tailwind CSS 配置文件示例');
-      config.push('自定义 Tailwind 插件');
-    }
-
-    if (stackLower.includes('react') || stackLower.includes('next')) {
-      config.push('React 组件样式方案（CSS Modules / Styled Components）');
-      config.push('Theme Provider 配置');
-      config.push('shadcn/ui 初始化与主题变量（components.json、globals.css）');
-      config.push('优先使用 shadcn blocks/components，通过 `npx shadcn@latest add <name>` 安装');
-    }
-
-    if (stackLower.includes('vue') || stackLower.includes('nuxt')) {
-      config.push('Vue 组件样式方案（Scoped CSS / CSS Modules）');
-      config.push('Vue 插件配置');
-    }
-
-    if (stackLower.includes('svelte')) {
-      config.push('Svelte 组件样式方案');
-      config.push('Svelte 预处理器配置');
-    }
-
-    if (stackLower.includes('astro')) {
-      config.push('Astro 组件样式方案');
-      config.push('Astro 集成配置');
-    }
-  }
-
-  // 生成创作提示
-  const tips = [
-    `根据产品类型 "${productType}" 调整文档重点和示例`,
-    '使用 design-system.json 中的精确数值（颜色、字体大小、间距等）',
-    '参考 ASCII Box 推荐中的核心建议',
-    '根据反模式（antiPatterns）提供"应避免"的建议',
-    '提供具体的代码示例，而非抽象描述',
-    '确保所有文档之间保持一致性',
-    '使用清晰的标题层级和结构',
-  ];
-
-  if (stack && isShadcnStack(stack)) {
-    tips.push(`在技术配置文档中提供 ${stack} + shadcn/ui 的具体实现示例`);
-    tips.push('用 `ui_search --category=ui-themes` 选主题，把 globalsCssSnippet 写入 globals.css');
-    tips.push('用 `ui_search --category=ui-guidelines-vercel` 对照 Vercel 界面规范（无障碍/动效/表单）');
-    tips.push('实现阶段先 `ui_search --category=shadcn-blocks` 匹配 block，再 `npx shadcn@latest add <name>` 安装');
-    tips.push('避免手写泛 Tailwind 模板；组件结构对齐 shadcn/ui new-york 风格');
-  } else if (stack) {
-    tips.push(`在技术配置文档中提供 ${stack} 的具体实现示例`);
-    tips.push(`确保代码示例符合 ${stack} 的最佳实践`);
-  }
-
-  // 根据产品类型添加特定提示
-  const productTypeLower = productType.toLowerCase();
-  if (productTypeLower.includes('saas') || productTypeLower.includes('b2b')) {
-    tips.push('强调专业性、效率和数据密集型界面的设计');
-  } else if (productTypeLower.includes('ecommerce') || productTypeLower.includes('e-commerce')) {
-    tips.push('强调产品展示、购物流程和转化率优化');
-  } else if (productTypeLower.includes('healthcare') || productTypeLower.includes('medical')) {
-    tips.push('强调可访问性、清晰度和信任感');
-  } else if (productTypeLower.includes('fintech') || productTypeLower.includes('finance')) {
-    tips.push('强调安全性、可信度和数据可视化');
-  }
-
-  return {
-    principles,
-    interaction,
-    layout,
-    config,
-    tips,
-    hardRules: renderUiHardRules(),
-    banned: renderUiBannedList(),
-    preFlight: renderPreFlightChecklist(),
-  };
-}
 
 /**
  * 获取数据加载器实例
@@ -267,307 +36,123 @@ async function getDataLoader(): Promise<UIDataLoader> {
 }
 
 /**
- * 获取推理引擎实例
- */
-export async function getReasoningEngine(): Promise<DesignReasoningEngine> {
-  if (!reasoningEngine) {
-    const loader = await getDataLoader();
-    const searchEngine = loader.getSearchEngine();
-
-    reasoningEngine = new DesignReasoningEngine();
-
-    // 加载所有数据（包括推理规则）
-    const products = searchEngine.getCategoryData('products') || [];
-    const styles = searchEngine.getCategoryData('styles') || [];
-    const colors = searchEngine.getCategoryData('colors') || [];
-    const typography = searchEngine.getCategoryData('typography') || [];
-    const landing = searchEngine.getCategoryData('landing') || [];
-    const uxGuidelines = searchEngine.getCategoryData('ux-guidelines') || [];
-    const reasoning = (searchEngine.getCategoryData('ui-reasoning') || []) as any[];
-
-    reasoningEngine.loadData({
-      products,
-      styles,
-      colors,
-      typography,
-      landing,
-      uxGuidelines,
-      reasoning: reasoning as any,
-    });
-  }
-  return reasoningEngine;
-}
-
-/**
- * UI 设计系统生成工具（重构版 - AI 驱动的文档生成）
- * 
- * 不再使用硬编码模板，而是返回核心数据和创作指导，
- * 让 AI 根据推荐自由创建文档内容
- * 
- * Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.5, 6.1-6.6
+ * UI 视觉方向生成工具 v2。
+ *
+ * 返回一个协调的、可执行的视觉方向契约，而不是独立拼装风格、颜色、字体和动效。
+ * 旧 colors/typography 字段由 v2 契约派生，仅用于兼容现有调用方。
  */
 export async function uiDesignSystem(args: any) {
   try {
-    // 构建设计请求
-    const request: DesignRequest = {
-      productType: args.product_type || args.description || 'SaaS',
+    const contract = buildVisualDirectionContract({
+      productType: args.product_type || args.description || 'Product',
       description: args.description,
       stack: args.stack,
       targetAudience: args.target_audience,
-      keywords: args.keywords ? args.keywords.split(',').map((k: string) => k.trim()) : undefined,
-    };
+      screenType: args.screen_type,
+      visualDirection: args.visual_direction,
+      density: args.density,
+      brandPersonality: args.brand_personality || args.keywords,
+      references: args.references,
+      avoid: args.avoid,
+      targetScore: args.target_score,
+    });
 
-    // 获取推理引擎
-    const engine = await getReasoningEngine();
+    const message = renderVisualDirectionBrief(contract);
+    const colorTokens = contract.visualLanguage.color.tokens;
+    const typography = contract.visualLanguage.typography;
 
-    // 生成设计系统推荐
-    const recommendation = engine.generateRecommendation(request);
-
-    // 格式化输出（保留 ASCII Box 和 JSON 格式化）
-    const formatter = new ASCIIBoxFormatter();
-    const asciiBox = formatter.format(recommendation);
-
-    // 生成 JSON 格式
-    const designSystemJson = formatDesignSystemJson(
-      recommendation,
-      request.productType,
-      request.stack
-    );
-
-    // 生成文件索引（按创建顺序）
-    const fileIndex = generateFileIndex();
-
-    // 生成创作指导
-    const creationGuidance = generateCreationGuidance(
-      request.productType,
-      request.stack
-    );
-
-    const loader = await getDataLoader();
-    const themeRecommendation = isShadcnStack(request.stack)
-      ? pickThemeForProductType(
-          loader.getSearchEngine().getCategoryData('ui-themes') || [],
-          request.productType
-        )
-      : undefined;
-    const themeSection = themeRecommendation
-      ? `
-## 🎨 推荐 shadcn 主题（内嵌预设）
-
-- **主题**: ${themeRecommendation.title} (\`${themeRecommendation.name}\`)
-- **说明**: ${themeRecommendation.description}
-- **操作**: 将下方 CSS variables 写入 \`app/globals.css\`；也可用 \`ui_search --category=ui-themes --query="${request.productType}"\`
-
-\`\`\`css
-${themeRecommendation.globalsCssSnippet}
-\`\`\`
-`
-      : '';
-
-    const vercelSection = isShadcnStack(request.stack)
-      ? `
-## ✅ Vercel 界面规范（实现时对照）
-
-- 检索: \`ui_search --category=ui-guidelines-vercel --query="form accessibility animation"\`
-- 重点: 表单可访问性、\`prefers-reduced-motion\`、对比度、键盘焦点、禁止 \`transition: all\`
-`
-      : '';
-
-    // 构建输出对象
-    const output: UIDesignSystemOutput = {
-      asciiBox,
-      designSystemJson,
-      fileIndex,
-      creationGuidance,
-      recommendation,
-    };
-
-    // 格式化文件索引列表
-    const fileIndexList = fileIndex
-      .map(file => `${file.order}. **${file.path}** ${file.required ? '(必需)' : '(可选)'}\n   ${file.purpose}`)
-      .join('\n\n');
-
-    // 格式化创作指导
-    const guidanceText = `
-### 设计原则文档主题
-${creationGuidance.principles.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
-
-### 交互规范文档主题
-${creationGuidance.interaction.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
-
-### 布局规范文档主题
-${creationGuidance.layout.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
-
-### 技术配置文档主题
-${creationGuidance.config.map((topic, i) => `${i + 1}. ${topic}`).join('\n')}
-
-### 创作提示
-${creationGuidance.tips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
-
----
-
-${creationGuidance.hardRules}
-
-${creationGuidance.banned}
-
-${creationGuidance.preFlight}
-`;
-
-    const message = `# ✅ 设计系统推荐已生成
-
-**产品类型**: ${request.productType}
-**技术栈**: ${request.stack || 'html'}
-${request.targetAudience ? `**目标用户**: ${request.targetAudience}` : ''}
-
----
-
-## 🎨 1. 核心设计推荐（ASCII Box）
-
-以下是基于 AI 推理引擎生成的核心设计推荐：
-
-\`\`\`
-${asciiBox}
-\`\`\`
-
----
-
-## 📊 2. 精确配置数据（JSON）
-
-以下是机器可读的设计系统配置，包含所有精确数值：
-
-\`\`\`json
-${JSON.stringify(designSystemJson, null, 2)}
-\`\`\`
-
----
-
-## 📁 3. 文件索引（按创建顺序）
-
-请严格按照以下顺序创建文件：
-
-${fileIndexList}
-
-**注意**: design-system.md 是最后创建的主文档，它应该包含完整的设计系统概览和 ASCII Box 推荐。
-
----
-
-## 📝 4. 文档创作指导
-
-以下是各类文档应包含的关键主题。**请根据上述 ASCII Box 推荐和 JSON 数据自由创作内容，不要使用固定模板**：
-
-${guidanceText}
-${themeSection}
-${vercelSection}
-
----
-
-## ✨ 请根据以上推荐和指导创建文档
-
-**现在，请按照文件索引的顺序，逐个创建设计系统文档。**
-
-### 创作要求：
-
-1. **使用核心数据**：
-   - 将 ASCII Box 中的核心推荐作为设计依据
-   - 使用 JSON 数据中的精确数值（颜色代码、字体大小、间距值等）
-   - 确保所有数值与 JSON 配置保持一致
-
-2. **遵循文件顺序**：
-   - 严格按照文件索引的顺序创建（1→2→3→4→5→6→7）
-   - design-system.json 最先创建（包含所有精确配置）
-   - design-system.md 最后创建（包含完整概览）
-
-3. **自由创作内容**：
-   - 参考创作指导中的主题列表
-   - 根据产品类型 "${request.productType}" 调整重点
-   ${request.stack ? `- 提供 ${request.stack} 的具体实现示例` : ''}
-   - 不要局限于固定模板，发挥创造力
-
-4. **保持一致性**：
-   - 所有文档使用相同的设计 Token（颜色、字体、间距）
-   - 确保术语和命名规范统一
-   - 交叉引用其他文档时保持准确
-
-5. **提供实用示例**：
-   - 包含具体的代码示例（不要抽象描述）
-   - 展示实际应用场景
-   - 参考反模式（antiPatterns）提供"应避免"的建议
-${isShadcnStack(request.stack) ? `
-6. **shadcn/ui 实现路径**（${request.stack}）：
-   - 用 \`ui_search --category=ui-themes\` 确认主题；上文的 globals.css 片段可直接使用
-   - 用 \`ui_search --category=shadcn-blocks --query="..."\` 找 block，再 \`npx shadcn@latest add <name>\`
-   - 用 \`ui_search --category=ui-guidelines-vercel\` 对照 Vercel 规范
-   - 在 block 基础上改文案/数据，不要从零写 Card/Button
-` : ''}
-
-### 开始创作：
-
-**第一步**：创建 \`docs/design-system.json\`，包含所有精确配置数据（使用上面的 JSON）
-
-**第二步**：创建 \`docs/design-guidelines/README.md\`，提供设计指南的索引和导航
-
-**第三步至第六步**：依次创建四个设计指南文档（principles、interaction、layout、config）
-
-**最后一步**：创建 \`docs/design-system.md\`，包含以下内容：
-   - ASCII Box 推荐（核心设计）
-   - 完整的设计系统概览
-   - **文件索引**（列出所有设计文档的链接，方便后续查看和使用）
-   - 快速开始指南
-
----
-
-🚀 **准备好了吗？让我们开始创建第一个文件吧！**
-`;
-
-    // 构建结构化数据对象
     const structuredData: DesignSystem = {
-      summary: `设计系统推荐已生成 - ${request.productType}`,
-      productType: request.productType,
+      ...contract,
+      productType: contract.objective.productType,
       colors: {
-        primary: (recommendation.colors?.primary as any) || {},
-        secondary: (recommendation.colors?.secondary as any) || {},
-        neutral: {},
-        semantic: {},
+        primary: {
+          '500': colorTokens.accent,
+          '600': colorTokens.accentStrong,
+        },
+        secondary: {
+          canvas: colorTokens.canvas,
+          surface: colorTokens.surface,
+        },
+        neutral: {
+          text: colorTokens.text,
+          mutedText: colorTokens.mutedText,
+          line: colorTokens.line,
+        },
+        semantic: {
+          success: colorTokens.success,
+          warning: colorTokens.warning,
+          danger: colorTokens.danger,
+        },
       },
       typography: {
-        fontFamilies: {},
-        fontSizes: {},
-        fontWeights: {},
-        lineHeights: {},
+        fontFamilies: {
+          strategy: typography.familyStrategy,
+        },
+        fontSizes: { ...typography.scale },
+        fontWeights: { ...typography.weights },
+        lineHeights: { ...typography.lineHeights },
       },
-      spacing: {},
-      breakpoints: {},
-      components: [],
-      documentation: asciiBox,
+      spacing: {
+        base: contract.visualLanguage.spacing.base,
+        scale: contract.visualLanguage.spacing.scale,
+        sectionGap: contract.visualLanguage.spacing.sectionGap,
+      },
+      breakpoints: {
+        mobile: '390px',
+        tablet: '768px',
+        desktop: '1440px',
+      },
+      components: contract.componentRules.map((item) => ({
+        name: item.component,
+        rule: item.rule,
+      })),
+      documentation: message,
     };
 
-    // 返回结构化输出（Requirements: 2.1, 2.5, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6）
     return okStructured(message, structuredData, {
       schema: (await import('../schemas/output/ui-ux-tools.js')).DesignSystemSchema,
+      contractVersion: contract.contractVersion,
+      note: '视觉方向是实现与截图评审的单一依据；旧 colors/typography 字段仅用于兼容现有调用方。',
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+    const fallback = buildVisualDirectionContract({
+      productType: args.product_type || 'Product',
+      description: args.description || '生成可执行的产品界面视觉方向',
+      targetAudience: args.target_audience,
+      targetScore: args.target_score,
+    });
+    const message = `视觉方向生成失败：${errorMessage}\n\n已返回安全的 Operational Clarity 基线，请补充页面类型、核心任务和目标用户后重试。`;
+    const tokens = fallback.visualLanguage.color.tokens;
     const errorData: DesignSystem = {
-      summary: "设计系统生成失败",
-      productType: args.product_type || 'Unknown',
-      colors: {},
-      typography: {},
+      ...fallback,
+      summary: '视觉方向生成失败，已返回安全基线',
+      productType: fallback.objective.productType,
+      colors: {
+        primary: { '500': tokens.accent, '600': tokens.accentStrong },
+        secondary: { canvas: tokens.canvas, surface: tokens.surface },
+        neutral: { text: tokens.text, mutedText: tokens.mutedText, line: tokens.line },
+        semantic: { success: tokens.success, warning: tokens.warning, danger: tokens.danger },
+      },
+      typography: {
+        fontFamilies: { strategy: fallback.visualLanguage.typography.familyStrategy },
+        fontSizes: { ...fallback.visualLanguage.typography.scale },
+        fontWeights: { ...fallback.visualLanguage.typography.weights },
+        lineHeights: { ...fallback.visualLanguage.typography.lineHeights },
+      },
+      spacing: {
+        base: fallback.visualLanguage.spacing.base,
+        scale: fallback.visualLanguage.spacing.scale,
+        sectionGap: fallback.visualLanguage.spacing.sectionGap,
+      },
+      breakpoints: { mobile: '390px', tablet: '768px', desktop: '1440px' },
+      components: fallback.componentRules.map((item) => ({ name: item.component, rule: item.rule })),
+      documentation: message,
     };
-    
-    return okStructured(`❌ 设计系统生成失败: ${errorMessage}
 
-**可能的原因**:
-1. 数据未加载完成
-2. 产品类型不明确
-3. 数据格式错误
-
-**建议**:
-1. 提供更具体的产品类型（如 "SaaS", "E-commerce", "Healthcare"）
-2. 添加产品描述帮助推理引擎理解需求
-3. 检查数据是否已同步（使用 \`sync_ui_data\` 工具）
-`, errorData, {
+    return okStructured(message, errorData, {
       schema: (await import('../schemas/output/ui-ux-tools.js')).DesignSystemSchema,
+      degraded: true,
     });
   }
 }
@@ -579,6 +164,72 @@ export async function uiSearch(args: any) {
   try {
     const mode = args.mode || 'search';
     const query = args.query || '';
+
+    if (mode === 'structure') {
+      const matches = searchUiStructures({
+        query,
+        screenType: args.screen_type,
+        density: args.density,
+        limit: args.limit || 3,
+      });
+
+      const structuredData: UISearchResult = {
+        summary: matches.length
+          ? `找到 ${matches.length} 个页面结构候选`
+          : '未找到页面结构候选',
+        query,
+        category: 'page-structure',
+        results: matches.map(({ pattern, score, reasons }) => ({
+          id: pattern.id,
+          title: pattern.title,
+          description: pattern.description,
+          category: 'page-structure',
+          score,
+          preview: JSON.stringify({
+            screenTypes: pattern.screenTypes,
+            densities: pattern.densities,
+            regions: pattern.regions,
+            flow: pattern.flow,
+            interaction: pattern.interaction,
+            responsive: pattern.responsive,
+            useWhen: pattern.useWhen,
+            avoid: pattern.avoid,
+            referenceMethods: pattern.referenceMethods,
+            matchReasons: reasons,
+          }, null, 2),
+        })),
+        totalResults: matches.length,
+      };
+
+      if (!matches.length) {
+        return okStructured(
+          `未找到匹配的页面结构。请补充 screen_type、核心任务或内容密度，不要改用风格标签搜索。`,
+          structuredData,
+          { schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema },
+        );
+      }
+
+      const message = `# 页面结构候选
+
+${matches.map(({ pattern, score, reasons }, index) => `## ${index + 1}. ${pattern.title} · ${score}/100
+
+${pattern.description}
+
+- **匹配原因**：${reasons.join('；') || '通用结构候选'}
+- **区域**：${pattern.regions.map((item) => `${item.name}（${item.purpose}）`).join(' → ')}
+- **任务流**：${pattern.flow.join(' → ')}
+- **交互**：${pattern.interaction}
+- **响应式**：${pattern.responsive.join('；')}
+- **禁止**：${pattern.avoid.join('；')}
+- **参考方法**：${pattern.referenceMethods.join('；')}`).join('\n\n---\n\n')}
+
+选择一个结构作为 \`docs/ui/page-structure.json\` 的基础。只复用信息组织方法，不复制参考产品的品牌视觉。`;
+
+      return okStructured(message, structuredData, {
+        schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
+        mode: 'structure',
+      });
+    }
 
     // 模式 1: catalog - 返回组件目录
     if (mode === 'catalog') {

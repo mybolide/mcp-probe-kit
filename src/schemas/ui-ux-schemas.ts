@@ -4,29 +4,70 @@
 
 export const uiDesignSystemSchema = {
   name: "ui_design_system",
-  description: "智能设计系统生成器 - 基于产品类型和需求，使用 AI 推理引擎生成完整的设计系统推荐。包括 UI 风格、配色方案、字体配对、落地页模式、效果建议、反模式警告和交付检查清单。输出 Markdown 文档、JSON 配置和完整设计规范文档集。",
+  description: "生成可执行的视觉方向，而不是风格标签拼盘。输出核心任务、信息架构、内容密度、排版与色彩策略、组件原则、明确禁用项和截图验收标准。",
   inputSchema: {
     type: "object",
     properties: {
       product_type: {
         type: "string",
-        description: "产品类型（必填）：SaaS, E-commerce, Healthcare, Fintech, Government（政府）, Education（教育）, Portfolio, Agency 等。这是推理引擎的核心输入。",
+        description: "产品类型，如 SaaS、交易系统、医疗应用、电商或品牌官网。",
       },
       description: {
         type: "string",
-        description: "系统说明（推荐）：详细描述产品功能、特点、使用场景。例如：'政府类网站，需要权威、可信、易用的设计风格，面向公众提供政务服务'。这将帮助推理引擎生成更准确的设计方案。",
+        description: "页面或产品的核心任务、关键内容和使用场景。不要只写视觉形容词。",
       },
       stack: {
         type: "string",
-        description: "技术栈（推荐）：react, vue, nextjs, nuxtjs, tailwind, html, svelte, astro 等。用于生成特定技术栈的实现建议和配置代码。",
+        description: "技术栈，如 react、nextjs、vue、nuxt、html。仅影响实现建议，不决定审美。",
       },
       target_audience: {
         type: "string",
-        description: "目标用户（可选）：如 'B2B企业', 'C端消费者', '政府公务员', '普通市民', '开发者' 等。帮助推理引擎选择合适的设计风格。",
+        description: "目标用户及其专业程度、使用频率和主要压力。",
+      },
+      screen_type: {
+        type: "string",
+        description: "页面类型，如 professional-dashboard、workflow-console、marketing-page、commerce-catalog、commerce-detail、content-workspace。未传时自动判断。",
+      },
+      visual_direction: {
+        type: "string",
+        description: "指定视觉方向。内置方向包括 editorial-precision、operational-clarity、calm-trust、product-storytelling、commerce-focus，也支持自定义名称。",
+      },
+      density: {
+        type: "string",
+        enum: ["compact", "comfortable", "spacious"],
+        description: "内容密度。专业后台通常 compact，通用产品 comfortable，营销页 spacious。",
+      },
+      brand_personality: {
+        oneOf: [
+          { type: "string" },
+          { type: "array", items: { type: "string" } },
+        ],
+        description: "品牌气质，如 精准、可信、克制。字符串可用逗号分隔。",
+      },
+      references: {
+        oneOf: [
+          { type: "string" },
+          { type: "array", items: { type: "string" } },
+        ],
+        description: "参考产品或设计方法，如 Linear、Apple、Vercel。只提取结构方法，不照抄视觉。",
+      },
+      avoid: {
+        oneOf: [
+          { type: "string" },
+          { type: "array", items: { type: "string" } },
+        ],
+        description: "项目特定禁用项，如 卡片瀑布、大标题、装饰性图标、大面积空白。",
+      },
+      target_score: {
+        type: "number",
+        minimum: 7.5,
+        maximum: 10,
+        default: 8.5,
+        description: "视觉验收目标分数。低于该分数不得交付。",
       },
       keywords: {
         type: "string",
-        description: "关键词（可选）：逗号分隔的关键词，如 'professional, modern, trustworthy, authoritative'（专业、现代、可信、权威）。用于辅助匹配设计风格。",
+        description: "兼容旧调用方。等价于 brand_personality，后续应改用 brand_personality。",
       },
     },
     required: ["product_type"],
@@ -35,35 +76,45 @@ export const uiDesignSystemSchema = {
 
 export const uiSearchSchema = {
   name: "ui_search",
-  description: "搜索 UI/UX 数据库，包括颜色、图标、图表、组件、设计模式，以及 shadcn/ui blocks、UI 主题预设（CSS variables）、Vercel Web Interface Guidelines 等。支持 search / catalog / template 三种模式。",
+  description: "搜索页面结构、组件、交互规范和实现参考。新 UI 流程优先使用 structure 模式按任务和页面类型选择信息架构；旧 search/catalog/template 模式继续兼容。",
   inputSchema: {
     type: "object",
     properties: {
       mode: {
         type: "string",
-        description: "搜索模式：search（搜索 UI/UX 数据，默认）、catalog（查看组件目录）、template（搜索 UI 模板）",
+        enum: ["structure", "search", "catalog", "template"],
+        description: "structure（页面结构，推荐）、search（通用数据）、catalog（组件目录）、template（旧模板兼容）。",
         default: "search",
       },
       query: {
         type: "string",
-        description: "搜索关键词（支持中英文，如 'button'、'按钮'、'primary color'、'主色调'）。catalog 模式不需要此参数。",
+        description: "核心任务或搜索关键词。structure 模式应描述用户要完成的任务。",
+      },
+      screen_type: {
+        type: "string",
+        description: "structure 模式的页面类型，如 professional-dashboard、workflow-console、marketing-page、commerce-catalog。",
+      },
+      density: {
+        type: "string",
+        enum: ["compact", "comfortable", "spacious"],
+        description: "structure 模式的目标内容密度。",
       },
       category: {
         type: "string",
-        description: "数据类别（search 模式）：colors、icons、charts、landing、products、typography、styles、ux-guidelines、shadcn-blocks、shadcn-components、ui-themes、ui-guidelines-vercel 等",
+        description: "search 模式数据类别：colors、icons、charts、landing、products、typography、styles、ux-guidelines、shadcn-blocks、shadcn-components、ui-themes、ui-guidelines-vercel。",
       },
       stack: {
         type: "string",
-        description: "技术栈过滤（仅 search 模式）：react、vue、nextjs、nuxtjs、svelte、astro、flutter、react-native、swiftui、jetpack-compose 等",
+        description: "search 模式技术栈过滤。",
       },
       limit: {
         type: "number",
-        description: "返回结果数量（默认 10，范围 1-50）",
+        description: "返回结果数量。structure 模式默认 3、最多 5；其他模式默认 10、最多 50。",
         default: 10,
       },
       min_score: {
         type: "number",
-        description: "最小相关性得分（默认 0，范围 0-100）",
+        description: "search 模式最小相关性得分。",
         default: 0,
       },
     },
@@ -97,7 +148,7 @@ export const syncUiDataSchema = {
 
 export const startUiSchema = {
   name: "start_ui",
-  description: "统一 UI 开发编排工具 - 一键完成整个 UI 开发流程。自动检查设计系统、生成组件目录、搜索/生成模板、渲染最终代码。适合快速原型开发，保证整个项目样式统一。",
+  description: "编排 UI 设计与实现：先锁定视觉方向和信息架构，再生成关键页面，后续通过真实截图评分与迭代完成验收。",
   inputSchema: {
     type: "object",
     properties: {
@@ -117,6 +168,49 @@ export const startUiSchema = {
       project_root: {
         type: "string",
         description: "项目根目录绝对路径。建议显式传入；如果存在 docs 或模板等相对路径解析，应统一相对该项目根目录处理，避免依赖客户端 cwd。",
+      },
+      target_audience: {
+        type: "string",
+        description: "目标用户及其专业程度、使用频率和主要压力。",
+      },
+      screen_type: {
+        type: "string",
+        description: "页面类型，如 professional-dashboard、workflow-console、marketing-page。未传时自动判断。",
+      },
+      visual_direction: {
+        type: "string",
+        description: "视觉方向名称。可使用内置方向或自定义方向。",
+      },
+      density: {
+        type: "string",
+        enum: ["compact", "comfortable", "spacious"],
+        description: "内容密度。",
+      },
+      brand_personality: {
+        type: "string",
+        description: "品牌气质，使用逗号分隔，如 精准、可信、克制。",
+      },
+      references: {
+        type: "string",
+        description: "参考产品或方法，使用逗号分隔，如 Linear、Apple。",
+      },
+      avoid: {
+        type: "string",
+        description: "项目特定禁用项，使用逗号分隔。",
+      },
+      target_score: {
+        type: "number",
+        minimum: 7.5,
+        maximum: 10,
+        default: 8.5,
+        description: "截图视觉验收目标分数。",
+      },
+      review_max_rounds: {
+        type: "number",
+        minimum: 1,
+        maximum: 5,
+        default: 3,
+        description: "截图评审未达标时的最大迭代轮次。每轮必须重新生成真实截图并评分。",
       },
       template_profile: {
         type: "string",

@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Rebuilt `ui_design_system` around a deterministic visual-direction contract instead of independently matching style labels, colors, fonts, effects, and landing-page templates.
+- Reduced the required design artifacts from seven guidance documents to `docs/design-system.json` and `docs/design-system.md`.
+- Changed `start_ui` from template-first orchestration to visual direction, page structure, key-screen implementation, real desktop/mobile screenshots, scored review, iteration, and final visual acceptance.
+- External UI Skills are now controlled supplements. They may add interaction, implementation, and structure details but cannot override the locked visual direction, density, typography, colors, avoid list, or target score.
+- React/Next workflows now search shadcn component primitives only after page structure selection; full-page blocks no longer define the layout.
+
+### Added
+
+- Added visual directions for Editorial Precision, Operational Clarity, Calm Trust, Product Storytelling, and Commerce Focus, with complete information architecture, tokens, component rules, content rules, prohibited patterns, and acceptance criteria.
+- Added deterministic `ui_search mode=structure` patterns for signal workbenches, list-inspector workflows, guided task flows, editorial product stories, catalog decision grids, and detail decision pages.
+- Added mandatory 1440x900 and 390x844 screenshot evidence, seven-dimension weighted scoring, blocking failures, bounded visual iteration, and no-fake-evidence rules to every `start_ui` mode.
+
+### Validation
+
+- Added unit, integration, property, schema, Skill-boundary, structure-search, and screenshot-plan regression coverage.
+- Claude Code 2.1.179 called the local MCP tools with exact inputs, implemented an isolated opportunity-radar dashboard, produced two screenshot rounds, rejected round 1 at 8.41/10, and passed the final visible review at 8.84/10 with two remaining non-blocking issues recorded.
+
 ---
 
 ## [4.0.0-rc.4] - 2026-08-01

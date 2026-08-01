@@ -10,10 +10,112 @@
 export const DesignSystemSchema = {
   type: 'object',
   properties: {
+    contractVersion: { type: 'string', enum: ['2.0'] },
     summary: { type: 'string' },
     productType: { type: 'string' },
+    objective: {
+      type: 'object',
+      properties: {
+        productType: { type: 'string' },
+        screenType: { type: 'string' },
+        primaryTask: { type: 'string' },
+        targetAudience: { type: 'string' },
+        density: { type: 'string', enum: ['compact', 'comfortable', 'spacious'] },
+      },
+      required: ['productType', 'screenType', 'primaryTask', 'targetAudience', 'density'],
+    },
+    direction: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        rationale: { type: 'string' },
+        personality: { type: 'array', items: { type: 'string' } },
+        referenceLessons: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              reference: { type: 'string' },
+              lesson: { type: 'string' },
+            },
+            required: ['reference', 'lesson'],
+          },
+        },
+      },
+      required: ['id', 'name', 'rationale', 'personality', 'referenceLessons'],
+    },
+    informationArchitecture: {
+      type: 'object',
+      properties: {
+        hierarchy: { type: 'array', items: { type: 'string' } },
+        layout: { type: 'string' },
+        navigation: { type: 'string' },
+        responsive: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['hierarchy', 'layout', 'navigation', 'responsive'],
+    },
+    visualLanguage: {
+      type: 'object',
+      properties: {
+        typography: { type: 'object' },
+        color: { type: 'object' },
+        shape: { type: 'object' },
+        depth: { type: 'object' },
+        imagery: { type: 'string' },
+        motion: { type: 'string' },
+        spacing: { type: 'object' },
+      },
+      required: ['typography', 'color', 'shape', 'depth', 'imagery', 'motion', 'spacing'],
+    },
+    componentRules: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          component: { type: 'string' },
+          rule: { type: 'string' },
+        },
+        required: ['component', 'rule'],
+      },
+    },
+    contentRules: { type: 'array', items: { type: 'string' } },
+    avoid: { type: 'array', items: { type: 'string' } },
+    acceptance: {
+      type: 'object',
+      properties: {
+        targetScore: { type: 'number' },
+        dimensions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              weight: { type: 'number' },
+              pass: { type: 'string' },
+            },
+            required: ['name', 'weight', 'pass'],
+          },
+        },
+        requiredViewports: { type: 'array', items: { type: 'string' } },
+        blockingFailures: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['targetScore', 'dimensions', 'requiredViewports', 'blockingFailures'],
+    },
+    artifacts: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          purpose: { type: 'string' },
+        },
+        required: ['path', 'purpose'],
+      },
+    },
     colors: {
       type: 'object',
+      description: 'Backward-compatible color token view.',
       properties: {
         primary: { type: 'object', additionalProperties: { type: 'string' } },
         secondary: { type: 'object', additionalProperties: { type: 'string' } },
@@ -23,6 +125,7 @@ export const DesignSystemSchema = {
     },
     typography: {
       type: 'object',
+      description: 'Backward-compatible typography token view.',
       properties: {
         fontFamilies: { type: 'object', additionalProperties: { type: 'string' } },
         fontSizes: { type: 'object', additionalProperties: { type: 'string' } },
@@ -30,28 +133,27 @@ export const DesignSystemSchema = {
         lineHeights: { type: 'object', additionalProperties: { type: 'string' } },
       },
     },
-    spacing: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-    },
-    breakpoints: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-    },
-    components: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          variants: { type: 'array', items: { type: 'string' } },
-          props: { type: 'array', items: { type: 'string' } },
-        },
-      },
-    },
+    spacing: { type: 'object' },
+    breakpoints: { type: 'object', additionalProperties: { type: 'string' } },
+    components: { type: 'array', items: { type: 'object' } },
     documentation: { type: 'string' },
   },
-  required: ['summary', 'productType', 'colors', 'typography'],
+  required: [
+    'contractVersion',
+    'summary',
+    'productType',
+    'objective',
+    'direction',
+    'informationArchitecture',
+    'visualLanguage',
+    'componentRules',
+    'contentRules',
+    'avoid',
+    'acceptance',
+    'artifacts',
+    'colors',
+    'typography',
+  ],
 } as const;
 
 /**
@@ -229,8 +331,40 @@ export const RenderResultSchema = {
 
 // TypeScript 类型定义
 export interface DesignSystem {
+  contractVersion: '2.0';
   summary: string;
   productType: string;
+  objective: {
+    productType: string;
+    screenType: string;
+    primaryTask: string;
+    targetAudience: string;
+    density: 'compact' | 'comfortable' | 'spacious';
+  };
+  direction: {
+    id: string;
+    name: string;
+    rationale: string;
+    personality: string[];
+    referenceLessons: Array<{ reference: string; lesson: string }>;
+  };
+  informationArchitecture: {
+    hierarchy: string[];
+    layout: string;
+    navigation: string;
+    responsive: string[];
+  };
+  visualLanguage: Record<string, any>;
+  componentRules: Array<{ component: string; rule: string }>;
+  contentRules: string[];
+  avoid: string[];
+  acceptance: {
+    targetScore: number;
+    dimensions: Array<{ name: string; weight: number; pass: string }>;
+    requiredViewports: string[];
+    blockingFailures: string[];
+  };
+  artifacts: Array<{ path: string; purpose: string }>;
   colors: {
     primary?: Record<string, string>;
     secondary?: Record<string, string>;
@@ -243,13 +377,9 @@ export interface DesignSystem {
     fontWeights?: Record<string, number>;
     lineHeights?: Record<string, string>;
   };
-  spacing?: Record<string, string>;
+  spacing?: Record<string, any>;
   breakpoints?: Record<string, string>;
-  components?: Array<{
-    name?: string;
-    variants?: string[];
-    props?: string[];
-  }>;
+  components?: Array<Record<string, any>>;
   documentation?: string;
 }
 

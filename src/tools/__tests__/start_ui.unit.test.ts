@@ -172,9 +172,14 @@ describe('start_ui 单元测试', () => {
         'context',
         'design-system',
         'catalog',
-        'template',
-        'save-template',
+        'structure',
+        'save-structure',
         'render',
+        'capture-desktop',
+        'capture-mobile',
+        'visual-review',
+        'visual-iterate',
+        'visual-acceptance',
         'update-context',
       ]));
       expect(result.content[0].text).toContain('structuredContent.metadata.plan.steps');
@@ -188,4 +193,92 @@ describe('start_ui 单元测试', () => {
       expect(text).toMatch(/高级选项|Advanced Options/i);
     });
   });
+
+  describe('视觉方向契约', () => {
+    test('auto 模式把视觉方向参数传入计划并暴露验收目标', async () => {
+      const result = await startUi({
+        description: '专业交易员使用的机会雷达与模拟盘管理首页',
+        framework: 'react',
+        mode: 'auto',
+        target_audience: '专业交易员',
+        screen_type: 'professional-dashboard',
+        visual_direction: 'editorial-precision',
+        density: 'compact',
+        brand_personality: '精准,可信,克制',
+        references: 'Linear,Apple',
+        avoid: '卡片瀑布,大标题',
+        target_score: 8.8,
+      });
+
+      expect(result.isError).toBe(false);
+      const structured = (result as any).structuredContent;
+      const direction = structured.metadata.visualDirection;
+      expect(direction.contractVersion).toBe('2.0');
+      expect(direction.direction.id).toBe('editorial-precision');
+      expect(direction.objective.density).toBe('compact');
+      expect(direction.acceptance.targetScore).toBe(8.8);
+
+      const designStep = structured.metadata.plan.steps.find((step: any) => step.id === 'design-system');
+      expect(designStep.args).toMatchObject({
+        screen_type: 'professional-dashboard',
+        visual_direction: 'editorial-precision',
+        density: 'compact',
+        target_score: 8.8,
+      });
+      expect(structured.designSystem.colors.accent).toMatch(/^oklch\(/);
+      expect(structured.metadata.reviewPolicy).toMatchObject({
+        maxRounds: 3,
+        targetScore: 8.8,
+        requiredViewports: ['1440x900', '390x844'],
+      });
+
+      const steps = structured.metadata.plan.steps;
+      const structureStep = steps.find((step: any) => step.id === 'structure');
+      expect(structureStep.args).toMatchObject({
+        mode: 'structure',
+        screen_type: 'professional-dashboard',
+        density: 'compact',
+      });
+      const desktopStep = steps.find((step: any) => step.id === 'capture-desktop');
+      const mobileStep = steps.find((step: any) => step.id === 'capture-mobile');
+      const reviewStep = steps.find((step: any) => step.id === 'visual-review');
+      const iterateStep = steps.find((step: any) => step.id === 'visual-iterate');
+      const acceptanceStep = steps.find((step: any) => step.id === 'visual-acceptance');
+      expect(desktopStep.outputs).toEqual(['artifacts/ui-review/专业交易员使用的机会雷达与模拟盘管理首页/desktop-1440x900.png']);
+      expect(mobileStep.outputs).toEqual(['artifacts/ui-review/专业交易员使用的机会雷达与模拟盘管理首页/mobile-390x844.png']);
+      expect(reviewStep.outputs).toEqual(['artifacts/ui-review/专业交易员使用的机会雷达与模拟盘管理首页/visual-review.json']);
+      expect(iterateStep.note).toContain('每轮必须基于新截图重新评分');
+      expect(acceptanceStep.note).toContain('无阻断项');
+      expect(result.content[0].text).toContain('设计方向：Editorial Precision');
+    });
+
+    test('视觉迭代轮次限制在 1 到 5', async () => {
+      const high = await startUi({ description: '订单审批工作台', review_max_rounds: 99 });
+      const low = await startUi({ description: '订单审批工作台', review_max_rounds: 0 });
+
+      expect((high as any).structuredContent.metadata.reviewPolicy.maxRounds).toBe(5);
+      expect((low as any).structuredContent.metadata.reviewPolicy.maxRounds).toBe(1);
+    });
+
+
+    test('React 栈在页面结构确定后只搜索 shadcn 基础组件', async () => {
+      const result = await startUi({
+        description: '订单审批工作台',
+        framework: 'react',
+        mode: 'auto',
+        screen_type: 'workflow-console',
+      });
+      const steps = (result as any).structuredContent.metadata.plan.steps;
+      const ids = steps.map((step: any) => step.id);
+      expect(ids).not.toContain('shadcn-blocks');
+      expect(ids).toContain('shadcn-components');
+      expect(ids.indexOf('shadcn-components')).toBeGreaterThan(ids.indexOf('save-structure'));
+      expect(ids.indexOf('shadcn-components')).toBeLessThan(ids.indexOf('render'));
+      const componentStep = steps.find((step: any) => step.id === 'shadcn-components');
+      expect(componentStep.args.category).toBe('shadcn-components');
+      expect(componentStep.note).toContain('不使用整页 block 覆盖');
+    });
+
+  });
+
 });

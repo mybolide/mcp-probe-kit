@@ -9,8 +9,6 @@
  */
 
 import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
-import { getReasoningEngine } from "./ui-ux-tools.js";
-import { DesignRequest } from "../utils/design-reasoning-engine.js";
 import { okStructured } from "../lib/response.js";
 import { attachHandles } from "../lib/handles.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
@@ -38,6 +36,7 @@ import {
 } from "../lib/memory-orchestration.js";
 import { isShadcnStack } from "../lib/shadcn-ui.js";
 import { renderUiHardRules, renderUiBannedList, renderPreFlightChecklist } from "../lib/quality-constraints.js";
+import { buildVisualDirectionContract, type VisualDirectionContract } from "../utils/visual-direction-engine.js";
 
 type TemplateProfileResolved = 'guided' | 'strict';
 type TemplateProfileRequest = 'guided' | 'strict' | 'auto';
@@ -53,24 +52,134 @@ ${renderUiBannedList()}
 
 ${renderPreFlightChecklist()}`;
 
-function buildShadcnBlocksPlanStep(description: string, framework: string) {
+function buildShadcnComponentsPlanStep(description: string, framework: string) {
   if (!isShadcnStack(framework)) {
     return [];
   }
 
   return [
     {
-      id: 'shadcn-blocks',
+      id: 'shadcn-components',
       tool: 'ui_search',
-      when: 'React/Next 栈：调用 ui_search（category=shadcn-blocks）匹配 block',
+      when: '页面结构已经锁定后，为 React/Next 实现选择基础组件',
       args: {
         mode: 'search',
-        query: description,
-        category: 'shadcn-blocks',
+        query: `${description} table drawer sheet select button tooltip form`,
+        category: 'shadcn-components',
         stack: framework,
-        limit: 5,
+        limit: 8,
       },
       outputs: [],
+      note: '只复用组件原语，不使用整页 block 覆盖 page-structure.json 或视觉方向契约',
+    },
+  ];
+}
+
+function buildUiExecutionSteps(options: {
+  description: string;
+  framework: string;
+  templateName: string;
+  visualContract: VisualDirectionContract;
+  reviewMaxRounds: number;
+}) {
+  const { description, framework, templateName, visualContract, reviewMaxRounds } = options;
+  const reviewRoot = `artifacts/ui-review/${templateName}`;
+  const desktopScreenshot = `${reviewRoot}/desktop-1440x900.png`;
+  const mobileScreenshot = `${reviewRoot}/mobile-390x844.png`;
+  const reviewReport = `${reviewRoot}/visual-review.json`;
+
+  return [
+    {
+      id: 'structure',
+      tool: 'ui_search',
+      args: {
+        mode: 'structure',
+        query: description,
+        screen_type: visualContract.objective.screenType,
+        density: visualContract.objective.density,
+        limit: 3,
+      },
+      outputs: [],
+      note: '选择信息架构和任务流，不搜索或套用表面风格标签',
+    },
+    {
+      id: 'save-structure',
+      type: 'agent_action' as const,
+      action: 'save_selected_page_structure',
+      requiredInputs: ['ui_search structure 模式返回的候选', 'docs/design-system.json'],
+      expectedOutputs: ['docs/ui/page-structure.json'],
+      outputs: ['docs/ui/page-structure.json'],
+      note: '只保留与当前任务匹配的区域、流程、响应式和禁用项',
+    },
+    ...buildShadcnComponentsPlanStep(description, framework),
+    {
+      id: 'render',
+      type: 'agent_action' as const,
+      action: 'implement_key_ui_screen',
+      requiredInputs: [
+        'docs/design-system.json',
+        'docs/ui/page-structure.json',
+        `目标框架：${framework}`,
+        '现有组件和真实业务内容',
+      ],
+      expectedOutputs: ['可运行的关键页面代码与必要交互测试'],
+      outputs: [],
+      note: '先完成一个关键页面，不得先批量复制到全部页面',
+    },
+    {
+      id: 'capture-desktop',
+      type: 'agent_action' as const,
+      action: 'capture_ui_screenshot',
+      requiredInputs: ['已启动的真实页面', 'viewport=1440x900', '稳定的测试数据和页面状态'],
+      expectedOutputs: [desktopScreenshot],
+      outputs: [desktopScreenshot],
+      note: '必须截取真实渲染结果，不接受设计稿、代码推断或历史截图',
+    },
+    {
+      id: 'capture-mobile',
+      type: 'agent_action' as const,
+      action: 'capture_ui_screenshot',
+      requiredInputs: ['已启动的真实页面', 'viewport=390x844', '与桌面图相同的核心任务状态'],
+      expectedOutputs: [mobileScreenshot],
+      outputs: [mobileScreenshot],
+      note: '移动端必须重新组织任务流，不得仅缩小桌面布局',
+    },
+    {
+      id: 'visual-review',
+      type: 'agent_action' as const,
+      action: 'score_ui_screenshots',
+      requiredInputs: [
+        desktopScreenshot,
+        mobileScreenshot,
+        'docs/design-system.json 中的 acceptance.dimensions、avoid 和 blockingFailures',
+      ],
+      expectedOutputs: [reviewReport],
+      outputs: [reviewReport],
+      note: `按 7 个维度逐项给分并列出具体视觉问题；代码规范不能替代截图评审，目标 ${visualContract.acceptance.targetScore}/10`,
+    },
+    {
+      id: 'visual-iterate',
+      type: 'agent_action' as const,
+      action: 'iterate_ui_from_visual_review',
+      when: `总分低于 ${visualContract.acceptance.targetScore}/10、任一阻断项命中或任一维度低于 7.5`,
+      requiredInputs: [reviewReport, '页面源码', 'docs/design-system.json', 'docs/ui/page-structure.json'],
+      expectedOutputs: [
+        '修正后的关键页面',
+        desktopScreenshot,
+        mobileScreenshot,
+        reviewReport,
+      ],
+      outputs: [desktopScreenshot, mobileScreenshot, reviewReport],
+      note: `最多 ${reviewMaxRounds} 轮。每轮必须基于新截图重新评分，禁止只改评分文本或伪造通过。`,
+    },
+    {
+      id: 'visual-acceptance',
+      type: 'agent_action' as const,
+      action: 'verify_visual_acceptance',
+      requiredInputs: [desktopScreenshot, mobileScreenshot, reviewReport],
+      expectedOutputs: ['visual passed=true 或明确列出仍未通过的原因'],
+      outputs: [],
+      note: `只有总分 ≥ ${visualContract.acceptance.targetScore}/10、无阻断项且截图为本轮真实结果时才允许通过`,
     },
   ];
 }
@@ -207,6 +316,15 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
       framework?: string;
       template?: string;
       project_root?: string;
+      target_audience?: string;
+      screen_type?: string;
+      visual_direction?: string;
+      density?: string;
+      brand_personality?: string;
+      references?: string;
+      avoid?: string;
+      target_score?: number;
+      review_max_rounds?: number;
       mode?: string;
       template_profile?: string;
       requirements_mode?: string;
@@ -218,6 +336,15 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
         description: "",
         framework: "html",
         template: "",
+        target_audience: "",
+        screen_type: "",
+        visual_direction: "",
+        density: "",
+        brand_personality: "",
+        references: "",
+        avoid: "",
+        target_score: 8.5,
+        review_max_rounds: 3,
         mode: "manual",
         template_profile: "auto",
         requirements_mode: "steady",
@@ -231,6 +358,15 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
         framework: ["stack", "lib", "框架"],
         template: ["name", "模板名"],
         project_root: ["projectRoot", "project_path", "projectPath", "root", "project_root", "path", "dir", "directory", "项目路径", "项目根目录"],
+        target_audience: ["audience", "users", "目标用户", "用户"],
+        screen_type: ["screen", "page_type", "页面类型"],
+        visual_direction: ["direction", "style_direction", "视觉方向"],
+        density: ["content_density", "内容密度", "密度"],
+        brand_personality: ["personality", "brand", "品牌气质"],
+        references: ["reference", "refs", "参考"],
+        avoid: ["banned", "avoid_list", "禁用项", "避免"],
+        target_score: ["score", "quality_score", "目标评分"],
+        review_max_rounds: ["review_rounds", "max_review_rounds", "视觉迭代轮次"],
         mode: ["模式"],
         template_profile: ["profile", "template_profile", "模板档位", "模板模式"],
         requirements_mode: ["requirements_mode", "loop", "需求模式"],
@@ -296,6 +432,41 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
     const maxRounds = getNumber(parsedArgs.loop_max_rounds, 2);
     const questionBudget = getNumber(parsedArgs.loop_question_budget, 5);
     const assumptionCap = getNumber(parsedArgs.loop_assumption_cap, 3);
+    const targetAudience = getString(parsedArgs.target_audience);
+    const screenType = getString(parsedArgs.screen_type);
+    const visualDirection = getString(parsedArgs.visual_direction);
+    const density = getString(parsedArgs.density);
+    const brandPersonality = getString(parsedArgs.brand_personality);
+    const references = getString(parsedArgs.references);
+    const avoid = getString(parsedArgs.avoid);
+    const targetScore = getNumber(parsedArgs.target_score, 8.5);
+    const reviewMaxRounds = Math.min(5, Math.max(1, getNumber(parsedArgs.review_max_rounds, 3)));
+    const visualContract = buildVisualDirectionContract({
+      productType,
+      description,
+      stack: framework,
+      targetAudience,
+      screenType,
+      visualDirection,
+      density,
+      brandPersonality,
+      references,
+      avoid,
+      targetScore,
+    });
+    const designSystemArgs = {
+      product_type: visualContract.objective.productType,
+      description,
+      stack: framework,
+      target_audience: visualContract.objective.targetAudience,
+      screen_type: visualContract.objective.screenType,
+      visual_direction: visualContract.direction.id,
+      density: visualContract.objective.density,
+      brand_personality: brandPersonality,
+      references,
+      avoid,
+      target_score: visualContract.acceptance.targetScore,
+    };
     let templateName = getString(parsedArgs.template);
     templateName = normalizeTemplateName(templateName || description || 'ui-template', 'ui-template');
 
@@ -316,6 +487,9 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
 
     const headerNotes = [
       `模板档位: ${profileDecision.resolved}${profileDecision.requested === 'auto' ? '（自动）' : ''}`,
+      `视觉方向: ${visualContract.direction.name}`,
+      `内容密度: ${visualContract.objective.density}`,
+      `视觉目标: ${visualContract.acceptance.targetScore}/10`,
     ];
     if (profileDecision.reason) {
       headerNotes.push(`选择理由: ${profileDecision.reason}`);
@@ -447,11 +621,7 @@ start_ui <描述> --requirements_mode=loop
             id: 'design-system',
             tool: 'ui_design_system',
             when: '缺少 docs/design-system.json 或 docs/design-system.md',
-            args: {
-              product_type: productType,
-              stack: framework,
-              description,
-            },
+            args: designSystemArgs,
             outputs: ['docs/design-system.json', 'docs/design-system.md'],
           },
           {
@@ -464,35 +634,18 @@ start_ui <描述> --requirements_mode=loop
             outputs: ['docs/ui/component-catalog.json'],
             note: '由 Agent 使用宿主文件能力生成组件目录；该步骤不是 MCP 工具调用',
           },
-          ...buildShadcnBlocksPlanStep(description, framework),
-          {
-            id: 'template',
-            tool: 'ui_search',
-            args: { mode: 'template', query: description },
-            outputs: [],
-          },
-          {
-            id: 'save-template',
-            type: 'agent_action',
-            action: 'save_ui_template',
-            requiredInputs: ['ui_search 返回的模板候选或 Agent 创建的最小模板'],
-            expectedOutputs: [`docs/ui/${templateName}.json`],
-            outputs: [`docs/ui/${templateName}.json`],
-          },
-          {
-            id: 'render',
-            type: 'agent_action',
-            action: 'implement_ui_from_template',
-            requiredInputs: [`docs/ui/${templateName}.json`, 'docs/design-system.md', `目标框架：${framework}`],
-            expectedOutputs: ['可运行的 UI 代码与必要测试'],
-            outputs: [],
-            note: '由 Agent 使用宿主代码与文件能力实施；该步骤不是 MCP 工具调用',
-          },
+          ...buildUiExecutionSteps({
+            description,
+            framework: framework,
+            templateName,
+            visualContract,
+            reviewMaxRounds,
+          }),
           {
             id: 'update-context',
             type: 'agent_action',
             action: 'update_project_context',
-            requiredInputs: ['已生成的设计系统、组件目录、模板和 UI 实现路径'],
+            requiredInputs: ['已生成的视觉方向、页面结构、UI 实现路径和截图评审报告'],
             expectedOutputs: ['docs/project-context.md 中的 UI 文档索引已更新'],
             outputs: ['docs/project-context.md'],
           },
@@ -559,6 +712,14 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
         metadata: {
           plan,
           template: templateMeta,
+          visualDirection: visualContract,
+          reviewPolicy: {
+            maxRounds: reviewMaxRounds,
+            targetScore: visualContract.acceptance.targetScore,
+            requiredViewports: visualContract.acceptance.requiredViewports,
+            dimensions: visualContract.acceptance.dimensions,
+            blockingFailures: visualContract.acceptance.blockingFailures,
+          },
           skills: skillBridge,
         },
       };
@@ -580,26 +741,9 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
       throwIfAborted(context?.signal, "start_ui(auto) 已取消");
       await reportToolProgress(context, 55, "start_ui: 生成智能推荐");
 
-      // 1. 获取推理引擎
-      const engine = await getReasoningEngine();
+      const inferredProductType = visualContract.objective.productType;
+      const inferredStack = framework;
 
-      // 2. 构造设计请求
-      const request: DesignRequest = {
-        productType,
-        description,
-        stack: framework,
-      };
-
-      // 3. 生成推荐
-      const recommendation = engine.generateRecommendation(request);
-
-      throwIfAborted(context?.signal, "start_ui(auto) 已取消");
-      await reportToolProgress(context, 80, "start_ui: 智能计划已生成");
-
-      // 4. 提取推理结果
-      const inferredProductType = recommendation.target;
-      const inferredKeywords = recommendation.style.keywords.join(", ");
-      const inferredStack = framework; // 保持用户指定的技术栈，或默认为 react
 
       // 5. 生成智能执行计划
       const searchQuery = description || templateName;
@@ -619,12 +763,7 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
             id: 'design-system',
             tool: 'ui_design_system',
             when: '缺少 docs/design-system.json 或 docs/design-system.md',
-            args: {
-              product_type: inferredProductType,
-              stack: inferredStack,
-              keywords: inferredKeywords,
-              description,
-            },
+            args: designSystemArgs,
             outputs: ['docs/design-system.json', 'docs/design-system.md'],
           },
           {
@@ -637,35 +776,18 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
             outputs: ['docs/ui/component-catalog.json'],
             note: '由 Agent 使用宿主文件能力生成组件目录；该步骤不是 MCP 工具调用',
           },
-          ...buildShadcnBlocksPlanStep(description, inferredStack),
-          {
-            id: 'template',
-            tool: 'ui_search',
-            args: { mode: 'template', query: searchQuery },
-            outputs: [],
-          },
-          {
-            id: 'save-template',
-            type: 'agent_action',
-            action: 'save_ui_template',
-            requiredInputs: ['ui_search 返回的模板候选或 Agent 创建的最小模板'],
-            expectedOutputs: [`docs/ui/${templateName}.json`],
-            outputs: [`docs/ui/${templateName}.json`],
-          },
-          {
-            id: 'render',
-            type: 'agent_action',
-            action: 'implement_ui_from_template',
-            requiredInputs: [`docs/ui/${templateName}.json`, 'docs/design-system.md', `目标框架：${inferredStack}`],
-            expectedOutputs: ['可运行的 UI 代码与必要测试'],
-            outputs: [],
-            note: '由 Agent 使用宿主代码与文件能力实施；该步骤不是 MCP 工具调用',
-          },
+          ...buildUiExecutionSteps({
+            description,
+            framework: inferredStack,
+            templateName,
+            visualContract,
+            reviewMaxRounds,
+          }),
           {
             id: 'update-context',
             type: 'agent_action',
             action: 'update_project_context',
-            requiredInputs: ['已生成的设计系统、组件目录、模板和 UI 实现路径'],
+            requiredInputs: ['已生成的视觉方向、页面结构、UI 实现路径和截图评审报告'],
             expectedOutputs: ['docs/project-context.md 中的 UI 文档索引已更新'],
             outputs: ['docs/project-context.md'],
           },
@@ -678,7 +800,7 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
         goal: `UI 需求：${description}`,
         tasks: [
           '按 delegated plan 顺序调用工具',
-          '生成设计系统、模板并渲染 UI 代码',
+          '锁定视觉方向、生成关键页面并准备截图验收',
         ],
         notes: [
           ...headerNotes,
@@ -690,7 +812,7 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
 # 快速开始
 
 ## 职责说明
-MCP 工具只提供指导并负责设计系统、检索与编排；Agent 负责组件目录、模板落盘、代码实施和测试。
+MCP 工具只提供视觉方向、结构检索与编排；Agent 负责关键页面实施、真实截图、视觉评分和迭代。
 
 ## 失败处理
 任一步失败时保留已完成产物、记录失败原因并从该步骤重试；不得跳过失败步骤宣称完成。
@@ -702,7 +824,7 @@ MCP 工具只提供指导并负责设计系统、检索与编排；Agent 负责�
 
 - 模式：auto
 - 目标框架：${inferredStack}
-- 设计方向：${recommendation.style.primary}
+- 设计方向：${visualContract.direction.name}
 - 规则：文本步骤与 \`structuredContent.metadata.plan.steps\` 来自同一份计划。
 
 ## 步骤
@@ -729,19 +851,19 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
             description: '由 Agent 生成组件目录文件',
           },
           {
-            name: '搜索 UI 模板',
+            name: '选择页面结构',
             status: 'pending',
-            description: '调用 ui_search 搜索匹配的模板',
+            description: '调用 ui_search structure 模式选择信息架构与任务流',
           },
           {
-            name: '保存模板文件',
+            name: '保存页面结构',
             status: 'pending',
-            description: `将模板保存为 docs/ui/${templateName}.json`,
+            description: '将选定结构保存为 docs/ui/page-structure.json',
           },
           {
-            name: '渲染最终代码',
+            name: '实现并截图评审',
             status: 'pending',
-            description: '由 Agent 根据模板和设计系统实施 UI 代码',
+            description: '由 Agent 根据视觉方向与页面结构实施一个关键页面',
           },
           {
             name: '更新项目上下文',
@@ -754,28 +876,37 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
           '调用 init_project_context',
           `调用 ui_design_system --product_type="${inferredProductType}" --stack="${inferredStack}"`,
           '由 Agent 创建 docs/ui/component-catalog.json',
-          `调用 ui_search --mode=template --query="${description}"`,
-          `保存模板到 docs/ui/${templateName}.json`,
-          `由 Agent 按 ${inferredStack} 实施 UI 代码与测试`,
+          `调用 ui_search --mode=structure --screen_type="${visualContract.objective.screenType}" --query="${description}"`,
+          '保存选定结构到 docs/ui/page-structure.json',
+          `由 Agent 按 ${inferredStack} 先实施一个关键页面`,
+          `生成 1440x900 与 390x844 真实截图并评分，低于 ${visualContract.acceptance.targetScore}/10 继续迭代`,
           '更新 docs/project-context.md 添加 UI 文档链接',
         ],
         designSystem: {
-          colors: {},
-          typography: {},
-          spacing: {},
+          colors: visualContract.visualLanguage.color.tokens,
+          typography: visualContract.visualLanguage.typography,
+          spacing: visualContract.visualLanguage.spacing,
         },
         renderedCode: {
           framework: inferredStack as 'react' | 'vue' | 'html',
           code: '待生成',
         },
         consistencyRules: [
-          '所有组件使用设计系统中定义的颜色',
-          '所有组件使用设计系统中定义的字体',
-          '所有组件使用设计系统中定义的间距',
+          '页面层级、密度和组件形态必须符合视觉方向契约',
+          '所有颜色、字体、圆角和间距来自同一契约',
+          `真实截图评分不得低于 ${visualContract.acceptance.targetScore}/10`,
         ],
         metadata: {
           plan,
           template: templateMeta,
+          visualDirection: visualContract,
+          reviewPolicy: {
+            maxRounds: reviewMaxRounds,
+            targetScore: visualContract.acceptance.targetScore,
+            requiredViewports: visualContract.acceptance.requiredViewports,
+            dimensions: visualContract.acceptance.dimensions,
+            blockingFailures: visualContract.acceptance.blockingFailures,
+          },
           skills: skillBridge,
         },
       };
@@ -826,7 +957,7 @@ start_ui "设置页面" --framework=react
       goal: `UI 开发：${description}`,
       tasks: [
         '按 delegated plan 顺序调用可见 MCP 工具并执行 Agent 操作',
-        '生成设计系统、组件目录、模板并实施 UI 代码',
+        '锁定视觉方向、选择页面结构、实施关键页面并完成截图评审',
       ],
       notes: [
         ...headerNotes,
@@ -851,11 +982,7 @@ start_ui "设置页面" --framework=react
           id: 'design-system',
           tool: 'ui_design_system',
           when: '缺少 docs/design-system.json 或 docs/design-system.md',
-          args: {
-            product_type: productType,
-            stack: framework,
-            description,
-          },
+          args: designSystemArgs,
           outputs: ['docs/design-system.json', 'docs/design-system.md'],
         },
         {
@@ -868,35 +995,18 @@ start_ui "设置页面" --framework=react
           outputs: ['docs/ui/component-catalog.json'],
           note: '由 Agent 使用宿主文件能力生成组件目录；该步骤不是 MCP 工具调用',
         },
-        ...buildShadcnBlocksPlanStep(description, framework),
-        {
-          id: 'template',
-          tool: 'ui_search',
-          args: { mode: 'template', query: description },
-          outputs: [],
-        },
-        {
-          id: 'save-template',
-          type: 'agent_action',
-          action: 'save_ui_template',
-          requiredInputs: ['ui_search 返回的模板候选或 Agent 创建的最小模板'],
-          expectedOutputs: [`docs/ui/${templateName}.json`],
-          outputs: [`docs/ui/${templateName}.json`],
-        },
-        {
-          id: 'render',
-          type: 'agent_action',
-          action: 'implement_ui_from_template',
-          requiredInputs: [`docs/ui/${templateName}.json`, 'docs/design-system.md', `目标框架：${framework}`],
-          expectedOutputs: ['可运行的 UI 代码与必要测试'],
-          outputs: [],
-          note: '由 Agent 使用宿主代码与文件能力实施；该步骤不是 MCP 工具调用',
-        },
+          ...buildUiExecutionSteps({
+            description,
+            framework: framework,
+            templateName,
+            visualContract,
+            reviewMaxRounds,
+          }),
         {
           id: 'update-context',
           type: 'agent_action',
           action: 'update_project_context',
-          requiredInputs: ['已生成的设计系统、组件目录、模板和 UI 实现路径'],
+          requiredInputs: ['已生成的视觉方向、页面结构、UI 实现路径和截图评审报告'],
           expectedOutputs: ['docs/project-context.md 中的 UI 文档索引已更新'],
           outputs: ['docs/project-context.md'],
         },
@@ -908,7 +1018,7 @@ start_ui "设置页面" --framework=react
 # 快速开始
 
 ## 职责说明
-MCP 工具只提供指导并负责设计系统、检索与编排；Agent 负责组件目录、模板落盘、代码实施和测试。
+MCP 工具只提供视觉方向、结构检索与编排；Agent 负责关键页面实施、真实截图、视觉评分和迭代。
 
 ## 失败处理
 任一步失败时保留已完成产物、记录失败原因并从该步骤重试；不得跳过失败步骤宣称完成。
@@ -920,7 +1030,10 @@ MCP 工具只提供指导并负责设计系统、检索与编排；Agent 负责�
 
 - 模式：manual
 - 目标框架：${framework}
-- 模板：docs/ui/${templateName}.json
+- 视觉方向：${visualContract.direction.name}
+- 内容密度：${visualContract.objective.density}
+- 目标评分：${visualContract.acceptance.targetScore}/10
+- 页面结构：docs/ui/page-structure.json
 - 规则：文本步骤与 \`structuredContent.metadata.plan.steps\` 来自同一份计划。
 
 ## 步骤
@@ -947,19 +1060,19 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
           description: '检查 docs/ui/component-catalog.json 是否存在',
         },
         {
-          name: '搜索 UI 模板',
+          name: '选择页面结构',
           status: 'pending',
-          description: '调用 ui_search 搜索匹配的模板',
+          description: '调用 ui_search structure 模式选择信息架构与任务流',
         },
         {
-          name: '保存模板文件',
+          name: '保存页面结构',
           status: 'pending',
-          description: `将模板保存为 docs/ui/${templateName}.json`,
+          description: '将选定结构保存为 docs/ui/page-structure.json',
         },
         {
-          name: '渲染最终代码',
+          name: '实现并截图评审',
           status: 'pending',
-          description: '由 Agent 根据模板和设计系统实施 UI 代码',
+          description: '由 Agent 根据视觉方向与页面结构实施一个关键页面',
         },
         {
           name: '更新项目上下文',
@@ -975,28 +1088,37 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
         ...(isShadcnStack(framework)
           ? [`调用 ui_search --category=shadcn-blocks --query="${description}" 匹配 shadcn block`]
           : []),
-        `调用 ui_search --mode=template --query="${description}"`,
-        `保存模板到 docs/ui/${templateName}.json`,
-        `由 Agent 按 ${framework} 实施 UI 代码与测试`,
+        `调用 ui_search --mode=structure --screen_type="${visualContract.objective.screenType}" --query="${description}"`,
+        '保存选定结构到 docs/ui/page-structure.json',
+        `由 Agent 按 ${framework} 先实施一个关键页面`,
+        `生成 1440x900 与 390x844 真实截图并评分，低于 ${visualContract.acceptance.targetScore}/10 继续迭代`,
         '更新 docs/project-context.md 添加 UI 文档链接',
       ],
       designSystem: {
-        colors: {},
-        typography: {},
-        spacing: {},
+        colors: visualContract.visualLanguage.color.tokens,
+        typography: visualContract.visualLanguage.typography,
+        spacing: visualContract.visualLanguage.spacing,
       },
       renderedCode: {
         framework: framework as 'react' | 'vue' | 'html',
         code: '待生成',
       },
       consistencyRules: [
-        '所有组件使用设计系统中定义的颜色',
-        '所有组件使用设计系统中定义的字体',
-        '所有组件使用设计系统中定义的间距',
+        '页面层级、密度和组件形态必须符合视觉方向契约',
+        '所有颜色、字体、圆角和间距来自同一契约',
+        `真实截图评分不得低于 ${visualContract.acceptance.targetScore}/10`,
       ],
       metadata: {
         plan,
         template: templateMeta,
+        visualDirection: visualContract,
+        reviewPolicy: {
+          maxRounds: reviewMaxRounds,
+          targetScore: visualContract.acceptance.targetScore,
+          requiredViewports: visualContract.acceptance.requiredViewports,
+          dimensions: visualContract.acceptance.dimensions,
+          blockingFailures: visualContract.acceptance.blockingFailures,
+        },
         skills: skillBridge,
       },
     };

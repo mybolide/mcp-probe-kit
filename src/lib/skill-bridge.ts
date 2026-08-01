@@ -29,18 +29,18 @@ export interface SkillBridgeStatus {
 
 const SKILL_DEFINITIONS: SkillDefinition[] = [
   {
-    name: "ui-ux-pro-max",
-    role: "设计系统与风格策略推荐",
-    appliesTo: ["start_ui", "start_product"],
-  },
-  {
     name: "interaction-design",
-    role: "交互状态与流程约束",
+    role: "补充交互状态、流程与可访问性约束，不改变已锁定的视觉方向",
     appliesTo: ["start_ui", "start_product"],
   },
   {
     name: "frontend-design",
-    role: "前端视觉与代码实现增强",
+    role: "补充前端实现细节与组件质量，不重新选择风格、配色或字体",
+    appliesTo: ["start_ui", "start_product"],
+  },
+  {
+    name: "ui-ux-pro-max",
+    role: "仅提供页面结构与模式参考；风格标签和主题推荐不得覆盖视觉方向契约",
     appliesTo: ["start_ui", "start_product"],
   },
 ];
@@ -96,18 +96,26 @@ export function buildSkillHeaderNote(status: SkillBridgeStatus): string {
 }
 
 export function buildSkillBridgePlanStep(status: SkillBridgeStatus) {
+  const authorityBoundary = status.workflow === "start_ui"
+    ? "视觉方向契约已经锁定；Skill 只能补充交互、实现和结构参考，禁止重新选择视觉风格、配色、字体、密度或禁用项"
+    : "当前产品约束与交付目标已经锁定；Skill 只能补充细节，不得覆盖用户目标和核心约束";
+
   return {
     id: "skill-bridge",
     type: "agent_action" as const,
     action: "invoke_installed_skills",
-    when: "宿主支持 skill 调用且对应 skill 已安装时优先执行",
+    when: "主契约生成后，宿主支持 skill 调用且对应 skill 已安装时执行",
     requiredInputs: [
+      authorityBoundary,
       `按顺序检查可用 skill：${status.skills.map((item) => item.name).join(", ")}`,
     ],
-    expectedOutputs: ["可用 skill 的设计约束与建议已合并进当前任务上下文"],
+    expectedOutputs: [
+      "只合并不冲突的交互状态、实现细节和页面结构建议",
+      "任何与主契约冲突的风格标签或主题推荐均已丢弃",
+    ],
     note:
       status.missingCount === 0
-        ? "全部增强 skill 可用"
+        ? "全部增强 skill 可用；主契约优先级最高"
         : `缺失 ${status.skills.filter((item) => !item.installed).map((item) => item.name).join(", ")}；继续执行 MCP 主流程，不得把缺失 skill 当成阻塞`,
     outputs: [],
   };
@@ -123,12 +131,13 @@ export function renderSkillBridgeSection(status: SkillBridgeStatus): string {
     .join("\n");
 
   const conclusion = status.ready
-    ? "全部 skill 可用，建议按顺序调用后再执行 MCP 工具步骤。"
-    : "部分 skill 缺失：继续执行 MCP 主流程，不阻塞；安装缺失 skill 后下次运行可获得更高质量输出。";
+    ? "全部 skill 可用，但视觉方向契约与产品约束始终拥有最高优先级。"
+    : "部分 skill 缺失：继续执行 MCP 主流程，不阻塞；不得降低视觉方向和验收标准。";
 
-  return `## 🧩 Skill Bridge（UI/PRD 增强）
+  return `## Skill Bridge（受控增强）
 
-按顺序调用（宿主支持时）：
+调用边界：先锁定主契约，再按顺序调用可用 Skill。Skill 只补充交互、实现与结构参考，禁止覆盖视觉方向、密度、配色、字体、禁用项和验收分数。
+
 ${orderLines}
 
 当前状态：
