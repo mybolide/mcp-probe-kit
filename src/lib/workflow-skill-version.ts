@@ -83,28 +83,65 @@ export function parseAgentsContextVersion(content: string): string | null {
   return match?.[1]?.trim() ?? null;
 }
 
-/** 比较 semver（仅主版本号段，忽略 prerelease 后缀） */
+interface ParsedSemver {
+  core: number[];
+  prerelease: string[] | null;
+}
+
+function parseSemver(value: string): ParsedSemver {
+  const normalized = value.trim().replace(/^v/i, "").split("+")[0] ?? "";
+  const separator = normalized.indexOf("-");
+  const corePart = separator === -1 ? normalized : normalized.slice(0, separator);
+  const prereleasePart = separator === -1 ? "" : normalized.slice(separator + 1);
+  return {
+    core: corePart.split(".").map((part) => {
+      const parsed = Number.parseInt(part, 10);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }),
+    prerelease: prereleasePart
+      ? prereleasePart.split(".").filter((part) => part.length > 0)
+      : null,
+  };
+}
+
+function comparePrereleaseIdentifier(left: string, right: string): number {
+  const leftNumeric = /^\d+$/.test(left);
+  const rightNumeric = /^\d+$/.test(right);
+  if (leftNumeric && rightNumeric) {
+    const diff = Number.parseInt(left, 10) - Number.parseInt(right, 10);
+    return diff === 0 ? 0 : diff > 0 ? 1 : -1;
+  }
+  if (leftNumeric !== rightNumeric) {
+    return leftNumeric ? -1 : 1;
+  }
+  return left === right ? 0 : left > right ? 1 : -1;
+}
+
+/** 完整比较 SemVer，包括 prerelease；正式版高于同核心版本的预发布版。 */
 export function compareSemver(a: string, b: string): number {
-  const normalize = (value: string) =>
-    value
-      .trim()
-      .replace(/^v/i, "")
-      .split("-")[0]
-      .split(".")
-      .map((part) => {
-        const n = Number.parseInt(part, 10);
-        return Number.isFinite(n) ? n : 0;
-      });
+  const left = parseSemver(a);
+  const right = parseSemver(b);
+  const coreLength = Math.max(left.core.length, right.core.length, 3);
 
-  const left = normalize(a);
-  const right = normalize(b);
-  const length = Math.max(left.length, right.length);
-
-  for (let i = 0; i < length; i += 1) {
-    const diff = (left[i] ?? 0) - (right[i] ?? 0);
+  for (let i = 0; i < coreLength; i += 1) {
+    const diff = (left.core[i] ?? 0) - (right.core[i] ?? 0);
     if (diff !== 0) {
       return diff > 0 ? 1 : -1;
     }
+  }
+
+  if (left.prerelease === null && right.prerelease === null) return 0;
+  if (left.prerelease === null) return 1;
+  if (right.prerelease === null) return -1;
+
+  const prereleaseLength = Math.max(left.prerelease.length, right.prerelease.length);
+  for (let i = 0; i < prereleaseLength; i += 1) {
+    const leftPart = left.prerelease[i];
+    const rightPart = right.prerelease[i];
+    if (leftPart === undefined) return -1;
+    if (rightPart === undefined) return 1;
+    const compared = comparePrereleaseIdentifier(leftPart, rightPart);
+    if (compared !== 0) return compared;
   }
   return 0;
 }

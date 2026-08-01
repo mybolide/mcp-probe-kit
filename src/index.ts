@@ -5,7 +5,7 @@ import {
   StdioServerTransport,
 } from "@modelcontextprotocol/server/stdio";
 import { VERSION } from "./version.js";
-import { resolveWorkspaceRootWithMeta } from "./lib/workspace-root.js";
+import { ensureMcpProbeKitBootstrapAtStartup } from "./lib/workflow-skill-installer.js";
 import { createProbeServer } from "./server/create-server.js";
 import { getProtocolModeFromEnv } from "./protocol/protocol-capabilities.js";
 import type { InternalTaskRecord } from "./tasks/task-types.js";
@@ -15,6 +15,8 @@ const MCP_BUILD_TAG = "v4-sdk2-dual-era-20260730";
 
 async function main(): Promise<void> {
   const protocolMode = getProtocolModeFromEnv();
+  const startup = ensureMcpProbeKitBootstrapAtStartup();
+  reportStartupBootstrap(startup);
 
   if (protocolMode === "legacy") {
     const runtime = createProbeServer({ protocolMode });
@@ -34,12 +36,36 @@ async function main(): Promise<void> {
     );
   }
 
-  const workspace = resolveWorkspaceRootWithMeta("");
   console.error(
-    `MCP Probe Kit v${VERSION} 已启动 | build=${MCP_BUILD_TAG} | protocol=${protocolMode} | workspace=${workspace.root} | source=${workspace.source}`
+    `MCP Probe Kit v${VERSION} 已启动 | build=${MCP_BUILD_TAG} | protocol=${protocolMode} | workspace=${startup.workspace.root} | source=${startup.workspace.source}`
   );
-  if (workspace.warning) {
-    console.error(`[MCP Probe Kit] ${workspace.warning}`);
+  if (startup.workspace.warning) {
+    console.error(`[MCP Probe Kit] ${startup.workspace.warning}`);
+  }
+}
+
+function reportStartupBootstrap(
+  startup: ReturnType<typeof ensureMcpProbeKitBootstrapAtStartup>
+): void {
+  if (startup.error) {
+    console.error(`[MCP Probe Kit] 启动时同步 Skill 失败，将在首次工具调用时重试: ${startup.error}`);
+    return;
+  }
+  const bootstrap = startup.bootstrap;
+  if (!bootstrap) return;
+  if (bootstrap.skill.created) {
+    console.error(
+      `[MCP Probe Kit] 启动时已创建 Skill: ${bootstrap.skill.skillRelPath} (v${bootstrap.skill.version})`
+    );
+  } else if (bootstrap.skill.updated) {
+    console.error(
+      `[MCP Probe Kit] 启动时已升级 Skill: ${bootstrap.skill.skillRelPath} ${bootstrap.skill.previousVersion ?? "?"} -> v${bootstrap.skill.version}`
+    );
+  }
+  if (bootstrap.agentsMd.created) {
+    console.error(`[MCP Probe Kit] 启动时已创建 AGENTS.md: ${bootstrap.agentsMd.path}`);
+  } else if (bootstrap.agentsMd.updated) {
+    console.error(`[MCP Probe Kit] 启动时已更新 AGENTS.md: ${bootstrap.agentsMd.path}`);
   }
 }
 

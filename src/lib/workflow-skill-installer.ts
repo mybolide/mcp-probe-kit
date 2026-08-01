@@ -28,6 +28,8 @@ import {
   isLikelyProjectNamedRelativePath,
   getMcpPackageInstallRoot,
   resolveWorkspaceRoot,
+  resolveWorkspaceRootWithMeta,
+  type WorkspaceRootResolution,
 } from "./workspace-root.js";
 
 export interface SkillEnsureResult {
@@ -54,6 +56,12 @@ export interface McpProbeKitBootstrapResult {
   harness?: HarnessAdapterEnsureResult;
   /** 工作区可能解析失败（写到了 mcp-probe-kit 安装目录） */
   workspaceWarning?: string;
+}
+
+export interface McpProbeKitStartupBootstrapResult {
+  workspace: WorkspaceRootResolution;
+  bootstrap: McpProbeKitBootstrapResult | null;
+  error?: string;
 }
 
 function buildWorkspaceWarning(projectRoot: string): string | undefined {
@@ -248,6 +256,32 @@ export function ensureMcpProbeKitBootstrapForToolCall(
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[MCP Probe Kit] mcp-probe-kit bootstrap failed: ${message}`);
     return null;
+  }
+}
+
+/**
+ * MCP 启动时同步当前工作区 Skill。
+ * 只有识别到真实项目目录时才写入；package fallback 时跳过，避免污染安装目录。
+ */
+export function ensureMcpProbeKitBootstrapAtStartup(
+  explicitProjectRoot: string = ""
+): McpProbeKitStartupBootstrapResult {
+  const workspace = resolveWorkspaceRootWithMeta(explicitProjectRoot);
+  if (workspace.source === "package-fallback") {
+    return { workspace, bootstrap: null };
+  }
+
+  try {
+    return {
+      workspace,
+      bootstrap: ensureMcpProbeKitBootstrap(workspace.root),
+    };
+  } catch (error) {
+    return {
+      workspace,
+      bootstrap: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 

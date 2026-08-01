@@ -6,6 +6,7 @@ import { VERSION } from "../../version.js";
 import {
   ensureAgentsMdSkillReference,
   ensureMcpProbeKitBootstrap,
+  ensureMcpProbeKitBootstrapAtStartup,
   ensureMcpProbeSkill,
   resolveProjectRootFromToolArgs,
 } from "../workflow-skill-installer.js";
@@ -35,10 +36,14 @@ afterEach(() => {
 });
 
 describe("workflow-skill-version", () => {
-  test("compareSemver 比较主次补丁", () => {
+  test("compareSemver 比较完整 SemVer", () => {
     expect(compareSemver("3.5.0", "3.5.1")).toBeLessThan(0);
     expect(compareSemver("3.6.0", "3.5.9")).toBeGreaterThan(0);
     expect(compareSemver("3.5.0", "3.5.0")).toBe(0);
+    expect(compareSemver("4.0.0-rc.2", "4.0.0-rc.3")).toBeLessThan(0);
+    expect(compareSemver("4.0.0-rc.10", "4.0.0-rc.3")).toBeGreaterThan(0);
+    expect(compareSemver("4.0.0-rc.3", "4.0.0")).toBeLessThan(0);
+    expect(compareSemver("4.0.0", "4.0.0-rc.99")).toBeGreaterThan(0);
   });
 
   test("无版本标记视为需要升级", () => {
@@ -91,6 +96,38 @@ describe("workflow-skill-installer", () => {
 
     expect(result.created).toBe(false);
     expect(result.updated).toBe(false);
+    expect(fs.readFileSync(skillPath, "utf8")).toBe(content);
+  });
+
+  test("rc.2 Skill 会自动升级到当前安装版本", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
+    tempDirs.push(root);
+    const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
+    const content = generateWorkflowSkillContent("4.0.0-rc.2");
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath, content, "utf8");
+
+    const result = ensureMcpProbeSkill(root);
+
+    expect(result.updated).toBe(true);
+    expect(result.previousVersion).toBe("4.0.0-rc.2");
+    expect(fs.readFileSync(skillPath, "utf8")).toContain(
+      `mcp-probe-kit-version: "${VERSION}"`
+    );
+  });
+
+  test("高于当前安装版本的 Skill 不会被降级", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
+    tempDirs.push(root);
+    const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
+    const content = generateWorkflowSkillContent("999.0.0");
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath, content, "utf8");
+
+    const result = ensureMcpProbeSkill(root);
+
+    expect(result.updated).toBe(false);
+    expect(result.previousVersion).toBe("999.0.0");
     expect(fs.readFileSync(skillPath, "utf8")).toBe(content);
   });
 
@@ -166,6 +203,28 @@ describe("workflow-skill-installer", () => {
 
     expect(result.skill.created).toBe(true);
     expect(result.agentsMd.created).toBe(true);
+  });
+
+  test("MCP 启动时在已确认工作区自动升级 Skill", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
+    tempDirs.push(root);
+    const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath, generateWorkflowSkillContent("4.0.0-rc.2"), "utf8");
+
+    const result = ensureMcpProbeKitBootstrapAtStartup(root);
+
+    expect(result.error).toBeUndefined();
+    expect(result.workspace.source).toBe("explicit");
+    expect(result.bootstrap?.skill.updated).toBe(true);
+    expect(result.bootstrap?.skill.previousVersion).toBe("4.0.0-rc.2");
+    expect(fs.readFileSync(skillPath, "utf8")).toContain(
+      `mcp-probe-kit-version: "${VERSION}"`
+    );
+
+    const second = ensureMcpProbeKitBootstrapAtStartup(root);
+    expect(second.bootstrap?.skill.created).toBe(false);
+    expect(second.bootstrap?.skill.updated).toBe(false);
   });
 
   test("从 tool args 解析 project_root", () => {
