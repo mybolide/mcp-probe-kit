@@ -24,6 +24,54 @@ import {
   type ToolExecutionContext,
 } from '../lib/tool-execution-context.js';
 
+
+interface ProductBrief {
+  targetUsers: string;
+  constraints: string;
+}
+
+function cleanProductSectionLine(value: string): string {
+  return value.trim().replace(/^[-*•]\s*/, '').trim();
+}
+
+function extractProductBrief(description: string): ProductBrief {
+  const values: Record<keyof ProductBrief, string[]> = {
+    targetUsers: [],
+    constraints: [],
+  };
+  let active: keyof ProductBrief | null = null;
+
+  for (const rawLine of description.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const heading = line.match(/^([^:：]{1,24})[:：]\s*(.*)$/);
+    if (heading) {
+      const label = heading[1]?.trim().toLowerCase() ?? '';
+      const inlineValue = cleanProductSectionLine(heading[2] ?? '');
+      if (/^(目标用户|用户对象|适用用户|target users?|audience)$/.test(label)) {
+        active = 'targetUsers';
+      } else if (/^(核心约束|约束|限制条件|constraints?)$/.test(label)) {
+        active = 'constraints';
+      } else {
+        active = null;
+      }
+      if (active && inlineValue) values[active].push(inlineValue);
+      continue;
+    }
+
+    if (active) {
+      const value = cleanProductSectionLine(line);
+      if (value) values[active].push(value);
+    }
+  }
+
+  return {
+    targetUsers: values.targetUsers.join('；'),
+    constraints: values.constraints.join('；'),
+  };
+}
+
 /** Product workflow entry. It exposes one closed delegated plan, not phantom sub-tools. */
 export async function startProduct(args: unknown, context?: ToolExecutionContext) {
   try {
@@ -35,6 +83,8 @@ export async function startProduct(args: unknown, context?: ToolExecutionContext
       requirements_file?: string;
       product_name?: string;
       product_type?: string;
+      target_users?: string;
+      constraints?: string;
       skip_design_system?: boolean;
       docs_dir?: string;
       project_root?: string;
@@ -44,6 +94,8 @@ export async function startProduct(args: unknown, context?: ToolExecutionContext
         requirements_file: '',
         product_name: '新产品',
         product_type: 'SaaS',
+        target_users: '',
+        constraints: '',
         skip_design_system: false,
         docs_dir: 'docs',
         project_root: '',
@@ -54,6 +106,8 @@ export async function startProduct(args: unknown, context?: ToolExecutionContext
         requirements_file: ['req_file', '需求文件'],
         product_name: ['name', '产品名称'],
         product_type: ['type', '产品类型'],
+        target_users: ['targetUsers', 'target_user', 'audience', '目标用户', '用户对象'],
+        constraints: ['core_constraints', 'limitations', '核心约束', '约束', '限制条件'],
         skip_design_system: ['skip_design'],
         docs_dir: ['dir', '目录'],
         project_root: ['projectRoot', 'project_path', 'projectPath', 'root', '项目路径', '项目根目录'],
@@ -99,6 +153,10 @@ export async function startProduct(args: unknown, context?: ToolExecutionContext
         structuredContent: { error_code: 'MISSING_PRODUCT_DESCRIPTION' },
       };
     }
+
+    const inferredBrief = extractProductBrief(description);
+    const targetUsers = getString(parsed.target_users) || inferredBrief.targetUsers;
+    const constraints = getString(parsed.constraints) || inferredBrief.constraints;
 
     throwIfAborted(context?.signal, 'start_product 已取消');
     await reportToolProgress(context, 45, 'start_product: 构建闭环计划');
@@ -181,7 +239,7 @@ export async function startProduct(args: unknown, context?: ToolExecutionContext
     const plan = buildDelegatedPlanContract({
       planId: createDelegatedPlanId('product', `${productName}:${description}`),
       workflow: 'product',
-      workflowVersion: '4.0.0-rc.2',
+      workflowVersion: '4.0.0',
       objective: `完成 ${productName} 的 PRD、原型文档、设计系统与 HTML 原型`,
       steps,
       globalRules: [
@@ -208,7 +266,7 @@ export async function startProduct(args: unknown, context?: ToolExecutionContext
 
 - 产品：${productName}
 - 类型：${productType}
-- 文档目录：${docsDir}
+${targetUsers ? `- 目标用户：${targetUsers}\n` : ''}${constraints ? `- 核心约束：${constraints}\n` : ''}- 文档目录：${docsDir}
 - 规则：以下文字直接由 \`structuredContent.metadata.plan.steps\` 渲染。
 
 ## 执行计划
@@ -242,7 +300,16 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
       nextSteps: plan.steps.map((step) =>
         step.tool ? `调用 ${step.tool}` : `执行 Agent 操作 ${step.action ?? step.id}`
       ),
-      metadata: { plan, skills: skillBridge, projectRoot, requirementsSource },
+      metadata: {
+        plan,
+        skills: skillBridge,
+        projectRoot,
+        requirementsSource,
+        productBrief: {
+          targetUsers: targetUsers || null,
+          constraints: constraints || null,
+        },
+      },
     };
 
     await reportToolProgress(context, 95, 'start_product: 闭环计划已生成');

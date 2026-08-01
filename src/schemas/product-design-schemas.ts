@@ -21,6 +21,14 @@ export const startProductSchema = {
       type: "string",
       description: "产品类型（可选）。用于生成设计系统，如 'SaaS'、'E-commerce'、'Healthcare' 等。默认为 'SaaS'。",
     },
+    target_users: {
+      type: "string",
+      description: "目标用户（可选）。例如：TypeScript 项目维护者、企业管理员、普通消费者。未提供时会尝试从 description 的“目标用户：”段落提取。",
+    },
+    constraints: {
+      type: "string",
+      description: "核心约束（可选）。多个约束建议用分号分隔。未提供时会尝试从 description 的“核心约束：”或“约束：”段落提取。",
+    },
     skip_design_system: {
       type: "boolean",
       description: "跳过设计系统生成（可选）。默认为 false。如果设置为 true，将不生成设计系统。",

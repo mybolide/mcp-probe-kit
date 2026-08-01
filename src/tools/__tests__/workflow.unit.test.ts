@@ -38,6 +38,23 @@ describe('workflow 工具', () => {
     expect(fs.existsSync(path.join(projectRoot, '.agents/skills/mcp-probe-kit/SKILL.md'))).toBe(true);
   });
 
+  test('新增功能中的规格步骤不会抢占 feature 路由', async () => {
+    const projectRoot = makeProjectRoot();
+    const intent = '为现有 TypeScript 项目新增一个只读的健康检查摘要功能，需要先生成规格、评估影响范围、补充测试，并在完成后进行收敛检查。';
+    const result = await workflow({ intent, project_root: projectRoot });
+
+    expect(result.isError).toBe(false);
+    if (!('structuredContent' in result) || !result.structuredContent) {
+      throw new Error('missing structuredContent');
+    }
+    expect(result.structuredContent.scenario).toBe('feature');
+    expect(result.structuredContent.firstTool).toBe('start_feature');
+    expect(result.structuredContent.firstToolArgsHint).toEqual({
+      description: intent,
+      spec_layout: 'auto',
+    });
+  });
+
   test('Bug 意图返回 start_bugfix', async () => {
     const projectRoot = makeProjectRoot();
     const result = await workflow({ intent: '修复支付接口 500 错误', scenario: 'bugfix', project_root: projectRoot });

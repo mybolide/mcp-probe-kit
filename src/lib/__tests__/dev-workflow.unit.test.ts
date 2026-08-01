@@ -12,6 +12,25 @@ describe('dev-workflow', () => {
     expect(result.scenario).toBe('feature');
   });
 
+  test('新增功能包含规格步骤时仍路由到 feature', () => {
+    const result = detectWorkflowScenario(
+      '为现有 TypeScript 项目新增一个只读的健康检查摘要功能，需要先生成规格、评估影响范围、补充测试，并在完成后进行收敛检查。'
+    );
+    expect(result.scenario).toBe('feature');
+    expect(result.confidence).toBe('high');
+  });
+
+  test('只检查已有规格时路由到 spec', () => {
+    const result = detectWorkflowScenario('仅检查现有订单导出规格和验收标准是否完整，不实现代码');
+    expect(result.scenario).toBe('spec');
+    expect(result.confidence).toBe('high');
+  });
+
+  test('新增页面即使提到规格仍优先路由到 ui', () => {
+    const result = detectWorkflowScenario('新增设置页面和交互组件，先补充页面规格再实现');
+    expect(result.scenario).toBe('ui');
+  });
+
   test('发布候选开发中的实机验收不会误判为 spec', () => {
     const result = detectWorkflowScenario([
       '继续 MCP Probe Kit v4.0.0-rc.2 发布候选开发：',

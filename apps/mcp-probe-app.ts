@@ -250,10 +250,13 @@ function renderProductWorkbench(): string {
   const metadata = asDict(structured.metadata);
   const plan = asDict(metadata.plan ?? structured.plan);
   const steps = asArray(plan.steps);
+  const productBrief = asDict(metadata.productBrief);
   const productName = text(lastInput.product_name, text(lastInput.name, '产品方案'));
+  const targetUsers = text(lastInput.target_users, text(productBrief.targetUsers, '待明确'));
+  const constraints = text(lastInput.constraints, text(productBrief.constraints, '无'));
   return `<header class="minimal-header task-title"><h1 title="${escapeHtml(productName)}">产品设计 · ${escapeHtml(truncate(productName, 54))}</h1><span>${steps.length} 步</span></header>
   ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ''}
-  <section class="panel product-compact"><dl class="inline-facts"><div><dt>用户</dt><dd>${escapeHtml(text(lastInput.target_users, '待明确'))}</dd></div><div><dt>约束</dt><dd>${escapeHtml(text(lastInput.constraints, '无'))}</dd></div></dl><div class="compact-timeline">${steps.length ? steps.map((step, index) => `<div><span>${index + 1}</span><p><strong>${escapeHtml(stepLabel(step, index))}</strong><small>${escapeHtml(text(step.tool, text(step.action)))}</small></p></div>`).join('') : '<div class="empty-state compact-empty">等待计划</div>'}</div><div class="task-actions task-actions-end"><button data-action="continue-chat">继续完善</button><button class="primary" data-action="start-feature-chat">进入开发</button></div></section>`;
+  <section class="panel product-compact"><dl class="inline-facts"><div><dt>用户</dt><dd>${escapeHtml(targetUsers)}</dd></div><div><dt>约束</dt><dd>${escapeHtml(constraints)}</dd></div></dl><div class="compact-timeline">${steps.length ? steps.map((step, index) => `<div><span>${index + 1}</span><p><strong>${escapeHtml(stepLabel(step, index))}</strong><small>${escapeHtml(text(step.tool, text(step.action)))}</small></p></div>`).join('') : '<div class="empty-state compact-empty">等待计划</div>'}</div><div class="task-actions task-actions-end"><button data-action="continue-chat">继续完善</button><button class="primary" data-action="start-feature-chat">进入开发</button></div></section>`;
 }
 
 function renderConvergence(): string {

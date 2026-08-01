@@ -80,6 +80,47 @@ const SCENARIO_PATTERNS: Array<{ scenario: WorkflowScenario; patterns: RegExp[] 
   },
 ];
 
+
+const UI_DELIVERY_PATTERN =
+  /(?:新增|添加|增加|实现|开发|设计|改造|优化).{0,24}(?:页面|界面|组件|布局|交互)|(?:页面|界面|组件|布局|交互).{0,24}(?:新增|添加|增加|实现|开发|设计|改造|优化)/i;
+
+const FEATURE_DELIVERY_PATTERN =
+  /新功能|功能开发|需求开发|(?:新增|添加|增加|新建|实现|开发|扩展|升级|改造|建设|接入|引入|上线|提供|支持).{0,24}(?:功能|能力|接口|服务|模块|流程|机制|系统|架构|摘要|状态|特性)|(?:为|给).{0,24}(?:新增|添加|增加|新建|实现|开发|扩展|提供|支持)/i;
+
+const SPEC_SUBJECT_PATTERN =
+  /规格|spec|requirements|验收标准|验收文档|验收条件/i;
+
+const SPEC_ACTION_PATTERN =
+  /校验|检查|审查|评审|验证|补全|完善|修订|整理|对照/i;
+
+const SPEC_ONLY_PATTERN =
+  /(?:仅|只)(?:需|要|做|进行)?(?:校验|检查|审查|评审|验证|补全|完善|修订).{0,12}(?:规格|spec|requirements|验收)|不(?:实现|开发|修改|写代码)/i;
+
+function detectPrimaryDeliveryScenario(text: string): {
+  scenario: WorkflowScenario;
+  confidence: 'high' | 'medium';
+} | null {
+  if (UI_DELIVERY_PATTERN.test(text)) {
+    return { scenario: 'ui', confidence: 'high' };
+  }
+
+  const hasFeatureDelivery = FEATURE_DELIVERY_PATTERN.test(text);
+  const hasSpecSubject = SPEC_SUBJECT_PATTERN.test(text);
+  const specOnly = hasSpecSubject && SPEC_ONLY_PATTERN.test(text);
+
+  // “新增功能，需要先生成规格”仍然是功能开发；规格只是其中一个步骤。
+  if (hasFeatureDelivery && !specOnly) {
+    return { scenario: 'feature', confidence: 'high' };
+  }
+
+  // 只有检查、评审、补全既有规格时，才直接进入 check_spec。
+  if (hasSpecSubject && (SPEC_ACTION_PATTERN.test(text) || specOnly)) {
+    return { scenario: 'spec', confidence: specOnly ? 'high' : 'medium' };
+  }
+
+  return null;
+}
+
 export const SCENARIO_LABELS: Record<WorkflowScenario, string> = {
   feature: '新功能开发',
   bugfix: 'Bug 修复',
@@ -126,6 +167,9 @@ export function detectWorkflowScenario(intent: string, explicit?: string): {
 
   const text = intent.trim();
   if (!text) return { scenario: 'unknown', confidence: 'low' };
+
+  const primaryDelivery = detectPrimaryDeliveryScenario(text);
+  if (primaryDelivery) return primaryDelivery;
 
   const scores = SCENARIO_PATTERNS.map((item) => ({
     scenario: item.scenario,

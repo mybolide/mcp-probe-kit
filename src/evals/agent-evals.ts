@@ -96,6 +96,22 @@ function runCase(definition: EvalDefinition): AgentEvalCaseResult {
 function evalDefinitions(): EvalDefinition[] {
   return [
     routeCase('route-feature', 'feature', 'start_feature'),
+    {
+      id: 'route-feature-with-spec-phase',
+      category: 'routing',
+      description: '新增功能即使包含生成规格步骤，也必须路由到 start_feature',
+      expected: { scenario: 'feature', firstTool: 'start_feature' },
+      evaluate: () => {
+        const plan = buildDevWorkflow(
+          '为现有 TypeScript 项目新增一个只读的健康检查摘要功能，需要先生成规格、评估影响范围、补充测试，并在完成后进行收敛检查。'
+        );
+        return { scenario: plan.scenario, firstTool: plan.firstTool };
+      },
+      matches: (actual) => {
+        const value = actual as Record<string, unknown>;
+        return value.scenario === 'feature' && value.firstTool === 'start_feature';
+      },
+    },
     routeCase('route-bugfix', 'bugfix', 'start_bugfix'),
     routeCase('route-ui', 'ui', 'start_ui'),
     routeCase('route-explore', 'explore', 'code_insight'),

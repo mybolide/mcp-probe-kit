@@ -86,6 +86,9 @@ describe('mcp-apps', () => {
     expect(html).toContain('@media (max-width: 460px)');
     expect(html).toContain('lifecycle-status');
     expect(html).toContain('gate-footer');
+    expect(html).toContain('.productBrief');
+    expect(html).toContain('.targetUsers');
+    expect(html).toContain('.constraints');
     expect(html).toContain('max-width: 1080px');
     expect(html).toContain('min-height: 26px');
     expect(html).toContain('ui-sans-serif, system-ui');
