@@ -41,6 +41,19 @@ describe('release readiness', () => {
     expect(report.checks.find((item) => item.id === 'release-npm-trusted-publishing')?.passed).toBe(false);
   });
 
+  it('构建前未清理 build 时阻断发布', () => {
+    const root = createFixture({
+      version: '4.0.0-rc.1',
+      serverVersion: '2.0.0',
+      includeMigration: true,
+      omitBuildClean: true,
+    });
+    const report = verifyReleaseReadiness(root);
+
+    expect(report.passed).toBe(false);
+    expect(report.checks.find((item) => item.id === 'clean-build-before-compile')?.passed).toBe(false);
+  });
+
   it('缺少迁移材料或 SDK 版本漂移时阻断发布候选', () => {
     const root = createFixture({
       version: '4.0.0-rc.1',
@@ -61,6 +74,7 @@ function createFixture(options: {
   serverVersion: string;
   includeMigration: boolean;
   legacyNpmToken?: boolean;
+  omitBuildClean?: boolean;
 }): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-release-readiness-'));
   temporaryDirectories.push(root);
@@ -68,6 +82,7 @@ function createFixture(options: {
   fs.mkdirSync(path.join(root, 'docs/specs/mcp-v4'), { recursive: true });
   fs.mkdirSync(path.join(root, 'src/lib'), { recursive: true });
   fs.mkdirSync(path.join(root, 'src/protocol/__tests__'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
     version: options.version,
     engines: { node: '>=20.0.0' },
@@ -80,7 +95,19 @@ function createFixture(options: {
       '@modelcontextprotocol/ext-apps': '1.7.2',
     },
     files: ['build', 'README.md', 'LICENSE'],
-    scripts: { 'eval:agents': 'eval', 'acceptance:agent': 'accept', 'stability:soak': 'soak', 'smoke:package': 'pack', 'smoke:rollback': 'rollback', 'smoke:inspector': 'inspector', 'security:audit': 'audit', 'release:verify': 'verify', 'build-mcp-apps': 'build-apps' },
+    scripts: {
+      'clean:build': options.omitBuildClean ? undefined : 'node scripts/clean-build.mjs',
+      prebuild: options.omitBuildClean ? 'npm run sync-version' : 'npm run clean:build && npm run sync-version',
+      'eval:agents': 'eval',
+      'acceptance:agent': 'accept',
+      'stability:soak': 'soak',
+      'smoke:package': 'pack',
+      'smoke:rollback': 'rollback',
+      'smoke:inspector': 'inspector',
+      'security:audit': 'audit',
+      'release:verify': 'verify',
+      'build-mcp-apps': 'build-apps',
+    },
   }));
   fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
     version: options.version,
@@ -114,6 +141,9 @@ function createFixture(options: {
       full: { count: 33 },
     },
   }));
+  if (!options.omitBuildClean) {
+    fs.writeFileSync(path.join(root, 'scripts/clean-build.mjs'), 'clean build');
+  }
   fs.writeFileSync(
     path.join(root, 'src/lib/mcp-apps.ts'),
     'io.modelcontextprotocol/ui\ntext/html;profile=mcp-app\nmemory-center\n'

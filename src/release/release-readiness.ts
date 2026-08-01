@@ -222,6 +222,7 @@ export function verifyReleaseReadiness(
     packageJson.files ?? [],
     'npm 包必须包含运行产物、README 和许可证'
   ));
+  checks.push(fileCheck(workspaceRoot, 'scripts/clean-build.mjs'));
   checks.push(fileCheck(workspaceRoot, 'docs/migration-v3-to-v4.md'));
   checks.push(fileCheck(workspaceRoot, 'src/protocol/__tests__/mcp-apps.integration.test.ts'));
   checks.push(contentCheck(
@@ -291,6 +292,7 @@ export function verifyReleaseReadiness(
     '稳定 RC 必须在 Node 20 最低版本和 Node 22 当前版本上持续回归'
   ));
   const requiredReleaseScripts = [
+    'clean:build',
     'eval:agents',
     'acceptance:agent',
     'stability:soak',
@@ -301,6 +303,21 @@ export function verifyReleaseReadiness(
     'release:verify',
     'build-mcp-apps',
   ];
+  checks.push(check(
+    'clean-build-before-compile',
+    packageJson.scripts?.['clean:build'] === 'node scripts/clean-build.mjs' &&
+      Boolean(packageJson.scripts?.prebuild?.trim().startsWith('npm run clean:build')),
+    'error',
+    {
+      cleanScript: 'node scripts/clean-build.mjs',
+      prebuildPrefix: 'npm run clean:build',
+    },
+    {
+      cleanScript: packageJson.scripts?.['clean:build'],
+      prebuild: packageJson.scripts?.prebuild,
+    },
+    '每次 TypeScript 构建前必须清空 build，防止已删除模块残留进入 npm tarball'
+  ));
   checks.push(check(
     'release-scripts',
     requiredReleaseScripts.every((name) => Boolean(packageJson.scripts?.[name])),

@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.4] - 2026-08-01
+
+### Fixed
+
+- Project Skill bootstrap now compares full SemVer prerelease identifiers, so `rc.2 < rc.3 < rc.4 < 4.0.0` instead of collapsing all prereleases to `4.0.0`.
+- MCP startup now creates or upgrades `.agents/skills/mcp-probe-kit/SKILL.md` before the Agent's first tool decision when a real workspace is detected. Equal versions remain untouched and newer project Skills are not downgraded.
+- `workflow` now prioritizes the primary delivery intent: feature requests that include a specification phase route to `start_feature`, while requests limited to reviewing an existing specification route to `check_spec`.
+- `start_product` now accepts `target_users` and `constraints`, and safely extracts them from structured `description` sections when explicit fields are omitted.
+- Product delegated plans now use the stable workflow protocol version `4.0.0` instead of a stale RC-specific literal.
+- Builds now remove the previous `build/` directory before TypeScript compilation, preventing deleted modules from leaking into npm tarballs.
+
+### Validation
+
+- Added deterministic workflow routing, Product brief extraction, Skill prerelease upgrade, startup idempotency, and clean-build release-gate regression tests.
+- Claude Code real-Agent calls against the locally installed rc.4 tarball verified exact feature/spec routing, Product brief extraction, Skill rc.3-to-rc.4 startup upgrade, and same-version idempotency using actual MCP tool traces.
+- `npm run release:verify` passed with 87 test files / 413 tests, 29/29 static checks, 38/38 tool-contract calls, 26/26 Agent Evals, 81 stability calls, a clean 360-entry package installation, v3.7.0 rollback, Inspector 2.0.0, and zero production vulnerabilities.
+
+---
+
 ## [4.0.0-rc.3] - 2026-08-01
 
 ### Added
