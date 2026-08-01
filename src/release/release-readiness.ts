@@ -253,12 +253,30 @@ export function verifyReleaseReadiness(
     '.github/workflows/release.yml',
     [
       'node-version: "20"',
+      'node-version: "24"',
+      'npm@11.18.0',
+      'id-token: write',
+      'package-manager-cache: false',
       'npm run release:verify',
       'npm publish --tag',
       'prerelease:',
       'publish_mcp_registry',
     ],
     'Tag 发布工作流必须区分 RC 与稳定版发布渠道'
+  ));
+  const releaseWorkflow = fs.readFileSync(
+    path.join(workspaceRoot, '.github/workflows/release.yml'),
+    'utf8'
+  );
+  checks.push(check(
+    'release-npm-trusted-publishing',
+    !releaseWorkflow.includes('NPM_TOKEN') && !releaseWorkflow.includes('NODE_AUTH_TOKEN'),
+    'error',
+    'OIDC Trusted Publishing without long-lived npm tokens',
+    releaseWorkflow.includes('NPM_TOKEN') || releaseWorkflow.includes('NODE_AUTH_TOKEN')
+      ? 'legacy npm token reference found'
+      : 'OIDC only',
+    'npm release job must use GitHub OIDC Trusted Publishing and must not reference npm tokens'
   ));
   checks.push(contentCheck(
     workspaceRoot,

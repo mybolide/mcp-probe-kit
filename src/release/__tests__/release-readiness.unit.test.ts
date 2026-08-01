@@ -25,6 +25,20 @@ describe('release readiness', () => {
     expect(report.totals.errors).toBe(0);
     expect(report.packageVersion).toBe('4.0.0-rc.1');
     expect(report.checks.find((item) => item.id === 'version-parity')?.passed).toBe(true);
+    expect(report.checks.find((item) => item.id === 'release-npm-trusted-publishing')?.passed).toBe(true);
+  });
+
+  it('发布工作流重新引用长期 npm token 时阻断发布', () => {
+    const root = createFixture({
+      version: '4.0.0-rc.1',
+      serverVersion: '2.0.0',
+      includeMigration: true,
+      legacyNpmToken: true,
+    });
+    const report = verifyReleaseReadiness(root);
+
+    expect(report.passed).toBe(false);
+    expect(report.checks.find((item) => item.id === 'release-npm-trusted-publishing')?.passed).toBe(false);
   });
 
   it('缺少迁移材料或 SDK 版本漂移时阻断发布候选', () => {
@@ -46,6 +60,7 @@ function createFixture(options: {
   version: string;
   serverVersion: string;
   includeMigration: boolean;
+  legacyNpmToken?: boolean;
 }): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-release-readiness-'));
   temporaryDirectories.push(root);
@@ -121,7 +136,8 @@ function createFixture(options: {
   );
   fs.writeFileSync(
     path.join(root, '.github/workflows/release.yml'),
-    'node-version: "20"\nnpm run release:verify\nnpm publish --tag\nprerelease:\npublish_mcp_registry\n'
+    'node-version: "20"\nnode-version: "24"\nnpm@11.18.0\nid-token: write\npackage-manager-cache: false\nnpm run release:verify\nnpm publish --tag\nprerelease:\npublish_mcp_registry\n' +
+      (options.legacyNpmToken ? 'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}\n' : '')
   );
   fs.writeFileSync(
     path.join(root, '.github/workflows/publish-mcp-registry.yml'),

@@ -17,10 +17,10 @@ jobs:
       prerelease: ${{ steps.release-meta.outputs.prerelease }}
       publish_mcp_registry: ${{ steps.release-meta.outputs.publish_mcp_registry }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -38,7 +38,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Extract release notes from CHANGELOG
         run: node scripts/extract-changelog-section.mjs "${{ github.ref_name }}" > release-notes.md
@@ -56,14 +56,21 @@ jobs:
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Use OIDC-capable npm CLI
+        run: npm install --global npm@11.18.0
 
       - name: Install dependencies
         run: npm ci
@@ -71,10 +78,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish to npm
+      - name: Publish to npm with Trusted Publishing
         run: npm publish --tag "${{ needs.build.outputs.npm_tag }}"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-mcp-registry:
     needs: [build, publish-npm]
@@ -84,7 +89,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Sync server.json version from tag
         shell: bash
