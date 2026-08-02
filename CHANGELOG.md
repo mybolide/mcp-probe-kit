@@ -30,6 +30,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.5] - 2026-08-02
+
+### Fixed
+
+- Published runtime now bundles the MCP SDK and other production dependencies into `build/index.js`, preventing `npx` installations with incomplete dependency trees from failing on `@modelcontextprotocol/server/stdio`.
+- The bundle includes a Node `createRequire` compatibility bridge for CommonJS dependencies used from the ESM entry point.
+- Feature and Bug workbenches no longer show `0/0 completed` or unusable refresh/converge actions when the Host has not provided a plan; the primary action returns to the conversation instead.
+
+### Validation
+
+- Package smoke testing now removes every installed runtime dependency except `mcp-probe-kit` before completing a real Modern MCP handshake, listing 23 tools, and calling `workflow`.
+- `npm pack` output parsing now tolerates lifecycle build logs while still validating the generated tarball.
+- Verified 91 test files / 415 tests, Legacy and Modern protocol paths, the 33-tool compatibility surface, and a dependency-free installed tarball.
+
+---
+
 ## [4.0.0-rc.4] - 2026-08-01
 
 ### Fixed

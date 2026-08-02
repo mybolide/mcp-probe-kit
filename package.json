@@ -1,6 +1,6 @@
 {
   "name": "mcp-probe-kit",
-  "version": "4.0.0-rc.4",
+  "version": "4.0.0-rc.5",
   "description": "AI-powered MCP development toolkit with 23 default tools, 29 with Memory, 33-tool compatibility mode, and MCP Apps workbenches",
   "mcpName": "io.github.mybolide/mcp-probe-kit",
   "type": "module",
@@ -9,8 +9,7 @@
     "mcp-probe-kit": "build/index.js"
   },
   "scripts": {
-    "build": "tsc",
-    "postbuild": "node scripts/copy-ui-embedded-data.mjs",
+    "build": "tsc && node scripts/bundle-runtime.mjs && node scripts/copy-ui-embedded-data.mjs",
     "watch": "tsc --watch",
     "dev": "tsc && node build/index.js",
     "test": "vitest --run --testTimeout=15000",

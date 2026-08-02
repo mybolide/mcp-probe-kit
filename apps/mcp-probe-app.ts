@@ -228,6 +228,9 @@ function stepState(step: Dict, state: ReturnType<typeof currentPlanState>): stri
 }
 
 function renderPlanSteps(state: ReturnType<typeof currentPlanState>): string {
+  if (!state.steps.length) {
+    return '<div class="wb-empty-plan">等待 Host 提供计划数据</div>';
+  }
   return `<ol class="plan-steps">${state.steps.map((step, index) => {
     const status = stepState(step, state);
     const marker = status === 'completed' ? '✓' : status === 'blocked' ? '!' : index + 1;
@@ -254,8 +257,15 @@ function renderTaskWorkbench(): string {
   const evidence = state.evidence.slice(0, 4);
   const planId = text(plan.planId);
   const total = state.steps.length || 0;
-  const primaryLabel = state.status === 'blocked' ? '处理阻断' : completedCount === total && total ? '查看结果' : '继续';
-  const currentStatus = currentStep ? stepState(currentStep, state) : 'completed';
+  const hasPlan = total > 0;
+  const primaryLabel = !hasPlan
+    ? '返回对话'
+    : state.status === 'blocked'
+      ? '处理阻断'
+      : completedCount === total
+        ? '查看结果'
+        : '继续';
+  const currentStatus = currentStep ? stepState(currentStep, state) : hasPlan ? 'completed' : 'pending';
   const percent = total ? Math.min(100, Math.round((completedCount / total) * 100)) : 0;
   const statusBadge = state.status === 'blocked'
     ? '<span class="status-badge bad">已阻断</span>'
@@ -277,9 +287,17 @@ function renderTaskWorkbench(): string {
   const evidenceBlock = evidence.length
     ? `<div class="def"><dt>证据${state.evidence.length > evidence.length ? ` · ${state.evidence.length}` : ''}</dt><dd>${evidence.map((entry) => `<div class="ev-row"><span class="ev-kind">${escapeHtml(EVIDENCE_LABELS[text(entry.kind)] || text(entry.kind, '其他'))}</span><span class="ev-text">${escapeHtml(text(entry.summary))}</span></div>`).join('')}</dd></div>`
     : '';
+  const currentTitle = currentStep
+    ? escapeHtml(stepLabel(currentStep, Math.max(displayIndex, 0)))
+    : hasPlan
+      ? '全部步骤已完成'
+      : '等待计划数据';
+  const emptyPlanHint = hasPlan
+    ? ''
+    : '<p class="wb-empty-hint">Host 尚未提供可用计划。可返回对话重新调用当前工具。</p>';
   return `<header class="minimal-header wb-header">
     <h1 title="${escapeHtml(objective)}">${kind === 'bug-workbench' ? 'Bug 修复' : '功能开发'} · ${escapeHtml(truncate(objective, 54))}</h1>
-    <div class="wb-header-meta">${statusBadge}<span class="status-count">已完成 <strong>${completedCount}</strong> / ${total || 0} 步</span><div class="progress-track"><span style="width:${percent}%"></span></div></div>
+    <div class="wb-header-meta">${statusBadge}<span class="status-count">${hasPlan ? `已完成 <strong>${completedCount}</strong> / ${total} 步` : '计划未就绪'}</span><div class="progress-track"><span style="width:${percent}%"></span></div></div>
   </header>
   ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ''}
   ${blockedBanner}
@@ -290,17 +308,18 @@ function renderTaskWorkbench(): string {
         <div class="wb-current${currentStatus === 'running' ? ' is-running' : ''}${currentStatus === 'blocked' ? ' is-blocked' : ''}">
           <div class="wb-current-head">
             ${displayIndex >= 0 ? `<span class="wb-step-index">${displayIndex + 1}</span>` : ''}
-            <h2>${currentStep ? escapeHtml(stepLabel(currentStep, Math.max(displayIndex, 0))) : '全部步骤已完成'}</h2>
+            <h2>${currentTitle}</h2>
             <span class="wb-state ${currentStatus}">${stepStateLabel(currentStatus)}</span>
           </div>
           ${currentStep ? `<div class="wb-command"><code>${escapeHtml(text(currentStep.tool, text(currentStep.action, 'host action')))}</code>${text(currentStep.note) ? `<span>${escapeHtml(currentStep.note)}</span>` : ''}</div>` : ''}
+          ${emptyPlanHint}
           ${(outputsBlock || evidenceBlock) ? `<dl class="wb-defs">${outputsBlock}${evidenceBlock}</dl>` : ''}
         </div>
         <div class="wb-actions task-actions task-actions-end">
           ${planId ? `<span class="wb-planid" title="${escapeHtml(planId)}">plan · ${escapeHtml(planId)}</span>` : ''}
           <div class="wb-buttons">
-            <button class="wb-secondary" data-action="resume-plan" data-id="${escapeHtml(planId)}">刷新</button>
-            <button class="wb-secondary" data-action="check-converge" data-id="${escapeHtml(planId)}">收敛</button>
+            ${planId ? `<button class="wb-secondary" data-action="resume-plan" data-id="${escapeHtml(planId)}">刷新</button>
+            <button class="wb-secondary" data-action="check-converge" data-id="${escapeHtml(planId)}">收敛</button>` : ''}
             <button class="primary" data-action="continue-chat">${primaryLabel}</button>
           </div>
         </div>

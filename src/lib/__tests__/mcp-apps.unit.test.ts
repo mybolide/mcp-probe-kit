@@ -93,6 +93,8 @@ describe('mcp-apps', () => {
     expect(html).toContain('min-height: 26px');
     expect(html).toContain('ui-sans-serif, system-ui');
     expect(html).toContain('font-size: 14px');
+    expect(html).toContain('wb-empty-plan');
+    expect(html).toContain('wb-empty-hint');
     expect(html).not.toContain('Development Workbench');
     expect(html).not.toContain('Product Workbench');
     expect(html).not.toContain('Quality Gate');

@@ -659,6 +659,7 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
 .wb-plan-label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; }
 .wb-plan-count { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .plan-steps { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.wb-empty-plan { padding: 18px 6px; color: var(--subtle); font-size: 12px; line-height: 1.6; }
 .plan-step { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 28px; border-radius: 6px; padding: 4px 6px; }
 .plan-step.running { border-left: 2px solid color-mix(in srgb, var(--accent) 55%, var(--border)); background: color-mix(in srgb, var(--accent) 4%, var(--panel)); }
 .plan-step.blocked { border-left: 2px solid color-mix(in srgb, var(--danger) 60%, var(--border)); background: color-mix(in srgb, var(--danger) 4%, var(--panel)); }
@@ -696,6 +697,7 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
 .wb-command { display: flex; align-items: baseline; gap: 10px; min-width: 0; margin-top: 14px; }
 .wb-command code { flex: 0 0 auto; border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; background: var(--panel-soft); color: var(--accent); font: 11.5px/1.5 var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace); font-weight: 650; }
 .wb-command span { min-width: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.wb-empty-hint { max-width: 560px; margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
 .wb-defs { display: grid; margin: 18px 0 0; }
 .wb-defs .def { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--border); }
 .wb-defs .def:last-child { border-bottom: 0; }

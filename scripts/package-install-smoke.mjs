@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
@@ -25,7 +25,7 @@ try {
     ['pack', '--json', '--ignore-scripts', '--pack-destination', packDir],
     root
   );
-  const packResult = JSON.parse(packed.stdout);
+  const packResult = parseNpmPackJson(packed.stdout);
   const artifact = packResult[0];
   assert(artifact?.filename, 'npm pack did not return a filename');
   assert(artifact.version === PACKAGE_VERSION, `unexpected packed version: ${artifact.version}`);
@@ -59,6 +59,18 @@ try {
   );
   const installedPackage = JSON.parse(await readFile(installedPackagePath, 'utf8'));
   assert(installedPackage.version === PACKAGE_VERSION, 'installed package version mismatch');
+
+  const installedNodeModules = join(consumerDir, 'node_modules');
+  for (const entry of await readdir(installedNodeModules, { withFileTypes: true })) {
+    if (entry.name === 'mcp-probe-kit') continue;
+    await rm(join(installedNodeModules, entry.name), { recursive: true, force: true });
+  }
+  const remainingRuntimeEntries = await readdir(installedNodeModules);
+  assert(
+    !remainingRuntimeEntries.includes('@modelcontextprotocol'),
+    'standalone smoke must run without installed MCP SDK dependencies'
+  );
+
 
   const serverPath = join(
     consumerDir,
@@ -119,12 +131,31 @@ try {
       firstTool: routed.structuredContent?.firstTool,
       started: stderrText.includes('v4-sdk2-dual-era-20260730'),
     }, null, 2));
+  } catch (error) {
+    throw new Error([
+      error instanceof Error ? error.stack || error.message : String(error),
+      stderrText ? 'server stderr:\n' + stderrText : '',
+    ].filter(Boolean).join('\n'));
   } finally {
     await client.close().catch(() => undefined);
     await transport.close().catch(() => undefined);
   }
 } finally {
   await rm(tempRoot, { recursive: true, force: true });
+}
+
+
+function parseNpmPackJson(output) {
+  const trimmed = output.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const match = trimmed.match(/(?:^|\r?\n)(\[\s*\{[\s\S]*\])$/);
+    if (!match) {
+      throw new Error(`npm pack did not return parseable JSON:\n${trimmed}`);
+    }
+    return JSON.parse(match[1]);
+  }
 }
 
 function runNpm(args, cwd) {
