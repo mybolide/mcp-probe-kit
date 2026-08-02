@@ -9,11 +9,21 @@ import { ensureMcpProbeKitBootstrapAtStartup } from "./lib/workflow-skill-instal
 import { createProbeServer } from "./server/create-server.js";
 import { getProtocolModeFromEnv } from "./protocol/protocol-capabilities.js";
 import type { InternalTaskRecord } from "./tasks/task-types.js";
+import { runCommandLine } from "./cli/command-line.js";
 
 /** 启动日志标识：用于确认客户端是否加载当前 build。 */
-const MCP_BUILD_TAG = "v4-sdk2-dual-era-20260730";
+const MCP_BUILD_TAG = "v4-cli-fallback-20260802";
 
 async function main(): Promise<void> {
+  const cliExitCode = await runCommandLine(process.argv.slice(2));
+  if (cliExitCode !== null) {
+    process.exitCode = cliExitCode;
+    return;
+  }
+  await runMcpServer();
+}
+
+async function runMcpServer(): Promise<void> {
   const protocolMode = getProtocolModeFromEnv();
   const startup = ensureMcpProbeKitBootstrapAtStartup();
   reportStartupBootstrap(startup);
@@ -67,6 +77,14 @@ function reportStartupBootstrap(
   } else if (bootstrap.agentsMd.updated) {
     console.error(`[MCP Probe Kit] 启动时已更新 AGENTS.md: ${bootstrap.agentsMd.path}`);
   }
+  const cliChanges = bootstrap.cliFallback?.files.filter(
+    (file) => file.created || file.updated
+  );
+  if (cliChanges && cliChanges.length > 0) {
+    console.error(
+      `[MCP Probe Kit] 已同步 CLI 降级启动器: ${bootstrap.cliFallback?.packageSpec} (${cliChanges.length} files)`
+    );
+  }
 }
 
 async function reportRecoveredTasks(
@@ -79,6 +97,12 @@ async function reportRecoveredTasks(
     );
   }
 }
+
+process.stdout.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EPIPE") {
+    process.exit(0);
+  }
+});
 
 main().catch((error) => {
   console.error("服务器启动失败:", error);

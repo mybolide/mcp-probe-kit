@@ -18,6 +18,7 @@ import {
   skillContentNeedsUpgrade,
 } from "./workflow-skill-version.js";
 import { ensureHarnessAdapters, type HarnessAdapterEnsureResult } from "./harness-adapters.js";
+import { ensureCliFallback, type CliFallbackEnsureResult } from "./cli-fallback-installer.js";
 import {
   detectDocumentLocale,
   patchLayoutManifestHarness,
@@ -54,6 +55,7 @@ export interface McpProbeKitBootstrapResult {
   skill: SkillEnsureResult;
   agentsMd: AgentsMdEnsureResult;
   harness?: HarnessAdapterEnsureResult;
+  cliFallback?: CliFallbackEnsureResult;
   /** 工作区可能解析失败（写到了 mcp-probe-kit 安装目录） */
   workspaceWarning?: string;
 }
@@ -172,7 +174,7 @@ export function ensureMcpProbeSkill(projectRoot: string): SkillEnsureResult {
       existed: Boolean(existing?.trim()),
       created: false,
       updated: false,
-      version: targetVersion,
+      version: previousVersion ?? targetVersion,
       previousVersion,
     };
   }
@@ -194,13 +196,14 @@ export function ensureMcpProbeSkill(projectRoot: string): SkillEnsureResult {
 /**
  * 确保 AGENTS.md 存在且含 mcp-probe 块与 Skill 引用；无则创建，有则按版本合并更新。
  */
-export function ensureAgentsMdSkillReference(projectRoot: string): AgentsMdEnsureResult {
+export function ensureAgentsMdSkillReference(
+  projectRoot: string,
+  targetVersion: string = getMcpProbeSkillVersion()
+): AgentsMdEnsureResult {
   const root = path.resolve(projectRoot);
   const layout = resolveProjectContextLayout(root);
   const agentsPath = path.join(root, layout.indexPath);
   const existing = fs.existsSync(agentsPath) ? fs.readFileSync(agentsPath, "utf8") : null;
-  const targetVersion = getMcpProbeSkillVersion();
-
   if (!agentsMdNeedsUpdate(existing, MCP_PROBE_SKILL_REL_PATH, targetVersion)) {
     return {
       path: layout.indexPath,
@@ -231,15 +234,18 @@ export function ensureMcpProbeKitBootstrap(projectRoot: string): McpProbeKitBoot
   const root = path.resolve(projectRoot);
   const workspaceWarning = buildWorkspaceWarning(root);
   const skill = ensureMcpProbeSkill(root);
-  const agentsMd = ensureAgentsMdSkillReference(root);
   const skillContent = fs.readFileSync(skill.skillPath, "utf8");
+  const installedVersion = parseSkillInstalledVersion(skillContent) ?? skill.version;
+  const agentsMd = ensureAgentsMdSkillReference(root, installedVersion);
+  const cliFallback = ensureCliFallback(root, installedVersion);
   const layout = resolveProjectContextLayout(root);
   const harness = ensureHarnessAdapters(root, skillContent, layout.indexPath);
   patchLayoutManifestHarness(root, harness.layoutHarness);
   return {
     projectRoot: root,
-    skill,
+    skill: { ...skill, version: installedVersion },
     agentsMd,
+    cliFallback,
     harness,
     workspaceWarning,
   };

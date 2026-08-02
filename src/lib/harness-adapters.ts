@@ -9,7 +9,10 @@ import {
   toLayoutHarnessManifest,
   type LayoutHarnessManifest,
 } from "./harness-skill-targets.js";
-import { getMcpProbeSkillVersion } from "./workflow-skill-version.js";
+import {
+  getMcpProbeSkillVersion,
+  parseSkillInstalledVersion,
+} from "./workflow-skill-version.js";
 
 const RULES_POINTER_VERSION_KEY = "mcp-probe-kit-harness-adapter-version";
 const CLAUDE_BLOCK_BEGIN =
@@ -47,6 +50,32 @@ function generateRulesPointerContent(
 
 **不要**跳过 MCP 直接改业务代码。拿不准先调 \`workflow\`。
 `;
+}
+
+function generateCursorRulesContent(
+  skillCanonical: string,
+  version: string,
+  agentsIndexPath: string
+): string {
+  return [
+    "---",
+    "description: mcp-probe-kit native MCP and version-locked CLI fallback",
+    "alwaysApply: true",
+    "---",
+    "",
+    "# mcp-probe-kit",
+    "",
+    `> ${RULES_POINTER_VERSION_KEY}: ${version}`,
+    "",
+    `Before coding, read \`${agentsIndexPath}\` and \`${skillCanonical}\`.`,
+    "",
+    "1. Prefer native mcp-probe-kit tools when they are available in the current Agent session.",
+    "2. If native MCP tools are missing, use \`.mcp-probe-kit/bin/probe.* exec <tool> --stdin\` through the terminal.",
+    `3. If the wrapper is missing, run \`npx --yes mcp-probe-kit@${version} install-agent --project-root .\`, then use the wrapper.`,
+    "4. Never use \`@latest\` or \`@next\`, never install globally, and do not ask the user to install it.",
+    "5. Preserve the normal chain: \`workflow\` → returned \`firstTool\` → \`plan_heartbeat\` → verification → \`code_review\` → \`converge\`.",
+    "",
+  ].join("\n");
 }
 
 function generateComateRulesContent(
@@ -96,6 +125,7 @@ function adapterNeedsUpdate(
   existing: string | null,
   nextContent: string,
   kind: HarnessAdapterKind,
+  version: string,
   agentsIndexPath?: string
 ): boolean {
   if (!existing?.trim()) {
@@ -104,7 +134,6 @@ function adapterNeedsUpdate(
   if (kind === "skill-mirror") {
     return existing !== nextContent;
   }
-  const version = getMcpProbeSkillVersion();
   if (!existing.includes(RULES_POINTER_VERSION_KEY) || !existing.includes(version)) {
     return true;
   }
@@ -125,11 +154,14 @@ function resolveAdapterContent(
   skillContent: string,
   agentsIndexPath: string
 ): string {
-  const version = getMcpProbeSkillVersion();
+  const version = parseSkillInstalledVersion(skillContent) ?? getMcpProbeSkillVersion();
   switch (adapter.kind) {
     case "skill-mirror":
       return skillContent;
     case "rules-pointer":
+      if (adapter.relPath.endsWith(".mdc")) {
+        return generateCursorRulesContent(CANONICAL_SKILL_REL_PATH, version, agentsIndexPath);
+      }
       return adapter.relPath.endsWith(".mdr")
         ? generateComateRulesContent(CANONICAL_SKILL_REL_PATH, version, agentsIndexPath)
         : generateRulesPointerContent(CANONICAL_SKILL_REL_PATH, version, agentsIndexPath);
@@ -147,6 +179,7 @@ function writeAdapterFile(
   projectRoot: string,
   adapter: HarnessAdapterTarget,
   content: string,
+  version: string,
   agentsIndexPath: string
 ): HarnessAdapterWriteResult {
   const absolute = path.join(projectRoot, adapter.relPath);
@@ -155,7 +188,7 @@ function writeAdapterFile(
   if (adapter.kind === "claude-pointer" && existing) {
     const block = generateClaudePointerBlock(CANONICAL_SKILL_REL_PATH, agentsIndexPath);
     const merged = mergeClaudePointer(existing, block);
-    if (!adapterNeedsUpdate(existing, merged, adapter.kind, agentsIndexPath)) {
+    if (!adapterNeedsUpdate(existing, merged, adapter.kind, version, agentsIndexPath)) {
       return {
         id: adapter.id,
         path: adapter.relPath,
@@ -177,7 +210,7 @@ function writeAdapterFile(
     };
   }
 
-  if (!adapterNeedsUpdate(existing, content, adapter.kind, agentsIndexPath)) {
+  if (!adapterNeedsUpdate(existing, content, adapter.kind, version, agentsIndexPath)) {
     return {
       id: adapter.id,
       path: adapter.relPath,
@@ -226,10 +259,11 @@ export function ensureHarnessAdapters(
   const root = path.resolve(projectRoot);
   const detection = detectHarnessContext(root);
   const adapters: HarnessAdapterWriteResult[] = [];
+  const version = parseSkillInstalledVersion(skillContent) ?? getMcpProbeSkillVersion();
 
   for (const adapter of detection.adaptersToWrite) {
     const content = resolveAdapterContent(adapter, skillContent, agentsIndexPath);
-    adapters.push(writeAdapterFile(root, adapter, content, agentsIndexPath));
+    adapters.push(writeAdapterFile(root, adapter, content, version, agentsIndexPath));
   }
 
   return {

@@ -47,6 +47,50 @@ function renderCommonFlows(): string {
   );
 }
 
+function renderExecutionChannels(skillVersion: string): string {
+  return `## 执行通道与自动降级
+
+### 首选：原生 MCP
+
+如果当前 Agent 可以直接调用 \`workflow\`、\`start_feature\`、\`start_bugfix\`、\`start_ui\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\` 等工具，优先使用原生 MCP。
+
+### 降级：项目 CLI
+
+如果 MCP 面板已连接，但当前 Agent 会话看不到上述 MCP 工具，不要跳过 mcp-probe-kit 工作流，也不要要求用户安装。直接通过终端调用项目内版本锁定启动器：
+
+Windows（PowerShell / CMD，优先使用不受脚本执行策略影响的 CMD 启动器）：
+
+\`\`\`powershell
+& ./.mcp-probe-kit/bin/probe.cmd exec <tool> --stdin
+\`\`\`
+
+macOS / Linux：
+
+\`\`\`bash
+./.mcp-probe-kit/bin/probe exec <tool> --stdin
+\`\`\`
+
+CLI 返回 JSON；读取 \`structuredContent\`、\`content\` 和 \`isError\`，继续执行与原生 MCP 相同的工具链。
+
+### 启动器缺失时自修复
+
+如果 \`.mcp-probe-kit/bin/probe.*\` 不存在，由 Agent 自行执行：
+
+Windows：
+
+\`\`\`powershell
+npx.cmd --yes mcp-probe-kit@${skillVersion} install-agent --project-root .
+\`\`\`
+
+macOS / Linux：
+
+\`\`\`bash
+npx --yes mcp-probe-kit@${skillVersion} install-agent --project-root .
+\`\`\`
+
+安装后立即改用项目内启动器。不得使用 \`@latest\` 或 \`@next\`，不得全局安装，也不得修改用户项目的 \`package.json\`。Skill、CLI 启动器和 MCP 必须保持同一精确版本 \`${skillVersion}\`。`;
+}
+
 function renderAvoidRules(): string {
   return MCP_SKILL_AVOID_RULES.map((rule) => `- ${rule}`).join("\n");
 }
@@ -66,6 +110,10 @@ export function generateWorkflowSkillBody(skillVersion: string = VERSION): strin
 1. **先查下表**，有对应 MCP 就先调，再写代码 / 改文件
 2. **拿不准** → \`workflow\`：\`{ "intent": "<结合当前对话整理的完整任务摘要>" }\`
 3. \`start_*\` 会列出后续该调的 MCP；按返回逐步调用即可
+
+${renderExecutionChannels(skillVersion)}
+
+---
 
 ## 参数构造纪律
 

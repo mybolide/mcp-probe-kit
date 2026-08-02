@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import {
   COMPACT_TOOL_COUNT,
   FULL_TOOL_COUNT,
+  PACKAGE_VERSION,
 } from './release-surface.mjs';
 
 const inspectorVersion = '2.0.0';
@@ -58,7 +59,7 @@ console.log(JSON.stringify({
     'resume_plan',
     'converge',
   ],
-  serverStarted: compact.stderr.includes('v4-sdk2-dual-era-20260730'),
+  serverStarted: compact.stderr.includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
 }, null, 2));
 
 function runInspector(toolset, expectedModelCount) {

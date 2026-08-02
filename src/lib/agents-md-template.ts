@@ -72,6 +72,7 @@ export function generateAgentsMdInner(input: AgentsMdTemplateInput): string {
 需已配置 mcp-probe-kit。${formatAgentsSkillReference(skillLink)}（首次 MCP 调用自动创建 Skill 文件）。
 
 - 不确定用哪个 MCP → \`workflow\`（返回 firstTool）
+- 当前会话看不到 MCP 工具 → 读取 Skill 的“执行通道与自动降级”，通过 \`.mcp-probe-kit/bin/probe.*\` 调用同版本 CLI；不要要求用户安装
 - 新功能 → \`start_feature\`（会先搜记忆）
 - Bug → \`start_bugfix\`（会先搜记忆）
 - UI → \`start_ui\`（会先搜记忆）
@@ -94,6 +95,7 @@ ${graphLineZh}${memorySection(locale)}`;
 Requires mcp-probe-kit. ${formatAgentsSkillReferenceEn(skillLink)} (Skill file auto-created on first MCP call).
 
 - Unsure which MCP → \`workflow\` (returns firstTool)
+- MCP tools missing from this Agent session → follow the Skill CLI fallback and call \`.mcp-probe-kit/bin/probe.*\`; do not ask the user to install it
 - Feature → \`start_feature\` (searches memory first)
 - Bug → \`start_bugfix\` (searches memory first)
 - UI → \`start_ui\` (searches memory first)

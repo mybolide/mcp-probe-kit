@@ -209,7 +209,7 @@ try {
       passed: acceptedConverge.structuredContent?.passed,
       memoryWriteAllowed: acceptedConverge.structuredContent?.memoryWriteAllowed,
     },
-    serverStarted: stderrText.includes('v4-sdk2-dual-era-20260730'),
+    serverStarted: stderrText.includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
   }, null, 2));
 } finally {
   await client.close().catch(() => undefined);

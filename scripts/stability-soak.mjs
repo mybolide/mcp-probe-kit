@@ -86,7 +86,7 @@ async function runSession({ era, calls, extraEnv = {} }) {
       assert(result.isError !== true, `${era} workflow call ${index + 1} failed`);
       assert(result.structuredContent?.firstTool === 'start_feature', `${era} workflow route mismatch`);
     }
-    assert(session.stderr().includes('v4-sdk2-dual-era-20260730'), `${era} startup marker missing`);
+    assert(session.stderr().includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`), `${era} startup marker missing`);
   } finally {
     await session.close();
   }

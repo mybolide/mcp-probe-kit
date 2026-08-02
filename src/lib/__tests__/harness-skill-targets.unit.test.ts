@@ -61,6 +61,24 @@ describe("harness-skill-targets", () => {
     expect(text).toContain(CANONICAL_SKILL_REL_PATH);
   });
 
+  test("检测到 .cursor 时写入 CLI 降级规则", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-"));
+    tempDirs.push(root);
+    fs.mkdirSync(path.join(root, ".cursor"), { recursive: true });
+
+    const result = ensureHarnessAdapters(root, generateWorkflowSkillContent(VERSION));
+
+    const cursorRule = result.adapters.find((adapter) => adapter.id === "cursor-rules");
+    expect(cursorRule?.created).toBe(true);
+    const text = fs.readFileSync(
+      path.join(root, ".cursor/rules/mcp-probe-kit.mdc"),
+      "utf8"
+    );
+    expect(text).toContain("alwaysApply: true");
+    expect(text).toContain(`mcp-probe-kit@${VERSION}`);
+    expect(text).toContain(".mcp-probe-kit/bin/probe.*");
+  });
+
   test("AGENTS.md 引用路径不因 harness 变化", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-"));
     tempDirs.push(root);

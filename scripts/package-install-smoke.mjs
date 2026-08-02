@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, join, resolve } from 'node:path';
+import { basename, delimiter, join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { COMPACT_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
@@ -79,6 +79,175 @@ try {
     'build',
     'index.js'
   );
+  const cliProjectDir = join(tempRoot, 'cli-project');
+  await mkdir(cliProjectDir, { recursive: true });
+  await writeFile(
+    join(cliProjectDir, 'package.json'),
+    JSON.stringify({ name: 'mcp-probe-cli-smoke', private: true }, null, 2) + '\n',
+    'utf8'
+  );
+  const cliResult = spawnSync(
+    process.execPath,
+    [serverPath, 'exec', 'workflow', '--stdin'],
+    {
+      cwd: cliProjectDir,
+      input: JSON.stringify({
+        intent: 'Verify the packed CLI fallback routes a feature request',
+        scenario: 'feature',
+        project_root: cliProjectDir,
+      }),
+      encoding: 'utf8',
+      windowsHide: true,
+      env: {
+        ...process.env,
+        MCP_ENABLE_GITNEXUS_BRIDGE: '0',
+        MEMORY_QDRANT_URL: '',
+        MEMORY_EMBEDDING_URL: '',
+        MEMORY_EMBEDDING_MODEL: '',
+      },
+    }
+  );
+  assert(
+    cliResult.status === 0,
+    `packed CLI failed: ${cliResult.stderr || cliResult.stdout}`
+  );
+  const cliPayload = JSON.parse(cliResult.stdout);
+  assert(cliPayload.ok === true, 'packed CLI returned ok=false');
+  assert(
+    cliPayload.structuredContent?.firstTool === 'start_feature',
+    'packed CLI routing mismatch'
+  );
+  assert(
+    cliPayload.runtime?.versionAligned === true,
+    'packed CLI runtime versions are not aligned'
+  );
+  const cliManifest = JSON.parse(
+    await readFile(join(cliProjectDir, '.mcp-probe-kit', 'runtime.json'), 'utf8')
+  );
+  assert(cliManifest.version === PACKAGE_VERSION, 'packed CLI manifest version mismatch');
+  const cliPowerShellWrapper = await readFile(
+    join(cliProjectDir, '.mcp-probe-kit', 'bin', 'probe.ps1'),
+    'utf8'
+  );
+  assert(
+    cliPowerShellWrapper.includes(`mcp-probe-kit@${PACKAGE_VERSION}`),
+    'packed CLI wrapper is not pinned to the package version'
+  );
+  const cliShellWrapperPath = join(cliProjectDir, '.mcp-probe-kit', 'bin', 'probe');
+  const cliShellWrapper = await readFile(cliShellWrapperPath, 'utf8');
+  assert(cliShellWrapper.startsWith('#!/usr/bin/env sh'), 'packed Unix CLI wrapper lacks a POSIX shebang');
+  assert(
+    cliShellWrapper.includes(`mcp-probe-kit@${PACKAGE_VERSION}`),
+    'packed Unix CLI wrapper is not pinned to the package version'
+  );
+  assert(cliShellWrapper.includes('"$@"'), 'packed Unix CLI wrapper does not preserve arguments');
+
+  let cliUnixWrapperExecuted = null;
+  if (process.platform !== 'win32') {
+    const shellStat = await stat(cliShellWrapperPath);
+    assert((shellStat.mode & 0o111) !== 0, 'packed Unix CLI wrapper is not executable');
+    const syntaxResult = spawnSync('sh', ['-n', cliShellWrapperPath], {
+      cwd: cliProjectDir,
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    assert(
+      syntaxResult.status === 0,
+      `packed Unix CLI wrapper syntax failed: ${syntaxResult.stderr || syntaxResult.stdout}`
+    );
+
+    const fakeBin = join(tempRoot, 'fake-bin');
+    const fakeNpx = join(fakeBin, 'npx');
+    const capturePath = join(tempRoot, 'unix-wrapper-args.txt');
+    await mkdir(fakeBin, { recursive: true });
+    await writeFile(
+      fakeNpx,
+      '#!/usr/bin/env sh\nprintf "%s\n" "$@" > "$MCP_PROBE_WRAPPER_CAPTURE"\n',
+      'utf8'
+    );
+    await chmod(fakeNpx, 0o755);
+    const wrapperResult = spawnSync(
+      cliShellWrapperPath,
+      ['status', '--project-root', '.'],
+      {
+        cwd: cliProjectDir,
+        encoding: 'utf8',
+        windowsHide: true,
+        env: {
+          ...process.env,
+          PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ''}`,
+          MCP_PROBE_WRAPPER_CAPTURE: capturePath,
+          MCP_PROBE_NPX_CACHE: join(tempRoot, 'unix-wrapper-cache'),
+        },
+      }
+    );
+    assert(
+      wrapperResult.status === 0,
+      `packed Unix CLI wrapper execution failed: ${wrapperResult.stderr || wrapperResult.stdout}`
+    );
+    const capturedArgs = (await readFile(capturePath, 'utf8')).trim().split(/\r?\n/);
+    assert(capturedArgs.includes('--yes'), 'packed Unix CLI wrapper omitted --yes');
+    assert(capturedArgs.includes('--cache'), 'packed Unix CLI wrapper omitted --cache');
+    assert(
+      capturedArgs.includes(`mcp-probe-kit@${PACKAGE_VERSION}`),
+      'packed Unix CLI wrapper executed a different package version'
+    );
+    assert(capturedArgs.includes('status'), 'packed Unix CLI wrapper did not forward the command');
+    cliUnixWrapperExecuted = true;
+  }
+  const cliPlanId = 'feature-packed-cli-lifecycle';
+  const cliPlan = {
+    planId: cliPlanId,
+    mode: 'delegated',
+    contractVersion: '2.0.0',
+    workflow: 'feature',
+    workflowVersion: '4.0.0',
+    objective: 'Verify plan state survives separate packed CLI processes',
+    steps: [{ id: 'done', action: 'verify', type: 'agent_action' }],
+    globalRules: [],
+    completionCriteria: ['All evidence is present'],
+    memoryPolicy: {
+      recallBeforeExecution: true,
+      extractAfterValidation: true,
+      writeOnlyReusableKnowledge: true,
+      allowNegativeMemory: true,
+    },
+    executionStatePolicy: {
+      heartbeatTool: 'plan_heartbeat',
+      resumeTool: 'resume_plan',
+      convergenceTool: 'converge',
+      heartbeatAfterEachStep: true,
+      persistPlanOnFirstHeartbeat: true,
+    },
+  };
+  const heartbeatPayload = runPackedCli(serverPath, cliProjectDir, 'plan_heartbeat', {
+    plan_id: cliPlanId,
+    project_root: cliProjectDir,
+    plan: cliPlan,
+    completed_step_ids: ['done'],
+    evidence: [
+      { kind: 'requirements', summary: 'Scope confirmed' },
+      { kind: 'spec', summary: 'Spec confirmed', reference: 'docs/specs/demo' },
+      { kind: 'implementation', summary: 'Implementation completed', revision: 'abc123' },
+      { kind: 'test', summary: 'Tests passed', reference: 'npm test' },
+      { kind: 'review', summary: 'Review passed', reference: 'review-1' },
+    ],
+  });
+  assert(heartbeatPayload.structuredContent?.stored === true, 'packed CLI heartbeat failed');
+  const resumePayload = runPackedCli(serverPath, cliProjectDir, 'resume_plan', {
+    plan_id: cliPlanId,
+    project_root: cliProjectDir,
+  });
+  assert(resumePayload.structuredContent?.found === true, 'packed CLI resume failed');
+  assert(
+    resumePayload.structuredContent?.readyStepIds?.length === 0,
+    'packed CLI resume lost completed plan state'
+  );
+  const convergePayload = runPackedCli(serverPath, cliProjectDir, 'converge', {
+    plan_id: cliPlanId,
+    project_root: cliProjectDir,
+  });
+  assert(convergePayload.structuredContent?.passed === true, 'packed CLI converge failed');
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [serverPath],
@@ -129,7 +298,17 @@ try {
       clientEra: client.getProtocolEra(),
       tools: tools.tools.length,
       firstTool: routed.structuredContent?.firstTool,
-      started: stderrText.includes('v4-sdk2-dual-era-20260730'),
+      cliFirstTool: cliPayload.structuredContent?.firstTool,
+      cliVersionAligned: cliPayload.runtime?.versionAligned,
+      cliWrapperPinned: cliPowerShellWrapper.includes(`mcp-probe-kit@${PACKAGE_VERSION}`),
+      cliUnixWrapperPinned: cliShellWrapper.includes(`mcp-probe-kit@${PACKAGE_VERSION}`),
+      cliUnixWrapperExecuted,
+      cliPlanLifecycle: {
+        heartbeatStored: heartbeatPayload.structuredContent?.stored,
+        resumeFound: resumePayload.structuredContent?.found,
+        converged: convergePayload.structuredContent?.passed,
+      },
+      started: stderrText.includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
     }, null, 2));
   } catch (error) {
     throw new Error([
@@ -144,6 +323,34 @@ try {
   await rm(tempRoot, { recursive: true, force: true });
 }
 
+
+
+function runPackedCli(serverPath, cwd, tool, input) {
+  const result = spawnSync(
+    process.execPath,
+    [serverPath, 'exec', tool, '--stdin'],
+    {
+      cwd,
+      input: JSON.stringify(input),
+      encoding: 'utf8',
+      windowsHide: true,
+      env: {
+        ...process.env,
+        MCP_ENABLE_GITNEXUS_BRIDGE: '0',
+        MEMORY_QDRANT_URL: '',
+        MEMORY_EMBEDDING_URL: '',
+        MEMORY_EMBEDDING_MODEL: '',
+      },
+    }
+  );
+  assert(
+    result.status === 0,
+    `packed CLI ${tool} failed: ${result.stderr || result.stdout}`
+  );
+  const payload = JSON.parse(result.stdout);
+  assert(payload.ok === true, `packed CLI ${tool} returned ok=false`);
+  return payload;
+}
 
 function parseNpmPackJson(output) {
   const trimmed = output.trim();

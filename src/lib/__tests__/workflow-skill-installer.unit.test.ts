@@ -203,6 +203,9 @@ describe("workflow-skill-installer", () => {
 
     expect(result.skill.created).toBe(true);
     expect(result.agentsMd.created).toBe(true);
+    expect(result.cliFallback?.version).toBe(VERSION);
+    expect(fs.existsSync(path.join(root, ".mcp-probe-kit/runtime.json"))).toBe(true);
+    expect(fs.existsSync(path.join(root, ".mcp-probe-kit/bin/probe.ps1"))).toBe(true);
   });
 
   test("MCP 启动时在已确认工作区自动升级 Skill", () => {
@@ -225,6 +228,27 @@ describe("workflow-skill-installer", () => {
     const second = ensureMcpProbeKitBootstrapAtStartup(root);
     expect(second.bootstrap?.skill.created).toBe(false);
     expect(second.bootstrap?.skill.updated).toBe(false);
+  });
+
+  test("旧进程不会降低项目内更高版本的 Skill、AGENTS 和 CLI", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
+    tempDirs.push(root);
+    const higherVersion = "999.0.0";
+    const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.mkdirSync(path.join(root, ".cursor"), { recursive: true });
+    fs.writeFileSync(skillPath, generateWorkflowSkillContent(higherVersion), "utf8");
+
+    const result = ensureMcpProbeKitBootstrap(root);
+
+    expect(result.skill.version).toBe(higherVersion);
+    expect(result.cliFallback?.version).toBe(higherVersion);
+    expect(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8")).toContain(
+      `mcp-probe:context-version: ${higherVersion}`
+    );
+    expect(
+      fs.readFileSync(path.join(root, ".cursor/rules/mcp-probe-kit.mdc"), "utf8")
+    ).toContain(`mcp-probe-kit@${higherVersion}`);
   });
 
   test("从 tool args 解析 project_root", () => {

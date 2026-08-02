@@ -10,6 +10,7 @@ import {
 import {
   COMPACT_TOOL_COUNT,
   FULL_TOOL_COUNT,
+  PACKAGE_VERSION,
 } from "./release-surface.mjs";
 
 const roots = [];
@@ -133,7 +134,7 @@ async function runLegacySmoke() {
       taskStatus: terminal.status,
       taskTtl: created.task?.ttl,
       firstTool: result.structuredContent?.firstTool,
-      started: stderr().includes("v4-sdk2-dual-era-20260730"),
+      started: stderr().includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
     };
   } finally {
     await client.close().catch(() => undefined);
@@ -225,7 +226,7 @@ async function runModernSmoke() {
       modernTasks: statusPayload.protocol.features.modernTasks,
       taskFallbackFirstTool: fallback.structuredContent?.firstTool,
       planState,
-      started: stderr().includes("v4-sdk2-dual-era-20260730"),
+      started: stderr().includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
     };
   } finally {
     await client.close().catch(() => undefined);

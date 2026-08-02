@@ -37,6 +37,13 @@ export interface HarnessDetectionResult {
 
 export const HARNESS_ADAPTER_TARGETS: HarnessAdapterTarget[] = [
   {
+    id: "cursor-rules",
+    harnessId: "cursor",
+    relPath: ".cursor/rules/mcp-probe-kit.mdc",
+    kind: "rules-pointer",
+    markerDir: ".cursor",
+  },
+  {
     id: "trae-skill",
     harnessId: "trae",
     relPath: ".trae/skills/mcp-probe-kit/SKILL.md",

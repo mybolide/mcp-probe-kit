@@ -30,6 +30,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.6] - 2026-08-02
+
+### Added
+
+- Added a first-class CLI surface (`exec`, `tools`, `schema`, `install-agent`, and `status`) that calls the same Tool Registry and handlers as MCP `tools/call`.
+- Project bootstrap now creates version-locked Windows launchers (`probe.cmd`, `probe.ps1`) and an executable POSIX `probe` launcher for macOS/Linux under `.mcp-probe-kit/bin/`, plus `.mcp-probe-kit/runtime.json`, without global installation or changes to the user's `package.json`.
+- Cursor projects receive an always-on rule that prefers native MCP tools and automatically falls back to the project CLI when a third-party Agent provider omits MCP tools from the session.
+
+### Changed
+
+- The generated Skill and `AGENTS.md` now define an MCP-to-CLI fallback path and let the Agent repair missing wrappers with the exact installed package version.
+- Skill, AGENTS, harness rules, runtime manifest, and CLI wrappers preserve the highest installed SemVer; an older process cannot downgrade a newer project bootstrap.
+
+### Validation
+
+- Added CLI routing, installation, schema/error, idempotency, exact-version pinning, Cursor-rule, and no-downgrade tests.
+- The installed-package smoke now removes all MCP SDK dependencies, verifies native MCP routing, CLI routing, Windows and POSIX wrapper pinning, executable permission and shell behavior on non-Windows CI, and a three-process `plan_heartbeat` → `resume_plan` → `converge` lifecycle.
+
+---
+
 ## [4.0.0-rc.5] - 2026-08-02
 
 ### Fixed
