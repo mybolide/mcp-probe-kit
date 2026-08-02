@@ -42,3 +42,19 @@ jobs:
         run: npm run build
       - name: Run dual-era smoke
         run: npm run smoke:protocol
+
+  macos-cli-fallback:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Verify packaged POSIX CLI fallback
+        run: npm run smoke:package
