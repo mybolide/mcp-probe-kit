@@ -191,7 +191,8 @@ function currentPlanState() {
   const steps = asArray(plan.steps);
   const nextStepId = text(snapshot.nextStepId);
   const currentStepId = text(record.currentStepId);
-  return { plan, record, steps, completed, skipped, status, currentStepId, nextStepId };
+  const evidence = asArray(record.evidence);
+  return { plan, record, steps, completed, skipped, status, currentStepId, nextStepId, evidence };
 }
 
 const STEP_LABELS: Record<string, string> = {
@@ -199,6 +200,19 @@ const STEP_LABELS: Record<string, string> = {
   'write-spec': '编写规格', 'check-spec': '规格检查', estimate: '工作量评估',
   'prepare-memory-candidate-feature': '沉淀候选', 'prepare-memory-candidate-bugfix': '沉淀候选',
 };
+
+const STATUS_LABELS: Record<string, string> = {
+  completed: '已完成', running: '执行中', blocked: '已阻断', pending: '待执行', skipped: '已跳过',
+};
+
+const EVIDENCE_LABELS: Record<string, string> = {
+  requirements: '需求', spec: '规格', implementation: '实现',
+  test: '测试', review: '审查', memory: '记忆', other: '其他',
+};
+
+function stepStateLabel(status: string): string {
+  return STATUS_LABELS[status] || status;
+}
 
 function stepLabel(step: Dict, index: number): string {
   const id = text(step.id, `step-${index + 1}`);
@@ -213,12 +227,16 @@ function stepState(step: Dict, state: ReturnType<typeof currentPlanState>): stri
   return 'pending';
 }
 
-function renderStepper(state: ReturnType<typeof currentPlanState>): string {
-  return `<div class="stepper" style="--step-count:${Math.max(1, state.steps.length)}">${state.steps.map((step, index) => {
+function renderPlanSteps(state: ReturnType<typeof currentPlanState>): string {
+  return `<ol class="plan-steps">${state.steps.map((step, index) => {
     const status = stepState(step, state);
     const marker = status === 'completed' ? '✓' : status === 'blocked' ? '!' : index + 1;
-    return `<div class="step-node ${status}"><div class="step-track"><span>${marker}</span></div><strong>${escapeHtml(stepLabel(step, index))}</strong></div>`;
-  }).join('')}</div>`;
+    return `<li class="plan-step ${status}" title="${escapeHtml(stepStateLabel(status))}">
+      <span class="step-marker" aria-hidden="true">${escapeHtml(String(marker))}</span>
+      <span class="step-name">${escapeHtml(stepLabel(step, index))}</span>
+      <span class="step-hint">${escapeHtml(stepStateLabel(status))}</span>
+    </li>`;
+  }).join('')}</ol>`;
 }
 
 function renderTaskWorkbench(): string {
@@ -230,18 +248,68 @@ function renderTaskWorkbench(): string {
     : (state.nextStepId || state.currentStepId);
   const currentIndex = state.steps.findIndex((step) => text(step.id) === highlightedStepId);
   const currentStep = currentIndex >= 0 ? state.steps[currentIndex] : state.steps.find((step) => stepState(step, state) === 'pending');
+  const displayIndex = currentStep ? state.steps.indexOf(currentStep) : -1;
   const objective = text(plan.objective, text(lastInput.description, kind === 'bug-workbench' ? '修复问题' : '实施功能'));
   const outputs = stringArray(currentStep?.outputs);
+  const evidence = state.evidence.slice(0, 4);
   const planId = text(plan.planId);
-  const primaryLabel = state.status === 'blocked' ? '处理阻断' : completedCount === state.steps.length && state.steps.length ? '查看结果' : '继续';
-  return `<header class="minimal-header task-title"><h1 title="${escapeHtml(objective)}">${kind === 'bug-workbench' ? 'Bug 修复' : '功能开发'} · ${escapeHtml(truncate(objective, 54))}</h1><span>${completedCount}/${state.steps.length || 0}</span></header>
+  const total = state.steps.length || 0;
+  const primaryLabel = state.status === 'blocked' ? '处理阻断' : completedCount === total && total ? '查看结果' : '继续';
+  const currentStatus = currentStep ? stepState(currentStep, state) : 'completed';
+  const percent = total ? Math.min(100, Math.round((completedCount / total) * 100)) : 0;
+  const statusBadge = state.status === 'blocked'
+    ? '<span class="status-badge bad">已阻断</span>'
+    : state.status === 'converged'
+      ? '<span class="status-badge ok">已收敛</span>'
+      : state.status === 'cancelled'
+        ? '<span class="status-badge bad">已取消</span>'
+        : state.status === 'active'
+          ? '<span class="status-badge run">执行中</span>'
+          : '<span class="status-badge pending">待执行</span>';
+  const blockedBanner = state.status === 'blocked'
+    ? `<div class="blocked-banner">${icon('alert')}<span>当前步骤已阻断，处理后再继续执行</span></div>`
+    : '';
+  const planSteps = renderPlanSteps(state);
+  const planHeading = `<div class="wb-plan-head"><span class="wb-plan-label">计划</span><span class="wb-plan-count">${completedCount}/${total || 0}</span></div>`;
+  const outputsBlock = outputs.length
+    ? `<div class="def"><dt>产出</dt><dd><span class="output-text">${outputs.map(escapeHtml).join('<span class="out-sep"> · </span>')}</span></dd></div>`
+    : '';
+  const evidenceBlock = evidence.length
+    ? `<div class="def"><dt>证据${state.evidence.length > evidence.length ? ` · ${state.evidence.length}` : ''}</dt><dd>${evidence.map((entry) => `<div class="ev-row"><span class="ev-kind">${escapeHtml(EVIDENCE_LABELS[text(entry.kind)] || text(entry.kind, '其他'))}</span><span class="ev-text">${escapeHtml(text(entry.summary))}</span></div>`).join('')}</dd></div>`
+    : '';
+  return `<header class="minimal-header wb-header">
+    <h1 title="${escapeHtml(objective)}">${kind === 'bug-workbench' ? 'Bug 修复' : '功能开发'} · ${escapeHtml(truncate(objective, 54))}</h1>
+    <div class="wb-header-meta">${statusBadge}<span class="status-count">已完成 <strong>${completedCount}</strong> / ${total || 0} 步</span><div class="progress-track"><span style="width:${percent}%"></span></div></div>
+  </header>
   ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ''}
-  <section class="panel task-shell">
-    ${renderStepper(state)}
-    <div class="task-current"><h2>${currentStep ? escapeHtml(stepLabel(currentStep, Math.max(currentIndex, 0))) : '已完成'}</h2>
-      ${currentStep ? `<div class="step-command"><code>${escapeHtml(text(currentStep.tool, text(currentStep.action, 'host action')))}</code>${text(currentStep.note) ? `<span>${escapeHtml(currentStep.note)}</span>` : ''}</div>${outputs.length ? `<div class="compact-outputs">${outputs.map((item) => `<span>${escapeHtml(item)}</span>`).join('')}</div>` : ''}` : ''}
+  ${blockedBanner}
+  <section class="wb-shell">
+    <div class="wb-grid">
+      <aside class="wb-plan wb-plan-desktop" aria-label="计划步骤">${planHeading}${planSteps}</aside>
+      <main class="wb-main">
+        <div class="wb-current${currentStatus === 'running' ? ' is-running' : ''}${currentStatus === 'blocked' ? ' is-blocked' : ''}">
+          <div class="wb-current-head">
+            ${displayIndex >= 0 ? `<span class="wb-step-index">${displayIndex + 1}</span>` : ''}
+            <h2>${currentStep ? escapeHtml(stepLabel(currentStep, Math.max(displayIndex, 0))) : '全部步骤已完成'}</h2>
+            <span class="wb-state ${currentStatus}">${stepStateLabel(currentStatus)}</span>
+          </div>
+          ${currentStep ? `<div class="wb-command"><code>${escapeHtml(text(currentStep.tool, text(currentStep.action, 'host action')))}</code>${text(currentStep.note) ? `<span>${escapeHtml(currentStep.note)}</span>` : ''}</div>` : ''}
+          ${(outputsBlock || evidenceBlock) ? `<dl class="wb-defs">${outputsBlock}${evidenceBlock}</dl>` : ''}
+        </div>
+        <div class="wb-actions task-actions task-actions-end">
+          ${planId ? `<span class="wb-planid" title="${escapeHtml(planId)}">plan · ${escapeHtml(planId)}</span>` : ''}
+          <div class="wb-buttons">
+            <button class="wb-secondary" data-action="resume-plan" data-id="${escapeHtml(planId)}">刷新</button>
+            <button class="wb-secondary" data-action="check-converge" data-id="${escapeHtml(planId)}">收敛</button>
+            <button class="primary" data-action="continue-chat">${primaryLabel}</button>
+          </div>
+        </div>
+      </main>
     </div>
-    <div class="task-actions task-actions-end"><button data-action="resume-plan" data-id="${escapeHtml(planId)}">刷新</button><button data-action="check-converge" data-id="${escapeHtml(planId)}">收敛</button><button class="primary" data-action="continue-chat">${primaryLabel}</button></div>
+    <details class="wb-plan-mobile">
+      <summary><span class="wb-plan-label">计划步骤</span><span class="wb-plan-count">${completedCount}/${total || 0}</span></summary>
+      ${planSteps}
+    </details>
   </section>`;
 }
 

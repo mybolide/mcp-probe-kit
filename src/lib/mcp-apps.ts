@@ -163,7 +163,7 @@ const APP_STYLES = `
 }
 * { box-sizing: border-box; }
 html { background: var(--app-bg); }
-body { container-name: mcp-app; container-type: inline-size; margin: 0; overflow-x: hidden; background: var(--app-bg); color: var(--text); font-size: 12px; line-height: 1.42; }
+body { container-name: mcp-app; container-type: inline-size; margin: 0; overflow-x: hidden; background: var(--app-bg); color: var(--text); font-size: 12.5px; line-height: 1.45; }
 button, input { font: inherit; }
 button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 26px; border: 1px solid var(--border); border-radius: 7px; padding: 3px 7px; background: var(--panel); color: var(--text); font-size: 10.5px; font-weight: 600; line-height: 1.2; cursor: pointer; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
 button:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); background: var(--panel-hover); }
@@ -314,7 +314,11 @@ input::placeholder { color: var(--subtle); }
 .step-node:first-child .step-track::before, .step-node:last-child .step-track::after { display: none; }
 .step-track span { position: relative; z-index: 1; display: grid; width: 19px; height: 19px; place-items: center; border: 2px solid var(--border); border-radius: 50%; background: var(--panel); color: var(--subtle); font-size: 9px; font-weight: 750; }
 .step-node strong { display: block; overflow: hidden; margin-top: 2px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; }
-.step-node small { display: none; }
+.step-node small { display: block; overflow: hidden; margin-top: 1px; color: var(--subtle); text-overflow: ellipsis; white-space: nowrap; font-size: 8px; font-weight: 600; line-height: 1.2; }
+.step-node.completed small { color: var(--success); }
+.step-node.running small { color: var(--accent); }
+.step-node.blocked small { color: var(--danger); }
+.step-node.skipped small { color: var(--warning); }
 .step-node.completed .step-track::before, .step-node.completed .step-track::after, .step-node.running .step-track::before { background: var(--accent); }
 .step-node.completed .step-track span { border-color: var(--accent); background: var(--accent); color: #fff; }
 .step-node.completed strong { color: var(--text); }
@@ -395,7 +399,7 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
   .step-track::before { top: 0; }
   .step-track::after { top: 50%; }
   .step-node strong { grid-column: 2; overflow: visible; margin: 0; padding-right: 8px; text-overflow: clip; white-space: normal; }
-  .step-node small { display: none; }
+  .step-node small { grid-column: 2; overflow: visible; margin-top: 0; text-overflow: clip; white-space: normal; }
   .step-command { flex-wrap: wrap; }
   .step-command code { min-width: 0; overflow-wrap: anywhere; }
   .convergence-hero dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
@@ -471,7 +475,7 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
   .step-track::before { top: 0; }
   .step-track::after { top: 50%; }
   .step-node strong { grid-column: 2; overflow: visible; margin: 0; padding-right: 8px; text-overflow: clip; white-space: normal; }
-  .step-node small { display: none; }
+  .step-node small { grid-column: 2; overflow: visible; margin-top: 0; text-overflow: clip; white-space: normal; }
   .step-command { flex-wrap: wrap; }
   .step-command code { min-width: 0; overflow-wrap: anywhere; }
   .convergence-hero dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
@@ -623,5 +627,165 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
   .inline-facts { grid-template-columns: 1fr; }
   .gate-summary .task-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Feature/Bug Workbench v3 — single operation canvas: quiet header + plan nav + current work. */
+.wb-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; margin: 0 0 10px; }
+.wb-header h1 { min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15.5px; font-weight: 700; line-height: 1.25; letter-spacing: -.012em; }
+.wb-header-meta { display: flex; align-items: center; flex: 0 0 auto; gap: 8px; }
+.wb-header-meta .status-count { font-size: 11.5px; }
+.wb-header-meta .progress-track { width: 100px; min-width: 0; height: 4px; }
+
+.status-badge { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 700; line-height: 1.3; }
+.status-badge::before { content: ''; width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+.status-badge.run { color: var(--accent); background: var(--accent-soft); }
+.status-badge.ok { color: var(--success); background: var(--success-soft); }
+.status-badge.bad { color: var(--danger); background: var(--danger-soft); }
+.status-badge.pending { color: var(--muted); background: var(--panel-soft); }
+.status-count { flex: 0 0 auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.status-count strong { color: var(--text); font-weight: 750; }
+.progress-track { flex: 1 1 0; min-width: 40px; height: 4px; overflow: hidden; border-radius: 999px; background: var(--panel-soft); }
+.progress-track > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .35s ease; }
+.blocked-banner { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0 0 8px; border: 1px solid color-mix(in srgb, var(--danger) 26%, var(--border)); border-radius: 6px; padding: 5px 8px; background: var(--danger-soft); color: var(--danger); font-size: 12px; }
+.blocked-banner .icon { flex: 0 0 auto; }
+.blocked-banner > span:last-child { min-width: 0; }
+
+.wb-shell { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; background: var(--panel); }
+.wb-grid { display: grid; grid-template-columns: 248px minmax(0, 1fr); align-items: stretch; gap: 0; }
+
+/* Left plan navigation — quiet vertical list, symbol + text status. */
+.wb-plan { min-width: 0; }
+.wb-plan-desktop { border-right: 1px solid var(--border); padding-right: 20px; }
+.wb-plan-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.wb-plan-label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+.wb-plan-count { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.plan-steps { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.plan-step { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 28px; border-radius: 6px; padding: 4px 6px; }
+.plan-step.running { border-left: 2px solid color-mix(in srgb, var(--accent) 55%, var(--border)); background: color-mix(in srgb, var(--accent) 4%, var(--panel)); }
+.plan-step.blocked { border-left: 2px solid color-mix(in srgb, var(--danger) 60%, var(--border)); background: color-mix(in srgb, var(--danger) 4%, var(--panel)); }
+.step-marker { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; border: 1px solid var(--border); color: var(--muted); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+.plan-step.completed .step-marker { border-color: transparent; background: transparent; color: var(--accent); }
+.plan-step.running .step-marker { border-color: var(--accent); background: transparent; color: var(--accent); }
+.plan-step.blocked .step-marker { border-color: var(--danger); background: transparent; color: var(--danger); }
+.plan-step.skipped .step-marker { border-color: transparent; color: var(--warning); }
+.plan-step.pending .step-marker { border-color: var(--border); color: var(--subtle); }
+.step-name { min-width: 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; line-height: 1.3; }
+.plan-step.completed .step-name { color: var(--text); }
+.plan-step.running .step-name { color: var(--accent); font-weight: 650; }
+.plan-step.blocked .step-name { color: var(--danger); font-weight: 600; }
+.plan-step.skipped .step-name { color: var(--subtle); text-decoration: line-through; }
+.plan-step.pending .step-name { color: var(--muted); }
+.step-hint { flex: 0 0 auto; color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.plan-step.running .step-hint { color: var(--accent); }
+.plan-step.blocked .step-hint { color: var(--danger); }
+
+/* Right content — current step protagonist via typography, whitespace and a light accent bar. */
+.wb-main { min-width: 0; padding-left: 20px; }
+.wb-current { position: relative; min-width: 0; padding: 6px 0 6px 16px; }
+.wb-current::before { content: ''; position: absolute; top: 12px; bottom: 12px; left: 0; width: 3px; border-radius: 2px; background: var(--accent); }
+.wb-current.is-blocked::before { background: var(--danger); }
+.wb-current-head { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.wb-step-index { display: grid; width: 26px; height: 26px; flex: 0 0 auto; place-items: center; align-self: center; border: 1px solid var(--accent-border); border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.wb-current.is-blocked .wb-step-index { border-color: color-mix(in srgb, var(--danger) 30%, var(--border)); background: var(--danger-soft); color: var(--danger); }
+.wb-current h2 { min-width: 0; margin: 0; color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.3; letter-spacing: -.012em; }
+.wb-state { display: inline-flex; align-items: center; flex: 0 0 auto; margin-left: auto; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 700; line-height: 1.35; }
+.wb-state.running { color: var(--accent); background: var(--accent-soft); }
+.wb-state.completed { color: var(--success); background: var(--success-soft); }
+.wb-state.blocked { color: var(--danger); background: var(--danger-soft); }
+.wb-state.pending { color: var(--muted); background: var(--panel-soft); }
+.wb-state.skipped { color: var(--warning); background: var(--warning-soft); }
+.wb-command { display: flex; align-items: baseline; gap: 10px; min-width: 0; margin-top: 14px; }
+.wb-command code { flex: 0 0 auto; border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; background: var(--panel-soft); color: var(--accent); font: 11.5px/1.5 var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace); font-weight: 650; }
+.wb-command span { min-width: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.wb-defs { display: grid; margin: 18px 0 0; }
+.wb-defs .def { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.wb-defs .def:last-child { border-bottom: 0; }
+.wb-defs dt { color: var(--muted); font-size: 11.5px; font-weight: 600; line-height: 1.5; letter-spacing: .03em; }
+.wb-defs dd { min-width: 0; margin: 0; }
+.output-text { color: var(--text); font-size: 13px; line-height: 1.55; }
+.out-sep { color: var(--subtle); }
+.ev-row { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; padding: 3px 0; }
+.ev-row + .ev-row { margin-top: 6px; }
+.ev-kind { color: var(--muted); font-size: 11.5px; font-weight: 600; line-height: 1.5; }
+.ev-text { min-width: 0; color: var(--text); font-size: 13px; line-height: 1.55; }
+
+/* Actions aligned with content; refresh/converge clearly downgraded. */
+.wb-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding: 12px 0 0 16px; border-top: 1px solid var(--border); }
+.wb-planid { min-width: 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font: 10.5px/1.4 var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace); }
+.wb-buttons { display: flex; align-items: center; flex: 0 0 auto; gap: 6px; }
+.wb-buttons button { min-height: 30px; font-size: 11.5px; }
+.wb-buttons .primary { padding: 6px 18px; font-size: 12.5px; }
+.wb-secondary { border-color: transparent; background: transparent; color: var(--muted); font-size: 11.5px; font-weight: 600; padding: 5px 12px; }
+.wb-secondary:hover { border-color: transparent; background: var(--panel-hover); color: var(--text); }
+
+/* Mobile plan steps live in a native <details>, default collapsed. */
+.wb-plan-mobile { display: none; }
+.wb-plan-mobile summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; list-style: none; margin: 0; padding: 8px 0; border-top: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; }
+.wb-plan-mobile summary::-webkit-details-marker { display: none; }
+.wb-plan-mobile summary::after { content: '▾'; color: var(--subtle); font-size: 10px; transition: transform .16s ease; }
+.wb-plan-mobile[open] summary::after { transform: rotate(180deg); }
+.wb-plan-mobile .plan-steps { margin-top: 2px; }
+
+@media (max-width: 660px) {
+  .wb-header { align-items: flex-start; }
+  .wb-header-meta { flex-wrap: wrap; row-gap: 5px; }
+  .wb-header-meta .progress-track { order: 3; flex-basis: 100%; width: auto; height: 3px; }
+  .wb-grid { grid-template-columns: 1fr; }
+  .wb-plan-desktop { display: none; }
+  .wb-plan-mobile { display: block; }
+  .wb-main { padding-left: 0; }
+  .plan-step { grid-template-columns: 28px minmax(0, 1fr); gap: 10px; min-height: 38px; padding: 5px 8px; }
+  .step-marker { width: 26px; height: 26px; font-size: 12px; }
+  .step-name { overflow: visible; white-space: normal; text-overflow: clip; font-size: 13.5px; }
+  .step-hint { grid-column: 2; font-size: 11.5px; }
+  .wb-current h2 { font-size: 17.5px; }
+  .wb-command { flex-wrap: wrap; }
+  .wb-command code { min-width: 0; overflow-wrap: anywhere; }
+  .wb-current .wb-state { margin-left: auto; }
+  .wb-actions { align-items: stretch; flex-direction: column; gap: 8px; }
+  .wb-buttons { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 8px; }
+  .wb-buttons button { min-height: 34px; }
+  .wb-buttons .primary { grid-column: 1 / -1; }
+}
+@media (max-width: 460px) {
+  .wb-shell { padding: 12px; }
+  .wb-header h1 { font-size: 14.5px; }
+  .wb-step-index { width: 24px; height: 24px; font-size: 12px; }
+  .wb-defs .def { grid-template-columns: 56px minmax(0, 1fr); gap: 8px; }
+  .wb-actions .wb-planid { display: none; }
+}
+
+@container mcp-app (max-width: 660px) {
+  .wb-header { align-items: flex-start; }
+  .wb-header-meta { flex-wrap: wrap; row-gap: 5px; }
+  .wb-header-meta .progress-track { order: 3; flex-basis: 100%; width: auto; height: 3px; }
+  .wb-grid { grid-template-columns: 1fr; }
+  .wb-plan-desktop { display: none; }
+  .wb-plan-mobile { display: block; }
+  .wb-main { padding-left: 0; }
+  .plan-step { grid-template-columns: 28px minmax(0, 1fr); gap: 10px; min-height: 38px; padding: 5px 8px; }
+  .step-marker { width: 26px; height: 26px; font-size: 12px; }
+  .step-name { overflow: visible; white-space: normal; text-overflow: clip; font-size: 13.5px; }
+  .step-hint { grid-column: 2; font-size: 11.5px; }
+  .wb-current h2 { font-size: 17.5px; }
+  .wb-command { flex-wrap: wrap; }
+  .wb-command code { min-width: 0; overflow-wrap: anywhere; }
+  .wb-current .wb-state { margin-left: auto; }
+  .wb-actions { align-items: stretch; flex-direction: column; gap: 8px; }
+  .wb-buttons { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 8px; }
+  .wb-buttons button { min-height: 34px; }
+  .wb-buttons .primary { grid-column: 1 / -1; }
+}
+@container mcp-app (max-width: 460px) {
+  .wb-shell { padding: 12px; }
+  .wb-header h1 { font-size: 14.5px; }
+  .wb-step-index { width: 24px; height: 24px; font-size: 12px; }
+  .wb-defs .def { grid-template-columns: 56px minmax(0, 1fr); gap: 8px; }
+  .wb-actions .wb-planid { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-track > span, .wb-plan-mobile summary::after { transition: none; }
+}
+
 
 `;
