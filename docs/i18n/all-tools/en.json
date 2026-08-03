@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "All Tools - Complete List of 30 AI Development Tools | MCP Probe Kit",
-    "description": "MCP Probe Kit complete tool list: 1 workflow guide + 6 orchestration tools, 4 code analysis tools, 2 Git tools, 1 generation tool, 7 project management tools, 3 UI/UX tools, and 6 memory tools.",
+    "title": "MCP Probe Kit v4 Tool Catalog - 23/29/33 Surfaces and One-line Calls",
+    "description": "Complete MCP Probe Kit v4 tool catalog: 23 model tools by default, 29 with Memory, a 33-tool full compatibility surface, plus one App-only action. Every tool includes a copyable one-line call.",
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "MCP Probe Kit provides 29 practical tools with structured output support for core and orchestration tools"
+    "subtitle": "23 model-visible tools by default, 29 with Memory, a 33-tool full compatibility surface, plus one App-only action"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -48,7 +48,12 @@
     "memorize_asset": "Store Memory",
     "update_memory_asset": "Update Memory",
     "delete_memory_asset": "Delete Memory",
-    "scan_and_extract_patterns": "Extract Patterns"
+    "scan_and_extract_patterns": "Extract Patterns",
+    "workflow": "Smart Router",
+    "plan_heartbeat": "Plan Checkpoint",
+    "resume_plan": "Resume Plan",
+    "converge": "Convergence Gate",
+    "list_memory_assets": "Browse Memory"
   },
   "categories": {
     "workflow": {
@@ -78,124 +83,216 @@
     "memory": {
       "title": "Memory",
       "count": "6 tools"
+    },
+    "routing": {
+      "title": "Intent Routing"
+    },
+    "plan": {
+      "title": "Plan State & Convergence"
+    },
+    "interactive": {
+      "title": "Interaction & Interview"
+    },
+    "apps": {
+      "title": "MCP Apps Only"
     }
   },
   "toolsData": {
     "start_feature": {
       "description": "Complete feature development workflow orchestration: bootstrap graph baseline → refresh GitNexus index → narrow scope → generate specs → estimate workload",
-      "usage": "Used to start the full feature flow, backfill graph-insights when missing, then use GitNexus query/context/impact analysis to narrow scope before spec and estimation"
+      "usage": "Used to start the full feature flow, backfill graph-insights when missing, then use GitNexus query/context/impact analysis to narrow scope before spec and estimation",
+      "prompt": "Use start_feature to build this feature: <goal, scope, and acceptance criteria>"
     },
     "start_bugfix": {
       "description": "Bug fix workflow: graph baseline → GitNexus → SRC-8 root-cause (TBP-inspired) → fix → tests → memorize",
-      "usage": "Use it for bugs, regressions, and anomalies; it backfills graph-insights first and uses GitNexus to constrain boundary and impact before TBP RCA"
+      "usage": "Use it for bugs, regressions, and anomalies; it backfills graph-insights first and uses GitNexus to constrain boundary and impact before TBP RCA",
+      "prompt": "Use start_bugfix to fix this issue: <symptom, error, and reproduction steps>"
     },
     "start_onboard": {
       "description": "Project onboarding workflow: generate context documentation to help new members quickly understand the project",
-      "usage": "Help new members quickly understand project structure, tech stack, and development standards"
+      "usage": "Help new members quickly understand project structure, tech stack, and development standards",
+      "prompt": "Use the start_onboard tool for this task: <describe your request>"
     },
     "start_ralph": {
       "description": "Ralph Wiggum Loop automated development, start loop development process with multiple safety protections enabled by default",
-      "usage": "Start automated loop development, AI will continuously iterate until goal is achieved or safety limits are reached"
+      "usage": "Start automated loop development, AI will continuously iterate until goal is achieved or safety limits are reached",
+      "prompt": "Use the start_ralph tool for this task: <describe your request>"
     },
     "start_product": {
       "description": "Complete product design workflow orchestration: PRD → prototype docs → design system → HTML prototype → project context update",
-      "usage": "One-click completion from requirements to HTML prototype, generating directly demonstrable product prototypes"
+      "usage": "One-click completion from requirements to HTML prototype, generating directly demonstrable product prototypes",
+      "prompt": "Use start_product to design from requirements to prototype: <product idea and target users>"
     },
     "start_ui": {
       "description": "Unified UI development entry: check design system → generate component catalog → search/generate templates → render code",
-      "usage": "One-click completion of entire UI development process, from design system to final code"
+      "usage": "One-click completion of entire UI development process, from design system to final code",
+      "prompt": "Use start_ui to design and implement: <page or component, style, and interactions>"
     },
     "code_review": {
       "description": "Intelligent code review, analyzing code from multiple dimensions including security, performance, quality, style, and best practices",
-      "usage": "Comprehensive code quality review, outputting structured issue list (severity/category/suggestion)"
+      "usage": "Comprehensive code quality review, outputting structured issue list (severity/category/suggestion)",
+      "prompt": "Use code_review to review: <file, directory, or diff scope>"
     },
     "fix_bug": {
       "description": "SRC-8 guidance-only bug RCA (TBP-inspired): injects rootCauseWorksheet and gates; Agent produces rootCauseAnalysis",
-      "usage": "Use it when you need to find the true cause first and close the chain from symptom and boundary to repair"
+      "usage": "Use it when you need to find the true cause first and close the chain from symptom and boundary to repair",
+      "prompt": "Use the fix_bug tool for this task: <describe your request>"
     },
     "refactor": {
       "description": "Refactoring suggestion tool, analyzing code structure, providing refactoring steps, risk assessment, and rollback plan",
-      "usage": "Analyze code structure, provide refactoring suggestions, refactoring steps, and risk assessment"
+      "usage": "Analyze code structure, provide refactoring suggestions, refactoring steps, and risk assessment",
+      "prompt": "Use the refactor tool for this task: <describe your request>"
     },
     "gencommit": {
       "description": "Automatically generate Git commit messages compliant with Conventional Commits specification based on code changes",
-      "usage": "Generate commit messages compliant with Conventional Commits specification based on code changes"
+      "usage": "Generate commit messages compliant with Conventional Commits specification based on code changes",
+      "prompt": "Use gencommit to create a conventional commit message from the current changes."
     },
     "git_work_report": {
       "description": "Generate work reports (daily/periodic) based on Git diff analysis, intelligently extracting actual work content",
-      "usage": "Automatically read Git commits for specified dates, analyze diff content, generate concise professional work reports. If direct command fails, provides temporary script solution (auto-deleted after execution)"
+      "usage": "Automatically read Git commits for specified dates, analyze diff content, generate concise professional work reports. If direct command fails, provides temporary script solution (auto-deleted after execution)",
+      "prompt": "Use the git_work_report tool for this task: <describe your request>"
     },
     "gentest": {
       "description": "Generate unit tests, supporting Jest/Vitest/Mocha frameworks, including edge cases and mock data",
-      "usage": "Generate unit test code, including edge cases and mocks"
+      "usage": "Generate unit test code, including edge cases and mocks",
+      "prompt": "Use the gentest tool for this task: <describe your request>"
     },
     "init_project": {
       "description": "Generate requirement/design/task documents following Spec-Driven Development approach",
-      "usage": "Generate requirement/design/task documents following Spec-Driven Development approach"
+      "usage": "Generate requirement/design/task documents following Spec-Driven Development approach",
+      "prompt": "Use init_project to turn this one-line idea into a complete project specification: <idea>"
     },
     "init_project_context": {
       "description": "Build a delegated project-context writing plan: MCP writes AGENTS.md and layout; Agent writes modular docs and graph-insights per plan",
-      "usage": "Call when context is missing; returns metadata.plan, pendingFiles, and documentation status (exists/written/agent_action_required). Agent must write pending files manually."
+      "usage": "Call when context is missing; returns metadata.plan, pendingFiles, and documentation status (exists/written/agent_action_required). Agent must write pending files manually.",
+      "prompt": "Use init_project_context to generate complete context and a graph baseline for the current project."
     },
     "add_feature": {
       "description": "Generate new feature specification documents (requirements/design/task list) based on project context",
-      "usage": "Generate new feature specification documents (requirements/design/task list) based on project context"
+      "usage": "Generate new feature specification documents (requirements/design/task list) based on project context",
+      "prompt": "Use the add_feature tool for this task: <describe your request>"
     },
     "check_spec": {
       "description": "Validate that a written feature spec (requirements/design/tasks.md) is complete: detects leftover placeholders, missing sections, missing FR/acceptance criteria, and FRs not in the coverage matrix",
-      "usage": "Call after writing the spec and before implementation; if it fails, fill the gaps per the report and rerun"
+      "usage": "Call after writing the spec and before implementation; if it fails, fill the gaps per the report and rerun",
+      "prompt": "Use the check_spec tool for this task: <describe your request>"
     },
     "estimate": {
       "description": "Estimate development workload, output story points, time range (optimistic/normal/pessimistic), risk points",
-      "usage": "Estimate development workload, output story points, time range (optimistic/normal/pessimistic), risk points"
+      "usage": "Estimate development workload, output story points, time range (optimistic/normal/pessimistic), risk points",
+      "prompt": "Use the estimate tool for this task: <describe your request>"
     },
     "interview": {
       "description": "Requirements interview tool, clarifying requirements through structured questioning to avoid misunderstandings and rework",
-      "usage": "Requirements interview tool, clarifying requirements through structured questioning before development"
+      "usage": "Requirements interview tool, clarifying requirements through structured questioning before development",
+      "prompt": "Use the interview tool for this task: <describe your request>"
     },
     "ask_user": {
       "description": "AI proactive questioning tool, supporting single or multiple questions, providing options, marking importance",
-      "usage": "AI proactively asks users questions, supporting single or multiple questions, providing options, marking importance"
+      "usage": "AI proactively asks users questions, supporting single or multiple questions, providing options, marking importance",
+      "prompt": "Use the ask_user tool for this task: <describe your request>"
     },
     "ui_design_system": {
       "description": "Intelligent design system generator, generating complete design specifications based on product type reasoning",
-      "usage": "Based on product type and requirements, use AI reasoning engine to generate complete design system recommendations"
+      "usage": "Based on product type and requirements, use AI reasoning engine to generate complete design system recommendations",
+      "prompt": "Use the ui_design_system tool for this task: <describe your request>"
     },
     "ui_search": {
       "description": "Search UI/UX database, including colors, icons, charts, components, design patterns, etc.",
-      "usage": "Search UI/UX database using BM25 algorithm for intelligent search"
+      "usage": "Search UI/UX database using BM25 algorithm for intelligent search",
+      "prompt": "Use the ui_search tool for this task: <describe your request>"
     },
     "sync_ui_data": {
       "description": "Sync UI/UX data to local cache, supporting automatic update checking and forced sync",
-      "usage": "Sync UI/UX data to local cache, downloading latest data from npm package uipro-cli"
+      "usage": "Sync UI/UX data to local cache, downloading latest data from npm package uipro-cli",
+      "prompt": "Use the sync_ui_data tool for this task: <describe your request>"
     },
     "code_insight": {
       "description": "Code graph insight tool, bridging GitNexus to analyze call chains, context, and impact (auto-degrades when unavailable)",
-      "usage": "Refresh the GitNexus index, perform task-level call-chain/context/impact analysis, and persist results to docs/graph-insights plus the project-context index"
+      "usage": "Refresh the GitNexus index, perform task-level call-chain/context/impact analysis, and persist results to docs/graph-insights plus the project-context index",
+      "prompt": "Use code_insight to analyze: <entry point, call chain, or impact question>"
     },
     "search_memory": {
       "description": "Semantic search across the shared memory pool, with optional type/tags preference",
-      "usage": "Use outside start_* to find historical bugfixes or patterns; text output includes id/score/summary/description and a --- content --- body (default 1500 chars; use read_memory_asset for unlimited full text)"
+      "usage": "Use outside start_* to find historical bugfixes or patterns; text output includes id/score/summary/description and a --- content --- body (default 1500 chars; use read_memory_asset for unlimited full text)",
+      "prompt": "Use search_memory to find prior experience related to: <problem or keywords>"
     },
     "read_memory_asset": {
       "description": "Read the full content and metadata of a stored memory asset by asset ID",
-      "usage": "Use after search_memory or orchestration hits; text output includes the full --- content --- body plus structuredContent.asset"
+      "usage": "Use after search_memory or orchestration hits; text output includes the full --- content --- body plus structuredContent.asset",
+      "prompt": "Use the read_memory_asset tool for this task: <describe your request>"
     },
     "memorize_asset": {
       "description": "Persist high-value code, spec, or pattern assets into the vector memory system for later reuse",
-      "usage": "Use after implementation to store reusable assets into the Qdrant + embedding memory backend"
+      "usage": "Use after implementation to store reusable assets into the Qdrant + embedding memory backend",
+      "prompt": "Use memorize_asset to store this validated knowledge: <summary, content, evidence, applicability>"
     },
     "update_memory_asset": {
       "description": "Update an existing memory asset by asset ID while preserving the same ID",
-      "usage": "Use to fix summary, content, or tags on an existing asset; content changes trigger re-embedding"
+      "usage": "Use to fix summary, content, or tags on an existing asset; content changes trigger re-embedding",
+      "prompt": "Use the update_memory_asset tool for this task: <describe your request>"
     },
     "delete_memory_asset": {
       "description": "Delete a stored memory asset by asset ID from the shared memory pool",
-      "usage": "Use to remove outdated, incorrect, or duplicate assets; confirm with read_memory_asset before deleting"
+      "usage": "Use to remove outdated, incorrect, or duplicate assets; confirm with read_memory_asset before deleting",
+      "prompt": "Use the delete_memory_asset tool for this task: <describe your request>"
     },
     "scan_and_extract_patterns": {
       "description": "Extract reusable patterns from a code snippet, file, or directory before deciding whether to store them into memory",
-      "usage": "Use for pattern mining first, then optionally follow with memorize_asset to persist the best candidates"
+      "usage": "Use for pattern mining first, then optionally follow with memorize_asset to persist the best candidates",
+      "prompt": "Use the scan_and_extract_patterns tool for this task: <describe your request>"
+    },
+    "workflow": {
+      "description": "Intelligent development workflow routing that selects the precise start_*, analysis, specification, or Memory entry from the complete task intent.",
+      "usage": "Use when the correct tool is unclear or when the Agent might skip the standard workflow.",
+      "prompt": "Use workflow to select and execute the correct development flow for: <complete task>"
+    },
+    "plan_heartbeat": {
+      "description": "Persists completed steps, evidence, open items, and revision for a resumable Delegated Plan checkpoint.",
+      "usage": "Call on first execution and after every completed, skipped, or blocked step.",
+      "prompt": "Use plan_heartbeat to record progress, evidence, and open items for plan <plan_id>."
+    },
+    "resume_plan": {
+      "description": "Restores a plan from the project checkpoint and recomputes executable and blocked steps from dependencies.",
+      "usage": "Call after interruption, server restart, or Agent handoff.",
+      "prompt": "Use resume_plan to restore plan: <plan_id>"
+    },
+    "converge": {
+      "description": "Checks plan steps plus requirements, specification, implementation, test, and review evidence before delivery or long-term Memory writes.",
+      "usage": "Call after implementation and validation; persist Memory only when passed=true.",
+      "prompt": "Use converge to verify whether this plan can close: <plan_id>"
+    },
+    "list_memory_assets": {
+      "description": "Memory Center browsing action that lists memory summaries by update time with filters and pagination.",
+      "usage": "App-only action used after MCP Apps capability negotiation; hidden from the model.",
+      "prompt": ""
     }
+  },
+  "ui": {
+    "eyebrow": "TOOL CATALOG",
+    "title": "Find a tool, copy one sentence, start immediately",
+    "subtitle": "23 model tools by default, 29 with Memory, a 33-tool full compatibility surface, plus one App-only action.",
+    "searchPlaceholder": "Search by tool name, purpose, or description…",
+    "all": "All",
+    "default": "Default",
+    "memory": "Memory",
+    "compatibility": "full compatibility",
+    "appOnly": "App-only",
+    "oneLine": "One-line call",
+    "copy": "Copy",
+    "copied": "Copied",
+    "details": "Parameters and full details",
+    "usage": "When to use",
+    "params": "Parameters",
+    "schema": "Output",
+    "required": "required",
+    "optional": "optional",
+    "noParams": "No parameters",
+    "noResults": "No matching tools",
+    "tools": "tools",
+    "appOnlyPrompt": "This action is called only by an MCP App. Use it inside Memory Center.",
+    "liveApps": "Open MCP Apps demos",
+    "categoryNav": "Browse by category"
   }
 }

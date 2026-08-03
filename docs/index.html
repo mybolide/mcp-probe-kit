@@ -1,327 +1,175 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Probe Kit - AI 驱动的完整研发工具集 | 30个工具覆盖开发全流程</title>
-
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="MCP Probe Kit 提供 30 个 AI 驱动的研发工具，覆盖需求分析、代码开发、质量保障、Bug修复、版本发布全流程。支持 Cursor、Cline、Claude Desktop，100% 结构化输出。">
-    <meta name="keywords" content="MCP Probe Kit, AI开发工具, 代码生成, 代码审查, Git工具, UI开发, 研发效率, Cursor, Cline, Claude, MCP Server">
-    <meta name="author" content="小墨 (Kyle) - ByteZoneX">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/">
-    <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/">
-    <meta property="og:title" content="MCP Probe Kit - AI 驱动的完整研发工具集">
-    <meta property="og:description" content="30 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。支持 Cursor、Cline、Claude Desktop。">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://mcp-probe-kit.bytezonex.com/">
-    <meta property="twitter:title" content="MCP Probe Kit - AI 驱动的完整研发工具集">
-    <meta property="twitter:description" content="30 个 AI 工具覆盖开发全流程，从需求到上线一站式解决。">
-    
-    <script src="assets/js/tailwind.js" data-cfasync="false"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            DEFAULT: '#2563EB',
-                            hover: '#1D4ED8',
-                            light: '#3B82F6',
-                        },
-                        text: {
-                            primary: '#0F172A',
-                            secondary: '#475569',
-                            tertiary: '#64748B',
-                        },
-                        bg: {
-                            page: '#F8FAFC',
-                            card: '#FFFFFF',
-                            hover: '#F1F5F9',
-                        },
-                        border: {
-                            DEFAULT: '#E2E8F0',
-                            hover: '#CBD5E1',
-                        },
-                    },
-                    boxShadow: {
-                        sm: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                        md: '0 4px 6px rgba(0, 0, 0, 0.07)',
-                        lg: '0 10px 15px rgba(0, 0, 0, 0.1)',
-                    },
-                    fontFamily: {
-                        sans: ['-apple-system', 'BlinkMacSystemFont', '"PingFang SC"', '"Microsoft YaHei"', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"Noto Sans CJK SC"', 'sans-serif'],
-                        mono: ['ui-monospace', '"SF Mono"', '"Cascadia Code"', '"Consolas"', 'Menlo', 'Monaco', '"PingFang SC"', '"Microsoft YaHei"', '"Courier New"', 'monospace']
-                    },
-                }
-            }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="i18n-title" content="meta.title">
+  <title>MCP Probe Kit v4 - 可视化 Agent 研发工作流与 MCP Apps</title>
+  <meta name="description" content="MCP Probe Kit v4 提供 23 个默认模型工具、29 个 Memory 工具面、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。">
+  <meta name="keywords" content="MCP Probe Kit, MCP Apps, Agent workflow, Memory Center, GitNexus, Cursor, Claude, Cline, OpenCode">
+  <meta name="author" content="小墨 (Kyle) - ByteZoneX">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/">
+  <link rel="icon" type="image/x-icon" href="https://www.bytezonex.com/favicon.ico">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mcp-probe-kit.bytezonex.com/">
+  <meta property="og:title" content="MCP Probe Kit v4 - Observable Agent Workflows">
+  <meta property="og:description" content="Native MCP Apps, resumable plans, convergence gates, Memory Center, and a managed GitNexus Sidecar.">
+  <meta property="og:image" content="https://mcp-probe-kit.bytezonex.com/assets/demos/feature-workbench.gif">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MCP Probe Kit v4">
+  <meta name="twitter:description" content="Observable Agent workflows with native MCP Apps.">
+  <meta name="twitter:image" content="https://mcp-probe-kit.bytezonex.com/assets/demos/feature-workbench.gif">
+  <script src="assets/js/tailwind.js" data-cfasync="false"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#101828', muted: '#475467', subtle: '#667085', line: '#E4E7EC',
+            canvas: '#F7F8FA', panel: '#FFFFFF', accent: '#155EEF', accentDark: '#004EEB',
+            success: '#067647', warning: '#B54708'
+          },
+          boxShadow: {
+            soft: '0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06)',
+            lift: '0 2px 4px rgba(16,24,40,.04), 0 18px 42px rgba(16,24,40,.10)'
+          },
+          fontFamily: {
+            sans: ['-apple-system','BlinkMacSystemFont','"Segoe UI"','"PingFang SC"','"Microsoft YaHei"','sans-serif'],
+            mono: ['ui-monospace','"SFMono-Regular"','Consolas','monospace']
+          }
         }
-    </script>
-    <style>
-        html { scroll-behavior: smooth; }
-        .card-link:hover .link-arrow { transform: translateX(4px); }
-        .link-arrow { transition: transform 0.2s; }
-        /* 移动端侧边栏 */
-        .sidebar-drawer { transition: transform 0.3s ease; }
-        @media (max-width: 767px) {
-            .sidebar-drawer { transform: translateX(-100%); }
-            .sidebar-drawer.open { transform: translateX(0); }
-        }
-        .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-        .backdrop.active { opacity: 1; pointer-events: auto; }
-        
-        /* i18n 加载优化：防止内容闪烁 */
-        body:not(.i18n-ready) [data-i18n] {
-            visibility: hidden;
-        }
-        body.i18n-ready [data-i18n] {
-            visibility: visible;
-        }
-    </style>
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body:not(.i18n-ready) [data-i18n] { visibility: hidden; }
+    .demo-frame { aspect-ratio: 1180 / 720; object-fit: cover; object-position: top; }
+    .demo-frame.gate { aspect-ratio: 1180 / 560; }
+    .feature-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+    .feature-card:hover { transform: translateY(-3px); border-color: #B2CCFF; box-shadow: 0 18px 42px rgba(16,24,40,.10); }
+    .grid-pattern { background-image: linear-gradient(#E4E7EC 1px, transparent 1px), linear-gradient(90deg,#E4E7EC 1px,transparent 1px); background-size: 28px 28px; mask-image: linear-gradient(to bottom,rgba(0,0,0,.5),transparent); }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .feature-card { transition: none; } }
+  </style>
 </head>
-<body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
-    <!-- A. 顶部导航栏 -->
-    <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50">
-        <div class="h-full px-4 flex items-center justify-between max-w-[1200px] mx-auto">
-            <a href="./index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
-                <span>🚀</span>
-                <span class="sm:inline hidden">MCP Probe Kit</span>
-            </a>
-            <div class="flex items-center gap-3">
-                <div class="hidden md:flex items-center gap-4">
-                    <a href="./pages/all-tools.html" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors" data-i18n="nav.docs">文档</a>
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">
-                        <span data-i18n="nav.mainSite">主站</span> ByteZoneX<span class="text-xs">↗</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">GitHub<span class="text-xs">↗</span></a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="text-text-secondary text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">npm<span class="text-xs">↗</span></a>
-                    <div id="lang-switcher-container"></div>
-                </div>
-                <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                    </svg>
-                </button>
-            </div>
+<body class="bg-canvas text-ink font-sans antialiased">
+  <nav class="sticky top-0 z-50 border-b border-line bg-white/90 backdrop-blur-xl">
+    <div class="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6">
+      <a href="./index.html" class="flex items-center gap-2.5 font-semibold tracking-tight text-ink no-underline">
+        <img src="./assets/logo.png" alt="MCP Probe Kit" class="h-8 w-8 rounded-lg">
+        <span>MCP Probe Kit</span>
+        <span class="hidden rounded-full border border-line bg-canvas px-2 py-0.5 text-[11px] font-medium text-subtle sm:inline">v4.0.0-rc.8</span>
+      </a>
+      <div class="flex items-center gap-2 sm:gap-5">
+        <a href="./pages/all-tools.html" class="hidden text-sm font-medium text-muted hover:text-accent sm:inline" data-i18n="nav.docs">文档</a>
+        <a href="./pages/apps.html" class="hidden text-sm font-medium text-muted hover:text-accent sm:inline" data-i18n="nav.apps">MCP Apps</a>
+        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-sm font-medium text-muted hover:text-accent">GitHub</a>
+        <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="hidden text-sm font-medium text-muted hover:text-accent md:inline">npm</a>
+        <div id="lang-switcher-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <header class="relative overflow-hidden border-b border-line bg-white">
+    <div class="grid-pattern pointer-events-none absolute inset-0 opacity-45"></div>
+    <div class="relative mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[1.06fr_.94fr] lg:items-center">
+      <div>
+        <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-[#B2CCFF] bg-[#EFF4FF] px-3 py-1 text-xs font-semibold text-accent">
+          <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
+          v4.0.0-rc.8 · npm <code class="font-mono">next</code>
         </div>
-    </nav>
-
-    <!-- 侧边栏遮罩 -->
-    <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
-
-    <!-- 移动端侧边栏 -->
-    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:hidden" id="sidebar">
-        <div class="p-4">
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">快速开始</div>
-                <a href="./index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary">
-                    <span>🏠</span>
-                    <span>文档首页</span>
-                </a>
-                <a href="./pages/getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>📖</span>
-                    <span>安装配置</span>
-                </a>
-            </div>
-            
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">工具文档</div>
-                <a href="./pages/all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>🛠️</span>
-                    <span>所有工具</span>
-                    <span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">29</span>
-                </a>
-            </div>
-            
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2">指南</div>
-                <a href="./pages/migration-v4.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>🚀</span>
-                    <span>迁移指南</span>
-                </a>
-                <a href="./pages/examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>💡</span>
-                    <span>最佳实践</span>
-                </a>
-            </div>
-            
-            <div class="pt-4 border-t border-border">
-                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>💻</span>
-                    <span>GitHub</span>
-                    <span class="ml-auto text-xs">↗</span>
-                </a>
-                <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>📦</span>
-                    <span>npm</span>
-                    <span class="ml-auto text-xs">↗</span>
-                </a>
-            </div>
-
-            <!-- QR Code -->
-            <div class="mt-4 pt-4 border-t border-border">
-                <div class="text-center">
-                    <div class="text-xs font-semibold text-text-tertiary mb-2">关注公众号</div>
-                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
-                    <div class="text-xs text-text-tertiary mt-2">获取更多技术分享</div>
-                </div>
-            </div>
+        <h1 class="max-w-[760px] text-4xl font-semibold leading-[1.06] tracking-[-.04em] text-ink sm:text-5xl md:text-6xl">
+          Know the Context.<br><span class="text-accent">Verify the Execution.</span>
+        </h1>
+        <p class="mt-6 max-w-[680px] text-base leading-7 text-muted sm:text-lg" data-i18n="hero.subtitle">让 Agent 看懂项目、按计划执行，并用可视化工作台追踪真实进度</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="./pages/getting-started.html" class="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white shadow-soft hover:bg-accentDark" data-i18n="hero.quickStart">快速开始</a>
+          <a href="./pages/apps.html" class="rounded-lg border border-line bg-white px-5 py-3 text-sm font-semibold text-ink shadow-soft hover:border-[#B2CCFF] hover:text-accent" data-i18n="showcase.openDemo">打开完整演示</a>
         </div>
-    </aside>
-
-    <!-- B. Hero 首屏 -->
-    <section class="bg-gradient-to-br from-primary to-primary-hover text-white py-12 px-6 text-center mt-14">
-        <div class="max-w-[800px] mx-auto">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 tracking-tight" data-i18n="hero.title">🚀 MCP Probe Kit</h1>
-            <p class="text-base sm:text-lg opacity-95 mb-2" data-i18n="hero.subtitle">AI 开发增强工具集 · 文档中心</p>
-            <div class="inline-block bg-white/20 px-3 py-1 rounded-full text-sm font-semibold mb-6 md:mb-8">v4.0.0-rc.8</div>
-            <div class="flex gap-3 md:gap-4 justify-center flex-wrap">
-                <a href="./pages/getting-started.html" class="bg-white text-primary px-5 py-2.5 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 inline-flex items-center gap-1.5 no-underline cursor-pointer border-0" data-i18n="hero.quickStart">快速开始</a>
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="bg-white/15 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold hover:bg-white/25 transition-all duration-200 inline-flex items-center gap-1.5 no-underline border border-white/30" data-i18n="hero.visitMainSite">
-                    访问主站 ByteZoneX ↗
-                </a>
-            </div>
+        <div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-subtle">
+          <span>✓ Node.js 20+</span><span>✓ Legacy + Modern MCP</span><span>✓ Windows · macOS · Linux</span>
         </div>
+      </div>
+      <div class="relative">
+        <div class="absolute -inset-4 rounded-[28px] bg-[#EFF4FF]"></div>
+        <div class="relative overflow-hidden rounded-2xl border border-line bg-white p-2 shadow-lift">
+          <img src="./assets/demos/feature-workbench.gif" alt="Feature Workbench animated demo" class="demo-frame w-full rounded-xl border border-line bg-canvas">
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="border-b border-line bg-white">
+      <div class="mx-auto grid max-w-[1200px] grid-cols-2 px-4 py-7 sm:px-6 md:grid-cols-4">
+        <div class="border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">23</strong><span class="text-xs text-subtle" data-i18n="stats.tools">默认模型工具</span></div>
+        <div class="md:border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">29</strong><span class="text-xs text-subtle" data-i18n="stats.memory">配置 Memory 后</span></div>
+        <div class="border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">5</strong><span class="text-xs text-subtle" data-i18n="stats.apps">原生 MCP Apps</span></div>
+        <div class="px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">3</strong><span class="text-xs text-subtle" data-i18n="stats.platforms">Sidecar 平台</span></div>
+      </div>
     </section>
-    
-    <!-- C. 主内容区 -->
-    <main class="flex-1 max-w-[1200px] mx-auto px-4 sm:px-6 py-8 md:py-12 w-full">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <!-- 1. 快速开始 -->
-            <article class="bg-bg-card border border-border rounded-lg p-4 sm:p-6 transition-all duration-300 ease-out shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-primary">
-                <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
-                    <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
-                        <span>📖</span>
-                        <span data-i18n="sections.quickStart.title">快速开始</span>
-                    </h2>
-                </div>
-                <p class="text-text-secondary text-sm mb-4 leading-relaxed" data-i18n="sections.quickStart.description">5 分钟快速上手 MCP Probe Kit v4.0.0-rc.8</p>
-                <nav class="flex flex-col gap-0">
-                    <a href="./pages/getting-started.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <span data-i18n="sections.quickStart.installConfig">安装配置</span>
-                        <span class="link-arrow text-text-tertiary text-base">→</span>
-                    </a>
-                </nav>
-            </article>
 
-            <!-- 2. 工具文档 -->
-            <article class="bg-bg-card border border-border rounded-lg p-4 sm:p-6 transition-all duration-300 ease-out shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-primary">
-                <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
-                    <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
-                        <span>🛠️</span>
-                        <span data-i18n="sections.tools.title">工具文档</span>
-                    </h2>
-                </div>
-                <p class="text-text-secondary text-sm mb-4 leading-relaxed" data-i18n="sections.tools.description">30 个实用工具的完整参考，含图谱洞察与编排工作流</p>
-                <nav class="flex flex-col gap-0">
-                    <a href="./pages/all-tools.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <div class="flex items-center gap-2">
-                            <span data-i18n="sections.tools.allTools">所有工具</span>
-                            <span class="bg-bg-hover text-text-secondary px-2 py-0.5 rounded-full text-xs font-semibold">29</span>
-                        </div>
-                        <span class="link-arrow text-text-tertiary text-base">→</span>
-                    </a>
-                </nav>
-            </article>
+    <section class="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 md:py-24">
+      <div class="max-w-[780px]">
+        <p class="text-xs font-semibold uppercase tracking-[.16em] text-accent" data-i18n="showcase.eyebrow">真实 UI · 自动演示</p>
+        <h2 class="mt-3 text-3xl font-semibold tracking-[-.03em] sm:text-4xl" data-i18n="showcase.title">不是工具列表，而是一套可观察的研发执行系统</h2>
+        <p class="mt-4 text-base leading-7 text-muted" data-i18n="showcase.description">下面的演示直接复用 npm 包中的 MCP App 源码。计划推进、记忆检索和收敛闸门都来自真实界面，不是单独绘制的宣传图。</p>
+      </div>
+      <div class="mt-10 grid gap-6 lg:grid-cols-2">
+        <article class="feature-card overflow-hidden rounded-2xl border border-line bg-white shadow-soft lg:col-span-2">
+          <img src="./assets/demos/feature-workbench.gif" alt="Feature Workbench" class="demo-frame w-full border-b border-line bg-canvas">
+          <div class="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+            <div><h3 class="text-lg font-semibold" data-i18n="showcase.featureTitle">Feature Workbench</h3><p class="mt-1 text-sm text-muted" data-i18n="showcase.featureDesc">展示父子规格、当前步骤、证据和跨会话恢复状态。</p></div>
+            <a href="./pages/apps.html#feature" class="shrink-0 text-sm font-semibold text-accent" data-i18n="showcase.openDemo">打开完整演示</a>
+          </div>
+        </article>
+        <article class="feature-card overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
+          <img src="./assets/demos/memory-center.gif" alt="Memory Center" class="demo-frame w-full border-b border-line bg-canvas">
+          <div class="p-5"><h3 class="text-lg font-semibold" data-i18n="showcase.memoryTitle">Memory Center</h3><p class="mt-1 text-sm leading-6 text-muted" data-i18n="showcase.memoryDesc">搜索、浏览、检查生命周期与证据，并管理已验证经验。</p></div>
+        </article>
+        <article class="feature-card overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
+          <img src="./assets/demos/convergence-gate.gif" alt="Convergence Gate" class="demo-frame gate w-full border-b border-line bg-canvas">
+          <div class="p-5"><h3 class="text-lg font-semibold" data-i18n="showcase.gateTitle">Convergence Gate</h3><p class="mt-1 text-sm leading-6 text-muted" data-i18n="showcase.gateDesc">缺步骤、缺测试或缺审查证据时拒绝收尾，通过后才允许长期记忆写入。</p></div>
+        </article>
+      </div>
+    </section>
 
-            <!-- 3. 指南 -->
-            <article class="bg-bg-card border border-border rounded-lg p-4 sm:p-6 transition-all duration-300 ease-out shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-primary">
-                <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
-                    <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
-                        <span>📚</span>
-                        <span data-i18n="sections.guides.title">指南</span>
-                    </h2>
-                </div>
-                <p class="text-text-secondary text-sm mb-4 leading-relaxed" data-i18n="sections.guides.description">迁移指南和最佳实践</p>
-                <nav class="flex flex-col gap-0">
-                    <a href="./pages/migration-v4.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <span>v3.x → v4.0 迁移指南</span>
-                        <span class="link-arrow text-text-tertiary text-base">→</span>
-                    </a>
-                    <a href="./pages/examples.html" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <span data-i18n="sections.guides.bestPractices">最佳实践</span>
-                        <span class="link-arrow text-text-tertiary text-base">→</span>
-                    </a>
-                </nav>
-            </article>
-
-            <!-- 4. 资源 -->
-            <article class="bg-bg-card border border-border rounded-lg p-4 sm:p-6 transition-all duration-300 ease-out shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-primary">
-                <div class="flex items-center justify-between mb-3 pb-3 border-b border-border">
-                    <h2 class="flex items-center gap-2 text-lg sm:text-xl font-semibold text-text-primary">
-                        <span>🔗</span>
-                        <span data-i18n="sections.resources.title">资源</span>
-                    </h2>
-                </div>
-                <p class="text-text-secondary text-sm mb-4 leading-relaxed" data-i18n="sections.resources.description">源代码和社区支持</p>
-                <nav class="flex flex-col gap-0">
-                    <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <div class="flex items-center gap-2">
-                            <span data-i18n="sections.resources.mainSite">ByteZoneX 主站</span>
-                            <span class="text-xs text-text-tertiary">↗</span>
-                        </div>
-                        <span class="link-arrow text-text-tertiary text-base">→</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <div class="flex items-center gap-2">
-                            <span data-i18n="sections.resources.githubRepo">GitHub 仓库</span>
-                            <span class="text-xs text-text-tertiary">↗</span>
-                        </div>
-                        <span class="link-arrow text-text-tertiary text-base">→</span>
-                    </a>
-                    <a href="https://www.npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <div class="flex items-center gap-2">
-                            <span data-i18n="sections.resources.npmPackage">npm 包</span>
-                            <span class="text-xs text-text-tertiary">↗</span>
-                        </div>
-                        <span class="link-arrow text-text-tertiary text-base">→</span>
-                    </a>
-                    <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2.5 -mx-3 text-text-primary text-sm font-medium rounded-md transition-all duration-200 hover:bg-bg-hover hover:text-primary no-underline">
-                        <div class="flex items-center gap-2">
-                            <span data-i18n="sections.resources.issues">问题反馈</span>
-                            <span class="text-xs text-text-tertiary">↗</span>
-                        </div>
-                        <span class="link-arrow text-text-tertiary text-base">→</span>
-                    </a>
-                </nav>
-            </article>
+    <section class="border-y border-line bg-white">
+      <div class="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 md:py-24">
+        <p class="text-xs font-semibold uppercase tracking-[.16em] text-accent" data-i18n="v4Features.eyebrow">v4 核心能力</p>
+        <h2 class="mt-3 max-w-[820px] text-3xl font-semibold tracking-[-.03em] sm:text-4xl" data-i18n="v4Features.title">把“Agent 说做完了”变成可验证的执行闭环</h2>
+        <div class="mt-10 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+          <article class="bg-white p-6"><span class="font-mono text-xs text-accent">01</span><h3 class="mt-4 font-semibold" data-i18n="v4Features.planTitle">计划检查点与恢复</h3><p class="mt-2 text-sm leading-6 text-muted" data-i18n="v4Features.planDesc">plan_heartbeat 持久化步骤与证据，resume_plan 在中断或切换 Agent 后恢复下一可执行步骤。</p></article>
+          <article class="bg-white p-6"><span class="font-mono text-xs text-accent">02</span><h3 class="mt-4 font-semibold" data-i18n="v4Features.appsTitle">五个原生工作台</h3><p class="mt-2 text-sm leading-6 text-muted" data-i18n="v4Features.appsDesc">Memory、Feature、Bug、Product 和 Convergence 直接显示在支持 MCP Apps 的 Host 中。</p></article>
+          <article class="bg-white p-6"><span class="font-mono text-xs text-accent">03</span><h3 class="mt-4 font-semibold" data-i18n="v4Features.graphTitle">GitNexus 托管 Sidecar</h3><p class="mt-2 text-sm leading-6 text-muted" data-i18n="v4Features.graphDesc">按版本、平台、架构和 Node 主版本隔离；完整性校验、FTS 探针、失败自动降级。</p></article>
+          <article class="bg-white p-6"><span class="font-mono text-xs text-accent">04</span><h3 class="mt-4 font-semibold" data-i18n="v4Features.cliTitle">版本锁定 CLI fallback</h3><p class="mt-2 text-sm leading-6 text-muted" data-i18n="v4Features.cliDesc">Host 丢失 MCP tool lease 时，项目内 probe 启动器继续调用同一 Tool Registry，不污染 package.json。</p></article>
+          <article class="bg-white p-6"><span class="font-mono text-xs text-accent">05</span><h3 class="mt-4 font-semibold" data-i18n="v4Features.specTitle">父子规格体系</h3><p class="mt-2 text-sm leading-6 text-muted" data-i18n="v4Features.specDesc">复杂版本需求自动拆成父规格、子规格和依赖图，check_spec 递归验证完整性。</p></article>
+          <article class="bg-white p-6"><span class="font-mono text-xs text-accent">06</span><h3 class="mt-4 font-semibold" data-i18n="v4Features.memoryTitle">收敛后记忆</h3><p class="mt-2 text-sm leading-6 text-muted" data-i18n="v4Features.memoryDesc">成功模式、失败尝试、伪根因和回归案例只有在 converge 通过后才正式写入长期记忆。</p></article>
         </div>
-    </main>
-    
-    <!-- D. Footer -->
-    <footer class="bg-bg-card border-t border-border px-4 sm:px-6 py-6 mt-auto">
-        <div class="max-w-[1200px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-text-secondary">
-            <div><span data-i18n="footer.madeWith">Made with ❤️ by</span> <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:text-primary-hover transition-colors duration-200 no-underline">小墨 (Kyle)</a></div>
-            <div>
-                © 2024-2026 MCP Probe Kit · <span data-i18n="footer.license">MIT License</span> ·
-                <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:text-primary-hover transition-colors duration-200 no-underline"><span data-i18n="footer.mainSite">主站 ByteZoneX</span> ↗</a>
-            </div>
-        </div>
-    </footer>
-    
-    <script>
-        // 侧边栏切换
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('backdrop');
-            const isOpen = sidebar.classList.contains('open');
-            if (isOpen) {
-                sidebar.classList.remove('open');
-                backdrop.classList.remove('active');
-            } else {
-                sidebar.classList.add('open');
-                backdrop.classList.add('active');
-            }
-        }
-    </script>
-    <script src="./assets/js/i18n.js"></script>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 md:py-24">
+      <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div><p class="text-xs font-semibold uppercase tracking-[.16em] text-accent">Documentation</p><h2 class="mt-3 text-3xl font-semibold tracking-[-.03em]" data-i18n="nav.docs">文档</h2></div>
+        <a href="./pages/all-tools.html" class="text-sm font-semibold text-accent" data-i18n="sections.tools.allTools">所有工具</a>
+      </div>
+      <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <a href="./pages/getting-started.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">01</div><h3 class="mt-6 font-semibold" data-i18n="sections.quickStart.title">快速开始</h3><p class="mt-2 text-sm text-muted" data-i18n="sections.quickStart.description">5 分钟快速上手 MCP Probe Kit v4.0.0-rc.8</p></a>
+        <a href="./pages/apps.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">02</div><h3 class="mt-6 font-semibold" data-i18n="nav.apps">MCP Apps</h3><p class="mt-2 text-sm text-muted" data-i18n="apps.subtitle">五个原生 App 把计划、记忆、产品交付和证据闸门带进支持 MCP Apps 的客户端。</p></a>
+        <a href="./pages/examples.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">03</div><h3 class="mt-6 font-semibold" data-i18n="sections.guides.bestPractices">最佳实践</h3><p class="mt-2 text-sm text-muted" data-i18n="sections.guides.description">迁移指南和最佳实践</p></a>
+        <a href="./pages/migration-v4.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">04</div><h3 class="mt-6 font-semibold">v3 → v4</h3><p class="mt-2 text-sm text-muted">Tool surfaces, Tasks, Apps, Memory and compatibility.</p></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-line bg-white">
+    <div class="mx-auto flex max-w-[1200px] flex-col gap-4 px-4 py-8 text-sm text-subtle sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <span>© 2024–2026 MCP Probe Kit · MIT License</span>
+      <div class="flex gap-4"><a href="https://github.com/mybolide/mcp-probe-kit" class="hover:text-accent">GitHub</a><a href="https://www.npmjs.com/package/mcp-probe-kit" class="hover:text-accent">npm</a><a href="https://www.bytezonex.com/" class="hover:text-accent">ByteZoneX</a></div>
+    </div>
+  </footer>
+  <script src="./assets/js/i18n.js"></script>
 </body>
 </html>
-

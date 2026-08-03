@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "MCP Probe Kit - AI 기반 완전한 개발 툴킷 | 전체 개발 라이프사이클을 커버하는 30개 도구",
-    "description": "MCP Probe Kit은 요구사항 분석, 코드 개발, 품질 보증, 버그 수정, 릴리스 관리를 커버하는 30개의 AI 기반 개발 도구를 제공합니다. Cursor, Cline, Claude Desktop을 지원하며 100% 구조화된 출력을 제공합니다.",
+    "title": "MCP Probe Kit v4 - 관찰 가능한 Agent 워크플로와 MCP Apps",
+    "description": "MCP Probe Kit v4는 기본 23개 모델 도구, Memory 구성 시 29개, 5개 MCP Apps, 재개 가능한 계획, 증거 수렴, GitNexus Sidecar, 버전 고정 CLI fallback을 제공합니다.",
     "keywords": "MCP Probe Kit, AI 개발 도구, 코드 생성, 코드 리뷰, Git 도구, UI 개발, 개발 효율성, Cursor, Cline, Claude, MCP 서버"
   },
   "nav": {
@@ -9,11 +9,12 @@
     "docs": "문서",
     "mainSite": "메인 사이트",
     "github": "GitHub",
-    "npm": "npm"
+    "npm": "npm",
+    "apps": "MCP Apps"
   },
   "hero": {
     "title": "🚀 MCP Probe Kit",
-    "subtitle": "AI 개발 강화 툴킷 · 문서 센터",
+    "subtitle": "Agent가 프로젝트를 이해하고 실제 계획을 실행하며 네이티브 워크벤치에서 진행 상황을 표시합니다",
     "version": "v4.0.0-rc.8",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
@@ -26,7 +27,7 @@
     },
     "tools": {
       "title": "도구 문서",
-      "description": "30개 실용 도구의 완전한 참조. 코드 그래프 인사이트와 오케스트레이션 포함",
+      "description": "기본 23개 모델 도구, Memory 구성 시 29개, 네이티브 MCP Apps 5개",
       "allTools": "모든 도구"
     },
     "guides": {
@@ -59,7 +60,8 @@
     "migration": "마이그레이션 가이드",
     "examples": "모범 사례",
     "followUs": "팔로우",
-    "getTechSharing": "기술 정보 받기"
+    "getTechSharing": "기술 정보 받기",
+    "apps": "MCP Apps 데모"
   },
   "gettingStarted": {
     "title": "설치 및 구성",
@@ -78,18 +80,18 @@
       "npx": {
         "title": "npx로 직접 사용",
         "recommended": "권장",
-        "description": "설치 불필요, 최신 버전 직접 사용：",
+        "description": "v4 프리뷰는 next, 안정 채널은 latest를 사용합니다:",
         "advantage": "장점：",
-        "advantageText": "수동 업데이트 불필요, 시작할 때마다 자동으로 최신 버전 사용",
+        "advantageText": "next는 최신 v4 RC를 가리킵니다. 운영 프로젝트는 정확한 버전을 고정하세요.",
         "copy": "복사"
       },
       "global": {
-        "title": "전역 설치",
-        "description": "시스템에 전역 설치：",
-        "configFile": "구성 파일：",
-        "note": "참고：",
-        "noteText": "수동으로 실행 필요",
-        "updateText": "버전 업데이트"
+        "title": "프로젝트 로컬 Agent fallback",
+        "description": "현재 프로젝트에 정확한 버전으로 고정된 로컬 실행기를 생성합니다:",
+        "configFile": "생성 파일:",
+        "note": "동작:",
+        "noteText": "MCP를 우선 사용하며 세션에 도구가 주입되지 않으면 Agent가 프로젝트 로컬 실행기를 자동 호출합니다.",
+        "updateText": "전역 설치나 package.json 수정이 없습니다."
       },
       "memory": {
         "title": "메모리 시스템 설치 구성 (Qdrant + Embedding)",
@@ -327,7 +329,7 @@
     "subtitle": "MCP Probe Kit은 완전한 개발 프로세스를 통합, 요구사항부터 배포까지의 모범 사례 가이드",
     "overview": {
       "title": "완전한 개발 프로세스",
-      "description": "MCP Probe Kit의 30개 도구는 요구사항 분석부터 코드 배포까지의 완전한 개발 프로세스를 커버합니다. 다음은 권장되는 모범 사례입니다.",
+      "description": "기본 모델 가시 도구 23개, Memory 구성 시 29개로 start_* 오케스트레이션, 계획 체크포인트, 수렴 게이트를 통해 전체 개발 흐름을 지원합니다.",
       "coreIdea": "핵심 철학：",
       "coreIdeaText": "워크플로 오케스트레이션 도구(start_*)를 통해 전체 개발 프로세스를 연결하여 AI를 개발 어시스턴트로 만듭니다."
     },
@@ -582,7 +584,7 @@
     "resources": {
       "title": "추가 리소스",
       "allTools": "완전한 도구 참조",
-      "allToolsDesc": "모든 30개 도구의 자세한 설명 보기",
+      "allToolsDesc": "full 호환 도구 33개와 App-only 작업 1개의 상세 설명 보기",
       "gettingStarted": "설치 및 구성",
       "gettingStartedDesc": "빠른 시작 가이드",
       "migration": "마이그레이션 가이드",
@@ -596,5 +598,63 @@
       "install": "📖 설치 및 구성",
       "allTools": "🛠️ 모든 도구 보기"
     }
+  },
+  "showcase": {
+    "eyebrow": "실제 UI · 자동 데모",
+    "title": "도구 목록이 아니라 관찰 가능한 실행 시스템",
+    "description": "아래 데모는 npm 패키지의 실제 MCP App 코드를 재사용합니다. 계획 진행, 메모리 검색, 수렴 게이트는 별도 마케팅 목업이 아닙니다.",
+    "featureTitle": "Feature Workbench",
+    "featureDesc": "부모-자식 명세, 현재 단계, 증거, 세션 간 복구 상태를 표시합니다.",
+    "memoryTitle": "Memory Center",
+    "memoryDesc": "검색, 탐색, 수명주기와 증거 확인, 검증된 지식 관리.",
+    "gateTitle": "Convergence Gate",
+    "gateDesc": "단계, 테스트 또는 리뷰 증거가 부족하면 종료를 거부하고 수렴 후에만 장기 메모리를 허용합니다.",
+    "openDemo": "전체 데모 열기"
+  },
+  "stats": {
+    "tools": "기본 모델 도구",
+    "memory": "Memory 구성 시",
+    "apps": "네이티브 MCP Apps",
+    "platforms": "Sidecar 플랫폼"
+  },
+  "v4Features": {
+    "eyebrow": "V4 핵심",
+    "title": "“Agent가 완료했다고 말함”을 검증 가능한 전달 루프로",
+    "planTitle": "체크포인트와 복구",
+    "planDesc": "plan_heartbeat가 단계와 증거를 저장하고 resume_plan이 중단 후 다음 실행 단계를 복원합니다.",
+    "appsTitle": "5개 네이티브 워크벤치",
+    "appsDesc": "Memory, Feature, Bug, Product, Convergence가 MCP Apps 지원 Host에 직접 표시됩니다.",
+    "graphTitle": "관리형 GitNexus Sidecar",
+    "graphDesc": "버전, 플랫폼, 아키텍처, Node 메이저별로 격리하고 무결성과 FTS를 검증하며 실패 시 안전하게 축소합니다.",
+    "cliTitle": "버전 고정 CLI fallback",
+    "cliDesc": "Host가 MCP tool lease를 잃어도 프로젝트의 probe 실행기가 package.json을 건드리지 않고 동일 Registry를 호출합니다.",
+    "specTitle": "부모-자식 명세",
+    "specDesc": "복잡한 릴리스를 부모 명세, 자식 명세, 의존성 그래프로 분리하고 check_spec이 재귀 검증합니다.",
+    "memoryTitle": "수렴 후 메모리",
+    "memoryDesc": "성공 패턴, 실패 접근, 잘못된 근본 원인, 회귀 사례는 converge 통과 후에만 저장합니다."
+  },
+  "apps": {
+    "title": "MCP Apps 시각화 워크벤치",
+    "subtitle": "5개 App이 계획, 메모리, 제품 인계, 증거 게이트를 MCP Apps 지원 클라이언트에 제공합니다.",
+    "badge": "v4.0.0-rc.8 · 실제 App 소스로 만든 데모",
+    "howTitle": "사용 방법",
+    "how1": "io.modelcontextprotocol/ui 지원 클라이언트에 mcp-probe-kit@next를 설정합니다.",
+    "how2": "start_feature, start_bugfix, start_product, converge 또는 Memory 도구를 평소처럼 호출합니다.",
+    "how3": "기능 협상 후 해당 워크벤치가 자동으로 열리며, 미지원 클라이언트는 text와 structuredContent를 계속 받습니다.",
+    "featureTitle": "Feature Workbench",
+    "featureDesc": "계획 단계, 현재 작업, 산출물, 증거, 복구 상태.",
+    "bugTitle": "Bug Workbench",
+    "bugDesc": "SRC-8 근본 원인 경계, 차단, 검증, 회귀.",
+    "memoryTitle": "Memory Center",
+    "memoryDesc": "의미 검색, 전체 내용, 수명주기, 증거, stale 표시, 확인 삭제.",
+    "productTitle": "Product Workbench",
+    "productDesc": "제품 정의, PRD, 프로토타입, 디자인 시스템에서 start_feature로 인계.",
+    "gateTitle": "Convergence Gate",
+    "gateDesc": "요구사항, 명세, 구현, 테스트, 리뷰 증거를 확인해 전달과 메모리 쓰기를 결정합니다.",
+    "compatTitle": "호환성과 축소 동작",
+    "compatDesc": "MCP Apps는 필수가 아닙니다. UI 협상이 없어도 도구 수와 텍스트 흐름은 유지되며 App-only 작업은 모델에 노출되지 않습니다.",
+    "tryTitle": "데모 체험",
+    "tryDesc": "데모는 읽기 전용이며 백엔드에 연결하지 않고 프로젝트나 메모리를 변경하지 않습니다.",
+    "back": "문서 홈으로"
   }
 }

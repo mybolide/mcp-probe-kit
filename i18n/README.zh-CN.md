@@ -22,11 +22,47 @@
 
 一个强大的 MCP (Model Context Protocol) 服务器，默认提供 **23 个模型可见工具**；完整配置 Memory 后提供 **29 个**；通过 `MCP_TOOLSET=full` 可恢复 **33 个兼容工具**。支持结构化输出、Legacy/Modern 双协议和正式 MCP Apps。
 
-**🎉 v3.0 重大更新**：精简工具数量，专注核心竞争力，消除选择困难，让 AI 做更多原生工作
+**🎉 v4 候选版本**：原生 MCP Apps、可恢复计划、证据收敛、GitNexus 托管 Sidecar、父子规格和版本锁定 CLI fallback。
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
 **协议支持**：Legacy MCP（2025-era）+ Modern MCP 2026-07-28 · **SDK**：TypeScript SDK v2 拆分包 · **运行时**：Node.js 20+
+
+---
+
+<!-- v4-showcase:start -->
+## 🎬 v4 动态展示
+
+v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付闭环。下面的动图直接由 npm 包中的同一套 MCP App 源码生成，不是另外绘制的宣传图。
+
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html"><img src="../docs/assets/demos/feature-workbench.gif" alt="Feature Workbench animated demo" width="920"/></a>
+</p>
+
+**Feature Workbench**：展示父子规格、当前步骤、产出、证据和跨会话恢复状态。
+
+<table>
+  <tr>
+    <td width="58%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo"/></a></td>
+    <td width="42%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo"/></a></td>
+  </tr>
+  <tr>
+    <td><strong>Memory Center</strong>：语义检索、全文查看、生命周期、证据、过期标记和确认删除。</td>
+    <td><strong>Convergence Gate</strong>：步骤或需求/规格/实现/测试/审查证据不完整时拒绝收尾。</td>
+  </tr>
+</table>
+
+- **5 个原生 MCP Apps**：Memory、Feature、Bug、Product 和 Convergence。
+- **可恢复委托计划**：`plan_heartbeat` 保存真实进度，`resume_plan` 恢复下一可执行步骤。
+- **证据收敛闸门**：`converge` 决定是否允许交付和正式写入长期记忆。
+- **GitNexus 托管 Sidecar**：按版本、平台、架构和 Node 主版本隔离，校验完整性与真实 FTS 能力，失败自动降级。
+- **版本锁定 CLI fallback**：Host 丢失 MCP 工具租约时，项目内 `probe` 启动器仍调用同一 Tool Registry。
+- **父子规格体系**：复杂版本需求先拆分再递归校验，避免塞进单一超大规格。
+
+**[打开 5 个可交互、只读的 MCP Apps 动态演示](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
+
+> **v4 预发布通道：** 使用 `mcp-probe-kit@next`（当前 `4.0.0-rc.8`）。npm `latest` 仍为稳定版 `3.7.0`；生产评估建议锁定精确版本。
+<!-- v4-showcase:end -->
 
 ---
 
@@ -38,7 +74,8 @@
 - [本地记忆栈（Qdrant + Nomic Embed）](../docs/memory-local-setup.zh-CN.md) - Docker Compose、端口 50008/50012、MCP 配置
 - [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 默认、Memory 条件工具、App-only 动作和 full 兼容工具面
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
-- [v3.0 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x → v3.0 升级指南
+- [v3 → v4 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - 工具面、协议、Apps、计划状态、Memory 与兼容策略
+- [MCP Apps 动态演示](https://mcp-probe-kit.bytezonex.com/pages/apps.html) - 由正式 App 源码生成的 5 个只读工作台
 
 ---
 
@@ -63,7 +100,7 @@
 ### 🧠 代码图谱桥接 (GitNexus)
 
 - `code_insight` 默认桥接 GitNexus，执行 query/context/impact 分析
-- 桥接默认通过 `npx -y gitnexus@latest mcp` 启动，降低抓取过期包的风险
+- GitNexus 使用托管 Sidecar，固定 `gitnexus@1.6.9`，校验包完整性和真实 FTS 能力，并按平台、架构和 Node 主版本复用运行时。
 - `init_project_context` 在 `docs/graph-insights/` 下生成基线图谱文档；如果 `docs/project-context.md` 已存在则保留旧上下文文档，仅回填图谱文档及索引条目
 - `start_feature` 刷新 GitNexus 索引，并在生成 spec 前执行任务级 `query/context/impact` 收窄，以减少过度范围
 - `start_bugfix` 刷新 GitNexus 索引，并在 SRC-8 真因分析前执行任务级图谱分析，以约束故障边界和爆炸半径
@@ -127,7 +164,7 @@
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "你的-qdrant-api-key",
@@ -157,7 +194,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -385,7 +422,7 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@next"]
     }
   }
 }
@@ -417,7 +454,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -439,7 +476,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -482,7 +519,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@next"]
     }
   }
 }
@@ -500,7 +537,7 @@ ollama pull nomic-embed-text
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "command": ["npx", "-y", "mcp-probe-kit@next"],
       "enabled": true
     }
   }
@@ -530,7 +567,7 @@ npm install -g mcp-probe-kit
 
 适用于 `code_insight`、`start_feature`、`start_bugfix`、`init_project_context`。
 
-- GitNexus Bridge 默认通过 `npx -y gitnexus@latest mcp` 启动。
+- GitNexus 使用托管 Sidecar，固定 `gitnexus@1.6.9`，校验包完整性和真实 FTS 能力，并按平台、架构和 Node 主版本复用运行时。
 - 在 Windows 上，首次冷启动可能需要 20 秒以上，因为 `npx` 可能会检查或下载依赖。
 - GitNexus 的部分依赖使用 `tree-sitter-*` 原生模块；如果系统没有 Visual Studio Build Tools，首次安装可能失败，并出现 `gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use` 之类的错误。
 
@@ -642,12 +679,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@latest 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@next 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 配置后客户端无法识别工具？
@@ -673,7 +710,7 @@ npm update -g mcp-probe-kit
 
 常见原因：
 
-1. `npx -y gitnexus@latest mcp` 属于冷启动，可能花 20 秒以上检查或下载依赖。
+1. 首次托管 Sidecar 安装包含原生依赖与 FTS 探针，因此可能较慢；它不会在每次调用时下载 `@latest`。
 2. GitNexus 依赖的 `tree-sitter-*` 原生模块在 Windows 上可能需要 Visual Studio Build Tools。
 
 如果日志里看到：

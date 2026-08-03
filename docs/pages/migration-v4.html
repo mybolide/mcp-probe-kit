@@ -12,26 +12,78 @@
         extend: {
           colors: {
             primary: { DEFAULT: '#2563EB', hover: '#1D4ED8' },
-            text: { primary: '#0F172A', secondary: '#475569' },
-            bg: { page: '#F8FAFC', card: '#FFFFFF' },
-            border: '#E2E8F0'
+            text: { primary: '#0F172A', secondary: '#475569', tertiary: '#64748B' },
+            bg: { page: '#F8FAFC', card: '#FFFFFF', hover: '#F1F5F9' },
+            border: '#E2E8F0',
+            fontFamily: { sans: ['-apple-system','BlinkMacSystemFont','"PingFang SC"','"Microsoft YaHei"','"Segoe UI"','sans-serif'], mono: ['ui-monospace','"SFMono-Regular"','Consolas','monospace'] }
           }
         }
       }
     };
   </script>
+  <link rel="stylesheet" href="../assets/css/docs-shell.css">
+  <link rel="icon" href="../assets/logo.png" type="image/png">
 </head>
-<body class="bg-bg-page text-text-primary min-h-screen">
-  <nav class="h-14 bg-white border-b border-border px-4 flex items-center justify-between">
-    <a href="../index.html" class="font-semibold no-underline">MCP Probe Kit</a>
-    <a href="https://github.com/mybolide/mcp-probe-kit" class="text-sm text-primary no-underline">GitHub ↗</a>
+<body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
+  <!-- docs-shell:start -->
+  <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50" data-doc-shell="topbar">
+    <div class="h-full px-4 flex items-center justify-between">
+      <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
+        <span aria-hidden="true">🚀</span><span class="sm:inline hidden">MCP Probe Kit</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <div id="lang-switcher-container"></div>
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors" aria-label="Toggle documentation navigation" aria-controls="sidebar">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
   </nav>
+  <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+  <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar" data-doc-shell="sidebar">
+    <div class="p-4">
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">快速开始</div>
+        <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🏠</span><span data-i18n="sidebar.home">文档首页</span></a>
+        <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📖</span><span data-i18n="sidebar.installation">安装配置</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
+        <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">33+1</span></a>
+        <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">5</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
+        <a href="./migration-v4.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary" aria-current="page"><span>🚀</span><span data-i18n="sidebar.migration">v4 迁移指南</span></a>
+        <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💡</span><span data-i18n="sidebar.examples">最佳实践</span></a>
+      </div>
+      <div class="pt-4 border-t border-border">
+        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💻</span><span>GitHub</span><span class="ml-auto text-xs">↗</span></a>
+        <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📦</span><span>npm</span><span class="ml-auto text-xs">↗</span></a>
+      </div>
+      <div class="mt-4 pt-4 border-t border-border">
+        <div class="text-center">
+          <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">关注公众号</div>
+          <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border">
+          <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">获取更多技术分享</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <!-- docs-shell:end -->
 
-  <main class="max-w-4xl mx-auto p-4 sm:p-8">
-    <header class="mb-8">
-      <div class="text-sm text-text-secondary mb-3"><a href="../index.html" class="text-primary">文档首页</a> / 迁移指南</div>
-      <h1 class="text-3xl font-bold mb-3">MCP Probe Kit v3 → v4</h1>
-      <p class="text-text-secondary">v4 保留主要工具能力，同时收敛默认模型工具面，升级双协议、计划恢复、Memory 生命周期与正式 MCP Apps。</p>
+  <main class="flex-1 mt-14 min-h-screen md:ml-64">
+    <div class="w-full max-w-none p-4 sm:p-6 lg:p-8 xl:p-10">
+      <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
+        <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0" data-i18n="sidebar.home">文档首页</a>
+        <span class="text-text-tertiary">/</span>
+        <span class="text-text-primary flex-shrink-0" data-i18n="sidebar.guides">指南</span>
+        <span class="text-text-tertiary">/</span>
+        <span class="text-text-primary flex-shrink-0" data-i18n="sidebar.migration">v4 迁移指南</span>
+      </nav>
+    <header class="mb-6">
+            <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">MCP Probe Kit v3 → v4</h1>
+      <p class="text-sm sm:text-base text-text-secondary">v4 保留主要工具能力，同时收敛默认模型工具面，升级双协议、计划恢复、Memory 生命周期与正式 MCP Apps。</p>
       <div class="flex flex-wrap gap-2 mt-4 text-xs">
         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">23 默认 / 29 Memory / 33 full</span>
         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">Node.js 20+</span>
@@ -40,19 +92,20 @@
       </div>
     </header>
 
-    <section class="bg-white border border-border rounded-xl p-5 mb-5">
+    <section class="bg-white border border-border rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
       <h2 class="text-xl font-semibold mb-3">RC 安装</h2>
       <p class="text-sm text-text-secondary mb-3">候选版本使用 npm <code>next</code> 标签，不覆盖稳定版 <code>latest</code>。</p>
-      <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm"><code>npx -y mcp-probe-kit@next
+      <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm"><code># MCP 客户端：跟随最新 v4 RC
+npx -y mcp-probe-kit@next
 
-# 全局安装
-npm install -g mcp-probe-kit@next
+# 项目内 Agent fallback：精确锁定版本
+npx -y mcp-probe-kit@4.0.0-rc.8 install-agent
 
-# 固定版本
-npm install -g mcp-probe-kit@4.0.0-rc.2</code></pre>
+# 临时运行精确版本
+npx -y mcp-probe-kit@4.0.0-rc.8</code></pre>
     </section>
 
-    <section class="bg-white border border-border rounded-xl p-5 mb-5">
+    <section class="bg-white border border-border rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
       <h2 class="text-xl font-semibold mb-3">工具面变化</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-sm border-collapse">
@@ -67,7 +120,7 @@ npm install -g mcp-probe-kit@4.0.0-rc.2</code></pre>
       <p class="text-sm text-text-secondary mt-3"><code>add_feature</code>、<code>fix_bug</code>、<code>sync_ui_data</code>、<code>ask_user</code> 不再进入默认模型工具面，但能力仍由编排、脚本或 full 模式保留。</p>
     </section>
 
-    <section class="bg-white border border-border rounded-xl p-5 mb-5">
+    <section class="bg-white border border-border rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
       <h2 class="text-xl font-semibold mb-3">正式 MCP Apps</h2>
       <p class="text-sm text-text-secondary mb-3">客户端协商 <code>io.modelcontextprotocol/ui</code> 且支持 <code>text/html;profile=mcp-app</code> 后，服务端提供五个交互界面：</p>
       <ul class="list-disc pl-5 space-y-2 text-sm text-text-secondary">
@@ -77,12 +130,13 @@ npm install -g mcp-probe-kit@4.0.0-rc.2</code></pre>
         <li>Product Workbench</li>
         <li>Convergence Gate</li>
       </ul>
+      <a href="./apps.html" class="inline-flex mt-4 text-sm font-semibold text-primary no-underline">打开五个真实动态演示 →</a>
       <p class="text-sm text-text-secondary mt-3"><code>list_memory_assets</code> 标记为 App-only，不计入 23/29 个模型可见工具。未支持 GUI 的客户端继续使用文本和结构化结果。</p>
       <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 mt-4 text-sm"><code># 显式关闭 MCP Apps
 MCP_ENABLE_UI_APPS=0</code></pre>
     </section>
 
-    <section class="bg-white border border-border rounded-xl p-5 mb-5">
+    <section class="bg-white border border-border rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
       <h2 class="text-xl font-semibold mb-3">协议模式</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-sm border-collapse">
@@ -97,7 +151,7 @@ MCP_ENABLE_UI_APPS=0</code></pre>
       <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 mt-4 text-sm"><code>MCP_PROTOCOL_MODE=auto</code></pre>
     </section>
 
-    <section class="bg-white border border-border rounded-xl p-5 mb-5">
+    <section class="bg-white border border-border rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
       <h2 class="text-xl font-semibold mb-3">计划恢复与 Memory 写入</h2>
       <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm"><code>start_*
 → plan_heartbeat
@@ -108,16 +162,22 @@ MCP_ENABLE_UI_APPS=0</code></pre>
       <p class="text-sm text-text-secondary mt-3">检查点保存在项目内 <code>.mcp-probe-kit/plans/</code>。只有 <code>converge passed=true</code> 后才能写入正式长期记忆。</p>
     </section>
 
-    <section class="bg-white border border-border rounded-xl p-5 mb-5">
+    <section class="bg-white border border-border rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
       <h2 class="text-xl font-semibold mb-3">验证与回退</h2>
       <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-sm"><code>npm run eval:agents
 npm run release:verify</code></pre>
       <p class="text-sm text-text-secondary mt-3">协议异常时先尝试 <code>MCP_PROTOCOL_MODE=legacy</code>；工具选择异常时可临时使用 <code>MCP_TOOLSET=full</code>。只有确认 v4 兼容层无法接受时再回退 v3。</p>
     </section>
 
-    <div class="text-sm text-text-secondary mb-10">
+    <div class="text-sm text-text-secondary mb-8">
       完整说明见仓库中的 <code>docs/migration-v3-to-v4.md</code>。
     </div>
+    <footer class="border-t border-border py-6 text-sm text-text-tertiary">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><span>© 2024–2026 MCP Probe Kit · MIT License</span><a href="https://github.com/mybolide/mcp-probe-kit" class="text-primary">GitHub ↗</a></div>
+    </footer>
+    </div>
   </main>
+  <script src="../assets/js/i18n.js"></script>
+  <script src="../assets/js/docs-shell.js"></script>
 </body>
 </html>

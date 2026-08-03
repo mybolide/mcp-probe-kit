@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "MCP Probe Kit - AI駆動の完全開発ツールキット | 開発ライフサイクル全体をカバーする30のツール",
-    "description": "MCP Probe Kitは、要件分析、コード開発、品質保証、バグ修正、リリース管理をカバーする30のAI駆動開発ツールを提供します。Cursor、Cline、Claude Desktopをサポートし、100%構造化出力を実現。",
+    "title": "MCP Probe Kit v4 - 可観測な Agent ワークフローと MCP Apps",
+    "description": "MCP Probe Kit v4 は標準23ツール、Memory構成時29ツール、5つのMCP Apps、再開可能な計画、収束ゲート、GitNexus Sidecar、固定バージョンCLI fallbackを提供します。",
     "keywords": "MCP Probe Kit, AI開発ツール, コード生成, コードレビュー, Gitツール, UI開発, 開発効率, Cursor, Cline, Claude, MCPサーバー"
   },
   "nav": {
@@ -9,11 +9,12 @@
     "docs": "ドキュメント",
     "mainSite": "メインサイト",
     "github": "GitHub",
-    "npm": "npm"
+    "npm": "npm",
+    "apps": "MCP Apps"
   },
   "hero": {
     "title": "🚀 MCP Probe Kit",
-    "subtitle": "AI開発強化ツールキット · ドキュメントセンター",
+    "subtitle": "Agent がプロジェクトを理解し、実行計画を進め、ネイティブUIで進捗を可視化",
     "version": "v4.0.0-rc.8",
     "quickStart": "クイックスタート",
     "visitMainSite": "ByteZoneXを訪問"
@@ -26,7 +27,7 @@
     },
     "tools": {
       "title": "ツールドキュメント",
-      "description": "30の実用的なツールの完全なリファレンス。コードグラフ洞察とオーケストレーションを含む",
+      "description": "標準23ツール、Memory構成時29ツール、さらに5つのネイティブMCP Apps",
       "allTools": "すべてのツール"
     },
     "guides": {
@@ -59,7 +60,8 @@
     "migration": "移行ガイド",
     "examples": "ベストプラクティス",
     "followUs": "フォローする",
-    "getTechSharing": "技術情報を入手"
+    "getTechSharing": "技術情報を入手",
+    "apps": "MCP Apps デモ"
   },
   "gettingStarted": {
     "title": "インストールと設定",
@@ -78,18 +80,18 @@
       "npx": {
         "title": "npxで直接使用",
         "recommended": "推奨",
-        "description": "インストール不要、最新バージョンを直接使用：",
+        "description": "v4プレビューは next、安定版は latest を使用します：",
         "advantage": "利点：",
-        "advantageText": "手動更新不要、起動時に自動的に最新バージョンを使用",
+        "advantageText": "next は最新v4 RCを追跡します。本番では正確なバージョンを固定してください。",
         "copy": "コピー"
       },
       "global": {
-        "title": "グローバルインストール",
-        "description": "システムにグローバルインストール：",
-        "configFile": "設定ファイル：",
-        "note": "注意：",
-        "noteText": "手動で実行する必要があります",
-        "updateText": "バージョンを更新"
+        "title": "プロジェクト内 Agent fallback",
+        "description": "現在のプロジェクトに正確なバージョン固定のローカルランチャーを生成します：",
+        "configFile": "生成されるファイル：",
+        "note": "動作：",
+        "noteText": "MCPを優先し、セッションにツールが注入されない場合はAgentがプロジェクト内ランチャーを自動使用します。",
+        "updateText": "グローバルインストールも package.json の変更も行いません。"
       },
       "memory": {
         "title": "メモリシステムのセットアップ（Qdrant + Embedding）",
@@ -327,7 +329,7 @@
     "subtitle": "MCP Probe Kitは完全な開発プロセスを統合、要件からデプロイまでのベストプラクティスガイド",
     "overview": {
       "title": "完全な開発プロセス",
-      "description": "MCP Probe Kitの30のツールは、要件分析からコードデプロイまでの完全な開発プロセスをカバーしています。以下は推奨されるベストプラクティスです。",
+      "description": "既定23個、Memory構成時29個のモデル可視ツールで、start_*、計画チェックポイント、収束ゲートを通じて開発全体を支援します。",
       "coreIdea": "コア哲学：",
       "coreIdeaText": "ワークフローオーケストレーションツール（start_*）を通じて開発プロセス全体を連携し、AIを開発アシスタントにします。"
     },
@@ -582,7 +584,7 @@
     "resources": {
       "title": "その他のリソース",
       "allTools": "完全なツールリファレンス",
-      "allToolsDesc": "全30ツールの詳細説明を表示",
+      "allToolsDesc": "33個のfull互換ツールと1個のApp-only操作の詳細を見る",
       "gettingStarted": "インストールと設定",
       "gettingStartedDesc": "クイックスタートガイド",
       "migration": "移行ガイド",
@@ -596,5 +598,63 @@
       "install": "📖 インストールと設定",
       "allTools": "🛠️ すべてのツールを表示"
     }
+  },
+  "showcase": {
+    "eyebrow": "実UI・自動デモ",
+    "title": "ツール一覧ではなく、観測可能な実行システム",
+    "description": "デモは npm パッケージに含まれる MCP App の実コードを再利用しています。進捗、記憶検索、収束ゲートは宣伝用モックではありません。",
+    "featureTitle": "Feature Workbench",
+    "featureDesc": "親子仕様、現在のステップ、証拠、セッションをまたぐ再開状態を表示。",
+    "memoryTitle": "Memory Center",
+    "memoryDesc": "検索、閲覧、ライフサイクルと証拠の確認、検証済み知識の管理。",
+    "gateTitle": "Convergence Gate",
+    "gateDesc": "未完了ステップやテスト・レビュー証拠があれば完了を拒否し、収束後のみ長期記憶を許可。",
+    "openDemo": "完全なデモを開く"
+  },
+  "stats": {
+    "tools": "標準モデルツール",
+    "memory": "Memory構成時",
+    "apps": "ネイティブMCP Apps",
+    "platforms": "Sidecar対応OS"
+  },
+  "v4Features": {
+    "eyebrow": "V4 コア",
+    "title": "「Agentが完了と言った」を検証可能な納品ループへ",
+    "planTitle": "チェックポイントと再開",
+    "planDesc": "plan_heartbeat がステップと証拠を保存し、resume_plan が中断後の次ステップを復元します。",
+    "appsTitle": "5つのネイティブUI",
+    "appsDesc": "Memory、Feature、Bug、Product、Convergence を対応Host内に表示します。",
+    "graphTitle": "管理型GitNexus Sidecar",
+    "graphDesc": "バージョン、OS、CPU、Nodeメジャーごとに分離し、整合性とFTSを検証、失敗時は安全に縮退します。",
+    "cliTitle": "固定バージョンCLI fallback",
+    "cliDesc": "Hostがツールleaseを失っても、プロジェクト内probeから同じTool Registryを呼び出せます。",
+    "specTitle": "親子仕様",
+    "specDesc": "複雑なリリースを親仕様、子仕様、依存グラフに分割し、check_specが再帰検証します。",
+    "memoryTitle": "収束後の記憶",
+    "memoryDesc": "成功パターン、失敗手法、誤った根因、回帰事例はconverge通過後のみ保存します。"
+  },
+  "apps": {
+    "title": "MCP Apps 可視化ワークベンチ",
+    "subtitle": "5つのAppが計画、記憶、製品引き継ぎ、証拠ゲートを対応クライアントへ提供します。",
+    "badge": "v4.0.0-rc.8・実Appソースから生成したデモ",
+    "howTitle": "使い方",
+    "how1": "io.modelcontextprotocol/ui 対応クライアントに mcp-probe-kit@next を設定します。",
+    "how2": "start_feature、start_bugfix、start_product、converge、Memoryツールを通常通り呼び出します。",
+    "how3": "交渉成功後に対応UIが自動表示され、非対応クライアントはtextとstructuredContentを受け取ります。",
+    "featureTitle": "Feature Workbench",
+    "featureDesc": "計画、現在作業、成果物、証拠、再開状態。",
+    "bugTitle": "Bug Workbench",
+    "bugDesc": "SRC-8の根因境界、阻断、検証、回帰。",
+    "memoryTitle": "Memory Center",
+    "memoryDesc": "意味検索、全文、ライフサイクル、証拠、期限切れ、確認削除。",
+    "productTitle": "Product Workbench",
+    "productDesc": "製品定義、PRD、プロトタイプ、デザインシステムからstart_featureへ。",
+    "gateTitle": "Convergence Gate",
+    "gateDesc": "要件、仕様、実装、テスト、レビュー証拠を確認して納品と記憶書込みを判断します。",
+    "compatTitle": "互換性と縮退",
+    "compatDesc": "MCP Appsは必須ではありません。UI未交渉時もツール数とテキストフローは維持され、App-only操作はモデルに出ません。",
+    "tryTitle": "デモを試す",
+    "tryDesc": "デモは読み取り専用で、バックエンド接続やプロジェクト・記憶の変更は行いません。",
+    "back": "ドキュメントへ戻る"
   }
 }

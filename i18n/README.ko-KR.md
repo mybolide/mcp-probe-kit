@@ -22,11 +22,47 @@
 
 강력한 MCP (Model Context Protocol) 서버로, 기본 **23개 모델 가시 도구**, Memory 완전 구성 시 **29개**, `MCP_TOOLSET=full` 사용 시 **33개 호환 도구**를 제공합니다. 구조화 출력, Legacy/Modern 이중 프로토콜, 정식 MCP Apps를 지원합니다.
 
-**🎉 v3.0 주요 업데이트**: 도구 수 간소화, 핵심 역량에 집중, 선택 혼란 제거, AI가 더 많은 네이티브 작업 수행
+**🎉 v4 릴리스 후보**: 네이티브 MCP Apps, 재개 가능한 계획, 증거 수렴, 관리형 GitNexus Sidecar, 부모-자식 명세, 버전 고정 CLI fallback.
 
 **모든 MCP 클라이언트 지원**: Cursor, Claude Desktop, Cline, Continue 등
 
 **프로토콜 지원**: Legacy MCP (2025-era) + Modern MCP 2026-07-28 · **SDK**: TypeScript SDK v2 분리 패키지 · **런타임**: Node.js 20+
+
+---
+
+<!-- v4-showcase:start -->
+## 🎬 v4 동작 데모
+
+v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가능한 전달 루프로 바꿉니다. 아래 애니메이션은 npm 패키지에 포함된 실제 MCP App 소스에서 생성됩니다.
+
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html"><img src="../docs/assets/demos/feature-workbench.gif" alt="Feature Workbench animated demo" width="920"/></a>
+</p>
+
+**Feature Workbench**: 부모-자식 명세, 현재 단계, 산출물, 증거, 세션 간 복구 상태.
+
+<table>
+  <tr>
+    <td width="58%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo"/></a></td>
+    <td width="42%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo"/></a></td>
+  </tr>
+  <tr>
+    <td><strong>Memory Center</strong>: 의미 검색, 전체 내용, 수명주기, 증거, stale 표시, 확인 삭제.</td>
+    <td><strong>Convergence Gate</strong>: 단계 또는 요구사항/명세/구현/테스트/리뷰 증거가 부족하면 종료를 거부합니다.</td>
+  </tr>
+</table>
+
+- **네이티브 MCP Apps 5개**: Memory, Feature, Bug, Product, Convergence.
+- **재개 가능한 위임 계획**: `plan_heartbeat`가 실제 진행을 저장하고 `resume_plan`이 다음 실행 단계를 복원합니다.
+- **증거 기반 수렴**: `converge`가 전달과 장기 Memory 쓰기를 제한합니다.
+- **관리형 GitNexus Sidecar**: 버전, OS, 아키텍처, Node 메이저별 격리, 무결성 및 실제 FTS 검증, 안전한 축소 동작.
+- **버전 고정 CLI fallback**: Host가 MCP tool lease를 잃어도 프로젝트의 `probe`가 동일 Tool Registry를 호출합니다.
+- **부모-자식 명세**: 복잡한 릴리스를 분해하고 재귀 검증합니다.
+
+**[읽기 전용 MCP Apps 라이브 데모 5개 열기](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
+
+> **v4 프리뷰 채널:** `mcp-probe-kit@next`(현재 `4.0.0-rc.8`)를 사용합니다. npm `latest`는 안정 버전 `3.7.0`을 유지합니다. 운영 평가에서는 정확한 버전을 고정하세요.
+<!-- v4-showcase:end -->
 
 ---
 
@@ -37,7 +73,8 @@
 - [빠른 시작](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5분 안에 설정
 - [모든 도구](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 기본, Memory 조건부, App-only 및 full 호환 도구 표면
 - [모범 사례](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 완전한 개발 워크플로우 가이드
-- [v3.0 마이그레이션 가이드](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - v2.x에서 v3.0으로 업그레이드
+- [v3 → v4 마이그레이션 가이드](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - 도구 표면, 프로토콜, Apps, 계획 상태, Memory 및 호환성
+- [MCP Apps 라이브 데모](https://mcp-probe-kit.bytezonex.com/pages/apps.html) - 실제 App 소스로 생성한 읽기 전용 워크벤치 5개
 
 ---
 
@@ -54,7 +91,7 @@
 ### 🧠 코드 그래프 브리지 (GitNexus)
 
 - `code_insight` 는 기본적으로 GitNexus 를 사용해 query/context/impact 분석을 수행합니다
-- 브리지는 기본적으로 `npx -y gitnexus@latest mcp` 를 실행해 오래된 패키지 위험을 줄입니다
+- GitNexus는 관리형 Sidecar를 사용해 `gitnexus@1.6.9`, 패키지 무결성, 실제 FTS 기능을 검증하고 플랫폼·아키텍처·Node 메이저별로 재사용합니다.
 - `init_project_context` 는 `docs/graph-insights/` 아래에 베이스라인 그래프 문서를 생성합니다
 - `start_feature` 와 `start_bugfix` 는 GitNexus 인덱스를 새로고침하고 작업 단위 그래프 힌트를 사용합니다
 - GitNexus 를 사용할 수 없더라도 오케스트레이션을 깨지 않고 자동으로 폴백합니다
@@ -300,7 +337,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@latest"]
+      "args": ["mcp-probe-kit@next"]
     }
   }
 }
@@ -319,7 +356,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@next"]
     }
   }
 }
@@ -337,7 +374,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "command": ["npx", "-y", "mcp-probe-kit@next"],
       "enabled": true
     }
   }
@@ -367,7 +404,7 @@ npm install -g mcp-probe-kit
 
 대상: `code_insight`, `start_feature`, `start_bugfix`, `init_project_context`
 
-- GitNexus Bridge 는 기본적으로 `npx -y gitnexus@latest mcp` 를 사용합니다.
+- GitNexus는 관리형 Sidecar를 사용해 `gitnexus@1.6.9`, 패키지 무결성, 실제 FTS 기능을 검증하고 플랫폼·아키텍처·Node 메이저별로 재사용합니다.
 - Windows 에서는 첫 콜드 스타트에 20초 이상 걸릴 수 있습니다.
 - GitNexus 의 일부 의존성은 `tree-sitter-*` 네이티브 모듈을 사용하며, Visual Studio Build Tools 가 필요할 수 있습니다.
 
@@ -461,12 +498,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@latest 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@next 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 설정 후 클라이언트가 도구를 인식하지 못하나요?
@@ -492,7 +529,7 @@ npm update -g mcp-probe-kit
 
 주요 원인:
 
-1. `npx -y gitnexus@latest mcp` 는 콜드 스타트이므로 의존성 확인 또는 다운로드에 20초 이상 걸릴 수 있습니다.
+1. 첫 관리형 Sidecar 설치에는 네이티브 의존성과 FTS 프로브가 포함되어 느릴 수 있습니다. 매 호출마다 `@latest`를 다운로드하지 않습니다.
 2. GitNexus 가 의존하는 `tree-sitter-*` 네이티브 모듈은 Windows 에서 Visual Studio Build Tools 가 필요할 수 있습니다.
 
 다음과 같은 로그가 보인다면:

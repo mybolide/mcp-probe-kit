@@ -13,6 +13,29 @@ type ToolResult = {
   isError?: boolean;
 };
 
+type DemoFrame = {
+  input?: Dict;
+  result?: ToolResult;
+  memoryItems?: Dict[];
+  memoryTotal?: number;
+  selectedMemory?: Dict | null;
+  planSnapshot?: Dict | null;
+  notice?: string;
+};
+
+type DemoConfig = {
+  enabled?: boolean;
+  autoplay?: boolean;
+  intervalMs?: number;
+  frames?: DemoFrame[];
+};
+
+declare global {
+  interface Window {
+    __MCP_PROBE_DEMO__?: DemoConfig;
+  }
+}
+
 const root = document.getElementById('app') as HTMLElement;
 const kind = root.dataset.appKind || 'task-workbench';
 const app = new App(
@@ -30,6 +53,7 @@ let selectedMemory: Dict | null = null;
 let basePlan: Dict = {};
 let planSnapshot: Dict | null = null;
 let planPollTimer: number | undefined;
+let demoTimer: number | undefined;
 let busy = false;
 let notice = '';
 
@@ -61,6 +85,48 @@ function numeric(value: unknown, fallback = 0): number {
 
 function bool(value: unknown): boolean {
   return value === true;
+}
+
+function applyDemoFrame(frame: DemoFrame): void {
+  if (frame.input) lastInput = asDict(frame.input);
+  if (frame.result) {
+    lastResult = frame.result;
+    const receivedPlan = resultPlan(lastResult);
+    if (asArray(receivedPlan.steps).length) basePlan = receivedPlan;
+  }
+  if (frame.memoryItems) {
+    memoryItems = frame.memoryItems.map(asDict);
+    memoryTotal = numeric(frame.memoryTotal, memoryItems.length);
+  }
+  if ('selectedMemory' in frame) {
+    selectedMemory = frame.selectedMemory ? asDict(frame.selectedMemory) : null;
+  }
+  if ('planSnapshot' in frame) {
+    planSnapshot = frame.planSnapshot ? asDict(frame.planSnapshot) : null;
+  }
+  notice = text(frame.notice);
+  render();
+}
+
+function startDemoPlayback(config: DemoConfig): void {
+  const frames = Array.isArray(config.frames) ? config.frames : [];
+  if (!frames.length) {
+    render();
+    return;
+  }
+  const queryFrame = Number(new URLSearchParams(window.location.search).get('frame'));
+  const fixedFrame = Number.isInteger(queryFrame) && queryFrame >= 0 && queryFrame < frames.length
+    ? queryFrame
+    : null;
+  let index = fixedFrame ?? 0;
+  applyDemoFrame(frames[index]);
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+  if (fixedFrame !== null || config.autoplay === false || reducedMotion || frames.length < 2) return;
+  const intervalMs = Math.max(900, numeric(config.intervalMs, 1800));
+  demoTimer = window.setInterval(() => {
+    index = (index + 1) % frames.length;
+    applyDemoFrame(frames[index]);
+  }, intervalMs);
 }
 
 function escapeHtml(value: unknown): string {
@@ -428,6 +494,10 @@ function syncPlanPolling(): void {
 
 root.addEventListener('submit', (event) => {
   const form = event.target as HTMLFormElement;
+  if (window.__MCP_PROBE_DEMO__?.enabled) {
+    event.preventDefault();
+    return;
+  }
   if (form.id !== 'memory-search') return;
   event.preventDefault();
   const query = text(new FormData(form).get('query')).trim();
@@ -435,6 +505,7 @@ root.addEventListener('submit', (event) => {
 });
 
 root.addEventListener('click', (event) => {
+  if (window.__MCP_PROBE_DEMO__?.enabled) return;
   const target = (event.target as HTMLElement).closest<HTMLElement>('[data-action]');
   if (!target || busy) return;
   const action = target.dataset.action;
@@ -490,6 +561,11 @@ app.addEventListener('hostcontextchanged', (context) => {
 });
 
 async function main(): Promise<void> {
+  const demo = window.__MCP_PROBE_DEMO__;
+  if (demo?.enabled) {
+    startDemoPlayback(demo);
+    return;
+  }
   render();
   await app.connect();
   const context = app.getHostContext();

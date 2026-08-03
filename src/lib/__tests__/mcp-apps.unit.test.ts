@@ -100,6 +100,23 @@ describe('mcp-apps', () => {
     expect(html).not.toContain('Quality Gate');
   });
 
+  test('builds a self-contained read-only demo document', () => {
+    const resource = MCP_APP_RESOURCES.find(
+      (item) => item.uri === 'ui://mcp-probe-kit/feature-workbench',
+    );
+    expect(resource).toBeDefined();
+    const html = buildMcpAppHtml(resource!, {
+      demo: {
+        enabled: true,
+        frames: [{ input: { description: '</script><script>alert(1)</script>' } }],
+      },
+    });
+    expect(html).toContain('window.__MCP_PROBE_DEMO__=');
+    expect(html).toContain('\u003c/script\u003e');
+    expect(html).not.toContain('</script><script>alert(1)</script>');
+    expect(html).toContain('data-app-kind="feature-workbench"');
+  });
+
   test('maps model tools to stable app resources', () => {
     expect(getMcpAppResourceUri('search_memory')).toBe(
       'ui://mcp-probe-kit/memory-center',

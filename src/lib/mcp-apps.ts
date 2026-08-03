@@ -108,7 +108,17 @@ export function buildMcpAppToolMeta(
   };
 }
 
-export function buildMcpAppHtml(resource: McpAppResourceDefinition): string {
+export interface McpAppHtmlOptions {
+  demo?: unknown;
+}
+
+export function buildMcpAppHtml(
+  resource: McpAppResourceDefinition,
+  options: McpAppHtmlOptions = {},
+): string {
+  const demoScript = options.demo === undefined
+    ? ''
+    : `<script>window.__MCP_PROBE_DEMO__=${serializeInlineJson(options.demo)};</script>`;
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -119,9 +129,19 @@ export function buildMcpAppHtml(resource: McpAppResourceDefinition): string {
 </head>
 <body>
   <div id="app" data-app-kind="${escapeHtml(resource.kind)}"></div>
+  ${demoScript}
   <script>${MCP_APP_BUNDLE}</script>
 </body>
 </html>`;
+}
+
+function serializeInlineJson(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\u003c')
+    .replace(/>/g, '\u003e')
+    .replace(/&/g, '\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 }
 
 function escapeHtml(value: string): string {

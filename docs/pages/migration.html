@@ -1,308 +1,102 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>迁移指南 - 从 v2.x 升级到 v3.0 | MCP Probe Kit</title>
-    
-    <meta name="description" content="MCP Probe Kit 迁移指南：从 v2.x 升级到 v3.0 的完整步骤。了解重大变更、新增功能、配置调整和最佳实践，确保平滑升级。">
-    <meta name="keywords" content="MCP Probe Kit 升级, 版本迁移, v3.0 新特性, 配置迁移, 工具升级指南, 破坏性变更">
-    <meta name="author" content="小墨 (Kyle) - ByteZoneX">
-    <meta name="robots" content="index, follow">
-    
-    <script src="../assets/js/tailwind.js" data-cfasync="false"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: { DEFAULT: '#2563EB', hover: '#1D4ED8' },
-                        text: { primary: '#0F172A', secondary: '#475569', tertiary: '#64748B' },
-                        bg: { page: '#F8FAFC', card: '#FFFFFF', hover: '#F1F5F9' },
-                        border: '#E2E8F0',
-                    },
-                    fontFamily: { 
-                        sans: ['-apple-system', 'BlinkMacSystemFont', '"PingFang SC"', '"Microsoft YaHei"', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"Noto Sans CJK SC"', 'sans-serif'],
-                        mono: ['ui-monospace', '"SF Mono"', '"Cascadia Code"', '"Consolas"', 'Menlo', 'Monaco', '"PingFang SC"', '"Microsoft YaHei"', '"Courier New"', 'monospace']
-                    },
-                }
-            }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>迁移指南已更新 | MCP Probe Kit</title>
+  <meta name="description" content="旧版迁移指南入口已更新，请使用 MCP Probe Kit v3 到 v4 迁移指南。">
+  <meta name="robots" content="noindex, follow">
+  <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html">
+  <meta http-equiv="refresh" content="0; url=./migration-v4.html">
+  <script src="../assets/js/tailwind.js" data-cfasync="false"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { DEFAULT: '#2563EB', hover: '#1D4ED8' },
+            text: { primary: '#0F172A', secondary: '#475569', tertiary: '#64748B' },
+            bg: { page: '#F8FAFC', card: '#FFFFFF', hover: '#F1F5F9' },
+            border: '#E2E8F0'
+          },
+          fontFamily: {
+            sans: ['-apple-system','BlinkMacSystemFont','"PingFang SC"','"Microsoft YaHei"','"Segoe UI"','sans-serif'],
+            mono: ['ui-monospace','"SFMono-Regular"','Consolas','monospace']
+          }
         }
-    </script>
-    <style>
-        html { scroll-behavior: smooth; }
-        .code-block { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .sidebar-drawer { transition: transform 0.3s ease; }
-        @media (max-width: 767px) {
-            .sidebar-drawer { transform: translateX(-100%); }
-            .sidebar-drawer.open { transform: translateX(0); }
-        }
-        .backdrop { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-        .backdrop.active { opacity: 1; pointer-events: auto; }
-        
-        /* i18n 加载优化：防止内容闪烁 */
-        body:not(.i18n-ready) [data-i18n] {
-            visibility: hidden;
-        }
-        body.i18n-ready [data-i18n] {
-            visibility: visible;
-        }
-    </style>
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="../assets/css/docs-shell.css">
+  <link rel="icon" href="../assets/logo.png" type="image/png">
 </head>
 <body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
-    <!-- A. 顶部导航栏 -->
-    <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50">
-        <div class="h-full px-4 flex items-center justify-between">
-            <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
-                <span>🚀</span>
-                <span class="sm:inline hidden">MCP Probe Kit</span>
-            </a>
-            <div class="flex items-center gap-3">
-                <div id="lang-switcher-container"></div>
-                <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                    </svg>
-                </button>
-            </div>
+  <!-- docs-shell:start -->
+  <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50" data-doc-shell="topbar">
+    <div class="h-full px-4 flex items-center justify-between">
+      <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
+        <span aria-hidden="true">🚀</span><span class="sm:inline hidden">MCP Probe Kit</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <div id="lang-switcher-container"></div>
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors" aria-label="Toggle documentation navigation" aria-controls="sidebar">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+  <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+  <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar" data-doc-shell="sidebar">
+    <div class="p-4">
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">快速开始</div>
+        <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🏠</span><span data-i18n="sidebar.home">文档首页</span></a>
+        <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📖</span><span data-i18n="sidebar.installation">安装配置</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
+        <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">33+1</span></a>
+        <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">5</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
+        <a href="./migration-v4.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary" aria-current="page"><span>🚀</span><span data-i18n="sidebar.migration">v4 迁移指南</span></a>
+        <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💡</span><span data-i18n="sidebar.examples">最佳实践</span></a>
+      </div>
+      <div class="pt-4 border-t border-border">
+        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💻</span><span>GitHub</span><span class="ml-auto text-xs">↗</span></a>
+        <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📦</span><span>npm</span><span class="ml-auto text-xs">↗</span></a>
+      </div>
+      <div class="mt-4 pt-4 border-t border-border">
+        <div class="text-center">
+          <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">关注公众号</div>
+          <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border">
+          <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">获取更多技术分享</div>
         </div>
-    </nav>
+      </div>
+    </div>
+  </aside>
+  <!-- docs-shell:end -->
 
-    <!-- 侧边栏遮罩 -->
-    <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
-
-    <!-- B. 侧边栏 -->
-    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar">
-        <div class="p-4">
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">快速开始</div>
-                <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>🏠</span>
-                    <span data-i18n="sidebar.home">文档首页</span>
-                </a>
-                <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>📖</span>
-                    <span data-i18n="sidebar.installation">安装配置</span>
-                </a>
-            </div>
-            
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
-                <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>🛠️</span>
-                    <span data-i18n="sidebar.allTools">所有工具</span>
-                    <span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">28</span>
-                </a>
-            </div>
-            
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
-                <a href="./migration.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary">
-                    <span>🚀</span>
-                    <span data-i18n="sidebar.migration">迁移指南</span>
-                </a>
-                <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>💡</span>
-                    <span data-i18n="sidebar.examples">最佳实践</span>
-                </a>
-            </div>
-            
-            <div class="pt-4 border-t border-border">
-                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>💻</span>
-                    <span>GitHub</span>
-                    <span class="ml-auto text-xs">↗</span>
-                </a>
-                <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>📦</span>
-                    <span>npm</span>
-                    <span class="ml-auto text-xs">↗</span>
-                </a>
-            </div>
-
-            <!-- QR Code -->
-            <div class="mt-4 pt-4 border-t border-border">
-                <div class="text-center">
-                    <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">关注公众号</div>
-                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
-                    <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">获取更多技术分享</div>
-                </div>
-            </div>
-        </div>
-    </aside>
-
-    <!-- C. 主内容区 -->
-    <main class="flex-1 mt-14 min-h-screen md:ml-64">
-        <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-            <!-- 面包屑 -->
-            <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
-                <a href="../index.html" class="hover:text-primary transition-colors no-underline flex-shrink-0" data-i18n="migration.breadcrumb.home">文档首页</a>
-                <span class="text-text-tertiary">/</span>
-                <span class="text-text-primary flex-shrink-0" data-i18n="migration.breadcrumb.guides">指南</span>
-                <span class="text-text-tertiary">/</span>
-                <span class="text-text-primary flex-shrink-0" data-i18n="migration.breadcrumb.migration">迁移指南</span>
-            </nav>
-
-            <!-- 页面标题 -->
-            <div class="mb-6">
-                <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2" data-i18n="migration.title">v3.0 迁移指南</h1>
-                <p class="text-sm sm:text-base text-text-secondary" data-i18n="migration.subtitle">从 v2.x 平滑迁移到 v3.0，了解重大变更和新特性</p>
-                <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
-                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v4.0.0-rc.8</span>
-                    <span>Legacy MCP + Modern MCP 2026-07-28</span>
-                    <span>SDK 1.27.1</span>
-                </div>
-            </div>
-
-            <!-- 概述 -->
-            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
-                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4" data-i18n="migration.overview.title">概述</h2>
-                <p class="text-text-secondary mb-4 text-sm" data-i18n="migration.overview.description">MCP Probe Kit v3.0 是一个重大版本更新，精简优化到高价值工具集（当前 30 个工具），带来了更强大的功能和更好的开发体验。</p>
-                <div class="p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm">
-                    <strong>💡 <span data-i18n="migration.overview.migrationTime">迁移时间：</span></strong><span data-i18n="migration.overview.migrationTimeText">大多数项目可以在 10-15 分钟内完成迁移，v2.x 的核心工具在 v3.0 中都保持兼容。</span>
-                </div>
-            </section>
-
-            <!-- 主要变更 -->
-            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
-                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4" data-i18n="migration.changes.title">主要变更</h2>
-                
-                <div class="mb-4">
-                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
-                        <span>🛠️</span>
-                        <span data-i18n="migration.changes.toolsOptimization.title">1. 工具精简优化</span>
-                    </h3>
-                    <p class="text-text-secondary text-sm pl-7" data-i18n="migration.changes.toolsOptimization.description">v2.x: 39 个工具 → v3.x: 精简至高价值工具集（当前 30 个）</p>
-                </div>
-                
-                <div class="mb-4">
-                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
-                        <span>🔄</span>
-                        <span data-i18n="migration.changes.workflows.title">2. 新增工作流编排</span>
-                    </h3>
-                    <p class="text-text-secondary text-sm pl-7 mb-2"><span data-i18n="migration.changes.workflows.description">11 个</span> <code class="bg-gray-200 px-1 rounded text-xs">start_*</code> <span data-i18n="migration.changes.workflows.description2">工作流编排工具，提供端到端的自动化开发流程：</span></p>
-                    <ul class="list-disc list-inside space-y-1 text-sm text-text-primary pl-7">
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_feature</code> - <span data-i18n="migration.changes.workflows.startFeature">功能开发工作流</span></li>
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_bugfix</code> - <span data-i18n="migration.changes.workflows.startBugfix">Bug 修复工作流</span></li>
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_ui</code> - <span data-i18n="migration.changes.workflows.startUi">UI 开发工作流</span></li>
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_product</code> - <span data-i18n="migration.changes.workflows.startProduct">产品设计工作流</span></li>
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">start_ralph</code> - <span data-i18n="migration.changes.workflows.startRalph">Ralph Loop 自动化开发</span></li>
-                    </ul>
-                </div>
-                
-                <div class="mb-4">
-                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
-                        <span>🎨</span>
-                        <span data-i18n="migration.changes.uiTools.title">3. 新增 UI/UX 工具集</span>
-                    </h3>
-                    <p class="text-text-secondary text-sm pl-7 mb-2" data-i18n="migration.changes.uiTools.description">完整的 UI/UX 工具链：</p>
-                    <ul class="list-disc list-inside space-y-1 text-sm text-text-primary pl-7">
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">ui_design_system</code> - <span data-i18n="migration.changes.uiTools.designSystem">智能设计系统生成器</span></li>
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">ui_search</code> - <span data-i18n="migration.changes.uiTools.uiSearch">UI/UX 数据库搜索</span></li>
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">sync_ui_data</code> - <span data-i18n="migration.changes.uiTools.syncUiData">UI/UX 数据同步</span></li>
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">init_component_catalog</code> - <span data-i18n="migration.changes.uiTools.componentCatalog">组件目录初始化</span></li>
-                        <li><code class="bg-gray-200 px-1 rounded text-xs">render_ui</code> - <span data-i18n="migration.changes.uiTools.renderUi">UI 渲染引擎</span></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
-                        <span>📊</span>
-                        <span data-i18n="migration.changes.codeInsight.title">4. 新增代码图谱洞察</span>
-                    </h3>
-                    <p class="text-text-secondary text-sm pl-7" data-i18n="migration.changes.codeInsight.description">code_insight 负责维护 docs/graph-insights 下的基线图谱文档，start_feature/start_bugfix 会在规划前刷新 GitNexus 索引并执行任务级范围收敛。</p>
-                </div>
-
-                <div>
-                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
-                        <span>🧩</span>
-                        <span data-i18n="migration.changes.structuredOutput.title">5. 结构化输出升级</span>
-                    </h3>
-                    <p class="text-text-secondary text-sm pl-7" data-i18n="migration.changes.structuredOutput.description">核心与编排工具优先支持结构化输出，输出格式一致、可预测，便于工具串联与状态追踪。</p>
-                </div>
-            </section>
-
-            <!-- 迁移步骤 -->
-            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
-                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4" data-i18n="migration.steps.title">迁移步骤</h2>
-                
-                <div class="mb-4">
-                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
-                        <span>📦</span>
-                        <span data-i18n="migration.steps.step1.title">步骤 1：更新版本</span>
-                    </h3>
-                    <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
-                        <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
-                            <span class="text-xs text-slate-300 font-medium">Bash</span>
-                        </div>
-                        <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code><span data-i18n="migration.steps.step1.npxNote"># 如果使用 npx（推荐）</span>
-<span data-i18n="migration.steps.step1.npxDesc"># 无需操作，自动使用最新版本</span>
-
-<span data-i18n="migration.steps.step1.globalNote"># 如果全局安装</span>
-npm update -g mcp-probe-kit</code></pre>
-                    </div>
-                </div>
-                
-                <div>
-                    <h3 class="font-medium text-text-primary mb-2 flex items-center gap-2">
-                        <span>📝</span>
-                        <span data-i18n="migration.steps.step2.title">步骤 2：检查配置文件</span>
-                    </h3>
-                    <p class="text-text-secondary text-sm ml-7 mb-3" data-i18n="migration.steps.step2.description">v3.0 的配置文件格式与 v2.x 完全兼容，无需修改。</p>
-                    <div class="ml-7 p-3 bg-green-50 border-l-3 border-green-500 rounded-r text-sm">
-                        <strong>✅ <span data-i18n="migration.steps.step2.compatible">向后兼容：</span></strong><span data-i18n="migration.steps.step2.compatibleText">v2.x 的核心工具在 v3.0 中都保持兼容，可以无缝升级。</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 获取帮助 -->
-            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
-                <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4" data-i18n="migration.help.title">获取帮助</h2>
-                <p class="text-text-secondary text-sm mb-4" data-i18n="migration.help.description">如果在迁移过程中遇到问题：</p>
-                <ul class="list-disc list-inside space-y-2 text-sm text-text-primary">
-                    <li>📖 <span data-i18n="migration.help.viewDocs">查看</span> <a href="./all-tools.html" class="text-primary hover:underline" data-i18n="migration.help.toolsReference">完整工具参考</a></li>
-                    <li>💬 <span data-i18n="migration.help.askIn">在</span> <a href="https://github.com/mybolide/mcp-probe-kit/discussions" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub Discussions</a> <span data-i18n="migration.help.askQuestion">提问</span></li>
-                    <li>🐛 <span data-i18n="migration.help.reportIn">在</span> <a href="https://github.com/mybolide/mcp-probe-kit/issues" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub Issues</a> <span data-i18n="migration.help.reportBug">报告 Bug</span></li>
-                </ul>
-            </section>
-
-            <!-- 迁移完成 -->
-            <section class="bg-gradient-to-br from-primary to-primary-hover text-white rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
-                <h2 class="text-lg sm:text-xl font-semibold mb-3" data-i18n="migration.complete.title">🎉 迁移完成！</h2>
-                <p class="text-sm opacity-95 mb-4" data-i18n="migration.complete.description">开始探索 v3.0 的强大功能</p>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <a href="./all-tools.html" class="bg-white/20 text-white px-4 py-2.5 rounded-md text-sm font-medium text-center hover:bg-white/30 transition-colors no-underline">
-                        🛠️ <span data-i18n="migration.complete.viewTools">查看所有工具</span>
-                    </a>
-                    <a href="./examples.html" class="bg-white/20 text-white px-4 py-2.5 rounded-md text-sm font-medium text-center hover:bg-white/30 transition-colors no-underline">
-                        💡 <span data-i18n="migration.complete.learnBestPractices">学习最佳实践</span>
-                    </a>
-                </div>
-            </section>
-
-            <!-- Footer -->
-            <footer class="text-center text-sm text-text-tertiary py-4 border-t border-border">
-                <p><span data-i18n="footer.madeWith">Made with ❤️ by</span> <a href="https://www.bytezonex.com/" target="_blank" rel="noopener" class="text-primary hover:underline">小墨 (Kyle)</a></p>
-                <p class="mt-1">© 2024-2026 MCP Probe Kit · <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-primary hover:underline">GitHub ↗</a></p>
-            </footer>
-        </div>
-    </main>
-
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('backdrop');
-            const isOpen = sidebar.classList.contains('open');
-            if (isOpen) {
-                sidebar.classList.remove('open');
-                backdrop.classList.remove('active');
-            } else {
-                sidebar.classList.add('open');
-                backdrop.classList.add('active');
-            }
-        }
-    </script>
-    <script src="../assets/js/i18n.js"></script>
+  <main class="flex-1 mt-14 min-h-screen md:ml-64">
+    <div class="w-full max-w-none p-4 sm:p-6 lg:p-8 xl:p-10">
+      <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
+        <a href="../index.html" class="hover:text-primary no-underline" data-i18n="sidebar.home">文档首页</a>
+        <span class="text-text-tertiary">/</span>
+        <span class="text-text-primary" data-i18n="sidebar.migration">迁移指南</span>
+      </nav>
+      <header class="mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">迁移指南已更新</h1>
+        <p class="text-sm sm:text-base text-text-secondary">旧版 v2→v3 页面已归档，当前版本请使用 v3→v4 迁移指南。</p>
+      </header>
+      <section class="bg-white rounded-xl border border-border p-4 sm:p-6 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-3">正在前往当前指南</h2>
+        <p class="text-sm text-text-secondary mb-4">页面会自动跳转。未自动跳转时，使用下面的入口。</p>
+        <a href="./migration-v4.html" class="inline-flex rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover no-underline">打开 v4 迁移指南 →</a>
+      </section>
+    </div>
+  </main>
+  <script src="../assets/js/i18n.js"></script>
+  <script src="../assets/js/docs-shell.js"></script>
 </body>
 </html>
-

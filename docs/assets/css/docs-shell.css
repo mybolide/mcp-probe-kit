@@ -1,0 +1,12 @@
+html { scroll-behavior: smooth; }
+.sidebar-drawer { transition: transform .24s ease; }
+.backdrop { opacity: 0; pointer-events: none; transition: opacity .24s ease; }
+.backdrop.active { opacity: 1; pointer-events: auto; }
+@media (max-width: 767px) {
+  .sidebar-drawer { transform: translateX(-100%); }
+  .sidebar-drawer.open { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .sidebar-drawer, .backdrop { transition-duration: 0s !important; }
+}

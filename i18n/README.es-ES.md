@@ -28,11 +28,47 @@
 
 Un potente servidor MCP con **23 herramientas visibles para el modelo por defecto**, **29 con Memory completo** y **33 herramientas de compatibilidad** mediante `MCP_TOOLSET=full`. Admite salida estructurada, protocolos Legacy/Modern y MCP Apps oficiales.
 
-**🎉 Actualización Mayor v3.0**: Número de herramientas simplificado, enfoque en competencias centrales, eliminación de parálisis de elección, más trabajo nativo para la IA
+**🎉 Candidato v4**: MCP Apps nativas, planes reanudables, convergencia por evidencias, GitNexus Sidecar administrado, especificaciones padre-hijo y CLI fallback fijado.
 
 **Soporta Todos los Clientes MCP**: Cursor, Claude Desktop, Cline, Continue y más
 
 **Compatibilidad de protocolo**: Legacy MCP (2025-era) + Modern MCP 2026-07-28 · **SDK**: paquetes separados de TypeScript SDK v2 · **Runtime**: Node.js 20+
+
+---
+
+<!-- v4-showcase:start -->
+## 🎬 v4 en acción
+
+v4 convierte la ejecución delegada del Agent en un ciclo de entrega observable, reanudable y verificable. Las animaciones se generan con el mismo código de MCP Apps incluido en el paquete npm.
+
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html"><img src="../docs/assets/demos/feature-workbench.gif" alt="Feature Workbench animated demo" width="920"/></a>
+</p>
+
+**Feature Workbench**: especificaciones padre-hijo, paso activo, entregables, evidencias y recuperación entre sesiones.
+
+<table>
+  <tr>
+    <td width="58%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo"/></a></td>
+    <td width="42%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo"/></a></td>
+  </tr>
+  <tr>
+    <td><strong>Memory Center</strong>: búsqueda semántica, contenido completo, ciclo de vida, evidencias, marcado obsoleto y borrado confirmado.</td>
+    <td><strong>Convergence Gate</strong>: bloquea el cierre cuando faltan pasos o evidencias de requisitos, especificación, implementación, pruebas o revisión.</td>
+  </tr>
+</table>
+
+- **Cinco MCP Apps nativas**: Memory, Feature, Bug, Product y Convergence.
+- **Planes delegados reanudables**: `plan_heartbeat` guarda el progreso real y `resume_plan` recupera el siguiente paso.
+- **Convergencia basada en evidencias**: `converge` controla la entrega y la escritura en Memory a largo plazo.
+- **GitNexus Sidecar administrado**: aislamiento por versión, plataforma, arquitectura y Node; integridad y FTS real verificados.
+- **CLI fallback con versión fijada**: el `probe` local usa el mismo Tool Registry si el Host pierde el lease MCP.
+- **Especificaciones padre-hijo**: los releases complejos se descomponen y validan recursivamente.
+
+**[Abrir las cinco demos interactivas y de solo lectura](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
+
+> **Canal preview de v4:** usa `mcp-probe-kit@next` (actualmente `4.0.0-rc.8`). npm `latest` sigue en la versión estable `3.7.0`. Fija una versión exacta para evaluación en producción.
+<!-- v4-showcase:end -->
 
 ---
 
@@ -43,7 +79,8 @@ Un potente servidor MCP con **23 herramientas visibles para el modelo por defect
 - [Inicio Rápido](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Configuración en 5 minutos
 - [Todas las Herramientas](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Superficies predeterminada, Memory condicional, App-only y compatibilidad full
 - [Mejores Prácticas](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Guía completa del flujo de trabajo
-- [Guía de Migración v3.0](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Actualización de v2.x a v3.0
+- [Guía de migración v3 → v4](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - Superficies, protocolo, Apps, estado del plan, Memory y compatibilidad
+- [Demos de MCP Apps](https://mcp-probe-kit.bytezonex.com/pages/apps.html) - Cinco workbenches de solo lectura generados con el código real
 
 ---
 
@@ -60,7 +97,7 @@ Un potente servidor MCP con **23 herramientas visibles para el modelo por defect
 ### 🧠 Puente de Grafo de Código (GitNexus)
 
 - `code_insight` usa GitNexus por defecto para análisis query/context/impact
-- El puente inicia `npx -y gitnexus@latest mcp` por defecto
+- GitNexus usa un Sidecar administrado que fija `gitnexus@1.6.9`, verifica la integridad y la capacidad FTS real, y reutiliza el runtime por plataforma, arquitectura y versión principal de Node.
 - `init_project_context` genera documentos base de grafo bajo `docs/graph-insights/`
 - `start_feature` y `start_bugfix` refrescan el índice GitNexus
 - Si GitNexus no está disponible, el servidor hace fallback automático
@@ -96,7 +133,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -117,7 +154,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -269,7 +306,7 @@ Herramientas UI/UX con `start_ui` como entrada unificada:
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@latest"]
+      "args": ["mcp-probe-kit@next"]
     }
   }
 }
@@ -282,7 +319,7 @@ Herramientas UI/UX con `start_ui` como entrada unificada:
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@next"]
     }
   }
 }
@@ -297,7 +334,7 @@ Herramientas UI/UX con `start_ui` como entrada unificada:
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "command": ["npx", "-y", "mcp-probe-kit@next"],
       "enabled": true
     }
   }
@@ -326,7 +363,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -348,7 +385,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -376,7 +413,7 @@ ollama pull nomic-embed-text
 
 ### Notas de Windows para Herramientas de Grafo
 
-- GitNexus usa `npx -y gitnexus@latest mcp` por defecto. Primer arranque en frío: 20+ segundos.
+- La primera instalación del Sidecar descarga dependencias nativas y ejecuta la sonda de capacidades; las llamadas posteriores reutilizan el runtime verificado.
 - Algunas dependencias (`tree-sitter-*`) requieren Visual Studio Build Tools.
 
 ```powershell
@@ -447,7 +484,7 @@ git_work_report --start_date 2026-02-01 --end_date 2026-02-07
 ### Q1: ¿La herramienta no funciona?
 
 ```bash
-npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: ¿El cliente no reconoce las herramientas?
@@ -462,7 +499,7 @@ npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
 
 ### Q4: ¿Por qué las herramientas de grafo son lentas en Windows?
 
-Causa: `npx -y gitnexus@latest mcp` (arranque en frío) + módulos nativos `tree-sitter-*`.
+Causa: la primera instalación del Sidecar administrado incluye dependencias nativas y la sonda FTS; no descarga `@latest` en cada llamada.
 
 Solución:
 1. Instala Visual Studio Build Tools con C++

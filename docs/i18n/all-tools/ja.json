@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "すべてのツール - 30個のAI開発ツール完全リスト | MCP Probe Kit",
-    "description": "MCP Probe Kit 完全ツールリスト：6個のワークフローオーケストレーションツール、4個のコード分析ツール、2個のGitツール、1個の生成ツール、7個のプロジェクト管理ツール、3個のUI/UXツール、6個の Memory ツール。",
+    "title": "MCP Probe Kit v4 ツール一覧 - 23/29/33面と1文呼び出し",
+    "description": "MCP Probe Kit v4 の完全なツール一覧。既定23、Memory構成時29、full互換33、App-only操作1件。各ツールにコピー可能な1文呼び出しを掲載。",
     "keywords": "AI開発ツール, コード生成ツール, コードレビューツール, Git自動化, UI生成, コードリファクタリング, パフォーマンス最適化, セキュリティスキャン"
   },
   "page": {
-    "subtitle": "MCP Probe Kitは30個の実用的なツールを提供し、コアおよびオーケストレーションツールは構造化出力をサポートします"
+    "subtitle": "既定23モデルツール、Memory構成時29、full互換33、さらにApp-only操作1件"
   },
   "search": {
     "placeholder": "🔍 ツール名または説明を検索...",
@@ -48,7 +48,12 @@
     "memorize_asset": "メモリ保存",
     "update_memory_asset": "メモリ更新",
     "delete_memory_asset": "メモリ削除",
-    "scan_and_extract_patterns": "パターン抽出"
+    "scan_and_extract_patterns": "パターン抽出",
+    "workflow": "スマートルーター",
+    "plan_heartbeat": "計画チェックポイント",
+    "resume_plan": "計画再開",
+    "converge": "収束ゲート",
+    "list_memory_assets": "Memory閲覧"
   },
   "categories": {
     "workflow": {
@@ -78,124 +83,216 @@
     "memory": {
       "title": "Memory",
       "count": "6個"
+    },
+    "routing": {
+      "title": "意図ルーティング"
+    },
+    "plan": {
+      "title": "計画状態と収束"
+    },
+    "interactive": {
+      "title": "対話とインタビュー"
+    },
+    "apps": {
+      "title": "MCP Apps専用"
     }
   },
   "toolsData": {
     "start_feature": {
       "description": "完全な機能開発ワークフローオーケストレーション：グラフ基線補完 → GitNexus 更新 → 範囲収束 → 仕様生成 → 作業量見積もり",
-      "usage": "不足している graph-insights を補完し、GitNexus の query/context/impact で範囲を絞ったうえで仕様と見積もりを生成します"
+      "usage": "不足している graph-insights を補完し、GitNexus の query/context/impact で範囲を絞ったうえで仕様と見積もりを生成します",
+      "prompt": "start_feature を使ってこの機能を開発してください：<目標、範囲、受入条件>"
     },
     "start_bugfix": {
       "description": "バグ修正ワークフロー：グラフ基線 → GitNexus → SRC-8 真因分析（TBP-inspired）→ 修正 → テスト → 記憶",
-      "usage": "バグ・回帰・異常調査向け。先に graph-insights を補完し、GitNexus で境界と影響面を絞った後に TBP RCA を進めます"
+      "usage": "バグ・回帰・異常調査向け。先に graph-insights を補完し、GitNexus で境界と影響面を絞った後に TBP RCA を進めます",
+      "prompt": "start_bugfix を使ってこの問題を修正してください：<現象、エラー、再現手順>"
     },
     "start_onboard": {
       "description": "プロジェクトオンボーディングワークフロー：コンテキストドキュメントを生成し、新メンバーがプロジェクトを迅速に理解できるようにします",
-      "usage": "新メンバーがプロジェクト構造、技術スタック、開発標準を迅速に理解できるようにします"
+      "usage": "新メンバーがプロジェクト構造、技術スタック、開発標準を迅速に理解できるようにします",
+      "prompt": "start_onboard ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "start_ralph": {
       "description": "Ralph Wiggum Loop自動開発、デフォルトで複数の安全保護が有効になっているループ開発プロセスを開始します",
-      "usage": "自動ループ開発を開始し、AIは目標が達成されるか安全制限に達するまで継続的に反復します"
+      "usage": "自動ループ開発を開始し、AIは目標が達成されるか安全制限に達するまで継続的に反復します",
+      "prompt": "start_ralph ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "start_product": {
       "description": "完全な製品設計ワークフローオーケストレーション：PRD → プロトタイプドキュメント → デザインシステム → HTMLプロトタイプ → プロジェクトコンテキスト更新",
-      "usage": "要件からHTMLプロトタイプまでのワンクリック完了、直接デモ可能な製品プロトタイプを生成します"
+      "usage": "要件からHTMLプロトタイプまでのワンクリック完了、直接デモ可能な製品プロトタイプを生成します",
+      "prompt": "start_product を使って要件からプロトタイプまで設計してください：<製品アイデアと対象ユーザー>"
     },
     "start_ui": {
       "description": "統一UI開発エントリ：デザインシステムチェック → コンポーネントカタログ生成 → テンプレート検索/生成 → コードレンダリング",
-      "usage": "デザインシステムから最終コードまで、UI開発プロセス全体をワンクリックで完了します"
+      "usage": "デザインシステムから最終コードまで、UI開発プロセス全体をワンクリックで完了します",
+      "prompt": "start_ui を使って設計・実装してください：<ページ/コンポーネント、スタイル、操作>"
     },
     "code_review": {
       "description": "インテリジェントコードレビュー、セキュリティ、パフォーマンス、品質、スタイル、ベストプラクティスなど複数の次元からコードを分析します",
-      "usage": "包括的なコード品質レビュー、構造化された問題リスト（severity/category/suggestion）を出力します"
+      "usage": "包括的なコード品質レビュー、構造化された問題リスト（severity/category/suggestion）を出力します",
+      "prompt": "code_review ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "fix_bug": {
       "description": "SRC-8 ガイド型バグ真因分析（TBP-inspired）：rootCauseWorksheet を注入し、Agent が rootCauseAnalysis を出力",
-      "usage": "真因を先に特定したいときに使います。現象・境界・真因・修正までの因果連鎖を閉じます"
+      "usage": "真因を先に特定したいときに使います。現象・境界・真因・修正までの因果連鎖を閉じます",
+      "prompt": "fix_bug ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "refactor": {
       "description": "リファクタリング提案ツール、コード構造を分析し、リファクタリング手順、リスク評価、ロールバック計画を提供します",
-      "usage": "コード構造を分析し、リファクタリング提案、リファクタリング手順、リスク評価を提供します"
+      "usage": "コード構造を分析し、リファクタリング提案、リファクタリング手順、リスク評価を提供します",
+      "prompt": "refactor ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "gencommit": {
       "description": "コード変更に基づいてConventional Commits仕様に準拠したGitコミットメッセージを自動生成します",
-      "usage": "コード変更に基づいてConventional Commits仕様に準拠したコミットメッセージを生成します"
+      "usage": "コード変更に基づいてConventional Commits仕様に準拠したコミットメッセージを生成します",
+      "prompt": "gencommit ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "git_work_report": {
       "description": "Git diff分析に基づいて作業レポート（日報/定期報告）を生成し、実際の作業内容をインテリジェントに抽出します",
-      "usage": "指定された日付のGitコミットを自動的に読み取り、diff内容を分析し、簡潔で専門的な作業レポートを生成します。直接コマンドが失敗した場合、一時スクリプトソリューションを提供します（実行後自動削除）"
+      "usage": "指定された日付のGitコミットを自動的に読み取り、diff内容を分析し、簡潔で専門的な作業レポートを生成します。直接コマンドが失敗した場合、一時スクリプトソリューションを提供します（実行後自動削除）",
+      "prompt": "git_work_report ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "gentest": {
       "description": "Jest/Vitest/Mochaフレームワークをサポートし、エッジケースとモックデータを含む単体テストを生成します",
-      "usage": "エッジケースとモックを含む単体テストコードを生成します"
+      "usage": "エッジケースとモックを含む単体テストコードを生成します",
+      "prompt": "gentest ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "init_project": {
       "description": "Spec-Driven Developmentアプローチに従って要件/設計/タスクドキュメントを生成します",
-      "usage": "Spec-Driven Developmentアプローチに従って要件/設計/タスクドキュメントを生成します"
+      "usage": "Spec-Driven Developmentアプローチに従って要件/設計/タスクドキュメントを生成します",
+      "prompt": "init_project を使ってこの1文から完全なプロジェクト仕様を作成してください：<アイデア>"
     },
     "init_project_context": {
       "description": "delegated 方式のコンテキスト執筆プランを返す：MCP が AGENTS.md と layout を書き込み、分類ドキュメントと graph-insights は Agent が plan に従って落盘",
-      "usage": "コンテキスト不足時に呼び出し。metadata.plan、pendingFiles、documentation の exists/written/agent_action_required を返す。Agent が pending ファイルを手動作成する必要あり"
+      "usage": "コンテキスト不足時に呼び出し。metadata.plan、pendingFiles、documentation の exists/written/agent_action_required を返す。Agent が pending ファイルを手動作成する必要あり",
+      "prompt": "init_project_context を使って現在のプロジェクトの完全なコンテキストとグラフ基線を生成してください。"
     },
     "add_feature": {
       "description": "プロジェクトコンテキストに基づいて新機能仕様ドキュメント（要件/設計/タスクリスト）を生成します",
-      "usage": "プロジェクトコンテキストに基づいて新機能仕様ドキュメント（要件/設計/タスクリスト）を生成します"
+      "usage": "プロジェクトコンテキストに基づいて新機能仕様ドキュメント（要件/設計/タスクリスト）を生成します",
+      "prompt": "add_feature ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "check_spec": {
       "description": "作成済みの機能仕様（requirements/design/tasks.md）が完全かを検証：残存プレースホルダ、欠落セクション、FR/受入基準の欠落、カバレッジ行列未登録のFRを検出",
-      "usage": "仕様作成後・実装前に呼び出す；不合格ならレポートに従って補完し再実行"
+      "usage": "仕様作成後・実装前に呼び出す；不合格ならレポートに従って補完し再実行",
+      "prompt": "check_spec ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "estimate": {
       "description": "開発作業量を見積もり、ストーリーポイント、時間範囲（楽観的/通常/悲観的）、リスクポイントを出力します",
-      "usage": "開発作業量を見積もり、ストーリーポイント、時間範囲（楽観的/通常/悲観的）、リスクポイントを出力します"
+      "usage": "開発作業量を見積もり、ストーリーポイント、時間範囲（楽観的/通常/悲観的）、リスクポイントを出力します",
+      "prompt": "estimate ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "interview": {
       "description": "要件インタビューツール、構造化された質問を通じて要件を明確にし、誤解と手戻りを回避します",
-      "usage": "開発前に構造化された質問を通じて要件を明確にする要件インタビューツール"
+      "usage": "開発前に構造化された質問を通じて要件を明確にする要件インタビューツール",
+      "prompt": "interview ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "ask_user": {
       "description": "AIプロアクティブ質問ツール、単一または複数の質問をサポートし、オプションを提供し、重要性をマークします",
-      "usage": "AIがユーザーに積極的に質問し、単一または複数の質問をサポートし、オプションを提供し、重要性をマークします"
+      "usage": "AIがユーザーに積極的に質問し、単一または複数の質問をサポートし、オプションを提供し、重要性をマークします",
+      "prompt": "ask_user ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "ui_design_system": {
       "description": "インテリジェントデザインシステムジェネレーター、製品タイプの推論に基づいて完全なデザイン仕様を生成します",
-      "usage": "製品タイプと要件に基づいて、AI推論エンジンを使用して完全なデザインシステムの推奨事項を生成します"
+      "usage": "製品タイプと要件に基づいて、AI推論エンジンを使用して完全なデザインシステムの推奨事項を生成します",
+      "prompt": "ui_design_system ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "ui_search": {
       "description": "色、アイコン、チャート、コンポーネント、デザインパターンなどを含むUI/UXデータベースを検索します",
-      "usage": "BM25アルゴリズムを使用してインテリジェント検索を行うUI/UXデータベースを検索します"
+      "usage": "BM25アルゴリズムを使用してインテリジェント検索を行うUI/UXデータベースを検索します",
+      "prompt": "ui_search ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "sync_ui_data": {
       "description": "UI/UXデータをローカルキャッシュに同期し、自動更新チェックと強制同期をサポートします",
-      "usage": "npmパッケージuipro-cliから最新データをダウンロードし、UI/UXデータをローカルキャッシュに同期します"
+      "usage": "npmパッケージuipro-cliから最新データをダウンロードし、UI/UXデータをローカルキャッシュに同期します",
+      "prompt": "sync_ui_data ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "code_insight": {
       "description": "コードグラフ洞察ツール。GitNexus をブリッジして呼び出し連鎖、コンテキスト、影響範囲を分析（利用不可時は自動で劣化）",
-      "usage": "GitNexus インデックスを更新し、タスク単位の呼び出し連鎖・コンテキスト・影響範囲を分析して docs/graph-insights と project-context 索引へ保存します"
+      "usage": "GitNexus インデックスを更新し、タスク単位の呼び出し連鎖・コンテキスト・影響範囲を分析して docs/graph-insights と project-context 索引へ保存します",
+      "prompt": "code_insight を使って分析してください：<入口、呼び出しチェーン、影響範囲>"
     },
     "search_memory": {
       "description": "共有メモリプールを意味検索、type/tags の優先順位指定に対応",
-      "usage": "start_* 以外で過去のバグ修正や再利用可能なパターンを能動的に検索；テキスト出力に id/score/要約/説明と --- content --- 本文を含む（デフォルト最大1500字、全文は read_memory_asset）"
+      "usage": "start_* 以外で過去のバグ修正や再利用可能なパターンを能動的に検索；テキスト出力に id/score/要約/説明と --- content --- 本文を含む（デフォルト最大1500字、全文は read_memory_asset）",
+      "prompt": "search_memory ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "read_memory_asset": {
       "description": "資産IDで沈殿済みメモリの完全な内容とメタデータを読み取る",
-      "usage": "オーケストレーション段階でメモリ要約がヒットした際に使用；テキスト出力に --- content --- 全文（コード/設定/詳細説明）を含む"
+      "usage": "オーケストレーション段階でメモリ要約がヒットした際に使用；テキスト出力に --- content --- 全文（コード/設定/詳細説明）を含む",
+      "prompt": "read_memory_asset ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "memorize_asset": {
       "description": "高価値なコード、仕様、パターン資産をベクトルメモリシステムに書き込み、後で再利用",
-      "usage": "開発完了後、再利用可能な資産を Qdrant + embedding メモリシステムに沈殿させる"
+      "usage": "開発完了後、再利用可能な資産を Qdrant + embedding メモリシステムに沈殿させる",
+      "prompt": "memorize_asset ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "update_memory_asset": {
       "description": "資産 ID で共有メモリプール内の既存資産を更新する（ID は維持）",
-      "usage": "要約・本文・タグの修正に使用；content 変更時は再ベクトル化される"
+      "usage": "要約・本文・タグの修正に使用；content 変更時は再ベクトル化される",
+      "prompt": "update_memory_asset ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "delete_memory_asset": {
       "description": "資産 ID で共有メモリプールから記憶資産を削除する",
-      "usage": "古い・誤った・重複した資産の整理に使用；削除前に read_memory_asset で内容を確認すること"
+      "usage": "古い・誤った・重複した資産の整理に使用；削除前に read_memory_asset で内容を確認すること",
+      "prompt": "delete_memory_asset ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "scan_and_extract_patterns": {
       "description": "単一コード片、単一ファイル、またはディレクトリ全体から再利用可能なパターンを抽出し、メモリに沈殿させるか判断",
-      "usage": "まずパターン抽出を行い、必要に応じて memorize_asset を呼び出してメモリに書き込む"
+      "usage": "まずパターン抽出を行い、必要に応じて memorize_asset を呼び出してメモリに書き込む",
+      "prompt": "scan_and_extract_patterns ツールを使って次のタスクを実行してください：<具体的な依頼>"
+    },
+    "workflow": {
+      "description": "完全なタスク意図から適切な start_*、分析、仕様、Memory の入口を選ぶ開発ワークフロー・ルーター。",
+      "usage": "利用ツールが不明な場合や、Agent が標準フローを飛ばしそうな場合に使用します。",
+      "prompt": "workflow を使って次のタスクに適切な開発フローを選択・実行してください：<完全なタスク>"
+    },
+    "plan_heartbeat": {
+      "description": "Delegated Plan の完了ステップ、証拠、未決事項、revision を保存し、再開可能なチェックポイントを作成します。",
+      "usage": "初回実行時と各ステップの完了・スキップ・阻止後に呼び出します。",
+      "prompt": "plan_heartbeat を使って計画 <plan_id> の進捗、証拠、未決事項を記録してください。"
+    },
+    "resume_plan": {
+      "description": "プロジェクト内チェックポイントから計画を復元し、依存関係に基づいて次の実行可能ステップを計算します。",
+      "usage": "中断、サーバー再起動、Agent交代後に使用します。",
+      "prompt": "resume_plan を使って計画を再開してください：<plan_id>"
+    },
+    "converge": {
+      "description": "計画ステップと要件、仕様、実装、テスト、レビュー証拠を確認し、納品と長期Memory書込みを判断します。",
+      "usage": "実装と検証後に呼び出し、passed=true の場合のみMemoryを保存します。",
+      "prompt": "converge を使って計画を完了できるか確認してください：<plan_id>"
+    },
+    "list_memory_assets": {
+      "description": "Memory Center専用の閲覧操作。更新順の要約一覧、フィルター、ページングを提供します。",
+      "usage": "MCP Apps交渉後のみ使用され、モデルには公開されません。",
+      "prompt": ""
     }
+  },
+  "ui": {
+    "eyebrow": "TOOL CATALOG",
+    "title": "ツールを探し、1文をコピーして、すぐ開始",
+    "subtitle": "既定23モデルツール、Memory構成時29、full互換33、さらにApp-only操作1件。",
+    "searchPlaceholder": "ツール名、用途、説明を検索…",
+    "all": "すべて",
+    "default": "既定",
+    "memory": "Memory",
+    "compatibility": "full互換",
+    "appOnly": "App-only",
+    "oneLine": "1文で呼び出す",
+    "copy": "コピー",
+    "copied": "コピー済み",
+    "details": "パラメータと詳細",
+    "usage": "利用場面",
+    "params": "パラメータ",
+    "schema": "出力",
+    "required": "必須",
+    "optional": "任意",
+    "noParams": "パラメータ不要",
+    "noResults": "一致するツールがありません",
+    "tools": "ツール",
+    "appOnlyPrompt": "この操作はMCP App専用です。Memory Center内で使用してください。",
+    "liveApps": "MCP Appsデモを見る",
+    "categoryNav": "カテゴリから探す"
   }
 }

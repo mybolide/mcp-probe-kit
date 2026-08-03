@@ -29,13 +29,49 @@
 
 A powerful MCP (Model Context Protocol) server with **23 model-visible tools by default**, **29 when Memory is configured**, and a **33-tool compatibility surface** available through `MCP_TOOLSET=full`. It covers the complete workflow from product analysis to final release and supports structured output.
 
-**🎉 v3.0 Major Update**: Streamlined tool count, focus on core competencies, eliminate choice paralysis, let AI do more native work
+**🎉 v4 release candidate**: native MCP Apps, resumable plans, evidence convergence, managed GitNexus Sidecar, parent-child specs, and a version-locked CLI fallback.
 
 **Supports All MCP Clients**: Cursor, Claude Desktop, Cline, Continue, and more
 
 **Protocol Support**: Legacy MCP (2025-era) + Modern MCP 2026-07-28 · **SDK**: split TypeScript SDK v2 packages
 
 **Runtime**: Node.js 20 or newer. `MCP_PROTOCOL_MODE=auto` is the default; use `legacy` or `modern` only for compatibility diagnosis.
+
+---
+
+<!-- v4-showcase:start -->
+## 🎬 v4 in action
+
+v4 turns delegated Agent work into an observable and verifiable delivery loop. The animations below are rendered from the same MCP App source shipped in the npm package—not separate marketing mockups.
+
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html"><img src="docs/assets/demos/feature-workbench.gif" alt="Feature Workbench animated demo" width="920"/></a>
+</p>
+
+**Feature Workbench** — parent-child specs, active step, outputs, evidence, and cross-session recovery.
+
+<table>
+  <tr>
+    <td width="58%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="docs/assets/demos/memory-center.gif" alt="Memory Center animated demo"/></a></td>
+    <td width="42%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo"/></a></td>
+  </tr>
+  <tr>
+    <td><strong>Memory Center</strong> — semantic search, full-content inspection, lifecycle state, evidence, stale marking, and confirmed deletion.</td>
+    <td><strong>Convergence Gate</strong> — blocks closure when steps or requirements/spec/implementation/test/review evidence are incomplete.</td>
+  </tr>
+</table>
+
+- **Five native MCP Apps**: Memory Center, Feature Workbench, Bug Workbench, Product Workbench, and Convergence Gate.
+- **Resumable delegated plans**: `plan_heartbeat` persists real progress; `resume_plan` restores the next executable step.
+- **Evidence-based convergence**: `converge` gates delivery and long-term Memory writes.
+- **Managed GitNexus Sidecar**: version/platform/architecture/Node isolation, integrity verification, real FTS probe, and safe degradation.
+- **Version-locked CLI fallback**: project-local `probe` wrappers reach the same Tool Registry when a host drops the MCP tool lease.
+- **Parent-child specifications**: complex releases are decomposed and recursively validated instead of being flattened into one oversized spec.
+
+**[Open the five live, read-only MCP App demos](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
+
+> **v4 preview channel:** use `mcp-probe-kit@next` (currently `4.0.0-rc.8`). npm `latest` remains the stable `3.7.0` channel. Pin an exact version for production evaluation.
+<!-- v4-showcase:end -->
 
 ---
 
@@ -47,7 +83,8 @@ A powerful MCP (Model Context Protocol) server with **23 model-visible tools by 
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
 - [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Default, conditional Memory, App-only, and full compatibility surfaces
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
-- [v3.0 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration.html) - Upgrade from v2.x to v3.0
+- [v3 → v4 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - Tool surfaces, protocol, Apps, plan state, Memory, and compatibility
+- [MCP Apps Live Demos](https://mcp-probe-kit.bytezonex.com/pages/apps.html) - Five real read-only workbenches generated from the shipped App source
 
 ---
 
@@ -166,7 +203,7 @@ Full Docker Compose, ports, and troubleshooting: **[docs/memory-local-setup.md](
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "your-qdrant-api-key",
@@ -203,7 +240,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -235,7 +272,7 @@ Core and orchestration tools support **structured output**, returning machine-re
 
 ### 🔌 Official MCP Apps and Memory Center
 
-v4.0.0-rc.3 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
+v4.0.0-rc.8 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
 
 - MCP Apps are enabled by default and can be disabled with `MCP_ENABLE_UI_APPS=0`.
 - UI metadata and `ui://` resources are exposed only after the client advertises support for `text/html;profile=mcp-app`.
@@ -472,7 +509,7 @@ No installation needed, use the latest version directly.
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@next"]
     }
   }
 }
@@ -509,7 +546,7 @@ npx --yes mcp-probe-kit@<exact-version> install-agent --project-root .
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@next"]
     }
   }
 }
@@ -527,7 +564,7 @@ npx --yes mcp-probe-kit@<exact-version> install-agent --project-root .
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "command": ["npx", "-y", "mcp-probe-kit@next"],
       "enabled": true
     }
   }
@@ -580,7 +617,7 @@ Lightweight local stack; no Ollama. Deploy Qdrant and `nomic-embed` via Docker C
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "your-qdrant-api-key",
@@ -783,12 +820,12 @@ Check detailed logs:
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@latest 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@next 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@latest 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: Client not recognizing tools after configuration?
@@ -810,7 +847,7 @@ This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connec
 | `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
 | Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
 
-**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0-rc.3 defaults to the 23-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 33-tool compatibility surface with `MCP_TOOLSET=full`.
+**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0-rc.8 defaults to the 23-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 33-tool compatibility surface with `MCP_TOOLSET=full`.
 
 **What you can try:**
 

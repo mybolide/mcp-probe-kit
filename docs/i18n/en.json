@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "MCP Probe Kit - AI-Powered Complete Development Toolkit | 30 Tools Covering Entire Development Lifecycle",
-    "description": "MCP Probe Kit provides 30 AI-powered development tools covering requirements analysis, code development, quality assurance, bug fixing, and release management. Supports Cursor, Cline, Claude Desktop with 100% structured output.",
+    "title": "MCP Probe Kit v4 - Observable Agent Workflows and Native MCP Apps",
+    "description": "MCP Probe Kit v4 ships 23 default model tools, 29 with Memory, five native MCP Apps, resumable plans, evidence convergence, GitNexus Sidecar, and a version-locked CLI fallback.",
     "keywords": "MCP Probe Kit, AI development tools, code generation, code review, Git tools, UI development, development efficiency, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {
@@ -9,11 +9,12 @@
     "docs": "Docs",
     "mainSite": "Main Site",
     "github": "GitHub",
-    "npm": "npm"
+    "npm": "npm",
+    "apps": "MCP Apps"
   },
   "hero": {
     "title": "🚀 MCP Probe Kit",
-    "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
+    "subtitle": "Help agents understand the project, execute a real plan, and expose progress in native workbenches",
     "version": "v4.0.0-rc.8",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
@@ -26,7 +27,7 @@
     },
     "tools": {
       "title": "Tools Documentation",
-      "description": "Complete reference for 29 practical tools, including code graph insight and orchestration workflows",
+      "description": "23 model-visible tools by default, 29 with Memory, plus five native MCP Apps",
       "allTools": "All Tools"
     },
     "guides": {
@@ -59,7 +60,8 @@
     "migration": "Migration Guide",
     "examples": "Best Practices",
     "followUs": "Follow Us",
-    "getTechSharing": "Get More Tech Insights"
+    "getTechSharing": "Get More Tech Insights",
+    "apps": "MCP Apps demos"
   },
   "gettingStarted": {
     "title": "Installation & Configuration",
@@ -78,18 +80,18 @@
       "npx": {
         "title": "Use npx Directly",
         "recommended": "Recommended",
-        "description": "No installation required, use the latest version directly:",
+        "description": "Use next for the v4 preview; latest remains the stable channel:",
         "advantage": "Advantage:",
-        "advantageText": "No manual updates needed, automatically uses the latest version on each startup",
+        "advantageText": "next tracks the newest v4 RC; pin an exact version for production projects.",
         "copy": "Copy"
       },
       "global": {
-        "title": "Global Installation",
-        "description": "Install globally to system:",
-        "configFile": "Configuration file:",
-        "note": "Note:",
-        "noteText": "Need to manually run",
-        "updateText": "to update version"
+        "title": "Project-local Agent fallback",
+        "description": "Generate exact-version local launchers for the current project:",
+        "configFile": "Generated files:",
+        "note": "Behavior:",
+        "noteText": "Prefer MCP; when tools are not injected into the session, the Agent calls the project-local launcher automatically.",
+        "updateText": "No global install and no package.json changes."
       },
       "memory": {
         "title": "Memory System Setup (Qdrant + Embedding)",
@@ -351,7 +353,7 @@
     "subtitle": "MCP Probe Kit integrates complete development process, best practices guide from requirements to deployment",
     "overview": {
       "title": "Complete Development Process",
-      "description": "MCP Probe Kit's 30 tools cover the complete development process from requirements analysis to code deployment. Here are the recommended best practices.",
+      "description": "23 model-visible tools by default and 29 with Memory, covering the delivery lifecycle through start_* orchestration, plan checkpoints, and convergence gates.",
       "coreIdea": "Core Philosophy:",
       "coreIdeaText": "Chain the entire development process through workflow orchestration tools (start_*), making AI your development assistant."
     },
@@ -606,7 +608,7 @@
     "resources": {
       "title": "More Resources",
       "allTools": "Complete Tools Reference",
-      "allToolsDesc": "View detailed descriptions of all 30 tools",
+      "allToolsDesc": "View detailed documentation for the 33-tool full compatibility surface plus one App-only action",
       "gettingStarted": "Installation & Configuration",
       "gettingStartedDesc": "Quick start guide",
       "migration": "Migration Guide",
@@ -620,5 +622,63 @@
       "install": "📖 Installation & Configuration",
       "allTools": "🛠️ View All Tools"
     }
+  },
+  "showcase": {
+    "eyebrow": "REAL UI · AUTO PLAY",
+    "title": "More than a tool catalog: an observable execution system",
+    "description": "These demos reuse the MCP App code shipped in the npm package. Plan progress, memory retrieval, and convergence are rendered by the real UI—not separate marketing mockups.",
+    "featureTitle": "Feature Workbench",
+    "featureDesc": "Track parent-child specs, the active step, evidence, and cross-session recovery.",
+    "memoryTitle": "Memory Center",
+    "memoryDesc": "Search, browse, inspect lifecycle and evidence, and manage validated knowledge.",
+    "gateTitle": "Convergence Gate",
+    "gateDesc": "Refuse closure when steps, tests, or review evidence are missing; enable long-term memory only after convergence.",
+    "openDemo": "Open full demo"
+  },
+  "stats": {
+    "tools": "default model tools",
+    "memory": "with Memory configured",
+    "apps": "native MCP Apps",
+    "platforms": "Sidecar platforms"
+  },
+  "v4Features": {
+    "eyebrow": "V4 CORE",
+    "title": "Turn “the agent says it is done” into a verifiable delivery loop",
+    "planTitle": "Checkpoints and recovery",
+    "planDesc": "plan_heartbeat persists steps and evidence; resume_plan restores the next executable step after interruption or agent handoff.",
+    "appsTitle": "Five native workbenches",
+    "appsDesc": "Memory, Feature, Bug, Product, and Convergence appear directly inside MCP Apps-capable hosts.",
+    "graphTitle": "Managed GitNexus Sidecar",
+    "graphDesc": "Isolated by version, platform, architecture, and Node major; integrity checked, FTS probed, and safely degraded on failure.",
+    "cliTitle": "Version-locked CLI fallback",
+    "cliDesc": "When a host drops the MCP tool lease, the project-local probe launcher reaches the same Tool Registry without touching package.json.",
+    "specTitle": "Parent-child specifications",
+    "specDesc": "Complex releases split into a parent spec, child specs, and a dependency graph that check_spec validates recursively.",
+    "memoryTitle": "Memory after convergence",
+    "memoryDesc": "Patterns, failed approaches, false root causes, and regression cases are persisted only after converge passes."
+  },
+  "apps": {
+    "title": "Native MCP Apps workbenches",
+    "subtitle": "Five Apps bring plans, memory, product handoff, and evidence gates into MCP Apps-capable clients.",
+    "badge": "v4.0.0-rc.8 · demos built from the real App source",
+    "howTitle": "How to use them",
+    "how1": "Configure mcp-probe-kit@next in a client that supports io.modelcontextprotocol/ui.",
+    "how2": "Call start_feature, start_bugfix, start_product, converge, or a Memory tool normally.",
+    "how3": "After capability negotiation the matching workbench opens automatically; non-App clients still receive text and structuredContent.",
+    "featureTitle": "Feature Workbench",
+    "featureDesc": "Plan steps, current work, outputs, evidence, and resume state.",
+    "bugTitle": "Bug Workbench",
+    "bugDesc": "SRC-8 root-cause boundaries, blockers, validation, and regression work.",
+    "memoryTitle": "Memory Center",
+    "memoryDesc": "Semantic search, full content, lifecycle, evidence, stale marking, and confirmed deletion.",
+    "productTitle": "Product Workbench",
+    "productDesc": "Product brief, PRD, prototype, design system, and handoff into start_feature.",
+    "gateTitle": "Convergence Gate",
+    "gateDesc": "Checks requirements, spec, implementation, test, and review evidence before delivery or memory writes.",
+    "compatTitle": "Compatibility and fallback",
+    "compatDesc": "MCP Apps are optional. Without UI negotiation, the tool count and text workflows remain unchanged; App-only actions stay hidden from the model.",
+    "tryTitle": "Try the demos",
+    "tryDesc": "The demo pages are read-only, do not connect to a backend, and cannot modify project or memory data.",
+    "back": "Back to documentation"
   }
 }

@@ -25,7 +25,7 @@
     "smoke:package": "node scripts/package-install-smoke.mjs",
     "acceptance:agent": "node scripts/agent-local-acceptance.mjs",
     "eval:agents": "tsx scripts/run-agent-evals.ts",
-    "release:static": "tsx scripts/verify-release-readiness.ts",
+    "release:static": "tsx scripts/verify-release-readiness.ts && npm run docs:verify",
     "release:verify": "npm run release:static && npm test && npm run build && npm run audit:tools && npm run smoke:protocol && npm run acceptance:agent && npm run stability:soak && npm run eval:agents && npm run smoke:package && npm run smoke:rollback && npm run smoke:inspector && npm run security:audit",
     "verify-workflow-skill": "tsx scripts/verify-workflow-skill.ts",
     "sync-workflow-skill": "tsx scripts/sync-workflow-skill.ts",
@@ -39,7 +39,13 @@
     "audit:tools": "node scripts/tool-contract-audit.mjs",
     "audit:tools:agent": "node scripts/claude-tool-contract-audit.mjs",
     "clean:build": "node scripts/clean-build.mjs",
-    "smoke:gitnexus-sidecar": "node scripts/gitnexus-sidecar-smoke.mjs"
+    "smoke:gitnexus-sidecar": "node scripts/gitnexus-sidecar-smoke.mjs",
+    "docs:build-demos": "npm run build-mcp-apps && tsx scripts/build-doc-demos.ts",
+    "docs:record-demos": "python scripts/render-doc-demo-gifs.py",
+    "docs:sync-tools": "tsx scripts/sync-doc-tools.ts",
+    "docs:build": "npm run docs:sync-shell && npm run docs:sync-tools && npm run docs:build-demos",
+    "docs:verify": "node scripts/verify-docs.mjs",
+    "docs:sync-shell": "tsx scripts/sync-doc-shell.ts"
   },
   "keywords": [
     "mcp",

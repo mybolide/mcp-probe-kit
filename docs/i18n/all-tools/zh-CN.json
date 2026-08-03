@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "所有工具 - 30个AI研发工具完整列表 | MCP Probe Kit",
-    "description": "MCP Probe Kit 完整工具列表：6个工作流编排工具、4个代码分析工具、2个Git工具、1个生成工具、7个项目管理工具、3个UI/UX工具、6个记忆工具。",
+    "title": "MCP Probe Kit v4 工具目录 - 23/29/33 工具面与一句话调用",
+    "description": "MCP Probe Kit v4 完整工具目录：默认 23 个模型工具，Memory 配置后 29 个，full 兼容面 33 个，另有 1 个 App-only 动作。每个工具提供可复制的一句话调用方式。",
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "MCP Probe Kit 提供 30 个实用工具，核心与编排工具支持结构化输出"
+    "subtitle": "默认 23 个模型工具，Memory 配置后 29 个，full 兼容面 33 个，另有 1 个 App-only 动作"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -48,7 +48,12 @@
     "memorize_asset": "沉淀记忆",
     "update_memory_asset": "更新记忆",
     "delete_memory_asset": "删除记忆",
-    "scan_and_extract_patterns": "抽取模式"
+    "scan_and_extract_patterns": "抽取模式",
+    "workflow": "智能路由",
+    "plan_heartbeat": "计划检查点",
+    "resume_plan": "恢复计划",
+    "converge": "收敛闸门",
+    "list_memory_assets": "App 浏览记忆"
   },
   "categories": {
     "workflow": {
@@ -78,124 +83,216 @@
     "memory": {
       "title": "记忆",
       "count": "6 个"
+    },
+    "routing": {
+      "title": "意图路由"
+    },
+    "plan": {
+      "title": "计划状态与收敛"
+    },
+    "interactive": {
+      "title": "交互与访谈"
+    },
+    "apps": {
+      "title": "MCP Apps 专用"
     }
   },
   "toolsData": {
     "start_feature": {
       "description": "完整的功能开发工作流编排：补齐图谱基线 → 刷新 GitNexus 图谱 → 收敛需求范围 → 生成规格 → 估算工作量",
-      "usage": "用于启动完整的功能开发流程，自动补齐 graph-insights，并通过 GitNexus 的 query/context/impact 收敛需求范围后生成规格与估算"
+      "usage": "用于启动完整的功能开发流程，自动补齐 graph-insights，并通过 GitNexus 的 query/context/impact 收敛需求范围后生成规格与估算",
+      "prompt": "请使用 start_feature 开发这个功能：<功能目标、范围和验收要求>"
     },
     "start_bugfix": {
       "description": "Bug 修复工作流编排：图谱基线 → GitNexus 收敛边界 → SRC-8 delegated plan（src8-1~8）→ 测试 → 记忆沉淀",
-      "usage": "找问题/修 bug；严格按 structuredContent.metadata.plan.steps 执行。方法论详见 docs/src8-methodology.zh-CN.md"
+      "usage": "找问题/修 bug；严格按 structuredContent.metadata.plan.steps 执行。方法论详见 docs/src8-methodology.zh-CN.md",
+      "prompt": "请使用 start_bugfix 修复这个问题：<错误现象、报错信息和复现步骤>"
     },
     "start_onboard": {
       "description": "项目上手工作流：生成上下文文档，帮助新成员快速了解项目",
-      "usage": "帮助新成员快速了解项目结构、技术栈和开发规范"
+      "usage": "帮助新成员快速了解项目结构、技术栈和开发规范",
+      "prompt": "请使用 start_onboard 工具完成以下任务：<描述你的具体需求>"
     },
     "start_ralph": {
       "description": "Ralph Wiggum Loop 自动化开发，启动循环开发流程，默认启用多重安全保护",
-      "usage": "启动自动化循环开发，AI会持续迭代直到完成目标或达到安全限制"
+      "usage": "启动自动化循环开发，AI会持续迭代直到完成目标或达到安全限制",
+      "prompt": "请使用 start_ralph 工具完成以下任务：<描述你的具体需求>"
     },
     "start_product": {
       "description": "产品设计完整工作流编排：PRD → 原型文档 → 设计系统 → HTML 原型 → 项目上下文更新",
-      "usage": "一键完成从需求到 HTML 原型的全流程，生成可直接演示的产品原型"
+      "usage": "一键完成从需求到 HTML 原型的全流程，生成可直接演示的产品原型",
+      "prompt": "请使用 start_product 从需求到原型设计：<产品想法和目标用户>"
     },
     "start_ui": {
       "description": "UI 开发统一入口：检查设计系统 → 生成组件目录 → 搜索/生成模板 → 渲染代码",
-      "usage": "一键完成UI开发全流程，从设计系统到最终代码"
+      "usage": "一键完成UI开发全流程，从设计系统到最终代码",
+      "prompt": "请使用 start_ui 设计并实现：<页面或组件需求、风格和交互>"
     },
     "code_review": {
       "description": "智能代码审查，从安全、性能、质量、风格和最佳实践等多维度分析代码",
-      "usage": "全面审查代码质量，输出结构化问题清单（severity/category/suggestion）"
+      "usage": "全面审查代码质量，输出结构化问题清单（severity/category/suggestion）",
+      "prompt": "请使用 code_review 审查：<文件、目录或 diff 范围>"
     },
     "fix_bug": {
       "description": "SRC-8 delegated plan Bug 真因分析：返回 metadata.plan（src8-1~8）、rootCauseWorksheet 与门禁，由 Agent 输出 rootCauseAnalysis 并修复",
-      "usage": "按 metadata.plan 从 src8-1 顺序执行；src8-4 闭合前禁止改代码；MCP 不自动修 Bug"
+      "usage": "按 metadata.plan 从 src8-1 顺序执行；src8-4 闭合前禁止改代码；MCP 不自动修 Bug",
+      "prompt": "请使用 fix_bug 工具完成以下任务：<描述你的具体需求>"
     },
     "refactor": {
       "description": "重构建议工具，分析代码结构，提供重构步骤、风险评估和回滚计划",
-      "usage": "分析代码结构，提供重构建议、重构步骤和风险评估"
+      "usage": "分析代码结构，提供重构建议、重构步骤和风险评估",
+      "prompt": "请使用 refactor 工具完成以下任务：<描述你的具体需求>"
     },
     "gencommit": {
       "description": "根据代码变更自动生成符合 Conventional Commits 规范的 Git commit 消息",
-      "usage": "根据代码变更生成符合 Conventional Commits 规范的提交消息"
+      "usage": "根据代码变更生成符合 Conventional Commits 规范的提交消息",
+      "prompt": "请使用 gencommit 根据当前改动生成规范的提交信息。"
     },
     "git_work_report": {
       "description": "基于 Git diff 分析生成工作报告（日报/周期报），智能提取实际工作内容",
-      "usage": "自动读取指定日期的 Git 提交，分析 diff 内容，生成简洁专业的中文工作报告。如果直接命令失败，会提供创建临时脚本的方案（执行后自动删除）"
+      "usage": "自动读取指定日期的 Git 提交，分析 diff 内容，生成简洁专业的中文工作报告。如果直接命令失败，会提供创建临时脚本的方案（执行后自动删除）",
+      "prompt": "请使用 git_work_report 工具完成以下任务：<描述你的具体需求>"
     },
     "gentest": {
       "description": "生成单元测试，支持 Jest/Vitest/Mocha 等框架，包含边界用例和 mock 数据",
-      "usage": "生成单元测试代码，包含边界用例和 mock"
+      "usage": "生成单元测试代码，包含边界用例和 mock",
+      "prompt": "请使用 gentest 工具完成以下任务：<描述你的具体需求>"
     },
     "init_project": {
       "description": "按 Spec-Driven Development 方式生成需求/设计/任务文档",
-      "usage": "按 Spec-Driven Development 方式生成需求/设计/任务文档"
+      "usage": "按 Spec-Driven Development 方式生成需求/设计/任务文档",
+      "prompt": "请使用 init_project 根据这句话生成完整项目规格：<一句话项目需求>"
     },
     "init_project_context": {
       "description": "生成项目上下文写作计划（delegated）：MCP 写 AGENTS.md 与 layout；分类文档与图谱由 Agent 按 plan 落盘",
-      "usage": "缺上下文时调用；返回 metadata.plan、pendingFiles 与 documentation 状态（exists/written/agent_action_required），Agent 须手动写入待落盘文件"
+      "usage": "缺上下文时调用；返回 metadata.plan、pendingFiles 与 documentation 状态（exists/written/agent_action_required），Agent 须手动写入待落盘文件",
+      "prompt": "请使用 init_project_context 为当前项目生成完整上下文和图谱基线。"
     },
     "add_feature": {
       "description": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文",
-      "usage": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文"
+      "usage": "生成新功能规格文档（需求/设计/任务清单），基于项目上下文",
+      "prompt": "请使用 add_feature 工具完成以下任务：<描述你的具体需求>"
     },
     "check_spec": {
       "description": "校验已落盘的功能规格（requirements/design/tasks.md）是否完整：检测残留占位符、缺失章节、缺 FR/验收标准、FR 未进覆盖矩阵",
-      "usage": "写完规格后、进入实现前调用；未通过则按报告补全后重跑"
+      "usage": "写完规格后、进入实现前调用；未通过则按报告补全后重跑",
+      "prompt": "请使用 check_spec 工具完成以下任务：<描述你的具体需求>"
     },
     "estimate": {
       "description": "估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点",
-      "usage": "估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点"
+      "usage": "估算开发工作量，输出故事点、时间范围（乐观/正常/悲观）、风险点",
+      "prompt": "请使用 estimate 工具完成以下任务：<描述你的具体需求>"
     },
     "interview": {
       "description": "需求访谈工具，通过结构化提问澄清需求，避免理解偏差和返工",
-      "usage": "需求访谈工具，在开发前通过结构化提问澄清需求"
+      "usage": "需求访谈工具，在开发前通过结构化提问澄清需求",
+      "prompt": "请使用 interview 工具完成以下任务：<描述你的具体需求>"
     },
     "ask_user": {
       "description": "AI 主动提问工具，支持单个或多个问题、提供选项、标注重要性",
-      "usage": "AI 主动向用户提问，支持单个或多个问题、提供选项、标注重要性"
+      "usage": "AI 主动向用户提问，支持单个或多个问题、提供选项、标注重要性",
+      "prompt": "请使用 ask_user 工具完成以下任务：<描述你的具体需求>"
     },
     "ui_design_system": {
       "description": "智能设计系统生成器，基于产品类型推理生成完整设计规范",
-      "usage": "基于产品类型和需求，使用 AI 推理引擎生成完整的设计系统推荐"
+      "usage": "基于产品类型和需求，使用 AI 推理引擎生成完整的设计系统推荐",
+      "prompt": "请使用 ui_design_system 工具完成以下任务：<描述你的具体需求>"
     },
     "ui_search": {
       "description": "搜索 UI/UX 数据库，包括颜色、图标、图表、组件、设计模式等",
-      "usage": "搜索 UI/UX 数据库，使用 BM25 算法进行智能搜索"
+      "usage": "搜索 UI/UX 数据库，使用 BM25 算法进行智能搜索",
+      "prompt": "请使用 ui_search 工具完成以下任务：<描述你的具体需求>"
     },
     "sync_ui_data": {
       "description": "同步 UI/UX 数据到本地缓存，支持自动检查更新和强制同步",
-      "usage": "同步 UI/UX 数据到本地缓存，从 npm 包 uipro-cli 下载最新数据"
+      "usage": "同步 UI/UX 数据到本地缓存，从 npm 包 uipro-cli 下载最新数据",
+      "prompt": "请使用 sync_ui_data 工具完成以下任务：<描述你的具体需求>"
     },
     "code_insight": {
       "description": "代码图谱洞察工具，桥接 GitNexus 分析调用链、上下文和影响面（不可用时自动降级）",
-      "usage": "用于刷新 GitNexus 图谱、获取任务级调用链/上下文/影响面，并把结果保存到 docs/graph-insights 与 project-context 索引"
+      "usage": "用于刷新 GitNexus 图谱、获取任务级调用链/上下文/影响面，并把结果保存到 docs/graph-insights 与 project-context 索引",
+      "prompt": "请使用 code_insight 分析：<代码入口、调用链或影响范围问题>"
     },
     "search_memory": {
       "description": "按语义检索共享记忆库，支持 type/tags 优先排序",
-      "usage": "在 start_* 之外主动查找历史 Bug 修复或可复用模式；文本输出含 id/score/摘要/描述及 --- content --- 正文（默认最多 1500 字，更长全文用 read_memory_asset）"
+      "usage": "在 start_* 之外主动查找历史 Bug 修复或可复用模式；文本输出含 id/score/摘要/描述及 --- content --- 正文（默认最多 1500 字，更长全文用 read_memory_asset）",
+      "prompt": "请使用 search_memory 查找与以下问题相关的历史经验：<问题或关键词>"
     },
     "read_memory_asset": {
       "description": "按资产 ID 读取已沉淀记忆的完整内容与元数据",
-      "usage": "当编排阶段已经命中记忆摘要时使用；文本输出含 --- content --- 全文（代码/配置/详细描述）"
+      "usage": "当编排阶段已经命中记忆摘要时使用；文本输出含 --- content --- 全文（代码/配置/详细描述）",
+      "prompt": "请使用 read_memory_asset 工具完成以下任务：<描述你的具体需求>"
     },
     "memorize_asset": {
       "description": "把高价值代码、规范或模式写入向量记忆系统，供后续复用",
-      "usage": "在开发完成后，将可复用资产沉淀到 Qdrant + embedding 记忆系统中"
+      "usage": "在开发完成后，将可复用资产沉淀到 Qdrant + embedding 记忆系统中",
+      "prompt": "请使用 memorize_asset 保存这条已验证经验：<摘要、内容、证据和适用范围>"
     },
     "update_memory_asset": {
       "description": "按资产 ID 更新共享记忆库中的已有资产（保留原 ID）",
-      "usage": "用于修正摘要、正文或标签；content 变更会重新向量化"
+      "usage": "用于修正摘要、正文或标签；content 变更会重新向量化",
+      "prompt": "请使用 update_memory_asset 工具完成以下任务：<描述你的具体需求>"
     },
     "delete_memory_asset": {
       "description": "按资产 ID 从共享记忆库删除一条已沉淀记忆",
-      "usage": "用于清理过时、错误或重复沉淀；删除前建议先用 read_memory_asset 确认内容"
+      "usage": "用于清理过时、错误或重复沉淀；删除前建议先用 read_memory_asset 确认内容",
+      "prompt": "请使用 delete_memory_asset 工具完成以下任务：<描述你的具体需求>"
     },
     "scan_and_extract_patterns": {
       "description": "从单段代码、单文件或整个目录中抽取可复用模式，再决定是否沉淀到记忆系统",
-      "usage": "适合先做模式归纳，再按需调用 memorize_asset 写入记忆"
+      "usage": "适合先做模式归纳，再按需调用 memorize_asset 写入记忆",
+      "prompt": "请使用 scan_and_extract_patterns 工具完成以下任务：<描述你的具体需求>"
+    },
+    "workflow": {
+      "description": "开发工作流智能路由：根据完整任务意图选择准确的 start_*、代码分析、规格或 Memory 入口。",
+      "usage": "不确定该调用哪个工具，或需要防止 Agent 跳过标准流程时使用。",
+      "prompt": "请使用 workflow 为以下任务选择并执行正确研发流程：<完整任务描述>"
+    },
+    "plan_heartbeat": {
+      "description": "记录 Delegated Plan 的完成步骤、证据、未决事项和 revision，并建立可恢复检查点。",
+      "usage": "首次执行计划以及每完成、跳过或阻塞一个步骤后调用。",
+      "prompt": "请使用 plan_heartbeat 记录计划 <plan_id> 的当前进度、证据和未决事项。"
+    },
+    "resume_plan": {
+      "description": "从项目内检查点恢复计划，并按依赖关系计算下一可执行步骤和阻塞项。",
+      "usage": "会话中断、服务重启或切换 Agent 后调用。",
+      "prompt": "请使用 resume_plan 恢复计划：<plan_id>"
+    },
+    "converge": {
+      "description": "检查计划步骤与需求、规格、实现、测试、审查证据，决定是否允许交付和长期记忆写入。",
+      "usage": "实现与验证完成后调用；passed=true 后才可正式沉淀 Memory。",
+      "prompt": "请使用 converge 检查计划是否可以收敛：<plan_id>"
+    },
+    "list_memory_assets": {
+      "description": "Memory Center 专用浏览动作，按更新时间列出记忆摘要并支持筛选和分页。",
+      "usage": "仅由协商成功的 MCP App 调用，不暴露给模型。",
+      "prompt": ""
     }
+  },
+  "ui": {
+    "eyebrow": "TOOL CATALOG",
+    "title": "找到工具，复制一句话，直接开始",
+    "subtitle": "默认 23 个模型工具；配置 Memory 后 29 个；full 兼容面 33 个；另有 1 个 App-only 动作。",
+    "searchPlaceholder": "搜索工具名、用途或描述…",
+    "all": "全部",
+    "default": "默认工具",
+    "memory": "Memory",
+    "compatibility": "full 兼容",
+    "appOnly": "App-only",
+    "oneLine": "一句话调用",
+    "copy": "复制",
+    "copied": "已复制",
+    "details": "参数与完整说明",
+    "usage": "适用场景",
+    "params": "参数",
+    "schema": "输出",
+    "required": "必填",
+    "optional": "可选",
+    "noParams": "无需参数",
+    "noResults": "没有找到匹配的工具",
+    "tools": "个工具",
+    "appOnlyPrompt": "此动作仅由 MCP App 调用，请在 Memory Center 中操作。",
+    "liveApps": "查看 MCP Apps 动态演示",
+    "categoryNav": "按分类浏览"
   }
 }

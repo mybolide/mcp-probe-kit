@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Probe Kit - AI-Powered Complete Development Toolkit | 30 Tools Covering Entire Development Lifecycle</title>
+    <title>MCP Probe Kit v4 Quick Start - 23/29/33 Tool Surfaces and MCP Apps</title>
     <meta name="i18n-title" content="meta.title">
     
     <!-- SEO Meta Tags -->
@@ -56,92 +56,60 @@
             visibility: visible;
         }
     </style>
+  <link rel="stylesheet" href="../assets/css/docs-shell.css">
+  <link rel="icon" href="../assets/logo.png" type="image/png">
 </head>
 <body class="font-sans bg-bg-page text-text-primary leading-relaxed min-h-screen flex flex-col">
-    <!-- A. Top navigation -->
-    <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50">
-        <div class="h-full px-4 flex items-center justify-between">
-            <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
-                <span>🚀</span>
-                <span class="sm:inline hidden">MCP Probe Kit</span>
-            </a>
-            <div class="flex items-center gap-3">
-                <div id="lang-switcher-container"></div>
-                <button onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                    </svg>
-                </button>
-            </div>
+  <!-- docs-shell:start -->
+  <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50" data-doc-shell="topbar">
+    <div class="h-full px-4 flex items-center justify-between">
+      <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
+        <span aria-hidden="true">🚀</span><span class="sm:inline hidden">MCP Probe Kit</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <div id="lang-switcher-container"></div>
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors" aria-label="Toggle documentation navigation" aria-controls="sidebar">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+  <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+  <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar" data-doc-shell="sidebar">
+    <div class="p-4">
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">快速开始</div>
+        <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🏠</span><span data-i18n="sidebar.home">文档首页</span></a>
+        <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary" aria-current="page"><span>📖</span><span data-i18n="sidebar.installation">安装配置</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
+        <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">33+1</span></a>
+        <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">5</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
+        <a href="./migration-v4.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🚀</span><span data-i18n="sidebar.migration">v4 迁移指南</span></a>
+        <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💡</span><span data-i18n="sidebar.examples">最佳实践</span></a>
+      </div>
+      <div class="pt-4 border-t border-border">
+        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💻</span><span>GitHub</span><span class="ml-auto text-xs">↗</span></a>
+        <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📦</span><span>npm</span><span class="ml-auto text-xs">↗</span></a>
+      </div>
+      <div class="mt-4 pt-4 border-t border-border">
+        <div class="text-center">
+          <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">关注公众号</div>
+          <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border">
+          <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">获取更多技术分享</div>
         </div>
-    </nav>
-
-    <!-- Sidebar backdrop -->
-    <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:opacity-100 md:pointer-events-auto md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
-
-    <!-- B. Sidebar -->
-    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar">
-        <div class="p-4">
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">Quick Start</div>
-                <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>🏠</span>
-                    <span data-i18n="sidebar.home">Documentation Home</span>
-                </a>
-                <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary">
-                    <span>📖</span>
-                    <span data-i18n="sidebar.installation">Installation & Configuration</span>
-                </a>
-            </div>
-            
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">Tools Documentation</div>
-                <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>🛠️</span>
-                    <span data-i18n="sidebar.allTools">All Tools</span>
-                    <span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">29</span>
-                </a>
-            </div>
-            
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">Guides</div>
-                <a href="./migration-v4.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>🚀</span>
-                    <span data-i18n="sidebar.migration">Migration Guide</span>
-                </a>
-                <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>💡</span>
-                    <span data-i18n="sidebar.examples">Best Practices</span>
-                </a>
-            </div>
-            
-            <div class="pt-4 border-t border-border">
-                <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>💻</span>
-                    <span>GitHub</span>
-                    <span class="ml-auto text-xs">↗</span>
-                </a>
-                <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline">
-                    <span>📦</span>
-                    <span>npm</span>
-                    <span class="ml-auto text-xs">↗</span>
-                </a>
-            </div>
-
-            <!-- QR Code -->
-            <div class="mt-4 pt-4 border-t border-border">
-                <div class="text-center">
-                    <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">Follow Us</div>
-                    <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="WeChat official account QR code" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border" />
-                    <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">Get More Tech Insights</div>
-                </div>
-            </div>
-        </div>
-    </aside>
+      </div>
+    </div>
+  </aside>
+  <!-- docs-shell:end -->
 
     <!-- C. Main content -->
     <main class="flex-1 mt-14 min-h-screen md:ml-64">
-        <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="w-full max-w-none p-4 sm:p-6 lg:p-8 xl:p-10">
             
             <!-- Breadcrumb -->
             <nav class="flex items-center gap-1 text-sm text-text-secondary mb-4 overflow-x-auto whitespace-nowrap">
@@ -159,7 +127,7 @@
                 <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
                     <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v4.0.0-rc.8</span>
                     <span>Legacy MCP + Modern MCP 2026-07-28</span>
-                    <span>SDK 1.27.1</span>
+                    <span>TypeScript SDK v2</span>
                 </div>
             </div>
 
@@ -195,7 +163,7 @@
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"]
+      "args": ["-y", "mcp-probe-kit@next"]
     }
   }
 }</code></pre>
@@ -206,42 +174,37 @@
                         </div>
                     </div>
 
-                    <!-- Global installation -->
+                    <!-- Project-local Agent fallback -->
                     <div class="border border-border rounded-lg overflow-hidden">
                         <button onclick="toggleInstall('global')" class="w-full px-4 py-3 bg-bg-page flex items-center justify-between text-left hover:bg-gray-100 transition-colors">
                             <div class="flex items-center gap-2">
-                                <span class="text-lg">📦</span>
-                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step1.global.title">Global Installation</span>
+                                <span class="text-lg">🧭</span>
+                                <span class="font-medium text-text-primary" data-i18n="gettingStarted.step1.global.title">项目内 Agent fallback</span>
                             </div>
                             <svg class="w-5 h-5 text-text-tertiary transition-transform" id="global-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
                         <div id="global-content" class="hidden p-4 border-t border-border">
-                            <p class="text-text-secondary mb-3 text-sm" data-i18n="gettingStarted.step1.global.description">Install globally to system:</p>
+                            <p class="text-text-secondary mb-3 text-sm" data-i18n="gettingStarted.step1.global.description">为当前项目生成精确锁定版本的本地启动器：</p>
                             <div class="bg-slate-900 rounded-lg overflow-hidden">
                                 <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
-                                    <span class="text-xs text-slate-300 font-medium">Bash</span>
-                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
+                                    <span class="text-xs text-slate-300 font-medium">PowerShell / Bash</span>
+                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">复制</button>
                                 </div>
-                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>npm install -g mcp-probe-kit</code></pre>
+                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>npx -y mcp-probe-kit@4.0.0-rc.8 install-agent</code></pre>
                             </div>
-                            <p class="text-text-secondary mt-3 mb-2 text-sm" data-i18n="gettingStarted.step1.global.configFile">Configuration file:</p>
+                            <p class="text-text-secondary mt-3 mb-2 text-sm" data-i18n="gettingStarted.step1.global.configFile">生成文件：</p>
                             <div class="bg-slate-900 rounded-lg overflow-hidden">
-                                <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
-                                    <span class="text-xs text-slate-300 font-medium">JSON</span>
-                                    <button onclick="copyCode(this)" class="text-xs text-slate-300 hover:text-white transition-colors" data-i18n="gettingStarted.common.copy">Copy</button>
-                                </div>
-                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "mcp-probe-kit"
-    }
-  }
-}</code></pre>
+                                <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code>.mcp-probe-kit/bin/probe
+.mcp-probe-kit/bin/probe.cmd
+.mcp-probe-kit/bin/probe.ps1
+.mcp-probe-kit/runtime.json</code></pre>
                             </div>
-                            <div class="mt-3 p-3 bg-amber-50 border-l-3 border-amber-500 rounded-r text-sm text-text-primary">
-                                <strong data-i18n="gettingStarted.step1.global.note">Note:</strong><span data-i18n="gettingStarted.step1.global.noteText">Need to manually run</span> <code class="bg-gray-200 px-1 rounded text-xs">npm update -g mcp-probe-kit</code> <span data-i18n="gettingStarted.step1.global.updateText">to update version</span>
+                            <div class="mt-3 p-3 bg-blue-50 border-l-3 border-blue-500 rounded-r text-sm text-text-primary">
+                                <strong data-i18n="gettingStarted.step1.global.note">行为：</strong>
+                                <span data-i18n="gettingStarted.step1.global.noteText">优先使用 MCP；会话未注入工具时，Agent 自动调用项目内启动器。</span>
+                                <span data-i18n="gettingStarted.step1.global.updateText">不会全局安装，也不会修改 package.json。</span>
                             </div>
                         </div>
                     </div>
@@ -451,7 +414,7 @@ curl http://127.0.0.1:50012/embeddings \
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@next"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "same-as-qdrant-.env-QDRANT_API_KEY",
@@ -719,7 +682,7 @@ npm run build</code></pre>
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@latest"],
+      "command": ["npx", "-y", "mcp-probe-kit@next"],
       "enabled": true
     }
   }
@@ -960,5 +923,6 @@ gyp ERR! find VS - missing any VC++ toolset</code></pre>
         }
     </script>
     <script src="../assets/js/i18n.js"></script>
+  <script src="../assets/js/docs-shell.js"></script>
 </body>
 </html>

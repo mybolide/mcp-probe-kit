@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "모든 도구 - 30개 AI 개발 도구 전체 목록 | MCP Probe Kit",
-    "description": "MCP Probe Kit 전체 도구 목록: 6개의 워크플로우 오케스트레이션 도구, 4개의 코드 분석 도구, 2개의 Git 도구, 1개의 생성 도구, 7개의 프로젝트 관리 도구, 3개의 UI/UX 도구, 6개의 Memory 도구.",
+    "title": "MCP Probe Kit v4 도구 카탈로그 - 23/29/33 표면과 한 문장 호출",
+    "description": "MCP Probe Kit v4 전체 도구 카탈로그: 기본 23개, Memory 구성 시 29개, full 호환 33개, App-only 작업 1개. 모든 도구에 복사 가능한 한 문장 호출 제공.",
     "keywords": "AI 개발 도구, 코드 생성 도구, 코드 리뷰 도구, Git 자동화, UI 생성, 코드 리팩토링, 성능 최적화, 보안 스캔"
   },
   "page": {
-    "subtitle": "MCP Probe Kit은 30개의 실용적인 도구를 제공하며, 핵심 및 오케스트레이션 도구는 구조화된 출력을 지원합니다"
+    "subtitle": "기본 모델 도구 23개, Memory 구성 시 29개, full 호환 33개, App-only 작업 1개"
   },
   "search": {
     "placeholder": "🔍 도구 이름 또는 설명 검색...",
@@ -48,7 +48,12 @@
     "memorize_asset": "메모리 저장",
     "update_memory_asset": "메모리 수정",
     "delete_memory_asset": "메모리 삭제",
-    "scan_and_extract_patterns": "패턴 추출"
+    "scan_and_extract_patterns": "패턴 추출",
+    "workflow": "스마트 라우터",
+    "plan_heartbeat": "계획 체크포인트",
+    "resume_plan": "계획 재개",
+    "converge": "수렴 게이트",
+    "list_memory_assets": "Memory 탐색"
   },
   "categories": {
     "workflow": {
@@ -78,124 +83,216 @@
     "memory": {
       "title": "Memory",
       "count": "6개"
+    },
+    "routing": {
+      "title": "의도 라우팅"
+    },
+    "plan": {
+      "title": "계획 상태와 수렴"
+    },
+    "interactive": {
+      "title": "상호작용과 인터뷰"
+    },
+    "apps": {
+      "title": "MCP Apps 전용"
     }
   },
   "toolsData": {
     "start_feature": {
       "description": "완전한 기능 개발 워크플로우 오케스트레이션: 그래프 베이스라인 보강 → GitNexus 갱신 → 범위 수렴 → 사양 생성 → 작업량 추정",
-      "usage": "누락된 graph-insights 를 먼저 보강하고 GitNexus query/context/impact 로 범위를 수렴시킨 뒤 사양과 추정을 생성합니다"
+      "usage": "누락된 graph-insights 를 먼저 보강하고 GitNexus query/context/impact 로 범위를 수렴시킨 뒤 사양과 추정을 생성합니다",
+      "prompt": "start_feature를 사용해 이 기능을 개발하세요: <목표, 범위, 인수 기준>"
     },
     "start_bugfix": {
       "description": "버그 수정 워크플로우：그래프 → GitNexus → SRC-8 근본원인 분석（TBP-inspired）→ 수정 → 테스트 → 기억",
-      "usage": "버그, 회귀, 이상 분석용. 먼저 graph-insights 를 보강하고 GitNexus 로 경계와 영향면을 좁힌 뒤 TBP RCA 를 진행합니다"
+      "usage": "버그, 회귀, 이상 분석용. 먼저 graph-insights 를 보강하고 GitNexus 로 경계와 영향면을 좁힌 뒤 TBP RCA 를 진행합니다",
+      "prompt": "start_bugfix를 사용해 이 문제를 수정하세요: <현상, 오류, 재현 단계>"
     },
     "start_onboard": {
       "description": "프로젝트 온보딩 워크플로우: 컨텍스트 문서를 생성하여 새 구성원이 프로젝트를 빠르게 이해할 수 있도록 돕습니다",
-      "usage": "새 구성원이 프로젝트 구조, 기술 스택 및 개발 표준을 빠르게 이해할 수 있도록 돕습니다"
+      "usage": "새 구성원이 프로젝트 구조, 기술 스택 및 개발 표준을 빠르게 이해할 수 있도록 돕습니다",
+      "prompt": "start_onboard 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "start_ralph": {
       "description": "Ralph Wiggum Loop 자동화 개발, 기본적으로 여러 안전 보호 기능이 활성화된 루프 개발 프로세스를 시작합니다",
-      "usage": "자동화된 루프 개발을 시작하며, AI는 목표가 달성되거나 안전 제한에 도달할 때까지 지속적으로 반복합니다"
+      "usage": "자동화된 루프 개발을 시작하며, AI는 목표가 달성되거나 안전 제한에 도달할 때까지 지속적으로 반복합니다",
+      "prompt": "start_ralph 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "start_product": {
       "description": "완전한 제품 설계 워크플로우 오케스트레이션: PRD → 프로토타입 문서 → 디자인 시스템 → HTML 프로토타입 → 프로젝트 컨텍스트 업데이트",
-      "usage": "요구사항에서 HTML 프로토타입까지 원클릭 완료, 직접 시연 가능한 제품 프로토타입을 생성합니다"
+      "usage": "요구사항에서 HTML 프로토타입까지 원클릭 완료, 직접 시연 가능한 제품 프로토타입을 생성합니다",
+      "prompt": "start_product를 사용해 요구사항부터 프로토타입까지 설계하세요: <제품 아이디어와 대상 사용자>"
     },
     "start_ui": {
       "description": "통합 UI 개발 진입점: 디자인 시스템 확인 → 컴포넌트 카탈로그 생성 → 템플릿 검색/생성 → 코드 렌더링",
-      "usage": "디자인 시스템에서 최종 코드까지 전체 UI 개발 프로세스를 원클릭으로 완료합니다"
+      "usage": "디자인 시스템에서 최종 코드까지 전체 UI 개발 프로세스를 원클릭으로 완료합니다",
+      "prompt": "start_ui를 사용해 설계하고 구현하세요: <페이지/컴포넌트, 스타일, 상호작용>"
     },
     "code_review": {
       "description": "지능형 코드 리뷰, 보안, 성능, 품질, 스타일 및 모범 사례 등 여러 차원에서 코드를 분석합니다",
-      "usage": "포괄적인 코드 품질 리뷰, 구조화된 문제 목록(severity/category/suggestion)을 출력합니다"
+      "usage": "포괄적인 코드 품질 리뷰, 구조화된 문제 목록(severity/category/suggestion)을 출력합니다",
+      "prompt": "code_review 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "fix_bug": {
       "description": "SRC-8 가이드형 버그 RCA（TBP-inspired）：rootCauseWorksheet 주입, Agent 가 rootCauseAnalysis 출력",
-      "usage": "먼저 진짜 원인을 찾고 싶을 때 사용하며 현상, 경계, 진짜 원인, 수정까지의 인과 사슬을 닫아줍니다"
+      "usage": "먼저 진짜 원인을 찾고 싶을 때 사용하며 현상, 경계, 진짜 원인, 수정까지의 인과 사슬을 닫아줍니다",
+      "prompt": "fix_bug 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "refactor": {
       "description": "리팩토링 제안 도구, 코드 구조를 분석하고 리팩토링 단계, 위험 평가 및 롤백 계획을 제공합니다",
-      "usage": "코드 구조를 분석하고 리팩토링 제안, 리팩토링 단계 및 위험 평가를 제공합니다"
+      "usage": "코드 구조를 분석하고 리팩토링 제안, 리팩토링 단계 및 위험 평가를 제공합니다",
+      "prompt": "refactor 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "gencommit": {
       "description": "코드 변경 사항을 기반으로 Conventional Commits 사양을 준수하는 Git 커밋 메시지를 자동으로 생성합니다",
-      "usage": "코드 변경 사항을 기반으로 Conventional Commits 사양을 준수하는 커밋 메시지를 생성합니다"
+      "usage": "코드 변경 사항을 기반으로 Conventional Commits 사양을 준수하는 커밋 메시지를 생성합니다",
+      "prompt": "gencommit 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "git_work_report": {
       "description": "Git diff 분석을 기반으로 작업 보고서(일일/정기)를 생성하고 실제 작업 내용을 지능적으로 추출합니다",
-      "usage": "지정된 날짜의 Git 커밋을 자동으로 읽고 diff 내용을 분석하여 간결하고 전문적인 작업 보고서를 생성합니다. 직접 명령이 실패하면 임시 스크립트 솔루션을 제공합니다(실행 후 자동 삭제)"
+      "usage": "지정된 날짜의 Git 커밋을 자동으로 읽고 diff 내용을 분석하여 간결하고 전문적인 작업 보고서를 생성합니다. 직접 명령이 실패하면 임시 스크립트 솔루션을 제공합니다(실행 후 자동 삭제)",
+      "prompt": "git_work_report 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "gentest": {
       "description": "Jest/Vitest/Mocha 프레임워크를 지원하고 엣지 케이스 및 모의 데이터를 포함하는 단위 테스트를 생성합니다",
-      "usage": "엣지 케이스 및 모의를 포함하는 단위 테스트 코드를 생성합니다"
+      "usage": "엣지 케이스 및 모의를 포함하는 단위 테스트 코드를 생성합니다",
+      "prompt": "gentest 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "init_project": {
       "description": "Spec-Driven Development 접근 방식에 따라 요구사항/설계/작업 문서를 생성합니다",
-      "usage": "Spec-Driven Development 접근 방식에 따라 요구사항/설계/작업 문서를 생성합니다"
+      "usage": "Spec-Driven Development 접근 방식에 따라 요구사항/설계/작업 문서를 생성합니다",
+      "prompt": "init_project를 사용해 이 한 문장 아이디어를 완전한 프로젝트 명세로 만드세요: <아이디어>"
     },
     "init_project_context": {
       "description": "delegated 컨텍스트 작성 계획 반환: MCP는 AGENTS.md와 layout 기록, 분류 문서와 graph-insights는 Agent가 plan에 따라 작성",
-      "usage": "컨텍스트 부족 시 호출. metadata.plan, pendingFiles, documentation exists/written/agent_action_required 반환. Agent가 pending 파일을 수동 작성해야 함"
+      "usage": "컨텍스트 부족 시 호출. metadata.plan, pendingFiles, documentation exists/written/agent_action_required 반환. Agent가 pending 파일을 수동 작성해야 함",
+      "prompt": "init_project_context를 사용해 현재 프로젝트의 전체 컨텍스트와 그래프 기준선을 생성하세요."
     },
     "add_feature": {
       "description": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다",
-      "usage": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다"
+      "usage": "프로젝트 컨텍스트를 기반으로 새 기능 사양 문서(요구사항/설계/작업 목록)를 생성합니다",
+      "prompt": "add_feature 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "check_spec": {
       "description": "작성된 기능 사양(requirements/design/tasks.md)의 완전성 검증: 잔여 플레이스홀더, 누락된 섹션, FR/수용 기준 누락, 커버리지 매트릭스 미등록 FR 감지",
-      "usage": "사양 작성 후·구현 전 호출; 실패 시 보고서에 따라 보완 후 재실행"
+      "usage": "사양 작성 후·구현 전 호출; 실패 시 보고서에 따라 보완 후 재실행",
+      "prompt": "check_spec 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "estimate": {
       "description": "개발 작업량을 추정하고 스토리 포인트, 시간 범위(낙관적/정상/비관적), 위험 포인트를 출력합니다",
-      "usage": "개발 작업량을 추정하고 스토리 포인트, 시간 범위(낙관적/정상/비관적), 위험 포인트를 출력합니다"
+      "usage": "개발 작업량을 추정하고 스토리 포인트, 시간 범위(낙관적/정상/비관적), 위험 포인트를 출력합니다",
+      "prompt": "estimate 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "interview": {
       "description": "요구사항 인터뷰 도구, 구조화된 질문을 통해 요구사항을 명확히 하여 오해와 재작업을 방지합니다",
-      "usage": "개발 전에 구조화된 질문을 통해 요구사항을 명확히 하는 요구사항 인터뷰 도구"
+      "usage": "개발 전에 구조화된 질문을 통해 요구사항을 명확히 하는 요구사항 인터뷰 도구",
+      "prompt": "interview 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "ask_user": {
       "description": "AI 능동적 질문 도구, 단일 또는 여러 질문을 지원하고 옵션을 제공하며 중요도를 표시합니다",
-      "usage": "AI가 사용자에게 능동적으로 질문하며 단일 또는 여러 질문을 지원하고 옵션을 제공하며 중요도를 표시합니다"
+      "usage": "AI가 사용자에게 능동적으로 질문하며 단일 또는 여러 질문을 지원하고 옵션을 제공하며 중요도를 표시합니다",
+      "prompt": "ask_user 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "ui_design_system": {
       "description": "지능형 디자인 시스템 생성기, 제품 유형 추론을 기반으로 완전한 디자인 사양을 생성합니다",
-      "usage": "제품 유형 및 요구사항을 기반으로 AI 추론 엔진을 사용하여 완전한 디자인 시스템 권장 사항을 생성합니다"
+      "usage": "제품 유형 및 요구사항을 기반으로 AI 추론 엔진을 사용하여 완전한 디자인 시스템 권장 사항을 생성합니다",
+      "prompt": "ui_design_system 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "ui_search": {
       "description": "색상, 아이콘, 차트, 컴포넌트, 디자인 패턴 등을 포함하는 UI/UX 데이터베이스를 검색합니다",
-      "usage": "BM25 알고리즘을 사용하여 지능형 검색을 수행하는 UI/UX 데이터베이스를 검색합니다"
+      "usage": "BM25 알고리즘을 사용하여 지능형 검색을 수행하는 UI/UX 데이터베이스를 검색합니다",
+      "prompt": "ui_search 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "sync_ui_data": {
       "description": "UI/UX 데이터를 로컬 캐시에 동기화하고 자동 업데이트 확인 및 강제 동기화를 지원합니다",
-      "usage": "npm 패키지 uipro-cli에서 최신 데이터를 다운로드하여 UI/UX 데이터를 로컬 캐시에 동기화합니다"
+      "usage": "npm 패키지 uipro-cli에서 최신 데이터를 다운로드하여 UI/UX 데이터를 로컬 캐시에 동기화합니다",
+      "prompt": "sync_ui_data 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "code_insight": {
       "description": "코드 그래프 인사이트 도구로 GitNexus를 브리지하여 호출 체인, 컨텍스트, 영향 범위를 분석합니다(사용 불가 시 자동 강등)",
-      "usage": "GitNexus 인덱스를 갱신하고 작업 단위 호출 체인/컨텍스트/영향 범위를 분석한 뒤 결과를 docs/graph-insights 와 project-context 인덱스에 저장합니다"
+      "usage": "GitNexus 인덱스를 갱신하고 작업 단위 호출 체인/컨텍스트/영향 범위를 분석한 뒤 결과를 docs/graph-insights 와 project-context 인덱스에 저장합니다",
+      "prompt": "code_insight를 사용해 분석하세요: <진입점, 호출 체인 또는 영향 범위>"
     },
     "search_memory": {
       "description": "공유 메모리 풀을 의미 기반 검색, type/tags 우선순위 지원",
-      "usage": "start_* 외에서 과거 버그 수정이나 재사용 가능한 패턴을 능동적으로 검색; 텍스트 출력에 id/score/요약/설명 및 --- content --- 본문 포함(기본 최대 1500자, 전문은 read_memory_asset)"
+      "usage": "start_* 외에서 과거 버그 수정이나 재사용 가능한 패턴을 능동적으로 검색; 텍스트 출력에 id/score/요약/설명 및 --- content --- 본문 포함(기본 최대 1500자, 전문은 read_memory_asset)",
+      "prompt": "search_memory 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "read_memory_asset": {
       "description": "자산 ID로 저장된 메모리의 전체 내용과 메타데이터를 읽기",
-      "usage": "오케스트레이션 단계에서 메모리 요약이 적중했을 때 사용; 텍스트 출력에 --- content --- 전문(코드/설정/상세 설명) 포함"
+      "usage": "오케스트레이션 단계에서 메모리 요약이 적중했을 때 사용; 텍스트 출력에 --- content --- 전문(코드/설정/상세 설명) 포함",
+      "prompt": "read_memory_asset 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "memorize_asset": {
       "description": "고가치 코드, 사양, 패턴 자산을 벡터 메모리 시스템에 저장하여 나중에 재사용",
-      "usage": "개발 완료 후 재사용 가능한 자산을 Qdrant + embedding 메모리 시스템에 저장"
+      "usage": "개발 완료 후 재사용 가능한 자산을 Qdrant + embedding 메모리 시스템에 저장",
+      "prompt": "memorize_asset 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "update_memory_asset": {
       "description": "자산 ID로 공유 메모리 풀의 기존 자산을 업데이트(동일 ID 유지)",
-      "usage": "요약, 본문, 태그 수정 시 사용; content 변경 시 재벡터화됨"
+      "usage": "요약, 본문, 태그 수정 시 사용; content 변경 시 재벡터화됨",
+      "prompt": "update_memory_asset 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "delete_memory_asset": {
       "description": "자산 ID로 공유 메모리 풀에서 저장된 메모리 자산을 삭제",
-      "usage": "오래되었거나 잘못되었거나 중복된 자산 정리 시 사용; 삭제 전 read_memory_asset으로 내용 확인 권장"
+      "usage": "오래되었거나 잘못되었거나 중복된 자산 정리 시 사용; 삭제 전 read_memory_asset으로 내용 확인 권장",
+      "prompt": "delete_memory_asset 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "scan_and_extract_patterns": {
       "description": "단일 코드 조각, 단일 파일 또는 전체 디렉터리에서 재사용 가능한 패턴을 추출한 후 메모리에 저장할지 결정",
-      "usage": "먼저 패턴 추출을 수행한 후 필요에 따라 memorize_asset을 호출하여 메모리에 기록"
+      "usage": "먼저 패턴 추출을 수행한 후 필요에 따라 memorize_asset을 호출하여 메모리에 기록",
+      "prompt": "scan_and_extract_patterns 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
+    },
+    "workflow": {
+      "description": "전체 작업 의도에서 정확한 start_*, 분석, 명세 또는 Memory 진입점을 선택하는 개발 워크플로 라우터입니다.",
+      "usage": "어떤 도구를 써야 할지 불명확하거나 Agent가 표준 흐름을 건너뛸 수 있을 때 사용합니다.",
+      "prompt": "workflow를 사용해 다음 작업에 맞는 개발 흐름을 선택하고 실행하세요: <전체 작업>"
+    },
+    "plan_heartbeat": {
+      "description": "Delegated Plan의 완료 단계, 증거, 미결 항목, revision을 저장해 재개 가능한 체크포인트를 만듭니다.",
+      "usage": "첫 실행과 각 단계의 완료, 건너뜀 또는 차단 후 호출합니다.",
+      "prompt": "plan_heartbeat를 사용해 계획 <plan_id>의 진행 상황, 증거, 미결 항목을 기록하세요."
+    },
+    "resume_plan": {
+      "description": "프로젝트 체크포인트에서 계획을 복원하고 의존성에 따라 다음 실행 가능 단계와 차단 단계를 계산합니다.",
+      "usage": "중단, 서버 재시작 또는 Agent 전환 후 사용합니다.",
+      "prompt": "resume_plan을 사용해 계획을 복구하세요: <plan_id>"
+    },
+    "converge": {
+      "description": "계획 단계와 요구사항, 명세, 구현, 테스트, 리뷰 증거를 검사해 전달과 장기 Memory 쓰기를 결정합니다.",
+      "usage": "구현과 검증 후 호출하며 passed=true일 때만 Memory를 저장합니다.",
+      "prompt": "converge를 사용해 계획을 종료할 수 있는지 확인하세요: <plan_id>"
+    },
+    "list_memory_assets": {
+      "description": "Memory Center 전용 탐색 작업으로 업데이트 순 목록, 필터, 페이지네이션을 제공합니다.",
+      "usage": "MCP Apps 기능 협상 후에만 사용되며 모델에는 노출되지 않습니다.",
+      "prompt": ""
     }
+  },
+  "ui": {
+    "eyebrow": "TOOL CATALOG",
+    "title": "도구를 찾고, 한 문장을 복사해 바로 시작",
+    "subtitle": "기본 모델 도구 23개, Memory 구성 시 29개, full 호환 33개, App-only 작업 1개.",
+    "searchPlaceholder": "도구 이름, 용도 또는 설명 검색…",
+    "all": "전체",
+    "default": "기본",
+    "memory": "Memory",
+    "compatibility": "full 호환",
+    "appOnly": "App-only",
+    "oneLine": "한 문장 호출",
+    "copy": "복사",
+    "copied": "복사됨",
+    "details": "매개변수와 전체 설명",
+    "usage": "사용 시점",
+    "params": "매개변수",
+    "schema": "출력",
+    "required": "필수",
+    "optional": "선택",
+    "noParams": "매개변수 없음",
+    "noResults": "일치하는 도구가 없습니다",
+    "tools": "도구",
+    "appOnlyPrompt": "이 작업은 MCP App 전용입니다. Memory Center에서 사용하세요.",
+    "liveApps": "MCP Apps 데모 보기",
+    "categoryNav": "카테고리별 탐색"
   }
 }
