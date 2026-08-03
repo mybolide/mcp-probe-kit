@@ -7,6 +7,38 @@ import { resolveWorkspaceRoot } from '../lib/workspace-root.js';
 import { isMemoryEnabled } from '../lib/memory-config.js';
 import type { ToolExecutionContext } from '../lib/tool-execution-context.js';
 
+const SUPPORTED_SCENARIO_INPUTS = new Set([
+  'auto',
+  'feature',
+  'bugfix',
+  'bug',
+  'ui',
+  'product',
+  'prd',
+  'explore',
+  'commit',
+  'review',
+  'refactor',
+  'onboard',
+  'spec',
+  'memory',
+]);
+
+function normalizeScenarioInput(value: unknown): string {
+  if (value === undefined || value === null || value === '') return 'auto';
+  if (typeof value !== 'string') {
+    throw new Error(`参数 scenario 必须是字符串，当前类型: ${typeof value}`);
+  }
+  const scenario = value.trim().toLowerCase();
+  if (!scenario) return 'auto';
+  if (!SUPPORTED_SCENARIO_INPUTS.has(scenario)) {
+    throw new Error(
+      `参数 scenario 不支持: ${value}。可选值: ${[...SUPPORTED_SCENARIO_INPUTS].join(', ')}`,
+    );
+  }
+  return scenario;
+}
+
 /**
  * workflow — 开发工作流路由（只读指南）
  *
@@ -40,7 +72,7 @@ export async function workflow(args: unknown, context?: ToolExecutionContext) {
       getString(parsed.intent) ||
       getString(parsed.input) ||
       getString(parsed.description);
-    const scenario = getString(parsed.scenario) || 'auto';
+    const scenario = normalizeScenarioInput(parsed.scenario);
 
     const plan = buildDevWorkflow(intent, { scenario, memoryAvailable: isMemoryEnabled() });
     const text = renderWorkflowMarkdown(plan, intent);

@@ -95,4 +95,32 @@ describe('workflow 工具', () => {
     }
     expect(result.structuredContent.firstTool).toBe('start_bugfix');
   });
+
+  test('显式非法 scenario 直接拒绝且不触发项目 bootstrap', async () => {
+    const projectRoot = makeProjectRoot();
+    const result = await workflow({
+      intent: '实现订单导出功能',
+      scenario: 'not-a-real-scenario',
+      project_root: projectRoot,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(String(result.content[0].text)).toContain('参数 scenario 不支持');
+    expect(String(result.content[0].text)).toContain('not-a-real-scenario');
+    expect(fs.existsSync(path.join(projectRoot, '.agents'))).toBe(false);
+    expect(fs.existsSync(path.join(projectRoot, 'AGENTS.md'))).toBe(false);
+  });
+
+  test('scenario 非字符串时在路由前返回类型错误', async () => {
+    const projectRoot = makeProjectRoot();
+    const result = await workflow({
+      intent: '实现订单导出功能',
+      scenario: { invalid: true },
+      project_root: projectRoot,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(String(result.content[0].text)).toContain('scenario 必须是字符串');
+    expect(fs.existsSync(path.join(projectRoot, '.agents'))).toBe(false);
+  });
 });
