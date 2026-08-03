@@ -6,6 +6,13 @@ import { handleToolError } from "../utils/error-handler.js";
 import { resolveGuidanceCode, trimCodeForPrompt } from "../lib/code-review-input.js";
 import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
 
+function validateOptionalCodeInput(value: unknown): void {
+  if (value === undefined || value === null || value === "") return;
+  if (typeof value !== "string") {
+    throw new Error(`参数 code 必须是字符串，当前类型: ${typeof value}`);
+  }
+}
+
 export async function refactor(args: any) {
   try {
     const parsedArgs = parseArgs<{
@@ -29,6 +36,8 @@ export async function refactor(args: any) {
         project_root: ["projectRoot", "project_path", "dir", "directory", "项目路径"],
       },
     });
+
+    validateOptionalCodeInput(parsedArgs.code);
 
     const goal = getString(parsedArgs.goal) || "全面优化";
     const inlineCode = getString(parsedArgs.code) || getString(parsedArgs.input);

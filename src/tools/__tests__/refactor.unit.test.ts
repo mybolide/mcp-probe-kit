@@ -42,4 +42,14 @@ describe("refactor 单元测试", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  test("code 为数字时直接返回类型错误，不字符串化后注入", async () => {
+    const result = await refactor({ code: 12345, goal: "improve_readability" });
+
+    expect(result.isError).toBe(true);
+    expect(String(result.content[0].text)).toContain("参数 code 必须是字符串");
+    expect(String(result.content[0].text)).toContain("当前类型: number");
+    expect(String(result.content[0].text)).not.toContain("待重构代码");
+  });
+
 });
