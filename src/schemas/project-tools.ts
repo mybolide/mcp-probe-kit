@@ -19,7 +19,7 @@ export const projectToolSchemas = [
         },
         scenario: {
           type: "string",
-          enum: ["auto", "feature", "bugfix", "ui", "explore", "commit", "review", "refactor", "onboard", "spec", "memory"],
+          enum: ["auto", "feature", "bugfix", "ui", "product", "explore", "commit", "review", "refactor", "onboard", "spec", "memory"],
           description: "可选：显式场景；默认 auto 从 intent 推断",
         },
         project_root: {

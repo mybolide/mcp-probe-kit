@@ -1,7 +1,22 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { gitWorkReport } from '../git_work_report.js';
 
 describe('git_work_report', () => {
+  it('非 Git 项目明确返回不适用', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'work-report-non-git-'));
+    try {
+      const result = await gitWorkReport({ date: '2026-08-03', project_root: root });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('不是 Git 仓库');
+      expect(result.content[0].text).toContain('git_work_report 不适用');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   describe('参数验证', () => {
     it('应该拒绝缺少日期参数', async () => {
       const result = await gitWorkReport({});

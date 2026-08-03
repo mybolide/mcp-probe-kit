@@ -69,17 +69,56 @@ export class MemoryClient {
     return headers;
   }
 
-  private async requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(url, init);
+  private dependencyError(
+    dependency: 'Embedding' | 'Qdrant',
+    url: string,
+    error: unknown,
+  ): Error {
+    const cause = error instanceof Error && error.cause instanceof Error
+      ? error.cause
+      : error instanceof Error
+        ? error
+        : null;
+    const code = cause && 'code' in cause && typeof cause.code === 'string'
+      ? ` (${cause.code})`
+      : '';
+    const reason = cause?.message && cause.message !== 'fetch failed'
+      ? `: ${cause.message}`
+      : '';
+    const model = dependency === 'Embedding' && this.config.embeddingModel
+      ? `，model=${this.config.embeddingModel}`
+      : '';
+    return new Error(`${dependency} 服务不可达: ${url}${model}${code}${reason}`);
+  }
+
+  private async requestJson<T>(
+    url: string,
+    init?: RequestInit,
+    dependency: 'Embedding' | 'Qdrant' = 'Qdrant',
+  ): Promise<T> {
+    let response: Response;
+    try {
+      response = await fetch(url, init);
+    } catch (error) {
+      throw this.dependencyError(dependency, url, error);
+    }
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      const body = await response.text();
+      throw new Error(
+        `${dependency} 服务请求失败: ${url}，HTTP ${response.status}${body ? `: ${body}` : ''}`
+      );
     }
     return response.json() as Promise<T>;
   }
 
   private async ensureCollection(vectorSize: number): Promise<void> {
     const url = `${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}`;
-    const exists = await fetch(url, { headers: this.buildHeaders(false) });
+    let exists: Response;
+    try {
+      exists = await fetch(url, { headers: this.buildHeaders(false) });
+    } catch (error) {
+      throw this.dependencyError('Qdrant', url, error);
+    }
     if (exists.ok) {
       return;
     }
@@ -115,7 +154,8 @@ export class MemoryClient {
             model: this.config.embeddingModel,
             input: text,
           }),
-        }
+        },
+        'Embedding',
       );
       const vector = data.data?.[0]?.embedding;
       if (!vector || !Array.isArray(vector) || vector.length === 0) {
@@ -124,14 +164,18 @@ export class MemoryClient {
       return vector;
     }
 
-    const data = await this.requestJson<{ embedding?: number[] }>(this.config.embeddingUrl, {
-      method: 'POST',
-      headers: this.buildEmbeddingHeaders(),
-      body: JSON.stringify({
-        model: this.config.embeddingModel,
-        prompt: text,
-      }),
-    });
+    const data = await this.requestJson<{ embedding?: number[] }>(
+      this.config.embeddingUrl,
+      {
+        method: 'POST',
+        headers: this.buildEmbeddingHeaders(),
+        body: JSON.stringify({
+          model: this.config.embeddingModel,
+          prompt: text,
+        }),
+      },
+      'Embedding',
+    );
     if (!data.embedding || !Array.isArray(data.embedding) || data.embedding.length === 0) {
       throw new Error('Embedding 服务未返回有效向量');
     }

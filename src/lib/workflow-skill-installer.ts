@@ -43,6 +43,34 @@ export interface SkillEnsureResult {
   previousVersion: string | null;
 }
 
+const PROJECT_CREATION_TOOLS = new Set(["init_project"]);
+
+function extractExplicitProjectRoot(args: unknown): string {
+  const record = flattenToolArgs(args);
+  return (
+    (typeof record.project_root === "string" ? record.project_root.trim() : "") ||
+    (typeof record.projectRoot === "string" ? record.projectRoot.trim() : "") ||
+    (typeof record.project_path === "string" ? record.project_path.trim() : "")
+  );
+}
+
+function assertExplicitProjectRootExists(toolName: string, args: unknown): void {
+  const explicit = extractExplicitProjectRoot(args);
+  if (!explicit || PROJECT_CREATION_TOOLS.has(toolName)) return;
+
+  const resolution = resolveWorkspaceRootWithMeta(explicit);
+  if (!resolution.explicitHonored) {
+    throw new Error(
+      `无效 project_root: ${explicit}。请传入真实存在的项目目录绝对路径。`
+    );
+  }
+  if (!fs.existsSync(resolution.root) || !fs.statSync(resolution.root).isDirectory()) {
+    throw new Error(
+      `项目目录不存在: ${resolution.root}。工具 ${toolName} 不会自动创建项目目录；请先创建目录或改用 init_project。`
+    );
+  }
+}
+
 export interface AgentsMdEnsureResult {
   path: string;
   existed: boolean;
@@ -92,11 +120,7 @@ function flattenToolArgs(args: unknown): Record<string, unknown> {
 }
 
 export function resolveProjectRootFromToolArgs(args: unknown): string {
-  const record = flattenToolArgs(args);
-  const explicit =
-    (typeof record.project_root === "string" ? record.project_root.trim() : "") ||
-    (typeof record.projectRoot === "string" ? record.projectRoot.trim() : "") ||
-    (typeof record.project_path === "string" ? record.project_path.trim() : "");
+  const explicit = extractExplicitProjectRoot(args);
 
   if (explicit && !isLikelyProjectNamedRelativePath(explicit)) {
     return resolveWorkspaceRoot(explicit);
@@ -252,9 +276,10 @@ export function ensureMcpProbeKitBootstrap(projectRoot: string): McpProbeKitBoot
 }
 
 export function ensureMcpProbeKitBootstrapForToolCall(
-  _toolName: string,
+  toolName: string,
   args: unknown
 ): McpProbeKitBootstrapResult | null {
+  assertExplicitProjectRootExists(toolName, args);
   try {
     const projectRoot = resolveProjectRootFromToolArgs(args);
     return ensureMcpProbeKitBootstrap(projectRoot);

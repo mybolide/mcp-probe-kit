@@ -6,6 +6,7 @@ import { VERSION } from "../../version.js";
 import {
   ensureAgentsMdSkillReference,
   ensureMcpProbeKitBootstrap,
+  ensureMcpProbeKitBootstrapForToolCall,
   ensureMcpProbeKitBootstrapAtStartup,
   ensureMcpProbeSkill,
   resolveProjectRootFromToolArgs,
@@ -255,5 +256,16 @@ describe("workflow-skill-installer", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
     tempDirs.push(root);
     expect(resolveProjectRootFromToolArgs({ project_root: root })).toBe(path.resolve(root));
+  });
+
+  test("非创建型工具拒绝不存在的显式 project_root 且不落盘", () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "wf-invalid-root-"));
+    tempDirs.push(parent);
+    const missing = path.join(parent, "does-not-exist");
+
+    expect(() =>
+      ensureMcpProbeKitBootstrapForToolCall("code_insight", { project_root: missing })
+    ).toThrow(/项目目录不存在/);
+    expect(fs.existsSync(missing)).toBe(false);
   });
 });

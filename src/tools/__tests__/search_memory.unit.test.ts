@@ -80,6 +80,17 @@ describe('search_memory 单元测试', () => {
     expect(searchMock.mock.calls[0][1].limit).toBeGreaterThan(0);
   });
 
+  test('非法 limit 类型在访问 Memory 后端前返回参数错误', async () => {
+    isEnabledMock.mockReturnValue(true);
+    searchMock.mockRejectedValue(new Error('fetch failed'));
+
+    const result = await searchMemory({ query: 'invalid-limit', limit: { bad: true } });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('limit 必须是数字');
+    expect(searchMock).not.toHaveBeenCalled();
+  });
+
   test('命中结果时文本输出包含 asset 字段', async () => {
     isEnabledMock.mockReturnValue(true);
     searchMock.mockResolvedValue([

@@ -1,4 +1,4 @@
-import { parseArgs, getString, getNumber, getBoolean } from '../utils/parseArgs.js';
+import { parseArgs, getString, getBoolean } from '../utils/parseArgs.js';
 import { okStructured } from '../lib/response.js';
 import { createMemoryClient } from '../lib/memory-client.js';
 import {
@@ -16,7 +16,7 @@ export async function searchMemory(args: unknown) {
     const parsed = parseArgs<{
       query?: string;
       type?: string;
-      limit?: number;
+      limit?: unknown;
       tags?: string[];
       include_inactive?: boolean;
     }>(args, {
@@ -31,6 +31,21 @@ export async function searchMemory(args: unknown) {
       throw new Error('缺少必填参数: query');
     }
 
+    const config = getMemoryConfig();
+    let requestedLimit = config.searchLimit;
+    if (parsed.limit !== undefined && parsed.limit !== null && parsed.limit !== '') {
+      if (typeof parsed.limit === 'number' && Number.isFinite(parsed.limit)) {
+        requestedLimit = parsed.limit;
+      } else if (
+        typeof parsed.limit === 'string' &&
+        /^-?\d+(?:\.\d+)?$/.test(parsed.limit.trim())
+      ) {
+        requestedLimit = Number(parsed.limit);
+      } else {
+        throw new Error(`参数 limit 必须是数字，当前类型: ${typeof parsed.limit}`);
+      }
+    }
+
     const client = createMemoryClient();
     if (!client.isEnabled()) {
       return okStructured('记忆服务未开启，无法检索。', {
@@ -39,8 +54,6 @@ export async function searchMemory(args: unknown) {
       });
     }
 
-    const config = getMemoryConfig();
-    const requestedLimit = getNumber(parsed.limit, config.searchLimit);
     const limit = requestedLimit > 0
       ? Math.min(Math.trunc(requestedLimit), 50)
       : config.searchLimit;

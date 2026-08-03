@@ -17,6 +17,10 @@ export const gitToolSchemas = [
           type: "string",
           description: "Commit 类型：fixed（修复）、feat（新功能）、docs（文档）、style（样式）、chore（杂项）、refactor（重构）、test（测试）。可选，会自动识别",
         },
+        project_root: {
+          type: "string",
+          description: "可选，目标 Git 仓库根目录或其子目录。未提供 changes 时用于确认当前项目确实是 Git 仓库",
+        },
       },
       required: [],
       additionalProperties: true,
@@ -59,6 +63,10 @@ export const gitToolSchemas = [
         output_file: {
           type: "string",
           description: "可选，输出文件路径",
+        },
+        project_root: {
+          type: "string",
+          description: "目标 Git 仓库根目录或其子目录；省略时按当前 MCP 工作区解析",
         },
       },
       required: [],

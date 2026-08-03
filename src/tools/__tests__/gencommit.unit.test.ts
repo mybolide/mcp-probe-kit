@@ -1,3 +1,6 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { describe, expect, test } from "vitest";
 import { gencommit } from "../gencommit.js";
 
@@ -45,5 +48,17 @@ describe("gencommit 单元测试", () => {
     expect(Array.isArray(structured.allowedTypes)).toBe(true);
     expect(structured.allowedTypes.some((item: any) => item.type === "feat")).toBe(true);
     expect(structured.outputTemplate).toMatch(/<type>: <emoji> <subject>/);
+  });
+
+  test("非 Git 项目且未提供 changes 时明确返回不适用", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gencommit-non-git-'));
+    try {
+      const result = await gencommit({ project_root: root });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('不是 Git 仓库');
+      expect(result.content[0].text).toContain('gencommit 不适用');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

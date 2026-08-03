@@ -15,6 +15,22 @@ afterEach(() => {
 });
 
 describe('memory-client 去重逻辑', () => {
+  test('embedding 网络失败时返回可定位的服务、URL、模型和连接原因', async () => {
+    vi.stubEnv('MEMORY_QDRANT_URL', 'http://127.0.0.1:50008');
+    vi.stubEnv('MEMORY_EMBEDDING_URL', 'http://127.0.0.1:11434/api/embeddings');
+    vi.stubEnv('MEMORY_EMBEDDING_MODEL', 'nomic-embed-text');
+
+    const cause = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:11434'), {
+      code: 'ECONNREFUSED',
+    });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed', { cause })));
+
+    const client = new MemoryClient();
+    await expect(client.embed('health check')).rejects.toThrow(
+      /Embedding 服务不可达: http:\/\/127\.0\.0\.1:11434\/api\/embeddings，model=nomic-embed-text \(ECONNREFUSED\)/,
+    );
+  });
+
   test('归一化 hash 忽略换行风格、行尾空白和多余空行', () => {
     const a = 'export const x = 1;  \r\n\r\n\r\n';
     const b = 'export const x = 1;\n\n';

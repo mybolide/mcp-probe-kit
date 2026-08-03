@@ -89,6 +89,36 @@ function buildPlan(
   };
 
   switch (scenario) {
+    case 'product':
+      return {
+        ...base,
+        summary: '使用 start_product 规划目标用户、用户价值、功能范围、非目标、风险和验收标准',
+        firstTool: 'start_product',
+        firstToolArgsHint: { description: intent },
+        phases: withMemory([
+          contextPhase(),
+          {
+            id: 'product',
+            title: '产品规划',
+            when: '需要定义产品目标、用户价值、范围、PRD 或路线图',
+            steps: [
+              {
+                tool: 'start_product',
+                required: true,
+                when: '先建立产品规划 delegated plan',
+              },
+              {
+                tool: 'start_ui',
+                required: false,
+                when: '产品范围确认后需要进入原型或 UI 实施',
+              },
+            ],
+          },
+        ], memoryAvailable),
+        avoid: [...commonAvoid(), '不要把产品规划误当成既有规格校验', '不要在范围未确认前直接进入 UI 实施'],
+        memoryNotes: commonMemoryNotes(memoryAvailable),
+      };
+
     case 'bugfix':
       return {
         ...base,

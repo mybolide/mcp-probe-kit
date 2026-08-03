@@ -2,6 +2,7 @@ export type WorkflowScenario =
   | 'feature'
   | 'bugfix'
   | 'ui'
+  | 'product'
   | 'explore'
   | 'commit'
   | 'review'
@@ -44,7 +45,11 @@ const SCENARIO_PATTERNS: Array<{ scenario: WorkflowScenario; patterns: RegExp[] 
   },
   {
     scenario: 'ui',
-    patterns: [/ui|界面|页面|组件|布局|样式|tailwind|shadcn|设计系统|交互/i],
+    patterns: [/ui|重新设计|视觉|界面设计|页面设计|组件设计|布局|样式|tailwind|shadcn|设计系统|交互|原型|响应式|美化/i],
+  },
+  {
+    scenario: 'product',
+    patterns: [/产品规划|产品目标|用户价值|目标用户|功能范围|非目标|产品需求|prd|roadmap|路线图|商业价值/i],
   },
   {
     scenario: 'explore',
@@ -81,8 +86,11 @@ const SCENARIO_PATTERNS: Array<{ scenario: WorkflowScenario; patterns: RegExp[] 
 ];
 
 
+const PRODUCT_DELIVERY_PATTERN =
+  /(?:规划|定义|梳理|制定|输出).{0,24}(?:产品目标|用户价值|目标用户|功能范围|非目标|产品需求|PRD|roadmap|路线图)|(?:产品目标|用户价值|目标用户|功能范围|非目标|产品需求|PRD|roadmap|路线图).{0,24}(?:规划|定义|梳理|制定|输出)/i;
+
 const UI_DELIVERY_PATTERN =
-  /(?:新增|添加|增加|实现|开发|设计|改造|优化).{0,24}(?:页面|界面|组件|布局|交互)|(?:页面|界面|组件|布局|交互).{0,24}(?:新增|添加|增加|实现|开发|设计|改造|优化)/i;
+  /(?:重新设计|设计|优化|改造|美化).{0,24}(?:页面|界面|组件|布局|交互|视觉|样式)|(?:页面|界面|组件|布局|交互|视觉|样式).{0,24}(?:重新设计|设计|优化|改造|美化)|(?:新增|添加|增加|实现|开发).{0,24}(?:交互组件|设计系统|响应式布局|视觉样式)/i;
 
 const FEATURE_DELIVERY_PATTERN =
   /新功能|功能开发|需求开发|(?:新增|添加|增加|新建|实现|开发|扩展|升级|改造|建设|接入|引入|上线|提供|支持).{0,24}(?:功能|能力|接口|服务|模块|流程|机制|系统|架构|摘要|状态|特性)|(?:为|给).{0,24}(?:新增|添加|增加|新建|实现|开发|扩展|提供|支持)/i;
@@ -100,6 +108,10 @@ function detectPrimaryDeliveryScenario(text: string): {
   scenario: WorkflowScenario;
   confidence: 'high' | 'medium';
 } | null {
+  if (PRODUCT_DELIVERY_PATTERN.test(text)) {
+    return { scenario: 'product', confidence: 'high' };
+  }
+
   if (UI_DELIVERY_PATTERN.test(text)) {
     return { scenario: 'ui', confidence: 'high' };
   }
@@ -125,6 +137,7 @@ export const SCENARIO_LABELS: Record<WorkflowScenario, string> = {
   feature: '新功能开发',
   bugfix: 'Bug 修复',
   ui: 'UI 开发',
+  product: '产品规划',
   explore: '代码探索 / 影响分析',
   commit: '生成提交',
   review: '代码审查',
@@ -151,6 +164,8 @@ export function detectWorkflowScenario(intent: string, explicit?: string): {
     bugfix: 'bugfix',
     bug: 'bugfix',
     ui: 'ui',
+    product: 'product',
+    prd: 'product',
     explore: 'explore',
     commit: 'commit',
     review: 'review',

@@ -38,6 +38,36 @@ describe('workflow 工具', () => {
     expect(fs.existsSync(path.join(projectRoot, '.agents/skills/mcp-probe-kit/SKILL.md'))).toBe(true);
   });
 
+  test('新增状态页面不会误路由到 start_ui', async () => {
+    const projectRoot = makeProjectRoot();
+    const result = await workflow({
+      intent: '为测试项目增加一个只读健康状态页面，展示版本、工具数量和 Memory 状态。',
+      project_root: projectRoot,
+    });
+
+    expect(result.isError).toBe(false);
+    if (!('structuredContent' in result) || !result.structuredContent) {
+      throw new Error('missing structuredContent');
+    }
+    expect(result.structuredContent.scenario).toBe('feature');
+    expect(result.structuredContent.firstTool).toBe('start_feature');
+  });
+
+  test('产品规划意图返回 start_product', async () => {
+    const projectRoot = makeProjectRoot();
+    const result = await workflow({
+      intent: '规划健康状态模块的产品目标、用户价值、功能范围和验收标准。',
+      project_root: projectRoot,
+    });
+
+    expect(result.isError).toBe(false);
+    if (!('structuredContent' in result) || !result.structuredContent) {
+      throw new Error('missing structuredContent');
+    }
+    expect(result.structuredContent.scenario).toBe('product');
+    expect(result.structuredContent.firstTool).toBe('start_product');
+  });
+
   test('新增功能中的规格步骤不会抢占 feature 路由', async () => {
     const projectRoot = makeProjectRoot();
     const intent = '为现有 TypeScript 项目新增一个只读的健康检查摘要功能，需要先生成规格、评估影响范围、补充测试，并在完成后进行收敛检查。';

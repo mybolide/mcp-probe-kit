@@ -7,6 +7,25 @@ describe('dev-workflow', () => {
     expect(result.scenario).toBe('bugfix');
   });
 
+  test('新增只读状态页面按功能交付路由到 feature', () => {
+    const result = detectWorkflowScenario(
+      '为测试项目增加一个只读健康状态页面，展示版本、工具数量和 Memory 状态。'
+    );
+    expect(result.scenario).toBe('feature');
+    expect(result.confidence).toBe('high');
+  });
+
+  test('产品目标和用户价值规划路由到 product', () => {
+    const result = detectWorkflowScenario(
+      '规划健康状态模块的产品目标、用户价值、功能范围和验收标准。'
+    );
+    expect(result.scenario).toBe('product');
+    expect(result.confidence).toBe('high');
+
+    const plan = buildDevWorkflow('规划健康状态模块的产品目标、用户价值、功能范围和验收标准。');
+    expect(plan.firstTool).toBe('start_product');
+  });
+
   test('识别 feature 场景', () => {
     const result = detectWorkflowScenario('开发用户认证新功能');
     expect(result.scenario).toBe('feature');

@@ -1,6 +1,8 @@
 import { okStructured } from "../lib/response.js";
 import type { GuidanceResult } from "../schemas/output/guidance-tools.js";
 import { handleToolError } from "../utils/error-handler.js";
+import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
+import { assertGitRepository } from "../lib/git-repository.js";
 
 /**
  * Git 工作报告生成工具
@@ -19,6 +21,7 @@ interface GitWorkReportArgs {
   start_date?: string;    // 起始日期 (YYYY-M-D 或 YYYY-MM-DD) - 周期报模式
   end_date?: string;      // 结束日期 (YYYY-M-D 或 YYYY-MM-DD) - 周期报模式
   output_file?: string;   // 可选，输出文件路径
+  project_root?: string;  // 可选，目标 Git 仓库或其子目录
 }
 
 // ============================================
@@ -251,6 +254,10 @@ export async function gitWorkReport(args: GitWorkReportArgs) {
   try {
     // 1. 参数验证
     validateArgs(args);
+    const gitRoot = assertGitRepository(
+      resolveWorkspaceRoot(args.project_root),
+      "git_work_report"
+    );
 
     // 2. 构建指导文本
     const guidance = buildGuidance(args);
@@ -269,6 +276,7 @@ export async function gitWorkReport(args: GitWorkReportArgs) {
         sinceDate,
         untilDate,
         outputFile: args.output_file ?? null,
+        projectRoot: gitRoot,
       },
       instructions: [
         `在目标仓库执行 git log --since=${sinceDate}T00:00:00 --until=${untilDate}T23:59:59 --format=%H`,
