@@ -7,6 +7,15 @@ describe('dev-workflow', () => {
     expect(result.scenario).toBe('bugfix');
   });
 
+  test('项目接入和建立上下文路由到 onboard', () => {
+    const intent = '将当前项目接入 MCP Probe Kit 并建立项目上下文。';
+    const result = detectWorkflowScenario(intent);
+    expect(result).toEqual({ scenario: 'onboard', confidence: 'high' });
+
+    const plan = buildDevWorkflow(intent);
+    expect(plan.firstTool).toBe('start_onboard');
+  });
+
   test('新增只读状态页面按功能交付路由到 feature', () => {
     const result = detectWorkflowScenario(
       '为测试项目增加一个只读健康状态页面，展示版本、工具数量和 Memory 状态。'

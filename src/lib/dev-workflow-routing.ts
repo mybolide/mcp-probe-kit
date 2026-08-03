@@ -69,7 +69,7 @@ const SCENARIO_PATTERNS: Array<{ scenario: WorkflowScenario; patterns: RegExp[] 
   },
   {
     scenario: 'onboard',
-    patterns: [/上手|onboard|新项目|熟悉项目|项目概览/i],
+    patterns: [/上手|onboard|新项目|熟悉项目|项目概览|项目接入|接入 MCP Probe Kit|建立项目上下文|初始化项目上下文/i],
   },
   {
     scenario: 'spec',
@@ -88,6 +88,9 @@ const SCENARIO_PATTERNS: Array<{ scenario: WorkflowScenario; patterns: RegExp[] 
 
 const PRODUCT_DELIVERY_PATTERN =
   /(?:规划|定义|梳理|制定|输出).{0,24}(?:产品目标|用户价值|目标用户|功能范围|非目标|产品需求|PRD|roadmap|路线图)|(?:产品目标|用户价值|目标用户|功能范围|非目标|产品需求|PRD|roadmap|路线图).{0,24}(?:规划|定义|梳理|制定|输出)/i;
+
+const ONBOARD_DELIVERY_PATTERN =
+  /(?:将|把|为)?.{0,12}(?:当前|现有|这个)?项目.{0,16}(?:接入|初始化|建立).{0,16}(?:MCP Probe Kit|项目上下文|开发上下文)|(?:接入|初始化|建立).{0,16}(?:MCP Probe Kit|项目上下文|开发上下文)/i;
 
 const UI_DELIVERY_PATTERN =
   /(?:重新设计|设计|优化|改造|美化).{0,24}(?:页面|界面|组件|布局|交互|视觉|样式)|(?:页面|界面|组件|布局|交互|视觉|样式).{0,24}(?:重新设计|设计|优化|改造|美化)|(?:新增|添加|增加|实现|开发).{0,24}(?:交互组件|设计系统|响应式布局|视觉样式)/i;
@@ -108,6 +111,10 @@ function detectPrimaryDeliveryScenario(text: string): {
   scenario: WorkflowScenario;
   confidence: 'high' | 'medium';
 } | null {
+  if (ONBOARD_DELIVERY_PATTERN.test(text)) {
+    return { scenario: 'onboard', confidence: 'high' };
+  }
+
   if (PRODUCT_DELIVERY_PATTERN.test(text)) {
     return { scenario: 'product', confidence: 'high' };
   }

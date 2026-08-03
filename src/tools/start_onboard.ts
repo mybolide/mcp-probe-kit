@@ -110,6 +110,7 @@ export async function startOnboard(args: any, context?: ToolExecutionContext) {
     // 智能参数解析，支持自然语言输入
     const parsedArgs = parseArgs<{
       project_path?: string;
+      project_root?: string;
       docs_dir?: string;
     }>(args, {
       defaultValues: {
@@ -118,7 +119,7 @@ export async function startOnboard(args: any, context?: ToolExecutionContext) {
       },
       primaryField: "project_path", // 纯文本输入默认映射到 project_path 字段
       fieldAliases: {
-        project_path: ["path", "dir", "directory", "路径", "项目路径"],
+        project_path: ["project_root", "path", "dir", "directory", "路径", "项目路径"],
         docs_dir: ["docs", "output", "目录", "文档目录"],
       },
     });
