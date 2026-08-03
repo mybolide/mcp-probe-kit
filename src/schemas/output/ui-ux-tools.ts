@@ -182,6 +182,15 @@ export const UISearchResultSchema = {
       },
     },
     totalResults: { type: 'number' },
+    stylePolicy: {
+      type: 'object',
+      properties: {
+        explicitStyleRequest: { type: 'boolean' },
+        filteredCount: { type: 'number' },
+        advisory: { type: 'string' },
+      },
+      required: ['explicitStyleRequest', 'filteredCount'],
+    },
   },
   required: ['summary', 'query', 'results', 'totalResults'],
 } as const;
@@ -397,6 +406,11 @@ export interface UISearchResult {
     preview?: string;
   }>;
   totalResults: number;
+  stylePolicy?: {
+    explicitStyleRequest: boolean;
+    filteredCount: number;
+    advisory?: string;
+  };
 }
 
 export interface SyncReport {

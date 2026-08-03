@@ -13,6 +13,7 @@ import { okStructured } from '../lib/response.js';
 import type { DesignSystem, UISearchResult, SyncReport } from '../schemas/output/ui-ux-tools.js';
 import { buildVisualDirectionContract, renderVisualDirectionBrief } from '../utils/visual-direction-engine.js';
 import { searchUiStructures } from '../utils/ui-structure-search.js';
+import { applyUiSearchStylePolicy } from '../utils/ui-search-style-policy.js';
 import {
   reportToolProgress,
   throwIfAborted,
@@ -466,14 +467,20 @@ start_ui "设置页面"
     const loader = await getDataLoader();
     const searchEngine = loader.getSearchEngine();
 
+    const requestedLimit = typeof args.limit === 'number' && Number.isFinite(args.limit)
+      ? Math.max(1, Math.min(Math.trunc(args.limit), 50))
+      : 10;
+    const stylePolicyOverfetchLimit = Math.min(requestedLimit * 3, 50);
     const options: UISearchOptions = {
       category: args.category,
       stack: args.stack,
-      limit: args.limit || 10,
+      limit: stylePolicyOverfetchLimit,
       minScore: args.min_score || 0,
     };
 
-    const results = searchEngine.search(query, options);
+    const rawResults = searchEngine.search(query, options);
+    const stylePolicy = applyUiSearchStylePolicy(query, rawResults, requestedLimit);
+    const results = stylePolicy.results;
 
     if (results.length === 0) {
       const noResultData: UISearchResult = {
@@ -482,6 +489,11 @@ start_ui "设置页面"
         category: options.category,
         results: [],
         totalResults: 0,
+        stylePolicy: {
+          explicitStyleRequest: stylePolicy.explicitStyleRequest,
+          filteredCount: stylePolicy.filteredCount,
+          advisory: stylePolicy.advisory,
+        },
       };
       
       return okStructured(`未找到匹配的 UI/UX 数据。
@@ -495,6 +507,7 @@ start_ui "设置页面"
 1. 尝试使用更通用的关键词
 2. 检查拼写是否正确
 3. 移除类别或技术栈限制
+${stylePolicy.advisory ? `\n**设计约束:** ${stylePolicy.advisory}\n` : ''}
 `, noResultData, {
         schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
       });
@@ -549,6 +562,7 @@ ${fields}
 - 查询: ${query}
 - 类别: ${options.category || '全部'}
 - 技术栈: ${options.stack || '全部'}
+${stylePolicy.advisory ? `- 设计约束: ${stylePolicy.advisory}\r\n` : ''}
 
 ---
 
@@ -574,6 +588,11 @@ ${formattedResults}
               : JSON.stringify(result.data, null, 2),
       })),
       totalResults: results.length,
+      stylePolicy: {
+        explicitStyleRequest: stylePolicy.explicitStyleRequest,
+        filteredCount: stylePolicy.filteredCount,
+        advisory: stylePolicy.advisory,
+      },
     };
 
     return okStructured(message, structuredData, {
