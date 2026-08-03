@@ -2,20 +2,31 @@ export const memoryToolSchemas = [
   {
     name: 'search_memory',
     description:
-      '按语义检索分层记忆库。当前项目记忆优先于跨项目经验；默认排除过期、被替代和撤回资产。适合主动查找历史 Bug、负面经验或可复用模式。',
+      '检索或浏览分层记忆库。默认 mode=semantic 按语义检索；Memory Center 可用 mode=browse 按更新时间分页浏览且不依赖 embedding。',
     inputSchema: {
       type: 'object',
       properties: {
-        query: { type: 'string', description: '检索 query（现象、报错、关键词、功能描述等）' },
+        mode: {
+          type: 'string',
+          enum: ['semantic', 'browse'],
+          description: 'semantic=语义检索（默认，query 必填）；browse=按更新时间分页浏览（query 可省略）',
+        },
+        query: { type: 'string', description: '语义检索 query；mode=semantic 时必填' },
         type: { type: 'string', description: '优先匹配的资产类型，如 bugfix、pattern、component' },
         tags: { type: 'array', items: { type: 'string' }, description: '优先匹配的标签' },
-        limit: { type: 'integer', minimum: 1, maximum: 50, description: '返回条数，默认 MEMORY_SEARCH_LIMIT（1-50）' },
+        limit: { type: 'integer', minimum: 1, maximum: 200, description: '返回条数；semantic 最大 50，browse 最大 200' },
+        offset: { type: 'integer', minimum: 0, description: 'browse 分页偏移量，默认 0' },
+        status: {
+          type: 'string',
+          enum: ['active', 'stale', 'expired', 'superseded', 'retracted'],
+          description: 'browse 模式按生命周期状态过滤',
+        },
+        source_project: { type: 'string', description: 'browse 模式按来源项目过滤' },
         include_inactive: {
           type: 'boolean',
           description: '维护/审计时设为 true，可返回 expired、superseded、retracted 资产；正常研发不要开启',
         },
       },
-      required: ['query'],
       additionalProperties: true,
     },
   },

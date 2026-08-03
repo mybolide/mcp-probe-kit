@@ -73,7 +73,8 @@ describe('mcp-apps', () => {
     const html = buildMcpAppHtml(resource!);
     expect(html).toContain('data-app-kind="memory-center"');
     expect(html).toContain('MCP Probe Kit Memory Center');
-    expect(html).toContain('list_memory_assets');
+    expect(html).not.toContain('callTool("list_memory_assets"');
+    expect(html).toContain('mode:"browse"');
     expect(html).toContain('ui/initialize');
     expect(html).toContain('minimal-header');
     expect(html).toContain('task-actions-end');

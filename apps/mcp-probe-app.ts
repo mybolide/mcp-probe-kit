@@ -438,9 +438,14 @@ function render(): void {
 }
 
 async function loadMemoryList(): Promise<void> {
-  const result = await callTool('list_memory_assets', { limit: 100, include_inactive: true });
+  const result = await callTool('search_memory', {
+    mode: 'browse',
+    limit: 100,
+    offset: 0,
+    include_inactive: true,
+  });
   const structured = asDict(result.structuredContent);
-  memoryItems = asArray(structured.items);
+  memoryItems = asArray(structured.results);
   memoryTotal = numeric(structured.total, memoryItems.length);
   visibleMemoryCount = 18;
   selectedMemory = null;

@@ -2,11 +2,15 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const searchMock = vi.fn();
 const isEnabledMock = vi.fn();
+const isReadEnabledMock = vi.fn();
+const listAssetsMock = vi.fn();
 
 vi.mock('../../lib/memory-client.js', () => ({
   createMemoryClient: () => ({
     isEnabled: isEnabledMock,
+    isReadEnabled: isReadEnabledMock,
     search: searchMock,
+    listAssets: listAssetsMock,
   }),
 }));
 
@@ -15,7 +19,9 @@ import { formatSearchMemoryResultsText } from '../../lib/memory-orchestration.js
 
 beforeEach(() => {
   isEnabledMock.mockReset();
+  isReadEnabledMock.mockReset();
   searchMock.mockReset();
+  listAssetsMock.mockReset();
 });
 
 afterEach(() => {
@@ -63,8 +69,63 @@ describe('search_memory 单元测试', () => {
       throw new Error('structuredContent 缺失');
     }
     expect(result.content[0].text).toContain('记忆服务未开启');
-    expect(result.structuredContent).toEqual({ enabled: false, results: [] });
+    expect(result.structuredContent).toEqual({ enabled: false, mode: 'semantic', results: [] });
     expect(searchMock).not.toHaveBeenCalled();
+  });
+
+  test('browse 模式不依赖 embedding，并通过 listAssets 返回历史列表', async () => {
+    isEnabledMock.mockReturnValue(false);
+    isReadEnabledMock.mockReturnValue(true);
+    listAssetsMock.mockResolvedValue({
+      items: [{
+        id: 'asset-browse-1',
+        name: '历史记忆',
+        type: 'pattern',
+        description: '用于浏览',
+        summary: 'browse summary',
+        tags: ['browse'],
+        status: 'active',
+        createdAt: '2026-08-01T00:00:00.000Z',
+        updatedAt: '2026-08-02T00:00:00.000Z',
+      }],
+      total: 1,
+      nextOffset: undefined,
+    });
+
+    const result = await searchMemory({
+      mode: 'browse',
+      limit: 100,
+      offset: 0,
+      include_inactive: true,
+    });
+
+    expect(result.isError).toBe(false);
+    expect(searchMock).not.toHaveBeenCalled();
+    expect(listAssetsMock).toHaveBeenCalledWith(expect.objectContaining({
+      limit: 100,
+      offset: 0,
+      includeInactive: true,
+    }));
+    expect('structuredContent' in result).toBe(true);
+    if (!('structuredContent' in result)) throw new Error('structuredContent 缺失');
+    expect(result.structuredContent).toEqual(expect.objectContaining({
+      enabled: true,
+      mode: 'browse',
+      count: 1,
+      total: 1,
+      results: [expect.objectContaining({
+        id: 'asset-browse-1',
+        updatedAt: '2026-08-02T00:00:00.000Z',
+      })],
+    }));
+  });
+
+  test('browse 模式非法 offset 在访问后端前返回参数错误', async () => {
+    isReadEnabledMock.mockReturnValue(true);
+    const result = await searchMemory({ mode: 'browse', offset: { bad: true } });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('offset 必须是数字');
+    expect(listAssetsMock).not.toHaveBeenCalled();
   });
 
 

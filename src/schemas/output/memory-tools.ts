@@ -61,8 +61,11 @@ export const MemorySearchSchema = {
   type: 'object',
   properties: {
     enabled: { type: 'boolean' },
+    mode: { type: 'string', enum: ['semantic', 'browse'] },
     query: { type: 'string' },
     count: { type: 'number' },
+    total: { type: 'number' },
+    nextOffset: { type: 'number' },
     results: {
       type: 'array',
       items: {
@@ -83,6 +86,10 @@ export const MemorySearchSchema = {
           evidence: { type: 'array', items: { type: 'string' } },
           applicability: { type: 'string' },
           sourcePath: { type: 'string' },
+          sourceProject: { type: 'string' },
+          confidence: { type: 'number' },
+          createdAt: { type: 'string' },
+          updatedAt: { type: 'string' },
         },
         required: ['id'],
       },
