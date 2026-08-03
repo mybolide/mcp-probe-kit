@@ -47,16 +47,17 @@ A v4 transforma a execução delegada do Agent em um ciclo de entrega observáve
 
 **Feature Workbench**: especificações pai-filho, etapa ativa, entregáveis, evidências e retomada entre sessões.
 
-<table>
-  <tr>
-    <td width="58%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo"/></a></td>
-    <td width="42%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo"/></a></td>
-  </tr>
-  <tr>
-    <td><strong>Memory Center</strong>: busca semântica, conteúdo completo, ciclo de vida, evidências, marcação obsoleta e exclusão confirmada.</td>
-    <td><strong>Convergence Gate</strong>: bloqueia o encerramento quando faltam etapas ou evidências de requisitos, especificação, implementação, testes ou revisão.</td>
-  </tr>
-</table>
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo" width="920"/></a>
+</p>
+
+<strong>Memory Center</strong>: busca semântica, conteúdo completo, ciclo de vida, evidências, marcação obsoleta e exclusão confirmada.
+
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo" width="920"/></a>
+</p>
+
+<strong>Convergence Gate</strong>: bloqueia o encerramento quando faltam etapas ou evidências de requisitos, especificação, implementação, testes ou revisão.
 
 - **Cinco MCP Apps nativas**: Memory, Feature, Bug, Product e Convergence.
 - **Planos delegados retomáveis**: `plan_heartbeat` salva o progresso real e `resume_plan` restaura a próxima etapa.

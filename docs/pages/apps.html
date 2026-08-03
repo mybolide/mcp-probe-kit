@@ -22,9 +22,7 @@
   <style>
     html { scroll-behavior: smooth; }
     body:not(.i18n-ready) [data-i18n] { visibility: hidden; }
-    .app-iframe { width: 100%; border: 0; background: #f5f7fb; }
-    .ratio-wide { aspect-ratio: 1180 / 720; }
-    .ratio-gate { aspect-ratio: 1180 / 560; }
+    .app-iframe { display: block; width: 100%; min-height: 240px; border: 0; background: #f5f7fb; transition: height .18s ease; }
     .app-tab { transition: background .16s ease, color .16s ease, border-color .16s ease; }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   </style>
@@ -121,7 +119,7 @@
         <div><p class="font-mono text-xs text-primary">start_feature</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.featureTitle">Feature Workbench</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.featureDesc">计划步骤、当前任务、产出、证据和恢复状态。</p></div>
         <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/feature-workbench</code>
       </div>
-      <iframe class="app-iframe ratio-wide" src="../demos/feature-workbench.html" title="Feature Workbench demo" loading="eager"></iframe>
+      <iframe class="app-iframe" src="../demos/feature-workbench.html" title="Feature Workbench demo" loading="eager"></iframe>
     </section>
 
     <section id="bug" class="scroll-mt-24 mt-8 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
@@ -129,7 +127,7 @@
         <div><p class="font-mono text-xs text-primary">start_bugfix</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.bugTitle">Bug Workbench</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.bugDesc">沿 SRC-8 真因流程展示边界、阻断、验证和回归。</p></div>
         <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/bug-workbench</code>
       </div>
-      <iframe class="app-iframe ratio-wide" src="../demos/bug-workbench.html" title="Bug Workbench demo" loading="lazy"></iframe>
+      <iframe class="app-iframe" src="../demos/bug-workbench.html" title="Bug Workbench demo" loading="lazy"></iframe>
     </section>
 
     <section id="memory" class="scroll-mt-24 mt-8 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
@@ -137,7 +135,7 @@
         <div><p class="font-mono text-xs text-primary">search_memory · list_memory_assets</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.memoryTitle">Memory Center</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.memoryDesc">语义检索、全文查看、生命周期、证据、过期标记和确认删除。</p></div>
         <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/memory-center</code>
       </div>
-      <iframe class="app-iframe ratio-wide" src="../demos/memory-center.html" title="Memory Center demo" loading="lazy"></iframe>
+      <iframe class="app-iframe" src="../demos/memory-center.html" title="Memory Center demo" loading="lazy"></iframe>
     </section>
 
     <section id="product" class="scroll-mt-24 mt-8 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
@@ -145,7 +143,7 @@
         <div><p class="font-mono text-xs text-primary">start_product</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.productTitle">Product Workbench</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.productDesc">从产品定义、PRD、原型和设计系统交接到 start_feature。</p></div>
         <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/product-workbench</code>
       </div>
-      <iframe class="app-iframe ratio-gate" src="../demos/product-workbench.html" title="Product Workbench demo" loading="lazy"></iframe>
+      <iframe class="app-iframe" src="../demos/product-workbench.html" title="Product Workbench demo" loading="lazy"></iframe>
     </section>
 
     <section id="convergence" class="scroll-mt-24 mt-8 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
@@ -153,7 +151,7 @@
         <div><p class="font-mono text-xs text-primary">converge</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.gateTitle">Convergence Gate</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.gateDesc">严格检查需求、规格、实现、测试和审查证据，决定是否允许交付与记忆写入。</p></div>
         <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/convergence</code>
       </div>
-      <iframe class="app-iframe ratio-gate" src="../demos/convergence-gate.html" title="Convergence Gate demo" loading="lazy"></iframe>
+      <iframe class="app-iframe" src="../demos/convergence-gate.html" title="Convergence Gate demo" loading="lazy"></iframe>
     </section>
 
     <section class="mt-12 grid gap-5 md:grid-cols-2">
@@ -169,6 +167,64 @@
       </footer>
     </div>
   </main>
+  <script>
+    (() => {
+      const observers = new WeakMap();
+      const pending = new WeakMap();
+
+      function measureFrame(frame) {
+        try {
+          const doc = frame.contentDocument;
+          const body = doc?.body;
+          if (!doc || !body) return;
+          const app = doc.getElementById('app');
+          const bodyRect = body.getBoundingClientRect();
+          const appRect = app?.getBoundingClientRect();
+          const contentHeight = Math.ceil(Math.max(
+            bodyRect.height,
+            appRect ? appRect.bottom - bodyRect.top : 0
+          ));
+          const targetHeight = Math.max(220, contentHeight + 2);
+          if (Math.abs(frame.getBoundingClientRect().height - targetHeight) > 1) {
+            frame.style.height = `${targetHeight}px`;
+          }
+          frame.dataset.heightReady = 'true';
+        } catch (error) {
+          console.warn('[apps-demo] unable to measure iframe height', error);
+        }
+      }
+
+      function scheduleMeasure(frame) {
+        cancelAnimationFrame(pending.get(frame));
+        pending.set(frame, requestAnimationFrame(() => measureFrame(frame)));
+      }
+
+      function attach(frame) {
+        scheduleMeasure(frame);
+        try {
+          const doc = frame.contentDocument;
+          if (!doc?.body) return;
+          observers.get(frame)?.disconnect();
+          const observer = new ResizeObserver(() => scheduleMeasure(frame));
+          observer.observe(doc.body);
+          const app = doc.getElementById('app');
+          if (app) observer.observe(app);
+          observers.set(frame, observer);
+          doc.fonts?.ready.then(() => scheduleMeasure(frame));
+        } catch (error) {
+          console.warn('[apps-demo] unable to observe iframe content', error);
+        }
+      }
+
+      document.querySelectorAll('iframe.app-iframe').forEach((frame) => {
+        frame.addEventListener('load', () => attach(frame));
+        if (frame.contentDocument?.readyState === 'complete') attach(frame);
+      });
+      window.addEventListener('resize', () => {
+        document.querySelectorAll('iframe.app-iframe').forEach(scheduleMeasure);
+      }, { passive: true });
+    })();
+  </script>
   <script src="../assets/js/i18n.js"></script>
   <script src="../assets/js/docs-shell.js"></script>
 </body>

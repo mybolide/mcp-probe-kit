@@ -19,6 +19,12 @@ function readJson(relative) {
   return JSON.parse(read(relative));
 }
 
+function readGifDimensions(relative) {
+  const buffer = readFileSync(resolve(root, relative));
+  if (buffer.length < 10 || buffer.subarray(0, 3).toString('ascii') !== 'GIF') return null;
+  return { width: buffer.readUInt16LE(6), height: buffer.readUInt16LE(8) };
+}
+
 function nested(object, dotted) {
   return dotted.split('.').reduce((value, key) => value?.[key], object);
 }
@@ -103,20 +109,31 @@ for (const file of demoFiles) {
   }
 }
 
-const gifFiles = [
-  'docs/assets/demos/feature-workbench.gif',
-  'docs/assets/demos/memory-center.gif',
-  'docs/assets/demos/convergence-gate.gif',
-];
+const gifExpectations = {
+  'docs/assets/demos/feature-workbench.gif': { minWidth: 1000, maxWidth: 1200, maxHeight: 500 },
+  'docs/assets/demos/memory-center.gif': { minWidth: 1000, maxWidth: 1200, maxHeight: 400 },
+  'docs/assets/demos/convergence-gate.gif': { minWidth: 1000, maxWidth: 1200, maxHeight: 400 },
+  'docs/assets/demos/feature-workbench-mobile.gif': { minWidth: 360, maxWidth: 420, maxHeight: 600 },
+  'docs/assets/demos/memory-center-mobile.gif': { minWidth: 360, maxWidth: 420, maxHeight: 600 },
+  'docs/assets/demos/convergence-gate-mobile.gif': { minWidth: 360, maxWidth: 420, maxHeight: 450 },
+};
+const gifFiles = Object.keys(gifExpectations);
 for (const file of gifFiles) {
   const absolute = resolve(root, file);
   check(existsSync(absolute), `${file} exists`);
   if (existsSync(absolute)) {
     const size = statSync(absolute).size;
+    const dimensions = readGifDimensions(file);
     check(size > 1024, `${file} is not empty`);
     check(size < 1024 * 1024, `${file} stays below 1 MiB`);
+    check(dimensions !== null, `${file} has a valid GIF header`);
+    if (dimensions) {
+      check(dimensions.width >= gifExpectations[file].minWidth && dimensions.width <= gifExpectations[file].maxWidth, `${file} keeps the intended responsive width`);
+      check(dimensions.height <= gifExpectations[file].maxHeight, `${file} has no oversized recording-canvas whitespace`);
+    }
   }
 }
+check(read('scripts/render-doc-demo-gifs.py').includes('crop_to_content'), 'GIF renderer crops all frames to their shared content bounds');
 
 const readmes = ['README.md', ...['zh-CN','ja-JP','ko-KR','es-ES','fr-FR','de-DE','pt-BR'].map((lang) => `i18n/README.${lang}.md`)];
 for (const file of readmes) {
@@ -126,6 +143,8 @@ for (const file of readmes) {
   check(text.includes('memory-center.gif'), `${file} embeds Memory Center animation`);
   check(text.includes('convergence-gate.gif'), `${file} embeds Convergence Gate animation`);
   check(text.includes('/pages/apps.html'), `${file} links to live MCP Apps demos`);
+  check((text.match(/animated demo" width="920"/g) ?? []).length === 3, `${file} presents all three demos at readable full width`);
+  check(!text.includes('width="58%"') && !text.includes('width="42%"') && !text.includes('width="50%" valign="top"'), `${file} has no compressed side-by-side GIF table`);
   check(!text.includes('mcp-probe-kit@latest'), `${file} does not present stable latest as v4 preview`);
   check(!text.includes('v4.0.0-rc.3'), `${file} has no stale rc.3 reference`);
   check(!text.includes('/pages/migration.html'), `${file} uses the v4 migration guide`);
@@ -193,6 +212,16 @@ check(!/npm\s+(?:install|i|update)\s+-g\s+mcp-probe-kit/.test(migrationV4), 'mig
 const legacyMigration = read('docs/pages/migration.html');
 check(legacyMigration.includes('url=./migration-v4.html'), 'legacy migration URL redirects to the current v4 guide');
 check(!legacyMigration.includes('30 个工具'), 'legacy migration URL no longer serves obsolete tool counts');
+
+const homepage = read('docs/index.html');
+check(homepage.includes('.demo-frame { display: block; width: 100%; height: auto; object-fit: contain;'), 'homepage preserves GIF natural proportions');
+check(!homepage.includes('aspect-ratio: 1180 /'), 'homepage does not force legacy GIF aspect ratios');
+check(homepage.includes('class="mt-10 grid items-start gap-6"'), 'homepage presents each readable demo at full width');
+check((homepage.match(/-mobile\.gif/g) ?? []).length >= 4, 'homepage serves responsive mobile GIF variants');
+const appsPage = read('docs/pages/apps.html');
+check(appsPage.includes('new ResizeObserver'), 'apps page observes demo content height');
+check(appsPage.includes("frame.dataset.heightReady = 'true'"), 'apps page marks auto-sized demo frames');
+check(!appsPage.includes('ratio-wide') && !appsPage.includes('ratio-gate'), 'apps page has no fixed iframe aspect ratios');
 
 for (const file of ['docs/index.html', 'docs/pages/apps.html', 'docs/pages/getting-started.html', 'docs/pages/all-tools.html', 'docs/pages/examples.html']) {
   const text = read(file);

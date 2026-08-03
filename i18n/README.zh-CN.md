@@ -41,16 +41,17 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 **Feature Workbench**：展示父子规格、当前步骤、产出、证据和跨会话恢复状态。
 
-<table>
-  <tr>
-    <td width="58%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo"/></a></td>
-    <td width="42%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo"/></a></td>
-  </tr>
-  <tr>
-    <td><strong>Memory Center</strong>：语义检索、全文查看、生命周期、证据、过期标记和确认删除。</td>
-    <td><strong>Convergence Gate</strong>：步骤或需求/规格/实现/测试/审查证据不完整时拒绝收尾。</td>
-  </tr>
-</table>
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo" width="920"/></a>
+</p>
+
+<strong>Memory Center</strong>：语义检索、全文查看、生命周期、证据、过期标记和确认删除。
+
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo" width="920"/></a>
+</p>
+
+<strong>Convergence Gate</strong>：步骤或需求/规格/实现/测试/审查证据不完整时拒绝收尾。
 
 - **5 个原生 MCP Apps**：Memory、Feature、Bug、Product 和 Convergence。
 - **可恢复委托计划**：`plan_heartbeat` 保存真实进度，`resume_plan` 恢复下一可执行步骤。

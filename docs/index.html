@@ -45,8 +45,8 @@
   <style>
     html { scroll-behavior: smooth; }
     body:not(.i18n-ready) [data-i18n] { visibility: hidden; }
-    .demo-frame { aspect-ratio: 1180 / 720; object-fit: cover; object-position: top; }
-    .demo-frame.gate { aspect-ratio: 1180 / 560; }
+    .demo-picture { display: block; width: 100%; }
+    .demo-frame { display: block; width: 100%; height: auto; object-fit: contain; object-position: top; }
     .feature-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
     .feature-card:hover { transform: translateY(-3px); border-color: #B2CCFF; box-shadow: 0 18px 42px rgba(16,24,40,.10); }
     .grid-pattern { background-image: linear-gradient(#E4E7EC 1px, transparent 1px), linear-gradient(90deg,#E4E7EC 1px,transparent 1px); background-size: 28px 28px; mask-image: linear-gradient(to bottom,rgba(0,0,0,.5),transparent); }
@@ -94,7 +94,10 @@
       <div class="relative">
         <div class="absolute -inset-4 rounded-[28px] bg-[#EFF4FF]"></div>
         <div class="relative overflow-hidden rounded-2xl border border-line bg-white p-2 shadow-lift">
-          <img src="./assets/demos/feature-workbench.gif" alt="Feature Workbench animated demo" class="demo-frame w-full rounded-xl border border-line bg-canvas">
+          <picture class="demo-picture">
+            <source media="(max-width: 639px)" srcset="./assets/demos/feature-workbench-mobile.gif">
+            <img src="./assets/demos/feature-workbench.gif" alt="Feature Workbench animated demo" class="demo-frame w-full rounded-xl border border-line bg-canvas">
+          </picture>
         </div>
       </div>
     </div>
@@ -116,20 +119,29 @@
         <h2 class="mt-3 text-3xl font-semibold tracking-[-.03em] sm:text-4xl" data-i18n="showcase.title">不是工具列表，而是一套可观察的研发执行系统</h2>
         <p class="mt-4 text-base leading-7 text-muted" data-i18n="showcase.description">下面的演示直接复用 npm 包中的 MCP App 源码。计划推进、记忆检索和收敛闸门都来自真实界面，不是单独绘制的宣传图。</p>
       </div>
-      <div class="mt-10 grid gap-6 lg:grid-cols-2">
-        <article class="feature-card overflow-hidden rounded-2xl border border-line bg-white shadow-soft lg:col-span-2">
-          <img src="./assets/demos/feature-workbench.gif" alt="Feature Workbench" class="demo-frame w-full border-b border-line bg-canvas">
+      <div class="mt-10 grid items-start gap-6">
+        <article class="feature-card overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
+          <picture class="demo-picture border-b border-line bg-canvas">
+            <source media="(max-width: 639px)" srcset="./assets/demos/feature-workbench-mobile.gif">
+            <img src="./assets/demos/feature-workbench.gif" alt="Feature Workbench" class="demo-frame w-full">
+          </picture>
           <div class="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
             <div><h3 class="text-lg font-semibold" data-i18n="showcase.featureTitle">Feature Workbench</h3><p class="mt-1 text-sm text-muted" data-i18n="showcase.featureDesc">展示父子规格、当前步骤、证据和跨会话恢复状态。</p></div>
             <a href="./pages/apps.html#feature" class="shrink-0 text-sm font-semibold text-accent" data-i18n="showcase.openDemo">打开完整演示</a>
           </div>
         </article>
         <article class="feature-card overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
-          <img src="./assets/demos/memory-center.gif" alt="Memory Center" class="demo-frame w-full border-b border-line bg-canvas">
+          <picture class="demo-picture border-b border-line bg-canvas">
+            <source media="(max-width: 639px)" srcset="./assets/demos/memory-center-mobile.gif">
+            <img src="./assets/demos/memory-center.gif" alt="Memory Center" class="demo-frame w-full">
+          </picture>
           <div class="p-5"><h3 class="text-lg font-semibold" data-i18n="showcase.memoryTitle">Memory Center</h3><p class="mt-1 text-sm leading-6 text-muted" data-i18n="showcase.memoryDesc">搜索、浏览、检查生命周期与证据，并管理已验证经验。</p></div>
         </article>
         <article class="feature-card overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
-          <img src="./assets/demos/convergence-gate.gif" alt="Convergence Gate" class="demo-frame gate w-full border-b border-line bg-canvas">
+          <picture class="demo-picture border-b border-line bg-canvas">
+            <source media="(max-width: 639px)" srcset="./assets/demos/convergence-gate-mobile.gif">
+            <img src="./assets/demos/convergence-gate.gif" alt="Convergence Gate" class="demo-frame w-full">
+          </picture>
           <div class="p-5"><h3 class="text-lg font-semibold" data-i18n="showcase.gateTitle">Convergence Gate</h3><p class="mt-1 text-sm leading-6 text-muted" data-i18n="showcase.gateDesc">缺步骤、缺测试或缺审查证据时拒绝收尾，通过后才允许长期记忆写入。</p></div>
         </article>
       </div>

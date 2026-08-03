@@ -41,16 +41,17 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 
 **Feature Workbench**: 부모-자식 명세, 현재 단계, 산출물, 증거, 세션 간 복구 상태.
 
-<table>
-  <tr>
-    <td width="58%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo"/></a></td>
-    <td width="42%"><a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo"/></a></td>
-  </tr>
-  <tr>
-    <td><strong>Memory Center</strong>: 의미 검색, 전체 내용, 수명주기, 증거, stale 표시, 확인 삭제.</td>
-    <td><strong>Convergence Gate</strong>: 단계 또는 요구사항/명세/구현/테스트/리뷰 증거가 부족하면 종료를 거부합니다.</td>
-  </tr>
-</table>
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#memory"><img src="../docs/assets/demos/memory-center.gif" alt="Memory Center animated demo" width="920"/></a>
+</p>
+
+<strong>Memory Center</strong>: 의미 검색, 전체 내용, 수명주기, 증거, stale 표시, 확인 삭제.
+
+<p align="center">
+  <a href="https://mcp-probe-kit.bytezonex.com/pages/apps.html#convergence"><img src="../docs/assets/demos/convergence-gate.gif" alt="Convergence Gate animated demo" width="920"/></a>
+</p>
+
+<strong>Convergence Gate</strong>: 단계 또는 요구사항/명세/구현/테스트/리뷰 증거가 부족하면 종료를 거부합니다.
 
 - **네이티브 MCP Apps 5개**: Memory, Feature, Bug, Product, Convergence.
 - **재개 가능한 위임 계획**: `plan_heartbeat`가 실제 진행을 저장하고 `resume_plan`이 다음 실행 단계를 복원합니다.
