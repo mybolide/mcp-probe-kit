@@ -236,6 +236,150 @@ function buildQuestionList() {
   return questions;
 }
 
+type InterviewQuestion = ReturnType<typeof buildQuestionList>[number];
+
+interface DescriptionAssessment {
+  readyForSpec: boolean;
+  recognizedConstraints: string[];
+  assumptions: string[];
+  missingQuestionIds: string[];
+}
+
+function assessDescription(description: string): DescriptionAssessment {
+  const recognizedConstraints: string[] = [];
+  const assumptions: string[] = [];
+  const signals = new Set<string>();
+
+  if (/只读|仅查看|只展示/i.test(description)) {
+    signals.add('read-only');
+    recognizedConstraints.push('功能为只读展示');
+  }
+  if (/不(?:允许|得)?修改|禁止修改|不改变系统状态/i.test(description)) {
+    signals.add('no-mutation');
+    recognizedConstraints.push('不得修改系统状态');
+  }
+  if (/展示|显示|包含|包括|返回/i.test(description)) {
+    signals.add('scope');
+    recognizedConstraints.push(`功能范围已描述：${description}`);
+  }
+  if (/版本|工具数量|Memory|Git|计划状态|状态/i.test(description)) {
+    signals.add('data-fields');
+    recognizedConstraints.push('展示字段或数据来源已明确');
+  }
+  if (/接口失败|请求失败|失败时|错误|异常/i.test(description)) {
+    signals.add('error-state');
+    recognizedConstraints.push('失败时必须显示明确错误');
+  }
+  if (/移动端|桌面端|响应式|横向溢出/i.test(description)) {
+    signals.add('responsive');
+    recognizedConstraints.push('包含桌面端或移动端适配要求');
+  }
+  if (/不要求登录|无需登录|免登录|匿名访问/i.test(description)) {
+    signals.add('auth-boundary');
+    recognizedConstraints.push('不要求登录');
+  }
+  if (/不引入新依赖|零依赖|不新增依赖/i.test(description)) {
+    signals.add('dependency-boundary');
+    recognizedConstraints.push('不得引入新依赖');
+  }
+  if (/验收|必须|不得|应当|无横向溢出|正确显示/i.test(description)) {
+    signals.add('acceptance');
+  }
+  if (/用户|开发者|维护人员|运维|管理员|访客/i.test(description)) {
+    signals.add('target-users');
+  }
+  if (/解决|痛点|问题|避免|方便|快速/i.test(description)) {
+    signals.add('pain-point');
+  }
+
+  const readyForSpec = description.trim().length >= 45 && signals.size >= 5;
+  const missingQuestionIds: string[] = [];
+
+  if (!signals.has('pain-point')) missingQuestionIds.push('pain_point');
+  if (!signals.has('target-users')) missingQuestionIds.push('target_users');
+  if (!signals.has('scope')) missingQuestionIds.push('scope_include');
+  if (!signals.has('acceptance') && !signals.has('error-state')) {
+    missingQuestionIds.push('success_criteria');
+  }
+  if (!signals.has('data-fields')) missingQuestionIds.push('input_output');
+  if (!signals.has('auth-boundary')) missingQuestionIds.push('security');
+
+  if (readyForSpec) {
+    if (!signals.has('target-users')) {
+      assumptions.push('目标用户未明确，规格草案暂按当前项目的开发与维护人员处理');
+    }
+    if (!signals.has('pain-point')) {
+      assumptions.push('业务痛点未单独描述，规格草案暂按“快速识别当前系统健康状态”处理');
+    }
+  }
+
+  return {
+    readyForSpec,
+    recognizedConstraints: [...new Set(recognizedConstraints)],
+    assumptions,
+    missingQuestionIds: readyForSpec ? [] : [...new Set(missingQuestionIds)].slice(0, 6),
+  };
+}
+
+function buildFocusedQuestions(ids: string[]): InterviewQuestion[] {
+  const byId = new Map(buildQuestionList().map((question) => [question.id, question]));
+  return ids
+    .map((id) => byId.get(id))
+    .filter((question): question is InterviewQuestion => Boolean(question));
+}
+
+function generateFocusedInterview(
+  featureName: string,
+  description: string,
+  assessment: DescriptionAssessment,
+  questions: InterviewQuestion[],
+): string {
+  const lines: string[] = [];
+  lines.push(renderGuidanceHeader({
+    tool: 'interview',
+    goal: assessment.readyForSpec
+      ? '整理已明确约束并直接进入规格草案。'
+      : '只追问描述中尚未明确的关键需求。',
+    tasks: assessment.readyForSpec
+      ? ['核对已识别约束与默认假设', '进入 check_spec 或 start_feature']
+      : ['只回答下列缺失项，不重复已给信息'],
+    outputs: [assessment.readyForSpec ? '可进入规格的需求摘要' : '聚焦后的补充问题'],
+  }));
+  lines.push(`# 需求访谈 - ${featureName}`, '');
+  lines.push('## 已提供的需求', '', description, '');
+
+  if (assessment.recognizedConstraints.length > 0) {
+    lines.push('## 已识别约束', '');
+    for (const item of assessment.recognizedConstraints) lines.push(`- ${item}`);
+    lines.push('');
+  }
+
+  if (assessment.readyForSpec) {
+    if (assessment.assumptions.length > 0) {
+      lines.push('## 默认假设（可在规格中修改）', '');
+      for (const assumption of assessment.assumptions) lines.push(`- ${assumption}`);
+      lines.push('');
+    }
+    lines.push(
+      '## 结论', '',
+      '当前信息已足以形成规格草案，不再重复进行全量访谈。', '',
+      '下一步：使用 `check_spec` 整理并校验规格，或由 `start_feature` 进入功能流程。',
+    );
+    return lines.join('\n');
+  }
+
+  lines.push('## 仍需补充', '');
+  questions.forEach((question, index) => {
+    lines.push(
+      `### Q${index + 1}. ${question.question} ${question.required ? '**[必答]**' : '_[可选]_'}`,
+      question.placeholder ? `_${question.placeholder}_` : '',
+      '',
+    );
+  });
+  lines.push('只需回答以上缺失项；已给出的范围和约束不会再次询问。');
+  return lines.join('\n');
+}
+
 // 生成访谈记录文件内容
 function generateInterviewRecord(
   featureName: string,
@@ -408,17 +552,29 @@ interview --feature-name user-login --answers {...}
     // 场景2: 开始访谈 - 生成问题列表
     if (description && !answers) {
       const name = featureName || extractFeatureName(description);
-      const questions = generateInterviewQuestions(name);
+      const assessment = assessDescription(description);
+      const focusedQuestions = buildFocusedQuestions(assessment.missingQuestionIds);
+      const questions = generateFocusedInterview(name, description, assessment, focusedQuestions);
       const structuredData: InterviewReport = {
-        summary: `需求访谈问题：${name}`,
+        summary: assessment.readyForSpec
+          ? `需求已收敛，可进入规格：${name}`
+          : `需求访谈缺失项：${name}`,
         mode: "questions",
         featureName: name,
         content: questions,
-        questions: buildQuestionList(),
-        nextSteps: [
-          "逐条回答问题并提交 answers",
-          `interview --feature-name ${name} --answers {...}`,
-        ],
+        questions: focusedQuestions,
+        readyForSpec: assessment.readyForSpec,
+        recognizedConstraints: assessment.recognizedConstraints,
+        assumptions: assessment.assumptions,
+        nextSteps: assessment.readyForSpec
+          ? [
+              `check_spec --feature-name ${name}`,
+              `start_feature --feature-name ${name}`,
+            ]
+          : [
+              "只回答 questions 中的缺失项并提交 answers",
+              `interview --feature-name ${name} --answers {...}`,
+            ],
       };
       return okStructured(questions, structuredData, {
         schema: (await import("../schemas/output/product-design-tools.js")).InterviewReportSchema,

@@ -27,6 +27,15 @@ export const GenPrototypeSchema = {
         description: { type: 'string' },
       },
     },
+    readyForSpec: { type: 'boolean' },
+    recognizedConstraints: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    assumptions: {
+      type: 'array',
+      items: { type: 'string' },
+    },
     indexPath: { type: 'string' },
     pages: {
       type: 'array',
@@ -113,5 +122,8 @@ export interface InterviewReport {
     required?: boolean;
     placeholder?: string;
   }>;
+  readyForSpec?: boolean;
+  recognizedConstraints?: string[];
+  assumptions?: string[];
   nextSteps?: string[];
 }
