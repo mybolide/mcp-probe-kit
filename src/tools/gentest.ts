@@ -5,6 +5,163 @@ import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
 import { resolveGuidanceCode, trimCodeForPrompt } from "../lib/code-review-input.js";
 import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
+
+interface TestFrameworkResolution {
+  framework: string;
+  source: "explicit" | "package-script" | "package-dependency" | "test-source" | "unresolved";
+  evidence?: string;
+}
+
+function readPackageJson(projectRoot: string): Record<string, unknown> | null {
+  const packagePath = path.join(projectRoot, "package.json");
+  if (!fs.existsSync(packagePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(packagePath, "utf8")) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function detectFrameworkFromText(text: string): string | null {
+  if (/\bnode\s+--test\b|from\s+["']node:test["']|require\(["']node:test["']\)/i.test(text)) {
+    return "node:test";
+  }
+  if (/\bvitest\b|from\s+["']vitest["']/i.test(text)) return "vitest";
+  if (/\bjest\b|from\s+["']@jest\/globals["']/i.test(text)) return "jest";
+  if (/\bmocha\b|from\s+["']mocha["']/i.test(text)) return "mocha";
+  if (/\bava\b|from\s+["']ava["']/i.test(text)) return "ava";
+  if (/\btap\b|from\s+["'](?:tap|node-tap)["']/i.test(text)) return "tap";
+  return null;
+}
+
+function findTestSourceEvidence(projectRoot: string): { framework: string; file: string } | null {
+  const roots = ["test", "tests", "__tests__", "src"];
+  const candidates: string[] = [];
+  const visit = (directory: string, depth: number): void => {
+    if (depth > 3 || candidates.length >= 40 || !fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (candidates.length >= 40) break;
+      if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "build" || entry.name === "dist") continue;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(absolute, depth + 1);
+      } else if (/\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(entry.name)) {
+        candidates.push(absolute);
+      }
+    }
+  };
+  for (const root of roots) visit(path.join(projectRoot, root), 0);
+
+  for (const file of candidates) {
+    try {
+      const framework = detectFrameworkFromText(fs.readFileSync(file, "utf8").slice(0, 16000));
+      if (framework) return { framework, file };
+    } catch {
+      // Ignore unreadable candidate files and continue bounded detection.
+    }
+  }
+  return null;
+}
+
+function resolveTestFramework(explicit: string, projectRoot?: string): TestFrameworkResolution {
+  if (explicit) return { framework: explicit, source: "explicit" };
+  if (!projectRoot) return { framework: "未识别（请沿用项目现有测试框架）", source: "unresolved" };
+
+  const packageJson = readPackageJson(projectRoot);
+  if (packageJson) {
+    const scripts = packageJson.scripts && typeof packageJson.scripts === "object"
+      ? packageJson.scripts as Record<string, unknown>
+      : {};
+    const testScript = typeof scripts.test === "string" ? scripts.test : "";
+    const scriptFramework = detectFrameworkFromText(testScript);
+    if (scriptFramework) {
+      return {
+        framework: scriptFramework,
+        source: "package-script",
+        evidence: `package.json scripts.test=${testScript}`,
+      };
+    }
+
+    const dependencies = {
+      ...(packageJson.dependencies && typeof packageJson.dependencies === "object"
+        ? packageJson.dependencies as Record<string, unknown>
+        : {}),
+      ...(packageJson.devDependencies && typeof packageJson.devDependencies === "object"
+        ? packageJson.devDependencies as Record<string, unknown>
+        : {}),
+    };
+    for (const framework of ["vitest", "jest", "mocha", "ava", "tap"]) {
+      if (framework in dependencies || (framework === "jest" && "@jest/globals" in dependencies)) {
+        return {
+          framework,
+          source: "package-dependency",
+          evidence: `package.json dependency=${framework}`,
+        };
+      }
+    }
+  }
+
+  const sourceEvidence = findTestSourceEvidence(projectRoot);
+  if (sourceEvidence) {
+    return {
+      framework: sourceEvidence.framework,
+      source: "test-source",
+      evidence: path.relative(projectRoot, sourceEvidence.file).replace(/\\/g, "/"),
+    };
+  }
+
+  return { framework: "未识别（请沿用项目现有测试框架）", source: "unresolved" };
+}
+
+function renderTestTemplate(framework: string): string {
+  if (framework === "node:test") {
+    return `\`\`\`javascript
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+test('描述测试场景', () => {
+  // Arrange
+  const input = ...;
+  const expected = ...;
+
+  // Act
+  const result = functionUnderTest(input);
+
+  // Assert
+  assert.deepEqual(result, expected);
+});
+\`\`\``;
+  }
+  if (framework === "vitest") {
+    return `\`\`\`typescript
+import { describe, expect, test } from 'vitest';
+
+describe('函数/模块名称', () => {
+  test('描述测试场景', () => {
+    const result = functionUnderTest(...);
+    expect(result).toEqual(...);
+  });
+});
+\`\`\``;
+  }
+  if (framework === "jest") {
+    return `\`\`\`typescript
+import { describe, expect, test } from '@jest/globals';
+
+describe('函数/模块名称', () => {
+  test('描述测试场景', () => {
+    const result = functionUnderTest(...);
+    expect(result).toEqual(...);
+  });
+});
+\`\`\``;
+  }
+  return `\`\`\`text
+沿用项目现有测试文件的 import、suite、assert 和 mock 语法；无法识别时不要擅自引入 Jest、Vitest 等新框架。
+\`\`\``;
+}
 
 export async function gentest(args: any) {
   try {
@@ -17,7 +174,7 @@ export async function gentest(args: any) {
     }>(args, {
       defaultValues: {
         code: "",
-        framework: "jest",
+        framework: "",
         file_path: "",
         project_root: "",
       },
@@ -30,15 +187,18 @@ export async function gentest(args: any) {
       },
     });
 
-    const framework = getString(parsedArgs.framework) || "jest";
+    const explicitFramework = getString(parsedArgs.framework);
     const inlineCode = getString(parsedArgs.code) || getString(parsedArgs.input);
     const filePath = getString(parsedArgs.file_path);
     const projectRoot = getString(parsedArgs.project_root);
+    const resolvedProjectRoot = projectRoot ? resolveWorkspaceRoot(projectRoot) : undefined;
+    const frameworkResolution = resolveTestFramework(explicitFramework, resolvedProjectRoot);
+    const framework = frameworkResolution.framework;
 
     const resolved = resolveGuidanceCode({
       code: inlineCode,
       filePath: filePath || undefined,
-      projectRoot: projectRoot ? resolveWorkspaceRoot(projectRoot) : undefined,
+      projectRoot: resolvedProjectRoot,
     });
 
     if (resolved.error) {
@@ -46,7 +206,14 @@ export async function gentest(args: any) {
         mode: "guidance",
         summary: `无法读取待测试代码：${resolved.error}`,
         input: { framework, file: filePath || null },
-        gentestInput: { received: false, error: resolved.error, file: filePath || null, framework },
+        gentestInput: {
+          received: false,
+          error: resolved.error,
+          file: filePath || null,
+          framework,
+          frameworkSource: frameworkResolution.source,
+          frameworkEvidence: frameworkResolution.evidence ?? null,
+        },
         instructions: [
           "提供 code，或提供 file_path 与 project_root 让 Agent 读取目标文件",
           "拿到代码后覆盖正常、边界、异常和依赖交互场景",
@@ -75,6 +242,9 @@ export async function gentest(args: any) {
       notes: [
         "本工具为指南型（guidance-only），不在服务端生成或运行测试",
         hasCode ? `已注入待测代码（${resolved.code.split("\n").length} 行）` : "未收到 code/file_path，请先提供待测内容",
+        frameworkResolution.evidence
+          ? `测试框架识别依据：${frameworkResolution.evidence}`
+          : "未找到测试框架证据；Agent 必须先检查项目现有测试文件和 package.json",
       ],
     });
 
@@ -106,21 +276,7 @@ ${hasCode ? `\`\`\`\n${promptCode}\n\`\`\`` : "_未提供 code / file_path，请
 ### 2️⃣ 测试用例模板
 
 **测试结构（AAA 模式）**：
-\`\`\`typescript
-describe('函数/模块名称', () => {
-  test('描述测试场景', () => {
-    // Arrange
-    const input = ...;
-    const expected = ...;
-
-    // Act
-    const result = functionUnderTest(input);
-
-    // Assert
-    expect(result).toBe(expected);
-  });
-});
-\`\`\`
+${renderTestTemplate(framework)}
 
 ### 3️⃣ 测试用例清单
 
@@ -176,12 +332,16 @@ describe('函数/模块名称', () => {
       summary: `${framework} 测试生成指南`,
       input: {
         framework,
+        frameworkSource: frameworkResolution.source,
+        frameworkEvidence: frameworkResolution.evidence ?? null,
         file: resolved.file ?? null,
         lineCount: hasCode ? resolved.code.split("\n").length : 0,
       },
       gentestInput: {
         received: hasCode,
         framework,
+        frameworkSource: frameworkResolution.source,
+        frameworkEvidence: frameworkResolution.evidence ?? null,
         file: resolved.file ?? null,
         lineCount: hasCode ? resolved.code.split("\n").length : 0,
         code: hasCode ? resolved.code : null,
