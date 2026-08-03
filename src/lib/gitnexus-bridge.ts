@@ -278,9 +278,14 @@ export function resolveGitNexusBridgeCommand(
 ): { command: string; args: string[]; strategy: GitNexusLaunchStrategy } | undefined {
   const explicitCommand = env.MCP_GITNEXUS_COMMAND?.trim();
   if (explicitCommand) {
+    const explicitArgs = env.MCP_GITNEXUS_ARGS?.trim();
     const args = splitArgs(
-      env.MCP_GITNEXUS_ARGS,
-      isGitNexusCliCommand(explicitCommand) ? ["mcp"] : defaultGitNexusNpxArgs(env, platform)
+      explicitArgs,
+      explicitArgs
+        ? []
+        : isGitNexusCliCommand(explicitCommand)
+          ? ["mcp"]
+          : defaultGitNexusNpxArgs(env, platform)
     );
     return {
       ...resolveSpawnCommand(explicitCommand, args, platform, env),

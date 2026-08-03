@@ -30,6 +30,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.8] - 2026-08-03
+
+### Fixed
+
+- Fixed the Node 20 release gate so an explicit `MCP_GITNEXUS_COMMAND` with explicit arguments no longer resolves the Node 22-only managed compatibility matrix before launching the configured command.
+- Made managed-runtime installer and timeout tests simulate their required Node 22 fingerprint explicitly, while `doctor gitnexus` now validates the expected `managed_unsupported` diagnostic on Node 20/21.
+
+### Validation
+
+- Reproduced the failed `v4.0.0-rc.7` GitHub Release job under Node `20.20.2`, then verified the corrected GitNexus bridge, runtime manager, and CLI tests as `29/29` passing under both Node 20.20.2 and Node 22.
+
+---
+
 ## [4.0.0-rc.7] - 2026-08-03
 
 ### Added

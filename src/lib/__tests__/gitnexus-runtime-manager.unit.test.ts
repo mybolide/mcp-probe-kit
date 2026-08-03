@@ -211,19 +211,19 @@ describe("GitNexus managed runtime", () => {
     };
 
     const [first, concurrent] = await Promise.all([
-      ensureManagedGitNexusRuntime({ env }),
-      ensureManagedGitNexusRuntime({ env }),
+      ensureManagedGitNexusRuntime({ env, nodeVersion: "22.0.0" }),
+      ensureManagedGitNexusRuntime({ env, nodeVersion: "22.0.0" }),
     ]);
     expect(first.valid).toBe(true);
     expect(concurrent.valid).toBe(true);
-    expect(first.compatibility.version).toBe(resolveCompatibleGitNexus(process.versions.node, process.platform).version);
+    expect(first.compatibility.version).toBe(resolveCompatibleGitNexus("22.0.0", process.platform).version);
     expect(fs.existsSync(first.cliPath)).toBe(true);
     expect(first.manifest?.integrity).toBe(first.compatibility.integrity);
     expect(fs.readFileSync(fake.counterPath, "utf8").trim().split(/\r?\n/)).toHaveLength(1);
 
-    const second = await ensureManagedGitNexusRuntime({ env });
+    const second = await ensureManagedGitNexusRuntime({ env, nodeVersion: "22.0.0" });
     expect(second.installedNow).toBe(false);
-    expect(inspectManagedGitNexusRuntime({ env }).valid).toBe(true);
+    expect(inspectManagedGitNexusRuntime({ env, nodeVersion: "22.0.0" }).valid).toBe(true);
     expect(fs.readFileSync(fake.counterPath, "utf8").trim().split(/\r?\n/)).toHaveLength(1);
   });
 
@@ -258,14 +258,14 @@ describe("GitNexus managed runtime", () => {
     };
 
     const startedAt = Date.now();
-    await expect(ensureManagedGitNexusRuntime({ env })).rejects.toThrow(/超时/);
+    await expect(ensureManagedGitNexusRuntime({ env, nodeVersion: "22.0.0" })).rejects.toThrow(/超时/);
     expect(Date.now() - startedAt).toBeLessThan(10_000);
 
     await new Promise((resolve) => setTimeout(resolve, 500));
     const childPid = Number(fs.readFileSync(hanging.childPidPath, "utf8"));
     try {
       expect(processExists(childPid)).toBe(false);
-      const versionRoot = path.join(runtimeRoot, resolveCompatibleGitNexus(process.versions.node, process.platform).version);
+      const versionRoot = path.join(runtimeRoot, resolveCompatibleGitNexus("22.0.0", process.platform).version);
       const leftovers = fs.existsSync(versionRoot) ? fs.readdirSync(versionRoot) : [];
       expect(leftovers.filter((name) => name.includes(".tmp-") || name.endsWith(".install.lock"))).toEqual([]);
     } finally {

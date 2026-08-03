@@ -137,11 +137,13 @@ describe("mcp-probe-kit CLI", () => {
     const exitCode = await runCommandLine(["doctor", "gitnexus"]);
 
     expect(exitCode).toBe(0);
-    expect(JSON.parse(output())).toMatchObject({
+    const actual = JSON.parse(output());
+    const managedSupported = Number(process.versions.node.split(".")[0]) >= 22;
+    expect(actual).toMatchObject({
       ok: true,
       component: "gitnexus",
       mode: "managed",
-      selectedStrategy: "managed_pending",
+      selectedStrategy: managedSupported ? "managed_pending" : "managed_unsupported",
       managed: { installed: false, valid: false },
       policy: {
         bundledInMainPackage: false,
