@@ -187,6 +187,10 @@ export const orchestrationToolSchemas = [
           type: "number",
           description: "最大迭代轮数。safe 模式默认：8",
         },
+        max_rounds: {
+          type: "number",
+          description: "max_iterations 的兼容别名；建议新调用统一使用 max_iterations",
+        },
         max_minutes: {
           type: "number",
           description: "最大运行分钟数。safe 模式默认：25",

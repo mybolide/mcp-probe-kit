@@ -720,7 +720,7 @@ export async function startRalph(args: any, context?: ToolExecutionContext) {
         completion_promise: ["完成条件", "退出条件"],
         test_command: ["测试命令"],
         cli_command: ["命令", "cli"],
-        max_iterations: ["最大迭代", "max_iters"],
+        max_iterations: ["最大迭代", "max_iters", "max_rounds", "最大轮数"],
         max_minutes: ["最大时间", "max_time"],
         confirm_every: ["确认频率"],
         confirm_timeout: ["确认超时"],
