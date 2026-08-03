@@ -19,6 +19,41 @@ export const CodeInsightSchema = {
     },
     summary: { type: 'string' },
     warnings: { type: 'array', items: { type: 'string' } },
+    localFallback: {
+      type: ['object', 'null'],
+      properties: {
+        available: { type: 'boolean' },
+        provider: { type: 'string' },
+        sourceRoot: { type: 'string' },
+        summary: { type: 'string' },
+        files: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              path: { type: 'string' },
+              size: { type: 'number' },
+              isTest: { type: 'boolean' },
+              matchedTerms: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+        symbols: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              kind: { type: 'string' },
+              file: { type: 'string' },
+              line: { type: 'number' },
+              exported: { type: 'boolean' },
+              signature: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
     nextAction: { type: ['string', 'null'] },
     handles: {
       type: 'object',

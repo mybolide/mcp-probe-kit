@@ -22,6 +22,7 @@ import {
   resolveProjectContextLayout,
   type ProjectContextLayout,
 } from "../lib/project-context-layout.js";
+import { collectLocalCodeEvidence, type LocalCodeEvidence } from "../lib/local-code-evidence.js";
 
 const ALLOWED_MODES = new Set<CodeInsightMode>(["auto", "query", "context", "impact"]);
 const ALLOWED_DIRECTIONS = new Set<CodeInsightDirection>(["upstream", "downstream"]);
@@ -37,6 +38,31 @@ interface ProjectDocsPlan {
   archiveJsonFilePath: string;
   navigationSnippet: string;
   devGuideSnippet: string;
+}
+
+function renderLocalFallback(evidence: LocalCodeEvidence): string {
+  if (!evidence.available) {
+    return `## 本地源码证据回退\n${evidence.summary}`;
+  }
+  const files = evidence.files.length > 0
+    ? evidence.files.slice(0, 15).map((file) => `- ${file.path}${file.matchedTerms.length > 0 ? `（命中: ${file.matchedTerms.join(', ')}）` : ''}`).join('\n')
+    : '- 未找到相关源码文件';
+  const symbols = evidence.symbols.length > 0
+    ? evidence.symbols.slice(0, 30).map((symbol) => `- ${symbol.kind} ${symbol.name} — ${symbol.file}:${symbol.line}`).join('\n')
+    : '- 未识别到相关声明';
+  const packageText = evidence.packageInfo
+    ? `\n项目清单:\n- package: ${evidence.packageInfo.name ?? '(unnamed)'}\n- scripts: ${Object.keys(evidence.packageInfo.scripts).join(', ') || '(none)'}`
+    : '';
+  return `## 本地源码证据回退
+${evidence.summary}
+
+限制: 仅提供文件和声明级证据；不提供调用图、依赖图或影响分析结论。
+
+相关文件:
+${files}
+
+相关符号:
+${symbols}${packageText}`;
 }
 
 interface DelegatedPlanStep {
@@ -413,6 +439,15 @@ export async function codeInsight(args: any, context?: ToolExecutionContext) {
       signal: context?.signal,
     });
     const status = deriveCodeInsightStatus(result);
+    const localFallback = status === "degraded" || status === "not_found"
+      ? collectLocalCodeEvidence({
+          projectRoot: projectRoot ? resolveWorkspaceRoot(projectRoot) : result.sourceRoot,
+          query: finalQuery,
+          target: finalTarget,
+          filePath: filePath || undefined,
+          includeTests,
+        })
+      : undefined;
     const showDelegatedPlan = getBoolean(parsedArgs.delegated_plan, saveToDocs || status === "ambiguous");
 
     const executionSummary = summarizeExecutions(
@@ -443,7 +478,9 @@ ${result.summary}
 ${executionSummary}
 
 ${ambiguityText ? `歧义候选:\n${ambiguityText}\n\n` : ""}\
-${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}`.trim();
+${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}
+
+${localFallback ? renderLocalFallback(localFallback) : ""}`.trim();
     const usageGuide = renderUsageGuide();
 
     const structured = {
@@ -463,6 +500,7 @@ ${result.warnings.length > 0 ? `警告: ${result.warnings.join(", ")}` : ""}`.tr
       sourceRoot: result.sourceRoot,
       analysisRoot: result.analysisRoot,
       pathMapped: result.pathMapped,
+      localFallback: localFallback ?? null,
     } as Record<string, unknown>;
 
     const docsProjectRoot = saveToDocs ? (projectRoot || result.sourceRoot) : "";
