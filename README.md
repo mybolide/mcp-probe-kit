@@ -960,3 +960,9 @@ MIT License
 ---
 
 **Made with ❤️ for AI-Powered Development**
+
+---
+
+## Acknowledgements
+
+Thanks to the [Linux.do](https://linux.do/) community for its support in promoting the project and providing feedback.

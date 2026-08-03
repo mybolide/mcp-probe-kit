@@ -768,3 +768,9 @@ MIT License
 ---
 
 **Made with ❤️ for AI-Powered Development**
+
+---
+
+## 致谢
+
+感谢 [Linux.do](https://linux.do/) 社区对项目推广与反馈的支持。
