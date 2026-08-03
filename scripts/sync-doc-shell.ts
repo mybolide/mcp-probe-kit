@@ -22,6 +22,17 @@ function item(page: ActivePage, current: ActivePage, href: string, icon: string,
   return `<a href="${href}" class="${selected ? active : normal}"${selected ? ' aria-current="page"' : ''}><span>${icon}</span><span data-i18n="${key}">${fallback}</span>${badgeHtml}</a>`;
 }
 
+function allToolsMenu(current: ActivePage): string {
+  if (current !== 'all-tools') {
+    return item('all-tools', current, './all-tools.html', '🛠️', 'sidebar.allTools', '所有工具', '33+1');
+  }
+  return `<button type="button" onclick="toggleToolsMenu()" class="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary border-l-3 border-primary hover:bg-blue-100 transition-colors" aria-controls="tools-submenu" aria-expanded="true" id="tools-menu-button">
+          <span class="flex items-center gap-2"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span></span>
+          <span class="flex items-center gap-2"><span class="bg-white text-xs px-2 py-0.5 rounded-full">33+1</span><svg class="w-4 h-4 rotate-180 transition-transform" id="tools-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></span>
+        </button>
+        <div id="tools-submenu" class="mt-1 ml-4 border-l border-border pl-2" aria-label="Tool categories"></div>`;
+}
+
 function shell(current: ActivePage): string {
   return `<!-- docs-shell:start -->
   <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50" data-doc-shell="topbar">
@@ -47,7 +58,7 @@ function shell(current: ActivePage): string {
       </div>
       <div class="mb-4">
         <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
-        ${item('all-tools', current, './all-tools.html', '🛠️', 'sidebar.allTools', '所有工具', '33+1')}
+        ${allToolsMenu(current)}
         ${item('apps', current, './apps.html', '◫', 'sidebar.apps', 'MCP Apps', '5')}
       </div>
       <div class="mb-4">

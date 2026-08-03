@@ -79,7 +79,11 @@
       </div>
       <div class="mb-4">
         <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
-        <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary" aria-current="page"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-white text-xs px-2 py-0.5 rounded-full">33+1</span></a>
+        <button type="button" onclick="toggleToolsMenu()" class="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary border-l-3 border-primary hover:bg-blue-100 transition-colors" aria-controls="tools-submenu" aria-expanded="true" id="tools-menu-button">
+          <span class="flex items-center gap-2"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span></span>
+          <span class="flex items-center gap-2"><span class="bg-white text-xs px-2 py-0.5 rounded-full">33+1</span><svg class="w-4 h-4 rotate-180 transition-transform" id="tools-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></span>
+        </button>
+        <div id="tools-submenu" class="mt-1 ml-4 border-l border-border pl-2" aria-label="Tool categories"></div>
         <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">5</span></a>
       </div>
       <div class="mb-4">
@@ -137,24 +141,8 @@
         </div>
         <div id="result-summary" class="mt-2 text-xs text-text-tertiary"></div>
       </section>
-
-      <div id="mobile-category-panel" class="mt-5 xl:hidden">
-        <details class="rounded-xl border border-border bg-white shadow-sm">
-          <summary class="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-text-primary">
-            <span id="mobile-category-title">工具分类与目录</span><span class="details-chevron text-text-tertiary transition-transform">⌄</span>
-          </summary>
-          <nav id="mobile-category-nav" class="max-h-[54vh] overflow-y-auto border-t border-border p-3"></nav>
-        </details>
-      </div>
-
-      <div class="mt-6 grid min-w-0 gap-6 xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[330px_minmax(0,1fr)]">
-        <aside class="hidden min-w-0 xl:block">
-          <div class="sticky top-[151px] max-h-[calc(100vh-175px)] overflow-y-auto rounded-xl border border-border bg-white p-3 shadow-sm">
-            <p id="category-nav-title" class="px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-text-tertiary">按分类浏览</p>
-            <nav id="category-nav" class="space-y-2"></nav>
-          </div>
-        </aside>
-        <div class="min-w-0"><div id="tools-container" class="space-y-6"></div></div>
+      <div class="mt-6 min-w-0">
+        <div id="tools-container" class="space-y-6"></div>
       </div>
 
       <footer class="mt-10 border-t border-border py-6 text-sm text-text-tertiary">
@@ -176,6 +164,17 @@
     let activeSurface = 'all';
     let searchQuery = '';
     let toastTimer = null;
+
+    function toggleToolsMenu() {
+      const submenu = document.getElementById('tools-submenu');
+      const button = document.getElementById('tools-menu-button');
+      const icon = document.getElementById('tools-menu-icon');
+      if (!submenu || !button || !icon) return;
+      const willOpen = submenu.classList.contains('hidden');
+      submenu.classList.toggle('hidden', !willOpen);
+      icon.classList.toggle('rotate-180', willOpen);
+      button.setAttribute('aria-expanded', String(willOpen));
+    }
 
     const fallbackUi = {
       eyebrow: 'TOOL CATALOG',
@@ -281,8 +280,8 @@
     }
 
     function renderCategoryNav(grouped) {
-      const desktop = [];
-      const mobile = [];
+      const ui = currentUi();
+      const menu = [];
       for (const [key, tools] of grouped) {
         const category = runtimeCatalog.categories[key];
         if (!category || !tools.length) continue;
@@ -292,25 +291,21 @@
             <code class="min-w-0 truncate font-mono">${escapeHtml(tool.name)}</code>
           </a>
         `).join('');
-        desktop.push(`
-          <div class="catalog-group rounded-lg border border-transparent hover:border-border">
-            <a href="#category-${escapeHtml(key)}" class="category-link flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold text-text-primary transition hover:bg-bg-page">
-              <span>${category.icon}</span><span class="min-w-0 flex-1 truncate">${escapeHtml(category.title)}</span><span class="text-xs font-normal text-text-tertiary">${tools.length}</span>
+        menu.push(`
+          <div class="catalog-group pt-2 first:pt-0">
+            <a href="#category-${escapeHtml(key)}" class="category-link flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold text-text-primary transition hover:bg-bg-page hover:text-primary">
+              <span>${category.icon}</span><span class="min-w-0 flex-1 truncate">${escapeHtml(category.title)}</span><span class="text-[11px] font-normal text-text-tertiary">${tools.length}</span>
             </a>
-            <div class="mb-2 ml-5 border-l border-border pl-2">${toolLinks}</div>
+            <div class="mt-0.5 space-y-0.5">${toolLinks}</div>
           </div>
         `);
-        mobile.push(`
-          <details class="group rounded-lg border border-border bg-white" open>
-            <summary class="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-semibold text-text-primary">
-              <span>${category.icon}</span><span class="min-w-0 flex-1">${escapeHtml(category.title)}</span><span class="text-xs font-normal text-text-tertiary">${tools.length}</span><span class="details-chevron text-text-tertiary transition-transform">⌄</span>
-            </summary>
-            <div class="border-t border-border p-2">${toolLinks}</div>
-          </details>
-        `);
       }
-      document.getElementById('category-nav').innerHTML = desktop.join('');
-      document.getElementById('mobile-category-nav').innerHTML = mobile.join('');
+      const submenu = document.getElementById('tools-submenu');
+      if (submenu) {
+        submenu.innerHTML = menu.length
+          ? menu.join('')
+          : `<div class="px-2 py-3 text-xs text-text-tertiary">${escapeHtml(ui.noResults)}</div>`;
+      }
     }
 
     function renderParams(tool, ui) {
@@ -379,8 +374,6 @@
       document.getElementById('page-subtitle').textContent = ui.subtitle;
       document.getElementById('search-input').placeholder = ui.searchPlaceholder;
       document.getElementById('apps-link').textContent = ui.liveApps;
-      document.getElementById('category-nav-title').textContent = ui.categoryNav;
-      document.getElementById('mobile-category-title').textContent = ui.categoryNav;
 
       const translations = currentTranslations();
       if (translations.meta?.title) document.title = translations.meta.title;
@@ -465,6 +458,11 @@
       if (filterButton) {
         activeSurface = filterButton.dataset.surface;
         renderCatalog();
+      }
+
+      const catalogLink = event.target.closest('.catalog-tool-link, .category-link');
+      if (catalogLink && window.innerWidth < 768 && document.getElementById('sidebar')?.classList.contains('open')) {
+        toggleSidebar();
       }
     });
 

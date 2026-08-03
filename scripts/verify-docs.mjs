@@ -170,11 +170,14 @@ check(allToolsPage.includes('navigator.clipboard.writeText'), 'all-tools uses th
 check(allToolsPage.includes("document.execCommand('copy')"), 'all-tools includes a clipboard fallback');
 check(allToolsPage.includes('<details class='), 'all-tools keeps parameters and schemas collapsed');
 check(allToolsPage.includes('surface-filters'), 'all-tools exposes tool-surface filters');
-check(allToolsPage.includes('category-nav'), 'all-tools uses category navigation');
-check(allToolsPage.includes('catalog-tool-link'), 'all-tools lists tool names under every category');
+check(allToolsPage.includes('id="tools-menu-button"'), 'all-tools restores the expandable All Tools sidebar button');
+check(allToolsPage.includes('id="tools-submenu"'), 'all-tools renders category navigation inside the documentation menu');
+check(allToolsPage.includes('toggleToolsMenu()'), 'all-tools exposes the legacy-style category menu toggle');
+check(allToolsPage.includes('catalog-tool-link'), 'all-tools lists tool names under every sidebar category');
 check(allToolsPage.includes('md:ml-64'), 'all-tools uses the shared fixed documentation sidebar shell');
 check(allToolsPage.includes('w-full max-w-none'), 'all-tools fills the available documentation viewport');
-check(allToolsPage.includes('mobile-category-panel'), 'all-tools exposes the full category/tool catalog on smaller screens');
+check(!allToolsPage.includes('mobile-category-panel'), 'all-tools does not duplicate category navigation in the content area');
+check(!allToolsPage.includes('xl:grid-cols-[300px_minmax(0,1fr)]'), 'all-tools tool cards use the full content width');
 check(allToolsPage.includes('一句话调用'), 'all-tools contains the Chinese one-line call fallback');
 
 const gettingStarted = read('docs/pages/getting-started.html');
