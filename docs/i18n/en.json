@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI Development Enhancement Toolkit · Documentation Center",
-    "version": "v4.0.0-rc.6",
+    "version": "v4.0.0-rc.7",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "Quick Start",
-      "description": "Get started with MCP Probe Kit v4.0.0-rc.6 in 5 minutes",
+      "description": "Get started with MCP Probe Kit v4.0.0-rc.7 in 5 minutes",
       "installConfig": "Installation & Configuration"
     },
     "tools": {
@@ -63,10 +63,10 @@
   },
   "gettingStarted": {
     "title": "Installation & Configuration",
-    "subtitle": "Get started with MCP Probe Kit v4.0.0-rc.6 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
+    "subtitle": "Get started with MCP Probe Kit v4.0.0-rc.7 in 5 minutes. Supports Cursor, Cline, and Claude Desktop",
     "skillBootstrap": {
       "title": "Skill & AGENTS auto-bootstrap",
-      "body": "Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v4.0.0-rc.6+)."
+      "body": "Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v4.0.0-rc.7+)."
     },
     "breadcrumb": {
       "home": "Documentation",
@@ -148,11 +148,11 @@
         }
       },
       "windowsGraph": {
-        "title": "Windows Notes for Graph Tools",
-        "description": "Graph-aware tools may have a slower first run on Windows because GitNexus is started through npx by default.",
-        "item1": "The first cold start may take 20+ seconds while npx checks or downloads dependencies.",
-        "item2": "Some GitNexus dependencies use tree-sitter native modules and may require Visual Studio Build Tools.",
-        "item3": "If your MCP client supports env, prefer a preinstalled gitnexus CLI and raise GitNexus timeouts.",
+        "title": "GitNexus Managed Runtime",
+        "description": "Graph-aware tools prefer an explicitly configured or system GitNexus CLI, then a version-locked managed Sidecar. The first explicit installation may take several minutes.",
+        "item1": "Default auto mode never blocks the feature workflow to install GitNexus; it degrades quickly and lets the Agent run doctor gitnexus --install.",
+        "item2": "On Windows, mcp-probe-kit also discovers the OpenSSL runtime shipped with Git for Windows so LadybugDB FTS can load without copying DLLs into the project.",
+        "item3": "The managed runtime lives in the mcp-probe-kit user cache, is not globally installed, does not modify the project package.json, is isolated by Node, platform, and architecture, and must pass a real FTS indexing probe.",
         "item4": "Quick install Build Tools on Windows: winget install Microsoft.VisualStudio.2022.BuildTools",
         "quickInstallTitle": "Quick install command:",
         "exampleTitle": "Example using a preinstalled gitnexus CLI:"
@@ -244,16 +244,16 @@
         "step4": "Check if configuration file JSON format is correct"
       },
       "q3": {
-        "title": "Issue 3: Graph-aware tools are slow or time out on first run on Windows",
+        "title": "Issue 3: The first managed GitNexus installation is slow or fails",
         "affected": "Affected tools:",
         "error": "Typical error:",
         "reasons": "Common causes:",
-        "reason1": "`npx -y gitnexus@latest mcp` may spend 20+ seconds checking or downloading dependencies on cold start.",
-        "reason2": "GitNexus depends on tree-sitter native modules, which may require Visual Studio Build Tools on Windows.",
+        "reason1": "The managed installation includes native parsers, a graph database, ONNX Runtime, and post-install grammar builds, so it may take several minutes.",
+        "reason2": "On Windows, a nonstandard Git installation can prevent discovery of the OpenSSL runtime needed by LadybugDB FTS; missing prebuilt native modules may also require Visual Studio Build Tools.",
         "solution": "Recommended actions:",
-        "step1": "Install Visual Studio Build Tools with the C++ workload.",
-        "step2": "Retry once after dependencies finish installing so the first cold start is not mistaken for steady-state latency.",
-        "step3": "If your client supports env, prefer a preinstalled gitnexus CLI and raise MCP_GITNEXUS_CONNECT_TIMEOUT_MS plus MCP_GITNEXUS_TIMEOUT_MS."
+        "step1": "Run doctor gitnexus --install through the project-local mcp-probe-kit launcher.",
+        "step2": "Retry the original tool after installation; default auto mode does not block the main workflow while GitNexus is missing.",
+        "step3": "Use MCP_GITNEXUS_WINDOWS_RUNTIME_BIN for a nonstandard Git runtime path, MCP_GITNEXUS_MODE=system to forbid managed installation, or off to disable GitNexus."
       }
     },
     "common": {
@@ -533,7 +533,7 @@
       "quick": {
         "title": "4.2 Quick Bug Analysis",
         "description": "Use",
-        "description2": "tool for SRC-8 fast RCA with rootCauseWorksheet and repair guidance.",
+        "description2": "tool for SRC-8 fast RCA with rootCauseWorksheet and repair guidance."
       }
     },
     "stage5": {

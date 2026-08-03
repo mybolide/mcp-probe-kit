@@ -9,6 +9,7 @@ const tempDirs: string[] = [];
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) fs.rmSync(dir, { recursive: true, force: true });
@@ -95,4 +96,61 @@ describe("mcp-probe-kit CLI", () => {
       code: "UNKNOWN_TOOL",
     });
   });
+  test("UTF-8 BOM 输入能够正常解析", async () => {
+    const root = createProject();
+    const output = captureStdout();
+    const payload = `﻿${JSON.stringify({
+      intent: "验证 BOM 输入",
+      scenario: "feature",
+      project_root: root,
+    })}`;
+
+    const exitCode = await runCommandLine(["exec", "workflow", "--json", payload]);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(output())).toMatchObject({
+      ok: true,
+      structuredContent: { firstTool: "start_feature" },
+    });
+  });
+
+  test("工具级 --help 返回 Schema 而不是执行工具", async () => {
+    const output = captureStdout();
+
+    const exitCode = await runCommandLine(["exec", "plan_heartbeat", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(output())).toMatchObject({
+      ok: true,
+      tool: "plan_heartbeat",
+    });
+  });
+
+  test("doctor gitnexus 默认只诊断，不触发安装", async () => {
+    const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "probe-gitnexus-doctor-"));
+    tempDirs.push(runtimeRoot);
+    vi.stubEnv("MCP_GITNEXUS_RUNTIME_ROOT", runtimeRoot);
+    vi.stubEnv("MCP_GITNEXUS_MODE", "managed");
+    vi.stubEnv("PATH", runtimeRoot);
+    const output = captureStdout();
+
+    const exitCode = await runCommandLine(["doctor", "gitnexus"]);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(output())).toMatchObject({
+      ok: true,
+      component: "gitnexus",
+      mode: "managed",
+      selectedStrategy: "managed_pending",
+      managed: { installed: false, valid: false },
+      policy: {
+        bundledInMainPackage: false,
+        automaticGlobalInstall: false,
+        exactVersion: true,
+        integrityPinned: true,
+      },
+    });
+    expect(fs.readdirSync(runtimeRoot)).toHaveLength(0);
+  });
+
 });

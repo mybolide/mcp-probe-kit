@@ -34,8 +34,37 @@ jobs:
       - name: Run release gate
         run: npm run release:verify
 
-  github-release:
+  gitnexus-sidecar:
+    name: GitNexus Sidecar (${{ matrix.os }})
     needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install pnpm 11
+        run: npm install --global pnpm@11.4.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify managed GitNexus Sidecar
+        run: npm run smoke:gitnexus-sidecar
+
+  github-release:
+    needs: [build, gitnexus-sidecar]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -54,7 +83,7 @@ jobs:
           generate_release_notes: false
 
   publish-npm:
-    needs: build
+    needs: [build, gitnexus-sidecar]
     runs-on: ubuntu-latest
     permissions:
       contents: read

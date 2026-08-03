@@ -155,9 +155,9 @@
             <!-- Page title -->
             <div class="mb-6">
                 <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2" data-i18n="gettingStarted.title">Installation & Configuration</h1>
-                    <p class="text-sm sm:text-base text-text-secondary" data-i18n="gettingStarted.subtitle">Get started with MCP Probe Kit v4.0.0-rc.6 in 5 minutes. Supports Cursor, Cline, and Claude Desktop</p>
+                    <p class="text-sm sm:text-base text-text-secondary" data-i18n="gettingStarted.subtitle">Get started with MCP Probe Kit v4.0.0-rc.7 in 5 minutes. Supports Cursor, Cline, and Claude Desktop</p>
                 <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary">
-                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v4.0.0-rc.6</span>
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v4.0.0-rc.7</span>
                     <span>Legacy MCP + Modern MCP 2026-07-28</span>
                     <span>SDK 1.27.1</span>
                 </div>
@@ -580,12 +580,12 @@ npm run build</code></pre>
                     </div>
 
                     <div class="mt-5 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r text-sm text-text-primary">
-                        <h3 class="font-semibold mb-2" data-i18n="gettingStarted.step1.windowsGraph.title">Windows Notes for Graph Tools</h3>
-                        <p class="mb-2 text-text-secondary" data-i18n="gettingStarted.step1.windowsGraph.description">Graph-aware tools may have a slower first run on Windows because GitNexus is started through npx by default.</p>
+                        <h3 class="font-semibold mb-2" data-i18n="gettingStarted.step1.windowsGraph.title">GitNexus Managed Runtime</h3>
+                        <p class="mb-2 text-text-secondary" data-i18n="gettingStarted.step1.windowsGraph.description">Graph-aware tools prefer an explicitly configured or system GitNexus CLI, then a version-locked managed Sidecar. The first explicit installation may take several minutes.</p>
                         <ul class="list-disc list-inside space-y-1 mb-3">
-                            <li data-i18n="gettingStarted.step1.windowsGraph.item1">The first cold start may take 20+ seconds while npx checks or downloads dependencies.</li>
-                            <li data-i18n="gettingStarted.step1.windowsGraph.item2">Some GitNexus dependencies use tree-sitter native modules and may require Visual Studio Build Tools.</li>
-                            <li data-i18n="gettingStarted.step1.windowsGraph.item3">If your MCP client supports env, prefer a preinstalled gitnexus CLI and raise GitNexus timeouts.</li>
+                            <li data-i18n="gettingStarted.step1.windowsGraph.item1">Default auto mode degrades quickly instead of blocking the feature workflow for installation.</li>
+                            <li data-i18n="gettingStarted.step1.windowsGraph.item2">Windows uses the OpenSSL runtime shipped with Git for Windows so LadybugDB FTS can load.</li>
+                            <li data-i18n="gettingStarted.step1.windowsGraph.item3">The isolated runtime must pass a real FTS indexing probe before it is accepted.</li>
                             <li data-i18n="gettingStarted.step1.windowsGraph.item4">Quick install Build Tools on Windows: winget install Microsoft.VisualStudio.2022.BuildTools</li>
                         </ul>
                         <p class="mb-2" data-i18n="gettingStarted.step1.windowsGraph.quickInstallTitle">Quick install command:</p>
@@ -617,7 +617,7 @@ npm run build</code></pre>
             <!-- Skill / AGENTS bootstrap -->
             <section class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 sm:p-6 mb-6">
                 <h2 class="text-lg font-semibold text-text-primary mb-2" data-i18n="gettingStarted.skillBootstrap.title">Skill & AGENTS auto-bootstrap</h2>
-                <p class="text-sm text-text-secondary leading-relaxed" data-i18n="gettingStarted.skillBootstrap.body">Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v4.0.0-rc.6+).</p>
+                <p class="text-sm text-text-secondary leading-relaxed" data-i18n="gettingStarted.skillBootstrap.body">Every MCP tool call writes AGENTS.md and .agents/skills/mcp-probe-kit/SKILL.md (single rule source). If .trae/, .lingma/, .comate/, .codebuddy/, or .claude/ already exists, thin harness adapters are created automatically — no env vars (v4.0.0-rc.7+).</p>
             </section>
 
             <!-- Step 2: Configuration file locations -->
@@ -888,8 +888,8 @@ gyp ERR! find VS - missing any VC++ toolset</code></pre>
                         </div>
                         <p class="text-sm text-text-primary mb-2"><strong data-i18n="gettingStarted.faq.q3.reasons">Common causes:</strong></p>
                         <ul class="list-disc list-inside space-y-1 text-sm text-text-primary mb-3">
-                            <li data-i18n="gettingStarted.faq.q3.reason1">npx -y gitnexus@latest mcp may spend 20+ seconds checking or downloading dependencies on cold start.</li>
-                            <li data-i18n="gettingStarted.faq.q3.reason2">GitNexus depends on tree-sitter native modules, which may require Visual Studio Build Tools on Windows.</li>
+                            <li data-i18n="gettingStarted.faq.q3.reason1">The managed installation includes native parsers, a graph database, ONNX Runtime, and post-install grammar builds, so it may take several minutes.</li>
+                            <li data-i18n="gettingStarted.faq.q3.reason2">A nonstandard Git path can prevent Windows from finding the OpenSSL runtime required by LadybugDB FTS.</li>
                         </ul>
                         <p class="text-sm text-text-primary mb-2"><strong data-i18n="gettingStarted.faq.q3.solution">Recommended actions:</strong></p>
                         <ol class="list-decimal list-inside space-y-2 text-sm text-text-primary">

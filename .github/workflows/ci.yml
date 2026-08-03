@@ -58,3 +58,27 @@ jobs:
         run: npm run build
       - name: Verify packaged POSIX CLI fallback
         run: npm run smoke:package
+
+  gitnexus-sidecar:
+    name: GitNexus Sidecar (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pnpm 11
+        run: npm install --global pnpm@11.4.0
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Verify managed GitNexus Sidecar
+        run: npm run smoke:gitnexus-sidecar

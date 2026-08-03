@@ -223,6 +223,10 @@ export function verifyReleaseReadiness(
     'npm 包必须包含运行产物、README 和许可证'
   ));
   checks.push(fileCheck(workspaceRoot, 'scripts/clean-build.mjs'));
+  checks.push(fileCheck(workspaceRoot, 'scripts/gitnexus-sidecar-smoke.mjs'));
+  checks.push(fileCheck(workspaceRoot, 'src/lib/gitnexus-runtime-config.ts'));
+  checks.push(fileCheck(workspaceRoot, 'src/lib/gitnexus-runtime-installer.ts'));
+  checks.push(fileCheck(workspaceRoot, 'src/lib/gitnexus-runtime-manager.ts'));
   checks.push(fileCheck(workspaceRoot, 'docs/migration-v3-to-v4.md'));
   checks.push(fileCheck(workspaceRoot, 'src/protocol/__tests__/mcp-apps.integration.test.ts'));
   checks.push(contentCheck(
@@ -288,8 +292,73 @@ export function verifyReleaseReadiness(
   checks.push(contentCheck(
     workspaceRoot,
     '.github/workflows/ci.yml',
-    ['node-version: "20"', 'node-version: "22"', 'npm run release:verify'],
-    '稳定 RC 必须在 Node 20 最低版本和 Node 22 当前版本上持续回归'
+    [
+      'node-version: "20"',
+      'node-version: "22"',
+      'npm run release:verify',
+      'ubuntu-latest',
+      'macos-latest',
+      'windows-latest',
+      'npm run smoke:gitnexus-sidecar',
+    ],
+    '稳定 RC 必须在 Node 20 最低版本持续回归，并在 Windows、macOS、Linux 验证 GitNexus Sidecar'
+  ));
+  checks.push(contentCheck(
+    workspaceRoot,
+    '.github/workflows/release.yml',
+    [
+      'ubuntu-latest',
+      'macos-latest',
+      'windows-latest',
+      'npm run smoke:gitnexus-sidecar',
+      'needs: [build, gitnexus-sidecar]',
+    ],
+    'Tag 发布前必须通过 Windows、macOS、Linux GitNexus Sidecar 闸门'
+  ));
+  checks.push(contentCheck(
+    workspaceRoot,
+    'src/lib/gitnexus-runtime-config.ts',
+    [
+      'gitnexus@1.6.9',
+      'sha512-Rq5LXFygx7jjMp/YFsIAcnnzuKvvCsb4rxHFILnu05ZOqk7xNXTUSMRa968EOCbxcKFxnhKYaGXoabOUeGZX6A==',
+      'libssl-3-x64.dll',
+      'libcrypto-3-x64.dll',
+      'GITNEXUS_WORKER_POOL_SIZE',
+    ],
+    'GitNexus 托管运行时必须锁定经过验证的版本、integrity 和 Windows FTS 运行时依赖'
+  ));
+  checks.push(contentCheck(
+    workspaceRoot,
+    'src/lib/gitnexus-runtime-installer.ts',
+    [
+      'verifyManagedRuntimeCapabilities',
+      'Full-text search:',
+      'FTS extension unavailable',
+      'full-text\\/BM25 search is disabled',
+    ],
+    'GitNexus 安装完成前必须通过真实 FTS 能力探针，不能接受静默降级运行时'
+  ));
+  const gitNexusRuntimeFiles = [
+    'src/lib/gitnexus-runtime-config.ts',
+    'src/lib/gitnexus-runtime-installer.ts',
+    'src/lib/gitnexus-runtime-manager.ts',
+    'src/lib/gitnexus-bridge.ts',
+    'scripts/gitnexus-sidecar-smoke.mjs',
+  ];
+  const latestReferences = gitNexusRuntimeFiles.flatMap((relativePath) => {
+    const absolutePath = path.join(workspaceRoot, relativePath);
+    if (!fs.existsSync(absolutePath)) return [`${relativePath}:missing`];
+    return fs.readFileSync(absolutePath, 'utf8').includes('gitnexus@latest')
+      ? [`${relativePath}:gitnexus@latest`]
+      : [];
+  });
+  checks.push(check(
+    'gitnexus-no-latest',
+    latestReferences.length === 0,
+    'error',
+    'no gitnexus@latest references in managed runtime paths',
+    latestReferences.length === 0 ? 'none' : latestReferences,
+    'GitNexus 托管链路不得重新引入不可复现的 @latest'
   ));
   const requiredReleaseScripts = [
     'clean:build',
@@ -302,6 +371,7 @@ export function verifyReleaseReadiness(
     'security:audit',
     'release:verify',
     'build-mcp-apps',
+    'smoke:gitnexus-sidecar',
   ];
   checks.push(check(
     'clean-build-before-compile',

@@ -62,10 +62,10 @@ describe("gitnexus-bridge workspace preparation", () => {
   });
 
   test("Windows 下 npx 命令直接交给底层 spawn 处理", () => {
-    const wrapped = resolveSpawnCommand("npx", ["-y", "gitnexus@latest", "mcp"], "win32");
+    const wrapped = resolveSpawnCommand("npx", ["-y", "gitnexus@1.6.9", "mcp"], "win32");
     expect(wrapped.command.toLowerCase()).not.toContain("cmd.exe");
     expect(wrapped.command.toLowerCase()).toContain("npx");
-    expect(wrapped.args).toEqual(["-y", "gitnexus@latest", "mcp"]);
+    expect(wrapped.args).toEqual(["-y", "gitnexus@1.6.9", "mcp"]);
   });
 
   test("优先使用本地 gitnexus CLI 启动 bridge", () => {
@@ -78,9 +78,10 @@ describe("gitnexus-bridge workspace preparation", () => {
       PATHEXT: ".CMD;.EXE;.BAT",
     }, "win32");
 
-    expect(resolved.strategy).toBe("local");
-    expect(resolved.command).toBe(executable);
-    expect(resolved.args).toEqual(["mcp"]);
+    expect(resolved).toBeDefined();
+    expect(resolved!.strategy).toBe("local");
+    expect(resolved!.command.toLowerCase()).toBe(executable.toLowerCase());
+    expect(resolved!.args).toEqual(["mcp"]);
   });
 
   test("显式 MCP_GITNEXUS_COMMAND 配置优先于本地 CLI 自动发现", () => {
@@ -90,9 +91,10 @@ describe("gitnexus-bridge workspace preparation", () => {
       PATH: "",
     }, "win32");
 
-    expect(resolved.strategy).toBe("env");
-    expect(resolved.command.toLowerCase()).toContain("npx");
-    expect(resolved.args).toEqual(["-y", "gitnexus@1.4.1", "mcp"]);
+    expect(resolved).toBeDefined();
+    expect(resolved!.strategy).toBe("env");
+    expect(resolved!.command.toLowerCase()).toContain("npx");
+    expect(resolved!.args).toEqual(["-y", "gitnexus@1.4.1", "mcp"]);
   });
 
   test("query 结果会按关键词对流程做轻量重排", () => {
@@ -131,15 +133,15 @@ describe("gitnexus-bridge workspace preparation", () => {
     fs.mkdirSync(path.dirname(executable), { recursive: true });
     fs.writeFileSync(executable, "@echo off\r\necho ok %*\r\n", "utf-8");
 
-    const wrapped = resolveSpawnCommand(executable, ["-y", "gitnexus@latest", "mcp"], "win32");
+    const wrapped = resolveSpawnCommand(executable, ["-y", "gitnexus@1.6.9", "mcp"], "win32");
     const result = await runSpawned(wrapped.command, wrapped.args);
 
     expect(wrapped.command).toBe(executable);
-    expect(wrapped.args).toEqual(["-y", "gitnexus@latest", "mcp"]);
+    expect(wrapped.args).toEqual(["-y", "gitnexus@1.6.9", "mcp"]);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("ok");
     expect(result.stdout).toContain("-y");
-    expect(result.stdout).toContain("gitnexus@latest");
+    expect(result.stdout).toContain("gitnexus@1.6.9");
     expect(result.stdout).toContain("mcp");
   });
 
@@ -245,7 +247,7 @@ describe("gitnexus-bridge workspace preparation", () => {
     expect(workspace.workspaceMode).toBe("direct");
     expect(workspace.sourceRoot).toBe(repoRoot);
     expect(workspace.analysisRoot).toBe(repoRoot);
-    expect(workspace.repoName).toBe("video-pipeline");
+    expect(workspace.repoName).toBe(path.basename(repoRoot));
     expect(workspace.pathMapped).toBe(false);
     expect(workspace.cleanup).toBeUndefined();
   });

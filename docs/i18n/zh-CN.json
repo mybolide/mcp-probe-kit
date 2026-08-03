@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 开发增强工具集 · 文档中心",
-    "version": "v4.0.0-rc.6",
+    "version": "v4.0.0-rc.7",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.6",
+      "description": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.7",
       "installConfig": "安装配置"
     },
     "tools": {
@@ -63,10 +63,10 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.6，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.7，支持 Cursor、Cline 和 Claude Desktop",
     "skillBootstrap": {
       "title": "Skill 与 AGENTS 自动安装",
-      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v4.0.0-rc.6+）。"
+      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v4.0.0-rc.7+）。"
     },
     "breadcrumb": {
       "home": "文档首页",
@@ -148,11 +148,11 @@
         }
       },
       "windowsGraph": {
-        "title": "Windows 图谱工具特别说明",
-        "description": "图谱相关工具在 Windows 上首次运行可能更慢，因为 GitNexus 默认通过 npx 启动。",
-        "item1": "首次冷启动时，npx 可能检查或下载依赖，耗时可能超过 20 秒。",
-        "item2": "GitNexus 的部分依赖使用 tree-sitter 原生模块，在 Windows 上可能需要 Visual Studio Build Tools。",
-        "item3": "如果 MCP 客户端支持 env，优先使用预装的 gitnexus CLI，并适当增大 GitNexus 超时。",
+        "title": "GitNexus 托管运行时",
+        "description": "图谱工具优先使用显式配置或系统 GitNexus；缺失时使用版本锁定的托管 Sidecar。首次显式安装可能需要数分钟。",
+        "item1": "默认 auto 模式不会在功能流程中阻塞安装；缺失时快速降级，并提示 Agent 自动执行 doctor gitnexus --install。",
+        "item2": "Windows 下会自动发现 Git for Windows 自带的 OpenSSL 运行库，使 LadybugDB FTS 无需复制 DLL 到项目即可加载。",
+        "item3": "托管运行时位于 mcp-probe-kit 用户缓存，不全局安装、不修改项目 package.json，按 Node、平台和架构隔离，并且必须通过真实 FTS 索引探针。",
         "item4": "Windows 下可用 winget 快速安装 Build Tools：winget install Microsoft.VisualStudio.2022.BuildTools",
         "quickInstallTitle": "快速安装命令：",
         "exampleTitle": "使用预装 gitnexus CLI 的配置示例："
@@ -244,16 +244,16 @@
         "step4": "检查配置文件 JSON 格式是否正确"
       },
       "q3": {
-        "title": "问题 3：Windows 下图谱工具首次启动很慢或超时",
+        "title": "问题 3：GitNexus 首次托管安装较慢或失败",
         "affected": "受影响工具：",
         "error": "典型错误：",
         "reasons": "常见原因：",
-        "reason1": "`npx -y gitnexus@latest mcp` 冷启动时可能花 20 秒以上检查或下载依赖。",
-        "reason2": "GitNexus 依赖的 tree-sitter 原生模块在 Windows 上可能需要 Visual Studio Build Tools。",
+        "reason1": "托管安装包含原生解析器、图数据库、ONNX Runtime 和 postinstall 语法构建，可能需要数分钟。",
+        "reason2": "Windows 的 Git 安装路径非标准时，可能无法发现 LadybugDB FTS 所需的 OpenSSL 运行库；原生预编译包缺失时也可能需要 Visual Studio Build Tools。",
         "solution": "建议处理：",
-        "step1": "安装带 C++ 工作负载的 Visual Studio Build Tools。",
-        "step2": "依赖安装完成后重试一次，避免把首次冷启动误判为稳定耗时。",
-        "step3": "如果客户端支持 env，优先使用预装的 gitnexus CLI，并增大 MCP_GITNEXUS_CONNECT_TIMEOUT_MS 与 MCP_GITNEXUS_TIMEOUT_MS。"
+        "step1": "通过项目内 mcp-probe-kit 启动器执行 doctor gitnexus --install。",
+        "step2": "安装完成后重试原工具；默认 auto 模式在 GitNexus 缺失时不会阻塞主工作流。",
+        "step3": "Git 运行库路径非标准时设置 MCP_GITNEXUS_WINDOWS_RUNTIME_BIN；如禁止托管安装设置 MCP_GITNEXUS_MODE=system；完全禁用则设置 off。"
       }
     },
     "common": {

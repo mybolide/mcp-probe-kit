@@ -24,6 +24,15 @@ import {
   compareSemver,
   parseSkillInstalledVersion,
 } from "../lib/workflow-skill-version.js";
+import {
+  ensureManagedGitNexusRuntime,
+  findSystemGitNexusCli,
+  inspectManagedGitNexusRuntime,
+  resolveGitForWindowsRuntimeBin,
+  resolveCompatibleGitNexus,
+  resolveGitNexusMode,
+  tryResolveCompatibleGitNexus,
+} from "../lib/gitnexus-runtime-manager.js";
 
 interface ParsedArgv {
   command: string;
@@ -46,6 +55,7 @@ export async function runCommandLine(argv: string[]): Promise<number | null> {
 
   const parsed = parseArgv(argv);
   try {
+    if (parsed.flags.has("help")) return runScopedHelp(parsed);
     switch (parsed.command) {
       case "exec":
         return await runExec(parsed);
@@ -57,6 +67,8 @@ export async function runCommandLine(argv: string[]): Promise<number | null> {
         return runInstallAgent(parsed);
       case "status":
         return runStatus(parsed);
+      case "doctor":
+        return await runDoctor(parsed);
       case "help":
       case "--help":
       case "-h":
@@ -71,7 +83,7 @@ export async function runCommandLine(argv: string[]): Promise<number | null> {
         throw new CliError(
           "UNKNOWN_COMMAND",
           `未知命令: ${parsed.command}`,
-          { supported: ["exec", "tools", "schema", "install-agent", "status"] }
+          { supported: ["exec", "tools", "schema", "install-agent", "status", "doctor"] }
         );
     }
   } catch (error) {
@@ -214,6 +226,116 @@ function runStatus(parsed: ParsedArgv): number {
   return 0;
 }
 
+async function runDoctor(parsed: ParsedArgv): Promise<number> {
+  const component = parsed.positionals[0]?.trim() || "gitnexus";
+  if (component !== "gitnexus") {
+    throw new CliError("UNKNOWN_DOCTOR_COMPONENT", `未知 doctor 组件: ${component}`, {
+      supported: ["gitnexus"],
+    });
+  }
+
+  const mode = resolveGitNexusMode();
+  const compatibility = tryResolveCompatibleGitNexus();
+  const systemCli = findSystemGitNexusCli();
+  const windowsRuntimeBin = resolveGitForWindowsRuntimeBin();
+  const explicitCommand = process.env.MCP_GITNEXUS_COMMAND?.trim() || null;
+  let managed: ReturnType<typeof inspectManagedGitNexusRuntime> | Awaited<ReturnType<typeof ensureManagedGitNexusRuntime>> | undefined;
+
+  if (compatibility) {
+    managed = inspectManagedGitNexusRuntime();
+    if (parsed.flags.has("install")) {
+      managed = await ensureManagedGitNexusRuntime();
+    }
+  } else if (parsed.flags.has("install")) {
+    throw new CliError(
+      "GITNEXUS_MANAGED_NODE_UNSUPPORTED",
+      `GitNexus 托管 Sidecar 要求 Node.js >= 22，当前为 ${process.versions.node}`,
+      { fallback: "使用系统 GitNexus CLI，或继续降级运行核心工作流" }
+    );
+  }
+
+  const selectedStrategy = explicitCommand
+    ? "env"
+    : mode === "off"
+      ? "disabled"
+      : managed?.valid
+        ? "managed"
+        : systemCli
+          ? "local"
+          : mode === "system"
+            ? "disabled"
+            : compatibility
+              ? "managed_pending"
+              : "managed_unsupported";
+
+  writeJson({
+    ok: true,
+    version: VERSION,
+    component: "gitnexus",
+    mode,
+    node: {
+      version: process.versions.node,
+      platform: process.platform,
+      arch: process.arch,
+    },
+    compatibility: compatibility || {
+      supported: false,
+      minimumNodeMajor: 22,
+      reason: "managed_node_unsupported",
+    },
+    explicitCommand,
+    systemCli: systemCli || null,
+    windowsRuntime: process.platform === "win32"
+      ? {
+          available: Boolean(windowsRuntimeBin),
+          bin: windowsRuntimeBin || null,
+          purpose: "LadybugDB FTS OpenSSL runtime",
+        }
+      : null,
+    selectedStrategy,
+    managed: managed
+      ? {
+          installed: managed.installed,
+          valid: managed.valid,
+          installedNow: "installedNow" in managed ? managed.installedNow : false,
+          reason: managed.reason,
+          runtimeRoot: managed.runtimeRoot,
+          installRoot: managed.installRoot,
+          manifestPath: managed.manifestPath,
+          cliPath: managed.cliPath,
+          manifest: managed.manifest,
+        }
+      : {
+          installed: false,
+          valid: false,
+          installedNow: false,
+          reason: "managed_node_unsupported",
+        },
+    policy: {
+      bundledInMainPackage: false,
+      automaticGlobalInstall: false,
+      packageJsonMutation: false,
+      exactVersion: true,
+      integrityPinned: true,
+      managedMinimumNodeMajor: 22,
+      license: compatibility?.license || "PolyForm-Noncommercial-1.0.0",
+    },
+  });
+  return 0;
+}
+
+function runScopedHelp(parsed: ParsedArgv): number {
+  if (parsed.command === "exec" && parsed.positionals[0]) {
+    return runSchema({ ...parsed, command: "schema", positionals: [parsed.positionals[0]] });
+  }
+  if (parsed.command === "doctor") {
+    process.stdout.write("用法:\n  mcp-probe-kit doctor gitnexus [--install]\n");
+    return 0;
+  }
+  printHelp();
+  return 0;
+}
+
 function parseArgv(argv: string[]): ParsedArgv {
   const command = argv[0] ?? "help";
   const positionals: string[] = [];
@@ -221,6 +343,10 @@ function parseArgv(argv: string[]): ParsedArgv {
 
   for (let index = 1; index < argv.length; index += 1) {
     const token = argv[index] ?? "";
+    if (token === "-h") {
+      flags.set("help", true);
+      continue;
+    }
     if (!token.startsWith("--")) {
       positionals.push(token);
       continue;
@@ -268,7 +394,8 @@ async function readJsonInput(flags: Map<string, string | boolean>): Promise<Reco
     raw = inline;
   }
 
-  if (!raw.trim()) return {};
+  raw = raw.replace(/^\uFEFF/, "").trim();
+  if (!raw) return {};
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -398,4 +525,5 @@ function printHelp(): void {
   process.stdout.write("  mcp-probe-kit schema <tool>\n");
   process.stdout.write("  mcp-probe-kit install-agent --project-root .\n");
   process.stdout.write("  mcp-probe-kit status --project-root .\n");
+  process.stdout.write("  mcp-probe-kit doctor gitnexus [--install]\n");
 }

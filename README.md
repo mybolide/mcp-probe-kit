@@ -92,7 +92,7 @@ All hard quality rules live in one module (`src/lib/quality-constraints.ts`) and
 ### 🧠 Code Graph Bridge (GitNexus)
 
 - `code_insight` bridges GitNexus by default for query/context/impact analysis
-- The bridge launches `npx -y gitnexus@latest mcp` by default to reduce stale package risk
+- The bridge prefers an explicitly configured or system GitNexus CLI, then a version-locked managed Sidecar; GitNexus is not bundled into the main package and is never globally installed
 - `init_project_context` bootstraps baseline graph docs under `docs/graph-insights/`; if `docs/project-context.md` already exists, it preserves the old context docs and only backfills graph docs plus the index entry
 - `start_feature` refreshes the GitNexus index and runs task-level `query/context/impact` narrowing before spec generation to reduce over-scoping
 - `start_bugfix` refreshes the GitNexus index and runs task-level graph analysis before TBP RCA to constrain failure boundary and blast radius
@@ -642,25 +642,49 @@ ollama pull nomic-embed-text
 - Qdrant collections are auto-created on first write with `Cosine` distance
 - Vector size is inferred from the first embedding response
 
-### Windows Notes for Graph Tools
+### GitNexus Managed Runtime
 
 Applies to `code_insight`, `start_feature`, `start_bugfix`, and `init_project_context`.
 
-- The GitNexus bridge uses `npx -y gitnexus@latest mcp` by default.
-- On Windows, the first cold start can take 20+ seconds because `npx` may check/download packages.
-- Some GitNexus dependencies use `tree-sitter-*` native modules. If your machine lacks Visual Studio Build Tools, the first install may fail with errors like `gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use`.
+GitNexus is **not bundled** into the `mcp-probe-kit` npm tarball because it includes native, platform-specific dependencies and uses the PolyForm Noncommercial license. The runtime policy is:
 
-Recommended on Windows:
+1. Use `MCP_GITNEXUS_COMMAND` when explicitly configured.
+2. Otherwise reuse an already validated managed Sidecar from the mcp-probe-kit user cache.
+3. Otherwise use a compatible `gitnexus` CLI already available on `PATH`.
+4. If no runtime is installed, graph analysis degrades immediately instead of blocking the main workflow. The Agent can run `doctor gitnexus --install` and retry automatically.
 
-1. Install Visual Studio Build Tools with the C++ workload if you use graph-aware tools regularly.
-2. Prefer stable local/global CLI usage for GitNexus when your MCP client supports `env`.
-3. Increase GitNexus connect/call timeouts on slower or first-run environments.
+Validated compatibility:
 
-Quick install command (Windows):
+| Node.js | Managed GitNexus |
+|---------|------------------|
+| 20-21 | Managed Sidecar disabled; use a system GitNexus CLI or degraded mode |
+| 22+ / Windows、macOS、Linux | `1.6.9` |
+
+Each managed installation is isolated by GitNexus version, operating system, CPU architecture, and Node.js major version. npm integrity is checked against the pinned release metadata before the runtime is accepted. The installer then runs `gitnexus doctor` plus a real TypeScript indexing probe and rejects any runtime that silently disables FTS/BM25 search.
+
+Install or repair the managed Sidecar through the project launcher:
 
 ```powershell
-winget install Microsoft.VisualStudio.2022.BuildTools
+# Windows
+& ./.mcp-probe-kit/bin/probe.cmd doctor gitnexus --install
 ```
+
+```bash
+# macOS / Linux
+./.mcp-probe-kit/bin/probe doctor gitnexus --install
+```
+
+The first installation can take several minutes because GitNexus includes native parsers, LadybugDB, ONNX Runtime, and post-install grammar builds. It runs outside the project and does not modify the project `package.json` or `node_modules`.
+
+Available modes:
+
+- `MCP_GITNEXUS_MODE=auto` — default; explicit/system/existing managed runtime, otherwise fast degradation.
+- `MCP_GITNEXUS_MODE=managed` — require the managed Sidecar and allow installation during the graph request.
+- `MCP_GITNEXUS_MODE=system` — use only explicit/system GitNexus; never install.
+- `MCP_GITNEXUS_MODE=off` — disable GitNexus.
+- `MCP_GITNEXUS_AUTO_INSTALL=1` — allow `auto` mode to install synchronously; not recommended for latency-sensitive clients.
+
+Some GitNexus dependencies use native modules. On Windows, LadybugDB FTS also requires the OpenSSL runtime shipped with Git for Windows; mcp-probe-kit discovers its `mingw64/bin` directory and exposes it only to the managed child process. Set `MCP_GITNEXUS_WINDOWS_RUNTIME_BIN` to an equivalent directory when Git is installed in a nonstandard location. A failed prebuilt-binary download may still require Visual Studio Build Tools with the C++ workload. Installation failure never prevents the mcp-probe-kit workflow from continuing in degraded mode.
 
 Example config using a preinstalled `gitnexus` CLI:
 
@@ -670,6 +694,7 @@ Example config using a preinstalled `gitnexus` CLI:
     "mcp-probe-kit": {
       "command": "mcp-probe-kit",
       "env": {
+        "MCP_GITNEXUS_MODE": "system",
         "MCP_GITNEXUS_COMMAND": "gitnexus",
         "MCP_GITNEXUS_ARGS": "mcp",
         "MCP_GITNEXUS_CONNECT_TIMEOUT_MS": "30000",
@@ -846,29 +871,17 @@ Use `@latest` tag in config, automatically uses latest version.
 npm update -g mcp-probe-kit
 ```
 
-### Q4: Why are graph-aware tools slow or timing out on Windows the first time?
+### Q4: Why can the first GitNexus installation take a long time?
 
-This usually affects `code_insight`, `start_feature`, `start_bugfix`, and `init_project_context`.
+GitNexus includes native parsers, a graph database, ONNX Runtime, and post-install grammar builds. A cold managed installation may take several minutes, especially on Windows or a slow network.
 
-Common causes:
+The normal feature and bug-fix workflows do **not** wait for this installation in default `auto` mode. They return a structured `managed_install_required` degradation result, and the Agent can automatically run:
 
-1. `npx -y gitnexus@latest mcp` performs a cold start and may spend 20+ seconds checking/downloading packages.
-2. GitNexus may need native `tree-sitter-*` modules, which can require Visual Studio Build Tools on Windows.
-
-If you see logs like:
-
-```text
-gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use
-gyp ERR! find VS - missing any VC++ toolset
+```powershell
+& ./.mcp-probe-kit/bin/probe.cmd doctor gitnexus --install
 ```
 
-Try this:
-
-1. Install Visual Studio Build Tools with the C++ workload.
-2. Retry once after dependencies finish installing.
-3. If your client supports `env`, switch the bridge to a preinstalled `gitnexus` CLI and raise:
-   `MCP_GITNEXUS_CONNECT_TIMEOUT_MS`
-   `MCP_GITNEXUS_TIMEOUT_MS`
+The installation is stored in the mcp-probe-kit user cache, uses an exact compatible version and npm integrity pin, and does not modify the business project. If native installation fails, graph analysis remains degraded while the rest of the workflow continues normally.
 
 **👉 [More FAQ](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html)**
 

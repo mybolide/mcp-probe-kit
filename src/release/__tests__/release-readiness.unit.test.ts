@@ -107,6 +107,7 @@ function createFixture(options: {
       'security:audit': 'audit',
       'release:verify': 'verify',
       'build-mcp-apps': 'build-apps',
+      'smoke:gitnexus-sidecar': 'sidecar-smoke',
     },
   }));
   fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
@@ -144,6 +145,17 @@ function createFixture(options: {
   if (!options.omitBuildClean) {
     fs.writeFileSync(path.join(root, 'scripts/clean-build.mjs'), 'clean build');
   }
+  fs.writeFileSync(path.join(root, 'scripts/gitnexus-sidecar-smoke.mjs'), 'gitnexus 1.6.9 smoke');
+  fs.writeFileSync(
+    path.join(root, 'src/lib/gitnexus-runtime-config.ts'),
+    'gitnexus@1.6.9\nsha512-Rq5LXFygx7jjMp/YFsIAcnnzuKvvCsb4rxHFILnu05ZOqk7xNXTUSMRa968EOCbxcKFxnhKYaGXoabOUeGZX6A==\nlibssl-3-x64.dll\nlibcrypto-3-x64.dll\nGITNEXUS_WORKER_POOL_SIZE\n'
+  );
+  fs.writeFileSync(
+    path.join(root, 'src/lib/gitnexus-runtime-installer.ts'),
+    'verifyManagedRuntimeCapabilities\nFull-text search:\nFTS extension unavailable\nfull-text\\/BM25 search is disabled\n'
+  );
+  fs.writeFileSync(path.join(root, 'src/lib/gitnexus-runtime-manager.ts'), 'managed runtime');
+  fs.writeFileSync(path.join(root, 'src/lib/gitnexus-bridge.ts'), 'managed GitNexus bridge');
   fs.writeFileSync(
     path.join(root, 'src/lib/mcp-apps.ts'),
     'io.modelcontextprotocol/ui\ntext/html;profile=mcp-app\nmemory-center\n'
@@ -166,7 +178,7 @@ function createFixture(options: {
   );
   fs.writeFileSync(
     path.join(root, '.github/workflows/release.yml'),
-    'node-version: "20"\nnode-version: "24"\nnpm@11.18.0\nid-token: write\npackage-manager-cache: false\nnpm run release:verify\nnpm publish --tag\nprerelease:\npublish_mcp_registry\n' +
+    'node-version: "20"\nnode-version: "24"\nnpm@11.18.0\nid-token: write\npackage-manager-cache: false\nnpm run release:verify\nubuntu-latest\nmacos-latest\nwindows-latest\nnpm run smoke:gitnexus-sidecar\nneeds: [build, gitnexus-sidecar]\nnpm publish --tag\nprerelease:\npublish_mcp_registry\n' +
       (options.legacyNpmToken ? 'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}\n' : '')
   );
   fs.writeFileSync(
@@ -175,7 +187,7 @@ function createFixture(options: {
   );
   fs.writeFileSync(
     path.join(root, '.github/workflows/ci.yml'),
-    'node-version: "20"\nnode-version: "22"\nnpm run release:verify\n'
+    'node-version: "20"\nnode-version: "22"\nnpm run release:verify\nubuntu-latest\nmacos-latest\nwindows-latest\nnpm run smoke:gitnexus-sidecar\n'
   );
   if (options.includeMigration) {
     fs.writeFileSync(path.join(root, 'docs/migration-v3-to-v4.md'), 'migration');

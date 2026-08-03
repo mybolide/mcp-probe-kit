@@ -30,6 +30,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.7] - 2026-08-03
+
+### Added
+
+- Added a version-locked managed GitNexus Sidecar with isolated user cache, installation locking, atomic promotion, npm integrity verification, Node/platform/architecture fingerprinting, and `doctor gitnexus [--install]` diagnostics.
+- Added a real post-install capability probe that runs GitNexus doctor plus TypeScript indexing and rejects runtimes that silently disable FTS/BM25 search.
+- Added Windows discovery of the OpenSSL runtime shipped with Git for Windows, exposing its `mingw64/bin` directory only to managed GitNexus child processes so LadybugDB FTS can load without copying DLLs into user projects.
+
+### Changed
+
+- GitNexus no longer launches through `gitnexus@latest`. Managed mode pins GitNexus `1.6.9` and its exact npm integrity across Windows, macOS, and Linux; Node 20/21 retain the core workflow and use system GitNexus or structured degradation.
+- Graph tools now prefer explicit configuration, then an already validated managed runtime, then a system CLI. Missing runtimes degrade immediately in default `auto` mode, while the generated Skill instructs Agents to install the Sidecar and retry without asking users to perform a global installation.
+- CLI JSON input now tolerates UTF-8 BOMs, and tool-scoped `--help` returns the tool schema instead of attempting execution.
+
+### Validation
+
+- Windows x64 with Node 22 completed managed installation, LadybugDB FTS loading, repository indexing, a 17-tool MCP handshake, and strict `query`, `context`, and `impact` calls with the expected `add` symbol.
+- Apple Silicon macOS with Node 24 completed the same build, targeted test, installation, indexing, MCP, and graph-query lifecycle from `/Users/kyle/Documents/workspace/mcp-probe-kit-rc7-macos-test`.
+- CI and tag-release workflows now block publication until the strict Sidecar smoke passes on `windows-latest`, `macos-latest`, and `ubuntu-latest`.
+
+---
+
 ## [4.0.0-rc.6] - 2026-08-02
 
 ### Added

@@ -88,7 +88,27 @@ macOS / Linux：
 npx --yes mcp-probe-kit@${skillVersion} install-agent --project-root .
 \`\`\`
 
-安装后立即改用项目内启动器。不得使用 \`@latest\` 或 \`@next\`，不得全局安装，也不得修改用户项目的 \`package.json\`。Skill、CLI 启动器和 MCP 必须保持同一精确版本 \`${skillVersion}\`。`;
+安装后立即改用项目内启动器。不得使用 \`@latest\` 或 \`@next\`，不得全局安装，也不得修改用户项目的 \`package.json\`。Skill、CLI 启动器和 MCP 必须保持同一精确版本 \`${skillVersion}\`。
+
+### GitNexus 托管运行时
+
+GitNexus 不打包进 mcp-probe-kit 主包，也不做全局安装。优先使用用户显式配置或系统已有的兼容 CLI；否则使用 mcp-probe-kit 管理的精确版本 Sidecar。
+
+如果工具结果包含 \`managed_install_required\`，Agent 不要让用户手动安装，自动执行一次：
+
+Windows：
+
+\`\`\`powershell
+& ./.mcp-probe-kit/bin/probe.cmd doctor gitnexus --install
+\`\`\`
+
+macOS / Linux：
+
+\`\`\`bash
+./.mcp-probe-kit/bin/probe doctor gitnexus --install
+\`\`\`
+
+安装完成后重试原工具。安装失败或超时则保留降级结果继续，不得阻塞主工作流。可通过 \`MCP_GITNEXUS_MODE=system|managed|off\` 控制策略。`;
 }
 
 function renderAvoidRules(): string {

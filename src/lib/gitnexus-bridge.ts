@@ -7,13 +7,23 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { resolveWorkspaceRoot } from "./workspace-root.js";
 import {
+  ensureManagedGitNexusRuntime,
+  buildManagedGitNexusProcessEnv,
+  findSystemGitNexusCli,
+  inspectManagedGitNexusRuntime,
+  isGitNexusAutoInstallEnabled,
+  resolveCompatibleGitNexus,
+  resolveGitNexusMode,
+  type GitNexusCompatibility,
+} from "./gitnexus-runtime-manager.js";
+import {
   isAbortError,
   throwIfAborted,
 } from "./tool-execution-context.js";
 
 export type CodeInsightMode = "auto" | "query" | "context" | "impact";
 export type CodeInsightDirection = "upstream" | "downstream";
-export type GitNexusLaunchStrategy = "local" | "npx" | "env";
+export type GitNexusLaunchStrategy = "local" | "managed" | "env" | "disabled";
 
 export interface CodeInsightCandidate {
   uid?: string;
@@ -91,7 +101,6 @@ const DEFAULT_CONNECT_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_CONNECT_TIMEOUT_MS",
 const DEFAULT_CALL_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_TIMEOUT_MS", 20000);
 const DEFAULT_INDEX_REFRESH_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_REFRESH_TIMEOUT_MS", 8000);
 const DEFAULT_FEATURE_GRAPH_BUDGET_MS = readIntEnv("MCP_GITNEXUS_FEATURE_BUDGET_MS", 8000);
-const DEFAULT_GITNEXUS_ARGS = ["-y", "gitnexus@latest", "mcp"];
 const FAILURE_CACHE_TTL_MS = readIntEnv("MCP_GITNEXUS_FAILURE_CACHE_TTL_MS", 30000);
 const DEFAULT_IGNORED_DIRS = new Set([
   ".git",
@@ -154,7 +163,7 @@ function isBridgeEnabled(): boolean {
   return !/^(0|false|no|off)$/i.test(raw.trim());
 }
 
-function splitArgs(raw: string | undefined, fallback: string[] = DEFAULT_GITNEXUS_ARGS): string[] {
+function splitArgs(raw: string | undefined, fallback: string[] = defaultGitNexusNpxArgs()): string[] {
   if (!raw) {
     return [...fallback];
   }
@@ -186,6 +195,14 @@ function inferCandidateRepoNames(baseDir?: string): string[] {
   const resolvedBaseDir = resolveWorkspaceRoot(baseDir);
   const candidates: string[] = [];
 
+  // GitNexus registers repositories by directory basename unless an explicit
+  // --name alias is supplied. Prefer that canonical identifier before the
+  // package name, which may differ (or be scoped) and is not a registry key.
+  const base = path.basename(resolvedBaseDir).trim();
+  if (base) {
+    candidates.push(base);
+  }
+
   const pkgPath = path.join(resolvedBaseDir, "package.json");
   try {
     if (fs.existsSync(pkgPath)) {
@@ -197,11 +214,6 @@ function inferCandidateRepoNames(baseDir?: string): string[] {
     }
   } catch {
     // ignore parse failure
-  }
-
-  const base = path.basename(resolvedBaseDir).trim();
-  if (base) {
-    candidates.push(base);
   }
 
   return Array.from(new Set(candidates.filter(Boolean)));
@@ -226,14 +238,30 @@ function isGitNexusCliCommand(command: string): boolean {
     || normalized === "gitnexus.bat";
 }
 
-function resolveNpxPackageArgs(bridgeArgs: string[]): string[] {
+function defaultGitNexusNpxArgs(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+): string[] {
+  const compatibility = resolveCompatibleGitNexus(
+    env.MCP_GITNEXUS_NODE_VERSION || process.versions.node,
+    platform
+  );
+  return ["-y", compatibility.packageSpec, "mcp"];
+}
+
+function resolveNpxPackageArgs(
+  bridgeArgs: string[],
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+): string[] {
   const flags: string[] = [];
-  let packageSpec = "gitnexus@latest";
+  let packageSpec = resolveCompatibleGitNexus(
+    env.MCP_GITNEXUS_NODE_VERSION || process.versions.node,
+    platform
+  ).packageSpec;
 
   for (const arg of bridgeArgs) {
-    if (arg === "mcp") {
-      break;
-    }
+    if (arg === "mcp") break;
     if (arg.startsWith("-")) {
       flags.push(arg);
       continue;
@@ -241,19 +269,18 @@ function resolveNpxPackageArgs(bridgeArgs: string[]): string[] {
     packageSpec = arg;
     break;
   }
-
   return [...flags, packageSpec];
 }
 
 export function resolveGitNexusBridgeCommand(
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform
-): { command: string; args: string[]; strategy: GitNexusLaunchStrategy } {
+): { command: string; args: string[]; strategy: GitNexusLaunchStrategy } | undefined {
   const explicitCommand = env.MCP_GITNEXUS_COMMAND?.trim();
   if (explicitCommand) {
     const args = splitArgs(
       env.MCP_GITNEXUS_ARGS,
-      isGitNexusCliCommand(explicitCommand) ? ["mcp"] : DEFAULT_GITNEXUS_ARGS
+      isGitNexusCliCommand(explicitCommand) ? ["mcp"] : defaultGitNexusNpxArgs(env, platform)
     );
     return {
       ...resolveSpawnCommand(explicitCommand, args, platform, env),
@@ -261,51 +288,118 @@ export function resolveGitNexusBridgeCommand(
     };
   }
 
-  const localCli = findExecutablePath("gitnexus", platform, env);
+  const localCli = findSystemGitNexusCli(env, platform);
   if (localCli) {
-    return {
-      command: localCli,
-      args: ["mcp"],
-      strategy: "local",
-    };
+    return { command: localCli, args: ["mcp"], strategy: "local" };
+  }
+  return undefined;
+}
+
+async function resolveGitNexusLauncher(
+  signal?: AbortSignal,
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+): Promise<{ command: string; args: string[]; strategy: GitNexusLaunchStrategy; env?: Record<string, string> } | undefined> {
+  const mode = resolveGitNexusMode(env);
+  if (mode === "off") return undefined;
+
+  const configured = resolveGitNexusBridgeCommand(env, platform);
+  if (configured?.strategy === "env") return configured;
+  if (mode === "system") return configured;
+
+  try {
+    const inspected = inspectManagedGitNexusRuntime({ env, platform });
+    if (inspected.valid) {
+      return {
+        command: process.execPath,
+        args: [inspected.cliPath, "mcp"],
+        strategy: "managed",
+        env: mergeManagedRuntimeEnv(env, inspected.compatibility),
+      };
+    }
+  } catch (error) {
+    if (mode === "managed") throw error;
   }
 
+  if (mode === "auto" && configured?.strategy === "local") return configured;
+  if (mode !== "managed" && !isGitNexusAutoInstallEnabled(env)) return undefined;
+
+  const managed = await ensureManagedGitNexusRuntime({ env, platform, signal });
   return {
-    ...resolveSpawnCommand("npx", splitArgs(env.MCP_GITNEXUS_ARGS), platform, env),
-    strategy: "npx",
+    command: process.execPath,
+    args: [managed.cliPath, "mcp"],
+    strategy: "managed",
+    env: mergeManagedRuntimeEnv(env, managed.compatibility),
   };
 }
 
-function resolveGitNexusCliCommand(
+async function resolveGitNexusCliCommand(
   subcommand: string,
+  signal?: AbortSignal,
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform
-) {
+): Promise<{ command: string; args: string[]; env?: NodeJS.ProcessEnv } | undefined> {
+  const mode = resolveGitNexusMode(env);
+  if (mode === "off") return undefined;
+
   const explicitCommand = env.MCP_GITNEXUS_COMMAND?.trim();
   if (explicitCommand) {
     if (isGitNexusCliCommand(explicitCommand)) {
       return resolveSpawnCommand(explicitCommand, [subcommand], platform, env);
     }
-
-    const bridgeArgs = splitArgs(env.MCP_GITNEXUS_ARGS);
+    const bridgeArgs = splitArgs(env.MCP_GITNEXUS_ARGS, defaultGitNexusNpxArgs(env, platform));
     return resolveSpawnCommand(
       explicitCommand,
-      [...resolveNpxPackageArgs(bridgeArgs), subcommand],
+      [...resolveNpxPackageArgs(bridgeArgs, env, platform), subcommand],
       platform,
       env
     );
   }
 
-  const localCli = findExecutablePath("gitnexus", platform, env);
-  if (localCli) {
-    return {
-      command: localCli,
-      args: [subcommand],
-    };
+  const localCli = findSystemGitNexusCli(env, platform);
+  if (mode === "system") {
+    return localCli ? { command: localCli, args: [subcommand] } : undefined;
   }
 
-  const bridgeArgs = splitArgs(env.MCP_GITNEXUS_ARGS);
-  return resolveSpawnCommand("npx", [...resolveNpxPackageArgs(bridgeArgs), subcommand], platform, env);
+  try {
+    const inspected = inspectManagedGitNexusRuntime({ env, platform });
+    if (inspected.valid) {
+      return {
+        command: process.execPath,
+        args: buildManagedCliArgs(inspected.cliPath, subcommand, inspected.compatibility),
+        env: mergeManagedRuntimeEnv(env, inspected.compatibility),
+      };
+    }
+  } catch (error) {
+    if (mode === "managed") throw error;
+  }
+
+  if (mode === "auto" && localCli) return { command: localCli, args: [subcommand] };
+  if (mode !== "managed" && !isGitNexusAutoInstallEnabled(env)) return undefined;
+
+  const managed = await ensureManagedGitNexusRuntime({ env, platform, signal });
+  return {
+    command: process.execPath,
+    args: buildManagedCliArgs(managed.cliPath, subcommand, managed.compatibility),
+    env: mergeManagedRuntimeEnv(env, managed.compatibility),
+  };
+}
+
+function buildManagedCliArgs(
+  cliPath: string,
+  subcommand: string,
+  compatibility: GitNexusCompatibility
+): string[] {
+  return subcommand === "analyze"
+    ? [cliPath, subcommand, ...(compatibility.analyzeArgs ?? [])]
+    : [cliPath, subcommand];
+}
+
+function mergeManagedRuntimeEnv(
+  env: NodeJS.ProcessEnv,
+  compatibility: GitNexusCompatibility
+): Record<string, string> {
+  return buildManagedGitNexusProcessEnv(compatibility, env, process.platform);
 }
 
 export function resolveExecutableCommand(
@@ -868,7 +962,8 @@ async function runProcess(
   args: string[],
   cwd: string,
   signal?: AbortSignal,
-  timeoutMs: number = DEFAULT_INDEX_REFRESH_TIMEOUT_MS
+  timeoutMs: number = DEFAULT_INDEX_REFRESH_TIMEOUT_MS,
+  env?: NodeJS.ProcessEnv
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
@@ -876,6 +971,7 @@ async function runProcess(
       stdio: ["ignore", "pipe", "pipe"],
       signal,
       windowsHide: true,
+      env: env ? { ...process.env, ...env } : process.env,
     });
 
     let stderr = "";
@@ -996,8 +1092,9 @@ async function createTempAnalysisWorkspace(
     const gitInit = resolveSpawnCommand("git", ["init", "-q"]);
     await runProcess(gitInit.command, gitInit.args, analysisRoot, signal);
 
-    const analyzeCli = resolveGitNexusCliCommand("analyze");
-    await runProcess(analyzeCli.command, analyzeCli.args, analysisRoot, signal);
+    const analyzeCli = await resolveGitNexusCliCommand("analyze", signal);
+    if (!analyzeCli) throw new Error("GitNexus runtime unavailable");
+    await runProcess(analyzeCli.command, analyzeCli.args, analysisRoot, signal, DEFAULT_INDEX_REFRESH_TIMEOUT_MS, analyzeCli.env);
   }
 
   return {
@@ -1009,8 +1106,9 @@ async function createTempAnalysisWorkspace(
     cleanup: async () => {
       if (options?.bootstrap !== false) {
         try {
-          const cleanCli = resolveGitNexusCliCommand("clean");
-          await runProcess(cleanCli.command, cleanCli.args, analysisRoot, undefined);
+          const cleanCli = await resolveGitNexusCliCommand("clean", signal);
+          if (!cleanCli) throw new Error("GitNexus runtime unavailable");
+          await runProcess(cleanCli.command, cleanCli.args, analysisRoot, undefined, DEFAULT_INDEX_REFRESH_TIMEOUT_MS, cleanCli.env);
         } catch {
           // best effort cleanup only
         }
@@ -1068,8 +1166,9 @@ export async function tryRefreshWorkspaceIndex(
   }
 
   try {
-    const analyzeCli = resolveGitNexusCliCommand("analyze");
-    await runProcess(analyzeCli.command, analyzeCli.args, workspace.analysisRoot, signal);
+    const analyzeCli = await resolveGitNexusCliCommand("analyze", signal);
+    if (!analyzeCli) return "GitNexus runtime unavailable";
+    await runProcess(analyzeCli.command, analyzeCli.args, workspace.analysisRoot, signal, DEFAULT_INDEX_REFRESH_TIMEOUT_MS, analyzeCli.env);
     return undefined;
   } catch (error) {
     return normalizeError(error);
@@ -1207,9 +1306,12 @@ export async function runCodeInsightBridge(
   const modeRequested = request.mode || "auto";
   const modeResolved = resolveMode(request);
   const requestedProjectRoot = resolveRequestedProjectRoot(request.projectRoot);
-  const launcher = resolveGitNexusBridgeCommand();
+  const runtimeMode = resolveGitNexusMode();
+  const configuredLauncher = resolveGitNexusBridgeCommand();
+  const fallbackStrategy: GitNexusLaunchStrategy =
+    configuredLauncher?.strategy || (runtimeMode === "off" || runtimeMode === "system" ? "disabled" : "managed");
 
-  if (!isBridgeEnabled() || isEnvDisabled("MCP_ENABLE_GITNEXUS_BRIDGE")) {
+  if (!isBridgeEnabled() || isEnvDisabled("MCP_ENABLE_GITNEXUS_BRIDGE") || runtimeMode === "off") {
     const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
     return {
       provider: "gitnexus",
@@ -1218,11 +1320,13 @@ export async function runCodeInsightBridge(
       degraded: true,
       modeRequested,
       modeResolved,
-      summary: "GitNexus bridge 已禁用（MCP_ENABLE_GITNEXUS_BRIDGE=0）。",
+      summary: runtimeMode === "off"
+        ? "GitNexus bridge 已禁用（MCP_GITNEXUS_MODE=off）。"
+        : "GitNexus bridge 已禁用（MCP_ENABLE_GITNEXUS_BRIDGE=0）。",
       executions: [],
       warnings: ["bridge_disabled"],
       repo: resolvePreferredRepoName(request.repo),
-      launcherStrategy: launcher.strategy,
+      launcherStrategy: "disabled",
       ambiguities: [],
       workspaceMode: "direct",
       sourceRoot,
@@ -1244,7 +1348,7 @@ export async function runCodeInsightBridge(
       executions: [],
       warnings: ["bridge_failure_cached"],
       repo: resolvePreferredRepoName(request.repo),
-      launcherStrategy: launcher.strategy,
+      launcherStrategy: fallbackStrategy,
       ambiguities: [],
       workspaceMode: "direct",
       sourceRoot,
@@ -1266,11 +1370,69 @@ export async function runCodeInsightBridge(
       executions: [],
       warnings: ["project_root_required", "unsafe_home_directory"],
       repo: resolvePreferredRepoName(request.repo),
-      launcherStrategy: launcher.strategy,
+      launcherStrategy: fallbackStrategy,
       ambiguities: [],
       workspaceMode: "direct",
       sourceRoot: requestedProjectRoot,
       analysisRoot: requestedProjectRoot,
+      pathMapped: false,
+    };
+  }
+
+  let launcher: {
+    command: string;
+    args: string[];
+    strategy: GitNexusLaunchStrategy;
+    env?: Record<string, string>;
+  } | undefined;
+  try {
+    launcher = await resolveGitNexusLauncher(request.signal);
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    const message = `GitNexus 托管运行时不可用：${normalizeError(error)}`;
+    bridgeFailureReason = message;
+    bridgeFailureUntil = Date.now() + FAILURE_CACHE_TTL_MS;
+    const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
+    return {
+      provider: "gitnexus",
+      enabled: true,
+      available: false,
+      degraded: true,
+      modeRequested,
+      modeResolved,
+      summary: message,
+      executions: [],
+      warnings: ["managed_runtime_unavailable"],
+      repo: resolvePreferredRepoName(request.repo),
+      launcherStrategy: runtimeMode === "system" ? "disabled" : "managed",
+      ambiguities: [],
+      workspaceMode: "direct",
+      sourceRoot,
+      analysisRoot: sourceRoot,
+      pathMapped: false,
+    };
+  }
+
+  if (!launcher) {
+    const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
+    return {
+      provider: "gitnexus",
+      enabled: true,
+      available: false,
+      degraded: true,
+      modeRequested,
+      modeResolved,
+      summary: runtimeMode === "system"
+        ? "GitNexus system 模式未发现可执行的 gitnexus CLI，已降级继续。"
+        : "GitNexus 托管运行时尚未安装，已快速降级继续。Agent 可自动执行 `mcp-probe-kit doctor gitnexus --install` 后重试。",
+      executions: [],
+      warnings: ["runtime_unavailable", "managed_install_required"],
+      repo: resolvePreferredRepoName(request.repo),
+      launcherStrategy: "disabled",
+      ambiguities: [],
+      workspaceMode: "direct",
+      sourceRoot,
+      analysisRoot: sourceRoot,
       pathMapped: false,
     };
   }
@@ -1296,6 +1458,7 @@ export async function runCodeInsightBridge(
     command,
     args,
     cwd: workspace.analysisRoot,
+    ...(launcher.env ? { env: launcher.env } : {}),
     stderr: "pipe",
   });
 
@@ -1497,16 +1660,12 @@ export async function runCodeInsightBridge(
   const successful = executions.filter((item) => item.ok);
   const failed = executions.filter((item) => !item.ok);
 
-  if (
-    successful.length === 0
-    && !effectiveRepo
-    && failed.length > 0
-    && failed.every((item) => (item.error || item.text || "").includes("Multiple repositories indexed"))
-  ) {
-    const availableRepos = parseAvailableReposFromError(
-      failed.map((item) => item.error || item.text || "").join(" | ")
+  if (successful.length === 0 && failed.length > 0) {
+    const failureText = failed.map((item) => item.error || item.text || "").join(" | ");
+    const availableRepos = parseAvailableReposFromError(failureText);
+    const retryRepo = inferCandidateRepoNames(workspace.sourceRoot).find(
+      (candidate) => candidate !== effectiveRepo && availableRepos.includes(candidate)
     );
-    const retryRepo = inferCandidateRepoNames(workspace.sourceRoot).find((candidate) => availableRepos.includes(candidate));
 
     if (retryRepo) {
       return runCodeInsightBridge({
@@ -1595,6 +1754,24 @@ export async function buildFeatureGraphContext(input: {
   repo?: string;
   projectRoot?: string;
 }): Promise<EmbeddedGraphContext> {
+  if (isBridgeEnabled() && !isEnvDisabled("MCP_ENABLE_GITNEXUS_BRIDGE") && resolveGitNexusMode() !== "off") {
+    try {
+      await resolveGitNexusLauncher(input.signal);
+    } catch (error) {
+      if (isAbortError(error)) throw error;
+      return {
+        enabled: true,
+        available: false,
+        degraded: true,
+        summary: `GitNexus 托管运行时不可用：${normalizeError(error)}`,
+        warnings: ["managed_runtime_unavailable"],
+        provider: "gitnexus",
+        mode: "query",
+        highlights: [],
+      };
+    }
+  }
+
   const controller = new AbortController();
   let timedOut = false;
   const forwardAbort = (): void => controller.abort(input.signal?.reason);

@@ -14,14 +14,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "AI 개발 강화 툴킷 · 문서 센터",
-    "version": "v4.0.0-rc.6",
+    "version": "v4.0.0-rc.7",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
   },
   "sections": {
     "quickStart": {
       "title": "빠른 시작",
-      "description": "5분 안에 MCP Probe Kit v4.0.0-rc.6 시작하기",
+      "description": "5분 안에 MCP Probe Kit v4.0.0-rc.7 시작하기",
       "installConfig": "설치 및 구성"
     },
     "tools": {
@@ -63,10 +63,10 @@
   },
   "gettingStarted": {
     "title": "설치 및 구성",
-    "subtitle": "5분 안에 MCP Probe Kit v4.0.0-rc.6 시작하기. Cursor, Cline, Claude Desktop 지원",
+    "subtitle": "5분 안에 MCP Probe Kit v4.0.0-rc.7 시작하기. Cursor, Cline, Claude Desktop 지원",
     "skillBootstrap": {
       "title": "Skill 및 AGENTS 자동 부트스트랩",
-      "body": "MCP 도구 호출 시 AGENTS.md와 .agents/skills/mcp-probe-kit/SKILL.md를 작성합니다(단일 규칙 소스). .trae/, .lingma/, .comate/ 등 디렉터리가 있으면 얇은 어댑터를 자동 생성합니다(v4.0.0-rc.6+, 환경 변수 불필요)."
+      "body": "MCP 도구 호출 시 AGENTS.md와 .agents/skills/mcp-probe-kit/SKILL.md를 작성합니다(단일 규칙 소스). .trae/, .lingma/, .comate/ 등 디렉터리가 있으면 얇은 어댑터를 자동 생성합니다(v4.0.0-rc.7+, 환경 변수 불필요)."
     },
     "breadcrumb": {
       "home": "문서",
@@ -124,12 +124,12 @@
         }
       },
       "windowsGraph": {
-        "title": "Windows 그래프 도구 안내",
-        "description": "그래프 관련 도구는 기본적으로 GitNexus 를 npx 로 시작하므로 Windows 에서 첫 실행이 느릴 수 있습니다.",
-        "item1": "첫 콜드 스타트에서는 npx 가 의존성을 확인하거나 다운로드하므로 20초 이상 걸릴 수 있습니다.",
-        "item2": "GitNexus 의 일부 의존성은 tree-sitter 네이티브 모듈을 사용하며 Windows 에서는 Visual Studio Build Tools 가 필요할 수 있습니다.",
-        "item3": "MCP 클라이언트가 env 를 지원하면, 미리 설치한 gitnexus CLI 를 우선 사용하고 GitNexus 타임아웃을 늘리세요.",
-        "item4": "Windows 에서 Build Tools 빠른 설치: winget install Microsoft.VisualStudio.2022.BuildTools",
+        "title": "GitNexus 관리형 런타임",
+        "description": "그래프 도구는 명시적으로 설정된 CLI 또는 시스템 GitNexus를 우선 사용하고, 없으면 버전이 고정된 관리형 Sidecar를 사용합니다. 최초 명시적 설치에는 몇 분이 걸릴 수 있습니다.",
+        "item1": "기본 auto 모드는 기능 흐름에서 설치를 기다리지 않고 즉시 성능 저하 모드로 전환하며, Agent가 doctor gitnexus --install을 자동 실행할 수 있습니다.",
+        "item2": "Windows에서는 Git for Windows에 포함된 OpenSSL 런타임을 자동으로 찾아 프로젝트에 DLL을 복사하지 않고 LadybugDB FTS를 로드합니다.",
+        "item3": "관리형 런타임은 사용자 캐시에 저장되고 전역 설치나 package.json 변경을 하지 않으며 Node, OS, 아키텍처별로 격리되고 실제 FTS 인덱싱 검사를 통과해야 합니다.",
+        "item4": "Windows에서 Build Tools 빠른 설치: winget install Microsoft.VisualStudio.2022.BuildTools",
         "quickInstallTitle": "빠른 설치 명령:",
         "exampleTitle": "미리 설치한 gitnexus CLI 를 사용하는 구성 예시:"
       },
@@ -220,16 +220,16 @@
         "step4": "구성 파일 JSON 형식이 올바른지 확인"
       },
       "q3": {
-        "title": "문제 3：Windows 에서 그래프 도구의 첫 실행이 느리거나 시간 초과됨",
+        "title": "문제 3: GitNexus 최초 관리형 설치가 느리거나 실패함",
         "affected": "영향받는 도구：",
         "error": "대표 오류：",
         "reasons": "주요 원인：",
-        "reason1": "`npx -y gitnexus@latest mcp` 는 콜드 스타트이므로 첫 실행 시 의존성 확인 또는 다운로드에 20초 이상 걸릴 수 있습니다.",
-        "reason2": "GitNexus 가 의존하는 tree-sitter 네이티브 모듈은 Windows 에서 Visual Studio Build Tools 가 필요할 수 있습니다.",
+        "reason1": "관리형 설치에는 네이티브 파서, 그래프 데이터베이스, ONNX Runtime, postinstall 문법 빌드가 포함되어 몇 분이 걸릴 수 있습니다.",
+        "reason2": "Windows의 Git 설치 경로가 표준 위치가 아니면 LadybugDB FTS용 OpenSSL 런타임을 찾지 못할 수 있으며, 사전 빌드가 없으면 Visual Studio Build Tools도 필요합니다.",
         "solution": "권장 조치：",
-        "step1": "C++ 워크로드가 포함된 Visual Studio Build Tools 를 설치하세요.",
-        "step2": "의존성 설치가 끝난 뒤 다시 한 번 실행해서 첫 콜드 스타트를 정상 지연과 구분하세요.",
-        "step3": "클라이언트가 env 를 지원하면 미리 설치한 gitnexus CLI 를 우선 사용하고 MCP_GITNEXUS_CONNECT_TIMEOUT_MS 와 MCP_GITNEXUS_TIMEOUT_MS 를 늘리세요."
+        "step1": "프로젝트 로컬 mcp-probe-kit 런처를 통해 doctor gitnexus --install을 실행합니다.",
+        "step2": "설치 후 원래 도구를 다시 실행합니다. 기본 auto 모드는 GitNexus가 없어도 주 워크플로를 차단하지 않습니다.",
+        "step3": "Git 런타임 경로가 표준이 아니면 MCP_GITNEXUS_WINDOWS_RUNTIME_BIN을 설정하고, 관리형 설치 금지는 system, 완전 비활성화는 off를 사용합니다."
       }
     },
     "common": {
