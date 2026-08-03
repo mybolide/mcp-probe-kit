@@ -35,7 +35,6 @@ import {
   isAppOnlyTool,
   listToolDefinitions,
   listToolDefinitionsForToolset,
-  prepareAppOnlyToolsForList,
   prepareRegisteredToolForList,
 } from "./tool-registry.js";
 import { supportsMcpApps } from "../lib/mcp-apps.js";
@@ -71,15 +70,14 @@ export function registerToolHandlers(
         uiAppsEnabled: options.uiAppsEnabled,
       })
     );
-    const appTools = prepareAppOnlyToolsForList({
-      clientCapabilities,
-      uiAppsEnabled: options.uiAppsEnabled,
-    });
-    const tools = [...modelTools, ...appTools];
+    // App-only actions remain callable by a negotiated MCP App through
+    // tools/call, but must never be returned from tools/list. Some clients
+    // ignore `_meta.ui.visibility: ['app']` and expose every listed tool to
+    // the model, which leaks app-only actions into the Agent tool surface.
+    const tools = modelTools;
     const payloadBytes = Buffer.byteLength(JSON.stringify({ tools }), "utf8");
     console.error(
-      `[MCP Probe Kit] 当前工具集: ${toolset} (${modelTools.length}/${listToolDefinitions().length} 模型工具` +
-        `${appTools.length > 0 ? ` + ${appTools.length} App 专用动作` : ''}) | tools/list ≈ ` +
+      `[MCP Probe Kit] 当前工具集: ${toolset} (${modelTools.length}/${listToolDefinitions().length} 模型工具) | tools/list ≈ ` +
         `${(payloadBytes / 1024).toFixed(1)} KB`
     );
     return { tools };

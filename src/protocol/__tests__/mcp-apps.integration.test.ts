@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 describe('official MCP Apps integration', () => {
-  test('negotiates UI metadata, serves Memory Center, and marks app-only tools as app-visible', async () => {
+  test('negotiates UI metadata, serves Memory Center, and keeps app-only actions out of tools/list', async () => {
     vi.stubEnv('MCP_TOOLSET', 'compact');
     vi.stubEnv('MCP_ENABLE_UI_APPS', 'true');
     vi.stubEnv('MEMORY_QDRANT_URL', '');
@@ -50,20 +50,8 @@ describe('official MCP Apps integration', () => {
         : false).toBe(true);
 
       const tools = await client.listTools();
-      expect(tools.tools).toHaveLength(24);
-      const modelVisibleTools = tools.tools.filter((tool) => {
-        const meta = tool._meta as Record<string, unknown> | undefined;
-        const ui = meta?.ui as Record<string, unknown> | undefined;
-        const visibility = ui?.visibility;
-        return !Array.isArray(visibility) || visibility.includes('model');
-      });
-      expect(modelVisibleTools).toHaveLength(23);
-      expect(tools.tools.find((tool) => tool.name === 'list_memory_assets')?._meta).toMatchObject({
-        ui: {
-          resourceUri: 'ui://mcp-probe-kit/memory-center',
-          visibility: ['app'],
-        },
-      });
+      expect(tools.tools).toHaveLength(23);
+      expect(tools.tools.some((tool) => tool.name === 'list_memory_assets')).toBe(false);
       const feature = tools.tools.find((tool) => tool.name === 'start_feature');
       expect(feature?._meta).toMatchObject({
         ui: {
@@ -97,6 +85,51 @@ describe('official MCP Apps integration', () => {
         items: [],
         total: 0,
       });
+    } finally {
+      await client.close().catch(() => undefined);
+      await runtime.server.close().catch(() => undefined);
+    }
+  });
+
+  test('keeps the Memory-enabled compact surface at 29 tools for MCP Apps clients', async () => {
+    vi.stubEnv('MCP_TOOLSET', 'compact');
+    vi.stubEnv('MCP_ENABLE_UI_APPS', 'true');
+    vi.stubEnv('MEMORY_QDRANT_URL', 'http://127.0.0.1:6333');
+    vi.stubEnv('MEMORY_EMBEDDING_URL', 'http://127.0.0.1:11434');
+    vi.stubEnv('MEMORY_EMBEDDING_MODEL', 'nomic-embed-text');
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const runtime = createProbeServer({ protocolMode: 'auto' });
+    const client = new Client(
+      { name: 'cursor-like-mcp-apps-client', version: '1.0.0' },
+      {
+        capabilities: {
+          extensions: {
+            [MCP_APPS_EXTENSION_ID]: {
+              mimeTypes: [MCP_APP_MIME_TYPE],
+            },
+          },
+        },
+      },
+    );
+
+    await runtime.server.connect(serverTransport);
+    await client.connect(clientTransport);
+    try {
+      const tools = await client.listTools();
+      expect(tools.tools).toHaveLength(29);
+      expect(tools.tools.some((tool) => tool.name === 'list_memory_assets')).toBe(false);
+      expect(tools.tools.map((tool) => tool.name)).toEqual(
+        expect.arrayContaining([
+          'search_memory',
+          'read_memory_asset',
+          'memorize_asset',
+          'update_memory_asset',
+          'delete_memory_asset',
+          'scan_and_extract_patterns',
+        ]),
+      );
+
     } finally {
       await client.close().catch(() => undefined);
       await runtime.server.close().catch(() => undefined);

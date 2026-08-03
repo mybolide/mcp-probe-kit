@@ -136,12 +136,9 @@ export function buildMcpAppHtml(
 }
 
 function serializeInlineJson(value: unknown): string {
-  return JSON.stringify(value)
-    .replace(/</g, '\u003c')
-    .replace(/>/g, '\u003e')
-    .replace(/&/g, '\u0026')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
+  return JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (character) =>
+    String.raw`\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  );
 }
 
 function escapeHtml(value: string): string {
