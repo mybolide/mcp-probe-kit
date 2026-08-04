@@ -80,17 +80,17 @@ MCP Probe Kit 不是代码生成器，也不替代 Agent 的工程判断。
 
 V1 先冻结现有 33 个公开工具的兼容基线，再以独立提交新增 1 个统一架构工具 `architecture`。目标工具面为 34 个。
 
-工具职责必须按层区分，禁止把它们混成一套中央意图判断系统：
+工具职责和调用方式必须分开理解，禁止把“原子能力”“可组合能力”和“必须被编排”混为一谈：
 
 ```text
 workflow
   仅在 Agent 不确定首个工具时提供路由建议
 
 start_*
-  场景流程编排器：组合多个原子能力，生成 Delegated Plan
+  场景流程编排器：只组合该场景实际需要的能力，生成 Delegated Plan
 
 fix_bug / code_insight / architecture / check_spec / gentest / code_review ...
-  原子或领域能力：各自拥有明确的方法、输入、输出和证据
+  原子或领域能力：可以被 Agent 直接调用；其中一部分也可以被 start_* 组合
 
 plan_heartbeat / resume_plan / converge
   跨流程通用的状态与收敛能力
@@ -99,7 +99,22 @@ Memory 工具
   跨流程通用的召回、候选、沉淀和维护能力
 ```
 
-其中 `start_*` 不是意图识别器，也不是能力实现本身。任务类型由 Agent 根据用户上下文和 Skill 判断；`workflow` 只是可选兜底。`start_*` 的职责是把已经选定场景需要的能力按顺序组合起来。
+其中 `start_*` 不是意图识别器，也不是所有工具的总入口。任务类型由 Agent 根据用户上下文和 Skill 判断；`workflow` 只是可选兜底。`start_*` 只在用户需要完整交付流程时，把已经选定场景所需的部分能力按顺序组合起来。
+
+三个概念必须严格区分：
+
+```text
+原子能力
+  工具职责单一，可以独立完成一次明确任务
+
+可组合能力
+  既可以独立调用，也可以作为某个 start_* 流程中的一个步骤
+
+被编排能力
+  仅指在某一次具体 Delegated Plan 中实际被 start_* 选中的能力
+```
+
+因此，原子能力不等于必须被编排，可组合也不等于每次都要进入 `start_*`。
 
 典型关系：
 
@@ -109,7 +124,20 @@ start_feature 编排 add_feature / check_spec / estimate / gentest / code_review
 start_ui 编排 ui_search / ui_design_system / gentest / code_review
 ```
 
-其余工具由编排工具生成的 Delegated Plan 指引调用，不要求 Agent 自己记住完整工具链。
+但以下直接调用同样是正常路径，不需要先经过任何 `start_*`：
+
+```text
+只想理解代码或影响范围 → code_insight
+只想做根因分析 → fix_bug
+只想检查现有规格 → check_spec
+只想做架构评估或设计 → architecture
+只想生成测试建议 → gentest
+只想审查当前 diff → code_review
+只想查询或维护记忆 → Memory 工具
+只想生成 Git 工作报告 → git_work_report
+```
+
+Agent 是否使用 `start_*`，取决于当前目标是“完成一个完整交付流程”，还是“执行一个明确的单项能力”。
 
 总计：目标 34 个。当前兼容基线仍为 33 个，新增 `architecture` 必须独立验收。
 
