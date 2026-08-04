@@ -10,7 +10,7 @@ This file tracks implementation status separately from the frozen requirements d
 | Phase 1 — Responsibility alignment | Complete | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
 | Phase 2 — `architecture` / ARC-8 | Complete | Add the single architecture domain tool and its shared methodology core |
 | Phase 3 — Plan lifecycle | Complete | Extend Plan, Heartbeat, Resume and Converge compatibly |
-| Phase 4 — Orchestrator closure | In progress | Feature, Bugfix and UI closure complete; onboard, product and Ralph remain |
+| Phase 4 — Orchestrator closure | In progress | Feature, Bugfix, UI and Onboard closure complete; Product and Ralph remain |
 | Phase 5 — Diff and verification consistency | Pending | Compare declared scope, real diff, contracts, tests and architecture drift |
 | Phase 6 — Memory quality | Pending | Improve conflict, supersede, expiry, negative evidence and retrieval quality |
 
@@ -201,5 +201,33 @@ docs verification: 1080 checks passed
 
 Remaining Phase 4 scope:
 
-- close and normalize `start_onboard`, `start_product` and `start_ralph`;
+- close and normalize `start_product` and `start_ralph`;
 - keep each remaining workflow independently testable and reversible.
+
+Completed in the third bounded Phase 4 slice:
+
+- `start_onboard` now returns a formal `DelegatedPlanContract` rather than a one-step prompt around `init_project_context`;
+- onboarding pins the resolved project root, uses a safe project-relative docs directory, and rejects path traversal;
+- the plan now covers project instructions, project context, `code_insight`, manifests/runtime configuration, entry points and module flows, command extraction and safe verification, constraints/risks, quickstart/navigation documentation, acceptance and optional project-knowledge MemoryCandidate preparation;
+- onboarding remains read-only with `requiredEvidenceKinds=[]`, but declares three explicit quality gates for context readiness, command verification and project navigation;
+- command validation requires real command, working directory and exit-code evidence; unexecuted commands remain candidates and dependency installation or long-running services are not performed automatically;
+- all steps have explicit dependencies and all output guidance uses the shared Heartbeat/Resume/Converge protocol;
+- production modules remain bounded: `start_onboard.ts` is 159 lines and `start-onboard-plan.ts` is 257 lines.
+
+Validation completed:
+
+```text
+start_onboard focused suite: 3 / 3 passed
+full regression suite: 498 / 498 passed across 102 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+release static checks: 37 / 37 passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+```
+
+Remaining Phase 4 scope:
+
+- close and normalize `start_product` and `start_ralph` independently;
+- complete one final Phase 4 regression after both remaining workflows are committed.
