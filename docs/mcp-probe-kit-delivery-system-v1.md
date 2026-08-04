@@ -80,33 +80,42 @@ MCP Probe Kit 不是代码生成器，也不替代 Agent 的工程判断。
 
 V1 先冻结现有 33 个公开工具的兼容基线，再以独立提交新增 1 个统一架构工具 `architecture`。目标工具面为 34 个。
 
-Agent 实际只需要记住 7 个主要工程入口：
+工具职责必须按层区分，禁止把它们混成一套中央意图判断系统：
 
 ```text
-start_feature
-start_bugfix
-start_ui
-architecture
-refactor
-start_onboard
 workflow
+  仅在 Agent 不确定首个工具时提供路由建议
+
+start_*
+  场景流程编排器：组合多个原子能力，生成 Delegated Plan
+
+fix_bug / code_insight / architecture / check_spec / gentest / code_review ...
+  原子或领域能力：各自拥有明确的方法、输入、输出和证据
+
+plan_heartbeat / resume_plan / converge
+  跨流程通用的状态与收敛能力
+
+Memory 工具
+  跨流程通用的召回、候选、沉淀和维护能力
 ```
 
-其余工具由入口工具生成的 Delegated Plan 指引调用，不要求 Agent 自己猜测完整工具链。
+其中 `start_*` 不是意图识别器，也不是能力实现本身。任务类型由 Agent 根据用户上下文和 Skill 判断；`workflow` 只是可选兜底。`start_*` 的职责是把已经选定场景需要的能力按顺序组合起来。
 
-工具分为三类：
+典型关系：
 
-| 类别 | 数量 | 说明 |
-|---|---:|---|
-| 主要工程入口 | 7 | Agent 根据任务类型直接进入；`workflow` 仅在不确定时使用 |
-| 核心执行与记忆工具 | 17 | 理解、规格、状态、验证、记忆和提交 |
-| 可选辅助工具 | 10 | 产品、Ralph、UI 数据、估算、访谈和报告 |
+```text
+start_bugfix 编排 fix_bug
+start_feature 编排 add_feature / check_spec / estimate / gentest / code_review
+start_ui 编排 ui_search / ui_design_system / gentest / code_review
+```
+
+其余工具由编排工具生成的 Delegated Plan 指引调用，不要求 Agent 自己记住完整工具链。
 
 总计：目标 34 个。当前兼容基线仍为 33 个，新增 `architecture` 必须独立验收。
 
 ---
 
-## 5. 七个主要工程入口
+## 5. 编排、路由与架构入口
 
 ### 5.1 `start_feature`
 
@@ -157,7 +166,24 @@ start_feature
 
 用途：Bug、报错、异常、不生效、回归和行为不一致。
 
-`start_bugfix` 必须以现有 SRC-8（Software Root-Cause 8-step，受丰田 TBP 启发）作为主流程，不能被压缩成“分析根因→改代码→测试”。SRC-8 由 `start_bugfix` 返回的 Delegated Plan 直接承载；`fix_bug` 是同一方法论的辅助指南，在当前工具面可见时可调用，但不是完成八步法的前提。
+`start_bugfix` 是完整 Bug 交付流程的编排器，不拥有 SRC-8 方法论本身。
+
+SRC-8（Software Root-Cause 8-step，受丰田 TBP 启发）的唯一能力归属是 `fix_bug`。`start_bugfix` 负责组合：
+
+```text
+Memory Recall
+→ 项目上下文与图谱
+→ fix_bug / SRC-8 子流程
+→ 规格闸门（按需）
+→ Plan 状态
+→ code_review
+→ converge
+→ Memory 正式沉淀
+```
+
+实现上可以把 `fix_bug` 返回的 SRC-8 子步骤展开到顶层 Delegated Plan，便于 Agent 顺序执行和 heartbeat；但步骤定义、门禁、工作表和输出 Schema 必须来自 `fix_bug` 的同一事实源，`start_bugfix` 不得维护另一份八步法。
+
+下面列出的 SRC-1 至 SRC-8，是 `start_bugfix` 所编排的 `fix_bug` 子流程；规范性定义见 6.3。
 
 #### SRC-1 明确差距
 
@@ -468,7 +494,14 @@ code_insight
 
 ### 6.3 `fix_bug`
 
-作用：提供 SRC-8 的真因分析工作表和执行门禁；通常由 `start_bugfix` 计划触发，而不是替代 `start_bugfix`。
+作用：Bug 修复领域能力，拥有 SRC-8 的唯一规范性定义，包括八步清单、真因工作表、门禁、结构化输出和子流程计划。它可以被 Agent 独立调用，也通常由 `start_bugfix` 编排。
+
+职责边界：
+
+- `fix_bug` 定义“Bug 应该怎样分析和修复”；
+- `start_bugfix` 定义“完整 Bug 交付还要组合哪些上下文、状态、审查、收敛和记忆步骤”；
+- `workflow` 只在 Agent 不确定入口时建议调用 `start_bugfix`；
+- 三者不得重复维护 SRC-8 规则。
 
 至少要求：
 
@@ -482,6 +515,19 @@ code_insight
 - SRC-8 回归保护和 MemoryCandidate。
 
 真因工作表未闭合前不得进入修复；连续三次修复失败后必须退回边界或真因步骤。
+
+`fix_bug` 的规范性产物至少包括：
+
+```text
+src8Checklist
+rootCauseWorksheet
+src8Gate
+BugAnalysis Schema
+SRC-1~SRC-8 子计划
+MemoryCandidate 模板
+```
+
+`start_bugfix` 只能复用或展开这些产物，不能在自己的模块中重新定义一套步骤标题、依赖、门禁或证据要求。
 
 ### 6.4 `add_feature`
 
@@ -997,8 +1043,9 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 ### Phase 1：统一工具职责和主流程
 
 - 以本文更新 Skill、Catalog 和文档；
-- 明确 7 个主要工程入口；
-- 将 `start_bugfix` 的 SRC-8 八步法作为不可丢失的正式流程；
+- 明确 `workflow`、`start_*`、原子能力、Plan 和 Memory 的分层职责；
+- 明确 `start_*` 是流程编排器，不承担意图识别；
+- 将 `fix_bug` 确立为 SRC-8 八步法的唯一事实源，`start_bugfix` 只负责编排和展开；
 - 修正互相冲突的调用说明；
 - 不新增工具、不改 Schema。
 
