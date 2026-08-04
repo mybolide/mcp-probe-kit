@@ -118,7 +118,9 @@ V1 不是以“新增多少工具”为成功标准，而以以下结果为标�
 
 ### 4.1 最终判断者
 
-最终等级由 MCP Probe Kit 服务端内部的 `TaskRiskClassifier` 判定。
+最终等级由 MCP Probe Kit 服务端内部的 `TaskRiskClassifier` 判定，但它不能挂在 `workflow` 这个单一工具下面。
+
+真正的信任边界是服务端统一的 `ToolInvocationGateway` / `PolicyKernel`：所有与交付状态有关的工具调用，无论 Agent 是先调 `workflow`、直接调 `start_feature`、直接调 `start_bugfix`，还是从 CLI fallback 进入，都必须经过同一套任务识别、状态恢复、分类和 Gate 检查。
 
 不是由以下任何一方单独决定：
 
@@ -134,7 +136,17 @@ Agent 的职责是提供事实和执行计划，分类器的职责是依据规�
 
 #### 第一次：快速预判
 
-由 `workflow` 根据以下信息生成 provisional level：
+由 `ToolInvocationGateway` 在首次相关调用时生成 provisional level。`workflow` 只是其中一种触发方式，不是唯一入口，也不是分类权威。
+
+下列调用都可以触发同一套快速预判：
+
+- `workflow`；
+- 任意 `start_*`；
+- `refactor`；
+- 对已有 Plan 的 `resume_plan`；
+- CLI fallback 中的等价调用。
+
+Gateway 根据以下信息生成 provisional level：
 
 - 用户完整意图；
 - 明确约束；
@@ -654,6 +666,36 @@ policies:
 
 公开工具面保持克制，内部服务解耦。
 
+### 10.0 ToolInvocationGateway / PolicyKernel
+
+这是工程控制面的真正入口，不是一个公开 MCP Tool。
+
+所有相关工具 handler 在执行前都经过它：
+
+```text
+Host / CLI / Agent
+        ↓
+ToolInvocationGateway
+        ↓
+TaskSessionResolver
+        ↓
+TaskRiskClassifier + GateEngine
+        ↓
+具体 Tool Handler
+```
+
+负责：
+
+- 识别或恢复当前 Task Session；
+- 统一运行 `IntakeNormalizer`；
+- 在首次调用时生成 provisional Task Profile；
+- 检查当前状态是否允许调用目标工具；
+- 注入统一的 runtime fingerprint、task profile 和 permit 状态；
+- 记录所有工具调用与状态转换，供后续审计；
+- 保证 MCP 原生调用与 CLI fallback 使用同一规则。
+
+它不负责决定具体业务方案，也不替代 `start_*` 的任务编排。
+
 ### 10.1 IntakeNormalizer
 
 负责：
@@ -765,9 +807,27 @@ HostAdapter 不拥有任务分类、架构规则和收敛规则。
 
 V1 第一阶段不急于增加大量公开工具。
 
-### 11.1 `workflow`
+### 11.1 ToolInvocationGateway 才是统一入口
 
-从“场景路由器”升级为“任务入口和快速 Profile”：
+`workflow` 不能成为唯一主入口，因为 Agent 可能直接调用 `start_feature`、`start_bugfix` 或 `refactor`，不同 Host 也可能采用 CLI fallback。
+
+因此所有这些路径必须先进入同一服务端 Gateway：
+
+```text
+workflow ───────┐
+start_feature ──┤
+start_bugfix ───┤
+start_ui ───────┼→ ToolInvocationGateway → PolicyKernel → Handler
+refactor ───────┤
+resume_plan ────┤
+CLI fallback ───┘
+```
+
+公开工具只是不同的用户意图入口，分类、状态和 Gate 不能分别实现在各个工具里。
+
+### 11.2 `workflow`
+
+保留为“用户或 Agent 不确定下一步时的路由助手”，并返回快速 Profile：
 
 ```json
 {
@@ -783,7 +843,9 @@ V1 第一阶段不急于增加大量公开工具。
 }
 ```
 
-### 11.2 `code_insight`
+它不是强制前置步骤，也不是任务分类的唯一入口。
+
+### 11.3 `code_insight`
 
 继续承担代码和图谱分析，但输出统一 Project Snapshot / Impact Subgraph：
 
@@ -792,7 +854,7 @@ V1 第一阶段不急于增加大量公开工具。
 - 提供公共契约、数据路径和测试关系；
 - 结果可被分类器和 GateEngine 直接消费。
 
-### 11.3 `start_feature` / `start_bugfix` / `start_ui` / `refactor`
+### 11.4 `start_feature` / `start_bugfix` / `start_ui` / `refactor`
 
 负责第二阶段分类和 Plan 编译：
 
@@ -802,7 +864,7 @@ V1 第一阶段不急于增加大量公开工具。
 - 未通过前置 Gate 时不返回“立即写代码”的指导；
 - 对 L2/L3 生成架构影响和 Permit 流程。
 
-### 11.4 `check_spec`
+### 11.5 `check_spec`
 
 保持规格检查职责，不把所有架构逻辑塞入其中。
 
@@ -814,7 +876,7 @@ V1 第一阶段不急于增加大量公开工具。
 - 数据所有权变化；
 - 验收和回滚要求。
 
-### 11.5 `plan_heartbeat`
+### 11.6 `plan_heartbeat`
 
 从“记录完成步骤”升级为：
 
@@ -824,7 +886,7 @@ V1 第一阶段不急于增加大量公开工具。
 - 发现范围越界时触发 runtime reclassification；
 - Permit 失效时明确返回修复路径。
 
-### 11.6 `resume_plan`
+### 11.7 `resume_plan`
 
 返回：
 
@@ -836,7 +898,7 @@ V1 第一阶段不急于增加大量公开工具。
 - 最近验证 revision；
 - 风险升级和未决事项。
 
-### 11.7 `converge`
+### 11.8 `converge`
 
 依据等级动态确定证据，不再固定要求同一组 evidence：
 
@@ -845,7 +907,7 @@ V1 第一阶段不急于增加大量公开工具。
 - L2：增加 baseline、impact、architecture、spec、drift、Agent acceptance；
 - L3：增加迁移、回滚、兼容、用户确认和严格验收。
 
-### 11.8 是否增加 `architecture` 工具
+### 11.9 是否增加 `architecture` 工具
 
 第一阶段不增加。
 
@@ -936,13 +998,16 @@ Agent 自述“已完成”只能形成低置信度声明，不能替代测试�
 
 > 给现有系统增加订单导出功能。
 
-Agent 必须先调用：
+Agent 可以调用 `workflow` 获取路由建议，也可以直接调用 `start_feature`。两种方式都会先经过服务端 `ToolInvocationGateway`，生成同一 provisional Task Profile。
+
+推荐路径：
 
 ```text
-workflow(intent=<完整需求>, project_root=<项目>)
+不确定下一步 → workflow → start_feature
+明确是新功能 → 直接 start_feature
 ```
 
-返回 provisional `feature/L2` 后，Agent 调 `start_feature`。
+两条路径不能产生不同的任务等级、Gate 或状态语义。
 
 `start_feature` 获取实际影响图，确认涉及 API、任务队列、存储和 UI，生成：
 
