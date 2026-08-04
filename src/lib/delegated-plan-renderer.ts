@@ -46,6 +46,22 @@ export function renderDelegatedPlanSteps(steps: readonly RenderablePlanStep[]): 
     .join('\n\n');
 }
 
+export function renderDelegatedPlanStateProtocol(input: {
+  planId: string;
+  projectRoot?: string;
+}): string {
+  const rootInstruction = input.projectRoot
+    ? `，并固定传入 \`project_root=${input.projectRoot}\``
+    : '';
+  return `## 状态回写协议
+
+- Workbench 进度只读取 Plan 检查点，不会根据聊天文本、Git diff 或“已经做完”的描述猜测完成状态。
+- 开始执行前必须调用 \`plan_heartbeat\`，传入 \`plan_id=${input.planId}\`、完整 \`structuredContent.metadata.plan\`${rootInstruction}，建立首个检查点。
+- 每完成、跳过或阻断一个步骤，立即再次调用 \`plan_heartbeat\`；\`completed_step_ids\` 必须是累计集合，并同步真实证据、未决项和当前 revision。
+- \`resume_plan\` 只读取检查点并计算下一步；它不会替代 \`plan_heartbeat\`，也不会自动把代码变更识别为已完成。
+- 全部步骤与证据回写后再调用 \`converge\`。`;
+}
+
 export function collectDelegatedPlanToolReferences(
   steps: readonly RenderablePlanStep[],
 ): string[] {

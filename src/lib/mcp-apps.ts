@@ -680,21 +680,25 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
 .plan-step { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 28px; border-radius: 6px; padding: 4px 6px; }
 .plan-step.running { border-left: 2px solid color-mix(in srgb, var(--accent) 55%, var(--border)); background: color-mix(in srgb, var(--accent) 4%, var(--panel)); }
 .plan-step.blocked { border-left: 2px solid color-mix(in srgb, var(--danger) 60%, var(--border)); background: color-mix(in srgb, var(--danger) 4%, var(--panel)); }
+.plan-step.untracked { border-left: 2px solid color-mix(in srgb, var(--warning) 55%, var(--border)); background: color-mix(in srgb, var(--warning) 4%, var(--panel)); }
 .step-marker { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; border: 1px solid var(--border); color: var(--muted); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
 .plan-step.completed .step-marker { border-color: transparent; background: transparent; color: var(--accent); }
 .plan-step.running .step-marker { border-color: var(--accent); background: transparent; color: var(--accent); }
 .plan-step.blocked .step-marker { border-color: var(--danger); background: transparent; color: var(--danger); }
 .plan-step.skipped .step-marker { border-color: transparent; color: var(--warning); }
 .plan-step.pending .step-marker { border-color: var(--border); color: var(--subtle); }
+.plan-step.untracked .step-marker { border-color: var(--warning); color: var(--warning); }
 .step-name { min-width: 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; line-height: 1.3; }
 .plan-step.completed .step-name { color: var(--text); }
 .plan-step.running .step-name { color: var(--accent); font-weight: 650; }
 .plan-step.blocked .step-name { color: var(--danger); font-weight: 600; }
 .plan-step.skipped .step-name { color: var(--subtle); text-decoration: line-through; }
 .plan-step.pending .step-name { color: var(--muted); }
+.plan-step.untracked .step-name { color: var(--warning); }
 .step-hint { flex: 0 0 auto; color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
 .plan-step.running .step-hint { color: var(--accent); }
 .plan-step.blocked .step-hint { color: var(--danger); }
+.plan-step.untracked .step-hint { color: var(--warning); }
 
 /* Right content — current step protagonist via typography, whitespace and a light accent bar. */
 .wb-main { min-width: 0; padding-left: 20px; }
@@ -710,6 +714,7 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
 .wb-state.completed { color: var(--success); background: var(--success-soft); }
 .wb-state.blocked { color: var(--danger); background: var(--danger-soft); }
 .wb-state.pending { color: var(--muted); background: var(--panel-soft); }
+.wb-state.untracked { color: var(--warning); background: var(--warning-soft); }
 .wb-state.skipped { color: var(--warning); background: var(--warning-soft); }
 .wb-command { display: flex; align-items: baseline; gap: 10px; min-width: 0; margin-top: 14px; }
 .wb-command code { flex: 0 0 auto; border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; background: var(--panel-soft); color: var(--accent); font: 11.5px/1.5 var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace); font-weight: 650; }

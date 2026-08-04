@@ -12,7 +12,10 @@ import {
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
 import { buildFeatureGraphContext } from "../lib/gitnexus-bridge.js";
-import { renderDelegatedPlanSteps } from "../lib/delegated-plan-renderer.js";
+import {
+  renderDelegatedPlanStateProtocol,
+  renderDelegatedPlanSteps,
+} from "../lib/delegated-plan-renderer.js";
 import { addFeature } from "./add_feature.js";
 import {
   buildMemoryPlanStep,
@@ -46,7 +49,7 @@ import {
  * start_feature 智能编排工具
  * 
  * 场景：开发新功能
- * 编排：[检查上下文] → 内嵌规格草稿 → check_spec → estimate
+ * 编排：[检查上下文] → 内嵌规格草稿 → check_spec → estimate → 实施 → 测试 → 审查
  */
 
 /**
@@ -438,7 +441,7 @@ ${graphContext.highlights.length > 0
             when: `缺少 ${layout.indexPath} 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
             args: {
               docs_dir: docsDir,
-              ...(projectRoot ? { project_root: projectRoot } : {}),
+              project_root: layout.projectRootPosix,
             },
             outputs: [layout.indexPath, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
             note: `兼容老项目：即使已有旧版 project-context，只要缺少图谱文档，也要先补齐 ${graphDocs.latestMarkdownPath}`,
@@ -477,7 +480,7 @@ ${graphContext.highlights.length > 0
               template_profile: templateProfile,
               spec_layout: specLayout,
               requirements_mode: 'steady',
-              ...(projectRoot ? { project_root: projectRoot } : {}),
+              project_root: layout.projectRootPosix,
               ...(specLayout === 'parent-child' && subspecs.length > 0 ? { subspecs } : {}),
             },
             outputs: specOutputs,
@@ -567,7 +570,8 @@ ${graphGuideSection}`;
       goal: `开发新功能：${featureName}`,
       tasks: [
         '按 delegated plan 顺序调用工具',
-        '生成规格文档并完成工作量估算',
+        '生成规格文档、完成工作量估算、实施、测试与代码审查',
+        '每完成一个步骤立即调用 plan_heartbeat 回写真实状态和证据',
       ],
         notes: [
           `模板档位: ${templateProfile}`,
@@ -592,7 +596,7 @@ ${graphGuideSection}`;
             type: 'tool',
             tool: 'check_spec',
             when: 'requirements/design/tasks 落盘后、进入估算或实现前',
-            args: { feature_name: featureName, docs_dir: docsDir, ...(projectRoot ? { project_root: projectRoot } : {}) },
+            args: { feature_name: featureName, docs_dir: docsDir, project_root: layout.projectRootPosix },
             outputs: [],
             note: '未通过则按报告补全后重跑；通过前不要写实现代码',
           },
@@ -621,12 +625,57 @@ ${graphGuideSection}`;
               spec_layout: 'parent-child',
               subspecs: '[填入 decompose-spec 产生的 SubspecDefinition[]]',
               requirements_mode: 'steady',
-              ...(projectRoot ? { project_root: projectRoot } : {}),
+              project_root: layout.projectRootPosix,
             },
             outputs: specOutputs,
             note: '再次调用 start_feature 以生成内嵌 parent-child 规格草稿',
           },
         ];
+
+    const deliverySteps: DelegatedPlanStep[] = embeddedSpecDraft
+      ? [
+          {
+            id: 'implement',
+            type: 'agent_action',
+            action: 'implement_feature_from_tasks',
+            dependsOn: ['check-spec', 'estimate'],
+            requiredInputs: [`${docsDir}/specs/${featureName}/tasks.md`],
+            expectedOutputs: ['完成任务清单对应的生产代码与必要迁移'],
+            completionEvidence: ['实际变更文件与完成的任务条目', '关键行为与规格一致'],
+            outputs: [],
+            note: 'Agent 使用宿主文件与代码能力实施；不得把规划结果当成已完成实现',
+          },
+          {
+            id: 'test',
+            type: 'agent_action',
+            action: 'run_affected_and_full_regression_tests',
+            dependsOn: ['implement'],
+            expectedOutputs: ['受影响测试、主链回归和必要静态检查结果'],
+            completionEvidence: ['真实测试命令、退出码和通过数量'],
+            outputs: [],
+          },
+          {
+            id: 'review',
+            type: 'tool',
+            tool: 'code_review',
+            dependsOn: ['test'],
+            args: {
+              project_root: layout.projectRootPosix,
+              focus: 'all',
+            },
+            expectedOutputs: ['变更范围代码审查结果与待处理问题'],
+            completionEvidence: ['高优先级问题已关闭或有明确阻断记录'],
+            outputs: [],
+          },
+        ]
+      : [];
+
+    const memoryPreparationSteps: DelegatedPlanStep[] = memoryContext.enabled && embeddedSpecDraft
+      ? [{
+          ...buildMemoryPlanStep('feature'),
+          dependsOn: ['review'],
+        } as DelegatedPlanStep]
+      : [];
 
 
     const plan = buildDelegatedPlanContract({
@@ -636,6 +685,7 @@ ${graphGuideSection}`;
       objective: `规划并实施新功能：${featureName}`,
       globalRules: [
         'Agent 必须按步骤顺序调用 MCP，并使用宿主能力完成真实文件与代码操作',
+        '首次执行前必须用完整 plan 建立 plan_heartbeat 检查点；每完成、跳过或阻断一步立即累计回写',
         'check_spec 未通过前不得进入实现阶段',
         '不得把 delegated plan 的输出误认为代码已经实施',
         '历史记忆仅作为参考，当前项目事实与代码优先',
@@ -643,8 +693,15 @@ ${graphGuideSection}`;
       completionCriteria: [
         '规格文档已生成并通过 check_spec',
         '工作量与主要风险已完成评估',
-        'Agent 已按 tasks.md 完成实现、测试与必要审查',
+        'Agent 已按 tasks.md 完成实现、测试与代码审查',
+        '所有步骤状态与证据已通过 plan_heartbeat 写入检查点',
       ],
+      declaredScope: {
+        projectRoot: layout.projectRootPosix,
+        docsDir,
+        featureName,
+        specLayout,
+      },
       memoryPolicy: {
         recallBeforeExecution: memoryContext.enabled,
         extractAfterValidation: memoryContext.enabled,
@@ -657,14 +714,15 @@ ${graphGuideSection}`;
           when: `缺少 ${layout.indexPath} 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
           args: {
             docs_dir: docsDir,
-            ...(projectRoot ? { project_root: projectRoot } : {}),
+            project_root: layout.projectRootPosix,
           },
           outputs: [layout.indexPath, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
           note: `兼容老项目：即使已有旧版 project-context，只要缺少图谱文档，也要先补齐 ${graphDocs.latestMarkdownPath}`,
         },
         ...subspecDecompositionSteps,
         ...specPlanSteps,
-        ...(memoryContext.enabled ? [buildMemoryPlanStep('feature')] : []),
+        ...deliverySteps,
+        ...memoryPreparationSteps,
       ] as DelegatedPlanStep[],
     });
 
@@ -684,6 +742,11 @@ ${graphGuideSection}`;
 - 布局：${specLayout}（请求：${layoutDecision.requested}）
 - 规则：文本步骤与 \`structuredContent.metadata.plan.steps\` 来自同一份计划。
 ${specDraftSection}
+
+${renderDelegatedPlanStateProtocol({
+  planId: plan.planId,
+  projectRoot: layout.projectRootPosix,
+})}
 
 ## 执行计划
 ${renderDelegatedPlanSteps(plan.steps)}
@@ -709,6 +772,16 @@ ${graphGuideSection}`;
           status: 'pending',
           description: '调用 estimate 工具进行工作量估算',
         },
+        {
+          name: '实施功能',
+          status: 'pending',
+          description: '按照 tasks.md 完成真实代码、迁移与必要配置修改',
+        },
+        {
+          name: '测试与审查',
+          status: 'pending',
+          description: '执行受影响测试和完整回归，并调用 code_review 检查变更',
+        },
       ],
       artifacts: [],
       nextSteps: [
@@ -719,6 +792,9 @@ ${graphGuideSection}`;
         '调用 check_spec 校验规格完整性，未通过先补全再重跑（通过前不要写实现代码）',
         '调用 estimate 工具进行工作量估算',
         '按照 tasks.md 开始开发',
+        '每完成、跳过或阻断一个 Plan 步骤，立即调用 plan_heartbeat 累计回写状态和证据',
+        '实现完成后执行受影响测试、完整回归和 code_review',
+        '全部步骤与证据写入检查点后调用 converge',
       ],
       specArtifacts: [
         {

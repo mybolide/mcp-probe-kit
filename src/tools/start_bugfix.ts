@@ -4,6 +4,7 @@ import { parseArgs, getString, getNumber } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import { attachHandles } from "../lib/handles.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
+import { renderDelegatedPlanStateProtocol } from "../lib/delegated-plan-renderer.js";
 import { BugFixReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
 import type { BugFixReport, RequirementsLoopReport } from "../schemas/structured-output.js";
 import {
@@ -241,7 +242,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         when: `缺少 ${layout.indexPath} 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
         args: {
           docs_dir: layout.contextRoot,
-          ...(projectRoot ? { project_root: projectRoot } : {}),
+          project_root: layout.projectRootPosix,
         },
         outputs: [layout.indexPath, graphDocs.latestMarkdownPath, graphDocs.latestJsonPath],
         note: `兼容老项目：如果旧项目没有 graph-insights/latest.*，先补齐图谱初始化再进入 bug 收敛`,
@@ -279,6 +280,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         globalRules: [
           '未完成 SRC-8 真因收敛前不得直接实施猜测性修复',
           'Agent 必须使用宿主能力完成真实代码修改和测试执行',
+          '首次执行前必须用完整 plan 建立 plan_heartbeat 检查点；每完成、跳过或阻断一步立即累计回写',
           '修复完成必须包含回归验证与防复发措施',
           '历史记忆仅作为候选证据，当前项目事实与代码优先',
         ],
@@ -287,7 +289,14 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
           '修复方案作用于原因层而不是仅隐藏症状',
           '回归测试与关联规格闸门通过',
           '可复用的成功或失败经验已评估是否沉淀',
+          '所有步骤状态与证据已通过 plan_heartbeat 写入检查点',
         ],
+        declaredScope: {
+          projectRoot: layout.projectRootPosix,
+          docsDir,
+          ...(featureNameInput ? { featureName: featureNameInput } : {}),
+          analysisMode,
+        },
         memoryPolicy: {
           recallBeforeExecution: memoryContext.enabled,
           extractAfterValidation: memoryContext.enabled,
@@ -375,7 +384,12 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         .replace(/{analysis_mode}/g, analysisMode)
         .replace(/{question_budget}/g, String(questionBudget))
         .replace(/{assumption_cap}/g, String(assumptionCap));
-      const guide = header + memoryGuideSection + renderedLoopPrompt + graphGuideSection;
+      const guide = `${header}${memoryGuideSection}${renderedLoopPrompt}${graphGuideSection}
+
+${renderDelegatedPlanStateProtocol({
+  planId: plan.planId,
+  projectRoot: layout.projectRootPosix,
+})}`;
 
       const loopReport: RequirementsLoopReport = {
         mode: 'loop',
@@ -434,6 +448,7 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
       tasks: [
         '按 delegated plan 顺序执行 metadata.plan.steps（src8-1~8）',
         '完成修复、回归测试、记忆候选准备与 converge 收敛',
+        '每完成一个步骤立即调用 plan_heartbeat 回写真实状态和证据',
       ],
       notes: [
         ...headerNotes,
@@ -451,9 +466,13 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
       .replace(/{analysis_mode}/g, analysisMode)
       .replace(/{stack_trace_section}/g, stackTraceSection)
       .replace(/{spec_gate_section}/g, specGateSection);
-    const guide = header + memoryGuideSection + renderedPrompt + graphGuideSection;
-
     const plan = buildOrchestrationPlan();
+    const guide = `${header}${memoryGuideSection}${renderedPrompt}${graphGuideSection}
+
+${renderDelegatedPlanStateProtocol({
+  planId: plan.planId,
+  projectRoot: layout.projectRootPosix,
+})}`;
 
     const bugfixReport = buildBugfixReport({
       errorMessage,

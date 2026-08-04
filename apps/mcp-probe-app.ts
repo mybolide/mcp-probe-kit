@@ -3,6 +3,12 @@ import {
   applyDocumentTheme,
   applyHostStyleVariables,
 } from '@modelcontextprotocol/ext-apps/app-with-deps';
+import {
+  buildInitialPlanHeartbeatArgs,
+  planSnapshotHasRecord,
+  planSnapshotNeedsReconciliation,
+  resolvePlanProjectRoot,
+} from '../src/lib/plan-workbench-state.js';
 
 declare const __MCP_PROBE_VERSION__: string;
 
@@ -55,6 +61,9 @@ let planSnapshot: Dict | null = null;
 let planPollTimer: number | undefined;
 let demoTimer: number | undefined;
 let busy = false;
+let planSyncing = false;
+let planCheckpointKnownMissing = false;
+let planProjectRootCache = '';
 let notice = '';
 
 function asDict(value: unknown): Dict {
@@ -247,28 +256,56 @@ function initialPlan(): Dict {
   return Object.keys(basePlan).length ? basePlan : resultPlan();
 }
 
+function currentPlanProjectRoot(plan: Dict): string {
+  const resolved = resolvePlanProjectRoot({ lastInput, lastResult, plan, planSnapshot });
+  if (resolved) planProjectRootCache = resolved;
+  return planProjectRootCache;
+}
+
 function currentPlanState() {
   const snapshot = asDict(planSnapshot);
   const record = asDict(snapshot.record);
   const plan = Object.keys(asDict(record.plan)).length ? asDict(record.plan) : initialPlan();
+  const hasCheckpoint = planSnapshotHasRecord(snapshot);
+  const needsReconciliation = planSnapshotNeedsReconciliation(snapshot);
   const completed = new Set(stringArray(record.completedStepIds));
   const skipped = new Set(asArray(record.skippedSteps).map((item) => text(item.stepId)));
-  const status = text(record.status, Object.keys(record).length ? 'active' : 'pending');
+  const status = needsReconciliation
+    ? 'untracked'
+    : hasCheckpoint
+    ? text(record.status, 'active')
+    : planCheckpointKnownMissing
+      ? 'untracked'
+      : 'pending';
   const steps = asArray(plan.steps);
   const nextStepId = text(snapshot.nextStepId);
   const currentStepId = text(record.currentStepId);
   const evidence = asArray(record.evidence);
-  return { plan, record, steps, completed, skipped, status, currentStepId, nextStepId, evidence };
+  return {
+    plan,
+    record,
+    steps,
+    completed,
+    skipped,
+    status,
+    currentStepId,
+    nextStepId,
+    evidence,
+    hasCheckpoint,
+    needsReconciliation,
+  };
 }
 
 const STEP_LABELS: Record<string, string> = {
   'recall-memory': '召回记忆', context: '项目上下文', 'decompose-spec': '拆分子规格',
   'write-spec': '编写规格', 'check-spec': '规格检查', estimate: '工作量评估',
+  implement: '实施功能', test: '运行测试', review: '代码审查',
   'prepare-memory-candidate-feature': '沉淀候选', 'prepare-memory-candidate-bugfix': '沉淀候选',
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  completed: '已完成', running: '执行中', blocked: '已阻断', pending: '待执行', skipped: '已跳过',
+  completed: '已完成', running: '执行中', blocked: '已阻断', pending: '待执行',
+  skipped: '已跳过', untracked: '未同步',
 };
 
 const EVIDENCE_LABELS: Record<string, string> = {
@@ -290,6 +327,7 @@ function stepState(step: Dict, state: ReturnType<typeof currentPlanState>): stri
   if (state.status === 'converged' || state.completed.has(id)) return 'completed';
   if (state.skipped.has(id)) return 'skipped';
   if (state.currentStepId === id) return state.status === 'blocked' ? 'blocked' : 'running';
+  if (state.status === 'untracked') return 'untracked';
   return 'pending';
 }
 
@@ -316,7 +354,9 @@ function renderTaskWorkbench(): string {
     ? (state.currentStepId || state.nextStepId)
     : (state.nextStepId || state.currentStepId);
   const currentIndex = state.steps.findIndex((step) => text(step.id) === highlightedStepId);
-  const currentStep = currentIndex >= 0 ? state.steps[currentIndex] : state.steps.find((step) => stepState(step, state) === 'pending');
+  const currentStep = currentIndex >= 0
+    ? state.steps[currentIndex]
+    : state.steps.find((step) => ['pending', 'untracked'].includes(stepState(step, state)));
   const displayIndex = currentStep ? state.steps.indexOf(currentStep) : -1;
   const objective = text(plan.objective, text(lastInput.description, kind === 'bug-workbench' ? '修复问题' : '实施功能'));
   const outputs = stringArray(currentStep?.outputs);
@@ -328,6 +368,8 @@ function renderTaskWorkbench(): string {
     ? '返回对话'
     : state.status === 'blocked'
       ? '处理阻断'
+      : state.status === 'untracked'
+        ? '同步并继续'
       : completedCount === total
         ? '查看结果'
         : '继续';
@@ -341,10 +383,14 @@ function renderTaskWorkbench(): string {
         ? '<span class="status-badge bad">已取消</span>'
         : state.status === 'active'
           ? '<span class="status-badge run">执行中</span>'
+          : state.status === 'untracked'
+            ? '<span class="status-badge bad">未跟踪</span>'
           : '<span class="status-badge pending">待执行</span>';
   const blockedBanner = state.status === 'blocked'
     ? `<div class="blocked-banner">${icon('alert')}<span>当前步骤已阻断，处理后再继续执行</span></div>`
-    : '';
+    : state.status === 'untracked'
+      ? `<div class="blocked-banner">${icon('alert')}<span>Plan 检查点没有真实步骤回写。当前完成情况不能从代码结果自动推断，需要 Agent 核验后调用 plan_heartbeat。</span></div>`
+      : '';
   const planSteps = renderPlanSteps(state);
   const planHeading = `<div class="wb-plan-head"><span class="wb-plan-label">计划</span><span class="wb-plan-count">${completedCount}/${total || 0}</span></div>`;
   const outputsBlock = outputs.length
@@ -384,7 +430,7 @@ function renderTaskWorkbench(): string {
         <div class="wb-actions task-actions task-actions-end">
           ${planId ? `<span class="wb-planid" title="${escapeHtml(planId)}">plan · ${escapeHtml(planId)}</span>` : ''}
           <div class="wb-buttons">
-            ${planId ? `<button class="wb-secondary" data-action="resume-plan" data-id="${escapeHtml(planId)}">刷新</button>
+            ${planId ? `<button class="wb-secondary" data-action="resume-plan" data-id="${escapeHtml(planId)}">同步状态</button>
             <button class="wb-secondary" data-action="check-converge" data-id="${escapeHtml(planId)}">收敛</button>` : ''}
             <button class="primary" data-action="continue-chat">${primaryLabel}</button>
           </div>
@@ -473,16 +519,55 @@ async function openMemory(id: string): Promise<void> {
   }
 }
 
-async function refreshPlanState(showNotice = false): Promise<void> {
-  const planId = text(currentPlanState().plan.planId);
+async function refreshPlanState(showNotice = false, initializeIfMissing = true): Promise<void> {
+  if (planSyncing) return;
+  const state = currentPlanState();
+  const plan = state.plan;
+  const planId = text(plan.planId);
   if (!planId) return;
-  const result = await callTool('resume_plan', {
-    plan_id: planId,
-    project_root: text(lastInput.project_root),
-  }, !showNotice);
-  const structured = asDict(result.structuredContent);
-  if (bool(structured.found)) planSnapshot = structured;
-  render();
+  const projectRoot = currentPlanProjectRoot(plan);
+  planSyncing = true;
+  try {
+    let result = await callTool('resume_plan', {
+      plan_id: planId,
+      ...(projectRoot ? { project_root: projectRoot } : {}),
+    }, true);
+    let structured = asDict(result.structuredContent);
+
+    if (!result.isError && !planSnapshotHasRecord(structured) && initializeIfMissing) {
+      planCheckpointKnownMissing = true;
+      const heartbeatArgs = buildInitialPlanHeartbeatArgs(plan, projectRoot);
+      if (Object.keys(heartbeatArgs).length) {
+        const initialized = await callTool('plan_heartbeat', heartbeatArgs, true);
+        if (!initialized.isError) {
+          result = await callTool('resume_plan', {
+            plan_id: planId,
+            ...(projectRoot ? { project_root: projectRoot } : {}),
+          }, true);
+          structured = asDict(result.structuredContent);
+        }
+      }
+    }
+
+    if (!result.isError && planSnapshotHasRecord(structured)) {
+      planSnapshot = structured;
+      planCheckpointKnownMissing = false;
+      if (showNotice) {
+        const record = asDict(structured.record);
+        notice = `已同步检查点：${stringArray(record.completedStepIds).length}/${asArray(asDict(record.plan).steps).length}`;
+      }
+    } else {
+      planCheckpointKnownMissing = true;
+      if (showNotice) {
+        notice = result.isError
+          ? 'Plan 状态同步失败，请检查 project_root 和 MCP 连接'
+          : '未找到 Plan 检查点；执行步骤必须通过 plan_heartbeat 写入后才能显示进度';
+      }
+    }
+  } finally {
+    planSyncing = false;
+    render();
+  }
 }
 
 function syncPlanPolling(): void {
@@ -531,10 +616,34 @@ root.addEventListener('click', (event) => {
     await loadMemoryList();
   })();
   if (action === 'resume-plan' && id) void refreshPlanState(true);
-  if (action === 'check-converge' && id) void callTool('converge', { plan_id: id, project_root: text(lastInput.project_root) }).then((result) => { lastResult = result; render(); });
-  if (action === 'rerun-converge' && id) void callTool('converge', { plan_id: id, project_root: text(lastInput.project_root) }).then((result) => { lastResult = result; render(); });
+  if (action === 'check-converge' && id) {
+    const state = currentPlanState();
+    const projectRoot = currentPlanProjectRoot(state.plan);
+    void callTool('converge', { plan_id: id, ...(projectRoot ? { project_root: projectRoot } : {}) })
+      .then((result) => { lastResult = result; render(); });
+  }
+  if (action === 'rerun-converge' && id) {
+    const state = currentPlanState();
+    const projectRoot = currentPlanProjectRoot(state.plan);
+    void callTool('converge', { plan_id: id, ...(projectRoot ? { project_root: projectRoot } : {}) })
+      .then((result) => { lastResult = result; render(); });
+  }
   if (action === 'return-plan') void app.sendMessage({ role: 'user', content: [{ type: 'text', text: '返回当前计划继续执行未完成步骤，补齐缺失证据。每完成一步调用 plan_heartbeat，完成后重新运行 converge。' }] });
-  if (action === 'continue-chat') void app.sendMessage({ role: 'user', content: [{ type: 'text', text: '继续执行当前工作台中的计划。每完成一步都调用 plan_heartbeat 写入真实步骤状态和证据，最后运行测试并检查收敛。' }] });
+  if (action === 'continue-chat') {
+    const state = currentPlanState();
+    const planId = text(state.plan.planId);
+    const projectRoot = currentPlanProjectRoot(state.plan);
+    const nextStep = state.nextStepId
+      || state.currentStepId
+      || text(state.steps.find((step) => !state.completed.has(text(step.id)))?.id);
+    void app.sendMessage({
+      role: 'user',
+      content: [{
+        type: 'text',
+        text: `继续执行 Plan ${planId || '当前计划'}${nextStep ? `，下一步 ${nextStep}` : ''}。${projectRoot ? `project_root=${projectRoot}。` : ''}开始前先调用 resume_plan；每完成、跳过或阻断一个步骤，立即调用 plan_heartbeat 写入 completed_step_ids、skipped_steps、unresolved_items 和真实证据。不得只完成代码而不回写状态；最后运行测试、代码审查并调用 converge。`,
+      }],
+    });
+  }
   if (action === 'start-feature-chat') void app.sendMessage({ role: 'user', content: [{ type: 'text', text: '基于当前产品方案进入功能开发，使用 start_feature 创建规格和执行计划。' }] });
 });
 
@@ -558,6 +667,9 @@ app.addEventListener('toolresult', (params) => {
   }
   render();
   syncPlanPolling();
+  if (kind === 'feature-workbench' || kind === 'bug-workbench') {
+    void refreshPlanState(false, true);
+  }
 });
 
 app.addEventListener('hostcontextchanged', (context) => {
@@ -577,6 +689,9 @@ async function main(): Promise<void> {
   if (context?.theme) applyDocumentTheme(context.theme);
   if (context?.styles?.variables) applyHostStyleVariables(context.styles.variables);
   if (kind === 'memory-center') await loadMemoryList();
+  if (kind === 'feature-workbench' || kind === 'bug-workbench') {
+    await refreshPlanState(false, true);
+  }
   syncPlanPolling();
 }
 

@@ -79,6 +79,10 @@ describe('mcp-apps', () => {
     expect(html).toContain('minimal-header');
     expect(html).toContain('task-actions-end');
     expect(html).toContain('resume_plan');
+    expect(html).toContain('plan_heartbeat');
+    expect(html).toContain('Plan \\u68C0\\u67E5\\u70B9\\u6CA1\\u6709\\u771F\\u5B9E\\u6B65\\u9AA4\\u56DE\\u5199');
+    expect(html).toContain('\\u540C\\u6B65\\u72B6\\u6001');
+    expect(html).toContain('\\u4E0D\\u5F97\\u53EA\\u5B8C\\u6210\\u4EE3\\u7801\\u800C\\u4E0D\\u56DE\\u5199\\u72B6\\u6001');
     expect(html).not.toContain('max-height: 690px');
     expect(html).toContain('container-type: inline-size');
     expect(html).toContain('@media (max-width: 660px)');

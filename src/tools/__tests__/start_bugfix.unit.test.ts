@@ -60,6 +60,7 @@ describe('start_bugfix 单元测试', () => {
     expect(plan.contractVersion).toBe('2.0.0');
     expect(plan.workflow).toBe('bugfix');
     expect(plan.planId).toMatch(/^bugfix-/);
+    expect(plan.declaredScope.projectRoot).toBeTruthy();
     expect(plan.methodology).toBe('src8');
     expect(Array.isArray(plan.steps)).toBe(true);
     expect(structured.analysisMode).toBe('src8');
@@ -78,6 +79,9 @@ describe('start_bugfix 单元测试', () => {
     expect(contextStep.note).toMatch(/兼容老项目|补齐/);
     expect(structured?.metadata?.graphDocs?.latestMarkdownPath).toBe('docs/graph-insights/latest.md');
     expect(structured?.metadata?.graphContext?.summary).toMatch(/GitNexus|图谱|降级/);
+    expect(result.content[0].text).toMatch(/状态回写协议/);
+    expect(result.content[0].text).toMatch(/plan_heartbeat/);
+    expect(result.content[0].text).toMatch(/resume_plan.*不会替代/s);
   });
 
   test('关联规格存在时计划包含 check_spec 闸门', async () => {

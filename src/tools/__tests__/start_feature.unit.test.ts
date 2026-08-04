@@ -64,7 +64,14 @@ describe('start_feature 单元测试', () => {
     expect(tools).toContain('init_project_context');
     expect(tools).toContain('check_spec');
     expect(tools).toContain('estimate');
+    expect(tools).toContain('code_review');
     expect(tools).not.toContain('add_feature');
+    expect(plan.steps.map((step: any) => step.id)).toEqual(
+      expect.arrayContaining(['write-spec', 'check-spec', 'estimate', 'implement', 'test', 'review']),
+    );
+    expect(plan.steps.find((step: any) => step.id === 'implement').dependsOn)
+      .toEqual(expect.arrayContaining(['check-spec', 'estimate']));
+    expect(plan.declaredScope.projectRoot).toBeTruthy();
     expect(writeSpec.type).toBe('agent_action');
     expect(writeSpec.expectedOutputs).toContain('docs/specs/user-auth/requirements.md');
     expect(value.metadata.specDraft.structuredContent).toBeTruthy();
@@ -78,6 +85,9 @@ describe('start_feature 单元测试', () => {
     expect(text).toMatch(/estimate/);
     expect(text).toMatch(/graph-insights\/latest\.md/);
     expect(text).toMatch(/structuredContent\.metadata\.specDraft/);
+    expect(text).toMatch(/状态回写协议/);
+    expect(text).toMatch(/plan_heartbeat/);
+    expect(text).toMatch(/resume_plan.*不会替代/s);
     expect(text).not.toMatch(/调用 MCP 工具.*add_feature/);
   });
 
