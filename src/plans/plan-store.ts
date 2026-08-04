@@ -3,11 +3,19 @@ import * as path from 'node:path';
 import { resolveWorkspaceRoot } from '../lib/workspace-root.js';
 import {
   PLAN_STATE_SCHEMA_VERSION,
+  normalizeEvidence,
   normalizeDelegatedPlan,
   normalizePlanId,
   stringArray,
   type PlanHeartbeatRecord,
 } from './plan-types.js';
+import {
+  normalizeAcceptanceResults,
+  normalizePlanArtifacts,
+  normalizePlanCandidates,
+  normalizePlanJsonObject,
+  normalizeRuntimeEvidence,
+} from './plan-state-metadata.js';
 
 export interface PlanStoreLocation {
   projectRoot: string;
@@ -63,6 +71,10 @@ function normalizeRecord(value: unknown): PlanHeartbeatRecord {
   const plan = normalizeDelegatedPlan(raw.plan);
   const createdAt = normalizeDate(raw.createdAt, 'createdAt');
   const updatedAt = normalizeDate(raw.updatedAt, 'updatedAt');
+  const declaredScope = normalizePlanJsonObject(
+    raw.declaredScope ?? raw.declared_scope,
+    'declaredScope',
+  );
   return {
     schemaVersion: PLAN_STATE_SCHEMA_VERSION,
     planId: normalizePlanId(String(raw.planId ?? '')),
@@ -80,7 +92,27 @@ function normalizeRecord(value: unknown): PlanHeartbeatRecord {
           .map((item) => ({ stepId: String(item.stepId), reason: String(item.reason) }))
       : [],
     unresolvedItems: stringArray(raw.unresolvedItems),
-    evidence: Array.isArray(raw.evidence) ? (raw.evidence as never) : [],
+    evidence: normalizeEvidence(raw.evidence, updatedAt),
+    ...(declaredScope ? { declaredScope } : {}),
+    artifacts: normalizePlanArtifacts(raw.artifacts, updatedAt),
+    memoryCandidates: normalizePlanCandidates(
+      raw.memoryCandidates ?? raw.memory_candidates,
+      'memoryCandidates',
+      updatedAt,
+    ),
+    architectureCandidates: normalizePlanCandidates(
+      raw.architectureCandidates ?? raw.architecture_candidates,
+      'architectureCandidates',
+      updatedAt,
+    ),
+    acceptanceResults: normalizeAcceptanceResults(
+      raw.acceptanceResults ?? raw.acceptance_results,
+      updatedAt,
+    ),
+    runtimeEvidence: normalizeRuntimeEvidence(
+      raw.runtimeEvidence ?? raw.runtime_evidence,
+      updatedAt,
+    ),
     ...(typeof raw.lastVerifiedRevision === 'string'
       ? { lastVerifiedRevision: raw.lastVerifiedRevision }
       : {}),

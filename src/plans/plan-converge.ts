@@ -6,14 +6,6 @@ import {
   type PlanHeartbeatRecord,
 } from './plan-types.js';
 
-export const DEFAULT_CONVERGENCE_EVIDENCE: PlanEvidenceKind[] = [
-  'requirements',
-  'spec',
-  'implementation',
-  'test',
-  'review',
-];
-
 export interface ConvergePlanInput {
   planId: string;
   projectRoot?: string;
@@ -21,10 +13,18 @@ export interface ConvergePlanInput {
   externalBlockers?: string[];
 }
 
+function hasPassingGate(record: PlanHeartbeatRecord, gateId: string): boolean {
+  return record.acceptanceResults.some(
+    (item) => item.gateId === gateId && item.passed && item.summary.trim(),
+  );
+}
+
 export interface ConvergePlanResult {
   passed: boolean;
   blockers: string[];
   missingEvidenceKinds: PlanEvidenceKind[];
+  requiredQualityGates: string[];
+  missingQualityGates: string[];
   incompleteStepIds: string[];
   memoryWriteAllowed: boolean;
   record: PlanHeartbeatRecord;
@@ -38,10 +38,13 @@ export async function convergePlan(
   const record = await store.read(planId);
   if (!record) throw new Error(`未找到 Plan 检查点: ${planId}`);
 
-  const requiredEvidenceKinds =
-    input.requiredEvidenceKinds && input.requiredEvidenceKinds.length > 0
-      ? [...new Set(input.requiredEvidenceKinds)]
-      : DEFAULT_CONVERGENCE_EVIDENCE;
+  const requiredEvidenceKinds = [
+    ...new Set([
+      ...record.plan.requiredEvidenceKinds,
+      ...(input.requiredEvidenceKinds ?? []),
+    ]),
+  ];
+  const requiredQualityGates = [...new Set(record.plan.qualityGates)];
   const completed = new Set(record.completedStepIds);
   const skipped = new Set(record.skippedSteps.map((item) => item.stepId));
   const incompleteStepIds = record.plan.steps
@@ -49,6 +52,9 @@ export async function convergePlan(
     .filter((stepId) => !completed.has(stepId) && !skipped.has(stepId));
   const missingEvidenceKinds = requiredEvidenceKinds.filter(
     (kind) => !hasEvidence(record, kind)
+  );
+  const missingQualityGates = requiredQualityGates.filter(
+    (gateId) => !hasPassingGate(record, gateId)
   );
   const blockers = [
     ...(record.status === 'cancelled' ? ['计划已取消'] : []),
@@ -64,6 +70,9 @@ export async function convergePlan(
     ...(missingEvidenceKinds.length > 0
       ? [`缺少收敛证据: ${missingEvidenceKinds.join(', ')}`]
       : []),
+    ...(missingQualityGates.length > 0
+      ? [`质量闸门未通过: ${missingQualityGates.join(', ')}`]
+      : []),
     ...((input.externalBlockers ?? []).map((item) => item.trim()).filter(Boolean)),
   ];
   const passed = blockers.length === 0;
@@ -73,6 +82,8 @@ export async function convergePlan(
     passed,
     blockers,
     requiredEvidenceKinds,
+    requiredQualityGates,
+    missingQualityGates,
   };
   const updated: PlanHeartbeatRecord = {
     ...record,
@@ -86,6 +97,8 @@ export async function convergePlan(
     passed,
     blockers,
     missingEvidenceKinds,
+    requiredQualityGates,
+    missingQualityGates,
     incompleteStepIds,
     memoryWriteAllowed:
       passed && updated.plan.memoryPolicy.extractAfterValidation,

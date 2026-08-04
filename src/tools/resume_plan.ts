@@ -37,6 +37,12 @@ export async function resumePlanTool(args: unknown) {
           completedStepIds: record.completedStepIds,
           unresolvedItems: record.unresolvedItems,
           lastVerifiedRevision: record.lastVerifiedRevision,
+          declaredScope: record.declaredScope,
+          artifacts: record.artifacts,
+          memoryCandidates: record.memoryCandidates,
+          architectureCandidates: record.architectureCandidates,
+          acceptanceResults: record.acceptanceResults,
+          runtimeEvidence: record.runtimeEvidence,
         },
       }
     );

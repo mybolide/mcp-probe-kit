@@ -15,6 +15,12 @@ export async function planHeartbeat(args: unknown) {
       skipped_steps?: unknown;
       unresolved_items?: string[];
       evidence?: unknown;
+      declared_scope?: unknown;
+      artifacts?: unknown;
+      memory_candidates?: unknown;
+      architecture_candidates?: unknown;
+      acceptance_results?: unknown;
+      runtime_evidence?: unknown;
       last_verified_revision?: string;
     }>(args, {
       fieldAliases: {
@@ -24,6 +30,11 @@ export async function planHeartbeat(args: unknown) {
         completed_step_ids: ['completedStepIds'],
         skipped_steps: ['skippedSteps'],
         unresolved_items: ['unresolvedItems'],
+        declared_scope: ['declaredScope'],
+        memory_candidates: ['memoryCandidates'],
+        architecture_candidates: ['architectureCandidates'],
+        acceptance_results: ['acceptanceResults'],
+        runtime_evidence: ['runtimeEvidence'],
         last_verified_revision: ['lastVerifiedRevision', 'revision'],
       },
     });
@@ -40,6 +51,12 @@ export async function planHeartbeat(args: unknown) {
       skippedSteps: parsed.skipped_steps,
       unresolvedItems: parsed.unresolved_items,
       evidence: parsed.evidence,
+      declaredScope: parsed.declared_scope,
+      artifacts: parsed.artifacts,
+      memoryCandidates: parsed.memory_candidates,
+      architectureCandidates: parsed.architecture_candidates,
+      acceptanceResults: parsed.acceptance_results,
+      runtimeEvidence: parsed.runtime_evidence,
       lastVerifiedRevision:
         getString(parsed.last_verified_revision) || undefined,
     });
@@ -55,6 +72,12 @@ export async function planHeartbeat(args: unknown) {
         skippedSteps: record.skippedSteps,
         unresolvedItems: record.unresolvedItems,
         evidenceCount: record.evidence.length,
+        declaredScope: record.declaredScope,
+        artifactCount: record.artifacts.length,
+        memoryCandidateCount: record.memoryCandidates.length,
+        architectureCandidateCount: record.architectureCandidates.length,
+        acceptanceResultCount: record.acceptanceResults.length,
+        runtimeEvidenceCount: record.runtimeEvidence.length,
         lastVerifiedRevision: record.lastVerifiedRevision,
         statePath: location.statePath,
         updatedAt: record.updatedAt,

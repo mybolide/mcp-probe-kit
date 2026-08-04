@@ -12,6 +12,22 @@ import {
   type PlanRunStatus,
   type SkippedPlanStep,
 } from './plan-types.js';
+import {
+  mergeAcceptanceResults,
+  mergeArtifacts,
+  mergeCandidates,
+  mergeRuntimeEvidence,
+  normalizeAcceptanceResults,
+  normalizePlanArtifacts,
+  normalizePlanCandidates,
+  normalizePlanJsonObject,
+  normalizeRuntimeEvidence,
+  type PlanAcceptanceResult,
+  type PlanArtifact,
+  type PlanCandidate,
+  type PlanJsonObject,
+  type PlanRuntimeEvidence,
+} from './plan-state-metadata.js';
 
 export interface PlanHeartbeatInput {
   planId: string;
@@ -23,6 +39,12 @@ export interface PlanHeartbeatInput {
   skippedSteps?: SkippedPlanStep[] | unknown;
   unresolvedItems?: string[];
   evidence?: PlanEvidence[] | unknown;
+  declaredScope?: PlanJsonObject | unknown;
+  artifacts?: PlanArtifact[] | unknown;
+  memoryCandidates?: PlanCandidate[] | unknown;
+  architectureCandidates?: PlanCandidate[] | unknown;
+  acceptanceResults?: PlanAcceptanceResult[] | unknown;
+  runtimeEvidence?: PlanRuntimeEvidence[] | unknown;
   lastVerifiedRevision?: string;
 }
 
@@ -49,6 +71,30 @@ export async function recordPlanHeartbeat(
   const completedSet = new Set(completed);
   const normalizedSkipped = skipped.filter((item) => !completedSet.has(item.stepId));
   const evidence = mergeEvidence(existing?.evidence, normalizeEvidence(input.evidence, now));
+  const declaredScope =
+    input.declaredScope === undefined
+      ? existing?.declaredScope ?? normalizePlanJsonObject(plan.declaredScope, 'plan.declaredScope')
+      : normalizePlanJsonObject(input.declaredScope, 'declaredScope');
+  const artifacts = mergeArtifacts(
+    existing?.artifacts,
+    normalizePlanArtifacts(input.artifacts, now),
+  );
+  const memoryCandidates = mergeCandidates(
+    existing?.memoryCandidates,
+    normalizePlanCandidates(input.memoryCandidates, 'memoryCandidates', now),
+  );
+  const architectureCandidates = mergeCandidates(
+    existing?.architectureCandidates,
+    normalizePlanCandidates(input.architectureCandidates, 'architectureCandidates', now),
+  );
+  const acceptanceResults = mergeAcceptanceResults(
+    existing?.acceptanceResults,
+    normalizeAcceptanceResults(input.acceptanceResults, now),
+  );
+  const runtimeEvidence = mergeRuntimeEvidence(
+    existing?.runtimeEvidence,
+    normalizeRuntimeEvidence(input.runtimeEvidence, now),
+  );
 
   assertKnownStepIds(plan, [
     ...completed,
@@ -73,6 +119,12 @@ export async function recordPlanHeartbeat(
         ? existing?.unresolvedItems ?? []
         : stringArray(input.unresolvedItems),
     evidence,
+    ...(declaredScope ? { declaredScope } : {}),
+    artifacts,
+    memoryCandidates,
+    architectureCandidates,
+    acceptanceResults,
+    runtimeEvidence,
     ...(input.lastVerifiedRevision?.trim()
       ? { lastVerifiedRevision: input.lastVerifiedRevision.trim() }
       : existing?.lastVerifiedRevision

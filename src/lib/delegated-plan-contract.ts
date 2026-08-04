@@ -19,6 +19,15 @@ export type DelegatedStepType =
   | 'user_input'
   | 'async_task';
 
+export type DelegatedEvidenceKind =
+  | 'requirements'
+  | 'spec'
+  | 'implementation'
+  | 'test'
+  | 'review'
+  | 'memory'
+  | 'other';
+
 export interface DelegatedPlanStep extends PlanStep {
   type?: DelegatedStepType;
   requiredInputs?: string[];
@@ -51,6 +60,12 @@ export interface DelegatedResumeContext {
   completedStepIds?: string[];
   unresolvedItems?: string[];
   lastVerifiedRevision?: string;
+  declaredScope?: Record<string, unknown>;
+  artifacts?: Array<Record<string, unknown>>;
+  memoryCandidates?: Array<Record<string, unknown>>;
+  architectureCandidates?: Array<Record<string, unknown>>;
+  acceptanceResults?: Array<Record<string, unknown>>;
+  runtimeEvidence?: Array<Record<string, unknown>>;
 }
 
 export interface DelegatedPlanContract {
@@ -63,6 +78,9 @@ export interface DelegatedPlanContract {
   steps: DelegatedPlanStep[];
   globalRules: string[];
   completionCriteria: string[];
+  requiredEvidenceKinds: DelegatedEvidenceKind[];
+  qualityGates: string[];
+  declaredScope?: Record<string, unknown>;
   memoryPolicy: DelegatedMemoryPolicy;
   executionStatePolicy: DelegatedExecutionStatePolicy;
   resumeContext?: DelegatedResumeContext;
@@ -76,6 +94,9 @@ export interface BuildDelegatedPlanContractInput {
   steps: DelegatedPlanStep[];
   globalRules?: string[];
   completionCriteria?: string[];
+  requiredEvidenceKinds?: DelegatedEvidenceKind[];
+  qualityGates?: string[];
+  declaredScope?: Record<string, unknown>;
   memoryPolicy?: Partial<DelegatedMemoryPolicy>;
   resumeContext?: DelegatedResumeContext;
 }
@@ -101,6 +122,44 @@ const DEFAULT_STATE_RULES = [
   '会话中断或切换 Agent 后先调用 resume_plan，再继续未完成步骤',
   '只有 converge 返回 passed=true 后，才能将本次结论正式写入长期记忆',
 ];
+
+const EVIDENCE_KINDS: DelegatedEvidenceKind[] = [
+  'requirements',
+  'spec',
+  'implementation',
+  'test',
+  'review',
+  'memory',
+  'other',
+];
+
+const DEFAULT_EVIDENCE_BY_WORKFLOW: Record<DelegatedWorkflowKind, DelegatedEvidenceKind[]> = {
+  feature: ['requirements', 'spec', 'implementation', 'test', 'review'],
+  bugfix: ['requirements', 'implementation', 'test', 'review'],
+  ui: ['requirements', 'implementation', 'test', 'review'],
+  onboard: [],
+  product: ['requirements', 'review'],
+  ralph: ['implementation', 'test', 'review'],
+  refactor: ['requirements', 'implementation', 'test', 'review'],
+  custom: [],
+};
+
+export function normalizeDelegatedEvidenceKinds(value: unknown): DelegatedEvidenceKind[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => {
+    const kind = String(item ?? '').trim() as DelegatedEvidenceKind;
+    if (!EVIDENCE_KINDS.includes(kind)) {
+      throw new Error(`不支持的 required evidence kind: ${String(item)}`);
+    }
+    return kind;
+  }))];
+}
+
+export function defaultEvidenceKindsForWorkflow(
+  workflow: DelegatedWorkflowKind,
+): DelegatedEvidenceKind[] {
+  return [...DEFAULT_EVIDENCE_BY_WORKFLOW[workflow]];
+}
 
 export function createDelegatedPlanId(
   workflow: DelegatedWorkflowKind,
@@ -168,6 +227,12 @@ export function buildDelegatedPlanContract(
     steps: normalizedSteps,
     globalRules: [...new Set([...DEFAULT_STATE_RULES, ...(input.globalRules ?? [])])],
     completionCriteria: input.completionCriteria ?? [],
+    requiredEvidenceKinds:
+      input.requiredEvidenceKinds === undefined
+        ? defaultEvidenceKindsForWorkflow(input.workflow)
+        : normalizeDelegatedEvidenceKinds(input.requiredEvidenceKinds),
+    qualityGates: [...new Set((input.qualityGates ?? []).map((item) => item.trim()).filter(Boolean))],
+    ...(input.declaredScope ? { declaredScope: { ...input.declaredScope } } : {}),
     memoryPolicy: {
       ...DEFAULT_MEMORY_POLICY,
       ...input.memoryPolicy,

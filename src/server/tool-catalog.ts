@@ -409,7 +409,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "plan-control",
     groupTitle: PLAN,
     whenToCall:
-      "执行需要持续状态、跨会话恢复或正式交付的 Delegated Plan 时记录步骤、证据、未决事项和 revision；首次调用附完整 plan，单次只读能力不强制使用",
+      "执行需要持续状态、跨会话恢复或正式交付的 Delegated Plan 时记录步骤、证据、作用域、产物、候选、验收结果、运行证据和 revision；首次调用附完整 plan，单次只读能力不强制使用",
   }),
   tool({
     name: "resume_plan",
@@ -432,7 +432,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "plan-control",
     groupTitle: PLAN,
     whenToCall:
-      "托管交付实现与验证完成后，按 Plan 检查需求、规格、实现、测试、审查证据和未决项；通过后才允许该流程正式沉淀记忆。单次只读分析和独立记忆管理不强制进入收敛",
+      "托管交付实现与验证完成后，按 Plan 自己声明的 requiredEvidenceKinds（例如需求、测试、审查）、qualityGates、步骤和未决项进行收敛；通过后才允许该流程正式沉淀记忆。单次只读分析和独立记忆管理不强制进入收敛",
   }),
   tool({
     name: "ask_user",

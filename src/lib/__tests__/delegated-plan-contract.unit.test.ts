@@ -29,6 +29,14 @@ describe('delegated-plan-contract', () => {
     expect(plan.steps[0].type).toBe('tool');
     expect(plan.steps[1].type).toBe('agent_action');
     expect(plan.memoryPolicy.allowNegativeMemory).toBe(true);
+    expect(plan.requiredEvidenceKinds).toEqual([
+      'requirements',
+      'spec',
+      'implementation',
+      'test',
+      'review',
+    ]);
+    expect(plan.qualityGates).toEqual([]);
     expect(plan.executionStatePolicy).toMatchObject({
       heartbeatTool: 'plan_heartbeat',
       resumeTool: 'resume_plan',
@@ -71,5 +79,25 @@ describe('delegated-plan-contract', () => {
         steps: [{ id: 'implementation', dependsOn: ['spec'] }],
       })
     ).toThrow('依赖未知步骤');
+  });
+
+  it('允许自定义只读计划显式声明空证据集和质量闸门', () => {
+    const plan = buildDelegatedPlanContract({
+      planId: 'custom-read-only',
+      workflow: 'custom',
+      workflowVersion: '4.0.0',
+      objective: '只读分析现有结构',
+      steps: [{ id: 'inspect', action: 'read_only_analysis' }],
+      requiredEvidenceKinds: [],
+      qualityGates: ['analysis-reviewed'],
+      declaredScope: { modules: ['src/plans'], exclusions: ['production writes'] },
+    });
+
+    expect(plan.requiredEvidenceKinds).toEqual([]);
+    expect(plan.qualityGates).toEqual(['analysis-reviewed']);
+    expect(plan.declaredScope).toEqual({
+      modules: ['src/plans'],
+      exclusions: ['production writes'],
+    });
   });
 });

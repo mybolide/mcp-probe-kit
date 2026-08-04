@@ -1,20 +1,22 @@
 import {
   buildDelegatedPlanContract,
+  normalizeDelegatedEvidenceKinds,
   type DelegatedPlanContract,
+  type DelegatedEvidenceKind,
   type DelegatedWorkflowKind,
 } from '../lib/delegated-plan-contract.js';
+import type {
+  PlanAcceptanceResult,
+  PlanArtifact,
+  PlanCandidate,
+  PlanJsonObject,
+  PlanRuntimeEvidence,
+} from './plan-state-metadata.js';
 
 export const PLAN_STATE_SCHEMA_VERSION = '1.0.0' as const;
 
 export type PlanRunStatus = 'active' | 'blocked' | 'converged' | 'cancelled';
-export type PlanEvidenceKind =
-  | 'requirements'
-  | 'spec'
-  | 'implementation'
-  | 'test'
-  | 'review'
-  | 'memory'
-  | 'other';
+export type PlanEvidenceKind = DelegatedEvidenceKind;
 
 export interface PlanEvidence {
   kind: PlanEvidenceKind;
@@ -40,6 +42,8 @@ export interface PlanConvergenceSnapshot {
   passed: boolean;
   blockers: string[];
   requiredEvidenceKinds: PlanEvidenceKind[];
+  requiredQualityGates?: string[];
+  missingQualityGates?: string[];
 }
 
 export interface PlanHeartbeatRecord {
@@ -52,6 +56,12 @@ export interface PlanHeartbeatRecord {
   skippedSteps: SkippedPlanStep[];
   unresolvedItems: string[];
   evidence: PlanEvidence[];
+  declaredScope?: PlanJsonObject;
+  artifacts: PlanArtifact[];
+  memoryCandidates: PlanCandidate[];
+  architectureCandidates: PlanCandidate[];
+  acceptanceResults: PlanAcceptanceResult[];
+  runtimeEvidence: PlanRuntimeEvidence[];
   lastVerifiedRevision?: string;
   lastConvergence?: PlanConvergenceSnapshot;
   createdAt: string;
@@ -87,6 +97,19 @@ export function normalizeDelegatedPlan(value: unknown): DelegatedPlanContract {
     completionCriteria: stringArray(
       raw.completionCriteria ?? raw.completion_criteria
     ),
+    requiredEvidenceKinds:
+      raw.requiredEvidenceKinds === undefined && raw.required_evidence_kinds === undefined
+        ? undefined
+        : normalizeDelegatedEvidenceKinds(
+            raw.requiredEvidenceKinds ?? raw.required_evidence_kinds
+          ),
+    qualityGates: stringArray(raw.qualityGates ?? raw.quality_gates),
+    declaredScope:
+      raw.declaredScope && typeof raw.declaredScope === 'object' && !Array.isArray(raw.declaredScope)
+        ? (raw.declaredScope as Record<string, unknown>)
+        : raw.declared_scope && typeof raw.declared_scope === 'object' && !Array.isArray(raw.declared_scope)
+          ? (raw.declared_scope as Record<string, unknown>)
+          : undefined,
     memoryPolicy:
       raw.memoryPolicy && typeof raw.memoryPolicy === 'object'
         ? (raw.memoryPolicy as never)
@@ -171,17 +194,8 @@ function normalizeWorkflow(value: unknown): DelegatedWorkflowKind {
 }
 
 function normalizeEvidenceKind(value: unknown): PlanEvidenceKind {
-  const kind = String(value ?? '').trim() as PlanEvidenceKind;
-  const allowed: PlanEvidenceKind[] = [
-    'requirements',
-    'spec',
-    'implementation',
-    'test',
-    'review',
-    'memory',
-    'other',
-  ];
-  if (!allowed.includes(kind)) throw new Error(`不支持的 evidence kind: ${kind}`);
+  const [kind] = normalizeDelegatedEvidenceKinds([value]);
+  if (!kind) throw new Error(`不支持的 evidence kind: ${String(value)}`);
   return kind;
 }
 

@@ -62,6 +62,10 @@ async function assertHeartbeat(
       plan,
       completed_step_ids: ['done'],
       evidence: convergenceEvidence(),
+      declared_scope: { modules: ['src/plans'] },
+      artifacts: [{ kind: 'report', summary: 'Plan 验证报告', reference: 'plan-report' }],
+      acceptance_results: [{ gate_id: 'protocol-check', passed: true, summary: '协议检查通过' }],
+      runtime_evidence: [{ kind: 'mcp', summary: 'MCP 调用成功', reference: 'in-memory' }],
     },
   });
   expect(result.isError ?? false).toBe(false);
@@ -69,6 +73,10 @@ async function assertHeartbeat(
     stored: true,
     planId: plan.planId,
     completedStepIds: ['done'],
+    declaredScope: { modules: ['src/plans'] },
+    artifactCount: 1,
+    acceptanceResultCount: 1,
+    runtimeEvidenceCount: 1,
   });
 }
 
@@ -78,7 +86,16 @@ async function assertResume(client: Client, planId: string, projectRoot: string)
     arguments: { plan_id: planId, project_root: projectRoot },
   });
   expect(result.isError ?? false).toBe(false);
-  expect(result.structuredContent).toMatchObject({ found: true, readyStepIds: [] });
+  expect(result.structuredContent).toMatchObject({
+    found: true,
+    readyStepIds: [],
+    record: {
+      declaredScope: { modules: ['src/plans'] },
+      artifacts: [expect.objectContaining({ summary: 'Plan 验证报告' })],
+      acceptanceResults: [expect.objectContaining({ gateId: 'protocol-check' })],
+      runtimeEvidence: [expect.objectContaining({ kind: 'mcp' })],
+    },
+  });
 }
 
 async function assertConverge(client: Client, planId: string, projectRoot: string) {
