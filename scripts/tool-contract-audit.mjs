@@ -43,12 +43,19 @@ try {
   const apps = await connect({ toolset: 'compact', projectRoot, memory: true, apps: true, memoryUrl: memory.url });
   const rawAppTools = (await apps.client.listTools()).tools;
   const appToolNames = new Set(rawAppTools.map((tool) => tool.name));
-  assert(appToolNames.has('list_memory_assets'), 'Apps tools/list missing list_memory_assets');
+  assert(
+    !appToolNames.has('list_memory_assets'),
+    'Apps tools/list must not expose app-only list_memory_assets to the model',
+  );
+  assert(
+    appToolNames.size === compactMemoryTools.size,
+    `Apps negotiation changed the model-visible tool count: ${appToolNames.size} !== ${compactMemoryTools.size}`,
+  );
+  // The hidden action remains callable by a negotiated MCP App when it knows
+  // the action name, but it must not compete on the model-visible tool surface.
   await auditCall('app-only', apps.client, appToolNames, 'list_memory_assets', { limit: 20, offset: 0 }, {
     forbiddenTextTools: phantomTools,
   });
-  const appDefinition = rawAppTools.find((tool) => tool.name === 'list_memory_assets');
-  assert(JSON.stringify(appDefinition?._meta ?? {}).includes('app'), 'list_memory_assets is not marked app-only');
 
   const legacy = await connect({ toolset: 'compact', projectRoot, memory: false, apps: false, era: 'legacy' });
   const legacyTools = new Set((await legacy.client.listTools()).tools.map((tool) => tool.name));
