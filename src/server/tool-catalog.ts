@@ -339,7 +339,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "memory",
     groupTitle: MEMORY,
-    whenToCall: "主动查**历史经验**；`start_*` 未覆盖时补查",
+    whenToCall: "主动查**历史经验**；默认只返回 active，审计失效记录时显式 `include_inactive=true`，并结合 ranking 解释核对证据与适用边界",
   }),
   tool({
     name: "read_memory_asset",
@@ -362,7 +362,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "memory",
     groupTitle: MEMORY,
     whenToCall:
-      "托管交付流程在 **converge passed=true** 后沉淀 MemoryCandidate；用户明确进行独立记忆管理时也可直接调用，但必须提供证据和适用边界",
+      "托管交付流程在 **converge passed=true** 后沉淀 MemoryCandidate；用户明确进行独立记忆管理时也可直接调用。默认拒绝同身份冲突，确认替代时用 `conflict_policy=supersede`，确需并行结论时显式 `allow_parallel`",
   }),
   tool({
     name: "update_memory_asset",
@@ -373,7 +373,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "memory",
     groupTitle: MEMORY,
-    whenToCall: "修正已有记忆条目",
+    whenToCall: "修正已有记忆、撤回错误结论或建立 supersede 关系；历史关系不可清除，retracted/负面结论必须保留 evidence",
   }),
   tool({
     name: "delete_memory_asset",
@@ -385,7 +385,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "memory",
     groupTitle: MEMORY,
-    whenToCall: "删除错误记忆（需 `confirm: true`）",
+    whenToCall: "硬删除未关联的错误/重复/无价值资产（需 `confirm: true`）；参与 supersede 链的资产只能用 update_memory_asset 撤回",
   }),
   tool({
     name: "scan_and_extract_patterns",

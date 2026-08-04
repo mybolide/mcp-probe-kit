@@ -67,7 +67,12 @@ export const memoryToolSchemas = [
         status: { type: 'string', enum: ['active', 'stale', 'expired', 'superseded', 'retracted'], description: '生命周期状态，默认 active' },
         expires_at: { type: 'string', description: '自动失效时间，ISO 日期时间' },
         supersedes: { type: 'array', items: { type: 'string' }, description: '本资产替代的旧资产 ID' },
-        superseded_by: { type: 'string', description: '替代本资产的新资产 ID；填写后状态自动变为 superseded' },
+        superseded_by: { type: 'string', description: '兼容字段；新建资产不接受该参数。请先创建 successor，再用 update_memory_asset 更新旧资产' },
+        conflict_policy: {
+          type: 'string',
+          enum: ['reject', 'supersede', 'allow_parallel'],
+          description: '同一 type/name/source_project 已有 active 资产但内容不同时的处理：reject（默认）/ supersede / allow_parallel',
+        },
         confidence: { type: 'number', description: '置信度，0-1' },
         tags: { type: 'array', items: { type: 'string' }, description: '标签列表，如 bugfix, root-cause' },
       },
@@ -78,7 +83,7 @@ export const memoryToolSchemas = [
   {
     name: 'delete_memory_asset',
     description:
-      '按 asset_id 从共享记忆库删除一条资产。适用于过时、错误或重复沉淀的清理；删除前建议先用 read_memory_asset 确认内容。',
+      '按 asset_id 从共享记忆库删除一条未参与 supersede 链的资产。适用于错误、重复或无价值沉淀；已有关联关系的资产必须改用 update_memory_asset 设置 retracted 并保留 evidence。',
     inputSchema: {
       type: 'object',
       properties: {
@@ -119,6 +124,11 @@ export const memoryToolSchemas = [
         expires_at: { type: 'string', description: '自动失效时间，ISO 日期时间；空字符串可清除' },
         supersedes: { type: 'array', items: { type: 'string' }, description: '本资产替代的旧资产 ID' },
         superseded_by: { type: 'string', description: '替代本资产的新资产 ID' },
+        conflict_policy: {
+          type: 'string',
+          enum: ['reject', 'supersede', 'allow_parallel'],
+          description: '更新后与同身份 active 资产冲突时的处理：reject（默认）/ supersede / allow_parallel',
+        },
         confidence: { type: 'number', description: '置信度，0-1' },
         tags: { type: 'array', items: { type: 'string' }, description: '标签列表' },
       },

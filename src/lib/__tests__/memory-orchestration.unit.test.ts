@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
   buildMemoryPlanStep,
+  formatSearchMemoryResultsText,
   renderMemoryGuideSection,
   shouldShowSourceInSearch,
   type MemoryInjectionContext,
@@ -119,5 +120,56 @@ describe('memory-orchestration', () => {
       evidence: expect.any(Array),
       applicability: expect.any(String),
     });
+  });
+
+  test('start_* Memory 注入受总字符预算约束并显式提示截断', () => {
+    vi.stubEnv('MEMORY_INJECTION_CONTENT_MAX_CHARS', '1000');
+    vi.stubEnv('MEMORY_INJECTION_TOTAL_MAX_CHARS', '700');
+    const asset = {
+      id: 'long-1',
+      name: 'long-memory',
+      type: 'bugfix',
+      description: 'desc',
+      summary: 'summary',
+      content: 'verified detail\n'.repeat(200),
+      tags: ['bugfix'],
+      confidence: 0.9,
+      status: 'active' as const,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const context: MemoryInjectionContext = {
+      enabled: true,
+      available: true,
+      degraded: false,
+      query: 'q',
+      results: [{ ...asset, score: 0.9 }],
+      assetsById: { [asset.id]: asset },
+    };
+
+    const section = renderMemoryGuideSection(context);
+
+    expect(section.length).toBeLessThanOrEqual(700);
+    expect(section).toContain('总字符预算截断');
+  });
+
+  test('search_memory 人类可读文本有独立总预算，结构化结果不受影响', () => {
+    vi.stubEnv('MEMORY_SEARCH_CONTENT_MAX_CHARS', '1000');
+    vi.stubEnv('MEMORY_SEARCH_TOTAL_MAX_CHARS', '600');
+    const text = formatSearchMemoryResultsText([
+      {
+        id: 'long-search',
+        score: 0.9,
+        name: 'long-search-memory',
+        type: 'pattern',
+        description: 'desc',
+        summary: 'summary',
+        content: 'full content\n'.repeat(200),
+        tags: ['pattern'],
+      },
+    ]);
+
+    expect(text.length).toBeLessThanOrEqual(600);
+    expect(text).toContain('search_memory 文本已按总字符预算截断');
   });
 });

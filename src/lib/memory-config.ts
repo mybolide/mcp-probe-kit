@@ -18,8 +18,12 @@ export interface MemoryConfig {
   projectPriorityBoost: number;
   /** Max chars of each asset content injected into start_* guides */
   injectionContentMaxChars: number;
+  /** Max total chars of the full Memory section injected into start_* guides */
+  injectionTotalMaxChars: number;
   /** Max chars of content in search_memory text; 0 = omit content block */
   searchContentMaxChars: number;
+  /** Max total chars of search_memory human-readable text */
+  searchTotalMaxChars: number;
 }
 
 function normalizeBaseUrl(value: string | undefined): string {
@@ -70,7 +74,9 @@ export function getMemoryConfig(): MemoryConfig {
     repoId: (process.env.MEMORY_REPO_ID || '').trim(),
     projectPriorityBoost: getOptionalNumberEnv('MEMORY_PROJECT_PRIORITY_BOOST', 0.08),
     injectionContentMaxChars: getNumberEnv('MEMORY_INJECTION_CONTENT_MAX_CHARS', 1500),
+    injectionTotalMaxChars: getNumberEnv('MEMORY_INJECTION_TOTAL_MAX_CHARS', 9000),
     searchContentMaxChars: getOptionalNumberEnv('MEMORY_SEARCH_CONTENT_MAX_CHARS', 1500),
+    searchTotalMaxChars: getNumberEnv('MEMORY_SEARCH_TOTAL_MAX_CHARS', 12000),
   };
 }
 

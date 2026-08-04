@@ -12,7 +12,7 @@ This file tracks implementation status separately from the frozen requirements d
 | Phase 3 — Plan lifecycle | Complete | Extend Plan, Heartbeat, Resume and Converge compatibly |
 | Phase 4 — Orchestrator closure | Complete | Feature, Bugfix, UI, Onboard, Product and bounded Ralph delivery loops are closed |
 | Phase 5 — Diff and verification consistency | Complete | Compare declared scope, real diff, contracts, tests and architecture drift |
-| Phase 6 — Memory quality | Pending | Improve conflict, supersede, expiry, negative evidence and retrieval quality |
+| Phase 6 — Memory quality | Complete | Enforce conflict, deduplication, lifecycle, supersede, negative-evidence, ranking and injection quality |
 
 ## Phase 0 evidence
 
@@ -320,3 +320,52 @@ ARC-8 drift: passed; ARC-1 through ARC-8 completed, 0 gaps, 0 drift findings
 ```
 
 Phase 5 is complete. Phase 6 can now focus on Memory conflict detection, supersede/expiry lifecycle, negative evidence quality, deduplication and retrieval ranking without changing the orchestration or Plan contracts.
+
+## Phase 6 evidence
+
+Implemented:
+
+- Memory lifecycle input is now strict. Invalid values no longer silently degrade to `active`; `retracted` and negative-memory types require evidence, and `superseded` requires a successor reference;
+- lifecycle history is monotonic: a retracted or superseded asset cannot be silently reactivated, existing `superseded_by` cannot be rewritten, and established `supersedes` relationships are append-only;
+- exact duplicate detection remains compatible with the former content/type/project scope, but now returns an explicit `deduplicated` disposition rather than claiming a new write;
+- exact duplicates use deterministic Qdrant-compatible UUIDs. When the deterministic base ID already belongs to stale, expired, superseded or retracted history, a deterministic revision UUID is allocated instead of overwriting the historical record;
+- same-process writes are serialized by both deduplication key and identity key. Deterministic exact-duplicate IDs also converge across processes, but the implementation does not claim globally atomic uniqueness for different-content identity conflicts across independent processes because Qdrant does not provide a corresponding unique constraint;
+- same-identity, different-content writes require an explicit `conflict_policy`: `reject` by default, `supersede` for a confirmed replacement, or `allow_parallel` for intentionally concurrent conclusions;
+- supersede validation prevents self-reference, cross-scope replacement, replacement of retracted targets and overwriting an existing different successor;
+- successor and predecessor links are validated before persistence and written together in one Qdrant batch. Updating `superseded_by` also updates the successor's `supersedes` relationship;
+- assets participating in a supersede chain cannot be hard-deleted. They must be retracted with evidence through `update_memory_asset`, preserving the audit trail;
+- Qdrant scroll pagination, vector generation and batch persistence are isolated in a storage adapter. Pagination follows every cursor and rejects repeated cursors rather than silently scanning only an initial subset or looping indefinitely;
+- `MemoryClient` remains the transport/read/search adapter and preserves the existing `upsertAsset` return contract. The richer write outcome is additive, and injected legacy clients that only implement `upsertAsset` continue to work;
+- legacy payloads without `identityKey` remain readable because the key is derived during payload normalization. No collection migration or destructive rewrite is required;
+- Memory search ranking is lifecycle-first and exposes a deterministic explanation covering vector relevance, preferred type/tag, project scope, confidence, evidence strength, applicability and weak-negative-memory penalties;
+- active assets remain ahead of stale, expired, superseded and retracted assets in maintenance searches, while ordinary searches still exclude inactive lifecycle states by default;
+- `search_memory` and complete-delivery Memory injection now have explicit total text budgets in addition to per-asset limits. Human-readable text reports truncation while structured results and `read_memory_asset` retain full access;
+- public Memory schemas and Catalog guidance describe conflict handling, lifecycle evidence, retrieval explanations and protected deletion without adding, removing or renaming tools;
+- production responsibilities remain bounded: `memory-write-operations.ts` 415 lines, `memory-write-storage.ts` 117 lines, `memory-client.ts` 350 lines, `memory-quality.ts` 207 lines, `memory-write-lock.ts` 25 lines, `memory-orchestration.ts` 468 lines, `memory-ranking.ts` 140 lines and `memory-text-budget.ts` 47 lines.
+
+Compatibility preserved:
+
+```text
+Compact: 24
+Compact + Memory: 30
+Full: 34
+Apps model-visible: 30
+App-only: 1
+Unique callable names: 35
+```
+
+Validation completed:
+
+```text
+Memory quality focused suite: 78 / 78 passed across 13 test files
+full regression suite: 542 / 542 passed across 108 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+release static checks: 37 / 37 passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+ARC-8 drift: passed; ARC-1 through ARC-8 completed, 0 gaps, 0 drift findings
+```
+
+Phase 6 is complete. Delivery System V1 phases 0 through 6 are now implemented, independently validated and locally reversible. No push, tag, release, npm publication or Memory collection migration was performed.

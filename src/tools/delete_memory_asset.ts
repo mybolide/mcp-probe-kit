@@ -61,6 +61,42 @@ export async function deleteMemoryAsset(args: any) {
       );
     }
 
+    const existing = await client.getAsset(assetId);
+    if (!existing) {
+      return okStructured(
+        `未找到记忆资产: ${assetId}`,
+        attachHandles(
+          { enabled: true, deleted: false, requires_confirmation: false, asset: null },
+          { memory_assets: buildMemoryAssetHandles([{ id: assetId }], 'delete_memory_asset') }
+        )
+      );
+    }
+    const linkedAssetIds = [
+      ...(existing.supersedes ?? []),
+      ...(existing.supersededBy ? [existing.supersededBy] : []),
+    ];
+    if (linkedAssetIds.length > 0) {
+      return okStructured(
+        `拒绝硬删除已参与 supersede 链的记忆资产: ${existing.name}。请改用 update_memory_asset 设置 status=retracted 并附 evidence，保留审计关系。`,
+        attachHandles(
+          {
+            enabled: true,
+            deleted: false,
+            requires_confirmation: false,
+            blocked_by_relations: true,
+            linked_asset_ids: linkedAssetIds,
+            asset: existing,
+          },
+          {
+            memory_assets: buildMemoryAssetHandles(
+              [{ id: existing.id, name: existing.name, type: existing.type, summary: existing.summary }],
+              'update_memory_asset'
+            ),
+          }
+        )
+      );
+    }
+
     const { deleted, asset } = await client.deleteAsset(assetId);
     if (!deleted) {
       return okStructured(

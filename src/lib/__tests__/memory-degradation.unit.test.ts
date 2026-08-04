@@ -17,7 +17,9 @@ const config: MemoryConfig = {
   repoId: 'acme/orders',
   projectPriorityBoost: 0.08,
   injectionContentMaxChars: 1500,
+  injectionTotalMaxChars: 9000,
   searchContentMaxChars: 1500,
+  searchTotalMaxChars: 12000,
 };
 
 describe('memory degradation', () => {

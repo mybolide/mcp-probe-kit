@@ -18,6 +18,19 @@ const MemoryAssetHandleSchema = {
   required: ['id', 'tool'],
 } as const;
 
+const MemoryConflictSchema = {
+  type: 'object',
+  properties: {
+    assetId: { type: 'string' },
+    name: { type: 'string' },
+    type: { type: 'string' },
+    sourceProject: { type: 'string' },
+    status: { type: 'string', enum: ['active', 'stale', 'expired', 'superseded', 'retracted'] },
+    reason: { type: 'string', enum: ['identity_conflict'] },
+  },
+  required: ['assetId', 'name', 'type', 'status', 'reason'],
+} as const;
+
 const ToolHandlesSchema = {
   type: 'object',
   properties: {
@@ -35,6 +48,7 @@ const MemoryAssetSchema = {
   type: 'object',
   properties: {
     id: { type: 'string' },
+    identityKey: { type: 'string' },
     name: { type: 'string' },
     type: { type: 'string' },
     description: { type: 'string' },
@@ -90,6 +104,22 @@ export const MemorySearchSchema = {
           confidence: { type: 'number' },
           createdAt: { type: 'string' },
           updatedAt: { type: 'string' },
+          ranking: {
+            type: 'object',
+            properties: {
+              lifecycleStatus: { type: 'string', enum: ['active', 'stale', 'expired', 'superseded', 'retracted'] },
+              lifecycleTier: { type: 'number' },
+              preferenceTier: { type: 'number' },
+              vectorScore: { type: 'number' },
+              projectBoost: { type: 'number' },
+              confidenceBoost: { type: 'number' },
+              evidenceBoost: { type: 'number' },
+              applicabilityBoost: { type: 'number' },
+              weakNegativePenalty: { type: 'number' },
+              adjustedScore: { type: 'number' },
+            },
+            required: ['lifecycleStatus', 'lifecycleTier', 'preferenceTier', 'vectorScore', 'adjustedScore'],
+          },
         },
         required: ['id'],
       },
@@ -114,7 +144,11 @@ export const MemorizeResultSchema = {
   properties: {
     enabled: { type: 'boolean' },
     stored: { type: 'boolean' },
+    reused: { type: 'boolean' },
+    disposition: { type: 'string', enum: ['created', 'deduplicated', 'superseding', 'parallel'] },
     asset: MemoryAssetSchema,
+    conflicts: { type: 'array', items: MemoryConflictSchema },
+    supersededAssetIds: { type: 'array', items: { type: 'string' } },
     warnings: { type: 'array', items: { type: 'string' } },
     handles: ToolHandlesSchema,
   },
@@ -127,6 +161,8 @@ export const DeleteMemoryResultSchema = {
     enabled: { type: 'boolean' },
     deleted: { type: 'boolean' },
     requires_confirmation: { type: 'boolean', description: '为 true 时表示仅预览，需 confirm=true 再删' },
+    blocked_by_relations: { type: 'boolean', description: '为 true 时资产参与 supersede 链，禁止硬删除' },
+    linked_asset_ids: { type: 'array', items: { type: 'string' } },
     preview: {
       type: 'object',
       properties: {
@@ -147,7 +183,10 @@ export const UpdateMemoryResultSchema = {
   properties: {
     enabled: { type: 'boolean' },
     updated: { type: 'boolean' },
+    disposition: { type: 'string', enum: ['updated', 'superseding', 'parallel'] },
     asset: MemoryAssetSchema,
+    conflicts: { type: 'array', items: MemoryConflictSchema },
+    supersededAssetIds: { type: 'array', items: { type: 'string' } },
     warnings: { type: 'array', items: { type: 'string' } },
     handles: ToolHandlesSchema,
   },

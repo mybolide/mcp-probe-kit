@@ -408,9 +408,9 @@ describe('memory-client 去重逻辑', () => {
     expect(audit.find((item) => item.id === 'expired-1')?.status).toBe('expired');
     expect(audit.find((item) => item.id === 'superseded-1')?.status).toBe('superseded');
     expect(audit.map((item) => item.id)).toEqual([
+      'active-1',
       'expired-1',
       'superseded-1',
-      'active-1',
     ]);
   });
   test('listAssets browses history with lifecycle filters and pagination', async () => {

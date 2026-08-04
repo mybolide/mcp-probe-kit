@@ -6,6 +6,7 @@ import {
   resolveMemoryStatus,
 } from './memory-model.js';
 import { classifyMemoryScope, rankMemorySearchResults } from './memory-ranking.js';
+import { applyMemoryTextBudget } from './memory-text-budget.js';
 import {
   buildMemoryAssetHandles,
   DEFAULT_GRAPH_RESOURCE_URI,
@@ -216,7 +217,11 @@ export function formatSearchMemoryResultsText(
     return lines.filter(Boolean).join('\n');
   });
 
-  return `${header}\n\n${items.join('\n\n')}`;
+  return applyMemoryTextBudget(
+    `${header}\n\n${items.join('\n\n')}`,
+    config.searchTotalMaxChars,
+    '\n\n[search_memory 文本已按总字符预算截断；结构化 results 与 read_memory_asset 仍可读取完整资产]'
+  ).text;
 }
 
 export function shouldShowSourceInSearch(
@@ -344,7 +349,11 @@ export function renderMemoryGuideSection(context: MemoryInjectionContext): strin
     blocks.push(`\n### ♻️ 可复用经验 / 相关历史（共 ${experiences.length} 条）\n${renderGroup(experiences)}`);
   }
 
-  return blocks.join('\n');
+  return applyMemoryTextBudget(
+    blocks.join('\n'),
+    config.injectionTotalMaxChars,
+    '\n\n[编排 Memory 注入已按总字符预算截断；需要全文时按 asset_id 调用 read_memory_asset]'
+  ).text;
 }
 
 export function buildMemoryInjectionHandles(context: MemoryInjectionContext): ToolHandles {

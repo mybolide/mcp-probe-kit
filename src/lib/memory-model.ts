@@ -26,6 +26,7 @@ export interface MemoryLifecycleFields {
 
 export interface MemoryAsset extends MemoryLifecycleFields {
   id: string;
+  identityKey?: string;
   name: string;
   type: string;
   description: string;
@@ -44,6 +45,7 @@ export interface MemoryAsset extends MemoryLifecycleFields {
 
 export interface MemorySearchResult extends MemoryLifecycleFields {
   id: string;
+  identityKey?: string;
   score: number;
   name: string;
   type: string;
@@ -54,6 +56,8 @@ export interface MemorySearchResult extends MemoryLifecycleFields {
   confidence?: number;
   sourceProject?: string;
   sourcePath?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface MemorySearchOptions {

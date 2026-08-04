@@ -1,25 +1,27 @@
-import { randomUUID } from 'node:crypto';
 import { getMemoryConfig, isMemoryEnabled, isMemoryReadEnabled, type MemoryConfig } from './memory-config.js';
-import { buildMemoryEmbeddingInput } from './memory-embedding.js';
-import { buildMemoryContentHashes } from './memory-hash.js';
 import {
   listMemoryAssetHistory,
-  normalizeProjectIdentity,
   type MemoryHistoryOptions,
   type MemoryHistoryResult,
 } from './memory-history.js';
 import {
   isMemorySearchEligible,
-  normalizeMemoryStatus,
-  normalizeStringArray,
   resolveMemoryStatus,
   type MemoryAsset,
   type MemorySearchOptions,
   type MemorySearchResult,
-  type MemoryStatus,
 } from './memory-model.js';
 import { normalizeMemoryPayload, payloadToMemoryFields } from './memory-payload.js';
 import { rankMemorySearchResults } from './memory-ranking.js';
+import {
+  updateMemoryAssetWithQuality,
+  upsertMemoryAssetWithQuality,
+  type MemoryAssetPatch,
+  type MemoryAssetWriteInput,
+  type MemoryUpdateOutcome,
+  type MemoryWriteDependencies,
+  type MemoryWriteOutcome,
+} from './memory-write-operations.js';
 export type { MemoryAsset, MemorySearchOptions, MemorySearchResult } from './memory-model.js';
 interface QdrantPoint {
   id: string;
@@ -182,133 +184,16 @@ export class MemoryClient {
     return data.embedding;
   }
 
-  private async findExistingAsset(input: {
-    normalizedContentHash: string;
-    type: string;
-    sourceProject?: string;
-  }): Promise<MemoryAsset | null> {
-    const data = await this.requestJson<{ result?: { points?: QdrantPoint[] } }>(
-      `${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}/points/scroll`,
-      {
-        method: 'POST',
-        headers: this.buildHeaders(),
-        body: JSON.stringify({
-          limit: 20,
-          with_payload: true,
-          with_vectors: false,
-          filter: {
-            must: [
-              {
-                key: 'normalizedContentHash',
-                match: { value: input.normalizedContentHash },
-              },
-            ],
-          },
-        }),
-      }
-    );
-
-    const expectedProject = normalizeProjectIdentity(input.sourceProject);
-    for (const point of data.result?.points ?? []) {
-      if (!point.payload) continue;
-      const fields = payloadToMemoryFields(point.payload);
-      if (fields.type !== input.type) continue;
-      if (normalizeProjectIdentity(fields.sourceProject) !== expectedProject) continue;
-      return { ...fields, id: fields.id || String(point.id) };
-    }
-    return null;
+  async upsertAsset(input: MemoryAssetWriteInput): Promise<MemoryAsset> {
+    const outcome = await this.upsertAssetWithQuality(input);
+    return outcome.asset;
   }
 
-  async upsertAsset(input: {
-    name: string;
-    type: string;
-    description: string;
-    summary: string;
-    content: string;
-    tags?: string[];
-    confidence?: number;
-    sourceProject?: string;
-    sourcePath?: string;
-    usage?: string;
-    evidence?: string[];
-    applicability?: string;
-    status?: MemoryStatus;
-    expiresAt?: string;
-    supersedes?: string[];
-    supersededBy?: string;
-  }): Promise<MemoryAsset> {
-    if (!this.isEnabled()) {
-      throw new Error('记忆系统未启用');
-    }
-
-    const now = new Date().toISOString();
-    const hashes = buildMemoryContentHashes(input.content);
-    const asset: MemoryAsset = {
-      id: randomUUID(),
-      name: input.name,
-      type: input.type,
-      description: input.description,
-      summary: input.summary,
-      content: input.content,
-      tags: normalizeStringArray(input.tags),
-      confidence: numberOr(input.confidence, 0.5),
-      sourceProject: input.sourceProject,
-      sourcePath: input.sourcePath,
-      usage: input.usage,
-      evidence: normalizeStringArray(input.evidence),
-      applicability: input.applicability,
-      status: normalizeMemoryStatus(input.status),
-      expiresAt: input.expiresAt,
-      supersedes: normalizeStringArray(input.supersedes),
-      supersededBy: input.supersededBy,
-      contentHash: hashes.contentHash,
-      normalizedContentHash: hashes.normalizedContentHash,
-      createdAt: now,
-      updatedAt: now,
-    };
-    asset.status = resolveMemoryStatus(asset);
-
-    const vector = await this.embed(
-      buildMemoryEmbeddingInput({
-        name: asset.name,
-        type: asset.type,
-        description: asset.description,
-        summary: asset.summary,
-        tags: asset.tags,
-        usage: asset.usage,
-        evidence: asset.evidence,
-        applicability: asset.applicability,
-        status: asset.status,
-        content: asset.content,
-      })
-    );
-
-    await this.ensureCollection(vector.length);
-
-    const existing = await this.findExistingAsset({
-      normalizedContentHash: asset.normalizedContentHash || '',
-      type: asset.type,
-      sourceProject: asset.sourceProject,
-    });
-    if (existing) {
-      return existing;
-    }
-
-    await this.requestJson(`${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}/points?wait=true`, {
-      method: 'PUT',
-      headers: this.buildHeaders(),
-      body: JSON.stringify({
-        points: [
-          {
-            id: asset.id,
-            vector,
-            payload: asset,
-          },
-        ],
-      }),
-    });
-
-    return asset;
+  async upsertAssetWithQuality(
+    input: MemoryAssetWriteInput,
+  ): Promise<MemoryWriteOutcome> {
+    if (!this.isEnabled()) throw new Error('记忆系统未启用');
+    return upsertMemoryAssetWithQuality(this.writeDependencies(), input);
   }
 
   async search(query: string, options: MemorySearchOptions = {}): Promise<MemorySearchResult[]> {
@@ -355,6 +240,8 @@ export class MemoryClient {
         supersededBy: fields.supersededBy,
         sourceProject: fields.sourceProject,
         sourcePath: fields.sourcePath,
+        createdAt: fields.createdAt,
+        updatedAt: fields.updatedAt,
       };
     });
 
@@ -436,101 +323,25 @@ export class MemoryClient {
 
   async updateAsset(
     assetId: string,
-    patch: {
-      name?: string;
-      type?: string;
-      description?: string;
-      summary?: string;
-      content?: string;
-      tags?: string[];
-      confidence?: number;
-      sourceProject?: string;
-      sourcePath?: string;
-      usage?: string;
-      evidence?: string[];
-      applicability?: string;
-      status?: MemoryStatus;
-      expiresAt?: string | null;
-      supersedes?: string[];
-      supersededBy?: string;
-    }
-  ): Promise<{ updated: boolean; asset: MemoryAsset | null }> {
-    if (!this.isEnabled()) {
-      throw new Error('记忆系统未启用');
-    }
+    patch: MemoryAssetPatch,
+  ): Promise<MemoryUpdateOutcome> {
+    if (!this.isEnabled()) throw new Error('记忆系统未启用');
+    return updateMemoryAssetWithQuality(
+      this.writeDependencies(),
+      assetId,
+      patch,
+    );
+  }
 
-    const existing = await this.getAsset(assetId);
-    if (!existing) {
-      return { updated: false, asset: null };
-    }
-
-    const asset: MemoryAsset = {
-      ...existing,
-      name: patch.name ?? existing.name,
-      type: patch.type ?? existing.type,
-      description: patch.description ?? existing.description,
-      summary: patch.summary ?? existing.summary,
-      content: patch.content ?? existing.content,
-      tags: patch.tags ?? existing.tags,
-      confidence: patch.confidence ?? existing.confidence,
-      sourceProject: patch.sourceProject !== undefined ? patch.sourceProject : existing.sourceProject,
-      sourcePath: patch.sourcePath !== undefined ? patch.sourcePath : existing.sourcePath,
-      usage: patch.usage !== undefined ? patch.usage : existing.usage,
-      evidence: patch.evidence ?? existing.evidence,
-      applicability:
-        patch.applicability !== undefined ? patch.applicability : existing.applicability,
-      status:
-        patch.status ?? (patch.supersededBy ? 'superseded' : existing.status),
-      expiresAt:
-        patch.expiresAt !== undefined ? patch.expiresAt ?? undefined : existing.expiresAt,
-      supersedes: patch.supersedes ?? existing.supersedes,
-      supersededBy:
-        patch.supersededBy !== undefined ? patch.supersededBy : existing.supersededBy,
-      id: existing.id,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
+  private writeDependencies(): MemoryWriteDependencies {
+    return {
+      config: this.config,
+      embed: (text) => this.embed(text),
+      ensureCollection: (vectorSize) => this.ensureCollection(vectorSize),
+      requestJson: <T>(url: string, init?: RequestInit) =>
+        this.requestJson<T>(url, init),
+      getAsset: (assetId) => this.getAsset(assetId),
     };
-    asset.status = resolveMemoryStatus(asset);
-
-    const hashes = buildMemoryContentHashes(asset.content);
-    asset.contentHash = hashes.contentHash;
-    asset.normalizedContentHash = hashes.normalizedContentHash;
-
-    const vector = await this.embed(
-      buildMemoryEmbeddingInput({
-        name: asset.name,
-        type: asset.type,
-        description: asset.description,
-        summary: asset.summary,
-        tags: asset.tags,
-        usage: asset.usage,
-        evidence: asset.evidence,
-        applicability: asset.applicability,
-        status: asset.status,
-        content: asset.content,
-      })
-    );
-
-    await this.ensureCollection(vector.length);
-
-    await this.requestJson(
-      `${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}/points?wait=true`,
-      {
-        method: 'PUT',
-        headers: this.buildHeaders(),
-        body: JSON.stringify({
-          points: [
-            {
-              id: assetId,
-              vector,
-              payload: asset,
-            },
-          ],
-        }),
-      }
-    );
-
-    return { updated: true, asset };
   }
 }
 export function createMemoryClient(): MemoryClient {

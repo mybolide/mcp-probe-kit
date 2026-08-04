@@ -49,6 +49,28 @@ describe('delete_memory_asset 单元测试', () => {
     expect(getAssetMock).not.toHaveBeenCalled();
   });
 
+  test('参与 supersede 链的资产即使 confirm=true 也拒绝硬删除', async () => {
+    isReadEnabledMock.mockReturnValue(true);
+    getAssetMock.mockResolvedValue({
+      ...sampleAsset,
+      supersededBy: 'asset-2',
+      status: 'superseded',
+    });
+
+    const result = await deleteMemoryAsset({ asset_id: 'asset-1', confirm: true });
+
+    expect(result.isError).toBe(false);
+    expect(result.content[0].text).toContain('拒绝硬删除');
+    expect(result.content[0].text).toContain('status=retracted');
+    expect((result as any).structuredContent).toMatchObject({
+      deleted: false,
+      blocked_by_relations: true,
+      linked_asset_ids: ['asset-2'],
+    });
+    expect((result as any).structuredContent?.handles?.memory_assets?.[0]?.tool).toBe('update_memory_asset');
+    expect(deleteAssetMock).not.toHaveBeenCalled();
+  });
+
   test('未 confirm 时返回预览并要求确认', async () => {
     isReadEnabledMock.mockReturnValue(true);
     getAssetMock.mockResolvedValue(sampleAsset);
@@ -77,12 +99,13 @@ describe('delete_memory_asset 单元测试', () => {
       throw new Error('structuredContent 缺失');
     }
     expect(result.content[0].text).toContain('未找到记忆资产');
-    expect(result.structuredContent.deleted).toBe(false);
+    expect((result as any).structuredContent.deleted).toBe(false);
     expect(deleteAssetMock).not.toHaveBeenCalled();
   });
 
   test('confirm=true 删除成功时返回资产信息', async () => {
     isReadEnabledMock.mockReturnValue(true);
+    getAssetMock.mockResolvedValue(sampleAsset);
     deleteAssetMock.mockResolvedValue({ deleted: true, asset: sampleAsset });
 
     const result = await deleteMemoryAsset({ asset_id: 'asset-1', confirm: true });
@@ -95,7 +118,7 @@ describe('delete_memory_asset 单元测试', () => {
     expect(result.structuredContent.deleted).toBe(true);
     expect(result.structuredContent.requires_confirmation).toBe(false);
     expect(result.structuredContent.asset.name).toBe('obsolete-pattern');
-    expect(getAssetMock).not.toHaveBeenCalled();
+    expect(getAssetMock).toHaveBeenCalledWith('asset-1');
   });
 
   test('缺少 asset_id 时返回错误', async () => {

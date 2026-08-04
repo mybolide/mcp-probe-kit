@@ -3,6 +3,7 @@ import {
   normalizeStringArray,
   type MemoryStatus,
 } from './memory-model.js';
+import { buildMemoryIdentityKey } from './memory-quality.js';
 
 function truncate(value: string, maxChars: number): string {
   if (value.length <= maxChars) {
@@ -72,6 +73,7 @@ export function normalizeMemoryPayload(payload: Record<string, unknown>): Record
 
 export function payloadToMemoryFields(payload: Record<string, unknown>): {
   id: string;
+  identityKey: string;
   name: string;
   type: string;
   description: string;
@@ -99,6 +101,15 @@ export function payloadToMemoryFields(payload: Record<string, unknown>): {
 
   return {
     id: String(p.id || ''),
+    identityKey:
+      typeof p.identityKey === 'string' && p.identityKey
+        ? p.identityKey
+        : buildMemoryIdentityKey({
+            name: String(p.name || ''),
+            type: String(p.type || ''),
+            sourceProject:
+              typeof p.sourceProject === 'string' ? p.sourceProject : undefined,
+          }),
     name: String(p.name || ''),
     type: String(p.type || ''),
     description: String(p.description || ''),

@@ -7,8 +7,12 @@ import {
 } from '../lib/memory-orchestration.js';
 import { attachHandles, buildMemoryAssetHandles } from '../lib/handles.js';
 import { getMemoryConfig } from '../lib/memory-config.js';
-import { classifyMemoryScope, rankMemorySearchResults } from '../lib/memory-ranking.js';
-import { normalizeMemoryStatus, resolveMemoryStatus } from '../lib/memory-model.js';
+import {
+  classifyMemoryScope,
+  explainMemoryRanking,
+} from '../lib/memory-ranking.js';
+import { resolveMemoryStatus } from '../lib/memory-model.js';
+import { parseMemoryStatus } from '../lib/memory-quality.js';
 import { handleToolError } from '../utils/error-handler.js';
 
 type SearchMemoryMode = 'semantic' | 'browse';
@@ -92,7 +96,7 @@ export async function searchMemory(args: unknown) {
         limit,
         offset,
         type: typeFilter || undefined,
-        status: status ? normalizeMemoryStatus(status) : undefined,
+        status: status ? parseMemoryStatus(status) : undefined,
         sourceProject: sourceProject || undefined,
         tags,
         includeInactive,
@@ -135,11 +139,7 @@ export async function searchMemory(args: unknown) {
       preferTags: tags,
       includeInactive,
     });
-    const results = rankMemorySearchResults(rawResults, {
-      preferTypes: typeFilter ? [typeFilter] : [],
-      preferTags: tags,
-      config,
-    }).slice(0, limit);
+    const results = rawResults.slice(0, limit);
 
     const items = results.map((item) => ({
       id: item.id,
@@ -157,6 +157,13 @@ export async function searchMemory(args: unknown) {
       evidence: item.evidence ?? [],
       applicability: item.applicability,
       sourcePath: shouldShowSourceInSearch(item, config) ? item.sourcePath : undefined,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      ranking: explainMemoryRanking(item, {
+        preferTypes: typeFilter ? [typeFilter] : [],
+        preferTags: tags,
+        config,
+      }),
     }));
 
     return okStructured(formatSearchMemoryResultsText(results, config), attachHandles({

@@ -6,11 +6,14 @@ import { attachHandles, buildMemoryAssetHandles } from '../lib/handles.js';
 import {
   isNegativeMemoryType,
   mergeMemoryTags,
-  normalizeMemoryStatus,
   normalizeOptionalIsoDate,
   normalizeStringArray,
   type MemoryStatus,
 } from '../lib/memory-model.js';
+import {
+  parseMemoryConflictPolicy,
+  parseMemoryStatus,
+} from '../lib/memory-quality.js';
 
 function fieldProvided(args: any, ...keys: string[]): boolean {
   const record =
@@ -45,6 +48,7 @@ export async function updateMemoryAsset(args: any) {
       expires_at?: string;
       supersedes?: string[];
       superseded_by?: string;
+      conflict_policy?: string;
     }>(args, {
       fieldAliases: {
         code_snippet: ['code', 'snippet'],
@@ -54,6 +58,7 @@ export async function updateMemoryAsset(args: any) {
         applicability: ['applicable_when', 'boundaries', 'limitations'],
         expires_at: ['expiresAt', 'expiry', 'valid_until'],
         superseded_by: ['supersededBy', 'replaced_by'],
+        conflict_policy: ['conflictPolicy', 'on_conflict'],
       },
     });
 
@@ -79,6 +84,7 @@ export async function updateMemoryAsset(args: any) {
       expiresAt?: string | null;
       supersedes?: string[];
       supersededBy?: string;
+      conflictPolicy?: 'reject' | 'supersede' | 'allow_parallel';
     } = {};
 
     if (fieldProvided(args, 'name')) {
@@ -118,7 +124,7 @@ export async function updateMemoryAsset(args: any) {
       patch.applicability = getString(parsed.applicability);
     }
     if (fieldProvided(args, 'status')) {
-      patch.status = normalizeMemoryStatus(getString(parsed.status));
+      patch.status = parseMemoryStatus(getString(parsed.status));
     }
     if (fieldProvided(args, 'expires_at', 'expiresAt', 'expiry', 'valid_until')) {
       const rawExpiresAt = getString(parsed.expires_at);
@@ -134,6 +140,9 @@ export async function updateMemoryAsset(args: any) {
       if (!fieldProvided(args, 'status') && patch.supersededBy) {
         patch.status = 'superseded';
       }
+    }
+    if (fieldProvided(args, 'conflict_policy', 'conflictPolicy', 'on_conflict')) {
+      patch.conflictPolicy = parseMemoryConflictPolicy(parsed.conflict_policy);
     }
 
     if (patch.type && isNegativeMemoryType(patch.type)) {
@@ -171,7 +180,8 @@ export async function updateMemoryAsset(args: any) {
       );
     }
 
-    const { updated, asset } = await client.updateAsset(assetId, patch);
+    const outcome = await client.updateAsset(assetId, patch);
+    const { updated, asset } = outcome;
     if (!updated || !asset) {
       return okStructured(
         `未找到记忆资产: ${assetId}`,
@@ -186,6 +196,9 @@ export async function updateMemoryAsset(args: any) {
           enabled: true,
           updated: true,
           asset,
+          disposition: outcome.disposition,
+          conflicts: outcome.conflicts,
+          supersededAssetIds: outcome.supersededAssetIds,
           warnings: warnings.length > 0 ? warnings : undefined,
         },
         {

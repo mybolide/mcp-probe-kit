@@ -5,10 +5,17 @@ import { handleToolError } from '../utils/error-handler.js';
 import {
   isNegativeMemoryType,
   mergeMemoryTags,
-  normalizeMemoryStatus,
   normalizeOptionalIsoDate,
   normalizeStringArray,
 } from '../lib/memory-model.js';
+import {
+  parseMemoryConflictPolicy,
+  parseMemoryStatus,
+} from '../lib/memory-quality.js';
+import type {
+  MemoryAssetWriteInput,
+  MemoryWriteOutcome,
+} from '../lib/memory-write-operations.js';
 
 export async function memorizeAsset(args: any) {
   try {
@@ -31,6 +38,7 @@ export async function memorizeAsset(args: any) {
       expires_at?: string;
       supersedes?: string[];
       superseded_by?: string;
+      conflict_policy?: string;
     }>(args, {
       defaultValues: {
         name: '',
@@ -48,6 +56,7 @@ export async function memorizeAsset(args: any) {
         status: 'active',
         expires_at: '',
         superseded_by: '',
+        conflict_policy: 'reject',
       },
       fieldAliases: {
         code_snippet: ['code', 'snippet'],
@@ -57,6 +66,7 @@ export async function memorizeAsset(args: any) {
         applicability: ['applicable_when', 'boundaries', 'limitations'],
         expires_at: ['expiresAt', 'expiry', 'valid_until'],
         superseded_by: ['supersededBy', 'replaced_by'],
+        conflict_policy: ['conflictPolicy', 'on_conflict'],
       },
     });
 
@@ -73,9 +83,13 @@ export async function memorizeAsset(args: any) {
     const applicability = getString(parsed.applicability);
     const supersedes = normalizeStringArray(parsed.supersedes);
     const supersededBy = getString(parsed.superseded_by);
-    const status = supersededBy
-      ? 'superseded'
-      : normalizeMemoryStatus(getString(parsed.status));
+    if (supersededBy) {
+      throw new Error(
+        '新建 Memory 资产不支持 superseded_by。请先创建 successor，再用 update_memory_asset 更新已有旧资产。',
+      );
+    }
+    const status = parseMemoryStatus(getString(parsed.status) || 'active');
+    const conflictPolicy = parseMemoryConflictPolicy(parsed.conflict_policy);
     const expiresAt = normalizeOptionalIsoDate(parsed.expires_at, 'expires_at');
     const tags = mergeMemoryTags(
       normalizeStringArray(parsed.tags),
@@ -114,7 +128,7 @@ export async function memorizeAsset(args: any) {
       );
     }
 
-    const asset = await client.upsertAsset({
+    const writeInput: MemoryAssetWriteInput = {
       name,
       type,
       description,
@@ -131,19 +145,46 @@ export async function memorizeAsset(args: any) {
       expiresAt,
       supersedes,
       supersededBy: supersededBy || undefined,
-    });
+      conflictPolicy,
+    };
+    const compatibilityClient = client as typeof client & {
+      upsertAssetWithQuality?: (
+        input: MemoryAssetWriteInput,
+      ) => Promise<MemoryWriteOutcome>;
+    };
+    const outcome = typeof compatibilityClient.upsertAssetWithQuality === 'function'
+      ? await compatibilityClient.upsertAssetWithQuality(writeInput)
+      : {
+          asset: await client.upsertAsset(writeInput),
+          disposition: 'created' as const,
+          conflicts: [],
+          supersededAssetIds: [],
+        };
+    const { asset } = outcome;
+    if (outcome.conflicts.length > 0) {
+      warnings.push(
+        `检测到同身份资产: ${outcome.conflicts.map((item) => item.assetId).join(', ')}；处理策略=${conflictPolicy}`,
+      );
+    }
 
     return okStructured(
       [
-        `已沉淀记忆资产: ${asset.name}`,
+        outcome.disposition === 'deduplicated'
+          ? `已复用重复记忆资产: ${asset.name}`
+          : `已沉淀记忆资产: ${asset.name}`,
         `asset_id: ${asset.id}`,
         `status: ${asset.status || 'active'}`,
+        `disposition: ${outcome.disposition}`,
         `下一步读取: read_memory_asset {"asset_id": "${asset.id}"}`,
       ].join('\n'),
       {
         enabled: true,
-        stored: true,
+        stored: outcome.disposition !== 'deduplicated',
+        reused: outcome.disposition === 'deduplicated',
+        disposition: outcome.disposition,
         asset,
+        conflicts: outcome.conflicts,
+        supersededAssetIds: outcome.supersededAssetIds,
         warnings: warnings.length > 0 ? warnings : undefined,
       }
     );
