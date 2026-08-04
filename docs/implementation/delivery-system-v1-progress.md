@@ -9,8 +9,8 @@ This file tracks implementation status separately from the frozen requirements d
 | Phase 0 — Compatibility baseline | Complete | Freeze exact tool names, counts, visibility, App-only behavior and protocol surface |
 | Phase 1 — Responsibility alignment | Complete | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
 | Phase 2 — `architecture` / ARC-8 | Complete | Add the single architecture domain tool and its shared methodology core |
-| Phase 3 — Plan lifecycle | Pending | Extend Plan, Heartbeat, Resume and Converge compatibly |
-| Phase 4 — Orchestrator closure | Pending | Complete feature, bugfix, UI, onboard, product and Ralph delivery loops |
+| Phase 3 — Plan lifecycle | Complete | Extend Plan, Heartbeat, Resume and Converge compatibly |
+| Phase 4 — Orchestrator closure | In progress | Feature and Bugfix closure improved; UI, onboard, product and Ralph remain |
 | Phase 5 — Diff and verification consistency | Pending | Compare declared scope, real diff, contracts, tests and architecture drift |
 | Phase 6 — Memory quality | Pending | Improve conflict, supersede, expiry, negative evidence and retrieval quality |
 
@@ -127,3 +127,51 @@ git diff --check: passed
 ```
 
 Phase 2 adds exactly one model-visible tool and does not add a central intent engine, policy kernel, risk classifier, mandatory architecture gate or new MCP App UI.
+
+## Phase 3 evidence
+
+Implemented:
+
+- Delegated Plans can declare workflow-specific `requiredEvidenceKinds`, `qualityGates`, `completionCriteria` and `declaredScope`;
+- Heartbeat records preserve `artifacts`, `memoryCandidates`, `architectureCandidates`, `acceptanceResults` and `runtimeEvidence` without breaking old state files;
+- state metadata is normalized and merged by stable identity so repeated heartbeats do not create duplicate candidate or acceptance records;
+- `resume_plan` restores the full declared scope, candidates, evidence and runtime metadata needed by a new Agent;
+- `converge` evaluates the Plan's own evidence and quality gates rather than a universal fixed five-kind list;
+- a `converge` call may add stricter evidence requirements but cannot weaken requirements already declared by the Plan;
+- custom or read-only Plans can explicitly declare an empty evidence set;
+- managed workflow Memory persistence remains gated by `converge passed=true`, while standalone Memory administration remains directly callable.
+
+Validation completed:
+
+```text
+Plan lifecycle and metadata focused tests: passed
+full regression suite: 492 / 492 passed across 102 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+release static checks: 37 / 37 passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+git diff --check: passed
+```
+
+Phase 3 was committed independently as `f137704`.
+
+## Phase 4 progress
+
+Completed in the first bounded Phase 4 slice:
+
+- `start_feature` steady Plans now include implementation, affected/full testing and `code_review`, rather than ending at specification and estimation;
+- `start_feature` and `start_bugfix` pin the resolved project root in their Plan scope and expose an explicit Heartbeat/Resume protocol;
+- the protocol states that `resume_plan` only reads checkpoints and cannot infer completion from chat text, files or Git changes;
+- Feature and Bug workbenches automatically create a marked initial checkpoint when none exists, but display it as untracked until an Agent verifies and writes real progress;
+- the workbench uses the resolved project root, reports checkpoint counts honestly, and sends exact cumulative `plan_heartbeat` instructions when execution continues;
+- existing executions that never wrote Heartbeats are not falsely marked complete or pending; they require explicit reconciliation.
+
+Remaining Phase 4 scope:
+
+- close and normalize `start_ui`, `start_onboard`, `start_product` and `start_ralph` delivery loops;
+- verify conditional architecture validate/drift closure where those workflows use architecture evidence;
+- keep each workflow independently testable and reversible.
+
+The first Phase 4 slice was committed independently as `39a4866`.
