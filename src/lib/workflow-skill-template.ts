@@ -56,7 +56,7 @@ function renderExecutionChannels(skillVersion: string): string {
 
 ### 降级：项目 CLI
 
-如果 MCP 面板已连接，但当前 Agent 会话看不到上述 MCP 工具，不要跳过 mcp-probe-kit 工作流，也不要要求用户安装。直接通过终端调用项目内版本锁定启动器：
+如果 MCP 面板已连接，但当前 Agent 会话看不到上述 MCP 工具，不要放弃当前目标所需的 mcp-probe-kit 能力，也不要要求用户安装。直接通过终端调用项目内版本锁定启动器：
 
 Windows（PowerShell / CMD，优先使用不受脚本执行策略影响的 CMD 启动器）：
 
@@ -122,14 +122,16 @@ function renderArgumentRules(): string {
 export function generateWorkflowSkillBody(skillVersion: string = VERSION): string {
   return `# MCP 调用时机 — mcp-probe-kit
 
-> 本 Skill 负责：**什么情况调哪个 MCP，以及调用前如何构造完整参数**。不是开发流程剧本。
+> 本 Skill 负责：**什么情况直接调用独立能力，什么情况使用完整交付编排，以及调用前如何构造完整参数**。不是中央意图识别器。
 > 由 mcp-probe-kit 自动安装；支持 MCP 的 Agent 客户端可从 \`.agents/skills/\` 加载。
 
 ## 总规则
 
-1. **先查下表**，有对应 MCP 就先调，再写代码 / 改文件
-2. **拿不准** → \`workflow\`：\`{ "intent": "<结合当前对话整理的完整任务摘要>" }\`
-3. \`start_*\` 会列出后续该调的 MCP；按返回逐步调用即可
+1. **先判断目标**：明确单项能力直接调用对应工具；需要从分析到验证完整交付时才调用 \`start_*\`
+2. **独立能力不是必须被编排**：\`code_insight\`、\`fix_bug\`、\`gentest\`、\`code_review\`、Memory 等均可直接调用
+3. **只有拿不准首工具时**才调用 \`workflow\`：\`{ "intent": "<结合当前对话整理的完整任务摘要>" }\`
+4. \`start_*\` 只组合当前场景实际需要的能力；按返回的 Delegated Plan 逐步执行，不要额外塞入无关工具
+5. 在写代码或改文件前，先完成当前目标真正需要的理解、规格或根因步骤
 
 ${renderExecutionChannels(skillVersion)}
 
@@ -171,7 +173,7 @@ ${renderAvoidRules()}
 
 export const MCP_PROBE_SKILL_NAME = "mcp-probe-kit";
 
-export const MCP_PROBE_SKILL_DESCRIPTION = `在已配置 mcp-probe-kit 的项目中，于新功能、Bug、UI、重构或提交前读取；统一选择首个 MCP、汇总当前对话构造完整参数，并让复杂功能通过 start_feature 自动采用 flat 或 parent-child Spec。仅负责工具路由与参数纪律，不承载完整研发流程。Routes coding intent, builds complete MCP arguments, and selects flat or parent-child specs for complex features.`;
+export const MCP_PROBE_SKILL_DESCRIPTION = `在已配置 mcp-probe-kit 的项目中，于新功能、Bug、UI、重构或提交前读取；区分独立能力与完整交付编排，汇总当前对话构造完整参数，并在不确定首工具时提供 workflow 兜底。完整新功能由 start_feature 选择 flat 或 parent-child Spec；Skill 不承担中央意图识别，start_* 只组合当前场景实际需要的能力。`;
 
 export function formatSkillFrontmatter(skillVersion: string = VERSION): string {
   return `---

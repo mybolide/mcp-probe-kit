@@ -57,15 +57,15 @@ function tool(options: CatalogOptions): ToolCatalogEntry {
   };
 }
 
-const ORCHESTRATION = "编排入口 `start_*`（复杂任务的第一步）";
-const ROUTING = "路由";
+const ORCHESTRATION = "完整交付编排 `start_*`（按需使用）";
+const ROUTING = "可选首工具路由";
 const PROJECT_SPEC = "项目与规格";
 const CODE_ANALYSIS = "代码分析（可直接调，不必等 start_*）";
 const GIT = "Git";
-const UI = "UI 子工具（通常由 `start_ui` 串联）";
+const UI = "UI 独立能力（可直接调用，也可由 `start_ui` 组合）";
 const MEMORY = "记忆（需 MEMORY 已配置）";
 const INTERACTIVE = "交互";
-const PLAN = "计划状态、恢复与收敛";
+const PLAN = "长任务状态、恢复与正式收敛（按需）";
 
 export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
   tool({
@@ -78,7 +78,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "orchestration",
     groupTitle: ORCHESTRATION,
     whenToCall:
-      "任何**新功能 / 增强 / 大版本升级**的首选入口；先把当前对话已确认的完整范围汇总到 description，默认 `spec_layout=auto`，复杂多模块需求先拆 parent-child 子规格，再指引 `add_feature` → `check_spec` → 实现",
+      "需要从需求、规格、实施、测试、审查到收敛完成**完整新功能交付**时使用；先把当前对话确认的完整范围汇总到 description，默认 `spec_layout=auto`，复杂多模块需求使用 parent-child；仅做规格、影响分析或测试时可直接调用对应能力",
   }),
   tool({
     name: "start_bugfix",
@@ -89,7 +89,8 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "orchestration",
     groupTitle: ORCHESTRATION,
-    whenToCall: "任何 **Bug / 报错**；指引 `fix_bug`（真因）→ `gentest` → 测试",
+    whenToCall:
+      "需要从现象、SRC-8 真因、修复、回归、审查到收敛完成**完整 Bug 交付**时使用；只做根因分析时直接调用 `fix_bug`",
   }),
   tool({
     name: "start_ui",
@@ -100,7 +101,8 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["ui", "workflow"],
     groupId: "orchestration",
     groupTitle: ORCHESTRATION,
-    whenToCall: "任何 **UI / 页面 / 组件**；指引设计系统、模板检索、实现约束",
+    whenToCall:
+      "需要从视觉方向、页面结构、实现、桌面/移动验收到正式收敛完成**完整 UI 交付**时使用；只查模式或生成设计系统时直接调用 UI 能力",
   }),
   tool({
     name: "start_onboard",
@@ -145,7 +147,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "routing",
     groupTitle: ROUTING,
     whenToCall:
-      "**不确定**该用哪个 MCP；或担心 Agent 跳过 MCP 直接写代码时。intent 必须是完整任务摘要，不是“继续/开始”等最后一句",
+      "Agent 阅读 Skill 后仍**不确定第一个工具**时使用；返回建议，不执行工具、不维护任务生命周期。intent 必须是完整任务摘要",
   }),
   tool({
     name: "init_project_context",
@@ -218,18 +220,19 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
   }),
   tool({
     name: "fix_bug",
-    title: "Bug 真因分析指南",
+    title: "SRC-8 Bug 根因分析",
     readOnly: true,
     idempotent: true,
     openWorld: false,
     toolsets: ["core", "workflow"],
     groupId: "code-analysis",
     groupTitle: CODE_ANALYSIS,
-    whenToCall: "需要 **TBP 真因分析**指南（通常由 `start_bugfix` 触发）",
+    whenToCall:
+      "需要独立执行 **SRC-8 根因分析与修复方法**时直接调用；完整 Bug 交付中由 `start_bugfix` 编排或展开同一方法核心",
   }),
   tool({
     name: "gentest",
-    title: "生成测试",
+    title: "测试设计与候选",
     readOnly: true,
     idempotent: true,
     openWorld: false,
@@ -345,7 +348,8 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "memory",
     groupTitle: MEMORY,
-    whenToCall: "已有已验证 MemoryCandidate，且 **converge passed=true** 后正式沉淀成功或负面经验",
+    whenToCall:
+      "托管交付流程在 **converge passed=true** 后沉淀 MemoryCandidate；用户明确进行独立记忆管理时也可直接调用，但必须提供证据和适用边界",
   }),
   tool({
     name: "update_memory_asset",
@@ -391,7 +395,8 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "plan-control",
     groupTitle: PLAN,
-    whenToCall: "执行 Delegated Plan 后记录完成步骤、证据、未决事项和 revision；首次调用附完整 plan",
+    whenToCall:
+      "执行需要持续状态、跨会话恢复或正式交付的 Delegated Plan 时记录步骤、证据、未决事项和 revision；首次调用附完整 plan，单次只读能力不强制使用",
   }),
   tool({
     name: "resume_plan",
@@ -413,7 +418,8 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "plan-control",
     groupTitle: PLAN,
-    whenToCall: "实现与验证完成后，检查需求/规格/实现/测试/审查证据；通过后才正式沉淀记忆",
+    whenToCall:
+      "托管交付实现与验证完成后，按 Plan 检查需求、规格、实现、测试、审查证据和未决项；通过后才允许该流程正式沉淀记忆。单次只读分析和独立记忆管理不强制进入收敛",
   }),
   tool({
     name: "ask_user",

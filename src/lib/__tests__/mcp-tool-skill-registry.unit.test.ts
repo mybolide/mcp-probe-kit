@@ -25,8 +25,23 @@ describe("mcp-tool-skill-registry", () => {
     expect(content).toContain("禁止把短确认语原样传给");
     expect(content).toContain("spec_layout=auto");
     expect(content).toContain("不得直接调用 `add_feature`");
-    expect(content).toContain("`converge` 未通过就把候选经验正式写入 `memorize_asset`");
-    expect(content).toContain("已有已验证 MemoryCandidate，且 **converge passed=true** 后正式沉淀");
+    expect(content).toContain("明确单项能力直接调用对应工具");
+    expect(content).toContain("只有拿不准首工具时");
+    expect(content).toContain("独立能力不是必须被编排");
+    expect(content).toContain("托管交付流程在 `converge` 未通过时");
+    expect(content).toContain("用户明确进行独立记忆管理时也可直接调用");
+    expect(content).not.toContain("复杂任务的第一步");
+  });
+
+  it("区分完整交付编排与可直接调用的独立能力", () => {
+    const content = generateWorkflowSkillContent("0.0.0-test");
+
+    expect(content).toContain("完整交付编排 `start_*`（按需使用）");
+    expect(content).toContain("只做 Bug 根因分析或使用 SRC-8 方法");
+    expect(content).toContain("fix_bug；不要求先 start_bugfix");
+    expect(content).toContain("code_insight；若后续转为完整交付");
+    expect(content).toContain("把 `workflow` 当作所有任务的强制入口");
+    expect(content).toContain("把 `start_*` 当作所有原子能力的上级");
   });
 
   it("关键工具的顶层描述明确复杂功能路由与上下文汇总要求", () => {

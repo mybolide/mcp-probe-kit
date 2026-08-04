@@ -7,7 +7,7 @@ This file tracks implementation status separately from the frozen requirements d
 | Phase | Status | Scope |
 |---|---|---|
 | Phase 0 — Compatibility baseline | Complete | Freeze exact tool names, counts, visibility, App-only behavior and protocol surface |
-| Phase 1 — Responsibility alignment | Pending | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
+| Phase 1 — Responsibility alignment | Complete | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
 | Phase 2 — `architecture` / ARC-8 | Pending | Add the single architecture domain tool and its shared methodology core |
 | Phase 3 — Plan lifecycle | Pending | Extend Plan, Heartbeat, Resume and Converge compatibly |
 | Phase 4 — Orchestrator closure | Pending | Complete feature, bugfix, UI, onboard, product and Ralph delivery loops |
@@ -46,3 +46,41 @@ git diff --check: passed
 ```
 
 No production tool behavior was changed in Phase 0.
+
+## Phase 1 evidence
+
+Implemented:
+
+- Skill now distinguishes direct domain/atomic capability calls from complete-delivery `start_*` orchestration;
+- `workflow` is documented as an optional first-tool fallback, not a mandatory entry or lifecycle owner;
+- `start_feature`, `start_bugfix` and `start_ui` Catalog guidance now describes complete delivery rather than universal task routing;
+- `fix_bug` is explicitly the SRC-8 public capability and can be called directly;
+- `gentest`, `code_insight`, `code_review`, UI tools and Memory tools remain first-class direct capabilities;
+- Plan and Converge guidance is scoped to managed, resumable or formal delivery tasks;
+- Memory guidance distinguishes managed workflow persistence from explicit standalone memory management;
+- the generated project Skill is rebuilt from the canonical Catalog and template and remains synchronized with all 33 current model-visible tools.
+
+Compatibility preserved:
+
+```text
+Compact: 23
+Compact + Memory: 29
+Full: 33
+Apps model-visible: 29
+App-only: 1
+Unique callable names: 34
+```
+
+Validation completed:
+
+```text
+focused Skill, workflow and registry tests: 42 / 42 passed
+deterministic Agent governance evals: 2 / 2 passed
+full regression suite: 464 / 464 passed
+tool contract audit: 38 / 38 passed
+dual-era protocol smoke: passed
+workflow Skill verification: 33 tools synchronized
+docs verification: 1067 checks passed
+```
+
+Phase 1 changed responsibility guidance and generated Skill content only. It did not add, remove or rename tools, alter public input/output schemas, or change App-only visibility.

@@ -40,10 +40,10 @@ function normalizeScenarioInput(value: unknown): string {
 }
 
 /**
- * workflow — 开发工作流路由（只读指南）
+ * workflow — 可选的首工具路由（只读指南）
  *
- * 根据用户意图生成「何时调哪个 MCP 工具」的分阶段计划，
- * 用于约束 Agent 先走 start_* / code_insight / check_spec，而不是直接写代码。
+ * 仅在 Agent 阅读 Skill 后仍不确定首工具时，根据完整任务摘要返回建议。
+ * 它不执行工具、不维护任务生命周期，也不要求明确的单项能力先经过 workflow。
  */
 export async function workflow(args: unknown, context?: ToolExecutionContext) {
   try {
