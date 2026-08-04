@@ -36,10 +36,10 @@ MCP Probe Kit 不是代码生成器，也不替代 Agent 的工程判断。
 - 不让规则引擎替 Agent 判断业务复杂度和架构优劣。
 - 不要求所有任务都走重型流程。
 - 不建立庞大的中央 Project Digital Twin 数据库。
-- 不新增一组 `start_architecture`、`check_architecture` 等孤立工具。
+- 不新增一组 `start_architecture`、`check_architecture`、`architecture_drift` 等彼此割裂的工具；只新增一个统一的 `architecture` 工具，使用不同 mode 覆盖评估、设计、校验和漂移检查。
 - 不宣称可以在所有 IDE 中阻止 Agent 直接修改文件。
 - 不把普通调试过程、临时日志和未经验证的猜测写入长期记忆。
-- 不在 V1 改变当前 33 个工具的名称、可见性和兼容行为。
+- 不改名、不删除现有 33 个工具；目标工具面在独立兼容阶段新增 1 个 `architecture`，最终为 34 个。
 
 ---
 
@@ -78,14 +78,15 @@ MCP Probe Kit 不是代码生成器，也不替代 Agent 的工程判断。
 
 ## 4. 工具总体设计
 
-V1 保持现有 33 个公开工具不变，避免兼容回归。
+V1 先冻结现有 33 个公开工具的兼容基线，再以独立提交新增 1 个统一架构工具 `architecture`。目标工具面为 34 个。
 
-Agent 实际只需要记住 6 个主要工程入口：
+Agent 实际只需要记住 7 个主要工程入口：
 
 ```text
 start_feature
 start_bugfix
 start_ui
+architecture
 refactor
 start_onboard
 workflow
@@ -97,15 +98,15 @@ workflow
 
 | 类别 | 数量 | 说明 |
 |---|---:|---|
-| 主要工程入口 | 6 | Agent 根据任务类型直接进入；`workflow` 仅在不确定时使用 |
+| 主要工程入口 | 7 | Agent 根据任务类型直接进入；`workflow` 仅在不确定时使用 |
 | 核心执行与记忆工具 | 17 | 理解、规格、状态、验证、记忆和提交 |
 | 可选辅助工具 | 10 | 产品、Ralph、UI 数据、估算、访谈和报告 |
 
-总计：33 个。
+总计：目标 34 个。当前兼容基线仍为 33 个，新增 `architecture` 必须独立验收。
 
 ---
 
-## 5. 六个主要工程入口
+## 5. 七个主要工程入口
 
 ### 5.1 `start_feature`
 
@@ -156,17 +157,93 @@ start_feature
 
 用途：Bug、报错、异常、不生效、回归和行为不一致。
 
-内部流程：
+`start_bugfix` 必须以现有 SRC-8（Software Root-Cause 8-step，受丰田 TBP 启发）作为主流程，不能被压缩成“分析根因→改代码→测试”。SRC-8 由 `start_bugfix` 返回的 Delegated Plan 直接承载；`fix_bug` 是同一方法论的辅助指南，在当前工具面可见时可调用，但不是完成八步法的前提。
+
+#### SRC-1 明确差距
+
+- 写清理想行为、实际行为和可观察差距；
+- 区分失败、停滞、性能下降、回归和未生效；
+- 禁止只记录“坏了”“卡了”“有问题”。
+
+#### SRC-2 收敛边界
+
+- 建立发生前、发生中、发生后的时间线；
+- 读取日志、堆栈、源码和运行证据；
+- 必要时调用 `code_insight` 定位入口、调用链和影响范围；
+- 从 code、runtime、data_contract、integration、agent_behavior、environment 六层收敛问题边界。
+
+#### SRC-3 验收契约
+
+- 在修复前定义“什么叫修好”；
+- 优先建立 failing test，或者可重复的复现命令、手动步骤；
+- 明确回归范围和不得破坏的现有行为。
+
+#### SRC-4 把握真因
+
+Agent 必须完成真因工作表：
+
+```text
+4a 假设清单：至少 2 个候选假设
+4b 排除矩阵：证据、反证和结论
+4c 对比分叉：成功样本 vs 失败样本；没有样本则记录 evidence gap
+4d 5 Why：至少 3 层，每层绑定观察事实
+4e 真因陈述：形成可验证的因果句；复杂问题记录主因和贡献因子
+```
+
+SRC-4 没有闭合前禁止修改代码。猜测、症状描述和“某 SDK 有 Bug”不能直接作为真因。
+
+#### SRC-5 制定对策
+
+- 对策必须针对真因，而不是增加兜底掩盖症状；
+- 优先最小 patch、最少文件和最少新概念；
+- 评估有效性、可行性、副作用和回归风险；
+- 如果对策改变模块边界、数据所有权或公共契约，调用 `architecture mode=assess|design`。
+
+#### SRC-6 贯彻修复
+
+- SRC-1 至 SRC-5 和复现门禁完成后才能改代码；
+- 一次只验证一个主要假设；
+- 实际修改必须限制在已确认的 Bug 范围；
+- 连续三次修复仍失败时返回 SRC-2 或 SRC-4，不得继续盲试。
+
+#### SRC-7 评价双轨
+
+- 结果轨：重跑原复现、failing test 和回归测试；
+- 过程轨：复盘哪条假设可以更早排除、哪一步证据不足；
+- 对涉及架构的修复调用 `architecture mode=validate|drift`；
+- 未验证不得声明修复完成。
+
+#### SRC-8 巩固传播
+
+- 补回归测试锁定边界；
+- 排查同类模块和相同路径是否存在同源问题；
+- 生成 MemoryCandidate，至少包含【现象】【根因】【修复】【验证】；
+- 失败方案、被证伪根因和新发现的回归同样形成负面候选；
+- 只有 `converge passed=true` 后才能调用 `memorize_asset` 正式沉淀。
+
+整体内部流程：
 
 ```text
 恢复错误现象和预期行为
 → 自动检索相似 Bug、负面经验和历史根因
-→ 明确复现条件和证据
-→ fix_bug 真因分析
-→ 必要时 code_insight 收敛调用链
-→ Agent 提交根因、影响范围和修复策略
-→ 生成修复计划和回归要求
-→ plan_heartbeat 建立检查点
+→ 生成 SRC-8 Delegated Plan
+→ 首次 plan_heartbeat 附完整 Plan 建立检查点
+→ SRC-1 明确差距
+→ plan_heartbeat
+→ SRC-2 收敛边界（code_insight 按需）
+→ plan_heartbeat
+→ SRC-3 建立验收契约
+→ plan_heartbeat
+→ SRC-4 真因工作表闭合
+→ plan_heartbeat
+→ SRC-5 制定最小对策（architecture 按需）
+→ plan_heartbeat
+→ SRC-6 贯彻修复
+→ plan_heartbeat
+→ SRC-7 结果与过程双评（architecture validate/drift 按需）
+→ plan_heartbeat
+→ SRC-8 回归保护与 MemoryCandidate
+→ plan_heartbeat
 ```
 
 Bug 未能复现时，不允许直接把猜测当作根因。可以记录假设，但必须明确验证方式。
@@ -176,14 +253,13 @@ Bug 未能复现时，不允许直接把猜测当作根因。可以记录假设�
 ```text
 start_bugfix
 → plan_heartbeat
-→ fix_bug
-→ code_insight（需要时）
-→ Agent 修复
-→ gentest
-→ 运行回归测试
+→ 严格执行 SRC-1~SRC-5
+→ architecture（架构根因或架构对策时）
+→ SRC-6 Agent 修复
+→ gentest + SRC-7 回归验证
 → code_review
 → converge
-→ memorize_asset（根因、修复、负面经验）
+→ SRC-8 memorize_asset（根因、修复、失败方案或错误根因）
 → gencommit
 ```
 
@@ -226,7 +302,68 @@ start_ui
 → gencommit
 ```
 
-### 5.4 `refactor`
+### 5.4 `architecture`
+
+用途：当任务涉及模块边界、依赖方向、数据所有权、公共契约、系统拆分、迁移方案或架构漂移时，提供统一的架构工作流。
+
+只增加一个工具，避免把架构能力拆成多个孤立入口。工具使用以下 mode：
+
+| mode | 作用 | 典型调用时机 |
+|---|---|---|
+| `assess` | 基于当前代码、图谱和 Memory 判断架构影响与问题边界 | 新功能、Bug 或重构发现跨模块影响时 |
+| `design` | 形成目标边界、依赖方向、数据所有权、契约、迁移和回滚方案 | 实施前需要作架构设计时 |
+| `validate` | 检查拟定方案是否覆盖影响范围、兼容和约束 | 方案完成、写代码前或重大阶段完成后 |
+| `drift` | 对照已确认设计和真实 diff，检查越界依赖、重复事实源和未登记变化 | 实施后、`converge` 前 |
+
+`architecture` 不替 Agent 决定哪个方案绝对最优。它负责：
+
+- 自动检索相关架构决策、失败重构和兼容经验；
+- 调用或消费 `code_insight` 的当前结构和影响证据；
+- 要求 Agent 明确当前问题、目标结构和选择依据；
+- 结构化记录模块边界、依赖方向、数据所有权和公共契约；
+- 明确必须保护的既有行为；
+- 给出迁移、回滚、验证和旧代码清理要求；
+- 生成 ADR/ArchitectureCandidate，并写入 Plan；
+- 在 `converge` 通过后沉淀经过验证的架构决策或反模式。
+
+标准输出至少包含：
+
+```text
+当前架构事实与证据
+→ 当前问题和根因
+→ 目标模块边界
+→ 允许与禁止的依赖方向
+→ 数据所有者和读写路径
+→ 公共契约及兼容要求
+→ 必须保护的行为
+→ 实施阶段、迁移与回滚
+→ 验证清单
+→ MemoryCandidate / ADR Candidate
+```
+
+标准后续链路：
+
+```text
+search_memory
+→ code_insight mode=impact
+→ architecture mode=assess
+→ architecture mode=design
+→ plan_heartbeat
+→ Agent 实施
+→ architecture mode=validate|drift
+→ code_review
+→ converge
+→ memorize_asset（架构决策、迁移经验或反模式）
+```
+
+以下情况不要求调用 `architecture`：
+
+- 单文件文案或样式修改；
+- 不改变公共行为的局部实现；
+- 根因和影响范围明确的单模块修复；
+- 纯只读查询。
+
+### 5.5 `refactor`
 
 用途：整理代码、拆分模块、降低耦合、收口数据所有权和渐进式架构调整。
 
@@ -237,8 +374,8 @@ start_ui
 ```text
 检索历史架构决策和失败重构经验
 → code_insight 获取当前结构和影响范围
-→ Agent 描述当前问题
-→ Agent 定义目标边界和必须保护的行为
+→ architecture mode=assess 描述当前问题和架构影响
+→ architecture mode=design 定义目标边界、数据所有权和必须保护的行为
 → 拆分为可独立验证、可回滚的小步骤
 → 生成阶段计划
 → 每步完成后 plan_heartbeat
@@ -256,17 +393,19 @@ start_ui
 
 ```text
 code_insight
+→ architecture mode=assess|design
 → refactor
 → plan_heartbeat
 → 分阶段实现
 → 每阶段测试与 heartbeat
+→ architecture mode=validate|drift
 → code_review
 → converge
 → memorize_asset（架构决策和反模式）
 → gencommit
 ```
 
-### 5.5 `start_onboard`
+### 5.6 `start_onboard`
 
 用途：新仓库、新成员或 Agent 第一次进入项目时建立可靠心智模型。
 
@@ -283,7 +422,7 @@ code_insight
 
 可使用 `scan_and_extract_patterns` 生成候选模式，但未经验证不得直接写入长期记忆。
 
-### 5.6 `workflow`
+### 5.7 `workflow`
 
 用途：Agent 不确定应该使用哪个入口时提供路由建议。
 
@@ -329,16 +468,20 @@ code_insight
 
 ### 6.3 `fix_bug`
 
-作用：提供统一的 Bug 真因分析框架。
+作用：提供 SRC-8 的真因分析工作表和执行门禁；通常由 `start_bugfix` 计划触发，而不是替代 `start_bugfix`。
 
 至少要求：
 
-- 可复现症状；
-- 预期与实际；
-- 根因链；
-- 为什么旧测试没有发现；
-- 修复点和回归范围；
-- 被排除的错误假设。
+- SRC-1 理想行为、实际行为和可观察差距；
+- SRC-2 时间线、问题边界和归因层；
+- SRC-3 failing test、复现命令或手动验收契约；
+- SRC-4 至少两个候选假设、排除证据、成功/失败对比、至少三层 5 Why 和真因因果句；
+- SRC-5 最小对策、有效性、可行性和回归风险；
+- SRC-6 复现门禁通过后再实施；
+- SRC-7 结果和过程双轨评价；
+- SRC-8 回归保护和 MemoryCandidate。
+
+真因工作表未闭合前不得进入修复；连续三次修复失败后必须退回边界或真因步骤。
 
 ### 6.4 `add_feature`
 
@@ -677,11 +820,13 @@ start_feature
 → 自动 Memory Recall
 → init_project_context / code_insight（按需）
 → Agent Task Assessment
+→ architecture mode=assess|design（涉及模块边界、数据所有权、公共契约或迁移时）
 → add_feature
 → check_spec
 → plan_heartbeat
 → Agent 实现
 → gentest + 真实测试
+→ architecture mode=validate|drift（本任务使用过 architecture 时）
 → code_review
 → converge
 → memorize_asset / update_memory_asset
@@ -693,14 +838,17 @@ start_feature
 ```text
 start_bugfix
 → 自动检索相似 Bug 和失败方案
-→ fix_bug
-→ code_insight（按需）
+→ SRC-1 明确差距
+→ SRC-2 code_insight 收敛边界
+→ SRC-3 验收契约
+→ SRC-4 完成真因工作表（fix_bug 可见时作为辅助）
+→ SRC-5 最小对策（architecture assess/design 按需）
 → plan_heartbeat
-→ Agent 修复
-→ gentest + 回归测试
+→ SRC-6 Agent 修复
+→ SRC-7 gentest + 回归测试 + architecture validate/drift（按需）
 → code_review
 → converge
-→ memorize_asset（根因、回归、负面经验）
+→ SRC-8 memorize_asset（根因、回归、失败方案或被证伪根因）
 ```
 
 ### 11.3 UI 开发
@@ -722,15 +870,32 @@ start_ui
 ```text
 search_memory
 → code_insight mode=impact
+→ architecture mode=assess|design
 → refactor
 → plan_heartbeat
 → 分阶段实现、测试和 heartbeat
+→ architecture mode=validate|drift
 → code_review
 → converge
 → memorize_asset（架构决策、反模式、迁移经验）
 ```
 
-### 11.5 会话中断或切换 Agent
+### 11.5 独立架构设计或审查
+
+```text
+architecture mode=assess
+→ 自动 Memory Recall
+→ code_insight mode=impact
+→ Agent 核对现状和问题
+→ architecture mode=design
+→ plan_heartbeat
+→ 方案评审或实施
+→ architecture mode=validate|drift
+→ code_review / converge
+→ memorize_asset（验证后的架构决策或反模式）
+```
+
+### 11.6 会话中断或切换 Agent
 
 ```text
 resume_plan
@@ -740,7 +905,7 @@ resume_plan
 → converge
 ```
 
-### 11.6 新项目上手
+### 11.7 新项目上手
 
 ```text
 start_onboard
@@ -832,29 +997,39 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 ### Phase 1：统一工具职责和主流程
 
 - 以本文更新 Skill、Catalog 和文档；
-- 明确 6 个主要工程入口；
+- 明确 7 个主要工程入口；
+- 将 `start_bugfix` 的 SRC-8 八步法作为不可丢失的正式流程；
 - 修正互相冲突的调用说明；
 - 不新增工具、不改 Schema。
 
-### Phase 2：Task Assessment 与 MemoryCandidate
+### Phase 2：新增统一 `architecture` 工具
+
+- 只新增一个 `architecture` 工具，不拆成多工具家族；
+- 支持 `assess|design|validate|drift` 四种 mode；
+- 复用 `code_insight`、Memory、Plan 和 Converge，不复制其实现；
+- 接入 `start_feature`、`start_bugfix`、`refactor` 和独立架构任务；
+- 保持现有 33 个工具名称、输入输出和可见性不变；
+- 完成后目标工具面为 34 个，并单独进行协议、Host、CLI 和 Claude 本地 build 验收。
+
+### Phase 3：Task Assessment 与 MemoryCandidate
 
 - 在现有 `start_*` Plan 中加入统一的影响分析问题；
 - 将 MemoryCandidate 写入 Plan 状态；
 - 不做自动风险分级。
 
-### Phase 3：增强 Heartbeat、Resume 和 Converge
+### Phase 4：增强 Heartbeat、Resume 和 Converge
 
 - Heartbeat 保存统一证据和候选记忆；
 - Resume 无需旧对话即可恢复；
 - Converge 根据实际任务检查证据，返回 memoryWriteAllowed。
 
-### Phase 4：实际 Diff 与验证一致性
+### Phase 5：实际 Diff 与验证一致性
 
 - code_review 对照 Agent 声明和真实 diff；
 - 对公共契约、数据结构、运行入口和权限变化增加客观检查；
 - 继续使用本地 build 和真实 Agent 场景验收。
 
-### Phase 5：Memory 质量治理
+### Phase 6：Memory 质量治理
 
 - 去重；
 - 冲突提示；
@@ -891,6 +1066,9 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 - 未完成 review 不能通过收敛；
 - 关键未决问题未关闭不能通过收敛；
 - 需要 Host、协议或本地 build 验收时必须有真实证据。
+- `start_bugfix` 未完成 SRC-1 至 SRC-5 不得进入修改代码步骤；
+- SRC-8 未生成回归保护和 MemoryCandidate 时，Bug 流程不得完整收敛；
+- 使用过 `architecture` 的任务，缺少 validate/drift 结果时不得通过最终收敛。
 
 ### 15.4 记忆有效性
 
@@ -903,10 +1081,11 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 ### 15.5 不过度治理
 
 - 小型改动可使用紧凑规格和定向测试；
-- 不强制生成架构文档和风险等级；
+- 不强制所有任务调用 `architecture`，但架构任务必须使用统一架构流程；
+- 不强制风险等级；
 - 只读查询不要求建立完整 Plan；
 - Memory 或图谱不可用时主流程仍可降级执行；
-- 用户不需要理解 33 个工具才能使用系统。
+- 用户不需要理解全部 34 个工具才能使用系统。
 
 ---
 
@@ -927,13 +1106,14 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 
 MCP Probe Kit V1 不再追求替 Agent 自动判断需求等级，也不建设庞大的自动控制平台。
 
-它通过现有 33 个工具形成一套完整但克制的交付系统：
+它在保护现有 33 个工具兼容性的基础上，只增加一个统一 `architecture` 工具，形成目标 34 个工具的完整但克制的交付系统：
 
 ```text
 正确入口
 → 历史记忆召回
 → 项目和代码理解
 → Agent 影响判断
+→ 必要时完成架构评估、设计和漂移验证
 → 规格和可恢复计划
 → 实际实施
 → 测试和审查
