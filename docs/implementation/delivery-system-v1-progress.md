@@ -10,7 +10,7 @@ This file tracks implementation status separately from the frozen requirements d
 | Phase 1 — Responsibility alignment | Complete | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
 | Phase 2 — `architecture` / ARC-8 | Complete | Add the single architecture domain tool and its shared methodology core |
 | Phase 3 — Plan lifecycle | Complete | Extend Plan, Heartbeat, Resume and Converge compatibly |
-| Phase 4 — Orchestrator closure | In progress | Feature and Bugfix closure improved; UI, onboard, product and Ralph remain |
+| Phase 4 — Orchestrator closure | In progress | Feature, Bugfix and UI closure complete; onboard, product and Ralph remain |
 | Phase 5 — Diff and verification consistency | Pending | Compare declared scope, real diff, contracts, tests and architecture drift |
 | Phase 6 — Memory quality | Pending | Improve conflict, supersede, expiry, negative evidence and retrieval quality |
 
@@ -175,3 +175,31 @@ Remaining Phase 4 scope:
 - keep each workflow independently testable and reversible.
 
 The first Phase 4 slice was committed independently as `39a4866`.
+
+Completed in the second bounded Phase 4 slice:
+
+- all `start_ui` modes (`manual`, `auto`, and requirements `loop`) now use one canonical `DelegatedPlanContract` rather than three ad hoc plan shapes;
+- the UI Plan pins the resolved project root and declares UI-specific evidence, completion criteria and quality gates;
+- the full delivery chain now includes requirements, design-system/context setup, page structure, implementation, desktop/mobile screenshots, visual review, bounded iteration, responsive/state/accessibility acceptance, real tests, `code_review`, conditional `architecture drift`, context update and optional MemoryCandidate preparation;
+- every step has explicit dependencies so `resume_plan` can recover the real next action rather than relying on array order or chat context;
+- all modes render the same Heartbeat/Resume/Converge protocol and generate their structured report directly from the canonical Plan;
+- architecture validation remains conditional: tasks using an ArchitectureCandidate/ADR or changing boundaries/contracts must run drift, while ordinary UI work records a justified skip;
+- `start_ui.ts` was reduced from 1148 lines to 473 lines by extracting request normalization, UI policy, plan construction and report rendering into focused modules; every new production module remains below 500 lines.
+
+Validation completed:
+
+```text
+start_ui focused suite: 48 / 48 passed across 4 test files
+full regression suite: 496 / 496 passed across 102 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+release static checks: 37 / 37 passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+```
+
+Remaining Phase 4 scope:
+
+- close and normalize `start_onboard`, `start_product` and `start_ralph`;
+- keep each remaining workflow independently testable and reversible.

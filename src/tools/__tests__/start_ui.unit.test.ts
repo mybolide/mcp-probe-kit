@@ -194,6 +194,83 @@ describe('start_ui 单元测试', () => {
     });
   });
 
+  describe('正式交付闭环', () => {
+    test.each([
+      ['manual', { description: '订单审批页', framework: 'html', mode: 'manual' }],
+      ['auto', { description: '订单审批页', framework: 'html', mode: 'auto' }],
+      ['loop', { description: '订单审批页', framework: 'html', requirements_mode: 'loop', loop_question_budget: 2 }],
+    ])('%s 模式使用同一 Delegated Plan Contract', async (_name, input) => {
+      const result = await startUi(input);
+      expect(result.isError).not.toBe(true);
+      const structured = (result as any).structuredContent;
+      const plan = structured.metadata.plan;
+      const ids = plan.steps.map((step: any) => step.id);
+
+      expect(plan.contractVersion).toBe('2.0.0');
+      expect(plan.workflow).toBe('ui');
+      expect(plan.planId).toMatch(/^ui-/);
+      expect(plan.declaredScope.projectRoot).toBeTruthy();
+      expect(plan.requiredEvidenceKinds).toEqual([
+        'requirements',
+        'implementation',
+        'test',
+        'review',
+      ]);
+      expect(plan.qualityGates).toEqual(expect.arrayContaining([
+        'ui-visual-acceptance',
+        'ui-responsive-acceptance',
+        'ui-state-coverage',
+        'ui-test-suite',
+        'ui-code-review',
+      ]));
+      expect(ids).toEqual(expect.arrayContaining([
+        'render',
+        'capture-desktop',
+        'capture-mobile',
+        'visual-acceptance',
+        'state-acceptance',
+        'test',
+        'review',
+        'architecture-drift',
+        'update-context',
+      ]));
+      expect(result.content[0].text).toContain('plan_heartbeat');
+      expect(result.content[0].text).toContain('resume_plan');
+      expect(result.content[0].text).toContain('converge');
+    });
+
+    test('UI 步骤依赖、验收门禁和报告摘要来自同一计划', async () => {
+      const result = await startUi({
+        description: '订单审批页',
+        framework: 'html',
+        mode: 'manual',
+      });
+      const structured = (result as any).structuredContent;
+      const plan = structured.metadata.plan;
+      const byId = new Map<string, any>(
+        plan.steps.map((step: any) => [step.id, step] as [string, any]),
+      );
+
+      expect(byId.get('context').dependsOn).toHaveLength(1);
+      expect(byId.get('structure').dependsOn).toEqual(['catalog']);
+      expect(byId.get('render').dependsOn).toEqual(['save-structure']);
+      expect(byId.get('visual-review').dependsOn).toEqual(['capture-desktop', 'capture-mobile']);
+      expect(byId.get('state-acceptance').dependsOn).toEqual(['visual-acceptance']);
+      expect(byId.get('test').dependsOn).toEqual(['state-acceptance']);
+      expect(byId.get('review')).toMatchObject({
+        tool: 'code_review',
+        dependsOn: ['test'],
+      });
+      expect(byId.get('architecture-drift')).toMatchObject({
+        tool: 'architecture',
+        dependsOn: ['review'],
+      });
+      expect(byId.get('architecture-drift').when).toContain('ArchitectureCandidate');
+      expect(structured.steps).toHaveLength(plan.steps.length);
+      expect(structured.nextSteps.at(-1)).toContain('converge');
+    });
+  });
+
   describe('视觉方向契约', () => {
     test('auto 模式把视觉方向参数传入计划并暴露验收目标', async () => {
       const result = await startUi({

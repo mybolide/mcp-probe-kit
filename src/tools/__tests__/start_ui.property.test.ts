@@ -99,7 +99,7 @@ describe('start_ui 属性测试', () => {
           const jsonBlocks = text.match(/```json\n([\s\S]*?)\n```/g);
           
           if (jsonBlocks) {
-            jsonBlocks.forEach(block => {
+            jsonBlocks.forEach((block: string) => {
               // 提取 JSON 内容
               const jsonContent = block.replace(/```json\n/, '').replace(/\n```/, '');
               
@@ -354,7 +354,7 @@ describe('start_ui 属性测试', () => {
           // 不应该包含模糊的指令（没有具体工具名称或文件名）
           // 如果包含"检查"，应该伴随具体的文件名或工具名
           const checkMatches = text.match(/检查[^。\n]*/g) || [];
-          checkMatches.forEach(match => {
+          checkMatches.forEach((match: string) => {
             // 应该包含具体的文件名、工具名或目录名
             const hasSpecific = 
               match.includes('.json') ||
