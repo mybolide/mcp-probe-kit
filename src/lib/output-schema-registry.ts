@@ -10,6 +10,7 @@ import {
   ProjectInitSchema,
   ProjectContextSchema,
 } from '../schemas/output/project-tools.js';
+import { WorkflowRoutingResultSchema } from '../schemas/output/workflow-routing.js';
 import {
   DesignSystemSchema,
   UISearchResultSchema,
@@ -81,6 +82,7 @@ const UserQuestionSchema: JsonSchema = {
 };
 
 const OUTPUT_SCHEMA_BY_TOOL: Record<string, JsonSchema> = {
+  workflow: WorkflowRoutingResultSchema as JsonSchema,
   gencommit: CommitGuidanceSchema as JsonSchema,
   git_work_report: GuidanceResultSchema as JsonSchema,
   code_insight: CodeInsightSchema as JsonSchema,

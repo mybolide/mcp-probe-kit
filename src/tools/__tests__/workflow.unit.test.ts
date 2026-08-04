@@ -123,4 +123,31 @@ describe('workflow 工具', () => {
     expect(String(result.content[0].text)).toContain('scenario 必须是字符串');
     expect(fs.existsSync(path.join(projectRoot, '.agents'))).toBe(false);
   });
+
+  test('多意图冲突时不返回首工具，并暴露可解释候选', async () => {
+    const projectRoot = makeProjectRoot();
+    const result = await workflow({
+      intent: '修复当前架构依赖错误，并重新设计模块边界和数据所有权。',
+      project_root: projectRoot,
+    });
+
+    expect(result.isError).toBe(false);
+    if (!('structuredContent' in result) || !result.structuredContent) {
+      throw new Error('missing structuredContent');
+    }
+    expect(result.structuredContent.scenario).toBe('unknown');
+    expect(result.structuredContent.firstTool).toBeNull();
+    expect(result.structuredContent.handles).toMatchObject({
+      next_tool: null,
+      next_action: 'clarify_or_configure',
+    });
+    expect(result.structuredContent.routingDecision).toMatchObject({
+      conflict: true,
+      requiresClarification: true,
+      selectedScenario: null,
+    });
+    expect(result.content[0].text).toContain('路由冲突');
+    expect(result.content[0].text).toContain('bugfix');
+    expect(result.content[0].text).toContain('architecture');
+  });
 });

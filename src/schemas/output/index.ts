@@ -8,6 +8,7 @@ export * from './core-tools.js';
 
 // 工作流编排工具
 export * from './workflow-tools.js';
+export * from './workflow-routing.js';
 
 // 项目管理工具
 export * from './project-tools.js';
@@ -54,6 +55,7 @@ export {
  * 工具名称 -> Schema 对象
  */
 export const SCHEMA_MAP = {
+  workflow: 'WorkflowRoutingResultSchema',
   // 编排工具（6 个）
   start_feature: 'FeatureReportSchema',
   start_bugfix: 'BugFixReportSchema',

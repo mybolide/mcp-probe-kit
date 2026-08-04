@@ -1,13 +1,16 @@
 /** Model-facing workflow router. Every referenced tool must exist on the active surface. */
 import {
   SCENARIO_LABELS,
+  detectWorkflowRoute,
   detectWorkflowScenario,
   type DevWorkflowPlan,
   type WorkflowPhase,
   type WorkflowScenario,
 } from './dev-workflow-routing.js';
+import { renderWorkflowRoutingDetails } from './workflow-routing-render.js';
 
 export {
+  detectWorkflowRoute,
   detectWorkflowScenario,
   type DevWorkflowPlan,
   type WorkflowPhase,
@@ -432,9 +435,10 @@ export function buildDevWorkflow(
   intent: string,
   options: BuildDevWorkflowOptions = {},
 ): DevWorkflowPlan {
-  const detection = detectWorkflowScenario(intent, options.scenario);
+  const detection = detectWorkflowRoute(intent, options.scenario);
   const plan = buildPlan(detection.scenario, intent, options.memoryAvailable === true);
   plan.confidence = detection.confidence;
+  plan.routingDecision = detection.routingDecision;
   return plan;
 }
 
@@ -450,11 +454,13 @@ export function renderWorkflowMarkdown(plan: DevWorkflowPlan, intent: string): s
         return `### ${index + 1}. ${phase.title}\n**时机**: ${phase.when}\n${steps}`;
       }).join('\n\n')
     : '_当前没有可执行工具步骤。_';
+  const routingDetails = renderWorkflowRoutingDetails(plan.routingDecision);
 
   return `# 开发工作流 · ${plan.scenarioLabel}
 
 **识别场景**: ${plan.scenario}（置信度: ${plan.confidence}）
 **摘要**: ${plan.summary}
+${routingDetails}
 ${firstTool}
 
 **用户意图**: ${intent || '(未提供)'}

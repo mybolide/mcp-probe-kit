@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest';
-import { buildDevWorkflow, detectWorkflowScenario } from '../dev-workflow.js';
+import {
+  buildDevWorkflow,
+  detectWorkflowRoute,
+  detectWorkflowScenario,
+} from '../dev-workflow.js';
 
 describe('dev-workflow', () => {
   test('识别 bugfix 场景', () => {
@@ -100,5 +104,114 @@ describe('dev-workflow', () => {
     const plan = buildDevWorkflow('随便', { scenario: 'ui' });
     expect(plan.scenario).toBe('ui');
     expect(plan.firstTool).toBe('start_ui');
+  });
+
+  test('架构修复与 Bug 修复同时成立时返回 unknown，不按规则数组顺序猜测', () => {
+    const intent = '修复当前架构依赖错误，并重新设计模块边界和数据所有权。';
+    const route = detectWorkflowRoute(intent);
+
+    expect(route.scenario).toBe('unknown');
+    expect(route.confidence).toBe('low');
+    expect(route.routingDecision).toMatchObject({
+      source: 'delivery-rules',
+      conflict: true,
+      requiresClarification: true,
+      selectedScenario: null,
+    });
+    expect(route.routingDecision.candidates.map((item) => item.scenario)).toEqual(
+      expect.arrayContaining(['bugfix', 'architecture']),
+    );
+
+    const plan = buildDevWorkflow(intent);
+    expect(plan.firstTool).toBeNull();
+    expect(plan.routingDecision?.conflict).toBe(true);
+  });
+
+  test('审查与重构关键词同分时返回冲突候选，而不是取数组第一项', () => {
+    const route = detectWorkflowRoute('请审查并重构这段代码，先不要直接修改。');
+
+    expect(route.scenario).toBe('unknown');
+    expect(route.routingDecision).toMatchObject({
+      source: 'keyword-scores',
+      conflict: true,
+      requiresClarification: true,
+    });
+    expect(route.routingDecision.candidates.map((item) => item.scenario)).toEqual(
+      expect.arrayContaining(['review', 'refactor']),
+    );
+  });
+
+  test('已知嵌套关系通过显式支配规则选择 UI，并公开被抑制候选', () => {
+    const route = detectWorkflowRoute('新增设置页面和交互组件，先补充页面规格再实现');
+
+    expect(route.scenario).toBe('ui');
+    expect(route.routingDecision).toMatchObject({
+      source: 'delivery-rules',
+      conflict: false,
+      requiresClarification: false,
+      selectedScenario: 'ui',
+    });
+    expect(route.routingDecision.candidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scenario: 'ui', status: 'selected' }),
+        expect.objectContaining({ scenario: 'feature', status: 'suppressed', suppressedBy: 'ui' }),
+      ]),
+    );
+  });
+
+  test('无有效信号时返回 unknown，不再低置信度猜成 feature', () => {
+    const route = detectWorkflowRoute('帮我处理一下这个事情');
+
+    expect(route.scenario).toBe('unknown');
+    expect(route.confidence).toBe('low');
+    expect(route.routingDecision).toMatchObject({
+      source: 'fallback',
+      conflict: false,
+      requiresClarification: true,
+      selectedScenario: null,
+    });
+  });
+
+  test('显式 scenario 在冲突文本中仍保持最高优先级并记录来源', () => {
+    const route = detectWorkflowRoute(
+      '修复当前架构依赖错误，并重新设计模块边界。',
+      'bugfix',
+    );
+
+    expect(route.scenario).toBe('bugfix');
+    expect(route.routingDecision).toMatchObject({
+      source: 'explicit',
+      conflict: false,
+      selectedScenario: 'bugfix',
+    });
+  });
+
+  test.each([
+    ['修复支付错误并检查调用链', 'bugfix'],
+    ['检查调用链并修复支付错误', 'bugfix'],
+    ['规划产品目标并设计页面原型', 'product'],
+    ['设计页面原型并规划产品目标', 'product'],
+    ['新增只读状态页面', 'feature'],
+    ['新增设置页面和交互组件', 'ui'],
+  ] as const)('词序和嵌套步骤不改变主交付选择: %s', (intent, expected) => {
+    const route = detectWorkflowRoute(intent);
+
+    expect(route.scenario).toBe(expected);
+    expect(route.routingDecision.conflict).toBe(false);
+    expect(route.routingDecision.selectedScenario).toBe(expected);
+  });
+
+  test.each([
+    '审查并重构这段代码',
+    '重构并审查这段代码',
+  ])('独立同级意图无论词序如何都返回冲突: %s', (intent) => {
+    const route = detectWorkflowRoute(intent);
+
+    expect(route.scenario).toBe('unknown');
+    expect(route.routingDecision.conflict).toBe(true);
+    expect(route.routingDecision.candidates.map((item) => item.scenario).sort()).toEqual([
+      'refactor',
+      'review',
+    ]);
   });
 });

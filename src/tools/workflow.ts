@@ -91,6 +91,7 @@ export async function workflow(args: unknown, context?: ToolExecutionContext) {
       phases: plan.phases,
       avoid: plan.avoid,
       memoryNotes: plan.memoryNotes,
+      routingDecision: plan.routingDecision ?? null,
       projectSkill: {
         relPath: bootstrap.skill.skillRelPath,
         existed: bootstrap.skill.existed,

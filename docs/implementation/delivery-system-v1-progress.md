@@ -369,3 +369,50 @@ ARC-8 drift: passed; ARC-1 through ARC-8 completed, 0 gaps, 0 drift findings
 ```
 
 Phase 6 is complete. Delivery System V1 phases 0 through 6 are now implemented, independently validated and locally reversible. No push, tag, release, npm publication or Memory collection migration was performed.
+
+## Post-V1 improvement — Explainable workflow routing
+
+This is a bounded post-V1 improvement, not a new Delivery System phase. `workflow` remains an optional fallback helper used only when the Agent cannot confidently choose the first capability after reading the Skill. It does not become a mandatory entry point, intent engine, risk classifier or orchestration controller.
+
+Implemented:
+
+- explicit `scenario` remains the highest-priority routing source and overrides inferred ambiguity;
+- delivery routing is now represented as a named decision table rather than a sequence whose array order silently decides the winner;
+- known parent/nested relationships use an explicit dominance map. For example, UI implementation suppresses its nested feature/spec candidates, product planning suppresses prototype/UI steps, Bug delivery suppresses exploratory inspection, and feature delivery suppresses its specification step;
+- independent strong intents remain independent. Architecture change plus Bug repair, or review plus refactor with equal evidence, returns `unknown` instead of selecting whichever rule happens to appear first;
+- keyword ties also return `unknown`; insufficient signals no longer default to a low-confidence feature workflow;
+- unresolved results expose `firstTool=null`, `requiresClarification=true`, the competing candidates and their matched rule IDs, and a `clarify_or_configure` handle;
+- selected results expose the routing source, reason, selected candidate and any nested candidates that were explicitly suppressed;
+- word order no longer changes the outcome for the validated routing pairs;
+- the existing `detectWorkflowScenario` API remains compatible and continues to return only `scenario` and `confidence`; the richer `detectWorkflowRoute` result is additive;
+- `workflow` now has a dedicated structured output schema for `routingDecision`, candidate status and nullable first-tool results;
+- Tool Schema, Catalog and generated Skill guidance now state that independent conflicts and ties return `unknown` rather than being guessed;
+- responsibilities remain separated: `workflow-routing-contract.ts` owns the public routing types, `dev-workflow-routing.ts` owns the decision rules, `workflow-routing-render.ts` owns human-readable explanation, and `workflow.ts` owns bootstrap and response decoration;
+- production modules remain bounded: `dev-workflow-routing.ts` 446 lines, `dev-workflow.ts` 483 lines, `workflow-routing-contract.ts` 50 lines, `workflow-routing-render.ts` 19 lines and `workflow.ts` 124 lines.
+
+Compatibility preserved:
+
+```text
+Compact: 24
+Compact + Memory: 30
+Full: 34
+Apps model-visible: 30
+App-only: 1
+Unique callable names: 35
+```
+
+Validation completed:
+
+```text
+workflow routing focused suite: 35 / 35 passed across 3 test files
+full regression suite: 557 / 557 passed across 109 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+release static checks: 37 / 37 passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+ARC-8 drift: passed; ARC-1 through ARC-8 completed, 0 gaps, 0 drift findings
+```
+
+The improvement is additive and locally reversible. It introduces no tool, migration, persisted routing state, push, tag, release or publication.

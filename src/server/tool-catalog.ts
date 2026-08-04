@@ -147,7 +147,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "routing",
     groupTitle: ROUTING,
     whenToCall:
-      "Agent 阅读 Skill 后仍**不确定第一个工具**时使用；返回建议，不执行工具、不维护任务生命周期。intent 必须是完整任务摘要",
+      "Agent 阅读 Skill 后仍**不确定第一个工具**时使用；返回可解释决策，不执行工具、不维护任务生命周期。intent 必须是完整任务摘要；多个独立强意图或同分规则会返回 unknown 和候选，不按规则顺序猜测",
   }),
   tool({
     name: "init_project_context",

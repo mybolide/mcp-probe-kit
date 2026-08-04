@@ -8,7 +8,7 @@ export const projectToolSchemas = [
   {
     name: "workflow",
     description:
-      "当不确定该用哪个 MCP 工具时使用。根据完整任务意图返回分阶段 MCP 指南（firstTool + phases）和下一工具参数提示。调用方必须汇总当前对话已确认的目标与约束，不得只传“继续/开始”等最后一句。新功能场景会提示 start_feature 并默认携带 spec_layout=auto。同时确保用户项目已存在 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 中的 Skill 引用（缺失则自动创建/更新）。",
+      "当不确定该用哪个 MCP 工具时使用。根据完整任务意图返回可解释 routingDecision、分阶段 MCP 指南（firstTool + phases）和下一工具参数提示。显式 scenario 优先；已知嵌套步骤按决策表处理；多个独立强意图、关键词同分或证据不足时返回 unknown 与候选，要求先澄清，不按规则顺序猜测。调用方必须汇总当前对话已确认的目标与约束，不得只传“继续/开始”等最后一句。新功能场景会提示 start_feature 并默认携带 spec_layout=auto。同时确保用户项目已存在 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 中的 Skill 引用（缺失则自动创建/更新）。",
     inputSchema: {
       type: "object",
       properties: {
@@ -20,7 +20,7 @@ export const projectToolSchemas = [
         scenario: {
           type: "string",
           enum: ["auto", "feature", "bugfix", "ui", "product", "architecture", "arch", "explore", "commit", "review", "refactor", "onboard", "spec", "memory"],
-          description: "可选：显式场景；默认 auto 从 intent 推断",
+          description: "可选：显式场景；显式值具有最高优先级。默认 auto 从 intent 推断，冲突或证据不足时返回 unknown 而不是猜测",
         },
         project_root: {
           type: "string",
