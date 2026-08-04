@@ -10,7 +10,7 @@ This file tracks implementation status separately from the frozen requirements d
 | Phase 1 — Responsibility alignment | Complete | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
 | Phase 2 — `architecture` / ARC-8 | Complete | Add the single architecture domain tool and its shared methodology core |
 | Phase 3 — Plan lifecycle | Complete | Extend Plan, Heartbeat, Resume and Converge compatibly |
-| Phase 4 — Orchestrator closure | In progress | Feature, Bugfix, UI, Onboard and Product closure complete; Ralph remains |
+| Phase 4 — Orchestrator closure | Complete | Feature, Bugfix, UI, Onboard, Product and bounded Ralph delivery loops are closed |
 | Phase 5 — Diff and verification consistency | Pending | Compare declared scope, real diff, contracts, tests and architecture drift |
 | Phase 6 — Memory quality | Pending | Improve conflict, supersede, expiry, negative evidence and retrieval quality |
 
@@ -261,3 +261,31 @@ Remaining Phase 4 scope:
 
 - close `start_ralph` with a bounded round model, per-round Heartbeat evidence, stop/failure policy and final Converge;
 - run the final Phase 4 regression and mark the phase complete.
+
+Completed in the fifth bounded Phase 4 slice:
+
+- `start_ralph` now returns a formal `DelegatedPlanContract` with a deterministic Plan ID, pinned project root, explicit round bounds and `backgroundExecution=false`;
+- the Plan creates one explicit step per permitted round, so `resume_plan` can restore the real round and the Workbench can display cumulative progress;
+- every executed or skipped round requires structured runtime evidence including round status, revision, diff size, test command/exit code, summary, next step and stop reason, followed immediately by `plan_heartbeat`;
+- the loop distinguishes successful completion from safety stops. STOP files, user decline/timeout, maximum rounds/time, repeated output, diff limits, command failure, blocked work and three failed repairs do not count as success;
+- final convergence requires independent completion-promise verification, final tests, real `code_review`, conditional `architecture drift`, round-evidence audit and one recorded final stop reason;
+- safe and normal modes both remain bounded and foreground-only. Generated scripts are optional helpers; `start_ralph` never starts them, creates a background process or claims a round completed;
+- Memory recall and post-validation candidate preparation are integrated without bypassing final convergence;
+- public Schema and Catalog wording now describe the bounded foreground behavior and accept an explicit `project_root`;
+- the previous 976-line module was split into focused production modules: `start_ralph.ts` 158 lines, `start-ralph-config.ts` 175 lines, `start-ralph-templates.ts` 232 lines and `start-ralph-plan.ts` 374 lines.
+
+Final Phase 4 validation:
+
+```text
+start_ralph focused behavior tests: 5 / 5 passed
+Ralph + Skill + Registry focused suite: 16 / 16 passed
+full regression suite: 504 / 504 passed across 102 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+release static checks: 37 / 37 passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+```
+
+Phase 4 is complete. All six complete-delivery orchestrators now use explicit delivery boundaries, resumable state and task-appropriate convergence semantics. Phase 5 can begin with declared-scope versus real-diff verification and architecture-drift consistency.

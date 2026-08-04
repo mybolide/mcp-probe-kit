@@ -135,7 +135,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "orchestration",
     groupTitle: ORCHESTRATION,
-    whenToCall: "需要**多轮自主迭代**、长任务循环时",
+    whenToCall: "需要**有界多轮迭代**、每轮 Heartbeat/测试/Diff 证据和最终 Converge 的完整长任务时；不用于后台无人值守循环",
   }),
   tool({
     name: "workflow",

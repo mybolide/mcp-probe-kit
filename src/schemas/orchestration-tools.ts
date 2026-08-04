@@ -159,7 +159,7 @@ export const orchestrationToolSchemas = [
   },
   {
     name: "start_ralph",
-    description: "当用户需要启动 Ralph Wiggum Loop 循环开发时使用。生成 .ralph/ 目录结构、安全模式脚本和执行指南。默认启用多重安全保护，防止无人值守时费用失控",
+    description: "用于需要多轮小步实现、每轮真实验证和正式收敛的长任务。返回有界 Delegated Plan、每轮 Heartbeat 证据契约和可选前台辅助脚本；不自动运行循环、不创建后台进程。安全停止不等于成功",
     inputSchema: {
       type: "object",
       properties: {
@@ -214,6 +214,10 @@ export const orchestrationToolSchemas = [
         cooldown_seconds: {
           type: "number",
           description: "每轮后冷却秒数。safe 模式默认：8",
+        },
+        project_root: {
+          type: "string",
+          description: "目标项目根目录绝对路径。省略时从当前已确认工作区解析",
         },
       },
       required: [],
