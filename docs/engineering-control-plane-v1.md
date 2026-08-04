@@ -1,5 +1,9 @@
 # MCP Probe Kit Engineering Control Plane V1
 
+> **状态：已被取代。** 本文包含较重的自动分级、Policy Kernel 和 Permit 设想，不再作为后续实施依据。
+>
+> 当前最终需求基线请见：`docs/mcp-probe-kit-delivery-system-v1.md`。
+
 > 状态：设计评审稿，尚未进入生产代码实施  
 > 目标：把 MCP Probe Kit 从“Agent 开发工具集合”升级为跨模型、跨 IDE、跨 Agent 的软件工程控制面。  
 > 核心约束：解决真实交付问题，不生成无执行力的架构文档，不强迫小改动走重型流程，不依赖某一个模型或宿主。
