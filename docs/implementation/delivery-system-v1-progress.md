@@ -10,7 +10,7 @@ This file tracks implementation status separately from the frozen requirements d
 | Phase 1 — Responsibility alignment | Complete | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
 | Phase 2 — `architecture` / ARC-8 | Complete | Add the single architecture domain tool and its shared methodology core |
 | Phase 3 — Plan lifecycle | Complete | Extend Plan, Heartbeat, Resume and Converge compatibly |
-| Phase 4 — Orchestrator closure | In progress | Feature, Bugfix, UI and Onboard closure complete; Product and Ralph remain |
+| Phase 4 — Orchestrator closure | In progress | Feature, Bugfix, UI, Onboard and Product closure complete; Ralph remains |
 | Phase 5 — Diff and verification consistency | Pending | Compare declared scope, real diff, contracts, tests and architecture drift |
 | Phase 6 — Memory quality | Pending | Improve conflict, supersede, expiry, negative evidence and retrieval quality |
 
@@ -229,5 +229,35 @@ docs verification: 1080 checks passed
 
 Remaining Phase 4 scope:
 
-- close and normalize `start_product` and `start_ralph` independently;
-- complete one final Phase 4 regression after both remaining workflows are committed.
+- close and normalize `start_ralph` independently;
+- complete one final Phase 4 regression after Ralph is committed.
+
+Completed in the fourth bounded Phase 4 slice:
+
+- `start_product` now uses a formal product `DelegatedPlanContract` with product-specific requirements and review evidence rather than software implementation/test/code-review gates;
+- the Plan declares product Brief, PRD, page-flow documents, design-system contract, interactive prototype, product acceptance report and project-context artifacts;
+- material gaps in target users, scope, constraints or success metrics become an explicit user-input step rather than silent assumptions;
+- `ui_design_system` is represented truthfully as returning a structured contract, followed by a separate Agent persistence step for JSON/Markdown files;
+- `start_ui` is treated as a child delegated workflow: the parent prototype step requires the child plan ID, real prototype artifacts, screenshot acceptance and `converge passed=true` before completion;
+- product acceptance checks PRD/prototype/state/visual consistency and performs a dedicated product-package review without pretending production code has been implemented;
+- optional Memory recall and post-validation MemoryCandidate preparation are integrated without bypassing parent convergence;
+- `docs_dir` and `requirements_file` are constrained to the resolved project root;
+- production modules remain bounded: `start_product.ts` is 268 lines and `start-product-plan.ts` is 351 lines.
+
+Validation completed:
+
+```text
+start_product focused suite: 5 / 5 passed
+full regression suite: 501 / 501 passed across 102 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+release static checks: 37 / 37 passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+```
+
+Remaining Phase 4 scope:
+
+- close `start_ralph` with a bounded round model, per-round Heartbeat evidence, stop/failure policy and final Converge;
+- run the final Phase 4 regression and mark the phase complete.

@@ -2,28 +2,36 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { parseArgs, getString, getBoolean } from '../utils/parseArgs.js';
 import { okStructured } from '../lib/response.js';
+import { attachHandles } from '../lib/handles.js';
 import { renderOrchestrationHeader } from '../lib/orchestration-guidance.js';
-import { renderDelegatedPlanSteps } from '../lib/delegated-plan-renderer.js';
+import {
+  renderDelegatedPlanStateProtocol,
+  renderDelegatedPlanSteps,
+} from '../lib/delegated-plan-renderer.js';
 import {
   buildSkillBridgePlanStep,
   buildSkillHeaderNote,
   detectSkillBridge,
   renderSkillBridgeSection,
 } from '../lib/skill-bridge.js';
-import {
-  buildDelegatedPlanContract,
-  createDelegatedPlanId,
-  type DelegatedPlanStep,
-} from '../lib/delegated-plan-contract.js';
-import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from '../lib/workspace-root.js';
 import { WorkflowReportSchema } from '../schemas/structured-output.js';
-import type { Artifact, WorkflowReport, WorkflowStep } from '../schemas/structured-output.js';
 import {
   reportToolProgress,
   throwIfAborted,
   type ToolExecutionContext,
 } from '../lib/tool-execution-context.js';
-
+import {
+  buildProjectRootRetryHint,
+  isLikelyProjectNamedRelativePath,
+  resolveWorkspaceRoot,
+} from '../lib/workspace-root.js';
+import {
+  buildOrchestrationHandles,
+  loadMemoryInjectionContext,
+  renderMemoryGuideSection,
+} from '../lib/memory-orchestration.js';
+import type { DelegatedPlanStep } from '../lib/delegated-plan-contract.js';
+import { buildProductPlan, buildProductReport } from './start-product-plan.js';
 
 interface ProductBrief {
   targetUsers: string;
@@ -40,11 +48,9 @@ function extractProductBrief(description: string): ProductBrief {
     constraints: [],
   };
   let active: keyof ProductBrief | null = null;
-
   for (const rawLine of description.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line) continue;
-
     const heading = line.match(/^([^:：]{1,24})[:：]\s*(.*)$/);
     if (heading) {
       const label = heading[1]?.trim().toLowerCase() ?? '';
@@ -59,20 +65,37 @@ function extractProductBrief(description: string): ProductBrief {
       if (active && inlineValue) values[active].push(inlineValue);
       continue;
     }
-
     if (active) {
       const value = cleanProductSectionLine(line);
       if (value) values[active].push(value);
     }
   }
-
   return {
     targetUsers: values.targetUsers.join('；'),
     constraints: values.constraints.join('；'),
   };
 }
 
-/** Product workflow entry. It exposes one closed delegated plan, not phantom sub-tools. */
+function normalizeDocsDir(value: string): string {
+  const normalized = (value || 'docs').trim().replace(/\\/g, '/').replace(/\/+$/, '');
+  if (!normalized || normalized.startsWith('/') || /^[A-Za-z]:\//.test(normalized)) {
+    throw new Error('docs_dir 必须是项目根目录下的相对路径');
+  }
+  if (normalized.split('/').some((segment) => !segment || segment === '.' || segment === '..')) {
+    throw new Error('docs_dir 不能包含空路径、. 或 ..');
+  }
+  return normalized;
+}
+
+function resolveProjectFile(projectRoot: string, value: string): string {
+  const resolved = path.resolve(projectRoot, value);
+  const relative = path.relative(projectRoot, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('requirements_file 必须位于 project_root 内');
+  }
+  return resolved;
+}
+
 export async function startProduct(args: unknown, context?: ToolExecutionContext) {
   try {
     throwIfAborted(context?.signal, 'start_product 已取消');
@@ -130,21 +153,19 @@ export async function startProduct(args: unknown, context?: ToolExecutionContext
       };
     }
 
-    const projectRoot = resolveWorkspaceRoot(explicitProjectRoot);
-    const requirementsFile = getString(parsed.requirements_file);
+    const projectRootNative = resolveWorkspaceRoot(explicitProjectRoot);
+    const projectRoot = projectRootNative.replace(/\\/g, '/');
+    const docsDir = normalizeDocsDir(getString(parsed.docs_dir) || 'docs');
     const productName = getString(parsed.product_name) || '新产品';
     const productType = getString(parsed.product_type) || 'SaaS';
-    const skipDesignSystem = getBoolean(parsed.skip_design_system);
-    const docsDir = getString(parsed.docs_dir) || 'docs';
+    const includeDesignSystem = !getBoolean(parsed.skip_design_system);
+    const requirementsFile = getString(parsed.requirements_file);
     let description = getString(parsed.description);
     let requirementsSource = '用户提供的描述';
-
     if (requirementsFile) {
-      const resolvedFile = path.isAbsolute(requirementsFile)
-        ? requirementsFile
-        : path.join(projectRoot, requirementsFile);
+      const resolvedFile = resolveProjectFile(projectRootNative, requirementsFile);
       description = await fs.readFile(resolvedFile, 'utf8');
-      requirementsSource = `需求文件：${resolvedFile}`;
+      requirementsSource = `需求文件：${resolvedFile.replace(/\\/g, '/')}`;
     }
     if (!description.trim()) {
       return {
@@ -157,166 +178,84 @@ export async function startProduct(args: unknown, context?: ToolExecutionContext
     const inferredBrief = extractProductBrief(description);
     const targetUsers = getString(parsed.target_users) || inferredBrief.targetUsers;
     const constraints = getString(parsed.constraints) || inferredBrief.constraints;
+    const skillBridge = detectSkillBridge('start_product');
+    const skillBridgeStep = buildSkillBridgePlanStep(skillBridge) as DelegatedPlanStep;
+    const memoryContext = await loadMemoryInjectionContext(
+      `产品设计 PRD 原型 用户流程 验收 失败经验 ${productName} ${productType}`,
+      'default',
+    );
+    const memoryRecallSteps: DelegatedPlanStep[] = memoryContext.enabled
+      ? [{
+          id: 'recall-memory',
+          type: 'tool',
+          tool: 'search_memory',
+          args: {
+            query: `产品设计 PRD 原型 用户流程 验收 失败经验 ${productName} ${productType}`,
+            limit: 5,
+          },
+          expectedOutputs: ['相关产品模式、历史决策、失败方案和验收经验'],
+          completionEvidence: ['记录采用、拒绝和需要用当前需求复核的记忆'],
+          outputs: [],
+          note: '历史产品经验只是候选，不得覆盖当前用户目标和约束',
+        }]
+      : [];
 
     throwIfAborted(context?.signal, 'start_product 已取消');
-    await reportToolProgress(context, 45, 'start_product: 构建闭环计划');
-
-    const skillBridge = detectSkillBridge('start_product');
-    const includeDesignSystem = !skipDesignSystem;
-    const steps: DelegatedPlanStep[] = [
-      buildSkillBridgePlanStep(skillBridge),
-      {
-        id: 'context',
-        type: 'tool',
-        tool: 'init_project_context',
-        when: `缺少 AGENTS.md 或 ${docsDir}/project-context.md`,
-        args: { docs_dir: docsDir, project_root: projectRoot },
-        outputs: ['AGENTS.md', `${docsDir}/project-context.md`],
-      },
-      {
-        id: 'prd',
-        type: 'agent_action',
-        action: 'generate_product_requirements_document',
-        requiredInputs: [requirementsSource, '产品目标、用户、问题、范围、约束、页面与验收标准'],
-        expectedOutputs: [`${docsDir}/prd/product-requirements.md`],
-        outputs: [`${docsDir}/prd/product-requirements.md`],
-        note: '由 Agent 使用宿主文件能力生成 PRD；该步骤不是 MCP 工具调用',
-      },
-      {
-        id: 'prototype-docs',
-        type: 'agent_action',
-        action: 'generate_prototype_documents',
-        dependsOn: ['prd'],
-        requiredInputs: [`${docsDir}/prd/product-requirements.md`],
-        expectedOutputs: [
-          `${docsDir}/prototype/prototype-index.md`,
-          `${docsDir}/prototype/page-*.md`,
-        ],
-        outputs: [
-          `${docsDir}/prototype/prototype-index.md`,
-          `${docsDir}/prototype/page-*.md`,
-        ],
-        note: '由 Agent 从 PRD 的页面与流程定义生成原型文档；该步骤不是 MCP 工具调用',
-      },
-      ...(includeDesignSystem
-        ? [{
-            id: 'design-system',
-            type: 'tool' as const,
-            tool: 'ui_design_system',
-            dependsOn: ['prd'],
-            args: { product_type: productType, description: productName, stack: 'html' },
-            outputs: [`${docsDir}/design-system.json`, `${docsDir}/design-system.md`],
-          }]
-        : []),
-      {
-        id: 'html-prototype',
-        type: 'tool',
-        tool: 'start_ui',
-        dependsOn: includeDesignSystem ? ['prototype-docs', 'design-system'] : ['prototype-docs'],
-        args: {
-          description: `根据 ${docsDir}/prototype/ 下的页面原型文档，为 ${productName} 生成可交互 HTML 原型；输出到 ${docsDir}/html-prototype/，并遵守现有设计系统`,
-          framework: 'html',
-          project_root: projectRoot,
-          mode: 'manual',
-        },
-        outputs: [`${docsDir}/html-prototype/index.html`, `${docsDir}/html-prototype/page-*.html`],
-      },
-      {
-        id: 'update-context',
-        type: 'agent_action',
-        action: 'update_project_context',
-        dependsOn: ['html-prototype'],
-        requiredInputs: [
-          `${docsDir}/prd/product-requirements.md`,
-          `${docsDir}/prototype/prototype-index.md`,
-          `${docsDir}/html-prototype/index.html`,
-        ],
-        expectedOutputs: [`${docsDir}/project-context.md 中已加入产品设计与原型索引`],
-        outputs: [`${docsDir}/project-context.md`],
-      },
-    ];
-
-    const plan = buildDelegatedPlanContract({
-      planId: createDelegatedPlanId('product', `${productName}:${description}`),
-      workflow: 'product',
-      workflowVersion: '4.0.0',
-      objective: `完成 ${productName} 的 PRD、原型文档、设计系统与 HTML 原型`,
-      steps,
-      globalRules: [
-        '文本指导与 structuredContent.metadata.plan.steps 必须保持一致',
-        '不得把 Agent 操作伪装成 MCP 工具调用',
-        '所有文档和原型必须由 Agent 使用宿主文件能力真实落盘',
-      ],
-      completionCriteria: [
-        'PRD 已落盘且覆盖目标用户、范围、页面、流程与验收标准',
-        '原型文档与 HTML 原型页面一致',
-        '项目上下文索引已更新',
-      ],
-      memoryPolicy: { recallBeforeExecution: false, extractAfterValidation: false },
+    await reportToolProgress(context, 55, 'start_product: 构建产品交付计划');
+    const plan = buildProductPlan({
+      projectRoot,
+      docsDir,
+      productName,
+      productType,
+      description,
+      requirementsSource,
+      targetUsers,
+      constraints,
+      includeDesignSystem,
+      memoryEnabled: memoryContext.enabled,
+      memoryRecallSteps,
+      skillBridgeStep,
     });
-
     const header = renderOrchestrationHeader({
       tool: 'start_product',
-      goal: `产品设计：${productName}`,
-      tasks: ['按 delegated plan 生成 PRD、原型文档、设计系统与 HTML 原型'],
+      goal: `产品设计与原型验收：${productName}`,
+      tasks: ['按 delegated plan 完成产品 Brief、PRD、原型、设计系统、子 UI 计划和产品包验收'],
       notes: [buildSkillHeaderNote(skillBridge), requirementsSource],
     });
-    const guidance = `${header}${renderSkillBridgeSection(skillBridge)}
-# 产品设计闭环
+    const guidance = `${header}${renderMemoryGuideSection(memoryContext)}${renderSkillBridgeSection(skillBridge)}
+# 产品设计交付
 
 - 产品：${productName}
 - 类型：${productType}
 ${targetUsers ? `- 目标用户：${targetUsers}\n` : ''}${constraints ? `- 核心约束：${constraints}\n` : ''}- 文档目录：${docsDir}
-- 规则：以下文字直接由 \`structuredContent.metadata.plan.steps\` 渲染。
+- 边界：本流程交付产品定义和可交互原型，不声称生产代码已经实现。
+
+${renderDelegatedPlanStateProtocol({ planId: plan.planId, projectRoot })}
 
 ## 执行计划
+
 ${renderDelegatedPlanSteps(plan.steps)}`;
-
-    const pending: WorkflowStep['status'] = 'pending';
-    const reportSteps: WorkflowStep[] = plan.steps.map((step) => ({
-      name: step.id,
-      status: pending,
-      description: step.tool
-        ? `调用 ${step.tool}`
-        : `Agent 操作：${step.action ?? step.id}`,
-    }));
-    const artifacts: Artifact[] = [
-      { path: `${docsDir}/prd/product-requirements.md`, type: 'doc', purpose: '产品需求文档' },
-      { path: `${docsDir}/prototype/prototype-index.md`, type: 'doc', purpose: '原型索引' },
-      { path: `${docsDir}/prototype/page-*.md`, type: 'doc', purpose: '页面原型文档' },
-      { path: `${docsDir}/html-prototype/index.html`, type: 'doc', purpose: 'HTML 原型入口' },
-      ...(includeDesignSystem
-        ? [
-            { path: `${docsDir}/design-system.json`, type: 'doc' as const, purpose: '设计系统配置' },
-            { path: `${docsDir}/design-system.md`, type: 'doc' as const, purpose: '设计系统文档' },
-          ]
-        : []),
-    ];
-    const report: WorkflowReport = {
-      summary: `产品设计工作流：${productName}`,
-      status: 'pending',
-      steps: reportSteps,
-      artifacts,
-      nextSteps: plan.steps.map((step) =>
-        step.tool ? `调用 ${step.tool}` : `执行 Agent 操作 ${step.action ?? step.id}`
-      ),
-      metadata: {
-        plan,
-        skills: skillBridge,
-        projectRoot,
-        requirementsSource,
-        productBrief: {
-          targetUsers: targetUsers || null,
-          constraints: constraints || null,
-        },
-      },
-    };
-
-    await reportToolProgress(context, 95, 'start_product: 闭环计划已生成');
-    return okStructured(guidance, report, {
-      schema: WorkflowReportSchema,
-      note: 'Agent 应严格执行 metadata.plan；所有工具引用均必须存在于当前工具面',
+    const report = buildProductReport({
+      plan,
+      projectRoot,
+      docsDir,
+      productName,
+      includeDesignSystem,
+      requirementsSource,
+      targetUsers,
+      constraints,
+      skills: skillBridge,
     });
+
+    await reportToolProgress(context, 95, 'start_product: 产品交付计划已生成');
+    return okStructured(
+      guidance,
+      attachHandles(report, buildOrchestrationHandles(memoryContext)),
+      {
+        schema: WorkflowReportSchema,
+        note: 'Agent 应执行父 Plan，并将 start_ui 返回的子 Plan 独立执行和收敛后再完成父原型步骤。',
+      },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
