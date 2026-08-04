@@ -8,7 +8,7 @@ This file tracks implementation status separately from the frozen requirements d
 |---|---|---|
 | Phase 0 — Compatibility baseline | Complete | Freeze exact tool names, counts, visibility, App-only behavior and protocol surface |
 | Phase 1 — Responsibility alignment | Complete | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
-| Phase 2 — `architecture` / ARC-8 | Pending | Add the single architecture domain tool and its shared methodology core |
+| Phase 2 — `architecture` / ARC-8 | In progress | Add the single architecture domain tool and its shared methodology core |
 | Phase 3 — Plan lifecycle | Pending | Extend Plan, Heartbeat, Resume and Converge compatibly |
 | Phase 4 — Orchestrator closure | Pending | Complete feature, bugfix, UI, onboard, product and Ralph delivery loops |
 | Phase 5 — Diff and verification consistency | Pending | Compare declared scope, real diff, contracts, tests and architecture drift |
@@ -84,3 +84,21 @@ docs verification: 1067 checks passed
 ```
 
 Phase 1 changed responsibility guidance and generated Skill content only. It did not add, remove or rename tools, alter public input/output schemas, or change App-only visibility.
+
+## Phase 2 progress
+
+Shared ARC-8 foundation completed before public exposure:
+
+- `src/lib/architecture-method.ts` owns ARC-1 through ARC-8, mode mapping, gates, normalization, candidates and bounded drift checks;
+- `src/schemas/architecture-tools.ts` defines the future public input contract;
+- `src/schemas/output/architecture-tools.ts` defines one compatible output model across assess/design/validate/drift;
+- focused method tests cover assess, blocked design, migration/rollback gates, valid design, missing drift evidence and explicit drift findings.
+
+Current validation:
+
+```text
+ARC-8 method tests: 7 / 7 passed
+TypeScript compiler: passed with npx tsc --noEmit
+```
+
+The public `architecture` tool is not exposed yet. Catalog, Registry, Visibility and the frozen tool-surface baseline remain unchanged until the tool handler and integration tests are ready.

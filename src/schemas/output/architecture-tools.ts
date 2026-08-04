@@ -1,0 +1,73 @@
+export const ArchitectureResultSchema = {
+  type: 'object',
+  properties: {
+    mode: { type: 'string', enum: ['assess', 'design', 'validate', 'drift'] },
+    methodology: { type: 'string', enum: ['arc8'] },
+    methodologyVersion: { type: 'string' },
+    summary: { type: 'string' },
+    arc8Status: {
+      type: 'object',
+      properties: {
+        completedSteps: { type: 'array', items: { type: 'string' } },
+        blockedSteps: { type: 'array', items: { type: 'string' } },
+        nextStep: { type: ['string', 'null'] },
+      },
+      required: ['completedSteps', 'blockedSteps', 'nextStep'],
+    },
+    problem: {
+      type: 'object',
+      properties: {
+        goal: { type: 'string' },
+        scope: { type: 'array', items: { type: 'string' } },
+        nonGoals: { type: 'array', items: { type: 'string' } },
+        successCriteria: { type: 'array', items: { type: 'string' } },
+        constraints: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['goal', 'scope', 'nonGoals', 'successCriteria', 'constraints'],
+    },
+    currentFacts: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          statement: { type: 'string' },
+          classification: { type: 'string', enum: ['fact', 'inference', 'unknown'] },
+          evidence: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['statement', 'classification', 'evidence'],
+      },
+    },
+    structuralCauses: { type: 'array', items: { type: 'string' } },
+    protectedInvariants: { type: 'array', items: { type: 'string' } },
+    alternatives: { type: 'array', items: { type: 'object' } },
+    tradeoffDimensions: { type: 'array', items: { type: 'string' } },
+    decision: { type: 'object' },
+    targetArchitecture: { type: 'object' },
+    transitionPlan: { type: 'object' },
+    validation: {
+      type: 'object',
+      properties: {
+        passed: { type: 'boolean' },
+        gaps: { type: 'array', items: { type: 'string' } },
+        driftFindings: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['passed', 'gaps', 'driftFindings'],
+    },
+    steps: { type: 'array', items: { type: 'object' } },
+    architectureCandidate: { type: 'object' },
+    adrCandidate: { type: 'object' },
+    memoryCandidate: { type: 'object' },
+    warnings: { type: 'array', items: { type: 'string' } },
+  },
+  required: [
+    'mode',
+    'methodology',
+    'summary',
+    'arc8Status',
+    'problem',
+    'currentFacts',
+    'validation',
+    'steps',
+    'architectureCandidate',
+  ],
+} as const;
