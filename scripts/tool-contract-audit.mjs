@@ -5,13 +5,20 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import {
+  assertExactToolSurface,
+  deriveExpectedToolSurfaces,
+  loadToolSurfaceBaseline,
+} from './lib/tool-surface-baseline.mjs';
 
 const roots = [];
 const clients = [];
 const cleanupTasks = [];
 const results = [];
-const phantomTools = ['init_component_catalog', 'render_ui', 'gen_prd', 'gen_prototype'];
-const compactHiddenTools = ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'];
+const baseline = await loadToolSurfaceBaseline();
+const expectedSurfaces = deriveExpectedToolSurfaces(baseline);
+const phantomTools = baseline.invariants.phantomTools;
+const compactHiddenTools = baseline.groups.fullCompatibilityOnly;
 
 try {
   const projectRoot = await createFixtureProject();
@@ -19,6 +26,7 @@ try {
 
   const compact = await connect({ toolset: 'compact', projectRoot, memory: false, apps: false });
   const compactTools = new Set((await compact.client.listTools()).tools.map((tool) => tool.name));
+  const compactSurface = assertExactToolSurface('compact', compactTools, expectedSurfaces.compact);
   await auditToolSet('compact', compact, compactTools, compactFixtures(projectRoot), {
     forbiddenTextTools: [...compactHiddenTools, ...phantomTools],
   });
@@ -27,6 +35,11 @@ try {
     toolset: 'compact', projectRoot, memory: true, apps: false, memoryUrl: memory.url,
   });
   const compactMemoryTools = new Set((await compactMemory.client.listTools()).tools.map((tool) => tool.name));
+  const compactMemorySurface = assertExactToolSurface(
+    'compactWithMemory',
+    compactMemoryTools,
+    expectedSurfaces.compactWithMemory,
+  );
   await auditMemoryTools(compactMemory, compactMemoryTools, projectRoot);
   for (const [name, args] of memoryClosureFixtures(projectRoot)) {
     await auditCall('compact-memory-closure', compactMemory.client, compactMemoryTools, name, args, {
@@ -36,6 +49,7 @@ try {
 
   const full = await connect({ toolset: 'full', projectRoot, memory: true, apps: false, memoryUrl: memory.url });
   const fullTools = new Set((await full.client.listTools()).tools.map((tool) => tool.name));
+  const fullSurface = assertExactToolSurface('full', fullTools, expectedSurfaces.full);
   await auditToolSet('full-compatibility', full, fullTools, fullFixtures(projectRoot), {
     forbiddenTextTools: phantomTools,
   });
@@ -43,22 +57,28 @@ try {
   const apps = await connect({ toolset: 'compact', projectRoot, memory: true, apps: true, memoryUrl: memory.url });
   const rawAppTools = (await apps.client.listTools()).tools;
   const appToolNames = new Set(rawAppTools.map((tool) => tool.name));
-  assert(
-    !appToolNames.has('list_memory_assets'),
-    'Apps tools/list must not expose app-only list_memory_assets to the model',
+  const appsSurface = assertExactToolSurface(
+    'appsModelVisible',
+    appToolNames,
+    expectedSurfaces.appsModelVisible,
   );
-  assert(
-    appToolNames.size === compactMemoryTools.size,
-    `Apps negotiation changed the model-visible tool count: ${appToolNames.size} !== ${compactMemoryTools.size}`,
-  );
+  for (const appOnlyName of expectedSurfaces.appOnly) {
+    assert(
+      !appToolNames.has(appOnlyName),
+      `Apps tools/list must not expose app-only ${appOnlyName} to the model`,
+    );
+  }
   // The hidden action remains callable by a negotiated MCP App when it knows
   // the action name, but it must not compete on the model-visible tool surface.
-  await auditCall('app-only', apps.client, appToolNames, 'list_memory_assets', { limit: 20, offset: 0 }, {
-    forbiddenTextTools: phantomTools,
-  });
+  for (const appOnlyName of expectedSurfaces.appOnly) {
+    await auditCall('app-only', apps.client, appToolNames, appOnlyName, { limit: 20, offset: 0 }, {
+      forbiddenTextTools: phantomTools,
+    });
+  }
 
   const legacy = await connect({ toolset: 'compact', projectRoot, memory: false, apps: false, era: 'legacy' });
   const legacyTools = new Set((await legacy.client.listTools()).tools.map((tool) => tool.name));
+  const legacySurface = assertExactToolSurface('legacyCompact', legacyTools, expectedSurfaces.compact);
   await auditCall('legacy-sample', legacy.client, legacyTools, 'workflow', {
     intent: '实现审计日志功能', scenario: 'feature', project_root: projectRoot,
   }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });
@@ -66,16 +86,34 @@ try {
   const failed = results.filter((item) => !item.passed);
   const report = {
     passed: failed.length === 0,
+    baseline: {
+      id: baseline.baselineId,
+      schemaVersion: baseline.schemaVersion,
+      expectedCounts: baseline.expectedCounts,
+    },
     generatedAt: new Date().toISOString(),
     totals: { calls: results.length, passed: results.length - failed.length, failed: failed.length },
     surfaces: {
-      compact: compactTools.size,
-      compactWithMemory: compactMemoryTools.size,
-      full: fullTools.size,
-      appsRaw: appToolNames.size,
+      compact: compactSurface,
+      compactWithMemory: compactMemorySurface,
+      full: fullSurface,
+      appsModelVisible: appsSurface,
+      legacyCompact: legacySurface,
+      appOnly: {
+        count: expectedSurfaces.appOnly.length,
+        names: [...expectedSurfaces.appOnly].sort(),
+      },
+      uniqueCallable: {
+        count: new Set([...fullTools, ...expectedSurfaces.appOnly]).size,
+        names: [...new Set([...fullTools, ...expectedSurfaces.appOnly])].sort(),
+      },
     },
     results,
   };
+  assert(
+    report.surfaces.uniqueCallable.count === baseline.expectedCounts.uniqueCallable,
+    `Unique callable count changed: ${report.surfaces.uniqueCallable.count} !== ${baseline.expectedCounts.uniqueCallable}`,
+  );
   console.log(JSON.stringify(report, null, 2));
   if (failed.length > 0) process.exitCode = 1;
 } finally {

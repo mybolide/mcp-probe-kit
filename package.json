@@ -36,7 +36,7 @@
     "smoke:inspector": "node scripts/inspector-smoke.mjs",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "build-mcp-apps": "node scripts/build-mcp-apps.mjs",
-    "audit:tools": "node scripts/tool-contract-audit.mjs",
+    "audit:tools": "node --test scripts/lib/__tests__/tool-surface-baseline.test.mjs && node scripts/tool-contract-audit.mjs",
     "audit:tools:agent": "node scripts/claude-tool-contract-audit.mjs",
     "clean:build": "node scripts/clean-build.mjs",
     "smoke:gitnexus-sidecar": "node scripts/gitnexus-sidecar-smoke.mjs",
