@@ -5,7 +5,7 @@
 export const codeAnalysisToolSchemas = [
   {
     name: "code_review",
-    description: "当用户需要审查代码质量、检查代码问题时使用。指南型工具：注入 code/file_path 与审查清单，由 Agent 阅读代码后输出结构化问题清单（severity/category/suggestion）；MCP 不做静态规则扫描",
+    description: "当用户需要审查代码、真实 Git diff 或托管 Plan 的交付一致性时使用。MCP 可确定性收集 changed files、Plan 声明范围、产物、测试、公共契约、架构和 revision 证据；代码语义问题仍由 Agent 审查，不伪装成静态扫描器",
     inputSchema: {
       type: "object",
       properties: {
@@ -19,7 +19,28 @@ export const codeAnalysisToolSchemas = [
         },
         project_root: {
           type: "string",
-          description: "项目根目录绝对路径。配合 file_path 解析相对路径",
+          description: "项目根目录绝对路径。未传 code/file_path 时，可从该 Git 仓库自动收集真实 diff",
+        },
+        plan_id: {
+          type: "string",
+          description: "可选托管 Plan ID。提供后读取 Plan 状态并比较 declaredScope、产物、测试、架构证据和 revision",
+        },
+        diff_mode: {
+          type: "string",
+          enum: ["auto", "working", "staged", "range"],
+          description: "Git diff 范围。auto 默认审查相对 HEAD 的 staged+unstaged 变更；working 仅未暂存；staged 仅已暂存；range 使用 base_ref/head_ref",
+        },
+        base_ref: {
+          type: "string",
+          description: "diff_mode=range 时的基线 Git ref",
+        },
+        head_ref: {
+          type: "string",
+          description: "diff_mode=range 时的目标 Git ref",
+        },
+        max_diff_chars: {
+          type: "number",
+          description: "最大 diff 字符数，1000-500000，默认 120000。超出时明确标记 truncated",
         },
         focus: {
           type: "string",

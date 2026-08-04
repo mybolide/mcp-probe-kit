@@ -11,7 +11,7 @@ This file tracks implementation status separately from the frozen requirements d
 | Phase 2 — `architecture` / ARC-8 | Complete | Add the single architecture domain tool and its shared methodology core |
 | Phase 3 — Plan lifecycle | Complete | Extend Plan, Heartbeat, Resume and Converge compatibly |
 | Phase 4 — Orchestrator closure | Complete | Feature, Bugfix, UI, Onboard, Product and bounded Ralph delivery loops are closed |
-| Phase 5 — Diff and verification consistency | Pending | Compare declared scope, real diff, contracts, tests and architecture drift |
+| Phase 5 — Diff and verification consistency | Complete | Compare declared scope, real diff, contracts, tests and architecture drift |
 | Phase 6 — Memory quality | Pending | Improve conflict, supersede, expiry, negative evidence and retrieval quality |
 
 ## Phase 0 evidence
@@ -289,3 +289,34 @@ docs verification: 1080 checks passed
 ```
 
 Phase 4 is complete. All six complete-delivery orchestrators now use explicit delivery boundaries, resumable state and task-appropriate convergence semantics. Phase 5 can begin with declared-scope versus real-diff verification and architecture-drift consistency.
+
+## Phase 5 evidence
+
+Implemented:
+
+- `code_review` can now collect a bounded real Git diff directly from `project_root` when no inline code or `file_path` is provided;
+- supported diff scopes are `auto`, `working`, `staged` and explicit `range` with validated `base_ref` / `head_ref`;
+- Git commands use argument arrays without shell interpolation, record current revision, branch, changed files, numstat, rename/copy status, untracked file names and truncation state;
+- untracked contents are never silently treated as reviewed, and internal `.mcp-probe-kit/plans/` checkpoint files are excluded from business diff evidence;
+- `plan_id` loads the persisted Plan state and exposes declared scope, expected artifacts, evidence, candidates, acceptance results, runtime evidence and last verified revision;
+- deterministic consistency checks compare real changed files with explicit Plan paths, verify expected artifacts, detect missing test evidence, flag potential public-contract/Schema/migration/protocol changes, require architecture validate/drift evidence when applicable and detect stale revision evidence;
+- deterministic consistency findings are separated from Agent-owned semantic code issues. MCP does not claim static scanning or automatically invent quality/security findings;
+- inline `code` and `file_path` review remain compatible; the new Git/Plan inputs are optional and do not require every direct review to have a managed Plan;
+- public Schema and Catalog now describe the real diff and Plan consistency inputs without changing tool names, visibility or tool counts;
+- production modules remain bounded: `code_review.ts` 325 lines, `git-diff-evidence.ts` 281 lines, `code-review-evidence.ts` 199 lines and `review-consistency.ts` 286 lines.
+
+Validation completed:
+
+```text
+Phase 5 focused evidence suite: 12 / 12 passed across 3 test files
+full regression suite: 513 / 513 passed across 104 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+release static checks: 37 / 37 passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+ARC-8 drift: passed; ARC-1 through ARC-8 completed, 0 gaps, 0 drift findings
+```
+
+Phase 5 is complete. Phase 6 can now focus on Memory conflict detection, supersede/expiry lifecycle, negative evidence quality, deduplication and retrieval ranking without changing the orchestration or Plan contracts.

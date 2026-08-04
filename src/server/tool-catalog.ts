@@ -263,7 +263,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["core", "workflow"],
     groupId: "code-analysis",
     groupTitle: CODE_ANALYSIS,
-    whenToCall: "用户要**审查**指定文件或 diff（含安全项）",
+    whenToCall: "用户要审查指定代码、真实 Git diff，或核验 Plan 声明范围、测试、公共契约、架构漂移与当前 revision 是否一致",
   }),
   tool({
     name: "refactor",

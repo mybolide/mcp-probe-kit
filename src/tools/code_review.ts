@@ -1,4 +1,4 @@
-import { parseArgs, getString } from "../utils/parseArgs.js";
+import { parseArgs, getNumber, getString } from "../utils/parseArgs.js";
 import { okStructured } from "../lib/response.js";
 import type { GuidanceResult } from "../schemas/output/guidance-tools.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
@@ -6,6 +6,11 @@ import { handleToolError } from "../utils/error-handler.js";
 import { renderCodeLimits, renderBannedPatterns, CODE_LIMITS } from "../lib/quality-constraints.js";
 import { resolveReviewCode, trimReviewCodeForPrompt } from "../lib/code-review-input.js";
 import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
+import {
+  collectCodeReviewEvidence,
+  normalizeGitDiffMode,
+  renderConsistencyEvidence,
+} from "../lib/code-review-evidence.js";
 
 export async function codeReview(args: any) {
   try {
@@ -14,6 +19,11 @@ export async function codeReview(args: any) {
       focus?: string;
       file_path?: string;
       project_root?: string;
+      plan_id?: string;
+      diff_mode?: string;
+      base_ref?: string;
+      head_ref?: string;
+      max_diff_chars?: number;
       input?: string;
     }>(args, {
       defaultValues: {
@@ -21,6 +31,11 @@ export async function codeReview(args: any) {
         focus: "all",
         file_path: "",
         project_root: "",
+        plan_id: "",
+        diff_mode: "auto",
+        base_ref: "",
+        head_ref: "",
+        max_diff_chars: 120000,
       },
       primaryField: "code",
       fieldAliases: {
@@ -28,18 +43,39 @@ export async function codeReview(args: any) {
         focus: ["type", "category", "类型", "重点"],
         file_path: ["filePath", "filepath", "path", "文件路径"],
         project_root: ["projectRoot", "project_path", "dir", "directory", "项目路径"],
+        plan_id: ["planId", "plan", "计划ID", "计划"],
+        diff_mode: ["diffMode", "变更模式"],
+        base_ref: ["baseRef", "base", "基线"],
+        head_ref: ["headRef", "head", "目标版本"],
+        max_diff_chars: ["maxDiffChars", "最大Diff字符"],
       },
     });
 
     const focus = getString(parsedArgs.focus) || "all";
     const inlineCode = getString(parsedArgs.code) || getString(parsedArgs.input);
     const filePath = getString(parsedArgs.file_path);
-    const projectRoot = getString(parsedArgs.project_root);
+    const projectRootInput = getString(parsedArgs.project_root);
+    const planId = getString(parsedArgs.plan_id);
+    const diffModeText = getString(parsedArgs.diff_mode) || "auto";
+    const baseRef = getString(parsedArgs.base_ref);
+    const headRef = getString(parsedArgs.head_ref);
+    const maxDiffChars = getNumber(parsedArgs.max_diff_chars, 120000);
+    const diffMode = normalizeGitDiffMode(diffModeText);
+    const needsProjectEvidence = Boolean(
+      projectRootInput
+      || planId
+      || getString(parsedArgs.base_ref)
+      || getString(parsedArgs.head_ref)
+      || diffModeText !== "auto"
+    );
+    const projectRoot = needsProjectEvidence
+      ? resolveWorkspaceRoot(projectRootInput || "")
+      : undefined;
 
     const resolved = resolveReviewCode({
       code: inlineCode,
       filePath: filePath || undefined,
-      projectRoot: projectRoot ? resolveWorkspaceRoot(projectRoot) : undefined,
+      projectRoot,
     });
 
     if (resolved.error) {
@@ -70,30 +106,55 @@ export async function codeReview(args: any) {
       });
     }
 
-    const hasCode = Boolean(resolved.code.trim());
-    const promptCode = hasCode ? trimReviewCodeForPrompt(resolved.code) : "";
+    const collectDiff = Boolean(
+      projectRoot
+      && (planId || !resolved.code.trim() || baseRef || headRef || diffModeText !== "auto")
+    );
+    const evidenceBundle = await collectCodeReviewEvidence({
+      projectRoot,
+      planId: planId || undefined,
+      collectDiff,
+      diffMode,
+      baseRef: baseRef || undefined,
+      headRef: headRef || undefined,
+      maxDiffChars,
+    });
+    const gitDiffCode = evidenceBundle.diffEvidence?.available
+      ? evidenceBundle.diffEvidence.diff
+      : "";
+    const reviewCode = resolved.code.trim() || gitDiffCode;
+    const reviewSource = resolved.code.trim()
+      ? resolved.file ? "file" : "inline"
+      : gitDiffCode ? "git-diff" : "none";
+    const hasCode = Boolean(reviewCode.trim());
+    const promptCode = hasCode ? trimReviewCodeForPrompt(reviewCode) : "";
+    const consistencySection = renderConsistencyEvidence(evidenceBundle);
 
     const header = renderGuidanceHeader({
       tool: "code_review",
       goal: "由 Agent 根据下方代码与审查清单完成审查，并输出结构化问题清单。",
       tasks: [
-        "先阅读本次注入的 reviewInput.code（或 file_path 对应文件）",
+        "先阅读本次注入的 reviewInput.code、真实 Git diff 和 Plan 证据（存在时）",
+        "先处理 deterministic consistency findings，再进行代码语义审查",
         "按审查清单逐项检查，不要只复述清单",
         "在回复中输出 issues JSON（severity/category/message/suggestion）",
       ],
       outputs: ["审查报告（问题清单、优点、建议）— 由 Agent 生成，非 MCP 静态扫描"],
       notes: [
         "本工具为指南型（guidance-only），不在服务端做静态规则扫描",
-        hasCode ? `已注入待审代码（${resolved.code.split("\n").length} 行）` : "未收到 code/file_path，请先提供待审内容",
+        hasCode ? `已注入待审内容（来源=${reviewSource}，${reviewCode.split("\n").length} 行）` : "未收到 code/file_path，也未取得可审查 Git diff",
+        planId ? `Plan 对照：${planId}` : "未指定 Plan，仅执行代码/Diff 审查",
       ],
     });
 
     const message = `${header}请对以下代码进行全面审查：
 
-📝 **待审代码**${resolved.file ? `（来源: ${resolved.file}）` : ""}：
+📝 **待审内容**${resolved.file ? `（来源: ${resolved.file}）` : reviewSource === "git-diff" ? "（来源: 真实 Git diff）" : ""}：
 ${hasCode ? `\`\`\`\n${promptCode}\n\`\`\`` : "_未提供 code / file_path，请 Agent 先读取目标文件或让用户补充后再审查_"}
 
 🎯 **审查重点**：${focus}
+
+${consistencySection}
 
 ---
 
@@ -144,7 +205,16 @@ ${renderCodeLimits()}
 
 ${renderBannedPatterns()}
 
-### 5️⃣ 最佳实践检查
+### 5️⃣ 交付一致性检查
+
+- [ ] 真实 changed files 是否落在 Plan declaredScope 内
+- [ ] Plan 声明产物是否真实存在，路径是否一致
+- [ ] 公共接口、Schema、迁移、协议和发布配置变化是否有兼容、迁移和回滚说明
+- [ ] 实现变化是否有真实测试命令、退出码和回归证据
+- [ ] Plan 的 lastVerifiedRevision 是否仍对应当前 HEAD
+- [ ] 使用 ArchitectureCandidate 或触及公共契约时是否完成 architecture validate/drift
+
+### 6️⃣ 最佳实践检查
 
 **TypeScript/JavaScript**：
 - [ ] 类型定义完整（避免 any）
@@ -162,7 +232,7 @@ ${renderBannedPatterns()}
   "issues": [
     {
       "severity": "critical|high|medium|low",
-      "category": "quality|security|performance|style",
+      "category": "quality|security|performance|style|scope|contract|test|architecture",
       "file": "文件路径（如有）",
       "line": 10,
       "code": "问题代码片段",
@@ -176,29 +246,41 @@ ${renderBannedPatterns()}
 
 ## ⚠️ 边界
 
-- MCP 仅返回指南 + 注入的待审代码，**issues 由 Agent 审查后生成**
-- 不要声称「工具已扫描完成」；应基于上方代码与清单给出真实发现
+- MCP 会确定性收集 Git/Plan 证据并生成 consistency findings；这不等于静态代码扫描
+- 代码语义 issues 仍由 Agent 基于真实代码/Diff 审查后生成
+- 不要声称「工具已扫描完成」；应区分确定性一致性发现与 Agent 代码判断
 
 现在请开始审查并输出问题清单。`;
 
-    const structured: GuidanceResult & { reviewInput: Record<string, unknown> } = {
+    const structured: GuidanceResult & {
+      reviewInput: Record<string, unknown>;
+      diffEvidence?: Record<string, unknown>;
+      planContext?: Record<string, unknown>;
+      consistency?: Record<string, unknown>;
+      evidenceWarnings?: string[];
+    } = {
       mode: "guidance",
       summary: `代码审查指南：${focus}`,
       input: {
         focus,
         file: resolved.file ?? null,
-        lineCount: hasCode ? resolved.code.split("\n").length : 0,
+        source: reviewSource,
+        planId: planId || null,
+        diffMode: collectDiff ? diffMode : null,
+        lineCount: hasCode ? reviewCode.split("\n").length : 0,
       },
       reviewInput: {
         received: hasCode,
         focus,
+        source: reviewSource,
         file: resolved.file ?? null,
-        lineCount: hasCode ? resolved.code.split("\n").length : 0,
-        code: hasCode ? resolved.code : null,
-        truncatedInPrompt: hasCode && resolved.code.length !== promptCode.length,
+        lineCount: hasCode ? reviewCode.split("\n").length : 0,
+        code: hasCode ? reviewCode : null,
+        truncatedInPrompt: hasCode && reviewCode.length !== promptCode.length,
       },
       instructions: [
-        "完整阅读 reviewInput.code 或 file_path 对应文件，不要只机械勾选清单",
+        "完整阅读 reviewInput.code、diffEvidence 和 planContext，不要只机械勾选清单",
+        "逐项核验 consistency.findings；可反驳，但必须提供当前仓库证据",
         "检查代码质量、SOLID、常见安全漏洞、性能风险和项目规范",
         "每个问题必须有代码证据、严重级别、类别、位置和可执行修复建议",
         "同时记录做得好的地方；没有证据的问题不要报告",
@@ -208,7 +290,7 @@ ${renderBannedPatterns()}
         overallScore: "number 0-100",
         issues: [{
           severity: "critical|high|medium|low",
-          category: "quality|security|performance|style",
+          category: "quality|security|performance|style|scope|contract|test|architecture",
           file: "string|null",
           line: "number|null",
           code: "string|null",
@@ -218,15 +300,23 @@ ${renderBannedPatterns()}
         strengths: ["string"],
       },
       boundaries: [
-        "该工具提供审查清单和代码输入，不声称已运行静态扫描器",
+        "该工具确定性收集 Git/Plan 证据并比较范围、产物、测试、契约、架构和 revision，但不声称已运行静态代码扫描器",
         "最终 issues 必须由 Agent 基于实际代码分析生成",
       ],
       nextSteps: ["Agent 按 instructions 审查代码并输出符合 outputContract 的报告"],
+      ...(evidenceBundle.diffEvidence
+        ? { diffEvidence: evidenceBundle.diffEvidence as unknown as Record<string, unknown> }
+        : {}),
+      ...(evidenceBundle.planContext ? { planContext: evidenceBundle.planContext } : {}),
+      ...(evidenceBundle.consistency
+        ? { consistency: evidenceBundle.consistency as unknown as Record<string, unknown> }
+        : {}),
+      ...(evidenceBundle.warnings.length > 0 ? { evidenceWarnings: evidenceBundle.warnings } : {}),
     };
 
     return okStructured(message, structured, {
       schema: (await import("../schemas/output/guidance-tools.js")).GuidanceResultSchema,
-      note: "指导型工具：structuredContent 包含完整审查清单、边界和输出契约，由 Agent 基于实际代码生成 issues",
+      note: "证据增强的指导型工具：MCP 收集真实 Git/Plan 一致性证据；代码语义 issues 仍由 Agent 基于实际代码生成",
     });
   } catch (error) {
     return handleToolError(error, "code_review");
