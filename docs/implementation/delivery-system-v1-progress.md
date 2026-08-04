@@ -8,7 +8,7 @@ This file tracks implementation status separately from the frozen requirements d
 |---|---|---|
 | Phase 0 — Compatibility baseline | Complete | Freeze exact tool names, counts, visibility, App-only behavior and protocol surface |
 | Phase 1 — Responsibility alignment | Complete | Align Skill, Catalog, workflow guidance and tests without changing public schemas |
-| Phase 2 — `architecture` / ARC-8 | In progress | Add the single architecture domain tool and its shared methodology core |
+| Phase 2 — `architecture` / ARC-8 | Complete | Add the single architecture domain tool and its shared methodology core |
 | Phase 3 — Plan lifecycle | Pending | Extend Plan, Heartbeat, Resume and Converge compatibly |
 | Phase 4 — Orchestrator closure | Pending | Complete feature, bugfix, UI, onboard, product and Ralph delivery loops |
 | Phase 5 — Diff and verification consistency | Pending | Compare declared scope, real diff, contracts, tests and architecture drift |
@@ -85,20 +85,45 @@ docs verification: 1067 checks passed
 
 Phase 1 changed responsibility guidance and generated Skill content only. It did not add, remove or rename tools, alter public input/output schemas, or change App-only visibility.
 
-## Phase 2 progress
+## Phase 2 evidence
 
-Shared ARC-8 foundation completed before public exposure:
+Implemented:
 
-- `src/lib/architecture-method.ts` owns ARC-1 through ARC-8, mode mapping, gates, normalization, candidates and bounded drift checks;
-- `src/schemas/architecture-tools.ts` defines the future public input contract;
-- `src/schemas/output/architecture-tools.ts` defines one compatible output model across assess/design/validate/drift;
-- focused method tests cover assess, blocked design, migration/rollback gates, valid design, missing drift evidence and explicit drift findings.
+- `architecture` is a model-visible direct domain capability with `assess`, `design`, `validate` and `drift` modes;
+- ARC-8 remains the single method source of truth and is split into focused production modules:
+  - `src/lib/architecture-types.ts` — contracts, step definitions and trade-off dimensions;
+  - `src/lib/architecture-normalization.ts` — input and baseline normalization;
+  - `src/lib/architecture-validation.ts` — gates, step state and bounded drift checks;
+  - `src/lib/architecture-method.ts` — result composition, ADR and Memory candidates;
+- every new production module remains below 500 lines; the largest architecture module is 360 lines;
+- `src/tools/architecture.ts` performs optional `code_insight` and Memory evidence collection, then returns a structured ARC-8 worksheet without claiming implementation work is complete;
+- `save_to_docs=true` returns a delegated document plan rather than directly rewriting project architecture documents;
+- Catalog, Registry, output Schema, Skill, CLI, workflow routing, tool visibility and generated docs all use the same public tool contract;
+- `workflow` can suggest `architecture` only for explicit architecture work; ordinary code understanding still routes to `code_insight`;
+- App-only behavior is unchanged: `list_memory_assets` remains outside the model registry.
 
-Current validation:
+Updated production surface:
 
 ```text
-ARC-8 method tests: 7 / 7 passed
-TypeScript compiler: passed with npx tsc --noEmit
+Compact: 24
+Compact + Memory: 30
+Full: 34
+Apps model-visible: 30
+App-only: 1
+Unique callable names: 35
 ```
 
-The public `architecture` tool is not exposed yet. Catalog, Registry, Visibility and the frozen tool-surface baseline remain unchanged until the tool handler and integration tests are ready.
+Validation completed:
+
+```text
+ARC-8 method and tool tests: 11 / 11 passed
+full regression suite: 477 / 477 passed across 100 test files
+TypeScript compiler and production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+workflow Skill verification: 34 tools synchronized
+docs verification: 1080 checks passed
+git diff --check: passed
+```
+
+Phase 2 adds exactly one model-visible tool and does not add a central intent engine, policy kernel, risk classifier, mandatory architecture gate or new MCP App UI.

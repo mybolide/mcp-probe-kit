@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 Tool Catalog - 23/29/33 Surfaces and One-line Calls",
-    "description": "Complete MCP Probe Kit v4 tool catalog: 23 model tools by default, 29 with Memory, a 33-tool full compatibility surface, plus one App-only action. Every tool includes a copyable one-line call.",
+    "title": "MCP Probe Kit v4 Tool Catalog - 24/30/34 Surfaces and One-line Calls",
+    "description": "Complete MCP Probe Kit v4 tool catalog: 24 model tools by default, 30 with Memory, a 34-tool full compatibility surface, plus one App-only action. Every tool includes a copyable one-line call.",
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "23 model-visible tools by default, 29 with Memory, a 33-tool full compatibility surface, plus one App-only action"
+    "subtitle": "24 model-visible tools by default, 30 with Memory, a 34-tool full compatibility surface, plus one App-only action"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -43,6 +43,7 @@
     "ui_search": "Search UI",
     "sync_ui_data": "Sync UI Data",
     "code_insight": "Code Insight",
+    "architecture": "Architecture ARC-8",
     "search_memory": "Search Memory",
     "read_memory_asset": "Read Memory",
     "memorize_asset": "Store Memory",
@@ -62,7 +63,7 @@
     },
     "analysis": {
       "title": "Code Analysis",
-      "count": "4 tools"
+      "count": "5 tools"
     },
     "git": {
       "title": "Git Tools",
@@ -212,6 +213,11 @@
       "description": "Code graph insight tool, bridging GitNexus to analyze call chains, context, and impact (auto-degrades when unavailable)",
       "usage": "Refresh the GitNexus index, perform task-level call-chain/context/impact analysis, and persist results to docs/graph-insights plus the project-context index",
       "prompt": "Use code_insight to analyze: <entry point, call chain, or impact question>"
+    },
+    "architecture": {
+      "description": "Independent ARC-8 architecture capability for assessing, designing, validating, and checking drift across boundaries, dependencies, data ownership, public contracts, migration, and rollback",
+      "usage": "Call assess/design/validate/drift directly; establish current facts and protected invariants before comparing alternatives, designing the transition, and checking the real implementation",
+      "prompt": "Use architecture with ARC-8 for: <architecture goal, scope, constraints, and current problem>"
     },
     "search_memory": {
       "description": "Semantic search across the shared memory pool, with optional type/tags preference",

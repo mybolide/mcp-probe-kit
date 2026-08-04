@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 ツール一覧 - 23/29/33面と1文呼び出し",
-    "description": "MCP Probe Kit v4 の完全なツール一覧。既定23、Memory構成時29、full互換33、App-only操作1件。各ツールにコピー可能な1文呼び出しを掲載。",
+    "title": "MCP Probe Kit v4 ツール一覧 - 24/30/34面と1文呼び出し",
+    "description": "MCP Probe Kit v4 の完全なツール一覧。既定24、Memory構成時30、full互換34、App-only操作1件。各ツールにコピー可能な1文呼び出しを掲載。",
     "keywords": "AI開発ツール, コード生成ツール, コードレビューツール, Git自動化, UI生成, コードリファクタリング, パフォーマンス最適化, セキュリティスキャン"
   },
   "page": {
-    "subtitle": "既定23モデルツール、Memory構成時29、full互換33、さらにApp-only操作1件"
+    "subtitle": "既定24モデルツール、Memory構成時30、full互換34、さらにApp-only操作1件"
   },
   "search": {
     "placeholder": "🔍 ツール名または説明を検索...",
@@ -43,6 +43,7 @@
     "ui_search": "UI検索",
     "sync_ui_data": "データ同期",
     "code_insight": "コード洞察",
+    "architecture": "アーキテクチャ ARC-8",
     "search_memory": "メモリ検索",
     "read_memory_asset": "メモリ読取",
     "memorize_asset": "メモリ保存",
@@ -62,7 +63,7 @@
     },
     "analysis": {
       "title": "コード分析",
-      "count": "4個"
+      "count": "5個"
     },
     "git": {
       "title": "Gitツール",
@@ -212,6 +213,11 @@
       "description": "コードグラフ洞察ツール。GitNexus をブリッジして呼び出し連鎖、コンテキスト、影響範囲を分析（利用不可時は自動で劣化）",
       "usage": "GitNexus インデックスを更新し、タスク単位の呼び出し連鎖・コンテキスト・影響範囲を分析して docs/graph-insights と project-context 索引へ保存します",
       "prompt": "code_insight を使って分析してください：<入口、呼び出しチェーン、影響範囲>"
+    },
+    "architecture": {
+      "description": "ARC-8 に基づく独立アーキテクチャ能力。境界、依存方向、データ所有権、公開契約、移行、ロールバック、実装ドリフトを評価・設計・検証します",
+      "usage": "assess/design/validate/drift を直接呼び出し、現状事実と保護すべき不変条件を確立してから候補比較、移行設計、実装照合を行います",
+      "prompt": "architecture と ARC-8 を使ってください：<目標、範囲、制約、現在の問題>"
     },
     "search_memory": {
       "description": "共有メモリプールを意味検索、type/tags の優先順位指定に対応",

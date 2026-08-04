@@ -27,11 +27,11 @@ describe('toolset-manager', () => {
     vi.unstubAllEnvs();
   });
 
-  it('compact exposes 23 model tools and conditionally six memory tools', () => {
-    expect(resolveToolsetNames('compact', { memoryEnabled: false })).toHaveLength(23);
-    expect(resolveToolsetNames('compact', { memoryEnabled: true })).toHaveLength(29);
+  it('compact exposes 24 model tools and conditionally six memory tools', () => {
+    expect(resolveToolsetNames('compact', { memoryEnabled: false })).toHaveLength(24);
+    expect(resolveToolsetNames('compact', { memoryEnabled: true })).toHaveLength(30);
     expect(resolveToolsetNames('compact', { memoryEnabled: false })).toEqual(
-      expect.arrayContaining(['start_product', 'gencommit', 'converge']),
+      expect.arrayContaining(['start_product', 'gencommit', 'converge', 'architecture']),
     );
     expect(resolveToolsetNames('compact', { memoryEnabled: false })).not.toEqual(
       expect.arrayContaining(['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user']),

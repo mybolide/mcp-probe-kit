@@ -1,11 +1,11 @@
 {
   "version": "4.0.0-rc.8",
   "protocol": "2025-11-25",
-  "totalTools": 33,
+  "totalTools": 34,
   "toolsets": {
     "compact": {
-      "description": "23 default model tools",
-      "count": 23,
+      "description": "24 default model tools",
+      "count": 24,
       "tools": [
         "start_feature",
         "start_bugfix",
@@ -19,6 +19,7 @@
         "check_spec",
         "estimate",
         "code_insight",
+        "architecture",
         "gentest",
         "code_review",
         "refactor",
@@ -34,8 +35,8 @@
       "note": "Default model-visible surface"
     },
     "compactWithMemory": {
-      "description": "29 model tools when Memory is configured",
-      "count": 29,
+      "description": "30 model tools when Memory is configured",
+      "count": 30,
       "tools": [
         "start_feature",
         "start_bugfix",
@@ -49,6 +50,7 @@
         "check_spec",
         "estimate",
         "code_insight",
+        "architecture",
         "gentest",
         "code_review",
         "refactor",
@@ -88,8 +90,8 @@
       ]
     },
     "core": {
-      "description": "12 core tools (daily high-frequency)",
-      "count": 12,
+      "description": "13 core tools (daily high-frequency)",
+      "count": 13,
       "tools": [
         "init_project",
         "gencommit",
@@ -102,7 +104,8 @@
         "init_project_context",
         "add_feature",
         "estimate",
-        "check_spec"
+        "check_spec",
+        "architecture"
       ]
     },
     "memory": {
@@ -128,8 +131,8 @@
       ]
     },
     "workflow": {
-      "description": "32 workflow tools (includes core + orchestration + interactive + UI + memory)",
-      "count": 32,
+      "description": "33 workflow tools (includes core + orchestration + interactive + UI + memory)",
+      "count": 33,
       "tools": [
         "init_project",
         "gencommit",
@@ -162,12 +165,13 @@
         "scan_and_extract_patterns",
         "plan_heartbeat",
         "resume_plan",
-        "converge"
+        "converge",
+        "architecture"
       ]
     },
     "full": {
-      "description": "All 33 tools",
-      "count": 33,
+      "description": "All 34 tools",
+      "count": 34,
       "note": "Compatibility/debugging surface selected with MCP_TOOLSET=full"
     }
   },
@@ -200,13 +204,14 @@
       ]
     },
     "code-analysis": {
-      "description": "Code analysis tools (5)",
+      "description": "Code analysis tools (6)",
       "tools": [
         "code_review",
         "code_insight",
         "refactor",
         "fix_bug",
-        "gentest"
+        "gentest",
+        "architecture"
       ]
     },
     "git": {
@@ -236,7 +241,7 @@
       ]
     },
     "plan-control": {
-      "description": "计划状态、恢复与收敛 (3)",
+      "description": "长任务状态、恢复与正式收敛（按需） (3)",
       "tools": [
         "plan_heartbeat",
         "resume_plan",

@@ -38,11 +38,11 @@ describe("Tool Registry", () => {
   });
 
   test("工具集过滤保持既有数量与成员关系", () => {
-    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: false })).toHaveLength(23);
-    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: true })).toHaveLength(29);
-    expect(listToolDefinitionsForToolset("core")).toHaveLength(12);
+    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: false })).toHaveLength(24);
+    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: true })).toHaveLength(30);
+    expect(listToolDefinitionsForToolset("core")).toHaveLength(13);
     expect(listToolDefinitionsForToolset("ui")).toHaveLength(4);
-    expect(listToolDefinitionsForToolset("workflow")).toHaveLength(32);
+    expect(listToolDefinitionsForToolset("workflow")).toHaveLength(33);
     expect(listToolDefinitionsForToolset("full")).toHaveLength(allToolSchemas.length);
     expect(getToolDefinition("git_work_report")?.toolsets).toEqual([]);
     expect(getToolDefinition("plan_heartbeat")?.annotations?.readOnlyHint).toBe(false);
@@ -76,7 +76,7 @@ describe("Tool Registry", () => {
       memoryEnabled: false,
     }).map((definition) => definition.name);
     expect(compactNames).toEqual(
-      expect.arrayContaining(["start_product", "gencommit", "converge"])
+      expect.arrayContaining(["start_product", "gencommit", "converge", "architecture"])
     );
     expect(compactNames).not.toEqual(
       expect.arrayContaining(["add_feature", "fix_bug", "sync_ui_data", "ask_user"])

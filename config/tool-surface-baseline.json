@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "baselineId": "v4.0.0-rc.8-pre-architecture",
-  "description": "Phase 0 compatibility baseline before adding the architecture tool.",
+  "baselineId": "v4.0.0-rc.8-architecture",
+  "description": "Compatibility baseline after exposing the single ARC-8 architecture tool.",
   "groups": {
     "compactModel": [
       "start_feature",
@@ -16,6 +16,7 @@
       "check_spec",
       "estimate",
       "code_insight",
+      "architecture",
       "gentest",
       "code_review",
       "refactor",
@@ -47,12 +48,12 @@
     ]
   },
   "expectedCounts": {
-    "compact": 23,
-    "compactWithMemory": 29,
-    "full": 33,
-    "appsModelVisible": 29,
+    "compact": 24,
+    "compactWithMemory": 30,
+    "full": 34,
+    "appsModelVisible": 30,
     "appOnly": 1,
-    "uniqueCallable": 34
+    "uniqueCallable": 35
   },
   "invariants": {
     "appOnlyHiddenFromModel": true,

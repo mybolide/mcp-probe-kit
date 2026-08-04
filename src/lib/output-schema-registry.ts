@@ -35,6 +35,7 @@ import {
   PatternExtractionSchema,
 } from '../schemas/output/memory-tools.js';
 import { CodeInsightSchema } from '../schemas/output/code-insight-tools.js';
+import { ArchitectureResultSchema } from '../schemas/output/architecture-tools.js';
 import {
   ConvergeResultSchema,
   PlanHeartbeatResultSchema,
@@ -83,6 +84,7 @@ const OUTPUT_SCHEMA_BY_TOOL: Record<string, JsonSchema> = {
   gencommit: CommitGuidanceSchema as JsonSchema,
   git_work_report: GuidanceResultSchema as JsonSchema,
   code_insight: CodeInsightSchema as JsonSchema,
+  architecture: ArchitectureResultSchema as JsonSchema,
   code_review: GuidanceResultSchema as JsonSchema,
   fix_bug: BugAnalysisSchema as JsonSchema,
   gentest: GuidanceResultSchema as JsonSchema,

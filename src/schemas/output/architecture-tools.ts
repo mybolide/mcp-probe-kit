@@ -58,6 +58,16 @@ export const ArchitectureResultSchema = {
     adrCandidate: { type: 'object' },
     memoryCandidate: { type: 'object' },
     warnings: { type: 'array', items: { type: 'string' } },
+    metadata: {
+      type: 'object',
+      properties: {
+        projectRoot: { type: 'string' },
+        evidenceCollection: { type: 'boolean' },
+        graphStatus: { type: 'string' },
+        memoryContext: { type: 'object' },
+        documentPlan: { type: ['object', 'null'] },
+      },
+    },
   },
   required: [
     'mode',

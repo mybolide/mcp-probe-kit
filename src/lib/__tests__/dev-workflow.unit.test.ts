@@ -7,6 +7,25 @@ describe('dev-workflow', () => {
     expect(result.scenario).toBe('bugfix');
   });
 
+  test('明确架构设计任务路由到 architecture，而普通读懂架构仍是 explore', () => {
+    const architecture = detectWorkflowScenario('评估当前模块边界和数据所有权，并设计可回滚的目标架构');
+    expect(architecture).toEqual({ scenario: 'architecture', confidence: 'high' });
+
+    const plan = buildDevWorkflow('评估当前模块边界和数据所有权，并设计可回滚的目标架构');
+    expect(plan.firstTool).toBe('architecture');
+    expect(plan.firstToolArgsHint).toMatchObject({ mode: 'design' });
+
+    const explore = detectWorkflowScenario('帮我读懂当前架构和调用链');
+    expect(explore.scenario).toBe('explore');
+  });
+
+  test('显式 architecture scenario 直接返回 ARC-8 工具', () => {
+    const plan = buildDevWorkflow('核验实现是否偏离目标架构', { scenario: 'architecture' });
+    expect(plan.scenario).toBe('architecture');
+    expect(plan.firstTool).toBe('architecture');
+    expect(plan.firstToolArgsHint).toMatchObject({ mode: 'drift' });
+  });
+
   test('项目接入和建立上下文路由到 onboard', () => {
     const intent = '将当前项目接入 MCP Probe Kit 并建立项目上下文。';
     const result = detectWorkflowScenario(intent);

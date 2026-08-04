@@ -74,6 +74,10 @@ export const architectureToolSchemas = [
           type: 'boolean',
           description: '是否返回架构文档 delegated 落盘计划；工具本身不直接重写项目文档',
         },
+        collect_evidence: {
+          type: 'boolean',
+          description: '是否自动调用 code_insight 并召回 Memory 证据，默认 true；测试或已提供完整证据时可设 false',
+        },
       },
       required: ['description'],
       additionalProperties: true,

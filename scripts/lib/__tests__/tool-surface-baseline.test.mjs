@@ -11,12 +11,12 @@ test('frozen baseline derives the expected Phase 0 surfaces', async () => {
   const baseline = await loadToolSurfaceBaseline();
   const surfaces = deriveExpectedToolSurfaces(baseline);
 
-  assert.equal(surfaces.compact.length, 23);
-  assert.equal(surfaces.compactWithMemory.length, 29);
-  assert.equal(surfaces.full.length, 33);
-  assert.equal(surfaces.appsModelVisible.length, 29);
+  assert.equal(surfaces.compact.length, 24);
+  assert.equal(surfaces.compactWithMemory.length, 30);
+  assert.equal(surfaces.full.length, 34);
+  assert.equal(surfaces.appsModelVisible.length, 30);
   assert.deepEqual(surfaces.appOnly, ['list_memory_assets']);
-  assert.equal(new Set([...surfaces.full, ...surfaces.appOnly]).size, 34);
+  assert.equal(new Set([...surfaces.full, ...surfaces.appOnly]).size, 35);
 });
 
 test('baseline validation rejects duplicate or cross-group tool ownership', async () => {

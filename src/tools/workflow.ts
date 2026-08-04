@@ -15,6 +15,8 @@ const SUPPORTED_SCENARIO_INPUTS = new Set([
   'ui',
   'product',
   'prd',
+  'architecture',
+  'arch',
   'explore',
   'commit',
   'review',

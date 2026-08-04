@@ -62,7 +62,7 @@ function withMemory(phases: WorkflowPhase[], available: boolean): WorkflowPhase[
 
 function commonAvoid(): string[] {
   return [
-    '不要跳过 start_* 返回的 delegated plan 直接写实现代码',
+    '已经选择 start_* 完整交付流程后，不要跳过其 delegated plan 直接写实现代码',
     '不要在未读取项目上下文和图谱的情况下进行大范围修改',
     '不要把 delegated plan 当成已经完成的实现',
   ];
@@ -72,7 +72,7 @@ function commonMemoryNotes(available: boolean): string[] {
   return available
     ? [
         'start_* 会按配置注入历史记忆；仍可用 search_memory 补查',
-        '只有 converge 通过后才能用 memorize_asset 正式写入长期记忆',
+        '托管交付的 MemoryCandidate 只有 converge 通过后才能正式写入；独立记忆管理可直接调用 Memory 工具',
       ]
     : ['Memory 后端未完整配置，本计划不会引用任何 Memory 工具'];
 }
@@ -185,6 +185,54 @@ function buildPlan(
           },
         ], memoryAvailable),
         avoid: [...commonAvoid(), '不要跳过设计系统和交互状态约束'],
+        memoryNotes: commonMemoryNotes(memoryAvailable),
+      };
+
+    case 'architecture':
+      return {
+        ...base,
+        summary: '使用 architecture / ARC-8 完成架构事实重建、方案权衡、目标设计、验证或漂移核验',
+        firstTool: 'architecture',
+        firstToolArgsHint: {
+          mode: /漂移|偏离|drift/i.test(intent)
+            ? 'drift'
+            : /验证|校验|评审|审查|validate|review/i.test(intent)
+              ? 'validate'
+              : /设计|规划|迁移|拆分|收口|design/i.test(intent)
+                ? 'design'
+                : 'assess',
+          description: intent,
+        },
+        phases: withMemory([
+          contextPhase(),
+          {
+            id: 'architecture-evidence',
+            title: '重建架构事实',
+            when: '当前边界、依赖、数据所有权或公共契约证据不足',
+            steps: [{
+              tool: 'code_insight',
+              required: false,
+              when: '需要调用链、依赖和影响面证据',
+            }],
+          },
+          {
+            id: 'architecture-method',
+            title: '执行 ARC-8',
+            when: '架构目标和范围已经明确',
+            steps: [{
+              tool: 'architecture',
+              required: true,
+              when: '执行 assess、design、validate 或 drift',
+              note: 'architecture 可以直接调用，不要求先经过 start_*',
+            }],
+          },
+        ], memoryAvailable),
+        avoid: [
+          '不要在当前架构事实未建立时直接输出目标架构',
+          '不要只有一个方案却宣称完成了架构权衡',
+          '不要在涉及数据或契约变化时遗漏迁移与回滚',
+          '不要把 ARC-8 工作表当成代码已经实施',
+        ],
         memoryNotes: commonMemoryNotes(memoryAvailable),
       };
 

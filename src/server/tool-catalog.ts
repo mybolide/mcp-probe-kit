@@ -219,6 +219,19 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
       "读不懂代码、找入口、看**调用链 / 影响面**；大重构前；`mode=impact` 评估改动范围",
   }),
   tool({
+    name: "architecture",
+    title: "ARC-8 架构推理与变更",
+    readOnly: true,
+    idempotent: false,
+    openWorld: true,
+    autoTask: true,
+    toolsets: ["core", "workflow"],
+    groupId: "code-analysis",
+    groupTitle: CODE_ANALYSIS,
+    whenToCall:
+      "需要评估或设计模块边界、依赖方向、数据所有权、公共契约、迁移回滚或实施漂移时直接调用；支持 `assess|design|validate|drift`，完整功能、Bug 和重构流程只按需组合它",
+  }),
+  tool({
     name: "fix_bug",
     title: "SRC-8 Bug 根因分析",
     readOnly: true,

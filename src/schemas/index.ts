@@ -14,6 +14,7 @@ import { uiUxSchemas } from "./ui-ux-schemas.js";
 import { productDesignSchemas } from "./product-design-schemas.js";
 import { memoryToolSchemas } from "./memory-tools.js";
 import { planToolSchemas } from "./plan-tools.js";
+import { architectureToolSchemas } from "./architecture-tools.js";
 
 // 合并所有工具 schemas；Tool Catalog/Registry 会在模块加载和测试中校验一一覆盖。
 export const allToolSchemas = [
@@ -29,4 +30,5 @@ export const allToolSchemas = [
   ...productDesignSchemas,
   ...memoryToolSchemas,
   ...planToolSchemas,
+  ...architectureToolSchemas,
 ];

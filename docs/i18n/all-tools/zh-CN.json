@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 工具目录 - 23/29/33 工具面与一句话调用",
-    "description": "MCP Probe Kit v4 完整工具目录：默认 23 个模型工具，Memory 配置后 29 个，full 兼容面 33 个，另有 1 个 App-only 动作。每个工具提供可复制的一句话调用方式。",
+    "title": "MCP Probe Kit v4 工具目录 - 24/30/34 工具面与一句话调用",
+    "description": "MCP Probe Kit v4 完整工具目录：默认 24 个模型工具，Memory 配置后 30 个，full 兼容面 34 个，另有 1 个 App-only 动作。每个工具提供可复制的一句话调用方式。",
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "默认 23 个模型工具，Memory 配置后 29 个，full 兼容面 33 个，另有 1 个 App-only 动作"
+    "subtitle": "默认 24 个模型工具，Memory 配置后 30 个，full 兼容面 34 个，另有 1 个 App-only 动作"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -43,6 +43,7 @@
     "ui_search": "搜索UI",
     "sync_ui_data": "同步 UI 数据",
     "code_insight": "图谱洞察",
+    "architecture": "架构 ARC-8",
     "search_memory": "搜索记忆",
     "read_memory_asset": "读取记忆",
     "memorize_asset": "沉淀记忆",
@@ -62,7 +63,7 @@
     },
     "analysis": {
       "title": "代码分析",
-      "count": "4 个"
+      "count": "5 个"
     },
     "git": {
       "title": "Git 工具",
@@ -212,6 +213,11 @@
       "description": "代码图谱洞察工具，桥接 GitNexus 分析调用链、上下文和影响面（不可用时自动降级）",
       "usage": "用于刷新 GitNexus 图谱、获取任务级调用链/上下文/影响面，并把结果保存到 docs/graph-insights 与 project-context 索引",
       "prompt": "请使用 code_insight 分析：<代码入口、调用链或影响范围问题>"
+    },
+    "architecture": {
+      "description": "基于 ARC-8 的独立架构能力，用于评估、设计、校验模块边界、依赖方向、数据所有权、公共契约、迁移回滚和实施漂移",
+      "usage": "可直接调用 assess/design/validate/drift；先建立当前事实和保护不变量，再比较方案、设计过渡路径并核验真实实现",
+      "prompt": "请使用 architecture 执行 ARC-8：<架构目标、范围、约束和当前问题>"
     },
     "search_memory": {
       "description": "按语义检索共享记忆库，支持 type/tags 优先排序",

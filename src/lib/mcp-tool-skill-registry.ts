@@ -28,6 +28,7 @@ export const MCP_INTENT_QUICK_LOOKUP: McpIntentQuickEntry[] = [
   { signal: "完整交付新功能、功能增强或跨模块能力", firstTool: "start_feature" },
   { signal: "完整修复 Bug，并完成回归、审查和收敛", firstTool: "start_bugfix" },
   { signal: "只做 Bug 根因分析或使用 SRC-8 方法", firstTool: "fix_bug" },
+  { signal: "架构评估、架构设计、数据所有权、迁移回滚或架构漂移", firstTool: "architecture" },
   { signal: "完整交付页面、组件或 UI 交互", firstTool: "start_ui" },
   { signal: "只查 UI 模式或生成设计系统", firstTool: "ui_search / ui_design_system" },
   { signal: "不熟代码、架构、调用链、影响面", firstTool: "code_insight" },
@@ -97,6 +98,10 @@ export const MCP_SKILL_COMMON_FLOWS = [
   {
     label: "只设计测试",
     chain: "gentest；测试候选生成后仍需由 Agent 真实落盘和执行",
+  },
+  {
+    label: "独立架构工作",
+    chain: "architecture assess → architecture design（按需）→ validate / drift；不要求先 start_*",
   },
   {
     label: "大重构",

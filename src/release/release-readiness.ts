@@ -144,11 +144,11 @@ export function verifyReleaseReadiness(
   ));
   checks.push(check(
     'tool-count',
-    toolManifest.totalTools === 33,
+    toolManifest.totalTools === 34,
     'error',
-    33,
+    34,
     toolManifest.totalTools,
-    'Tool Manifest 必须包含 33 个工具'
+    'Tool Manifest 必须包含 34 个模型可见工具'
   ));
   const compactTools = toolManifest.toolsets?.compact?.tools ?? [];
   const compactWithMemoryTools =
@@ -158,25 +158,25 @@ export function verifyReleaseReadiness(
   const appOnlyTools = toolManifest.toolsets?.appOnly?.tools ?? [];
   checks.push(check(
     'compact-tool-surface',
-    toolManifest.toolsets?.compact?.count === 23 &&
-      compactTools.length === 23 &&
-      ['start_product', 'gencommit', 'converge'].every((name) => compactTools.includes(name)) &&
+    toolManifest.toolsets?.compact?.count === 24 &&
+      compactTools.length === 24 &&
+      ['start_product', 'gencommit', 'converge', 'architecture'].every((name) => compactTools.includes(name)) &&
       ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'].every(
         (name) => !compactTools.includes(name)
       ),
     'error',
-    { count: 23, required: ['start_product', 'gencommit', 'converge'], hidden: ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'] },
+    { count: 24, required: ['start_product', 'gencommit', 'converge', 'architecture'], hidden: ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'] },
     { count: toolManifest.toolsets?.compact?.count, tools: compactTools },
-    '默认模型工具面必须固定为审核后的 23 个工具'
+    '默认模型工具面必须固定为审核后的 24 个工具'
   ));
   checks.push(check(
     'memory-conditional-surface',
-    toolManifest.toolsets?.compactWithMemory?.count === 29 &&
-      compactWithMemoryTools.length === 29 &&
+    toolManifest.toolsets?.compactWithMemory?.count === 30 &&
+      compactWithMemoryTools.length === 30 &&
       toolManifest.toolsets?.memoryConditional?.count === 6 &&
       memoryConditionalTools.length === 6,
     'error',
-    { compactWithMemory: 29, memoryConditional: 6 },
+    { compactWithMemory: 30, memoryConditional: 6 },
     {
       compactWithMemory: toolManifest.toolsets?.compactWithMemory?.count,
       memoryConditional: toolManifest.toolsets?.memoryConditional?.count,
@@ -195,11 +195,11 @@ export function verifyReleaseReadiness(
   ));
   checks.push(check(
     'full-compatibility-surface',
-    toolManifest.toolsets?.full?.count === 33,
+    toolManifest.toolsets?.full?.count === 34,
     'error',
-    33,
+    34,
     toolManifest.toolsets?.full?.count,
-    'MCP_TOOLSET=full 必须继续保留 33 工具兼容面'
+    'MCP_TOOLSET=full 必须保留 34 工具兼容面'
   ));
 
   checks.push(check(

@@ -24,7 +24,7 @@ describe("SDK v2 dual-era stdio", () => {
       expect(session.client.getProtocolEra()).toBe("modern");
       expect(session.client.getServerCapabilities()).not.toHaveProperty("tasks");
       const tools = await session.client.listTools();
-      expect(tools.tools).toHaveLength(isMemoryEnabled() ? 29 : 23);
+      expect(tools.tools).toHaveLength(isMemoryEnabled() ? 30 : 24);
       expect(tools.tools.map((tool) => tool.name)).toEqual(
         expect.arrayContaining(['plan_heartbeat', 'resume_plan', 'converge'])
       );

@@ -3,6 +3,7 @@ export type WorkflowScenario =
   | 'bugfix'
   | 'ui'
   | 'product'
+  | 'architecture'
   | 'explore'
   | 'commit'
   | 'review'
@@ -52,6 +53,10 @@ const SCENARIO_PATTERNS: Array<{ scenario: WorkflowScenario; patterns: RegExp[] 
     patterns: [/产品规划|产品目标|用户价值|目标用户|功能范围|非目标|产品需求|prd|roadmap|路线图|商业价值/i],
   },
   {
+    scenario: 'architecture',
+    patterns: [/架构设计|目标架构|架构评审|架构迁移|架构漂移|模块边界|数据所有权|依赖方向|公共契约|ADR|architecture design|architecture review/i],
+  },
+  {
     scenario: 'explore',
     patterns: [/架构|调用链|影响面|不熟|读懂|图谱|依赖|入口|code_insight|上下文/i],
   },
@@ -98,6 +103,9 @@ const UI_DELIVERY_PATTERN =
 const FEATURE_DELIVERY_PATTERN =
   /新功能|功能开发|需求开发|(?:新增|添加|增加|新建|实现|开发|扩展|升级|改造|建设|接入|引入|上线|提供|支持).{0,24}(?:功能|能力|接口|服务|模块|流程|机制|系统|架构|摘要|状态|特性)|(?:为|给).{0,24}(?:新增|添加|增加|新建|实现|开发|扩展|提供|支持)/i;
 
+const ARCHITECTURE_DELIVERY_PATTERN =
+  /(?:评估|设计|规划|审查|评审|验证|迁移|拆分|收口|核验).{0,24}(?:架构|模块边界|依赖方向|数据所有权|公共契约|系统拆分|架构漂移)|(?:架构|模块边界|依赖方向|数据所有权|公共契约|系统拆分|架构漂移).{0,24}(?:评估|设计|规划|审查|评审|验证|迁移|拆分|收口|核验)/i;
+
 const SPEC_SUBJECT_PATTERN =
   /规格|spec|requirements|验收标准|验收文档|验收条件/i;
 
@@ -123,6 +131,10 @@ function detectPrimaryDeliveryScenario(text: string): {
     return { scenario: 'ui', confidence: 'high' };
   }
 
+  if (ARCHITECTURE_DELIVERY_PATTERN.test(text)) {
+    return { scenario: 'architecture', confidence: 'high' };
+  }
+
   const hasFeatureDelivery = FEATURE_DELIVERY_PATTERN.test(text);
   const hasSpecSubject = SPEC_SUBJECT_PATTERN.test(text);
   const specOnly = hasSpecSubject && SPEC_ONLY_PATTERN.test(text);
@@ -145,6 +157,7 @@ export const SCENARIO_LABELS: Record<WorkflowScenario, string> = {
   bugfix: 'Bug 修复',
   ui: 'UI 开发',
   product: '产品规划',
+  architecture: '架构评估 / 设计 / 漂移核验',
   explore: '代码探索 / 影响分析',
   commit: '生成提交',
   review: '代码审查',
@@ -173,6 +186,8 @@ export function detectWorkflowScenario(intent: string, explicit?: string): {
     ui: 'ui',
     product: 'product',
     prd: 'product',
+    architecture: 'architecture',
+    arch: 'architecture',
     explore: 'explore',
     commit: 'commit',
     review: 'review',

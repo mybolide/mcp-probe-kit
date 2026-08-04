@@ -11,6 +11,7 @@ export const COMPACT_MODEL_TOOL_NAMES = [
   'check_spec',
   'estimate',
   'code_insight',
+  'architecture',
   'gentest',
   'code_review',
   'refactor',

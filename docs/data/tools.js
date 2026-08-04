@@ -2,9 +2,9 @@
 const toolsData = {
   "version": "4.0.0-rc.8",
   "counts": {
-    "default": 23,
-    "withMemory": 29,
-    "full": 33,
+    "default": 24,
+    "withMemory": 30,
+    "full": 34,
     "appOnly": 1
   },
   "categories": {
@@ -245,6 +245,12 @@ const toolsData = {
           "type": "string",
           "required": false,
           "desc": "Commit 类型：fixed（修复）、feat（新功能）、docs（文档）、style（样式）、chore（杂项）、refactor（重构）、test（测试）。可选，会自动识别"
+        },
+        {
+          "name": "project_root",
+          "type": "string",
+          "required": false,
+          "desc": "可选，目标 Git 仓库根目录或其子目录。未提供 changes 时用于确认当前项目确实是 Git 仓库"
         }
       ],
       "usage": "变更完成，需要**规范 commit message**",
@@ -278,6 +284,12 @@ const toolsData = {
           "type": "string",
           "required": false,
           "desc": "可选，输出文件路径"
+        },
+        {
+          "name": "project_root",
+          "type": "string",
+          "required": false,
+          "desc": "目标 Git 仓库根目录或其子目录；省略时按当前 MCP 工作区解析"
         }
       ],
       "usage": "需要基于 git 历史的**工作报告 / 周报**",
@@ -492,7 +504,7 @@ const toolsData = {
           "desc": "分析方法。默认 src8（Software Root-Cause 8-step，受丰田 TBP 启发）；tbp8 为兼容别名"
         }
       ],
-      "usage": "需要 **TBP 真因分析**指南（通常由 `start_bugfix` 触发）",
+      "usage": "需要独立执行 **SRC-8 根因分析与修复方法**时直接调用；完整 Bug 交付中由 `start_bugfix` 编排或展开同一方法核心",
       "surface": "compatibility"
     },
     {
@@ -527,6 +539,129 @@ const toolsData = {
       ],
       "usage": "需要**补测试 / 回归用例**（Bug 修复后、功能完成后）",
       "surface": "default"
+    },
+    {
+      "name": "architecture",
+      "description": "独立架构领域能力，使用 ARC-8 完成架构评估、设计、校验和漂移检查。可直接调用，也可由功能、Bug 或重构流程按需组合；MCP 负责方法、门禁与结构化证据，不替 Agent 声称绝对最优架构。",
+      "schema": "structuredContent",
+      "params": [
+        {
+          "name": "mode",
+          "type": "assess | design | validate | drift",
+          "required": false,
+          "desc": "ARC-8 入口阶段：assess、design、validate 或 drift，默认 assess"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "desc": "本次架构任务的完整目标，不能只传“继续”或“优化架构”"
+        },
+        {
+          "name": "project_root",
+          "type": "string",
+          "required": false,
+          "desc": "目标项目根目录绝对路径"
+        },
+        {
+          "name": "scope",
+          "type": "array<string>",
+          "required": false,
+          "desc": "涉及模块、目录、服务或数据域"
+        },
+        {
+          "name": "constraints",
+          "type": "array<string>",
+          "required": false,
+          "desc": "已确认的业务与技术约束"
+        },
+        {
+          "name": "non_goals",
+          "type": "array<string>",
+          "required": false,
+          "desc": "本次明确不处理的内容"
+        },
+        {
+          "name": "baseline",
+          "type": "unknown",
+          "required": false,
+          "desc": "已有 assess 结果、ADR、ArchitectureCandidate、Plan 或设计证据；可传对象或 JSON/文本"
+        },
+        {
+          "name": "current_facts",
+          "type": "array<object>",
+          "required": false,
+          "desc": "当前架构事实，需标记 fact/inference/unknown"
+        },
+        {
+          "name": "structural_causes",
+          "type": "array<string>",
+          "required": false,
+          "desc": ""
+        },
+        {
+          "name": "protected_invariants",
+          "type": "array<string>",
+          "required": false,
+          "desc": ""
+        },
+        {
+          "name": "alternatives",
+          "type": "array<object>",
+          "required": false,
+          "desc": ""
+        },
+        {
+          "name": "decision",
+          "type": "object",
+          "required": false,
+          "desc": ""
+        },
+        {
+          "name": "target_architecture",
+          "type": "object",
+          "required": false,
+          "desc": ""
+        },
+        {
+          "name": "transition_plan",
+          "type": "object",
+          "required": false,
+          "desc": ""
+        },
+        {
+          "name": "diff",
+          "type": "string",
+          "required": false,
+          "desc": "validate/drift 使用的真实 Git diff、revision 摘要或实现证据"
+        },
+        {
+          "name": "runtime_evidence",
+          "type": "array<string>",
+          "required": false,
+          "desc": "运行结果、图谱摘要、日志、指标或验收证据"
+        },
+        {
+          "name": "observed_drift",
+          "type": "array<string>",
+          "required": false,
+          "desc": "Agent 已确认的架构偏移事实"
+        },
+        {
+          "name": "save_to_docs",
+          "type": "boolean",
+          "required": false,
+          "desc": "是否返回架构文档 delegated 落盘计划；工具本身不直接重写项目文档"
+        },
+        {
+          "name": "collect_evidence",
+          "type": "boolean",
+          "required": false,
+          "desc": "是否自动调用 code_insight 并召回 Memory 证据，默认 true；测试或已提供完整证据时可设 false"
+        }
+      ],
+      "usage": "需要评估或设计模块边界、依赖方向、数据所有权、公共契约、迁移回滚或实施漂移时直接调用；支持 `assess|design|validate|drift`，完整功能、Bug 和重构流程只按需组合它",
+      "surface": "default"
     }
   ],
   "routing": [
@@ -543,7 +678,7 @@ const toolsData = {
         },
         {
           "name": "scenario",
-          "type": "auto | feature | bugfix | ui | explore | commit | review | refactor | onboard | spec | memory",
+          "type": "auto | feature | bugfix | ui | product | architecture | arch | explore | commit | review | refactor | onboard | spec | memory",
           "required": false,
           "desc": "可选：显式场景；默认 auto 从 intent 推断"
         },
@@ -554,7 +689,7 @@ const toolsData = {
           "desc": "可选。项目根目录绝对路径；未传时自动从 MCP 客户端工作区解析（如 Cursor 注入 WORKSPACE_FOLDER_PATHS、OpenCode/客户端配置的 cwd 等）。仅边缘场景需手动传入。"
         }
       ],
-      "usage": "**不确定**该用哪个 MCP；或担心 Agent 跳过 MCP 直接写代码时。intent 必须是完整任务摘要，不是“继续/开始”等最后一句",
+      "usage": "Agent 阅读 Skill 后仍**不确定第一个工具**时使用；返回建议，不执行工具、不维护任务生命周期。intent 必须是完整任务摘要",
       "surface": "default"
     }
   ],
@@ -631,7 +766,7 @@ const toolsData = {
           "desc": "每轮假设上限（默认 3）"
         }
       ],
-      "usage": "任何**新功能 / 增强 / 大版本升级**的首选入口；先把当前对话已确认的完整范围汇总到 description，默认 `spec_layout=auto`，复杂多模块需求先拆 parent-child 子规格，再指引 `add_feature` → `check_spec` → 实现",
+      "usage": "需要从需求、规格、实施、测试、审查到收敛完成**完整新功能交付**时使用；先把当前对话确认的完整范围汇总到 description，默认 `spec_layout=auto`，复杂多模块需求使用 parent-child；仅做规格、影响分析或测试时可直接调用对应能力",
       "surface": "default"
     },
     {
@@ -718,7 +853,7 @@ const toolsData = {
           "desc": "每轮假设上限（默认 3）"
         }
       ],
-      "usage": "任何 **Bug / 报错**；指引 `fix_bug`（真因）→ `gentest` → 测试",
+      "usage": "需要从现象、SRC-8 真因、修复、回归、审查到收敛完成**完整 Bug 交付**时使用；只做根因分析时直接调用 `fix_bug`",
       "surface": "default"
     },
     {
@@ -782,6 +917,12 @@ const toolsData = {
           "type": "number",
           "required": false,
           "desc": "最大迭代轮数。safe 模式默认：8"
+        },
+        {
+          "name": "max_rounds",
+          "type": "number",
+          "required": false,
+          "desc": "max_iterations 的兼容别名；建议新调用统一使用 max_iterations"
         },
         {
           "name": "max_minutes",
@@ -943,7 +1084,7 @@ const toolsData = {
           "desc": "每轮假设上限（默认 3）"
         }
       ],
-      "usage": "任何 **UI / 页面 / 组件**；指引设计系统、模板检索、实现约束",
+      "usage": "需要从视觉方向、页面结构、实现、桌面/移动验收到正式收敛完成**完整 UI 交付**时使用；只查模式或生成设计系统时直接调用 UI 能力",
       "surface": "default"
     },
     {
@@ -1242,14 +1383,20 @@ const toolsData = {
   "memory": [
     {
       "name": "search_memory",
-      "description": "按语义检索分层记忆库。当前项目记忆优先于跨项目经验；默认排除过期、被替代和撤回资产。适合主动查找历史 Bug、负面经验或可复用模式。",
+      "description": "检索或浏览分层记忆库。默认 mode=semantic 按语义检索；Memory Center 可用 mode=browse 按更新时间分页浏览且不依赖 embedding。",
       "schema": "MemorySearchSchema",
       "params": [
         {
+          "name": "mode",
+          "type": "semantic | browse",
+          "required": false,
+          "desc": "semantic=语义检索（默认，query 必填）；browse=按更新时间分页浏览（query 可省略）"
+        },
+        {
           "name": "query",
           "type": "string",
-          "required": true,
-          "desc": "检索 query（现象、报错、关键词、功能描述等）"
+          "required": false,
+          "desc": "语义检索 query；mode=semantic 时必填"
         },
         {
           "name": "type",
@@ -1267,7 +1414,25 @@ const toolsData = {
           "name": "limit",
           "type": "integer",
           "required": false,
-          "desc": "返回条数，默认 MEMORY_SEARCH_LIMIT（1-50）"
+          "desc": "返回条数；semantic 最大 50，browse 最大 200"
+        },
+        {
+          "name": "offset",
+          "type": "integer",
+          "required": false,
+          "desc": "browse 分页偏移量，默认 0"
+        },
+        {
+          "name": "status",
+          "type": "active | stale | expired | superseded | retracted",
+          "required": false,
+          "desc": "browse 模式按生命周期状态过滤"
+        },
+        {
+          "name": "source_project",
+          "type": "string",
+          "required": false,
+          "desc": "browse 模式按来源项目过滤"
         },
         {
           "name": "include_inactive",
@@ -1408,7 +1573,7 @@ const toolsData = {
           "desc": "标签列表，如 bugfix, root-cause"
         }
       ],
-      "usage": "已有已验证 MemoryCandidate，且 **converge passed=true** 后正式沉淀成功或负面经验",
+      "usage": "托管交付流程在 **converge passed=true** 后沉淀 MemoryCandidate；用户明确进行独立记忆管理时也可直接调用，但必须提供证据和适用边界",
       "surface": "memory"
     },
     {
@@ -1680,7 +1845,7 @@ const toolsData = {
           "desc": ""
         }
       ],
-      "usage": "执行 Delegated Plan 后记录完成步骤、证据、未决事项和 revision；首次调用附完整 plan",
+      "usage": "执行需要持续状态、跨会话恢复或正式交付的 Delegated Plan 时记录步骤、证据、未决事项和 revision；首次调用附完整 plan，单次只读能力不强制使用",
       "surface": "default"
     },
     {
@@ -1740,7 +1905,7 @@ const toolsData = {
           "desc": "默认 requirements/spec/implementation/test/review"
         }
       ],
-      "usage": "实现与验证完成后，检查需求/规格/实现/测试/审查证据；通过后才正式沉淀记忆",
+      "usage": "托管交付实现与验证完成后，按 Plan 检查需求、规格、实现、测试、审查证据和未决项；通过后才允许该流程正式沉淀记忆。单次只读分析和独立记忆管理不强制进入收敛",
       "surface": "default"
     }
   ],

@@ -121,7 +121,7 @@ function createFixture(options: {
   const compactTools = [
     'start_feature', 'start_bugfix', 'start_ui', 'start_onboard', 'start_product',
     'start_ralph', 'workflow', 'init_project_context', 'init_project', 'check_spec',
-    'estimate', 'code_insight', 'gentest', 'code_review', 'refactor', 'gencommit',
+    'estimate', 'code_insight', 'architecture', 'gentest', 'code_review', 'refactor', 'gencommit',
     'git_work_report', 'ui_design_system', 'ui_search', 'plan_heartbeat',
     'resume_plan', 'converge', 'interview',
   ];
@@ -132,14 +132,14 @@ function createFixture(options: {
   fs.writeFileSync(path.join(root, 'tools-manifest.json'), JSON.stringify({
     version: options.version,
     structuredOutput: { version: options.version },
-    totalTools: 33,
+    totalTools: 34,
     toolsets: {
-      compact: { count: 23, tools: compactTools },
-      compactWithMemory: { count: 29, tools: [...compactTools, ...memoryTools] },
+      compact: { count: 24, tools: compactTools },
+      compactWithMemory: { count: 30, tools: [...compactTools, ...memoryTools] },
       memoryConditional: { count: 6, tools: memoryTools },
       appOnly: { count: 1, tools: ['list_memory_assets'] },
       workflow: { tools: ['plan_heartbeat', 'resume_plan', 'converge'] },
-      full: { count: 33 },
+      full: { count: 34 },
     },
   }));
   if (!options.omitBuildClean) {
