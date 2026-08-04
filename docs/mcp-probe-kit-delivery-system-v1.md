@@ -1,8 +1,28 @@
-# MCP Probe Kit 软件交付系统 V1 需求
+# MCP Probe Kit 软件交付系统 V1 最终需求与验收基线
 
-> 状态：最终设计基线，后续实现以本文为准  
-> 目标：让不同模型、不同 IDE、不同 Agent，在任何项目中都按照一致、可恢复、可验证、可审计、可维护、可学习的工程纪律交付软件。  
+> 文档状态：开发前最终需求基线，后续实现、测试和验收以本文为准。
+>
+> 当前代码基线：`mcp-probe-kit@4.0.0-rc.8`，分支 `develop/v4`。
+>
+> 当前模型可见工具：Full 33 个；目标模型可见工具：Full 34 个。
+>
+> App-only 隐藏动作：1 个；目标唯一可调用工具名总数：35 个。
+>
+> 目标：让不同模型、不同 IDE、不同 Agent，在任何项目中都按照一致、可恢复、可验证、可审计、可维护、可学习的工程纪律交付软件。
+>
 > 核心原则：Agent 负责工程判断和实施，MCP Probe Kit 负责提供统一方法、项目证据、过程状态、验证闭环和长期记忆。
+
+本文同时定义：
+
+- 产品边界；
+- 工具数量与可见性；
+- 全部工具的当前实现、目标效果和修改范围；
+- `fix_bug` 的 SRC-8 方法；
+- `architecture` 的 ARC-8 方法；
+- Plan、Converge 和 Memory 闭环；
+- 完整组合流程；
+- 渐进式开发阶段；
+- 开发完成后的验收条件。
 
 ---
 
@@ -39,7 +59,7 @@ MCP Probe Kit 不是代码生成器，也不替代 Agent 的工程判断。
 - 不新增一组 `start_architecture`、`check_architecture`、`architecture_drift` 等彼此割裂的工具；只新增一个统一的 `architecture` 工具，使用不同 mode 覆盖评估、设计、校验和漂移检查。
 - 不宣称可以在所有 IDE 中阻止 Agent 直接修改文件。
 - 不把普通调试过程、临时日志和未经验证的猜测写入长期记忆。
-- 不改名、不删除现有 33 个工具；目标工具面在独立兼容阶段新增 1 个 `architecture`，最终为 34 个。
+- 不改名、不删除现有 33 个模型可见工具；目标模型可见工具面在独立兼容阶段新增 1 个 `architecture`，最终为 34 个；App-only 隐藏动作另计 1 个。
 
 ---
 
@@ -78,7 +98,7 @@ MCP Probe Kit 不是代码生成器，也不替代 Agent 的工程判断。
 
 ## 4. 工具总体设计
 
-V1 先冻结现有 33 个公开工具的兼容基线，再以独立提交新增 1 个统一架构工具 `architecture`。目标工具面为 34 个。
+V1 先冻结现有 33 个模型可见工具的兼容基线，再以独立提交新增 1 个统一架构工具 `architecture`。目标模型可见工具面为 34 个，连同 App-only 隐藏动作后唯一可调用工具名总数为 35 个。
 
 工具职责和调用方式必须分开理解，禁止把“原子能力”“可组合能力”和“必须被编排”混为一谈：
 
@@ -139,7 +159,214 @@ start_ui 编排 ui_search / ui_design_system / gentest / code_review
 
 Agent 是否使用 `start_*`，取决于当前目标是“完成一个完整交付流程”，还是“执行一个明确的单项能力”。
 
-总计：目标 34 个。当前兼容基线仍为 33 个，新增 `architecture` 必须独立验收。
+### 4.1 工具数量与可见性口径
+
+工具数量必须区分“模型可见工具”和“App-only 隐藏动作”，禁止再用一个数字混合表达。
+
+| 工具面 | 当前基线 | 新增 `architecture` 后 | 说明 |
+|---|---:|---:|---|
+| Compact 模型可见 | 23 | 24 | 默认紧凑工具集 |
+| Compact + Memory | 29 | 30 | 紧凑工具集开启 Memory |
+| Full 模型可见 | 33 | 34 | 完整兼容工具集 |
+| MCP Apps 协商下模型可见 | 29 | 30 | App 能力开启时，模型仍只看到允许的公开工具 |
+| App-only 隐藏动作 | 1 | 1 | `list_memory_assets`，仅供 Memory Center 调用 |
+| 唯一可调用工具名总数 | 34 | 35 | 模型可见工具加 App-only 动作去重后的总数 |
+
+当前已验证基线：
+
+```text
+compact = 23
+compactWithMemory = 29
+full = 33
+appsRaw = 29
+tool contract audit = 38 / 38 passed
+```
+
+目标数量表达必须统一为：
+
+```text
+模型可见正式工具：34 个
+App-only 隐藏动作：1 个
+唯一可调用工具名总数：35 个
+```
+
+### 4.2 最终逻辑架构
+
+```mermaid
+flowchart TB
+    U[用户<br/>业务目标、约束、确认]
+    A[Agent<br/>理解需求、工程判断、实施与真实验证]
+    SK[Skill / AGENTS.md<br/>工具时机、方法、组合规则、禁止事项]
+
+    U --> A
+    SK --> A
+
+    W[workflow<br/>可选首工具路由]
+    A -. 不确定首工具时 .-> W
+    W -. 返回 firstTool 建议 .-> A
+
+    subgraph O[完整交付编排工具]
+        SF[start_feature]
+        SB[start_bugfix]
+        SU[start_ui]
+        SO[start_onboard]
+        SP[start_product]
+        SR[start_ralph]
+    end
+
+    subgraph D[可独立调用的领域与原子能力]
+        CI[code_insight]
+        FB[fix_bug / SRC-8]
+        AR[architecture / ARC-8]
+        AF[add_feature]
+        CS[check_spec]
+        GT[gentest]
+        CR[code_review]
+        RF[refactor]
+        UI[UI / Git / 交互等独立工具]
+    end
+
+    A -->|完整交付| O
+    A -->|明确单项能力| D
+    O -. 只组合本次实际需要的能力 .-> D
+
+    subgraph P[按需状态与收敛]
+        PH[plan_heartbeat]
+        RP[resume_plan]
+        CV[converge]
+    end
+
+    O --> PH
+    D -. 长任务或正式交付时 .-> PH
+    PH --> RP
+    PH --> CV
+
+    subgraph M[长期记忆]
+        SM[search / read]
+        MC[MemoryCandidate]
+        MM[memorize / update / delete]
+    end
+
+    A --> SM
+    O -. 自动注入少量高相关记忆 .-> SM
+    D -. 产生可复用结论 .-> MC
+    O -. 汇总流程经验 .-> MC
+    MC --> PH
+    CV -->|托管流程通过后| MM
+
+    subgraph E[项目事实与证据]
+        PC[Project Context / AGENTS.md]
+        G[Graph / GitNexus]
+        S[Spec / ADR / ArchitectureCandidate]
+        DF[Git Diff / Tests / Runtime Evidence]
+    end
+
+    A --> PC
+    CI --> G
+    AR --> G
+    AF --> S
+    AR --> S
+    CR --> DF
+    CV --> DF
+
+    subgraph R[统一运行与兼容层]
+        TC[Schema + Catalog + Registry]
+        MCP[MCP Legacy / Modern]
+        CLI[项目内 CLI Fallback]
+        HOST[Cursor / Claude Code / 其他 Host]
+        APP[MCP Apps 可选 UI]
+    end
+
+    O --> TC
+    D --> TC
+    P --> TC
+    M --> TC
+    TC --> MCP
+    TC --> CLI
+    MCP --> HOST
+    CLI --> HOST
+    MCP --> APP
+```
+
+### 4.3 全量工具实现与目标效果矩阵
+
+下表是开发前的完整工具清单。`architecture` 是本期唯一新增的模型可见工具；`list_memory_assets` 是现有 App-only 隐藏动作。
+
+| # | 工具 | 类型 | 当前实现位置 | 当前实现效果 | V1 最终效果与修改要求 |
+|---:|---|---|---|---|---|
+| 1 | `workflow` | 可选路由 | `src/tools/workflow.ts`、`src/lib/dev-workflow.ts` | 根据显式或轻量场景返回 `firstTool`、参数提示和阶段建议，并同步 Skill | 保持可选；增加 `architecture` 场景；删除“所有任务必须先路由”的暗示；不执行工具、不维护任务状态、不判断风险等级 |
+| 2 | `start_feature` | 完整交付编排 | `src/tools/start_feature.ts` | 注入 Memory、图谱、规格布局、规格草稿、`check_spec` 和 `estimate`，返回功能 Plan | 补齐影响分析、架构按需、实现、真实测试、`code_review`、`converge` 和 Memory 闭环；不复制底层工具方法 |
+| 3 | `start_bugfix` | 完整交付编排 | `src/tools/start_bugfix.ts` | 组合 Memory、项目上下文、图谱、规格闸门和共享 SRC-8 Plan | 明确只编排 `fix_bug` 的 SRC-8；补齐修复、回归、review、converge 和正式记忆沉淀；不维护第二套八步法 |
+| 4 | `start_ui` | 完整交付编排 | `src/tools/start_ui.ts` | 生成视觉方向、设计系统、结构搜索、关键页面实现、桌面/移动截图、视觉评审和迭代步骤 | 所有模式统一正式 DelegatedPlanContract；补交互状态、真实测试、review、converge 和 Memory；不得把 Agent 文件操作伪装为 MCP 工具 |
+| 5 | `start_onboard` | 项目上手编排 | `src/tools/start_onboard.ts` | 当前主要编排 `init_project_context` | 扩展为项目上下文、`code_insight`、构建/测试/运行命令、Memory、关键文件和已知问题导航；不强制进入代码交付流程 |
+| 6 | `start_product` | 产品编排 | `src/tools/start_product.ts` | 已有正式 Plan，生成 PRD、原型文档、设计系统、调用 `start_ui` 生成 HTML 原型并更新上下文 | 保留闭环；接入可恢复状态、产物一致性和最终产品验收；不强制代码 review，除非进入真实代码实现 |
+| 7 | `start_ralph` | 长周期循环编排 | `src/tools/start_ralph.ts` | 生成 Ralph 提示、脚本、安全限制、进度模板和停止条件，不后台自动执行 | 接入 Plan、每轮 heartbeat、测试证据、重复输出检测和最终 converge；每轮只做一个可验证变更，禁止失控后台运行 |
+| 8 | `init_project` | 项目初始化 | `src/tools/init_project.ts` | 实际写入 Skill 与 `AGENTS.md`，其余结构作为 `pendingFiles` 交给 Agent | 保留真实写入边界；明确哪些文件 MCP 已写、哪些由 Agent 落盘；不伪称项目骨架全部自动生成 |
+| 9 | `init_project_context` | 项目事实初始化 | `src/tools/init_project_context.ts` | 写入 Skill、`AGENTS.md`、layout manifest、索引和 delegated 落盘计划；分类文档和图谱由 Agent完成 | 保留渐进兼容；不覆盖已有上下文；稳定输出项目技术栈、架构、命令、测试和图谱入口 |
+| 10 | `add_feature` | 规格能力 | `src/tools/add_feature.ts` | 生成 flat 或 parent-child 规格模板、草稿和落盘指导 | 保持可独立调用；只在范围与布局明确后使用；规格覆盖目标、非目标、影响、接口、数据、迁移、回滚、验收和测试 |
+| 11 | `check_spec` | 规格校验 | `src/tools/check_spec.ts` | 检查规格文件、章节、占位符和 parent-child 关联 | 按任务实际要求检查完整性、可测试性、影响、契约、数据、迁移、回滚和未决项；不强制所有项目同一重型模板 |
+| 12 | `estimate` | 估算 | `src/tools/estimate.ts` | 根据描述、任务和上下文给出故事点、工时和风险估算 | 保留为计划参考；输出依据、不确定性和假设；不得作为承诺工期或自动风险分类器 |
+| 13 | `code_insight` | 代码事实能力 | `src/tools/code_insight.ts`、`src/lib/gitnexus-bridge.ts` | 支持 context/impact/auto、符号消歧、图谱证据、影响面和可选文档 Plan | 保留；图谱不可用时明确 degraded；输出事实、来源、歧义和置信度；不替 Agent选择方案 |
+| 14 | `fix_bug` | Bug 领域能力 | `src/tools/fix_bug.ts`、`src/lib/src8-guidance.ts`、`src/lib/src8-prompt.ts` | 提供 SRC-8、真因工作表、归因层、门禁、BugAnalysis 和子计划 | 成为 SRC-8 唯一公共事实源；支持独立调用和被 `start_bugfix` 编排；连续三次失败退回边界/真因阶段 |
+| 15 | `architecture` | 架构领域能力 | **新增**：`src/tools/architecture.ts`、`src/lib/architecture-method.ts` | 当前不存在 | 实现 ARC-8；支持 `assess|design|validate|drift`；输出事实、根因、不变量、候选方案、权衡、目标边界、数据所有权、迁移、回滚、验证、ADR/ArchitectureCandidate 和 MemoryCandidate |
+| 16 | `gentest` | 测试设计 | `src/tools/gentest.ts` | 读取代码或文件，识别项目现有测试框架，返回测试策略、场景和候选代码 | 保留；禁止擅自引入新测试框架；明确“生成测试建议”不等于“测试已执行通过” |
+| 17 | `code_review` | 代码审查 | `src/tools/code_review.ts` | 当前为 guidance-only，注入代码/文件，由 Agent按清单生成问题 | 增强真实 Git diff、Plan 声明范围、接口/Schema/数据变化、架构偏移和测试证据对比；仍不伪称服务端已完成静态扫描 |
+| 18 | `refactor` | 重构能力 | `src/tools/refactor.ts` | 返回问题分析、分步重构建议、质量约束和测试指导 | 保持独立调用；架构变化时按需使用 `architecture`；必须包含行为保护、分阶段验证、迁移、回滚和旧代码清理 |
+| 19 | `gencommit` | Git 辅助 | `src/tools/gencommit.ts` | 根据实际变更生成 Conventional Commit 建议 | 保留；可引用 plan/spec 和测试摘要；只生成文本，不自动 commit、push、tag 或 release |
+| 20 | `git_work_report` | Git 报告 | `src/tools/git_work_report.ts` | 生成读取 Git 历史和 diff 的指导，不直接执行 Git 收集 | 保留；Agent 必须基于真实 commit 和 diff 生成日报/周报，禁止根据提交标题推测工作内容 |
+| 21 | `ui_design_system` | UI 领域能力 | `src/tools/ui-ux-tools.ts` | 生成视觉方向、设计 token、组件规则和兼容字段 | 保持独立调用与流程复用；输出稳定视觉契约，不直接实施页面 |
+| 22 | `ui_search` | UI 数据检索 | `src/tools/ui-ux-tools.ts` | 搜索本地 UI/UX 数据集，支持结构、模板、组件、主题等模式 | 保留；只提供候选模式和证据，不替 Agent作最终设计选择 |
+| 23 | `sync_ui_data` | UI 数据维护 | `src/tools/ui-ux-tools.ts` | 检查上游版本，下载并写缓存；`check_only` 不联网不写入；新数据下次启动生效 | 保留明确副作用边界；只在显式调用时联网和写缓存；当前会话不热切换 |
+| 24 | `search_memory` | Memory 检索 | `src/tools/search_memory.ts`、`src/lib/memory-client.ts` | 语义检索和 browse，默认过滤过期、替代和撤回资产 | 保留；显示来源、状态、适用范围和更新时间；当前项目事实永远优先 |
+| 25 | `read_memory_asset` | Memory 精读 | `src/tools/read_memory_asset.ts` | 按 `asset_id` 读取记忆全文 | 保留；高影响决策不得只依赖搜索摘要 |
+| 26 | `memorize_asset` | Memory 写入 | `src/tools/memorize_asset.ts` | 写入成功或负面记忆，支持 evidence、applicability、生命周期、过期和替代关系 | 托管交付流程必须 `converge passed=true` 后调用；用户明确进行独立记忆管理时可直接调用，但必须满足证据和边界要求 |
+| 27 | `update_memory_asset` | Memory 更新 | `src/tools/update_memory_asset.ts` | 按 ID 原位更新，支持状态、expiry、supersede 关系 | 保留；新结论取代旧结论时应形成明确替代关系，避免两个冲突的 active 资产 |
+| 28 | `delete_memory_asset` | Memory 删除 | `src/tools/delete_memory_asset.ts` | 要求 `confirm=true` 后删除资产 | 保留；删除前应读取确认；用于错误、重复、无价值或不应保留的资产 |
+| 29 | `scan_and_extract_patterns` | Memory 候选提取 | `src/tools/scan_and_extract_patterns.ts` | 扫描仓库并输出可复用模式与反模式候选 | 只生成 MemoryCandidate，绝不自动写长期记忆 |
+| 30 | `plan_heartbeat` | 状态写入 | `src/tools/plan_heartbeat.ts`、`src/plans/plan-heartbeat.ts`、`src/plans/plan-store.ts` | 原子写入 `.mcp-probe-kit/plans/<plan_id>.json`，保存步骤、证据、revision 和未决项 | 增加可选 `declaredScope`、`artifacts`、`memoryCandidates`、`architectureCandidates`、`acceptanceResults`、`runtimeEvidence`；保持旧 Plan 可读 |
+| 31 | `resume_plan` | 状态恢复 | `src/tools/resume_plan.ts`、`src/plans/plan-resume.ts` | 根据依赖计算 ready/blocked steps 并恢复状态 | 新 Agent 无需旧对话即可继续；恢复候选记忆、架构候选、证据、revision 和下一动作 |
+| 32 | `converge` | 交付收敛 | `src/tools/converge.ts`、`src/plans/plan-converge.ts` | 当前检查步骤、未决项和固定证据种类 | 改为由 Plan 声明 `requiredEvidenceKinds`、`qualityGates`、`completionCriteria`；按任务实际需求收敛，托管流程通过后返回 `memoryWriteAllowed` |
+| 33 | `ask_user` | 交互辅助 | `src/tools/ask_user.ts` | 生成单个或多个结构化问题、上下文和选项 | 保留 Full 兼容；支持 Host 无原生 elicitation 时使用；普通 Agent也可直接向用户提问 |
+| 34 | `interview` | 需求访谈 | `src/tools/interview.ts` | 提供结构化访谈、多轮问题和需求收敛 | 保留；仅在需求确实模糊时使用，不成为每个任务必经步骤 |
+| 35 | `list_memory_assets` | App-only 隐藏动作 | `src/tools/list_memory_assets.ts`、`src/server/tool-registry.ts` | 为 Memory Center 分页浏览记忆，支持类型、状态、项目和标签过滤；不出现在模型 `tools/list` | 保持 App-only；不得竞争模型工具面；无 Apps 时不影响核心 Memory 功能 |
+
+### 4.4 每个工具的统一实现契约
+
+每个模型可见工具必须同时具备：
+
+```text
+Input Schema
+Tool Catalog Entry
+Handler / Tool Implementation
+Output Schema
+Skill Route / Usage Guidance
+Tool Visibility
+CLI 调用路径
+Legacy Protocol
+Modern Protocol
+单元测试与契约测试
+```
+
+统一注册链：
+
+```text
+Schema
+→ Catalog
+→ Registry
+→ MCP / CLI
+→ Skill
+→ Docs
+→ Contract Audit
+```
+
+任何一项缺失均视为工具未完整实现。禁止出现：
+
+- Catalog 有工具但没有 Schema；
+- Schema 有工具但没有 Handler；
+- 文本中引用不存在的 phantom tool；
+- CLI 与 MCP 使用不同的实现语义；
+- Legacy 与 Modern 返回不同核心结构；
+- App-only 工具泄漏到模型 `tools/list`。
 
 ---
 
@@ -471,6 +698,149 @@ architecture mode=assess
 
 单项架构评估可以只执行 `assess`；单项方案审查可以直接执行 `validate`，但必须携带其依赖的事实和设计证据。
 
+#### `architecture` 输入契约
+
+```json
+{
+  "mode": "assess | design | validate | drift",
+  "description": "本次架构任务的完整目标",
+  "project_root": "目标项目绝对路径",
+  "scope": ["可选：模块、目录、服务或数据域"],
+  "constraints": ["已确认业务与技术约束"],
+  "non_goals": ["本次明确不处理的内容"],
+  "baseline": "可选：已有 ADR、ArchitectureCandidate、Plan 或设计正文",
+  "diff": "可选：validate/drift 使用的真实 diff 或 revision 范围",
+  "runtime_evidence": ["可选：运行结果、日志、指标或验收证据"],
+  "save_to_docs": false
+}
+```
+
+输入规则：
+
+- `description` 必须是完整目标，不接受只有“继续”“优化架构”等无上下文短句；
+- `project_root` 必须解析到真实项目根目录；
+- `design` 缺少 ARC-1～ARC-3 事实时应返回缺口，而不是直接生成目标架构；
+- `validate` 必须提供待验证设计；
+- `drift` 必须提供已确认设计及真实实现证据；
+- `save_to_docs=true` 只返回明确的 Agent 落盘计划，不直接重写大量项目文档。
+
+#### `architecture` 结构化输出契约
+
+```json
+{
+  "mode": "assess",
+  "methodology": "arc8",
+  "arc8Status": {
+    "completedSteps": [],
+    "blockedSteps": [],
+    "nextStep": "arc-1"
+  },
+  "problem": {
+    "goal": "",
+    "scope": [],
+    "nonGoals": [],
+    "successCriteria": [],
+    "constraints": []
+  },
+  "currentFacts": [
+    {
+      "statement": "",
+      "classification": "fact | inference | unknown",
+      "evidence": []
+    }
+  ],
+  "structuralCauses": [],
+  "protectedInvariants": [],
+  "alternatives": [],
+  "tradeoffMatrix": [],
+  "decision": {
+    "recommended": "",
+    "rationale": [],
+    "rejectedAlternatives": [],
+    "assumptions": []
+  },
+  "targetArchitecture": {
+    "boundaries": [],
+    "allowedDependencies": [],
+    "forbiddenDependencies": [],
+    "dataOwnership": [],
+    "publicContracts": [],
+    "protectedBehaviors": []
+  },
+  "transitionPlan": {
+    "stages": [],
+    "migration": [],
+    "compatibility": [],
+    "rollback": [],
+    "observability": [],
+    "cleanup": []
+  },
+  "validation": {
+    "passed": false,
+    "gaps": [],
+    "driftFindings": []
+  },
+  "architectureCandidate": {},
+  "adrCandidate": {},
+  "memoryCandidate": {},
+  "metadata": {
+    "plan": {},
+    "graphStatus": "available | degraded | unavailable",
+    "warnings": []
+  }
+}
+```
+
+不同 mode 可以返回字段子集，但字段语义必须一致，不得为四种 mode 各自创建互不兼容的输出模型。
+
+#### `architecture` 实现结构
+
+```text
+src/tools/architecture.ts
+  参数解析、调用共享方法、组装 MCP 响应
+
+src/lib/architecture-method.ts
+  ARC-8 步骤、门禁、mode 映射、候选方案与输出构建
+
+src/schemas/architecture-tools.ts
+  输入 Schema
+
+src/schemas/output/architecture-tools.ts
+  输出 Schema
+
+src/tools/__tests__/architecture.unit.test.ts
+  方法、门禁和输出契约单测
+
+src/tools/__tests__/architecture.integration.test.ts
+  图谱、Memory、Plan、diff 和降级路径集成测试
+```
+
+同时接入：
+
+```text
+src/schemas/index.ts
+src/server/tool-catalog.ts
+src/server/tool-registry.ts
+src/server/tool-visibility.ts
+src/lib/output-schema-registry.ts
+src/lib/mcp-tool-skill-registry.ts
+src/lib/dev-workflow.ts
+src/lib/dev-workflow-routing.ts
+```
+
+#### `architecture` 专项验收场景
+
+1. `assess` 能基于真实项目和图谱输出 fact/inference/unknown，而不是编造依赖。
+2. 图谱不可用时返回 degraded，并仍可使用代码、manifest 和 diff 证据继续。
+3. `design` 缺少 ARC-1～ARC-3 结果时返回明确缺口，不直接越过门禁。
+4. 涉及数据或公共契约变化但没有迁移和回滚时，`validate.passed=false`。
+5. `drift` 能发现新增越界依赖、重复事实源、未登记契约变化和旧路径残留。
+6. 合理实现偏差可生成 ADR 更新候选，不合理偏差要求退回设计或实施阶段。
+7. `architecture` 可独立调用，不依赖任何 `start_*`。
+8. `start_feature`、`start_bugfix`、`refactor` 引用同一 ARC-8 核心，不复制步骤文本和门禁。
+9. Compact、Full、Legacy、Modern、CLI fallback 对 `architecture` 使用同一 Schema 和核心语义。
+10. 新增工具后工具面严格为 Compact 24、Compact+Memory 30、Full 34；App-only 隐藏语义不变。
+
 `architecture` 不替 Agent 决定哪个方案绝对最优。它负责：
 
 - 自动检索相关架构决策、失败重构和兼容经验；
@@ -779,11 +1149,13 @@ MemoryCandidate 模板
 - 真实 Host、CLI、协议或本地 build 验收在需要时已完成；
 - MemoryCandidate 只包含可复用且已验证的内容。
 
-只有 `converge passed=true` 后：
+对于托管交付流程，只有 `converge passed=true` 后：
 
-- 才允许正式调用 `memorize_asset`；
+- 才允许把该流程的 MemoryCandidate 正式交给 `memorize_asset`；
 - 才建议生成最终提交；
-- 才能对用户声明任务已完成。
+- 才能对用户声明该正式交付任务已完成。
+
+独立只读工具和用户明确发起的记忆管理不受该托管流程门禁约束。
 
 ### 6.11 `gencommit`
 
@@ -818,9 +1190,22 @@ Agent 不应仅根据搜索摘要执行高影响决策。
 
 ### 6.14 `memorize_asset`
 
-作用：将已验证的 MemoryCandidate 正式写入长期记忆。
+作用：将有证据、有适用边界的经验正式写入长期记忆。
 
-只允许在 `converge passed=true` 后调用。
+使用分为两种模式：
+
+```text
+托管交付流程
+→ 必须先形成 MemoryCandidate
+→ converge passed=true
+→ memorize_asset
+
+用户明确进行独立记忆管理
+→ 可以直接调用 memorize_asset
+→ 但必须提供 evidence、applicability 和真实内容
+```
+
+不得在 `memorize_asset` 内建立“所有调用都必须先 converge”的全局硬门禁；收敛门禁由托管 Plan 和 `converge` 负责。
 
 优先沉淀：
 
@@ -860,7 +1245,7 @@ Agent 不应仅根据搜索摘要执行高影响决策。
 
 ---
 
-## 7. 十个可选辅助工具
+## 7. 十个现有辅助与场景工具
 
 | 工具 | 作用 | 在主流程中的位置 |
 |---|---|---|
@@ -875,11 +1260,23 @@ Agent 不应仅根据搜索摘要执行高影响决策。
 | `ask_user` | 向用户询问单个关键问题 | Host 缺少原生 elicitation 时使用 |
 | `interview` | 结构化需求访谈 | 需求高度模糊时使用，不应成为每个任务的强制步骤 |
 
+### 7.1 App-only 隐藏动作：`list_memory_assets`
+
+`list_memory_assets` 不属于模型可见 34 个工具。它只服务 Memory Center：
+
+- 支持分页；
+- 支持类型、状态、项目和标签过滤；
+- 支持查看 active、stale、expired、superseded 和 retracted 生命周期；
+- 通过 App 协商后可按已知工具名调用；
+- 不得出现在模型 `tools/list`；
+- 不得被 Skill 推荐给普通 Agent；
+- Host 不支持 Apps 时，`search_memory`、`read_memory_asset` 等核心功能仍正常工作。
+
 ---
 
 ## 8. 统一任务生命周期
 
-所有工程任务使用同一条逻辑链，但小任务可以简化规格和影响分析深度。
+需要正式交付、持续状态或跨会话恢复的托管任务使用同一条逻辑链。单次只读查询、明确的独立分析和直接记忆管理不强制套入完整生命周期。
 
 ```text
 1. Intake
@@ -961,7 +1358,9 @@ Agent 发现可复用结论时，将其加入 Plan 的 `MemoryCandidate`：
 
 ### 9.3 收敛后正式写入
 
-`converge` 验证通过后返回 `memoryWriteAllowed=true`，Agent 再调用 `memorize_asset`。
+托管流程中，`converge` 验证通过后返回 `memoryWriteAllowed=true`，Agent 再调用 `memorize_asset`。
+
+用户明确要求创建、修正或删除记忆时，可直接使用 Memory 管理工具，但工具仍需检查证据、适用范围、生命周期和确认参数。
 
 ### 9.4 后续维护
 
@@ -1021,17 +1420,19 @@ start_feature
 ```text
 start_bugfix
 → 自动检索相似 Bug 和失败方案
+→ 调用或展开 fix_bug 的 SRC-8 子流程
 → SRC-1 明确差距
 → SRC-2 code_insight 收敛边界
 → SRC-3 验收契约
-→ SRC-4 完成真因工作表（fix_bug 可见时作为辅助）
+→ SRC-4 完成真因工作表
 → SRC-5 最小对策（architecture assess/design 按需）
 → plan_heartbeat
 → SRC-6 Agent 修复
 → SRC-7 gentest + 回归测试 + architecture validate/drift（按需）
 → code_review
 → converge
-→ SRC-8 memorize_asset（根因、回归、失败方案或被证伪根因）
+→ SRC-8 生成回归保护与 MemoryCandidate
+→ memorize_asset（托管流程收敛通过后，沉淀根因、回归、失败方案或被证伪根因）
 ```
 
 ### 11.3 UI 开发
@@ -1070,12 +1471,13 @@ architecture mode=assess
 → 自动 Memory Recall
 → code_insight mode=impact
 → Agent 核对现状和问题
-→ architecture mode=design
-→ plan_heartbeat
-→ 方案评审或实施
+→ 若只做当前架构评估，可在输出 ARC-1～ARC-3 后结束
+→ 若需要设计，architecture mode=design
+→ 若进入正式实施，plan_heartbeat
+→ 方案评审或分阶段实施
 → architecture mode=validate|drift
 → code_review / converge
-→ memorize_asset（验证后的架构决策或反模式）
+→ memorize_asset（托管流程收敛后沉淀验证过的架构决策或反模式）
 ```
 
 ### 11.6 会话中断或切换 Agent
@@ -1129,6 +1531,117 @@ start_onboard
 
 这不是新工具，而是让不同入口返回一致结构，便于任何 Host 和 Agent 按相同方式执行。
 
+### 12.1 输出真实性
+
+所有工具必须区分以下三类结果：
+
+```text
+MCP 已真实完成
+  例如：读取文件、生成图谱结果、写入 Plan 状态、写入 Memory、同步 UI 缓存
+
+MCP 已生成指导或计划
+  例如：代码审查清单、测试设计、规格模板、重构步骤、Delegated Plan
+
+Agent 仍需完成
+  例如：修改业务代码、落盘 pendingFiles、运行测试、截图验收、执行 Git 命令
+```
+
+禁止：
+
+- 把指导文本描述成已经完成静态扫描；
+- 把生成测试代码描述成测试已经通过；
+- 把 Delegated Plan 描述成代码已经修改；
+- 把 Agent 操作伪装成 MCP 工具调用；
+- 把推断描述成项目事实；
+- 在没有真实 revision、diff、测试或运行证据时声明正式交付完成。
+
+### 12.2 写入与副作用边界
+
+#### 默认只读或指导型
+
+```text
+workflow
+start_feature / start_bugfix / start_ui / start_onboard / start_product / start_ralph
+add_feature / check_spec / estimate
+code_insight / fix_bug / architecture / gentest / code_review / refactor
+gencommit / git_work_report
+ui_design_system / ui_search
+search_memory / read_memory_asset / scan_and_extract_patterns
+resume_plan
+ask_user / interview
+```
+
+这些工具返回结果、计划或候选，不应未经声明修改业务代码。
+
+#### 有限项目写入
+
+```text
+init_project
+init_project_context
+plan_heartbeat
+converge
+```
+
+要求：
+
+- 写入路径必须在结构化输出中列出；
+- 使用原子写或可恢复写入；
+- 不覆盖用户已有业务文件，除非契约明确且允许；
+- `converge` 只写计划状态和收敛结果，不修改业务代码。
+
+#### 外部、缓存或记忆写入
+
+```text
+sync_ui_data
+memorize_asset
+update_memory_asset
+delete_memory_asset
+list_memory_assets（只读 App-only）
+```
+
+要求：
+
+- 联网、缓存更新、删除和外部服务写入必须在调用时明确；
+- `delete_memory_asset` 必须要求 `confirm=true`；
+- UI 数据同步后的新版本默认下次会话生效；
+- Memory 写入失败不得影响主开发流程的真实完成状态，但必须报告未沉淀。
+
+### 12.3 Delegated Plan 统一契约
+
+正式编排工具返回的 Plan 至少包含：
+
+```json
+{
+  "planId": "稳定且可恢复的标识",
+  "workflow": "feature | bugfix | ui | product | onboard | ralph | architecture | refactor",
+  "workflowVersion": "版本",
+  "objective": "完整目标",
+  "globalRules": [],
+  "completionCriteria": [],
+  "requiredEvidenceKinds": [],
+  "qualityGates": [],
+  "memoryPolicy": {},
+  "steps": []
+}
+```
+
+每个 step 至少包含：
+
+```text
+id
+type: tool | agent_action
+tool 或 action
+dependsOn
+when
+requiredInputs
+expectedOutputs
+outputs
+onFailure
+note
+```
+
+文本指导和 `structuredContent.metadata.plan.steps` 必须来自同一份 Plan 数据，禁止两套步骤长期漂移。
+
 ---
 
 ## 13. 异常和降级处理
@@ -1170,12 +1683,29 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 
 ## 14. 渐进式实施顺序
 
+当前实现与目标设计的主要差距：
+
+- `architecture` 尚未实现；
+- `start_feature` 当前更强于规格阶段，实施、测试、review 和 converge 闭环不足；
+- `start_bugfix` 已复用 SRC-8，但完整交付末端仍需收口；
+- `start_ui` 已有较完整视觉流程，但不同模式的 Plan Contract 和正式收敛不一致；
+- `start_onboard` 当前主要只有 `init_project_context`；
+- `start_ralph` 尚未与统一 Plan、Heartbeat 和 Converge 完整对齐；
+- Plan 状态缺少明确的 MemoryCandidate、ArchitectureCandidate 和验收结果字段；
+- `converge` 仍偏固定证据种类，没有完全按 Plan 的实际要求判断；
+- `code_review` 尚不能完整比较声明范围、真实 diff 和架构偏移；
+- Catalog、Skill 和部分说明仍需统一“编排器与独立能力”的职责表达。
+
 ### Phase 0：冻结兼容基线
 
-- 固定现有 23 / 29 / 33 工具面；
+- 固定现有 Compact 23、Compact+Memory 29、Full 33、App 模型面 29；
+- 固定 App-only `list_memory_assets` 不进入模型 `tools/list`；
 - 固定 Legacy / Modern、CLI、Apps 和 Memory 行为；
-- 固定现有自动化、协议和 Claude 本地 build 验收；
+- 归档 Catalog、Schema、Visibility、协议、CLI 和本地 build 基线；
+- 运行并保存 `docs:verify`、`audit:tools`、协议 smoke 和现有核心测试结果；
 - 不修改生产行为。
+
+完成条件：产生可重复执行的基线报告，后续任何工具数量、可见性或协议变化都能被检测。
 
 ### Phase 1：统一工具职责和主流程
 
@@ -1183,35 +1713,59 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 - 明确 `workflow`、`start_*`、原子能力、Plan 和 Memory 的分层职责；
 - 明确 `start_*` 是流程编排器，不承担意图识别；
 - 将 `fix_bug` 确立为 SRC-8 八步法的唯一事实源，`start_bugfix` 只负责编排和展开；
+- 明确独立能力可直接调用，不要求所有工具被编排；
+- 修正 `memorize_asset` 的托管流程与直接管理双模式说明；
 - 修正互相冲突的调用说明；
 - 不新增工具、不改 Schema。
+
+完成条件：Skill、Catalog、文档和测试中不再出现职责冲突或 phantom tool。
 
 ### Phase 2：新增统一 `architecture` 工具
 
 - 只新增一个 `architecture` 工具，不拆成多工具家族；
+- 实现 ARC-8 单一方法核心；
 - 支持 `assess|design|validate|drift` 四种 mode；
 - 复用 `code_insight`、Memory、Plan 和 Converge，不复制其实现；
 - 接入 `start_feature`、`start_bugfix`、`refactor` 和独立架构任务；
 - 保持现有 33 个工具名称、输入输出和可见性不变；
-- 完成后目标工具面为 34 个，并单独进行协议、Host、CLI 和 Claude 本地 build 验收。
+- 完成后工具面必须严格为 Compact 24、Compact+Memory 30、Full 34、App 模型面 30；
+- 单独完成 Schema、Catalog、Registry、Visibility、CLI、Legacy、Modern、Host 和 Claude 本地 build 验收。
 
-### Phase 3：Task Assessment 与 MemoryCandidate
+完成条件：ARC-8 专项十个验收场景全部通过，原有 33 个工具契约无回归。
 
-- 在现有 `start_*` Plan 中加入统一的影响分析问题；
-- 将 MemoryCandidate 写入 Plan 状态；
-- 不做自动风险分级。
+### Phase 3：Plan、Heartbeat、Resume 与 Converge
 
-### Phase 4：增强 Heartbeat、Resume 和 Converge
+- 在现有 Plan Schema 上新增可选字段，保持旧状态可读；
+- 支持 `declaredScope`、`artifacts`、`memoryCandidates`、`architectureCandidates`、`acceptanceResults` 和 `runtimeEvidence`；
+- Plan 声明 `requiredEvidenceKinds`、`qualityGates` 和 `completionCriteria`；
+- Heartbeat 原子保存完整状态；
+- Resume 在没有旧对话正文时恢复完整目标、证据和下一步；
+- Converge 按 Plan 实际要求判断，并对托管流程返回 `memoryWriteAllowed`；
+- 不引入自动风险等级或中央状态机。
 
-- Heartbeat 保存统一证据和候选记忆；
-- Resume 无需旧对话即可恢复；
-- Converge 根据实际任务检查证据，返回 memoryWriteAllowed。
+完成条件：旧 Plan 兼容测试、跨会话恢复测试、不同 workflow 的收敛测试全部通过。
+
+### Phase 4：补齐各编排流程的正式交付闭环
+
+- `start_feature`：影响分析、架构按需、规格、实施、测试、review、converge、Memory；
+- `start_bugfix`：共享 SRC-8、修复、回归、review、converge、Memory；
+- `start_ui`：统一 Plan Contract、交互状态、响应式、截图、真实测试、review、converge；
+- `start_onboard`：上下文、图谱、命令、Memory、关键文件和已知问题导航；
+- `start_product`：Plan 恢复和产物一致性；
+- `start_ralph`：每轮 heartbeat、测试证据、停止条件和最终 converge；
+- 每个编排器分别提交、测试和验收，不一次修改全部入口。
+
+完成条件：六类编排流程都能从首次调用走到正式收敛，并可在中途恢复。
 
 ### Phase 5：实际 Diff 与验证一致性
 
-- code_review 对照 Agent 声明和真实 diff；
-- 对公共契约、数据结构、运行入口和权限变化增加客观检查；
+- `code_review` 对照 Agent 声明范围、Plan、Spec 和真实 diff；
+- 检查未声明文件、公共契约、Schema、数据所有权、持久化、运行入口、权限和安全变化；
+- 使用过 `architecture` 时，消费 drift 结果并检查未关闭偏移；
+- 测试证据必须包含真实命令、退出状态和必要运行结果；
 - 继续使用本地 build 和真实 Agent 场景验收。
+
+完成条件：越界修改、消费者遗漏、数据迁移遗漏、架构漂移和虚假测试证据均有确定性测试。
 
 ### Phase 6：Memory 质量治理
 
@@ -1222,29 +1776,87 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 - 错误删除；
 - 检索质量和注入长度校准。
 
-每个 Phase 独立提交、独立测试、可单独回滚。
+完成条件：有效资产检索、失效资产过滤、冲突更新、负面记忆证据和删除确认全部有自动化测试。
+
+### 14.1 实施纪律与停止条件
+
+每个 Phase 必须：
+
+- 独立提交；
+- 独立测试；
+- 可单独回滚；
+- 不在一个步骤同时重写 Registry、Routing、Plan 和 Apps；
+- 优先增加检查器和兼容层，再删除重复实现；
+- 不自动 push、tag 或发布；
+- 不修改与当前 Phase 无关的用户文件。
+
+出现以下情况立即停止并回滚当前步骤：
+
+- 工具数量意外变化；
+- Cursor 或其他 Host 的工具出现或消失；
+- App-only 工具进入模型 `tools/list`；
+- Memory 行为发生非预期变化；
+- Legacy、Modern 或 CLI 协议回归；
+- `project_root` 解析发生变化；
+- 工具产生未声明写入；
+- 单步必须同时修改超过三个核心生产模块才能工作；
+- 测试无法证明新行为且只能依赖人工猜测。
 
 ---
 
 ## 15. 验收标准
 
-### 15.1 跨 Agent 一致性
+### 15.1 工具面与兼容性
+
+- Compact 工具数严格为 24；
+- Compact+Memory 工具数严格为 30；
+- Full 模型可见工具数严格为 34；
+- MCP Apps 协商下模型可见工具数严格为 30；
+- App-only `list_memory_assets` 不出现在模型 `tools/list`；
+- 唯一可调用工具名总数为 35；
+- 原有 33 个模型可见工具名称不删除、不改名；
+- Legacy、Modern、CLI fallback 使用同一 Registry、Schema 和核心语义；
+- Host 不支持 Apps 时核心流程不受影响；
+- 不存在 Catalog、Schema、Handler、Skill 或文本引用不一致的 phantom tool。
+
+### 15.2 跨 Agent 一致性
 
 同一个任务由 Claude Code、Cursor 和 CLI fallback 执行时：
 
-- 进入相同类型的入口流程；
-- 得到相同的 Task Assessment 问题；
+- Agent 可以根据明确目标直接调用独立能力，也可以使用 `start_*`；
+- 一旦选择同一工具或同一编排流程，应得到相同的方法、Schema 和 Plan 语义；
+- 使用同一 SRC-8 和 ARC-8 方法核心；
 - 使用同一 Plan 状态语义；
 - 使用同一 Memory 召回和沉淀规则；
 - 使用同一 Converge 证据要求。
 
-### 15.2 可恢复性
+### 15.3 可恢复性
 
 - 任意步骤中断后可通过 `resume_plan` 继续；
 - 新 Agent 能看到目标、完成步骤、证据、revision 和未决项；
 - 不依赖旧对话正文。
 
-### 15.3 可验证性
+### 15.4 SRC-8 与 ARC-8 方法验收
+
+`fix_bug`：
+
+- SRC-1～SRC-8 的步骤、门禁和结构化产物来自一个共享事实源；
+- `start_bugfix` 只编排或展开，不复制步骤；
+- SRC-4 未闭合时不能进入修复；
+- 连续三次修复失败时必须返回边界或真因阶段；
+- SRC-8 生成回归保护和 MemoryCandidate，而不是直接绕过收敛写入。
+
+`architecture`：
+
+- ARC-1～ARC-8 的步骤、门禁和结构化产物来自 `architecture-method` 单一事实源；
+- `assess|design|validate|drift` 只是进入 ARC-8 的不同阶段；
+- 当前事实未建立时不能设计目标架构；
+- 结构性根因和保护不变量未明确时不能选定方案；
+- 没有候选方案权衡时不能把设计标记为确认；
+- 数据、契约或持久化变化没有迁移和回滚时 validate 必须失败；
+- 正式实施没有 drift 对比时不能最终收敛。
+
+### 15.5 可验证性
 
 - 未运行测试不能声称测试通过；
 - 未完成 review 不能通过收敛；
@@ -1254,7 +1866,7 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 - SRC-8 未生成回归保护和 MemoryCandidate 时，Bug 流程不得完整收敛；
 - 使用过 `architecture` 的任务，缺少 validate/drift 结果时不得通过最终收敛。
 
-### 15.4 记忆有效性
+### 15.6 记忆有效性
 
 - `start_*` 能召回高相关历史经验；
 - 未经验证的候选不能进入长期记忆；
@@ -1262,14 +1874,44 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 - 错误、重复和过期记忆可以修正或删除；
 - 同一根因在后续任务中不需要从零重复排查。
 
-### 15.5 不过度治理
+### 15.7 编排流程验收
+
+- `start_feature` 可从完整需求走到规格、实施、测试、review、converge 和 Memory；
+- `start_bugfix` 可从 SRC-8 走到真实修复、回归、review、converge 和 Memory；
+- `start_ui` 可覆盖设计系统、结构、实现、交互状态、桌面/移动截图、测试和收敛；
+- `start_onboard` 能输出项目上下文、代码入口、关键命令、关键文件、Memory 和已知问题；
+- `start_product` 的 PRD、原型文档、设计系统和 HTML 原型保持一致；
+- `start_ralph` 每轮有明确目标、变更、测试、heartbeat、停止条件和下一步；
+- 每个正式编排流程均可在中途 `resume_plan`；
+- 编排器只组合本次实际需要的工具，不把所有工具强制塞入流程。
+
+### 15.8 不过度治理
 
 - 小型改动可使用紧凑规格和定向测试；
 - 不强制所有任务调用 `architecture`，但架构任务必须使用统一架构流程；
 - 不强制风险等级；
 - 只读查询不要求建立完整 Plan；
 - Memory 或图谱不可用时主流程仍可降级执行；
-- 用户不需要理解全部 34 个工具才能使用系统。
+- 用户不需要理解全部 34 个模型可见工具才能使用系统；
+- 用户明确进行独立 Memory 管理时，不要求先创建托管 Plan；
+- 不建设 TaskRiskClassifier、PolicyKernel、中央意图引擎或强制统一入口。
+
+### 15.9 开发启动确认清单
+
+以下内容全部确认后，需求阶段结束，进入 Phase 0 和 Phase 1：
+
+- [ ] 接受“Agent 自主选择工具，`workflow` 仅可选路由”的总原则；
+- [ ] 接受“`start_*` 只编排完整交付，不是意图识别器”的职责；
+- [ ] 接受“独立能力可直接调用，不要求全部进入编排”的边界；
+- [ ] 接受 `fix_bug` 独占 SRC-8 方法事实源；
+- [ ] 接受 `architecture` 独占 ARC-8 方法事实源；
+- [ ] 接受只新增一个 `architecture`，不拆分架构工具家族；
+- [ ] 接受目标工具数量：Compact 24、Compact+Memory 30、Full 34、App 模型面 30、App-only 1、唯一工具名 35；
+- [ ] 接受 Plan 只服务长任务和正式交付，不包裹所有只读工具；
+- [ ] 接受托管 Memory 写入需 converge，独立记忆管理可直接调用；
+- [ ] 接受六个渐进式开发 Phase 和停止/回滚条件；
+- [ ] 接受不自动 commit、push、tag、release，不大规模重写 Registry、Apps 或 Memory 后端；
+- [ ] 接受所有完成结论必须以真实 diff、测试、review、运行或协议证据为依据。
 
 ---
 
@@ -1290,7 +1932,16 @@ Agent 必须从当前对话、活动 Plan、已有 Spec 和 history 恢复完整
 
 MCP Probe Kit V1 不再追求替 Agent 自动判断需求等级，也不建设庞大的自动控制平台。
 
-它在保护现有 33 个工具兼容性的基础上，只增加一个统一 `architecture` 工具，形成目标 34 个工具的完整但克制的交付系统：
+它在保护现有 33 个模型可见工具兼容性的基础上，只增加一个统一 `architecture` 工具，形成 34 个模型可见工具；连同 1 个 App-only 隐藏动作，唯一可调用工具名总数为 35 个。
+
+这套系统的两个领域方法核心分别是：
+
+```text
+fix_bug → SRC-8 软件根因修复方法
+architecture → ARC-8 架构推理与变更方法
+```
+
+完整但克制的交付链路为：
 
 ```text
 正确入口
