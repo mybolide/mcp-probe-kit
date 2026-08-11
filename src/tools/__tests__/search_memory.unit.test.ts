@@ -129,7 +129,7 @@ describe('search_memory 单元测试', () => {
   });
 
 
-  test('省略或传入无效 limit 时使用正数默认值', async () => {
+  test('省略 limit 时使用正数默认值，零和负数严格拒绝', async () => {
     isEnabledMock.mockReturnValue(true);
     searchMock.mockResolvedValue([]);
 
@@ -137,8 +137,13 @@ describe('search_memory 单元测试', () => {
     expect(searchMock.mock.calls[0][1].limit).toBeGreaterThan(0);
 
     searchMock.mockClear();
-    await searchMemory({ query: 'zero-limit', limit: 0 });
-    expect(searchMock.mock.calls[0][1].limit).toBeGreaterThan(0);
+    const zero = await searchMemory({ query: 'zero-limit', limit: 0 });
+    expect(zero.isError).toBe(true);
+    expect(zero.content[0].text).toContain('limit 必须是 1-50 的整数');
+    const negative = await searchMemory({ query: 'negative-limit', limit: -1 });
+    expect(negative.isError).toBe(true);
+    expect(negative.content[0].text).toContain('limit 必须是 1-50 的整数');
+    expect(searchMock).not.toHaveBeenCalled();
   });
 
   test('非法 limit 类型在访问 Memory 后端前返回参数错误', async () => {

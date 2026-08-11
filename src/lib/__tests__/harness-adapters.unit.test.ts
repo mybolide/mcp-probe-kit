@@ -51,6 +51,34 @@ describe("harness-adapters", () => {
     expect(second.layoutHarness.adapters).toEqual(first.layoutHarness.adapters);
   });
 
+  test("Claude Code 环境自动创建 CLAUDE.md 恢复规则并保持幂等", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-adapter-claude-env-"));
+    tempDirs.push(root);
+    fs.writeFileSync(path.join(root, "CLAUDE.md"), "# User Claude rules\nkeep-me\n", "utf8");
+    const environment = {
+      CLAUDECODE: "1",
+      CLAUDE_PROJECT_DIR: root,
+      AI_AGENT: "claude-code_2-1-179_harness",
+    };
+    const skill = generateWorkflowSkillContent(VERSION);
+
+    const first = ensureHarnessAdapters(root, skill, "AGENTS.md", environment);
+    const claude = first.adapters.find((adapter) => adapter.id === "claude-pointer");
+    const content = fs.readFileSync(path.join(root, "CLAUDE.md"), "utf8");
+
+    expect(claude?.updated).toBe(true);
+    expect(content).toContain(`mcp-probe-kit-harness-adapter-version: ${VERSION}`);
+    expect(content).toContain("call `resume_plan` first");
+    expect(content).toContain("pass only `project_root`");
+    expect(content).toContain("do not inspect the workspace with Bash");
+    expect(content).toContain("# User Claude rules");
+    expect(content).toContain("keep-me");
+
+    const second = ensureHarnessAdapters(root, skill, "AGENTS.md", environment);
+    expect(second.adapters[0]?.skipped).toBe(true);
+    expect(fs.readFileSync(path.join(root, "CLAUDE.md"), "utf8")).toBe(content);
+  });
+
   test("patchLayoutManifestHarness 保留 generatedAt 且无变化时不写盘", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-adapter-"));
     tempDirs.push(root);

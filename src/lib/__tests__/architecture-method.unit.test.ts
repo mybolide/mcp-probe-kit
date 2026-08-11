@@ -28,7 +28,16 @@ it('assess 输出 ARC-1 至 ARC-3 方法状态且不强制设计证据', () => {
 
   expect(result.methodology).toBe('arc8');
   expect(result.validation.passed).toBe(true);
-  expect(result.arc8Status.completedSteps).toContain('arc-3');
+  expect(result.arc8Status.completedSteps).toEqual(['arc-1', 'arc-2', 'arc-3']);
+  expect(result.arc8Status.notInScopeSteps).toEqual([
+    'arc-4',
+    'arc-5',
+    'arc-6',
+    'arc-7',
+    'arc-8',
+  ]);
+  expect(result.steps.slice(3).every((step) => step.status === 'not_in_scope')).toBe(true);
+  expect(result.arc8Status.nextStep).toBeNull();
   expect(result.validation.gaps).toEqual([]);
 });
 
@@ -42,6 +51,24 @@ it('design 缺少当前事实、根因和不变量时被 ARC-2/3 门禁阻断', 
   expect(result.validation.gaps.join('\n')).toContain('ARC-2');
   expect(result.validation.gaps.join('\n')).toContain('ARC-3');
   expect(result.arc8Status.blockedSteps.length).toBeGreaterThan(0);
+});
+
+it('assess 缺少事实、结构性根因和保护不变量时被 ARC-2/3 门禁阻断', () => {
+  const result = buildArchitectureMethod({
+    mode: 'assess',
+    description: '评估支付模块拆分',
+    currentFacts: [],
+    structuralCauses: [],
+    protectedInvariants: [],
+  });
+
+  expect(result.validation.passed).toBe(false);
+  expect(result.validation.gaps.join('\n')).toContain('ARC-2');
+  expect(result.validation.gaps.join('\n')).toContain('ARC-3');
+  expect(result.arc8Status.completedSteps).toEqual(['arc-1']);
+  expect(result.arc8Status.blockedSteps).toEqual(
+    expect.arrayContaining(['arc-2', 'arc-3']),
+  );
 });
 
 it('validate 对数据或契约变化强制要求迁移与回滚', () => {

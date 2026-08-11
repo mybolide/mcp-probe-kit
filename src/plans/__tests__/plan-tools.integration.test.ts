@@ -41,7 +41,76 @@ describe('Plan MCP tools integration', () => {
       });
       await assertHeartbeat(client, plan, projectRoot);
       await assertResume(client, plan.planId, projectRoot);
+      await assertLatestResume(client, plan.planId, projectRoot);
       await assertConverge(client, plan.planId, projectRoot);
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
+  test('resume_plan 返回可执行步骤时要求 Agent 立即继续而不是停在恢复汇报', async () => {
+    const projectRoot = await mkdtemp(join(tmpdir(), 'plan-resume-continue-'));
+    cleanup.push(projectRoot);
+    const { server } = createProbeServer();
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client(
+      { name: 'plan-resume-continue-test', version: '1.0.0' },
+      { capabilities: {} },
+    );
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+
+    try {
+      const plan = buildDelegatedPlanContract({
+        planId: 'feature-resume-continue-abc123',
+        workflow: 'feature',
+        workflowVersion: '4.0.0',
+        objective: '验证恢复后自动继续契约',
+        steps: [
+          { id: 'context', tool: 'init_project_context', args: { project_root: projectRoot } },
+          { id: 'implement', action: 'implement_feature', dependsOn: ['context'] },
+        ],
+      });
+      await client.callTool({
+        name: 'plan_heartbeat',
+        arguments: {
+          plan_id: plan.planId,
+          project_root: projectRoot,
+          plan,
+          status: 'active',
+          completed_step_ids: [],
+          current_step_id: 'context',
+        },
+      });
+
+      const result = await client.callTool({
+        name: 'resume_plan',
+        arguments: { project_root: projectRoot },
+      });
+      const structured = result.structuredContent as Record<string, any>;
+      const text = (result.content ?? [])
+        .map((item: any) => item?.text ?? '')
+        .join('\n');
+
+      expect(result.isError ?? false).toBe(false);
+      expect(structured).toMatchObject({
+        found: true,
+        selection: 'latest-resumable',
+        mustContinue: true,
+        nextStepId: 'context',
+        nextTool: 'init_project_context',
+        continuationContract: {
+          stopAfterResume: false,
+          heartbeatAfterEveryStep: true,
+          prohibitResumeOnlyReport: true,
+        },
+        handles: {
+          next_tool: 'init_project_context',
+        },
+      });
+      expect(text).toContain('禁止只汇报“已恢复”后停止');
+      expect(text).toContain('立即调用工具: init_project_context');
     } finally {
       await client.close();
       await server.close();
@@ -95,6 +164,19 @@ async function assertResume(client: Client, planId: string, projectRoot: string)
       acceptanceResults: [expect.objectContaining({ gateId: 'protocol-check' })],
       runtimeEvidence: [expect.objectContaining({ kind: 'mcp' })],
     },
+  });
+}
+
+async function assertLatestResume(client: Client, planId: string, projectRoot: string) {
+  const result = await client.callTool({
+    name: 'resume_plan',
+    arguments: { project_root: projectRoot },
+  });
+  expect(result.isError ?? false).toBe(false);
+  expect(result.structuredContent).toMatchObject({
+    found: true,
+    selection: 'latest-resumable',
+    record: { planId },
   });
 }
 

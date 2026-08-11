@@ -11,10 +11,10 @@ describe('UiAppResourceStore', () => {
     expect(store.read('ui://mcp-probe-kit/memory-center')).toBeNull();
   });
 
-  test('enabled store exposes five stable standards-compliant resources', () => {
+  test('enabled store exposes six stable standards-compliant resources', () => {
     const store = new UiAppResourceStore(true);
     const resources = store.list();
-    expect(resources).toHaveLength(5);
+    expect(resources).toHaveLength(6);
     expect(resources.every((item) => item.mimeType === MCP_APP_MIME_TYPE)).toBe(true);
 
     const content = store.read('ui://mcp-probe-kit/memory-center');

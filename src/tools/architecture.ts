@@ -227,7 +227,7 @@ async function collectArchitectureInsight(
   if (files.length > 0) {
     facts.push({
       statement: `code_insight 识别到 ${files.length} 个与架构目标相关的文件`,
-      classification: 'fact',
+      classification: status === 'ok' ? 'fact' : 'inference',
       evidence: files,
     });
   }
@@ -292,7 +292,12 @@ function renderArchitectureResult(result: ReturnType<typeof buildArchitectureMet
   }
   lines.push('', '## ARC-8 步骤');
   for (const step of result.steps) {
-    lines.push(`- [${step.status === 'completed' ? 'x' : ' '}] ${step.id.toUpperCase()} ${step.title} — ${step.status}`);
+    const marker = step.status === 'completed'
+      ? 'x'
+      : step.status === 'not_in_scope'
+        ? '-'
+        : ' ';
+    lines.push(`- [${marker}] ${step.id.toUpperCase()} ${step.title} — ${step.status}`);
   }
   lines.push(
     '',

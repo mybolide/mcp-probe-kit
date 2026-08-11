@@ -54,6 +54,24 @@ describe('release readiness', () => {
     expect(report.checks.find((item) => item.id === 'clean-build-before-compile')?.passed).toBe(false);
   });
 
+  it('README 工具数量落后于 Manifest 时阻断发布', () => {
+    const root = createFixture({
+      version: '4.0.0-rc.1',
+      serverVersion: '2.0.0',
+      includeMigration: true,
+    });
+    fs.writeFileSync(
+      path.join(root, 'README.md'),
+      '23 model-visible tools by default; 29 when Memory is configured; 33-tool compatibility surface',
+      'utf8',
+    );
+
+    const report = verifyReleaseReadiness(root);
+
+    expect(report.passed).toBe(false);
+    expect(report.checks.find((item) => item.id === 'readme-tool-surface')?.passed).toBe(false);
+  });
+
   it('缺少迁移材料或 SDK 版本漂移时阻断发布候选', () => {
     const root = createFixture({
       version: '4.0.0-rc.1',
@@ -110,6 +128,11 @@ function createFixture(options: {
       'smoke:gitnexus-sidecar': 'sidecar-smoke',
     },
   }));
+  fs.writeFileSync(
+    path.join(root, 'README.md'),
+    '24 model-visible tools by default; 30 when Memory is configured; 34-tool compatibility surface',
+    'utf8',
+  );
   fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
     version: options.version,
     packages: { '': { version: options.version } },

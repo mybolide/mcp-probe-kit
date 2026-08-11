@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit v4 - 可视化 Agent 研发工作流与 MCP Apps",
-    "description": "MCP Probe Kit v4 提供 23 个默认模型工具、29 个 Memory 工具面、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。",
+    "description": "MCP Probe Kit v4 提供 24 个默认模型工具、30 个 Memory 工具面、34 个 full 兼容模型工具、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。",
     "keywords": "MCP Probe Kit, AI开发工具, 代码生成, 代码审查, Git工具, UI开发, 研发效率, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {
@@ -15,19 +15,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "让 Agent 看懂项目、按计划执行，并用可视化工作台追踪真实进度",
-    "version": "v4.0.0-rc.8",
+    "version": "v4.0.0-rc.9",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.8",
+      "description": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.9",
       "installConfig": "安装配置"
     },
     "tools": {
       "title": "工具文档",
-      "description": "默认 23 个模型工具，配置 Memory 后 29 个，并提供 5 个原生 MCP Apps",
+      "description": "默认 24 个模型工具，配置 Memory 后 30 个，并提供 5 个原生 MCP Apps",
       "allTools": "所有工具"
     },
     "guides": {
@@ -65,10 +65,10 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.8，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.9，支持 Cursor、Cline 和 Claude Desktop",
     "skillBootstrap": {
       "title": "Skill 与 AGENTS 自动安装",
-      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v4.0.0-rc.8+）。"
+      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v4.0.0-rc.9+）。"
     },
     "breadcrumb": {
       "home": "文档首页",
@@ -353,7 +353,7 @@
     "subtitle": "MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南",
     "overview": {
       "title": "完整研发流程",
-      "description": "默认 23 个模型可见工具，配置 Memory 后为 29 个；通过 start_*、计划检查点和收敛闸门覆盖完整研发流程。",
+      "description": "默认 24 个模型可见工具，配置 Memory 后为 30 个；通过 start_*、计划检查点和收敛闸门覆盖完整研发流程。",
       "coreIdea": "核心理念：",
       "coreIdeaText": "通过工作流编排工具（start_*）串联整个开发流程，让 AI 成为你的研发助手。"
     },
@@ -608,7 +608,7 @@
     "resources": {
       "title": "更多资源",
       "allTools": "完整工具参考",
-      "allToolsDesc": "查看 33 个 full 兼容工具和 1 个 App-only 动作的详细说明",
+      "allToolsDesc": "查看 34 个 full 兼容工具和 1 个 App-only 动作的详细说明",
       "gettingStarted": "安装配置",
       "gettingStartedDesc": "快速开始使用",
       "migration": "迁移指南",
@@ -660,7 +660,7 @@
   "apps": {
     "title": "MCP Apps 可视化工作台",
     "subtitle": "五个原生 App 把计划、记忆、产品交付和证据闸门带进支持 MCP Apps 的客户端。",
-    "badge": "v4.0.0-rc.8 · 真实 App 源码演示",
+    "badge": "v4.0.0-rc.9 · 真实 App 源码演示",
     "howTitle": "如何使用",
     "how1": "在支持 io.modelcontextprotocol/ui 的客户端中配置 mcp-probe-kit@next。",
     "how2": "正常调用 start_feature、start_bugfix、start_product、converge 或 Memory 工具。",

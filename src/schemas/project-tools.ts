@@ -8,19 +8,19 @@ export const projectToolSchemas = [
   {
     name: "workflow",
     description:
-      "当不确定该用哪个 MCP 工具时使用。根据完整任务意图返回可解释 routingDecision、分阶段 MCP 指南（firstTool + phases）和下一工具参数提示。显式 scenario 优先；已知嵌套步骤按决策表处理；多个独立强意图、关键词同分或证据不足时返回 unknown 与候选，要求先澄清，不按规则顺序猜测。调用方必须汇总当前对话已确认的目标与约束，不得只传“继续/开始”等最后一句。新功能场景会提示 start_feature 并默认携带 spec_layout=auto。同时确保用户项目已存在 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 中的 Skill 引用（缺失则自动创建/更新）。",
+      "仅当 Agent 阅读 Skill 和各工具 description 后仍不确定该调用哪个 MCP 时使用的兜底选择指南。workflow 不做自然语言意图识别：scenario=auto（默认）只返回工具选择规则与速查表，不从 intent 猜 firstTool；Agent 根据完整对话自行判断或澄清。若 Agent 已明确场景，可传显式 scenario 获取该场景的确定性 firstTool、phases 和参数提示。同时确保用户项目已存在 .agents/skills/mcp-probe-kit/SKILL.md 与 AGENTS.md 中的 Skill 引用（缺失则自动创建/更新）。",
     inputSchema: {
       type: "object",
       properties: {
         intent: {
           type: "string",
           description:
-            "当前任务的完整意图摘要，应包含本轮对话已确认的目标、范围、模块、阶段和关键约束；用户只说“继续/开始/往下做”时，先结合前文重建任务摘要，禁止原样传入短确认语。",
+            "可选上下文摘要。scenario=auto 时仅供指南展示，不参与自动分类；显式 scenario 时用于生成该场景的参数提示和阶段说明。",
         },
         scenario: {
           type: "string",
-          enum: ["auto", "feature", "bugfix", "ui", "product", "architecture", "arch", "explore", "commit", "review", "refactor", "onboard", "spec", "memory"],
-          description: "可选：显式场景；显式值具有最高优先级。默认 auto 从 intent 推断，冲突或证据不足时返回 unknown 而不是猜测",
+          enum: ["auto", "feature", "bugfix", "ui", "product", "ralph", "architecture", "arch", "explore", "commit", "work_report", "report", "test", "review", "refactor", "onboard", "spec", "memory"],
+          description: "可选：显式场景。默认 auto 只返回 Agent 工具选择指南，不从 intent 推断场景；Agent 已确定场景时传 feature/bugfix/ui/... 获取确定性流程说明",
         },
         project_root: {
           type: "string",
@@ -137,11 +137,13 @@ export const projectToolSchemas = [
           description: "相关代码或文件上下文。可选，有助于更准确的估算",
         },
         team_size: {
-          type: "number",
+          type: "integer",
+          minimum: 1,
           description: "团队规模（人数）。可选，默认为 1",
         },
         experience_level: {
           type: "string",
+          enum: ["junior", "mid", "senior"],
           description: "经验水平：junior（初级）、mid（中级）、senior（高级）。可选，默认为 mid",
         },
       },

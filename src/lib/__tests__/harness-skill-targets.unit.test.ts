@@ -30,6 +30,22 @@ describe("harness-skill-targets", () => {
     expect(detection.skillCanonical).toBe(CANONICAL_SKILL_REL_PATH);
   });
 
+  test("Claude Code 子进程环境无需 .claude 目录也会启用原生适配", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-claude-env-"));
+    tempDirs.push(root);
+
+    const detection = detectHarnessContext(root, {
+      CLAUDECODE: "1",
+      CLAUDE_PROJECT_DIR: root,
+      AI_AGENT: "claude-code_2-1-179_harness",
+    });
+
+    expect(detection.markerHarnesses).toEqual([]);
+    expect(detection.environmentHarnesses).toEqual(["claude"]);
+    expect(detection.detected).toEqual(["claude"]);
+    expect(detection.adaptersToWrite.map((item) => item.id)).toEqual(["claude-pointer"]);
+  });
+
   test("存在 .trae 时自动写 trae Skill 镜像", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-"));
     tempDirs.push(root);

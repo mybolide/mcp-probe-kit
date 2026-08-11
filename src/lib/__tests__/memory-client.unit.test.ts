@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   buildMemoryContentHashes,
   MemoryClient,
@@ -7,6 +7,10 @@ import {
 } from '../memory-client.js';
 
 const originalFetch = globalThis.fetch;
+
+beforeEach(() => {
+  vi.stubEnv('MEMORY_EMBEDDING_PROVIDER', 'ollama');
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();

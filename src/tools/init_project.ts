@@ -8,7 +8,7 @@ import type { ProjectInit } from "../schemas/output/project-tools.js";
 import type { ToolExecutionContext } from "../lib/tool-execution-context.js";
 
 const AGENT_MANUAL_WRITE_NOTICE =
-  "MCP 仅写入 Skill 与 AGENTS.md；Agent 须按指南手动落盘 pendingFiles 中的 docs、specs、scripts、src。";
+  "MCP 的自动写入范围仅限 Skill 与 AGENTS.md；Agent 须按指南手动落盘 pendingFiles 中的 docs、specs、scripts、src。";
 
 /**
  * init_project 工具
@@ -54,6 +54,20 @@ export async function initProject(args: any, context?: ToolExecutionContext) {
       { path: MCP_PROBE_SKILL_REL_PATH, action: bootstrap.skill.created ? "created" as const : bootstrap.skill.updated ? "updated" as const : "skipped" as const },
       { path: agentsRel, action: bootstrap.agentsMd.created ? "created" as const : bootstrap.agentsMd.updated ? "updated" as const : "skipped" as const },
     ];
+    const skillStatus = bootstrap.skill.created
+      ? "本次已创建"
+      : bootstrap.skill.updated
+        ? "本次已升级"
+        : "已存在且无需更新";
+    const agentsStatus = bootstrap.agentsMd.created
+      ? "本次已创建"
+      : bootstrap.agentsMd.updated
+        ? "本次已更新"
+        : "已存在且无需更新";
+    const bootstrapChanged = bootstrapWritten.some((file) => file.action !== "skipped");
+    const bootstrapStatusSummary = bootstrapChanged
+      ? "MCP 已完成必要的创建或更新；具体状态见下方。"
+      : "MCP 已检查托管文件；本次无需写入或更新。";
     const pendingFiles = [
       { path: "docs/project-context.md", reason: "由 Agent 按指南创建" },
       { path: "docs/constitution.md", reason: "由 Agent 按指南创建" },
@@ -71,14 +85,15 @@ export async function initProject(args: any, context?: ToolExecutionContext) {
 📋 **项目需求**：
 ${input}
 ${warningBlock}
-📌 **MCP 已自动同步（必须先落盘）**（项目根: \`${toPosixPath(projectRoot)}\`）：
-- \`${MCP_PROBE_SKILL_REL_PATH}\`${bootstrap.skill.created ? "（已创建）" : bootstrap.skill.updated ? "（已升级）" : "（已是最新）"}
-- \`${agentsRel}\`${bootstrap.agentsMd.created ? "（已创建）" : bootstrap.agentsMd.updated ? "（已更新）" : ""}
+📌 **MCP 托管文件状态（必须先确认）**（项目根: \`${toPosixPath(projectRoot)}\`）：
+- \`${MCP_PROBE_SKILL_REL_PATH}\`（${skillStatus}）
+- \`${agentsRel}\`（${agentsStatus}）
+- ${bootstrapStatusSummary}
 
 🎯 **初始化步骤**：
 
-**第零步：确认 MCP 产物（已完成服务端写入，Agent 勿跳过）**
-- Skill 与 AGENTS.md 已由 mcp-probe-kit 写入上述路径
+**第零步：确认 MCP 托管文件状态（服务端已检查，Agent 勿跳过）**
+- MCP 已检查并确保 Skill 与 AGENTS.md 处于可用状态；是否发生本次写入以上方状态为准
 - 若未看到文件，确认已从目标项目目录打开 MCP 客户端，或在工具参数中传 \`project_root\` 绝对路径
 
 **第一步：创建项目基础结构**
@@ -89,8 +104,8 @@ ${warningBlock}
 ├── .agents/
 │   └── skills/
 │       └── mcp-probe-kit/
-│           └── SKILL.md             # MCP 调用时机（已自动创建）
-├── AGENTS.md                        # Agent 规则（已自动创建/更新）
+│           └── SKILL.md             # MCP 托管，状态见上方
+├── AGENTS.md                        # MCP 托管，状态见上方
 ├── docs/
 │   ├── project-context.md           # 项目上下文（技术栈、架构、规范）
 │   ├── constitution.md              # 项目宪法（核心原则和约束）
@@ -237,7 +252,7 @@ ${warningBlock}
 7. 识别可以并行执行的任务以优化开发效率
 
 🚀 **开始执行**：
-MCP 已写入 Skill 与 AGENTS.md。请按上述步骤由 Agent 创建 docs、scripts、src 及 specs 文档。`;
+MCP 已检查并确保 Skill 与 AGENTS.md 可用。请按上述步骤由 Agent 创建 docs、scripts、src 及 specs 文档。`;
 
     // 创建结构化数据对象
     const structuredData: ProjectInit = {
@@ -264,7 +279,9 @@ MCP 已写入 Skill 与 AGENTS.md。请按上述步骤由 Agent 创建 docs、sc
           'scripts/',
           'src/'
         ],
-        writtenFiles: bootstrapWritten.map((file) => file.path),
+        writtenFiles: bootstrapWritten
+          .filter((file) => file.action !== "skipped")
+          .map((file) => file.path),
         plannedFiles: pendingFiles.map((file) => file.path),
       },
       writtenFiles: bootstrapWritten,
@@ -296,9 +313,15 @@ MCP 已写入 Skill 与 AGENTS.md。请按上述步骤由 Agent 创建 docs、sc
       nextSteps: []
     };
     
-    return okStructured(`❌ 初始化项目失败: ${errorMessage}`, errorData, {
-      schema: (await import("../schemas/output/project-tools.js")).ProjectInitSchema,
-    });
+    return {
+      content: [{ type: "text" as const, text: `❌ 初始化项目失败: ${errorMessage}` }],
+      structuredContent: {
+        ...errorData,
+        error_code: "INIT_PROJECT_REJECTED",
+        message: errorMessage,
+      },
+      isError: true,
+    };
   }
 }
 

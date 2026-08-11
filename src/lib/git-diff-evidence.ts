@@ -17,6 +17,7 @@ export interface GitChangedFile {
 export interface GitDiffEvidence {
   available: true;
   repositoryRoot: string;
+  scopePath?: string;
   mode: GitDiffMode;
   currentRevision?: string;
   branch?: string;
@@ -98,17 +99,19 @@ function diffCommandSets(
   mode: GitDiffMode,
   baseRef?: string,
   headRef?: string,
+  scopePath?: string,
 ): string[][] {
-  if (mode === 'working') return [['diff', '--no-ext-diff', '--no-color', '--']];
-  if (mode === 'staged') return [['diff', '--cached', '--no-ext-diff', '--no-color', '--']];
+  const scope = scopePath ? [scopePath] : [];
+  if (mode === 'working') return [['diff', '--no-ext-diff', '--no-color', '--', ...scope]];
+  if (mode === 'staged') return [['diff', '--cached', '--no-ext-diff', '--no-color', '--', ...scope]];
   if (mode === 'range') {
     if (!baseRef || !headRef) throw new Error('diff_mode=range 时必须提供 base_ref 和 head_ref');
-    return [['diff', '--no-ext-diff', '--no-color', baseRef, headRef, '--']];
+    return [['diff', '--no-ext-diff', '--no-color', baseRef, headRef, '--', ...scope]];
   }
-  if (hasHead(root)) return [['diff', '--no-ext-diff', '--no-color', 'HEAD', '--']];
+  if (hasHead(root)) return [['diff', '--no-ext-diff', '--no-color', 'HEAD', '--', ...scope]];
   return [
-    ['diff', '--cached', '--no-ext-diff', '--no-color', '--'],
-    ['diff', '--no-ext-diff', '--no-color', '--'],
+    ['diff', '--cached', '--no-ext-diff', '--no-color', '--', ...scope],
+    ['diff', '--no-ext-diff', '--no-color', '--', ...scope],
   ];
 }
 
@@ -118,18 +121,20 @@ function metadataCommandSets(
   flag: '--name-status' | '--numstat',
   baseRef?: string,
   headRef?: string,
+  scopePath?: string,
 ): string[][] {
   const suffix = flag === '--name-status' ? [flag] : [flag];
-  if (mode === 'working') return [['diff', ...suffix, '--']];
-  if (mode === 'staged') return [['diff', '--cached', ...suffix, '--']];
+  const scope = scopePath ? [scopePath] : [];
+  if (mode === 'working') return [['diff', ...suffix, '--', ...scope]];
+  if (mode === 'staged') return [['diff', '--cached', ...suffix, '--', ...scope]];
   if (mode === 'range') {
     if (!baseRef || !headRef) throw new Error('diff_mode=range 时必须提供 base_ref 和 head_ref');
-    return [['diff', ...suffix, baseRef, headRef, '--']];
+    return [['diff', ...suffix, baseRef, headRef, '--', ...scope]];
   }
-  if (hasHead(root)) return [['diff', ...suffix, 'HEAD', '--']];
+  if (hasHead(root)) return [['diff', ...suffix, 'HEAD', '--', ...scope]];
   return [
-    ['diff', '--cached', ...suffix, '--'],
-    ['diff', ...suffix, '--'],
+    ['diff', '--cached', ...suffix, '--', ...scope],
+    ['diff', ...suffix, '--', ...scope],
   ];
 }
 
@@ -187,8 +192,10 @@ function applyNumstat(files: Map<string, GitChangedFile>, text: string): void {
   }
 }
 
-function collectUntracked(root: string, warnings: string[]): string[] {
-  const result = runGit(root, ['ls-files', '--others', '--exclude-standard', '-z']);
+function collectUntracked(root: string, warnings: string[], scopePath?: string): string[] {
+  const args = ['ls-files', '--others', '--exclude-standard', '-z'];
+  if (scopePath) args.push('--', scopePath);
+  const result = runGit(root, args);
   if (!result.ok) {
     warnings.push(`无法读取未跟踪文件: ${result.error}`);
     return [];
@@ -214,6 +221,12 @@ function optionalGitValue(root: string, args: string[]): string | undefined {
 
 export function collectGitDiffEvidence(input: CollectGitDiffInput): GitDiffEvidence {
   const repositoryRoot = assertGitRepository(input.projectRoot, 'code_review');
+  const resolvedProjectRoot = path.resolve(input.projectRoot);
+  const relativeScope = normalizePath(path.relative(repositoryRoot, resolvedProjectRoot));
+  if (relativeScope.startsWith('../') || path.isAbsolute(relativeScope)) {
+    throw new Error(`project_root 不在解析到的 Git 仓库内: ${resolvedProjectRoot}`);
+  }
+  const scopePath = relativeScope && relativeScope !== '.' ? relativeScope : undefined;
   const mode = input.mode ?? 'auto';
   const baseRef = safeRef(input.baseRef, 'base_ref');
   const headRef = safeRef(input.headRef, 'head_ref');
@@ -221,22 +234,22 @@ export function collectGitDiffEvidence(input: CollectGitDiffInput): GitDiffEvide
   const warnings: string[] = [];
   const diff = collectOutputs(
     repositoryRoot,
-    diffCommandSets(repositoryRoot, mode, baseRef, headRef),
+    diffCommandSets(repositoryRoot, mode, baseRef, headRef, scopePath),
     warnings,
   );
   const nameStatus = collectOutputs(
     repositoryRoot,
-    metadataCommandSets(repositoryRoot, mode, '--name-status', baseRef, headRef),
+    metadataCommandSets(repositoryRoot, mode, '--name-status', baseRef, headRef, scopePath),
     warnings,
   );
   const numstat = collectOutputs(
     repositoryRoot,
-    metadataCommandSets(repositoryRoot, mode, '--numstat', baseRef, headRef),
+    metadataCommandSets(repositoryRoot, mode, '--numstat', baseRef, headRef, scopePath),
     warnings,
   );
   const files = parseNameStatus(nameStatus);
   applyNumstat(files, numstat);
-  const untrackedFiles = mode === 'range' ? [] : collectUntracked(repositoryRoot, warnings);
+  const untrackedFiles = mode === 'range' ? [] : collectUntracked(repositoryRoot, warnings, scopePath);
   if (untrackedFiles.length > 0) {
     warnings.push(`存在 ${untrackedFiles.length} 个未跟踪文件；Git 证据只包含文件名，Agent 必须显式读取内容后才能审查。`);
   }
@@ -255,6 +268,7 @@ export function collectGitDiffEvidence(input: CollectGitDiffInput): GitDiffEvide
   return {
     available: true,
     repositoryRoot: path.resolve(repositoryRoot).replace(/\\/g, '/'),
+    ...(scopePath ? { scopePath } : {}),
     mode,
     ...(currentRevision ? { currentRevision } : {}),
     ...(branch ? { branch } : {}),

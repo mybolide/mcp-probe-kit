@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="i18n-title" content="meta.title">
   <title>MCP Probe Kit v4 - 可视化 Agent 研发工作流与 MCP Apps</title>
-  <meta name="description" content="MCP Probe Kit v4 提供 23 个默认模型工具、29 个 Memory 工具面、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。">
+  <meta name="description" content="MCP Probe Kit v4 提供 24 个默认模型工具、30 个 Memory 工具面、34 个 full 兼容模型工具、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。">
   <meta name="keywords" content="MCP Probe Kit, MCP Apps, Agent workflow, Memory Center, GitNexus, Cursor, Claude, Cline, OpenCode">
   <meta name="author" content="小墨 (Kyle) - ByteZoneX">
   <meta name="robots" content="index, follow">
@@ -59,7 +59,7 @@
       <a href="./index.html" class="flex items-center gap-2.5 font-semibold tracking-tight text-ink no-underline">
         <img src="./assets/logo.png" alt="MCP Probe Kit" class="h-8 w-8 rounded-lg">
         <span>MCP Probe Kit</span>
-        <span class="hidden rounded-full border border-line bg-canvas px-2 py-0.5 text-[11px] font-medium text-subtle sm:inline">v4.0.0-rc.8</span>
+        <span class="hidden rounded-full border border-line bg-canvas px-2 py-0.5 text-[11px] font-medium text-subtle sm:inline">v4.0.0-rc.9</span>
       </a>
       <div class="flex items-center gap-2 sm:gap-5">
         <a href="./pages/all-tools.html" class="hidden text-sm font-medium text-muted hover:text-accent sm:inline" data-i18n="nav.docs">文档</a>
@@ -77,7 +77,7 @@
       <div>
         <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-[#B2CCFF] bg-[#EFF4FF] px-3 py-1 text-xs font-semibold text-accent">
           <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
-          v4.0.0-rc.8 · npm <code class="font-mono">next</code>
+          v4.0.0-rc.9 · npm <code class="font-mono">next</code>
         </div>
         <h1 class="max-w-[760px] text-4xl font-semibold leading-[1.06] tracking-[-.04em] text-ink sm:text-5xl md:text-6xl">
           Know the Context.<br><span class="text-accent">Verify the Execution.</span>
@@ -106,8 +106,8 @@
   <main>
     <section class="border-b border-line bg-white">
       <div class="mx-auto grid max-w-[1200px] grid-cols-2 px-4 py-7 sm:px-6 md:grid-cols-4">
-        <div class="border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">23</strong><span class="text-xs text-subtle" data-i18n="stats.tools">默认模型工具</span></div>
-        <div class="md:border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">29</strong><span class="text-xs text-subtle" data-i18n="stats.memory">配置 Memory 后</span></div>
+        <div class="border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">24</strong><span class="text-xs text-subtle" data-i18n="stats.tools">默认模型工具</span></div>
+        <div class="md:border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">30</strong><span class="text-xs text-subtle" data-i18n="stats.memory">配置 Memory 后</span></div>
         <div class="border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">5</strong><span class="text-xs text-subtle" data-i18n="stats.apps">原生 MCP Apps</span></div>
         <div class="px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">3</strong><span class="text-xs text-subtle" data-i18n="stats.platforms">Sidecar 平台</span></div>
       </div>
@@ -168,7 +168,7 @@
         <a href="./pages/all-tools.html" class="text-sm font-semibold text-accent" data-i18n="sections.tools.allTools">所有工具</a>
       </div>
       <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <a href="./pages/getting-started.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">01</div><h3 class="mt-6 font-semibold" data-i18n="sections.quickStart.title">快速开始</h3><p class="mt-2 text-sm text-muted" data-i18n="sections.quickStart.description">5 分钟快速上手 MCP Probe Kit v4.0.0-rc.8</p></a>
+        <a href="./pages/getting-started.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">01</div><h3 class="mt-6 font-semibold" data-i18n="sections.quickStart.title">快速开始</h3><p class="mt-2 text-sm text-muted" data-i18n="sections.quickStart.description">5 分钟快速上手 MCP Probe Kit v4.0.0-rc.9</p></a>
         <a href="./pages/apps.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">02</div><h3 class="mt-6 font-semibold" data-i18n="nav.apps">MCP Apps</h3><p class="mt-2 text-sm text-muted" data-i18n="apps.subtitle">五个原生 App 把计划、记忆、产品交付和证据闸门带进支持 MCP Apps 的客户端。</p></a>
         <a href="./pages/examples.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">03</div><h3 class="mt-6 font-semibold" data-i18n="sections.guides.bestPractices">最佳实践</h3><p class="mt-2 text-sm text-muted" data-i18n="sections.guides.description">迁移指南和最佳实践</p></a>
         <a href="./pages/migration-v4.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">04</div><h3 class="mt-6 font-semibold">v3 → v4</h3><p class="mt-2 text-sm text-muted">Tool surfaces, Tasks, Apps, Memory and compatibility.</p></a>

@@ -50,7 +50,7 @@
     "update_memory_asset": "メモリ更新",
     "delete_memory_asset": "メモリ削除",
     "scan_and_extract_patterns": "パターン抽出",
-    "workflow": "スマートルーター",
+    "workflow": "ツール選択ガイド",
     "plan_heartbeat": "計画チェックポイント",
     "resume_plan": "計画再開",
     "converge": "収束ゲート",
@@ -86,7 +86,7 @@
       "count": "6個"
     },
     "routing": {
-      "title": "意図ルーティング"
+      "title": "ツール選択"
     },
     "plan": {
       "title": "計画状態と収束"
@@ -250,9 +250,9 @@
       "prompt": "scan_and_extract_patterns ツールを使って次のタスクを実行してください：<具体的な依頼>"
     },
     "workflow": {
-      "description": "完全なタスク意図から適切な start_*、分析、仕様、Memory の入口を選ぶ開発ワークフロー・ルーター。",
-      "usage": "利用ツールが不明な場合や、Agent が標準フローを飛ばしそうな場合に使用します。",
-      "prompt": "workflow を使って次のタスクに適切な開発フローを選択・実行してください：<完全なタスク>"
+      "description": "Skill とツール説明を読んでもどの MCP ツールを使うべきか判断できない Agent 向けのフォールバック選択ガイドです。auto は自然言語の意図分類を行わず、firstTool も返しません。",
+      "usage": "Agent が本当にツール選択に迷う場合だけ使用します。場面が既に明確なら、明示的な scenario で決定的なガイドを取得します。",
+      "prompt": "判断が難しい次のタスクについて、workflow をフォールバックのツール選択ガイドとして使用してください：<完全なタスク>"
     },
     "plan_heartbeat": {
       "description": "Delegated Plan の完了ステップ、証拠、未決事項、revision を保存し、再開可能なチェックポイントを作成します。",
@@ -278,7 +278,7 @@
   "ui": {
     "eyebrow": "TOOL CATALOG",
     "title": "ツールを探し、1文をコピーして、すぐ開始",
-    "subtitle": "既定23モデルツール、Memory構成時29、full互換33、さらにApp-only操作1件。",
+    "subtitle": "既定24モデルツール、Memory構成時30、full互換34、さらにApp-only操作1件。",
     "searchPlaceholder": "ツール名、用途、説明を検索…",
     "all": "すべて",
     "default": "既定",

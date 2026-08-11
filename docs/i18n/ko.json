@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit v4 - 관찰 가능한 Agent 워크플로와 MCP Apps",
-    "description": "MCP Probe Kit v4는 기본 23개 모델 도구, Memory 구성 시 29개, 5개 MCP Apps, 재개 가능한 계획, 증거 수렴, GitNexus Sidecar, 버전 고정 CLI fallback을 제공합니다.",
+    "description": "MCP Probe Kit v4는 기본 24개 모델 도구, Memory 구성 시 30개, full 호환 34개, 5개 MCP Apps, 재개 가능한 계획, 증거 수렴, GitNexus Sidecar, 버전 고정 CLI fallback을 제공합니다.",
     "keywords": "MCP Probe Kit, AI 개발 도구, 코드 생성, 코드 리뷰, Git 도구, UI 개발, 개발 효율성, Cursor, Cline, Claude, MCP 서버"
   },
   "nav": {
@@ -15,19 +15,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "Agent가 프로젝트를 이해하고 실제 계획을 실행하며 네이티브 워크벤치에서 진행 상황을 표시합니다",
-    "version": "v4.0.0-rc.8",
+    "version": "v4.0.0-rc.9",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
   },
   "sections": {
     "quickStart": {
       "title": "빠른 시작",
-      "description": "5분 안에 MCP Probe Kit v4.0.0-rc.8 시작하기",
+      "description": "5분 안에 MCP Probe Kit v4.0.0-rc.9 시작하기",
       "installConfig": "설치 및 구성"
     },
     "tools": {
       "title": "도구 문서",
-      "description": "기본 23개 모델 도구, Memory 구성 시 29개, 네이티브 MCP Apps 5개",
+      "description": "기본 24개 모델 도구, Memory 구성 시 30개, 네이티브 MCP Apps 5개",
       "allTools": "모든 도구"
     },
     "guides": {
@@ -65,10 +65,10 @@
   },
   "gettingStarted": {
     "title": "설치 및 구성",
-    "subtitle": "5분 안에 MCP Probe Kit v4.0.0-rc.8 시작하기. Cursor, Cline, Claude Desktop 지원",
+    "subtitle": "5분 안에 MCP Probe Kit v4.0.0-rc.9 시작하기. Cursor, Cline, Claude Desktop 지원",
     "skillBootstrap": {
       "title": "Skill 및 AGENTS 자동 부트스트랩",
-      "body": "MCP 도구 호출 시 AGENTS.md와 .agents/skills/mcp-probe-kit/SKILL.md를 작성합니다(단일 규칙 소스). .trae/, .lingma/, .comate/ 등 디렉터리가 있으면 얇은 어댑터를 자동 생성합니다(v4.0.0-rc.8+, 환경 변수 불필요)."
+      "body": "MCP 도구 호출 시 AGENTS.md와 .agents/skills/mcp-probe-kit/SKILL.md를 작성합니다(단일 규칙 소스). .trae/, .lingma/, .comate/ 등 디렉터리가 있으면 얇은 어댑터를 자동 생성합니다(v4.0.0-rc.9+, 환경 변수 불필요)."
     },
     "breadcrumb": {
       "home": "문서",
@@ -329,7 +329,7 @@
     "subtitle": "MCP Probe Kit은 완전한 개발 프로세스를 통합, 요구사항부터 배포까지의 모범 사례 가이드",
     "overview": {
       "title": "완전한 개발 프로세스",
-      "description": "기본 모델 가시 도구 23개, Memory 구성 시 29개로 start_* 오케스트레이션, 계획 체크포인트, 수렴 게이트를 통해 전체 개발 흐름을 지원합니다.",
+      "description": "기본 모델 가시 도구 24개, Memory 구성 시 30개로 start_* 오케스트레이션, 계획 체크포인트, 수렴 게이트를 통해 전체 개발 흐름을 지원합니다.",
       "coreIdea": "핵심 철학：",
       "coreIdeaText": "워크플로 오케스트레이션 도구(start_*)를 통해 전체 개발 프로세스를 연결하여 AI를 개발 어시스턴트로 만듭니다."
     },
@@ -584,7 +584,7 @@
     "resources": {
       "title": "추가 리소스",
       "allTools": "완전한 도구 참조",
-      "allToolsDesc": "full 호환 도구 33개와 App-only 작업 1개의 상세 설명 보기",
+      "allToolsDesc": "full 호환 도구 34개와 App-only 작업 1개의 상세 설명 보기",
       "gettingStarted": "설치 및 구성",
       "gettingStartedDesc": "빠른 시작 가이드",
       "migration": "마이그레이션 가이드",
@@ -636,7 +636,7 @@
   "apps": {
     "title": "MCP Apps 시각화 워크벤치",
     "subtitle": "5개 App이 계획, 메모리, 제품 인계, 증거 게이트를 MCP Apps 지원 클라이언트에 제공합니다.",
-    "badge": "v4.0.0-rc.8 · 실제 App 소스로 만든 데모",
+    "badge": "v4.0.0-rc.9 · 실제 App 소스로 만든 데모",
     "howTitle": "사용 방법",
     "how1": "io.modelcontextprotocol/ui 지원 클라이언트에 mcp-probe-kit@next를 설정합니다.",
     "how2": "start_feature, start_bugfix, start_product, converge 또는 Memory 도구를 평소처럼 호출합니다.",

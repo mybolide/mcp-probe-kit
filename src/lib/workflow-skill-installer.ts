@@ -5,7 +5,11 @@ import {
   resolveAgentsSkillRefMode,
 } from "./agents-skill-ref.js";
 import { generateAgentsMdInner } from "./agents-md-template.js";
-import { mergeAgentsMdBlock } from "./merge-agents-md.js";
+import {
+  consolidateAgentsMdBlocksPreservingNewest,
+  inspectAgentsMdBlocks,
+  mergeAgentsMdBlock,
+} from "./merge-agents-md.js";
 import {
   generateWorkflowSkillContent,
   LEGACY_WORKFLOW_SKILL_REL_PATH,
@@ -13,7 +17,9 @@ import {
 } from "./workflow-skill-template.js";
 import {
   agentsContextNeedsUpgrade,
+  compareSemver,
   getMcpProbeSkillVersion,
+  parseAgentsContextVersion,
   parseSkillInstalledVersion,
   skillContentNeedsUpgrade,
 } from "./workflow-skill-version.js";
@@ -26,6 +32,7 @@ import {
   toPosixPath,
 } from "./project-context-layout.js";
 import {
+  assertManagedWriteRootSafe,
   isLikelyProjectNamedRelativePath,
   getMcpPackageInstallRoot,
   resolveWorkspaceRoot,
@@ -153,12 +160,24 @@ function buildAgentsMdInner(projectRoot: string, existingAgentsContent?: string)
 function agentsMdNeedsUpdate(
   content: string | null | undefined,
   skillRelPath: string,
-  targetVersion: string
+  targetVersion: string,
+  generatedInner: string,
 ): boolean {
   if (!content?.trim()) {
     return true;
   }
+  const inspection = inspectAgentsMdBlocks(content);
+  const installedContextVersion = parseAgentsContextVersion(content);
+  if (
+    installedContextVersion
+    && compareSemver(installedContextVersion, getMcpProbeSkillVersion()) > 0
+  ) {
+    return !inspection.validSingleBlock;
+  }
   if (!content.includes("mcp-probe:context")) {
+    return true;
+  }
+  if (!inspection.validSingleBlock) {
     return true;
   }
   if (content.includes(LEGACY_WORKFLOW_SKILL_REL_PATH)) {
@@ -173,7 +192,8 @@ function agentsMdNeedsUpdate(
   if (agentsContextNeedsUpgrade(content, targetVersion)) {
     return true;
   }
-  return false;
+  const merged = mergeAgentsMdBlock(content, generatedInner, targetVersion).content;
+  return merged !== content;
 }
 
 function writeSkillFile(skillPath: string, version: string): void {
@@ -228,7 +248,13 @@ export function ensureAgentsMdSkillReference(
   const layout = resolveProjectContextLayout(root);
   const agentsPath = path.join(root, layout.indexPath);
   const existing = fs.existsSync(agentsPath) ? fs.readFileSync(agentsPath, "utf8") : null;
-  if (!agentsMdNeedsUpdate(existing, MCP_PROBE_SKILL_REL_PATH, targetVersion)) {
+  const inner = buildAgentsMdInner(root, existing ?? undefined);
+  if (!agentsMdNeedsUpdate(
+    existing,
+    MCP_PROBE_SKILL_REL_PATH,
+    targetVersion,
+    inner,
+  )) {
     return {
       path: layout.indexPath,
       existed: Boolean(existing?.trim()),
@@ -237,8 +263,16 @@ export function ensureAgentsMdSkillReference(
     };
   }
 
-  const inner = buildAgentsMdInner(root, existing ?? undefined);
-  const { content, mergeMode } = mergeAgentsMdBlock(existing, inner, targetVersion);
+  const installedContextVersion = existing ? parseAgentsContextVersion(existing) : null;
+  const preserveNewerDuplicateBlocks = Boolean(
+    existing
+    && installedContextVersion
+    && compareSemver(installedContextVersion, getMcpProbeSkillVersion()) > 0
+    && !inspectAgentsMdBlocks(existing).validSingleBlock,
+  );
+  const { content, mergeMode } = preserveNewerDuplicateBlocks
+    ? consolidateAgentsMdBlocksPreservingNewest(existing!)
+    : mergeAgentsMdBlock(existing, inner, targetVersion);
   fs.mkdirSync(path.dirname(agentsPath), { recursive: true });
   fs.writeFileSync(agentsPath, content, "utf8");
 
@@ -256,6 +290,7 @@ export function ensureAgentsMdSkillReference(
  */
 export function ensureMcpProbeKitBootstrap(projectRoot: string): McpProbeKitBootstrapResult {
   const root = path.resolve(projectRoot);
+  assertManagedWriteRootSafe(root);
   const workspaceWarning = buildWorkspaceWarning(root);
   const skill = ensureMcpProbeSkill(root);
   const skillContent = fs.readFileSync(skill.skillPath, "utf8");

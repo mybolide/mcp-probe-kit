@@ -24,11 +24,11 @@ function item(page: ActivePage, current: ActivePage, href: string, icon: string,
 
 function allToolsMenu(current: ActivePage): string {
   if (current !== 'all-tools') {
-    return item('all-tools', current, './all-tools.html', '🛠️', 'sidebar.allTools', '所有工具', '33+1');
+    return item('all-tools', current, './all-tools.html', '🛠️', 'sidebar.allTools', '所有工具', '34+1');
   }
   return `<button type="button" onclick="toggleToolsMenu()" class="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary border-l-3 border-primary hover:bg-blue-100 transition-colors" aria-controls="tools-submenu" aria-expanded="true" id="tools-menu-button">
           <span class="flex items-center gap-2"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span></span>
-          <span class="flex items-center gap-2"><span class="bg-white text-xs px-2 py-0.5 rounded-full">33+1</span><svg class="w-4 h-4 rotate-180 transition-transform" id="tools-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></span>
+          <span class="flex items-center gap-2"><span class="bg-white text-xs px-2 py-0.5 rounded-full">34+1</span><svg class="w-4 h-4 rotate-180 transition-transform" id="tools-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></span>
         </button>
         <div id="tools-submenu" class="mt-1 ml-4 border-l border-border pl-2" aria-label="Tool categories"></div>`;
 }

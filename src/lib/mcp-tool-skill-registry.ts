@@ -4,6 +4,10 @@
  */
 
 import { TOOL_CATALOG } from "../server/tool-catalog.js";
+import {
+  WORKFLOW_SELECTION_GUIDE,
+  type WorkflowSelectionGuideEntry,
+} from "./workflow-selection-guide.js";
 
 export interface McpToolSkillEntry {
   name: string;
@@ -18,41 +22,13 @@ export interface McpToolSkillGroup {
   tools: McpToolSkillEntry[];
 }
 
-/** 意图速查：用户信号 → 第一个应调的 MCP */
-export interface McpIntentQuickEntry {
-  signal: string;
-  firstTool: string;
-}
-
-export const MCP_INTENT_QUICK_LOOKUP: McpIntentQuickEntry[] = [
-  { signal: "完整交付新功能、功能增强或跨模块能力", firstTool: "start_feature" },
-  { signal: "完整修复 Bug，并完成回归、审查和收敛", firstTool: "start_bugfix" },
-  { signal: "只做 Bug 根因分析或使用 SRC-8 方法", firstTool: "fix_bug" },
-  { signal: "架构评估、架构设计、数据所有权、迁移回滚或架构漂移", firstTool: "architecture" },
-  { signal: "完整交付页面、组件或 UI 交互", firstTool: "start_ui" },
-  { signal: "只查 UI 模式或生成设计系统", firstTool: "ui_search / ui_design_system" },
-  { signal: "不熟代码、架构、调用链、影响面", firstTool: "code_insight" },
-  { signal: "只生成测试策略或测试候选", firstTool: "gentest" },
-  { signal: "只审查指定代码或 diff", firstTool: "code_review" },
-  { signal: "新项目上手、熟悉仓库", firstTool: "start_onboard" },
-  { signal: "产品方案、PRD、原型", firstTool: "start_product" },
-  { signal: "长周期自主迭代（Ralph）", firstTool: "start_ralph" },
-  { signal: "缺 AGENTS.md / 项目上下文", firstTool: "init_project_context" },
-  { signal: "全新空仓库脚手架", firstTool: "init_project" },
-  { signal: "写 commit message", firstTool: "gencommit" },
-  { signal: "代码评审、安全检查", firstTool: "code_review" },
-  { signal: "重构、整理代码", firstTool: "refactor（大改前先 code_insight）" },
-  { signal: "估算工时、排期", firstTool: "estimate" },
-  { signal: "校验规格是否写全", firstTool: "check_spec" },
-  { signal: "查历史踩坑、可复用经验", firstTool: "search_memory" },
-  { signal: "需求不清楚、要澄清", firstTool: "ask_user 或 interview" },
-  { signal: "工作报告、周报、git 汇总", firstTool: "git_work_report" },
-  { signal: "不确定用哪个 MCP", firstTool: "workflow" },
-];
+/** Agent 工具选择速查；用于 Skill/AGENTS/workflow 兜底指南，不做文本分类。 */
+export type McpIntentQuickEntry = WorkflowSelectionGuideEntry;
+export const MCP_INTENT_QUICK_LOOKUP: McpIntentQuickEntry[] = WORKFLOW_SELECTION_GUIDE;
 
 /** Agent 调 MCP 前的参数构造纪律。 */
 export const MCP_SKILL_ARGUMENT_RULES = [
-  "用户只说“继续 / 开始 / 往下做”时，先结合当前对话、已有 Spec 和用户已确认决定，重建完整任务摘要；禁止把短确认语原样传给 `workflow.intent` 或 `start_*.description`。",
+  "用户只说“继续 / 开始 / 往下做”且存在最近的 Delegated Plan 或已知 plan_id 时，直接调用 `resume_plan` 恢复检查点并从 nextStepId 继续；`mustContinue=true` 时禁止只汇报恢复结果，必须立即执行 nextStep/nextTool 并逐步 heartbeat；plan_id 丢失时只传 project_root，由工具自动选择最近的 active/blocked Plan；只有不存在可恢复 Plan 时，才结合当前对话、已有 Spec 和用户已确认决定下一工具。不要先调用 `workflow` 做意图识别。",
   "先判断当前目标是一个明确的单项能力，还是需要完整交付；单项能力直接调用对应工具，完整交付才使用 `start_*`。",
   "完整新功能交付调用 `start_feature`，并传 `description=<完整范围摘要>`、`spec_layout=auto` 和明确的 `project_root`；让编排器决定 flat 或 parent-child。",
   "跨模块、多阶段、大版本或架构升级不得直接调用 `add_feature`；只有布局和 `subspecs` 已明确时，才按 `start_feature` 返回的 plan 调用它。",
@@ -117,7 +93,7 @@ export const MCP_SKILL_AVOID_RULES = [
   "有对应 MCP 却**直接大段写实现**",
   "把 `workflow` 当作所有任务的强制入口",
   "把 `start_*` 当作所有原子能力的上级，导致单项分析也被强制套入完整流程",
-  "把用户的“继续 / 开始 / 往下做”原样当作 `workflow.intent` 或 `start_feature.description`",
+  "把用户的“继续 / 开始 / 往下做”交给 `workflow` 做意图识别，或原样当作 `start_feature.description`",
   "大型跨模块需求绕过 `start_feature` 直接手写单体 Spec",
   "`check_spec` **未通过**就写功能代码",
   "长流程执行步骤后**不** `plan_heartbeat`，导致中断后无法恢复",

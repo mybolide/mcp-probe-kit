@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
   MCP_APPS_EXTENSION_ID,
@@ -18,13 +20,14 @@ const supportedCapabilities = {
 };
 
 describe('mcp-apps', () => {
-  test('declares five stable MCP App resources', () => {
-    expect(MCP_APP_RESOURCES).toHaveLength(5);
+  test('declares six stable MCP App resources', () => {
+    expect(MCP_APP_RESOURCES).toHaveLength(6);
     expect(MCP_APP_RESOURCES.map((resource) => resource.uri)).toEqual(
       expect.arrayContaining([
         'ui://mcp-probe-kit/memory-center',
         'ui://mcp-probe-kit/feature-workbench',
         'ui://mcp-probe-kit/bug-workbench',
+        'ui://mcp-probe-kit/plan-workbench',
         'ui://mcp-probe-kit/product-workbench',
         'ui://mcp-probe-kit/convergence',
       ]),
@@ -81,7 +84,7 @@ describe('mcp-apps', () => {
     expect(html).toContain('resume_plan');
     expect(html).toContain('plan_heartbeat');
     expect(html).toContain('Plan \\u68C0\\u67E5\\u70B9\\u6CA1\\u6709\\u771F\\u5B9E\\u6B65\\u9AA4\\u56DE\\u5199');
-    expect(html).toContain('\\u540C\\u6B65\\u72B6\\u6001');
+    expect(html).not.toContain('\\u540C\\u6B65\\u72B6\\u6001');
     expect(html).toContain('\\u4E0D\\u5F97\\u53EA\\u5B8C\\u6210\\u4EE3\\u7801\\u800C\\u4E0D\\u56DE\\u5199\\u72B6\\u6001');
     expect(html).not.toContain('max-height: 690px');
     expect(html).toContain('container-type: inline-size');
@@ -122,12 +125,34 @@ describe('mcp-apps', () => {
     expect(html).toContain('data-app-kind="feature-workbench"');
   });
 
+  test('Plan Workbench render path is strictly read-only with no native or custom controls', () => {
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mcp-probe-app.ts'),
+      'utf8',
+    );
+    const start = source.indexOf('function renderTaskWorkbench()');
+    const end = source.indexOf('function renderProductWorkbench()');
+    const workbench = source.slice(start, end);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    expect(workbench).toContain('wb-readonly-footer');
+    expect(workbench).toContain('wb-plan-mobile');
+    expect(workbench).not.toContain('<button');
+    expect(workbench).not.toContain('<details');
+    expect(workbench).not.toContain('<summary');
+    expect(workbench).not.toContain('data-action=');
+  });
+
   test('maps model tools to stable app resources', () => {
     expect(getMcpAppResourceUri('search_memory')).toBe(
       'ui://mcp-probe-kit/memory-center',
     );
     expect(getMcpAppResourceUri('converge')).toBe(
       'ui://mcp-probe-kit/convergence',
+    );
+    expect(getMcpAppResourceUri('resume_plan')).toBe(
+      'ui://mcp-probe-kit/plan-workbench',
     );
   });
 });

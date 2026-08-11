@@ -152,6 +152,7 @@ export function renderConsistencyEvidence(bundle: CodeReviewEvidenceBundle): str
     if (bundle.diffEvidence.available) {
       sections.push([
         `- Git root: ${bundle.diffEvidence.repositoryRoot}`,
+        `- Git scope: ${bundle.diffEvidence.scopePath ?? '.'}`,
         `- Diff mode: ${bundle.diffEvidence.mode}`,
         `- Current revision: ${bundle.diffEvidence.currentRevision ?? 'unborn/unknown'}`,
         `- Changed files: ${bundle.diffEvidence.changedFiles.length}`,

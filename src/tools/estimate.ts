@@ -4,6 +4,59 @@ import type { GuidanceResult } from "../schemas/output/guidance-tools.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
 
+
+const ESTIMATE_OUTPUT_CONTRACT = {
+  summary: "一句话估算结论",
+  storyPoints: "number",
+  confidence: "high|medium|low",
+  timeEstimates: {
+    optimistic: "string",
+    normal: "string",
+    pessimistic: "string",
+  },
+  breakdown: [
+    {
+      task: "string",
+      hours: "number",
+      complexity: "low|medium|high",
+    },
+  ],
+  risks: [
+    {
+      risk: "string",
+      impact: "low|medium|high",
+      mitigation: "string",
+    },
+  ],
+  assumptions: ["string"],
+};
+
+const ESTIMATE_OUTPUT_EXAMPLE = {
+  summary: "任务估算总结（一句话）",
+  storyPoints: 5,
+  confidence: "medium",
+  timeEstimates: {
+    optimistic: "4h",
+    normal: "8h",
+    pessimistic: "16h",
+  },
+  breakdown: [
+    {
+      task: "需求理解",
+      hours: 1,
+      complexity: "low",
+    },
+  ],
+  risks: [
+    {
+      risk: "需求边界可能变化",
+      impact: "medium",
+      mitigation: "实现前确认验收标准",
+    },
+  ],
+  assumptions: ["开发环境和依赖已就绪"],
+};
+
 /**
  * estimate 工具
  * 
@@ -118,100 +171,23 @@ const PROMPT_TEMPLATE = `# 工作量估算指南
 
 ---
 
-## 📊 输出模板
+## 📊 分析检查清单（非输出结构）
 
-### 估算结果
+以下内容只用于推导估算，不构成第二套输出字段：
+- 确认故事点与三点时间估算相互一致
+- 在 breakdown 中列出主要任务、工时和复杂度
+- 在 risks 中列出风险、影响和缓解措施
+- 在 assumptions 中明确估算前提
+- 使用 confidence 表达当前信息充分程度
 
-| 项目 | 结果 |
-|------|------|
-| **故事点** | X 点 |
-| **预估时间** | X-X 小时/天 |
-| **置信度** | 高 / 中 / 低 |
-
-### 复杂度分析
-
-| 维度 | 评分 | 说明 |
-|------|------|------|
-| 代码量 | X/5 | [说明] |
-| 技术难度 | X/5 | [说明] |
-| 依赖复杂度 | X/5 | [说明] |
-| 测试复杂度 | X/5 | [说明] |
-| **综合** | X/5 | |
-
-### 时间分解
-
-| 活动 | 时间 | 说明 |
-|------|------|------|
-| 需求理解 | Xh | |
-| 设计 | Xh | |
-| 编码 | Xh | |
-| 单元测试 | Xh | |
-| 代码审查 | Xh | |
-| 集成测试 | Xh | |
-| 文档 | Xh | |
-| **合计** | Xh | |
-
-### 风险因素
-
-| 风险 | 影响 | 缓解措施 |
-|------|------|----------|
-| [风险描述] | 高/中/低 | [措施] |
-
-### 任务拆分建议
-
-> 如果估算超过 8 小时（5 故事点），建议拆分：
-
-| 子任务 | 估算 | 说明 |
-|--------|------|------|
-| [子任务1] | Xh | |
-| [子任务2] | Xh | |
-
-### 置信度说明
-
-**置信度**: [高/中/低]
-
-**影响因素**:
-- [因素1]
-- [因素2]
-
-**建议**: [如果置信度低，建议补充什么信息]
-
----
+最终响应只允许使用下方 JSON 契约中的字段名。
 
 ## 📤 输出格式要求
 
-请严格按以下 JSON 格式输出估算结果：
+请严格按以下 JSON 格式输出估算结果。字段名必须与 structuredContent.outputContract 完全一致：
 
 \`\`\`json
-{
-  "summary": "任务估算总结（一句话）",
-  "estimate": {
-    "story_points": 5,
-    "hours": { "optimistic": 4, "expected": 8, "pessimistic": 16 },
-    "confidence": "high|medium|low"
-  },
-  "complexity": {
-    "code_volume": { "score": 3, "reason": "中等代码量" },
-    "technical_difficulty": { "score": 4, "reason": "涉及新技术" },
-    "dependency": { "score": 2, "reason": "依赖较少" },
-    "testing": { "score": 3, "reason": "需要集成测试" }
-  },
-  "breakdown": [
-    { "activity": "需求理解", "hours": 1 },
-    { "activity": "设计", "hours": 2 },
-    { "activity": "编码", "hours": 4 },
-    { "activity": "测试", "hours": 2 }
-  ],
-  "risks": [
-    {
-      "type": "technical|dependency|requirement",
-      "description": "风险描述",
-      "impact": "high|medium|low",
-      "mitigation": "缓解措施"
-    }
-  ],
-  "split_suggestion": ["子任务1", "子任务2"]
-}
+{output_contract_example}
 \`\`\`
 
 ## ⚠️ 边界约束
@@ -261,6 +237,12 @@ export async function estimate(args: any) {
     if (!taskDescription) {
       throw new Error("缺少必填参数: task_description（任务描述）");
     }
+    if (!Number.isInteger(teamSize) || teamSize < 1) {
+      throw new Error(`参数 team_size 必须是大于等于 1 的整数，当前值: ${String(parsedArgs.team_size)}`);
+    }
+    if (!['junior', 'mid', 'senior'].includes(experienceLevel)) {
+      throw new Error(`参数 experience_level 不支持: ${experienceLevel}。可选值: junior, mid, senior`);
+    }
 
     const expLevelMap: Record<string, string> = {
       junior: "初级（1-2年经验）",
@@ -283,7 +265,8 @@ export async function estimate(args: any) {
       .replace(/{task_description}/g, taskDescription)
       .replace(/{team_size}/g, String(teamSize))
       .replace(/{experience_level}/g, expLevelMap[experienceLevel] || experienceLevel)
-      .replace(/{code_context_section}/g, codeContextSection)}`;
+      .replace(/{code_context_section}/g, codeContextSection)
+      .replace(/{output_contract_example}/g, JSON.stringify(ESTIMATE_OUTPUT_EXAMPLE, null, 2))}`;
 
     const structured: GuidanceResult = {
       mode: 'guidance',
@@ -300,14 +283,7 @@ export async function estimate(args: any) {
         '给出乐观、正常、悲观时间并使用 PERT 计算期望值',
         '映射故事点，列出风险、假设和必要的拆分建议',
       ],
-      outputContract: {
-        summary: '一句话估算结论',
-        storyPoints: 'number',
-        timeEstimates: { optimistic: 'string', normal: 'string', pessimistic: 'string' },
-        breakdown: [{ task: 'string', hours: 'number', complexity: 'low|medium|high' }],
-        risks: [{ risk: 'string', impact: 'low|medium|high', mitigation: 'string' }],
-        assumptions: ['string'],
-      },
+      outputContract: ESTIMATE_OUTPUT_CONTRACT,
       boundaries: [
         '该工具提供估算方法和输出契约，不声称已经执行真实开发',
         '估算必须基于当前输入；信息不足时降低置信度并明确假设',

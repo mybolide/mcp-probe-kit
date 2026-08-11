@@ -95,3 +95,44 @@ export function buildInitialPlanHeartbeatArgs(
     }],
   };
 }
+
+export function planFromToolResult(resultValue: unknown): PlanWorkbenchDict {
+  const result = asDict(resultValue);
+  const structured = asDict(result.structuredContent ?? result);
+  const record = asDict(structured.record);
+  const metadata = asDict(structured.metadata);
+  const metadataRecord = asDict(metadata.record);
+  const candidates = [
+    asDict(record.plan),
+    asDict(metadataRecord.plan),
+    asDict(structured.plan),
+    asDict(metadata.plan),
+  ];
+  return candidates.find((candidate) => Object.keys(candidate).length > 0) ?? {};
+}
+
+function snapshotRevision(snapshotValue: unknown): number {
+  const snapshot = asDict(snapshotValue);
+  const record = asDict(snapshot.record);
+  const raw = firstText([record.updatedAt, snapshot.updatedAt]);
+  const parsed = raw ? Date.parse(raw) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function shouldAdoptPlanSnapshot(
+  currentValue: unknown,
+  candidateValue: unknown,
+): boolean {
+  if (!planSnapshotHasRecord(candidateValue)) return false;
+  if (!planSnapshotHasRecord(currentValue)) return true;
+
+  const current = asDict(currentValue);
+  const candidate = asDict(candidateValue);
+  const currentRecord = asDict(current.record);
+  const candidateRecord = asDict(candidate.record);
+  const currentPlanId = firstText([currentRecord.planId, asDict(currentRecord.plan).planId]);
+  const candidatePlanId = firstText([candidateRecord.planId, asDict(candidateRecord.plan).planId]);
+
+  if (currentPlanId && candidatePlanId && currentPlanId !== candidatePlanId) return true;
+  return snapshotRevision(candidate) >= snapshotRevision(current);
+}

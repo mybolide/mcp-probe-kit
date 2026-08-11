@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit é um kit em nível de protocolo para explorar contexto e orquestrar desenvolvimento. A v4 mostra 23 ferramentas ao modelo por padrão, 29 com Memory totalmente configurado e mantém uma superfície full compatível com 33 ferramentas.
+> mcp-probe-kit é um kit em nível de protocolo para explorar contexto e orquestrar desenvolvimento. A v4 mostra 24 ferramentas ao modelo por padrão, 30 com Memory totalmente configurado e mantém uma superfície full compatível com 34 ferramentas.
 
 **Idiomas**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | **Português (BR)**
 
@@ -26,7 +26,7 @@
 
 > 🚀 Kit de Ferramentas de Desenvolvimento Completo Impulsionado por IA - Cobrindo Todo o Ciclo de Vida do Desenvolvimento
 
-Um poderoso servidor MCP com **23 ferramentas visíveis ao modelo por padrão**, **29 com Memory completo** e **33 ferramentas de compatibilidade** via `MCP_TOOLSET=full`. Suporta saída estruturada, protocolos Legacy/Modern e MCP Apps oficiais.
+Um poderoso servidor MCP com **24 ferramentas visíveis ao modelo por padrão**, **30 com Memory completo** e **34 ferramentas de compatibilidade** via `MCP_TOOLSET=full`. Suporta saída estruturada, protocolos Legacy/Modern e MCP Apps oficiais.
 
 **🎉 Release candidate v4**: MCP Apps nativas, planos retomáveis, convergência por evidências, GitNexus Sidecar gerenciado, specs pai-filho e CLI fallback fixado.
 
@@ -68,7 +68,7 @@ A v4 transforma a execução delegada do Agent em um ciclo de entrega observáve
 
 **[Abrir as cinco demos MCP Apps interativas e somente leitura](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **Canal preview da v4:** use `mcp-probe-kit@next` (atualmente `4.0.0-rc.8`). npm `latest` permanece no canal estável `3.7.0`. Fixe uma versão exata para avaliação em produção.
+> **Canal preview da v4:** use `mcp-probe-kit@next` (candidato atual `4.0.0-rc.9`). npm `latest` permanece no canal estável `3.7.0`. Fixe uma versão exata para avaliação em produção.
 <!-- v4-showcase:end -->
 
 ---
@@ -89,9 +89,9 @@ A v4 transforma a execução delegada do Agent em um ciclo de entrega observáve
 
 ### 📦 Superfícies de ferramentas
 
-- **`compact` padrão**: 23 ferramentas visíveis ao modelo; mantém entradas independentes como `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan` e `converge`.
-- **Memory totalmente configurado**: adiciona dinamicamente seis ferramentas Memory, totalizando 29 visíveis.
-- **`MCP_TOOLSET=full`**: restaura 33 ferramentas de modelo compatíveis para fluxos antigos e diagnóstico.
+- **`compact` padrão**: 24 ferramentas visíveis ao modelo; mantém entradas independentes como `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge` e `architecture`.
+- **Memory totalmente configurado**: adiciona dinamicamente seis ferramentas Memory, totalizando 30 visíveis.
+- **`MCP_TOOLSET=full`**: restaura 34 ferramentas de modelo compatíveis para fluxos antigos e diagnóstico.
 - **MCP Apps**: `list_memory_assets` é exclusivo do Memory Center, com `visibility=["app"]`, e não conta como ferramenta do modelo.
 - `add_feature`, `fix_bug`, `sync_ui_data` e `ask_user` ficam ocultos por padrão, mas suas capacidades permanecem via orquestração, scripts de manutenção ou modo full.
 

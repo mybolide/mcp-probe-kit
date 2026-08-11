@@ -5,9 +5,12 @@ const WorkflowScenarioSchema = {
     'bugfix',
     'ui',
     'product',
+    'ralph',
     'architecture',
     'explore',
     'commit',
+    'work_report',
+    'test',
     'review',
     'refactor',
     'onboard',
@@ -51,12 +54,25 @@ export const WorkflowRoutingResultSchema = {
     phases: { type: 'array', items: { type: 'object', additionalProperties: true } },
     avoid: { type: 'array', items: { type: 'string' } },
     memoryNotes: { type: 'array', items: { type: 'string' } },
+    selectionGuide: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          signal: { type: 'string' },
+          firstTool: { type: 'string' },
+          note: { type: 'string' },
+        },
+        required: ['signal', 'firstTool'],
+      },
+    },
+    agentSelectionRules: { type: 'array', items: { type: 'string' } },
     routingDecision: {
       type: 'object',
       properties: {
         source: {
           type: 'string',
-          enum: ['explicit', 'delivery-rules', 'keyword-scores', 'fallback'],
+          enum: ['explicit', 'guide', 'delivery-rules', 'keyword-scores', 'fallback'],
         },
         selectedScenario: {
           anyOf: [RoutableWorkflowScenarioSchema, { type: 'null' }],

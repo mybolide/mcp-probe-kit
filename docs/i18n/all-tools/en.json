@@ -50,7 +50,7 @@
     "update_memory_asset": "Update Memory",
     "delete_memory_asset": "Delete Memory",
     "scan_and_extract_patterns": "Extract Patterns",
-    "workflow": "Smart Router",
+    "workflow": "Tool Selection Guide",
     "plan_heartbeat": "Plan Checkpoint",
     "resume_plan": "Resume Plan",
     "converge": "Convergence Gate",
@@ -86,7 +86,7 @@
       "count": "6 tools"
     },
     "routing": {
-      "title": "Intent Routing"
+      "title": "Tool Selection"
     },
     "plan": {
       "title": "Plan State & Convergence"
@@ -250,9 +250,9 @@
       "prompt": "Use the scan_and_extract_patterns tool for this task: <describe your request>"
     },
     "workflow": {
-      "description": "Intelligent development workflow routing that selects the precise start_*, analysis, specification, or Memory entry from the complete task intent.",
-      "usage": "Use when the correct tool is unclear or when the Agent might skip the standard workflow.",
-      "prompt": "Use workflow to select and execute the correct development flow for: <complete task>"
+      "description": "Fallback tool-selection guide for an Agent that is still unsure which MCP tool to call after reading the Skill and tool descriptions. Auto mode does not classify natural-language intent and returns no firstTool.",
+      "usage": "Use only when the Agent is genuinely unsure which tool to call. If the Agent already knows the scenario, pass an explicit scenario for deterministic guidance.",
+      "prompt": "Use workflow only as a fallback guide for this unclear task: <complete task>"
     },
     "plan_heartbeat": {
       "description": "Persists completed steps, evidence, open items, and revision for a resumable Delegated Plan checkpoint.",
@@ -278,7 +278,7 @@
   "ui": {
     "eyebrow": "TOOL CATALOG",
     "title": "Find a tool, copy one sentence, start immediately",
-    "subtitle": "23 model tools by default, 29 with Memory, a 33-tool full compatibility surface, plus one App-only action.",
+    "subtitle": "24 model tools by default, 30 with Memory, a 34-tool full compatibility surface, plus one App-only action.",
     "searchPlaceholder": "Search by tool name, purpose, or description…",
     "all": "All",
     "default": "Default",

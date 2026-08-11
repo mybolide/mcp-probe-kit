@@ -1,18 +1,24 @@
 import { spawnSync } from 'node:child_process';
-import { chmod, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { chmod, cp, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, delimiter, join, resolve } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { create as createTar } from 'tar';
 import { COMPACT_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
 
 const npmExecPath = process.env.npm_execpath;
 const root = process.cwd();
 const tempRoot = await mkdtemp(join(tmpdir(), 'mcp-package-smoke-'));
+const stagingDir = join(tempRoot, 'staging');
 const packDir = join(tempRoot, 'pack');
 const consumerDir = join(tempRoot, 'consumer');
+const frozenBuildPath = join(root, 'build', 'index.js');
+const frozenBuild = await fingerprintFile(frozenBuildPath);
 
 try {
+  await createFrozenPackageStaging(root, stagingDir);
   await mkdir(packDir, { recursive: true });
   await mkdir(consumerDir, { recursive: true });
   await writeFile(
@@ -21,24 +27,25 @@ try {
     'utf8'
   );
 
-  const packed = runNpm(
-    ['pack', '--json', '--ignore-scripts', '--pack-destination', packDir],
-    root
-  );
-  const packResult = parseNpmPackJson(packed.stdout);
-  const artifact = packResult[0];
-  assert(artifact?.filename, 'npm pack did not return a filename');
-  assert(artifact.version === PACKAGE_VERSION, `unexpected packed version: ${artifact.version}`);
+  // npm pack/publish run prepare, which rebuilds build/index.js. A frozen
+  // candidate must never be rebuilt during acceptance. Create an npm-compatible
+  // tarball directly from the frozen package files instead; release can publish
+  // this exact tarball rather than repacking the source workspace.
+  const tarballFilename = `mcp-probe-kit-${PACKAGE_VERSION}.tgz`;
+  const tarballPath = join(packDir, tarballFilename);
+  await createTar({
+    gzip: true,
+    cwd: stagingDir,
+    file: tarballPath,
+    prefix: 'package/',
+    portable: true,
+  }, ['package.json', 'README.md', 'LICENSE', 'build']);
+  const stagedBuild = await fingerprintFile(join(stagingDir, 'build', 'index.js'));
   assert(
-    artifact.files?.some((file) => file.path === 'build/index.js'),
-    'packed artifact is missing build/index.js'
+    stagedBuild.sha256 === frozenBuild.sha256 && stagedBuild.size === frozenBuild.size,
+    'staging copy changed frozen build bytes'
   );
-  assert(
-    !artifact.files?.some((file) => file.path.includes('__tests__') || file.path.endsWith('.test.js')),
-    'packed artifact contains test files'
-  );
-
-  const tarballPath = resolve(packDir, basename(artifact.filename));
+  await assertFrozenBuildUnchanged(frozenBuildPath, frozenBuild, 'after frozen tarball creation');
   runNpm(
     [
       'install',
@@ -59,6 +66,17 @@ try {
   );
   const installedPackage = JSON.parse(await readFile(installedPackagePath, 'utf8'));
   assert(installedPackage.version === PACKAGE_VERSION, 'installed package version mismatch');
+  const installedBuild = await fingerprintFile(join(
+    consumerDir,
+    'node_modules',
+    'mcp-probe-kit',
+    'build',
+    'index.js'
+  ));
+  assert(
+    installedBuild.sha256 === frozenBuild.sha256 && installedBuild.size === frozenBuild.size,
+    'installed package build/index.js does not match frozen candidate bytes'
+  );
 
   const installedNodeModules = join(consumerDir, 'node_modules');
   for (const entry of await readdir(installedNodeModules, { withFileTypes: true })) {
@@ -284,17 +302,20 @@ try {
       name: 'workflow',
       arguments: {
         intent: '开发并验证 MCP Probe Kit v4 RC 发布候选，覆盖双协议、Agent Evals 和发布渠道保护',
-        scenario: 'auto',
+        scenario: 'feature',
         project_root: consumerDir,
       },
     });
-    assert(routed.structuredContent?.firstTool === 'start_feature', 'packed server routing mismatch');
+    assert(routed.structuredContent?.firstTool === 'start_feature', 'packed explicit feature workflow guide mismatch');
 
     console.log(JSON.stringify({
       version: installedPackage.version,
-      tarball: artifact.filename,
-      packedEntries: artifact.entryCount,
-      packedSize: artifact.size,
+      tarball: tarballFilename,
+      packedSize: (await stat(tarballPath)).size,
+      frozenBuildSha256: frozenBuild.sha256,
+      stagedBuildSha256: stagedBuild.sha256,
+      installedBuildSha256: installedBuild.sha256,
+      frozenBuildPreserved: true,
       clientEra: client.getProtocolEra(),
       tools: tools.tools.length,
       firstTool: routed.structuredContent?.firstTool,
@@ -319,6 +340,8 @@ try {
     await client.close().catch(() => undefined);
     await transport.close().catch(() => undefined);
   }
+
+  await assertFrozenBuildUnchanged(frozenBuildPath, frozenBuild, 'after package consumer smoke');
 } finally {
   await rm(tempRoot, { recursive: true, force: true });
 }
@@ -352,19 +375,6 @@ function runPackedCli(serverPath, cwd, tool, input) {
   return payload;
 }
 
-function parseNpmPackJson(output) {
-  const trimmed = output.trim();
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const match = trimmed.match(/(?:^|\r?\n)(\[\s*\{[\s\S]*\])$/);
-    if (!match) {
-      throw new Error(`npm pack did not return parseable JSON:\n${trimmed}`);
-    }
-    return JSON.parse(match[1]);
-  }
-}
-
 function runNpm(args, cwd) {
   const command = npmExecPath ? process.execPath : 'npm';
   const commandArgs = npmExecPath ? [npmExecPath, ...args] : args;
@@ -383,6 +393,47 @@ function runNpm(args, cwd) {
     ].filter(Boolean).join('\n'));
   }
   return result;
+}
+
+async function createFrozenPackageStaging(sourceRoot, destinationRoot) {
+  await mkdir(destinationRoot, { recursive: true });
+  for (const filename of ['package.json', 'README.md', 'LICENSE']) {
+    await cp(join(sourceRoot, filename), join(destinationRoot, filename), { force: true });
+  }
+  await cp(join(sourceRoot, 'build'), join(destinationRoot, 'build'), {
+    recursive: true,
+    force: true,
+    filter: (source) => {
+      const normalized = source.replaceAll('\\', '/');
+      if (normalized.includes('/__tests__/')) return false;
+      if (/\.test\.(?:js|d\.ts)$/i.test(normalized)) return false;
+      return true;
+    },
+  });
+}
+
+async function fingerprintFile(filePath) {
+  const info = await stat(filePath);
+  const bytes = await readFile(filePath);
+  return {
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    size: info.size,
+    mtimeMs: info.mtimeMs,
+  };
+}
+
+async function assertFrozenBuildUnchanged(filePath, expected, stage) {
+  const actual = await fingerprintFile(filePath);
+  assert(
+    actual.sha256 === expected.sha256
+      && actual.size === expected.size
+      && actual.mtimeMs === expected.mtimeMs,
+    [
+      `frozen build changed ${stage}`,
+      `expected sha=${expected.sha256} size=${expected.size} mtimeMs=${expected.mtimeMs}`,
+      `actual sha=${actual.sha256} size=${actual.size} mtimeMs=${actual.mtimeMs}`,
+    ].join('\n')
+  );
 }
 
 function assert(condition, message) {

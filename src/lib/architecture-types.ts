@@ -3,7 +3,7 @@ export const ARCHITECTURE_METHOD_VERSION = '1.0.0' as const;
 
 export type ArchitectureMode = 'assess' | 'design' | 'validate' | 'drift';
 export type ArchitectureFactClassification = 'fact' | 'inference' | 'unknown';
-export type ArchitectureStepStatus = 'completed' | 'pending' | 'blocked';
+export type ArchitectureStepStatus = 'completed' | 'pending' | 'blocked' | 'not_in_scope';
 
 export interface ArchitectureFact {
   statement: string;
@@ -103,6 +103,7 @@ export interface ArchitectureMethodResult {
   arc8Status: {
     completedSteps: string[];
     blockedSteps: string[];
+    notInScopeSteps: string[];
     nextStep: string | null;
   };
   problem: {

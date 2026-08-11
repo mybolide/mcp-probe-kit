@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, test } from "vitest";
 import { VERSION } from "../../version.js";
 import {
@@ -56,10 +57,71 @@ describe("cli-fallback-installer", () => {
     const shell = fs.readFileSync(shellPath, "utf8");
     expect(shell.startsWith("#!/usr/bin/env sh")).toBe(true);
     expect(shell).toContain('"$@"');
+    expect(shell).toContain("MCP_PROBE_LOCAL_ENTRY");
+    expect(shell).not.toContain('cd "$PROJECT_ROOT"');
+    const cmd = fs.readFileSync(path.join(root, CLI_CMD_REL_PATH), "utf8");
+    expect(cmd).toContain("MCP_PROBE_LOCAL_ENTRY");
+    expect(cmd).not.toContain("pushd");
+    expect(cmd).not.toContain("MCP_PROBE_PROJECT_ROOT");
     if (process.platform !== "win32") {
       expect(fs.statSync(shellPath).mode & 0o111).not.toBe(0);
     }
     expect(fs.existsSync(path.join(root, CLI_RUNTIME_MANIFEST_REL_PATH))).toBe(true);
+  });
+
+
+  test("源码仓库内启动器自动使用本地 build，不被同名 package 的 npx 解析遮蔽", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "probe-cli-source-"));
+    tempDirs.push(root);
+    fs.mkdirSync(path.join(root, "build"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "package.json"),
+      `${JSON.stringify({ name: "mcp-probe-kit", version: VERSION })}\n`,
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(root, "build", "index.js"),
+      'console.log(`LOCAL_CHECKOUT_OK ${process.argv.slice(2).join(" ")}`);\n',
+      "utf8",
+    );
+
+    ensureCliFallback(root);
+
+    const cmd = fs.readFileSync(path.join(root, CLI_CMD_REL_PATH), "utf8");
+    const powershell = fs.readFileSync(path.join(root, CLI_POWERSHELL_REL_PATH), "utf8");
+    const shell = fs.readFileSync(path.join(root, CLI_SHELL_REL_PATH), "utf8");
+    expect(cmd).toContain('%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js');
+    expect(powershell).toContain('$LocalCheckoutEntry');
+    expect(shell).toContain('$WRAPPER_ROOT/build/index.js');
+
+    const env = { ...process.env };
+    delete env.MCP_PROBE_LOCAL_ENTRY;
+    const execution = process.platform === "win32"
+      ? spawnSync("cmd.exe", ["/d", "/c", path.join(root, CLI_CMD_REL_PATH), "--version"], {
+          cwd: root,
+          env,
+          encoding: "utf8",
+        })
+      : spawnSync(path.join(root, CLI_SHELL_REL_PATH), ["--version"], {
+          cwd: root,
+          env,
+          encoding: "utf8",
+        });
+    expect(execution.status).toBe(0);
+    expect(execution.stdout).toContain("LOCAL_CHECKOUT_OK --version");
+  });
+
+  test("普通目标项目不会把自身 build/index.js 误当成 mcp-probe-kit CLI", () => {
+    const root = tempRoot();
+    fs.mkdirSync(path.join(root, "build"), { recursive: true });
+    fs.writeFileSync(path.join(root, "build", "index.js"), 'console.log("USER_APP");\n', "utf8");
+
+    ensureCliFallback(root);
+
+    const cmd = fs.readFileSync(path.join(root, CLI_CMD_REL_PATH), "utf8");
+    const shell = fs.readFileSync(path.join(root, CLI_SHELL_REL_PATH), "utf8");
+    expect(cmd).not.toContain('%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js');
+    expect(shell).not.toContain('$WRAPPER_ROOT/build/index.js');
   });
 
   test("同版本重复执行不重写文件", () => {

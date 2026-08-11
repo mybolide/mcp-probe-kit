@@ -50,7 +50,7 @@
     "update_memory_asset": "메모리 수정",
     "delete_memory_asset": "메모리 삭제",
     "scan_and_extract_patterns": "패턴 추출",
-    "workflow": "스마트 라우터",
+    "workflow": "도구 선택 가이드",
     "plan_heartbeat": "계획 체크포인트",
     "resume_plan": "계획 재개",
     "converge": "수렴 게이트",
@@ -86,7 +86,7 @@
       "count": "6개"
     },
     "routing": {
-      "title": "의도 라우팅"
+      "title": "도구 선택"
     },
     "plan": {
       "title": "계획 상태와 수렴"
@@ -250,9 +250,9 @@
       "prompt": "scan_and_extract_patterns 도구를 사용해 다음 작업을 수행하세요: <구체적인 요청>"
     },
     "workflow": {
-      "description": "전체 작업 의도에서 정확한 start_*, 분석, 명세 또는 Memory 진입점을 선택하는 개발 워크플로 라우터입니다.",
-      "usage": "어떤 도구를 써야 할지 불명확하거나 Agent가 표준 흐름을 건너뛸 수 있을 때 사용합니다.",
-      "prompt": "workflow를 사용해 다음 작업에 맞는 개발 흐름을 선택하고 실행하세요: <전체 작업>"
+      "description": "Skill과 도구 설명을 읽은 뒤에도 어떤 MCP 도구를 호출할지 확신하지 못하는 Agent를 위한 폴백 도구 선택 가이드입니다. auto 모드는 자연어 의도를 분류하지 않으며 firstTool을 반환하지 않습니다.",
+      "usage": "Agent가 실제로 도구 선택을 확신하지 못할 때만 사용합니다. 이미 시나리오를 알고 있다면 명시적 scenario로 결정적인 가이드를 받습니다.",
+      "prompt": "다음 모호한 작업에 대해 workflow를 폴백 도구 선택 가이드로만 사용하세요: <전체 작업>"
     },
     "plan_heartbeat": {
       "description": "Delegated Plan의 완료 단계, 증거, 미결 항목, revision을 저장해 재개 가능한 체크포인트를 만듭니다.",
@@ -278,7 +278,7 @@
   "ui": {
     "eyebrow": "TOOL CATALOG",
     "title": "도구를 찾고, 한 문장을 복사해 바로 시작",
-    "subtitle": "기본 모델 도구 23개, Memory 구성 시 29개, full 호환 33개, App-only 작업 1개.",
+    "subtitle": "기본 모델 도구 24개, Memory 구성 시 30개, full 호환 34개, App-only 작업 1개.",
     "searchPlaceholder": "도구 이름, 용도 또는 설명 검색…",
     "all": "전체",
     "default": "기본",

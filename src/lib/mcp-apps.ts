@@ -8,6 +8,7 @@ export type McpAppKind =
   | 'memory-center'
   | 'feature-workbench'
   | 'bug-workbench'
+  | 'plan-workbench'
   | 'product-workbench'
   | 'convergence';
 
@@ -38,6 +39,12 @@ export const MCP_APP_RESOURCES: readonly McpAppResourceDefinition[] = [
     kind: 'bug-workbench',
   },
   {
+    uri: 'ui://mcp-probe-kit/plan-workbench',
+    name: 'MCP Probe Kit Plan Workbench',
+    description: 'Read-only resumed plan and progress view.',
+    kind: 'plan-workbench',
+  },
+  {
     uri: 'ui://mcp-probe-kit/product-workbench',
     name: 'MCP Probe Kit Product Workbench',
     description: 'Interactive product definition and product-to-feature handoff.',
@@ -63,6 +70,7 @@ const TOOL_RESOURCE_URI: Readonly<Record<string, string>> = {
   list_memory_assets: 'ui://mcp-probe-kit/memory-center',
   start_feature: 'ui://mcp-probe-kit/feature-workbench',
   start_bugfix: 'ui://mcp-probe-kit/bug-workbench',
+  resume_plan: 'ui://mcp-probe-kit/plan-workbench',
   start_product: 'ui://mcp-probe-kit/product-workbench',
   converge: 'ui://mcp-probe-kit/convergence',
 };
@@ -734,6 +742,8 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
 
 /* Actions aligned with content; refresh/converge clearly downgraded. */
 .wb-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding: 12px 0 0 16px; border-top: 1px solid var(--border); }
+.wb-readonly-footer { justify-content: space-between; }
+.wb-readonly-note { color: var(--subtle); font-size: 9.5px; }
 .wb-planid { min-width: 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font: 10.5px/1.4 var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace); }
 .wb-buttons { display: flex; align-items: center; flex: 0 0 auto; gap: 6px; }
 .wb-buttons button { min-height: 30px; font-size: 11.5px; }
@@ -741,12 +751,9 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
 .wb-secondary { border-color: transparent; background: transparent; color: var(--muted); font-size: 11.5px; font-weight: 600; padding: 5px 12px; }
 .wb-secondary:hover { border-color: transparent; background: var(--panel-hover); color: var(--text); }
 
-/* Mobile plan steps live in a native <details>, default collapsed. */
-.wb-plan-mobile { display: none; }
-.wb-plan-mobile summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; list-style: none; margin: 0; padding: 8px 0; border-top: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; }
-.wb-plan-mobile summary::-webkit-details-marker { display: none; }
-.wb-plan-mobile summary::after { content: '▾'; color: var(--subtle); font-size: 10px; transition: transform .16s ease; }
-.wb-plan-mobile[open] summary::after { transform: rotate(180deg); }
+/* Mobile plan is static and read-only; no details/summary or action controls. */
+.wb-plan-mobile { display: none; border-top: 1px solid var(--border); padding-top: 10px; }
+.wb-plan-mobile .wb-plan-head { margin-bottom: 8px; }
 .wb-plan-mobile .plan-steps { margin-top: 2px; }
 
 @media (max-width: 660px) {
@@ -808,7 +815,7 @@ pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .progress-track > span, .wb-plan-mobile summary::after { transition: none; }
+  .progress-track > span { transition: none; }
 }
 
 

@@ -1,10 +1,10 @@
 # MCP Probe Kit 软件交付系统 V1 最终需求与验收基线
 
-> 文档状态：开发前最终需求基线，后续实现、测试和验收以本文为准。
+> 文档状态：V1 最终需求基线；实现已进入 `4.0.0-rc.9` 发布候选阶段，本文同时保留 V1 基线与当前实现口径。
 >
-> 当前代码基线：`mcp-probe-kit@4.0.0-rc.8`，分支 `develop/v4`。
+> 当前发布候选：`mcp-probe-kit@4.0.0-rc.9`，分支 `develop/v4`。
 >
-> 当前模型可见工具：Full 33 个；目标模型可见工具：Full 34 个。
+> V1 兼容基线：Full 33 个；rc.20 当前模型可见工具：Full 34 个。
 >
 > App-only 隐藏动作：1 个；目标唯一可调用工具名总数：35 个。
 >
@@ -77,7 +77,7 @@ MCP Probe Kit 不是代码生成器，也不替代 Agent 的工程判断。
 
 ### 3.2 MCP Probe Kit 负责
 
-- 告诉 Agent 当前任务应该先做什么；
+- 提供清晰的工具合同、调用边界和兜底工具选择指南，供 Agent 判断下一步；
 - 自动召回与当前任务相关的历史经验；
 - 提供项目上下文、调用链和影响范围证据；
 - 要求 Agent 完成统一的任务分析；
@@ -104,7 +104,7 @@ V1 先冻结现有 33 个模型可见工具的兼容基线，再以独立提交�
 
 ```text
 workflow
-  仅在 Agent 不确定首个工具时提供路由建议
+  仅在 Agent 不确定首个工具时提供工具选择指南；不做自然语言意图识别
 
 start_*
   场景流程编排器：只组合该场景实际需要的能力，生成 Delegated Plan
@@ -163,7 +163,7 @@ Agent 是否使用 `start_*`，取决于当前目标是“完成一个完整交�
 
 工具数量必须区分“模型可见工具”和“App-only 隐藏动作”，禁止再用一个数字混合表达。
 
-| 工具面 | 当前基线 | 新增 `architecture` 后 | 说明 |
+| 工具面 | V1 兼容基线 | rc.20 当前 | 说明 |
 |---|---:|---:|---|
 | Compact 模型可见 | 23 | 24 | 默认紧凑工具集 |
 | Compact + Memory | 29 | 30 | 紧凑工具集开启 Memory |
@@ -172,7 +172,7 @@ Agent 是否使用 `start_*`，取决于当前目标是“完成一个完整交�
 | App-only 隐藏动作 | 1 | 1 | `list_memory_assets`，仅供 Memory Center 调用 |
 | 唯一可调用工具名总数 | 34 | 35 | 模型可见工具加 App-only 动作去重后的总数 |
 
-当前已验证基线：
+V1 兼容基线记录（历史口径）：
 
 ```text
 compact = 23
@@ -201,9 +201,9 @@ flowchart TB
     U --> A
     SK --> A
 
-    W[workflow<br/>可选首工具路由]
+    W[workflow<br/>兜底工具选择指南]
     A -. 不确定首工具时 .-> W
-    W -. 返回 firstTool 建议 .-> A
+    W -. 返回选择规则 / 速查表 .-> A
 
     subgraph O[完整交付编排工具]
         SF[start_feature]
@@ -294,7 +294,7 @@ flowchart TB
 
 | # | 工具 | 类型 | 当前实现位置 | 当前实现效果 | V1 最终效果与修改要求 |
 |---:|---|---|---|---|---|
-| 1 | `workflow` | 可选路由 | `src/tools/workflow.ts`、`src/lib/dev-workflow.ts` | 根据显式或轻量场景返回 `firstTool`、参数提示和阶段建议，并同步 Skill | 保持可选；增加 `architecture` 场景；删除“所有任务必须先路由”的暗示；不执行工具、不维护任务状态、不判断风险等级 |
+| 1 | `workflow` | 兜底工具选择指南 | `src/tools/workflow.ts`、`src/lib/dev-workflow.ts` | `scenario=auto` 只返回 `selectionGuide` / `agentSelectionRules`，不从自然语言猜 `firstTool`；显式 `scenario` 返回确定性场景指南，并同步 Skill | 保持可选；Agent 根据完整对话、Skill 和 tool descriptions 自主选择工具；`workflow` 只在拿不准时辅助，不执行工具、不维护任务状态、不判断风险等级 |
 | 2 | `start_feature` | 完整交付编排 | `src/tools/start_feature.ts` | 注入 Memory、图谱、规格布局、规格草稿、`check_spec` 和 `estimate`，返回功能 Plan | 补齐影响分析、架构按需、实现、真实测试、`code_review`、`converge` 和 Memory 闭环；不复制底层工具方法 |
 | 3 | `start_bugfix` | 完整交付编排 | `src/tools/start_bugfix.ts` | 组合 Memory、项目上下文、图谱、规格闸门和共享 SRC-8 Plan | 明确只编排 `fix_bug` 的 SRC-8；补齐修复、回归、review、converge 和正式记忆沉淀；不维护第二套八步法 |
 | 4 | `start_ui` | 完整交付编排 | `src/tools/start_ui.ts` | 生成视觉方向、设计系统、结构搜索、关键页面实现、桌面/移动截图、视觉评审和迭代步骤 | 所有模式统一正式 DelegatedPlanContract；补交互状态、真实测试、review、converge 和 Memory；不得把 Agent 文件操作伪装为 MCP 工具 |
@@ -957,16 +957,18 @@ code_insight
 
 ### 5.7 `workflow`
 
-用途：Agent 不确定应该使用哪个入口时提供路由建议。
+用途：Agent 阅读 Skill 和 tool descriptions 后仍不确定应该使用哪个入口时，提供兜底工具选择指南。
 
 它只负责：
 
-- 根据完整意图选择第一个工具；
-- 给出参数提示；
-- 展示建议流程和禁止事项。
+- 在 `scenario=auto` 时展示工具选择规则、相邻能力边界和禁止事项，`firstTool=null`；
+- 在 Agent 已经判断出场景并显式传 `scenario` 时，给出该场景的确定性 `firstTool`、参数提示和阶段建议；
+- 帮助 Agent 自己判断，必要时提示先向用户澄清。
 
 它不负责：
 
+- 根据任意自然语言自动识别 feature / bugfix / ui / refactor 等意图；
+- 代替 Agent 处理多个独立交付之间的语义关系；
 - 判断需求风险等级；
 - 作为所有任务的强制主入口；
 - 替代 `start_*` 的项目分析；

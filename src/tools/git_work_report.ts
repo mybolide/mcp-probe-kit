@@ -1,8 +1,7 @@
 import { okStructured } from "../lib/response.js";
 import type { GuidanceResult } from "../schemas/output/guidance-tools.js";
 import { handleToolError } from "../utils/error-handler.js";
-import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
-import { assertGitRepository } from "../lib/git-repository.js";
+import { resolveGitRepositoryForTool } from "../lib/git-repository.js";
 
 /**
  * Git 工作报告生成工具
@@ -254,10 +253,7 @@ export async function gitWorkReport(args: GitWorkReportArgs) {
   try {
     // 1. 参数验证
     validateArgs(args);
-    const gitRoot = assertGitRepository(
-      resolveWorkspaceRoot(args.project_root),
-      "git_work_report"
-    );
+    const gitRoot = resolveGitRepositoryForTool(args.project_root, "git_work_report");
 
     // 2. 构建指导文本
     const guidance = buildGuidance(args);

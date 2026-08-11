@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { VERSION } from "../../version.js";
 import { runCommandLine } from "../command-line.js";
@@ -20,6 +21,12 @@ function createProject(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "probe-cli-"));
   tempDirs.push(root);
   fs.writeFileSync(path.join(root, "package.json"), '{"name":"cli-demo"}\n', "utf8");
+  return root;
+}
+
+function createGitProject(): string {
+  const root = createProject();
+  execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
   return root;
 }
 
@@ -123,6 +130,29 @@ describe("mcp-probe-kit CLI", () => {
     expect(JSON.parse(output())).toMatchObject({
       ok: true,
       tool: "plan_heartbeat",
+    });
+  });
+
+  test("CLI Git 工具在多工作区中选择实际 Git 仓库而不是首个非 Git 目录", async () => {
+    const nonGit = createProject();
+    const gitRoot = createGitProject();
+    vi.stubEnv("WORKSPACE_FOLDER_PATHS", JSON.stringify([nonGit, gitRoot]));
+    const output = captureStdout();
+
+    const exitCode = await runCommandLine([
+      "exec",
+      "git_work_report",
+      "--json",
+      JSON.stringify({ start_date: "2020-01-01", end_date: "2030-01-01" }),
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(output())).toMatchObject({
+      ok: true,
+      project: {
+        root: path.resolve(gitRoot),
+        source: "workspace-env",
+      },
     });
   });
 

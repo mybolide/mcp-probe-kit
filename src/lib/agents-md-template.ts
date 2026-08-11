@@ -71,7 +71,8 @@ export function generateAgentsMdInner(input: AgentsMdTemplateInput): string {
     return `## MCP（必须先调）
 需已配置 mcp-probe-kit。${formatAgentsSkillReference(skillLink)}（首次 MCP 调用自动创建 Skill 文件）。
 
-- 不确定用哪个 MCP → \`workflow\`（返回 firstTool）
+- 用户只说“继续 / 开始 / 往下做” → **先调用 \`resume_plan\`**；已知 \`plan_id\` 则传入，未知则只传 \`project_root\` 自动恢复最近的 active/blocked Plan；未确认无可恢复 Plan 前，禁止先用 Bash 探索、调用 \`workflow\` 或重新调用 \`start_*\`；恢复成功且 \`mustContinue=true\` 后禁止只汇报“已恢复”，必须立即执行 \`nextStep/nextTool\`，每步后调用 \`plan_heartbeat\`，直到阻断、取消或收敛
+- 不确定用哪个 MCP → \`workflow\`（只返回工具选择指南；由 Agent 自己判断，必要时再澄清）
 - 当前会话看不到 MCP 工具 → 读取 Skill 的“执行通道与自动降级”，通过 \`.mcp-probe-kit/bin/probe.*\` 调用同版本 CLI；不要要求用户安装
 - 新功能 → \`start_feature\`（会先搜记忆）
 - Bug → \`start_bugfix\`（会先搜记忆）
@@ -94,7 +95,8 @@ ${graphLineZh}${memorySection(locale)}`;
   return `## MCP (call first)
 Requires mcp-probe-kit. ${formatAgentsSkillReferenceEn(skillLink)} (Skill file auto-created on first MCP call).
 
-- Unsure which MCP → \`workflow\` (returns firstTool)
+- User says only “continue / start / keep going” → **call \`resume_plan\` first**; pass \`plan_id\` when known, otherwise pass only \`project_root\` to recover the latest active/blocked Plan. Do not explore with Bash, call \`workflow\`, or restart with \`start_*\` until no resumable Plan is confirmed. When recovery returns \`mustContinue=true\`, do not stop after reporting recovery; execute \`nextStep/nextTool\` immediately, call \`plan_heartbeat\` after each step, and continue until blocked, cancelled, or converged
+- Unsure which MCP → \`workflow\` (returns a tool-selection guide only; the Agent decides, and clarifies only when needed)
 - MCP tools missing from this Agent session → follow the Skill CLI fallback and call \`.mcp-probe-kit/bin/probe.*\`; do not ask the user to install it
 - Feature → \`start_feature\` (searches memory first)
 - Bug → \`start_bugfix\` (searches memory first)

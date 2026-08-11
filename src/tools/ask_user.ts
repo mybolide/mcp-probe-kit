@@ -17,6 +17,11 @@ interface Question {
 
 export async function askUser(args: any) {
   try {
+    const hasExplicitQuestion = Boolean(
+      args
+      && typeof args === 'object'
+      && Object.prototype.hasOwnProperty.call(args, 'question')
+    );
     // 解析参数
     const parsed = parseArgs(args, {
       primaryField: "question",
@@ -28,6 +33,19 @@ export async function askUser(args: any) {
     const questions = parsed.questions as Question[];
     const context = parsed.context;
     const reason = parsed.reason;
+
+    if (hasExplicitQuestion && (typeof question !== 'string' || !question.trim())) {
+      throw new Error('参数 question 必须是非空字符串');
+    }
+
+    if (Array.isArray(questions)) {
+      for (let i = 0; i < questions.length; i++) {
+        const item = questions[i] as unknown;
+        if (!item || typeof item !== 'object' || !String((item as { question?: unknown }).question ?? '').trim()) {
+          throw new Error(`参数 questions[${i}].question 必须是非空字符串`);
+        }
+      }
+    }
 
     if (!question && !questions) {
       const header = renderGuidanceHeader({
@@ -48,9 +66,9 @@ ask_user "你希望支持哪些支付方式？"
 ### 多个问题
 \`\`\`
 ask_user --questions [
-  "目标用户是谁？",
-  "预期的并发量是多少？",
-  "有预算限制吗？"
+  { "question": "目标用户是谁？", "required": true },
+  { "question": "预期的并发量是多少？", "required": true },
+  { "question": "有预算限制吗？", "required": false }
 ]
 \`\`\`
 
@@ -112,7 +130,7 @@ ask_user "是否需要支持移动端？" --context "当前只有 PC 端实现"
       // 多个问题
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
-        const required = q.required !== false ? "**[必答]**" : "_[可选]_";
+        const required = q.required === true ? "**[必答]**" : "_[可选]_";
         
         lines.push(`### ${i + 1}. ${q.question} ${required}`);
         lines.push("");
@@ -152,7 +170,7 @@ ask_user "是否需要支持移动端？" --context "当前只有 PC 端实现"
           question: String(item.question ?? ''),
           context: item.context ? String(item.context) : undefined,
           options: Array.isArray(item.options) ? item.options.map(String) : [],
-          required: item.required !== false,
+          required: item.required === true,
         }))
       : [];
     const primaryQuestion = question

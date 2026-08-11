@@ -42,7 +42,7 @@ const outputSchemas = manifest.structuredOutput?.schemas ?? {};
 
 const categoryMap: Record<string, { key: string; title: string; icon: string }> = {
   orchestration: { key: 'workflow', title: '编排入口', icon: '🔄' },
-  routing: { key: 'routing', title: '意图路由', icon: '🧭' },
+  routing: { key: 'routing', title: '工具选择兜底', icon: '🧭' },
   'project-spec': { key: 'project', title: '项目与规格', icon: '📁' },
   'code-analysis': { key: 'analysis', title: '代码分析与测试', icon: '🔍' },
   git: { key: 'git', title: 'Git 工具', icon: '📝' },

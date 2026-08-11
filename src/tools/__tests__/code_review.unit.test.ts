@@ -48,6 +48,38 @@ describe("code_review 单元测试", () => {
     expect(meta?.note).toMatch(/Agent/);
   });
 
+  test("显式 project_root 位于父 Git 仓库子树时只收集该子树 diff", async () => {
+    const root = makeGitRepo();
+    const scopedRoot = path.join(root, "packages", "scoped-app");
+    const outsideFile = path.join(root, "outside.ts");
+    fs.mkdirSync(scopedRoot, { recursive: true });
+    fs.writeFileSync(path.join(scopedRoot, "app.ts"), "export const scoped = 1;\n", "utf8");
+    fs.writeFileSync(outsideFile, "export const outside = 1;\n", "utf8");
+    execFileSync("git", ["add", "."], { cwd: root, stdio: "ignore" });
+    execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-m", "baseline"], {
+      cwd: root,
+      stdio: "ignore",
+    });
+    fs.writeFileSync(path.join(scopedRoot, "app.ts"), "export const scoped = 2;\n", "utf8");
+    fs.writeFileSync(outsideFile, "export const outside = 2;\n", "utf8");
+
+    try {
+      const result = await codeReview({ project_root: scopedRoot, focus: "quality" });
+      const structured = (result as any).structuredContent;
+      const code = String(structured.reviewInput.code ?? "");
+
+      expect(result.isError).toBeFalsy();
+      expect(structured.reviewInput.source).toBe("git-diff");
+      expect(code).toContain("scoped = 2");
+      expect(code).not.toContain("outside = 2");
+      expect(structured.diffEvidence.scopePath).toBe("packages/scoped-app");
+      expect(structured.diffEvidence.changedFiles.map((item: any) => item.path))
+        .toEqual(["packages/scoped-app/app.ts"]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("未传 code/file_path 时明确提示 Agent 需先获取代码", async () => {
     const result = await codeReview({ focus: "quality" });
     const text = String(result.content[0].text);
@@ -161,12 +193,8 @@ describe("code_review 单元测试", () => {
       expect(String(invalidMode.content[0].text)).toContain("diff_mode");
 
       const invalidRange = await codeReview({ project_root: root, diff_mode: "range" });
-      expect(invalidRange.isError).toBeFalsy();
-      expect((invalidRange as any).structuredContent.diffEvidence).toMatchObject({
-        available: false,
-        mode: "range",
-      });
-      expect((invalidRange as any).structuredContent.evidenceWarnings.join(" ")).toContain("base_ref");
+      expect(invalidRange.isError).toBe(true);
+      expect(String(invalidRange.content[0].text)).toContain("base_ref");
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

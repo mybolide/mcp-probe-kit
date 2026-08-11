@@ -7,8 +7,14 @@ const evidenceSchema = {
     },
     summary: { type: 'string' },
     step_id: { type: 'string' },
-    reference: { type: 'string' },
-    revision: { type: 'string' },
+    reference: {
+      type: 'string',
+      description: '证据来源路径、命令、日志或结果引用；除 requirements 外，收敛时 reference/revision 至少提供一个',
+    },
+    revision: {
+      type: 'string',
+      description: '证据对应的 Git revision、文件哈希或可复核版本；除 requirements 外，收敛时 reference/revision 至少提供一个',
+    },
     verified_at: { type: 'string' },
   },
   required: ['kind', 'summary'],
@@ -73,7 +79,7 @@ export const planToolSchemas = [
   {
     name: 'plan_heartbeat',
     description:
-      '由 Agent 在 Delegated Plan 执行过程中记录轻量检查点。首次调用必须提供完整 plan；后续合并步骤、证据、产物、候选经验、验收结果、运行证据和 revision。只记录状态，不代替 Agent 执行。',
+      '由 Agent 在 Delegated Plan 执行过程中记录轻量检查点。首次调用必须提供完整 plan；后续合并步骤、证据、产物、候选经验、验收结果、运行证据和 revision。除 requirements 外，每条用于收敛的 evidence 必须至少提供 reference 或 revision，否则 converge 会明确拒绝。只记录状态，不代替 Agent 执行。',
     inputSchema: {
       type: 'object',
       properties: {
@@ -115,21 +121,21 @@ export const planToolSchemas = [
   {
     name: 'resume_plan',
     description:
-      '从 .mcp-probe-kit/plans/ 读取 Delegated Plan 检查点，按依赖计算下一可执行步骤、阻塞步骤和 resumeContext。只恢复计划，不执行步骤。',
+      '从 .mcp-probe-kit/plans/ 读取 Delegated Plan 检查点，按依赖计算下一可执行步骤、阻塞步骤和 resumeContext。plan_id 可选；省略时自动恢复当前项目最近更新的 active/blocked Plan。本工具只读取状态，不替 Agent 执行；返回 mustContinue=true 后 Agent 必须立即执行 nextStep/nextTool，逐步调用 plan_heartbeat，禁止只汇报恢复结果后停止。',
     inputSchema: {
       type: 'object',
       properties: {
-        plan_id: { type: 'string' },
+        plan_id: { type: 'string', description: '可选；省略时选择当前项目最近更新的 active/blocked Plan' },
         project_root: { type: 'string' },
       },
-      required: ['plan_id'],
+      required: [],
       additionalProperties: true,
     },
   },
   {
     name: 'converge',
     description:
-      '按 Delegated Plan 自己声明的证据和质量闸门关闭计划。任一未完成步骤、未决事项、必需证据或验收结果缺失都会拒绝收敛；调用参数只能增加证据要求，不能削弱 Plan。',
+      '按 Delegated Plan 自己声明的证据和质量闸门关闭计划。任一未完成步骤、未决事项、必需证据或验收结果缺失都会拒绝收敛；除 requirements 外，证据只有摘要但没有 reference/revision 也不算可复核证据。调用参数只能增加证据要求，不能削弱 Plan。',
     inputSchema: {
       type: 'object',
       properties: {

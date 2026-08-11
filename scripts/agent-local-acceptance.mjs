@@ -41,16 +41,6 @@ try {
     `expected ${COMPACT_TOOL_COUNT} compact tools, got ${tools.tools.length}`
   );
 
-  const shortIntent = await client.callTool({
-    name: 'workflow',
-    arguments: {
-      intent: '继续开发',
-      scenario: 'auto',
-      project_root: projectRoot,
-    },
-  });
-  assert(shortIntent.isError !== true, 'short intent routing returned an error');
-
   const fullIntent = [
     `继续 MCP Probe Kit v${PACKAGE_VERSION} 发布候选开发：`,
     '- 校验 npm next 标签与 Git Tag/package version 一致性；',
@@ -65,15 +55,15 @@ try {
     name: 'workflow',
     arguments: {
       intent: fullIntent,
-      scenario: 'auto',
+      scenario: 'feature',
       project_root: projectRoot,
     },
   });
-  assert(routed.isError !== true, 'full intent routing returned an error');
-  assert(routed.structuredContent?.firstTool === 'start_feature', 'full intent did not route to start_feature');
+  assert(routed.isError !== true, 'explicit feature workflow guide returned an error');
+  assert(routed.structuredContent?.firstTool === 'start_feature', 'explicit feature guide did not return start_feature');
   assert(
     routed.structuredContent?.firstToolArgsHint?.spec_layout === 'auto',
-    'full intent did not preserve spec_layout=auto'
+    'explicit feature guide did not preserve spec_layout=auto'
   );
 
   const feature = await client.callTool({
@@ -116,6 +106,23 @@ try {
     arguments: { plan_id: featurePlan.planId, project_root: projectRoot },
   });
   assert(resumed.structuredContent?.found === true, 'feature plan could not be resumed');
+
+  const resumedAfterContinue = await client.callTool({
+    name: 'resume_plan',
+    arguments: { project_root: projectRoot },
+  });
+  assert(
+    resumedAfterContinue.structuredContent?.found === true,
+    'bare continue recovery could not find the latest unfinished plan'
+  );
+  assert(
+    resumedAfterContinue.structuredContent?.selection === 'latest-resumable',
+    'bare continue recovery did not use latest-resumable selection'
+  );
+  assert(
+    resumedAfterContinue.structuredContent?.record?.planId === featurePlan.planId,
+    'bare continue recovery selected the wrong plan'
+  );
 
   const rejectedConverge = await client.callTool({
     name: 'converge',
@@ -180,13 +187,13 @@ try {
   console.log(JSON.stringify({
     clientEra: client.getProtocolEra(),
     tools: tools.tools.length,
-    shortIntent: {
-      scenario: shortIntent.structuredContent?.scenario,
-      confidence: shortIntent.structuredContent?.confidence,
-      firstTool: shortIntent.structuredContent?.firstTool,
-      forwardedDescription: shortIntent.structuredContent?.firstToolArgsHint?.description,
+    continuationResume: {
+      selection: resumedAfterContinue.structuredContent?.selection,
+      planId: resumedAfterContinue.structuredContent?.record?.planId,
+      nextStep: resumedAfterContinue.structuredContent?.nextStepId,
+      appResource: 'ui://mcp-probe-kit/plan-workbench',
     },
-    reconstructedIntent: {
+    explicitScenarioGuide: {
       scenario: routed.structuredContent?.scenario,
       confidence: routed.structuredContent?.confidence,
       firstTool: routed.structuredContent?.firstTool,

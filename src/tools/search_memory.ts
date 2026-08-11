@@ -68,6 +68,13 @@ export async function searchMemory(args: unknown) {
       mode === 'browse' ? 50 : config.searchLimit,
     );
     const requestedOffset = parseNumericArg(parsed.offset, 'offset', 0);
+    const maximumLimit = mode === 'browse' ? 200 : 50;
+    if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > maximumLimit) {
+      throw new Error(`参数 limit 必须是 1-${maximumLimit} 的整数，当前值: ${requestedLimit}`);
+    }
+    if (!Number.isInteger(requestedOffset) || requestedOffset < 0) {
+      throw new Error(`参数 offset 必须是大于等于 0 的整数，当前值: ${requestedOffset}`);
+    }
 
     const client = createMemoryClient();
     const readEnabled = mode === 'browse' ? client.isReadEnabled() : client.isEnabled();
@@ -79,10 +86,8 @@ export async function searchMemory(args: unknown) {
       });
     }
 
-    const limit = requestedLimit > 0
-      ? Math.min(Math.trunc(requestedLimit), mode === 'browse' ? 200 : 50)
-      : mode === 'browse' ? 50 : config.searchLimit;
-    const offset = requestedOffset > 0 ? Math.trunc(requestedOffset) : 0;
+    const limit = requestedLimit;
+    const offset = requestedOffset;
     const typeFilter = getString(parsed.type);
     const tags = Array.isArray(parsed.tags)
       ? parsed.tags.filter((item): item is string => typeof item === 'string')

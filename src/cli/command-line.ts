@@ -9,10 +9,7 @@ import {
 } from "../server/tool-registry.js";
 import { getToolsetFromEnv } from "../lib/toolset-manager.js";
 import { ensureMcpProbeKitBootstrap } from "../lib/workflow-skill-installer.js";
-import {
-  resolveWorkspaceRootWithMeta,
-  type WorkspaceRootResolution,
-} from "../lib/workspace-root.js";
+import type { WorkspaceRootResolution } from "../lib/workspace-root.js";
 import {
   CLI_RUNTIME_MANIFEST_REL_PATH,
   readCliRuntimeManifest,
@@ -33,21 +30,16 @@ import {
   resolveGitNexusMode,
   tryResolveCompatibleGitNexus,
 } from "../lib/gitnexus-runtime-manager.js";
+import { CliError } from "./cli-error.js";
+import {
+  resolveCliProjectForTool,
+  resolveRequiredWorkspace,
+} from "./cli-project-resolution.js";
 
 interface ParsedArgv {
   command: string;
   positionals: string[];
   flags: Map<string, string | boolean>;
-}
-
-class CliError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly details?: unknown
-  ) {
-    super(message);
-  }
 }
 
 export async function runCommandLine(argv: string[]): Promise<number | null> {
@@ -106,7 +98,7 @@ async function runExec(parsed: ParsedArgv): Promise<number> {
   const input = await readJsonInput(parsed.flags);
   const explicitProjectRoot = flagString(parsed.flags, "project-root");
   if (explicitProjectRoot) input.project_root = explicitProjectRoot;
-  const project = resolveCliProject(input);
+  const project = resolveCliProjectForTool(toolName, input);
   input.project_root = project.root;
 
   const bootstrap = ensureMcpProbeKitBootstrap(project.root);
@@ -418,35 +410,6 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function resolveCliProject(input: Record<string, unknown>): WorkspaceRootResolution {
-  const requested = extractRequestedProjectRoot(input);
-  const resolution = resolveWorkspaceRootWithMeta(requested);
-  assertUsableWorkspace(resolution);
-  return resolution;
-}
-
-function resolveRequiredWorkspace(explicitProjectRoot?: string): WorkspaceRootResolution {
-  const resolution = resolveWorkspaceRootWithMeta(explicitProjectRoot);
-  assertUsableWorkspace(resolution);
-  return resolution;
-}
-
-function assertUsableWorkspace(resolution: WorkspaceRootResolution): void {
-  if (resolution.source === "package-fallback") {
-    throw new CliError(
-      "PROJECT_ROOT_NOT_FOUND",
-      "未识别到用户项目目录，请在项目目录运行或使用 --project-root 指定",
-      { resolved: resolution.root, warning: resolution.warning }
-    );
-  }
-  if (!fs.existsSync(resolution.root) || !fs.statSync(resolution.root).isDirectory()) {
-    throw new CliError(
-      "PROJECT_ROOT_NOT_FOUND",
-      `项目目录不存在: ${resolution.root}`
-    );
-  }
-}
-
 function assertRuntimeVersionAligned(projectRoot: string, installedVersion: string): void {
   if (compareSemver(installedVersion, VERSION) > 0) {
     throw new CliError(
@@ -459,14 +422,6 @@ function assertRuntimeVersionAligned(projectRoot: string, installedVersion: stri
       }
     );
   }
-}
-
-function extractRequestedProjectRoot(input: Record<string, unknown>): string {
-  for (const key of ["project_root", "projectRoot", "project_path"]) {
-    const value = input[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
-  return "";
 }
 
 function flagString(flags: Map<string, string | boolean>, name: string): string | undefined {

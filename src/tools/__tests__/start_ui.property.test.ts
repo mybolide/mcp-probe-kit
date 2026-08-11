@@ -4,9 +4,19 @@
  * 使用 fast-check 进行基于属性的测试，验证跨所有输入的通用正确性属性
  */
 
-import { describe, test, expect } from 'vitest';
+import { afterEach, beforeEach, describe, test, expect, vi } from 'vitest';
 import * as fc from 'fast-check';
 import { startUi } from '../start_ui.js';
+
+beforeEach(() => {
+  vi.stubEnv('MEMORY_QDRANT_URL', '');
+  vi.stubEnv('MEMORY_EMBEDDING_URL', '');
+  vi.stubEnv('MEMORY_EMBEDDING_MODEL', '');
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('start_ui 属性测试', () => {
   // Feature: ui-workflow-execution-issue, Property 11: Token 长度约束

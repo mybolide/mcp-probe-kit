@@ -27,13 +27,18 @@ export function evaluateArchitectureGaps(input: ArchitectureValidationInput): st
   const gaps: string[] = [];
   const { mode } = input;
 
-  if ((mode === 'design' || mode === 'validate' || mode === 'drift') && input.currentFacts.length === 0) {
-    gaps.push('ARC-2 缺少当前架构事实；先执行 assess 或提供等价事实证据');
+  const hasEstablishedCurrentFact = input.currentFacts.some((fact) =>
+    fact.classification === 'fact'
+    && fact.statement.trim().length > 0
+    && fact.evidence.some((item) => item.trim().length > 0)
+  );
+  if (!hasEstablishedCurrentFact) {
+    gaps.push('ARC-2 缺少经证据支持的当前架构事实；先执行 assess 或提供等价事实证据');
   }
-  if ((mode === 'design' || mode === 'validate') && input.structuralCauses.length === 0) {
+  if ((mode === 'assess' || mode === 'design' || mode === 'validate') && input.structuralCauses.length === 0) {
     gaps.push('ARC-3 缺少结构性根因');
   }
-  if ((mode === 'design' || mode === 'validate') && input.protectedInvariants.length === 0) {
+  if ((mode === 'assess' || mode === 'design' || mode === 'validate') && input.protectedInvariants.length === 0) {
     gaps.push('ARC-3 缺少保护不变量');
   }
   if ((mode === 'design' || mode === 'validate') && input.alternatives.length < 2) {
@@ -112,12 +117,12 @@ export function buildArchitectureSteps(
   let previousBlocked = false;
   return ARC8_STEP_DEFINITIONS.map((definition) => {
     const relevant = definition.modes.includes(mode);
-    let status: ArchitectureMethodStep['status'] = relevant ? 'pending' : 'completed';
+    let status: ArchitectureMethodStep['status'] = relevant ? 'pending' : 'not_in_scope';
     if (relevant && previousBlocked) status = 'blocked';
     if (relevant && hasGaps && isStepBlockedByGaps(definition.id, gaps)) {
       status = 'blocked';
       previousBlocked = true;
-    } else if (relevant && !hasGaps) {
+    } else if (relevant && !previousBlocked) {
       status = 'completed';
     }
     return {

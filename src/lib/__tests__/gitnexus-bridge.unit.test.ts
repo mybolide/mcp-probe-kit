@@ -252,6 +252,31 @@ describe("gitnexus-bridge workspace preparation", () => {
     expect(workspace.cleanup).toBeUndefined();
   });
 
+  test("显式 project_root 位于父 Git 仓库子目录时可严格保留子树作用域", async () => {
+    const repoRoot = makeTempDir("gitnexus-explicit-scope-");
+    fs.mkdirSync(path.join(repoRoot, ".git"));
+    const scopedRoot = path.join(repoRoot, "apps", "payments");
+    fs.mkdirSync(path.join(scopedRoot, "src"), { recursive: true });
+    fs.writeFileSync(path.join(repoRoot, "outside.ts"), "export const outside = true;\n", "utf-8");
+    fs.writeFileSync(path.join(scopedRoot, "src", "inside.ts"), "export const inside = true;\n", "utf-8");
+
+    const workspace = await prepareBridgeWorkspace(scopedRoot, undefined, {
+      preserveRequestedRoot: true,
+      bootstrap: false,
+    });
+
+    try {
+      expect(workspace.workspaceMode).toBe("temp-repo");
+      expect(workspace.sourceRoot).toBe(scopedRoot);
+      expect(workspace.analysisRoot).not.toBe(repoRoot);
+      expect(workspace.pathMapped).toBe(true);
+      expect(fs.existsSync(path.join(workspace.analysisRoot, "src", "inside.ts"))).toBe(true);
+      expect(fs.existsSync(path.join(workspace.analysisRoot, "outside.ts"))).toBe(false);
+    } finally {
+      await workspace.cleanup?.();
+    }
+  });
+
   test("non-git 目录创建项目内一次性工作区并忽略敏感目录", async () => {
     const sourceRoot = makeTempDir("gitnexus-temp-");
     fs.writeFileSync(path.join(sourceRoot, "index.ts"), "export const ok = true;\n", "utf-8");

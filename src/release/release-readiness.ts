@@ -201,6 +201,24 @@ export function verifyReleaseReadiness(
     toolManifest.toolsets?.full?.count,
     'MCP_TOOLSET=full 必须保留 34 工具兼容面'
   ));
+  const readme = fs.existsSync(path.join(workspaceRoot, 'README.md'))
+    ? fs.readFileSync(path.join(workspaceRoot, 'README.md'), 'utf8')
+    : '';
+  const readmeToolSurfaceTerms = [
+    '24 model-visible tools by default',
+    '30 when Memory is configured',
+    '34-tool compatibility surface',
+  ];
+  checks.push(check(
+    'readme-tool-surface',
+    readmeToolSurfaceTerms.every((term) => readme.includes(term)) &&
+      !readme.includes('23 model-visible tools by default') &&
+      !readme.includes('33-tool compatibility surface'),
+    'error',
+    readmeToolSurfaceTerms,
+    readmeToolSurfaceTerms.filter((term) => readme.includes(term)),
+    'README 工具数量必须与 Tool Manifest 的 24/30/34 工具面一致'
+  ));
 
   checks.push(check(
     'workflow-toolset-plan-tools',

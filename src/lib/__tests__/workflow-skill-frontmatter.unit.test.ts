@@ -37,9 +37,14 @@ describe("workflow-skill frontmatter", () => {
     expect(parseSkillInstalledVersion(legacy)).toBe("3.6.3");
   });
 
-  test("缺 frontmatter 时触发升级", () => {
+  test("更高版本即使仍用旧标记也不得被旧进程降级", () => {
     const legacy = `${formatSkillVersionMarker("9.9.9")}\n# body\n`;
     expect(skillFrontmatterNeedsUpgrade(legacy)).toBe(true);
+    expect(skillContentNeedsUpgrade(legacy, "3.6.6")).toBe(false);
+  });
+
+  test("较低版本旧标记仍需升级", () => {
+    const legacy = `${formatSkillVersionMarker("3.6.3")}\n# body\n`;
     expect(skillContentNeedsUpgrade(legacy, "3.6.6")).toBe(true);
   });
 

@@ -2,7 +2,7 @@
  * 基础工具的 Schema 定义
  */
 
-import { PROJECT_ROOT_SCHEMA_DESCRIPTION } from "../lib/workspace-root.js";
+import { INIT_PROJECT_ROOT_SCHEMA_DESCRIPTION } from "../lib/workspace-root.js";
 
 export const basicToolSchemas = [
   {
@@ -21,7 +21,7 @@ export const basicToolSchemas = [
         },
         project_root: {
           type: "string",
-          description: PROJECT_ROOT_SCHEMA_DESCRIPTION,
+          description: INIT_PROJECT_ROOT_SCHEMA_DESCRIPTION,
         },
       },
       required: [],

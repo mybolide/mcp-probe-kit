@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "baselineId": "v4.0.0-rc.8-architecture",
-  "description": "Compatibility baseline after exposing the single ARC-8 architecture tool.",
+  "baselineId": "v4.0.0-rc.9-host-acceptance",
+  "description": "Compatibility baseline for rc.20, where Agents choose tools from Skill/tool guidance and workflow is a fallback navigation guide rather than a natural-language intent classifier.",
   "groups": {
     "compactModel": [
       "start_feature",

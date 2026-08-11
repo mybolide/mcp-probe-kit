@@ -305,18 +305,52 @@ export function buildLayoutManifest(
   };
 }
 
+export interface LayoutManifestWriteResult {
+  path: string;
+  action: "created" | "updated" | "skipped";
+}
+
+function comparableLayoutManifest(manifest: LayoutManifestV1): Omit<LayoutManifestV1, "generatedAt"> {
+  const { generatedAt: _generatedAt, projectRoot: _projectRoot, ...stable } = manifest;
+  return stable;
+}
+
+export function writeLayoutManifestWithStatus(
+  projectRoot: string,
+  layout: ProjectContextLayout,
+  harness?: LayoutManifestHarnessV1
+): LayoutManifestWriteResult {
+  const resolvedRoot = path.resolve(projectRoot);
+  const manifestRel = layoutManifestRel(layout.contextRoot);
+  const manifest = buildLayoutManifest(attachProjectRoot(layout, resolvedRoot), harness);
+  const absoluteManifest = path.join(resolvedRoot, ...manifestRel.split("/"));
+  const existed = fs.existsSync(absoluteManifest);
+
+  if (existed) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(absoluteManifest, "utf8")) as LayoutManifestV1;
+      if (
+        JSON.stringify(comparableLayoutManifest(existing))
+        === JSON.stringify(comparableLayoutManifest(manifest))
+      ) {
+        return { path: manifestRel, action: "skipped" };
+      }
+    } catch {
+      // Invalid or legacy manifests are replaced with the canonical format below.
+    }
+  }
+
+  fs.mkdirSync(path.dirname(absoluteManifest), { recursive: true });
+  fs.writeFileSync(absoluteManifest, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  return { path: manifestRel, action: existed ? "updated" : "created" };
+}
+
 export function writeLayoutManifest(
   projectRoot: string,
   layout: ProjectContextLayout,
   harness?: LayoutManifestHarnessV1
 ): string {
-  const resolvedRoot = path.resolve(projectRoot);
-  const manifestRel = layoutManifestRel(layout.contextRoot);
-  const manifest = buildLayoutManifest(attachProjectRoot(layout, resolvedRoot), harness);
-  const absoluteManifest = path.join(resolvedRoot, ...manifestRel.split("/"));
-  fs.mkdirSync(path.dirname(absoluteManifest), { recursive: true });
-  fs.writeFileSync(absoluteManifest, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-  return manifestRel;
+  return writeLayoutManifestWithStatus(projectRoot, layout, harness).path;
 }
 
 function layoutHarnessEquals(

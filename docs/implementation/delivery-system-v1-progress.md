@@ -2,6 +2,8 @@
 
 This file tracks implementation status separately from the frozen requirements document.
 
+> **Current rc.20 surface:** Compact 24, Compact + Memory 30, Full 34, Apps model-visible 30, App-only 1, unique callable names 35. Phase 0 counts below are the historical pre-`architecture` compatibility baseline, not the current tool surface.
+
 ## Phase status
 
 | Phase | Status | Scope |
@@ -370,7 +372,9 @@ ARC-8 drift: passed; ARC-1 through ARC-8 completed, 0 gaps, 0 drift findings
 
 Phase 6 is complete. Delivery System V1 phases 0 through 6 are now implemented, independently validated and locally reversible. No push, tag, release, npm publication or Memory collection migration was performed.
 
-## Post-V1 improvement — Explainable workflow routing
+## Historical Post-V1 experiment — Explainable workflow routing (superseded by rc.20)
+
+> Historical record only. The regex/action-object classifier described in this section is **not** the current product contract. rc.20 removed natural-language intent classification from the production path; Agent-owned tool selection and the guide-only `workflow` fallback are the current behavior. The section is retained to preserve implementation history.
 
 This is a bounded post-V1 improvement, not a new Delivery System phase. `workflow` remains an optional fallback helper used only when the Agent cannot confidently choose the first capability after reading the Skill. It does not become a mandatory entry point, intent engine, risk classifier or orchestration controller.
 
@@ -416,3 +420,130 @@ ARC-8 drift: passed; ARC-1 through ARC-8 completed, 0 gaps, 0 drift findings
 ```
 
 The improvement is additive and locally reversible. It introduces no tool, migration, persisted routing state, push, tag, release or publication.
+
+## Historical Post-V1 bugfix — Independent acceptance hardening (routing classifier later retired)
+
+This bugfix is driven by an independent Cursor full-functional acceptance run. It does not add a Delivery System phase and does not turn `workflow` into a mandatory or central intent engine.
+
+Implemented:
+
+- replaced broad sentence-level delivery regexes with a bounded action–object signal table for Bug, architecture, onboarding, product, UI, feature, specification and Git work-report intents;
+- added Chinese, English and mixed-language signals for production incidents, architecture boundaries, repository onboarding and UI visual specifications;
+- preserved the fallback boundary: direct atomic and `start_*` tools remain independently callable, while `workflow` only helps when the Agent has not already selected the first capability;
+- known nested steps still use an explicit dominance table, but independent deliverables do not suppress one another. Bug + Feature and architecture change + Feature now return `unknown` with conflict evidence;
+- product planning suppresses its prototype/UI substep, UI implementation suppresses its nested feature/spec step, Feature suppresses its specification step, and explicit spec-only requests suppress implementation;
+- explicit spec-only delivery now recognises output/generate/write wording and negative implementation constraints such as `不进行代码实现`; PRD plus prototype/UI remains a Product workflow, call-relation analysis routes to `code_insight`, and architecture modification plus an independent feature remains an unresolved conflict;
+- corrected a false positive where `只读` was interpreted as “只检查规格”; explicit spec-only constraints are now evaluated before ordinary dominance and suppressed candidates cannot suppress other candidates;
+- introduced the additive `work_report` workflow scenario, routed to `git_work_report`, with `report` as an explicit alias;
+- architecture submode selection now uses action semantics: architecture assessment remains `assess` even when the architecture object contains “拆分”, while target-architecture conformance checks select `validate`;
+- imported the independent acceptance routing matrix as a regression suite and added further Chinese/English, cross-keyword and independent-goal cases;
+- ARC-8 steps outside the selected architecture mode now report `not_in_scope` rather than `completed`; successful `assess` completes only ARC-1 through ARC-3 and exposes ARC-4 through ARC-8 in `notInScopeSteps`;
+- an `assess` call with explicitly empty facts, structural causes and protected invariants is now blocked at ARC-2/ARC-3 instead of being reported as a successful assessment;
+- code-review intent now uses positive review action/object evidence, while the commit fallback only matches actual commit-message generation requests; the phrase “未提交代码” no longer creates a false commit/review conflict;
+- Inspector smoke now follows the actual MCP Apps contract: `list_memory_assets` remains registered in the Manifest as the sole app-only action but must not appear in `tools/list` for compact or full clients;
+- Git-dependent tools now select an explicit project root first, then an actual Git repository among client workspaces. When the client supplies only non-Git workspaces, they fail safely and request `project_root` instead of silently operating on the MCP server repository;
+- MCP and CLI multi-workspace Git selection, no-client-workspace fallback and explicit non-Git rejection are covered by deterministic tests;
+- generated PowerShell, CMD and shell wrappers no longer change the caller working directory to the wrapper installation root or force `project_root`; a test-only `MCP_PROBE_LOCAL_ENTRY` override allows acceptance to exercise the exact local build while the normal wrapper remains pinned to the exact package version;
+- AGENTS.md bootstrap repairs every duplicate managed block, orphan marker and recognisable legacy generated fragment, preserves user-authored MCP sections, and remains hash-stable across repeated bootstrap calls;
+- an older process now preserves a newer-version Skill, AGENTS managed block and pinned CLI rather than structurally “repairing” them back to the older version;
+- `code_review` now rejects `diff_mode=range` unless both refs are supplied, and `search_memory` rejects non-integer, zero, negative or over-limit pagination values;
+- Claude contract-audit batches now have a configurable model and hard timeout, terminate the process tree on timeout, and report missing AGENTS.md as a failed integrity result rather than masking the timeout with a secondary filesystem exception;
+- CLI project-root selection and CLI error contracts were split out of the command dispatcher, reducing `command-line.ts` from 550 to 485 lines;
+- workflow natural-language intent classification has been removed from the production path. Agents choose tools from Skill/AGENTS/tool descriptions; `workflow` is only the fallback tool-selection guide. Explicit `scenario` remains deterministic for compatibility, and the former `workflow-intent-signals.ts` classifier is retired.
+
+Representative workflow guide contract:
+
+```text
+scenario=auto -> guide only / firstTool=null
+scenario=feature -> feature / start_feature
+scenario=bugfix -> bugfix / start_bugfix
+scenario=ui -> ui / start_ui
+scenario=architecture -> architecture / architecture
+scenario=explore -> explore / code_insight
+scenario=refactor -> refactor / refactor
+multiple independent user goals -> Agent splits or clarifies; workflow does not classify the sentence
+```
+
+Architecture assess status:
+
+```text
+completed: ARC-1, ARC-2, ARC-3
+not_in_scope: ARC-4, ARC-5, ARC-6, ARC-7, ARC-8
+nextStep: null
+```
+
+Architecture assess with empty evidence:
+
+```text
+completed: ARC-1
+blocked: ARC-2, ARC-3
+validation.passed: false
+gaps: missing current facts, structural cause and protected invariants
+```
+
+Compatibility preserved:
+
+```text
+Compact: 24
+Compact + Memory: 30
+Full: 34
+Apps model-visible: 30
+App-only registered: 1
+App-only exposed through tools/list: 0
+Unique callable names: 35
+```
+
+Validation completed:
+
+```text
+workflow / higher-version / wrapper focused suite: 87 / 87 passed across 5 test files
+final full regression suite: 605 / 605 passed across 111 test files
+TypeScript compiler and final production build: passed
+tool contract audit: 39 / 39 passed
+Legacy / Modern protocol smoke: passed
+Inspector smoke: passed; compact 24, full 34, no app-only leakage
+release static checks: 37 / 37 passed
+docs verification: 1080 checks passed
+Agent local acceptance: passed
+Agent evals: 26 / 26 passed
+package installation smoke: passed
+rollback smoke to 3.7.0: passed
+production dependency security audit: 0 vulnerabilities
+final build black-box routing/architecture/Git-safety matrix: passed
+final build wrapper, higher-version and strict-input closure: passed
+real Claude MCP calls: passed for the four independent-acceptance workflow cases, empty architecture assess, project context, Git report and Memory search
+final independent Claude evidence review: PASS_FOR_CURSOR_ACCEPTANCE; 0 product defects
+Claude environment limitations retained as evidence: dedicated connector HTTP 404, intermittent BYOK reasoning_content errors and large-batch timeouts
+final ARC-8 drift: passed; 0 gaps, 0 drift findings
+build/index.js size: 3668454 bytes
+build/index.js SHA-256: 64231bef472c0a726abc0d95ad50a8a01cf30a4b3ab5a2e7dd872050b09635ba
+```
+
+The build recorded immediately above is historical pre-rc.20 evidence and is not the current frozen release candidate.
+
+## rc.20 current release-candidate closure
+
+rc.20 restores the intended responsibility boundary: the Agent interprets the user request and chooses the MCP tool from the conversation, Skill, AGENTS.md and tool descriptions. `workflow` is only a fallback tool-selection guide; `scenario=auto` is guide-only and returns `firstTool=null`, while an explicit `scenario` remains deterministic for compatibility.
+
+Current public tool-surface contract:
+
+```text
+Compact: 24
+Compact + Memory: 30
+Full: 34
+Apps model-visible: 30
+App-only: 1
+Unique callable names: 35
+```
+
+Final frozen candidate accepted by Cursor:
+
+```text
+version: 4.0.0-rc.9
+build/index.js size: 3681669 bytes
+build/index.js SHA-256: 3907abeb326db62caa7ceeee0ad1ab76eaed6e6182564139717e9fee5e27ff62
+Cursor final acceptance: PASS / READY_TO_RELEASE
+fresh Agent tool-selection black box: 24 / 24 correct
+```
+
+The rc.20 candidate remains uncommitted and unpublished until explicit release authorization.

@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { CallToolResultSchema } from "@modelcontextprotocol/core";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
@@ -11,7 +11,12 @@ import { isMemoryEnabled } from "../../lib/memory-config.js";
 
 const cleanup: string[] = [];
 
+beforeEach(() => {
+  vi.stubEnv('MCP_TOOLSET', 'compact');
+});
+
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await Promise.all(
     cleanup.splice(0).map((path) => rm(path, { recursive: true, force: true }))
   );

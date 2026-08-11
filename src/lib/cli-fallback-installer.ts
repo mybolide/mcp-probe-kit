@@ -72,6 +72,7 @@ export function ensureCliFallback(
       ? discoveredVersion
       : requestedVersion;
   const packageSpec = `mcp-probe-kit@${version}`;
+  const localSourceCheckout = isLocalSourceCheckout(root, version);
   const installedAt =
     existingManifest?.version === version && existingManifest.installedAt
       ? existingManifest.installedAt
@@ -79,9 +80,9 @@ export function ensureCliFallback(
 
   const files: CliFallbackFileResult[] = [];
   files.push(
-    ensureTextFile(root, CLI_POWERSHELL_REL_PATH, renderPowerShellWrapper(version)),
-    ensureTextFile(root, CLI_CMD_REL_PATH, renderCmdWrapper(version)),
-    ensureTextFile(root, CLI_SHELL_REL_PATH, renderShellWrapper(version), true)
+    ensureTextFile(root, CLI_POWERSHELL_REL_PATH, renderPowerShellWrapper(version, localSourceCheckout)),
+    ensureTextFile(root, CLI_CMD_REL_PATH, renderCmdWrapper(version, localSourceCheckout)),
+    ensureTextFile(root, CLI_SHELL_REL_PATH, renderShellWrapper(version, localSourceCheckout), true)
   );
 
   const manifest: CliRuntimeManifest = {
@@ -114,6 +115,21 @@ export function ensureCliFallback(
       Boolean(discoveredVersion) && compareSemver(discoveredVersion!, requestedVersion) > 0,
     files,
   };
+}
+
+function isLocalSourceCheckout(projectRoot: string, version: string): boolean {
+  const packageJsonPath = path.join(projectRoot, "package.json");
+  const localEntryPath = path.join(projectRoot, "build", "index.js");
+  if (!fs.existsSync(packageJsonPath) || !fs.existsSync(localEntryPath)) return false;
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as {
+      name?: unknown;
+      version?: unknown;
+    };
+    return packageJson.name === "mcp-probe-kit" && packageJson.version === version;
+  } catch {
+    return false;
+  }
 }
 
 function discoverInstalledCliVersion(
@@ -185,7 +201,13 @@ function ensureExecutable(filePath: string): void {
   }
 }
 
-function renderPowerShellWrapper(version: string): string {
+function renderPowerShellWrapper(version: string, localSourceCheckout: boolean): string {
+  const localBranch = localSourceCheckout
+    ? String.raw`} elseif (Test-Path -LiteralPath $LocalCheckoutEntry) {
+  & node $LocalCheckoutEntry @ProbeArguments
+  exit $LASTEXITCODE
+`
+    : '';
   return `# ${CLI_VERSION_MARKER}: ${version}\n` + String.raw`param(
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]]$ProbeArguments
@@ -193,48 +215,64 @@ function renderPowerShellWrapper(version: string): string {
 
 $ErrorActionPreference = "Stop"
 $PackageSpec = "mcp-probe-kit@${version}"
-$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$WrapperRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$LocalCheckoutEntry = Join-Path $WrapperRoot "build\index.js"
 $CacheRoot = if ($env:MCP_PROBE_NPX_CACHE) {
   $env:MCP_PROBE_NPX_CACHE
 } elseif ($env:LOCALAPPDATA) {
   Join-Path $env:LOCALAPPDATA "mcp-probe-kit\npm-cache"
 } else {
-  Join-Path $ProjectRoot ".mcp-probe-kit\npm-cache"
+  Join-Path $WrapperRoot ".mcp-probe-kit\npm-cache"
 }
 
-Push-Location $ProjectRoot
-try {
+if ($env:MCP_PROBE_LOCAL_ENTRY) {
+  & node $env:MCP_PROBE_LOCAL_ENTRY @ProbeArguments
+  exit $LASTEXITCODE
+${localBranch}} else {
   & npx.cmd --yes --cache $CacheRoot $PackageSpec @ProbeArguments
   exit $LASTEXITCODE
-} finally {
-  Pop-Location
 }
 `;
 }
 
-function renderCmdWrapper(version: string): string {
+function renderCmdWrapper(version: string, localSourceCheckout: boolean): string {
+  const localBranch = localSourceCheckout
+    ? `) else if exist "%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js" (\r\n` +
+      `  call node "%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js" %*\r\n`
+    : '';
   return `@echo off\r\n` +
     `rem ${CLI_VERSION_MARKER}: ${version}\r\n` +
     `setlocal\r\n` +
-    `for %%I in ("%~dp0..\\..") do set "MCP_PROBE_PROJECT_ROOT=%%~fI"\r\n` +
+    `for %%I in ("%~dp0..\\..") do set "MCP_PROBE_WRAPPER_ROOT=%%~fI"\r\n` +
     `if defined MCP_PROBE_NPX_CACHE (\r\n` +
     `  set "MCP_PROBE_CACHE=%MCP_PROBE_NPX_CACHE%"\r\n` +
     `) else (\r\n` +
     `  set "MCP_PROBE_CACHE=%LOCALAPPDATA%\\mcp-probe-kit\\npm-cache"\r\n` +
     `)\r\n` +
-    `pushd "%MCP_PROBE_PROJECT_ROOT%"\r\n` +
-    `call npx.cmd --yes --cache "%MCP_PROBE_CACHE%" mcp-probe-kit@${version} %*\r\n` +
+    `if defined MCP_PROBE_LOCAL_ENTRY (\r\n` +
+    `  call node "%MCP_PROBE_LOCAL_ENTRY%" %*\r\n` +
+    localBranch +
+    `) else (\r\n` +
+    `  call npx.cmd --yes --cache "%MCP_PROBE_CACHE%" mcp-probe-kit@${version} %*\r\n` +
+    `)\r\n` +
     `set "MCP_PROBE_EXIT=%ERRORLEVEL%"\r\n` +
-    `popd\r\n` +
     `exit /b %MCP_PROBE_EXIT%\r\n`;
 }
 
-function renderShellWrapper(version: string): string {
+function renderShellWrapper(version: string, localSourceCheckout: boolean): string {
+  const localBranch = localSourceCheckout
+    ? `if [ -f "$WRAPPER_ROOT/build/index.js" ]; then\n` +
+      `  exec node "$WRAPPER_ROOT/build/index.js" "$@"\n` +
+      `fi\n`
+    : '';
   return `#!/usr/bin/env sh\n` +
     `# ${CLI_VERSION_MARKER}: ${version}\n` +
     `set -eu\n\n` +
-    `PROJECT_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"\n` +
+    `WRAPPER_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"\n` +
     `CACHE_ROOT="\${MCP_PROBE_NPX_CACHE:-\${XDG_CACHE_HOME:-$HOME/.cache}/mcp-probe-kit/npm-cache}"\n` +
-    `cd "$PROJECT_ROOT"\n` +
+    `if [ -n "\${MCP_PROBE_LOCAL_ENTRY:-}" ]; then\n` +
+    `  exec node "$MCP_PROBE_LOCAL_ENTRY" "$@"\n` +
+    `fi\n` +
+    localBranch +
     `exec npx --yes --cache "$CACHE_ROOT" "mcp-probe-kit@${version}" "$@"\n`;
 }

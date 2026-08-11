@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>v3 → v4 迁移指南 | MCP Probe Kit</title>
-  <meta name="description" content="MCP Probe Kit v3 升级到 v4：Node.js 20、23/29/33 工具面、Legacy/Modern 双协议、MCP Apps、计划恢复与 Memory Center。">
+  <meta name="description" content="MCP Probe Kit v3 升级到 v4：Node.js 20、24/30/34 工具面、Legacy/Modern 双协议、MCP Apps、计划恢复与 Memory Center。">
   <script src="../assets/js/tailwind.js" data-cfasync="false"></script>
   <script>
     tailwind.config = {
@@ -49,7 +49,7 @@
       </div>
       <div class="mb-4">
         <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
-        <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">33+1</span></a>
+        <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">34+1</span></a>
         <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">5</span></a>
       </div>
       <div class="mb-4">
@@ -85,7 +85,7 @@
             <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-2">MCP Probe Kit v3 → v4</h1>
       <p class="text-sm sm:text-base text-text-secondary">v4 保留主要工具能力，同时收敛默认模型工具面，升级双协议、计划恢复、Memory 生命周期与正式 MCP Apps。</p>
       <div class="flex flex-wrap gap-2 mt-4 text-xs">
-        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">23 默认 / 29 Memory / 33 full</span>
+        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">24 默认 / 30 Memory / 34 full</span>
         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">Node.js 20+</span>
         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">Legacy + Modern</span>
         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">MCP Apps</span>
@@ -99,10 +99,10 @@
 npx -y mcp-probe-kit@next
 
 # 项目内 Agent fallback：精确锁定版本
-npx -y mcp-probe-kit@4.0.0-rc.8 install-agent
+npx -y mcp-probe-kit@4.0.0-rc.9 install-agent
 
 # 临时运行精确版本
-npx -y mcp-probe-kit@4.0.0-rc.8</code></pre>
+npx -y mcp-probe-kit@4.0.0-rc.9</code></pre>
     </section>
 
     <section class="bg-white border border-border rounded-xl p-4 sm:p-6 mb-6 shadow-sm">
@@ -111,9 +111,9 @@ npx -y mcp-probe-kit@4.0.0-rc.8</code></pre>
         <table class="w-full text-sm border-collapse">
           <thead><tr class="border-b"><th class="text-left py-2">配置</th><th class="text-left py-2">模型可见</th><th class="text-left py-2">用途</th></tr></thead>
           <tbody class="text-text-secondary">
-            <tr class="border-b"><td class="py-2">默认 / <code>compact</code></td><td>23</td><td>推荐日常使用</td></tr>
-            <tr class="border-b"><td class="py-2"><code>compact</code> + Memory</td><td>29</td><td>增加 6 个 Memory 工具</td></tr>
-            <tr><td class="py-2"><code>MCP_TOOLSET=full</code></td><td>33</td><td>兼容与诊断</td></tr>
+            <tr class="border-b"><td class="py-2">默认 / <code>compact</code></td><td>24</td><td>推荐日常使用</td></tr>
+            <tr class="border-b"><td class="py-2"><code>compact</code> + Memory</td><td>30</td><td>增加 6 个 Memory 工具</td></tr>
+            <tr><td class="py-2"><code>MCP_TOOLSET=full</code></td><td>34</td><td>兼容与诊断</td></tr>
           </tbody>
         </table>
       </div>
@@ -131,7 +131,7 @@ npx -y mcp-probe-kit@4.0.0-rc.8</code></pre>
         <li>Convergence Gate</li>
       </ul>
       <a href="./apps.html" class="inline-flex mt-4 text-sm font-semibold text-primary no-underline">打开五个真实动态演示 →</a>
-      <p class="text-sm text-text-secondary mt-3"><code>list_memory_assets</code> 标记为 App-only，不计入 23/29 个模型可见工具。未支持 GUI 的客户端继续使用文本和结构化结果。</p>
+      <p class="text-sm text-text-secondary mt-3"><code>list_memory_assets</code> 标记为 App-only，不计入 24/30 个模型可见工具。未支持 GUI 的客户端继续使用文本和结构化结果。</p>
       <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 mt-4 text-sm"><code># 显式关闭 MCP Apps
 MCP_ENABLE_UI_APPS=0</code></pre>
     </section>

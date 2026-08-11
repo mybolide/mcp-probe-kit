@@ -80,15 +80,15 @@ const appOnlySchemas: Record<string, RegisteredToolSchema> = {
 };
 
 const handlers: Record<string, RegisteredToolHandler> = {
-  init_project: async (args) => initProject(args as never),
+  init_project: async (args, context) => initProject(args as never, context),
   gencommit: async (args) => gencommit(args as never),
   code_review: async (args) => codeReview(args as never),
   code_insight: async (args, context) => codeInsight(args as never, context),
   architecture: async (args, context) => architecture(args as never, context),
   gentest: async (args) => gentest(args as never),
   refactor: async (args) => refactor(args as never),
-  init_project_context: async (args) => initProjectContext(args as never),
-  workflow: async (args) => workflow(args as never),
+  init_project_context: async (args, context) => initProjectContext(args as never, context),
+  workflow: async (args, context) => workflow(args as never, context),
   add_feature: async (args) => addFeature(args as never),
   check_spec: async (args) => checkSpec(args as never),
   fix_bug: async (args) => fixBug(args as never),

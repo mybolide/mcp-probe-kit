@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { resolveWorkspaceRoot } from '../lib/workspace-root.js';
 import {
@@ -60,6 +60,37 @@ export class JsonPlanStore {
     await writeFile(tempPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
     await rename(tempPath, location.absolutePath);
     return location;
+  }
+
+  async readLatestResumable(): Promise<PlanHeartbeatRecord | null> {
+    let entries;
+    try {
+      entries = await readdir(this.plansDir, { withFileTypes: true });
+    } catch (error) {
+      if (isMissingFile(error)) return null;
+      throw error;
+    }
+
+    const records: PlanHeartbeatRecord[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      try {
+        const raw = JSON.parse(
+          await readFile(path.join(this.plansDir, entry.name), 'utf8'),
+        ) as unknown;
+        const record = normalizeRecord(raw);
+        if (record.status === 'active' || record.status === 'blocked') {
+          records.push(record);
+        }
+      } catch {
+        // A malformed unrelated checkpoint must not prevent recovery of valid plans.
+      }
+    }
+
+    return records.sort((left, right) =>
+      Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
+      || right.planId.localeCompare(left.planId)
+    )[0] ?? null;
   }
 }
 

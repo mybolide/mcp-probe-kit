@@ -50,7 +50,7 @@
     "update_memory_asset": "更新记忆",
     "delete_memory_asset": "删除记忆",
     "scan_and_extract_patterns": "抽取模式",
-    "workflow": "智能路由",
+    "workflow": "工具选择指南",
     "plan_heartbeat": "计划检查点",
     "resume_plan": "恢复计划",
     "converge": "收敛闸门",
@@ -86,7 +86,7 @@
       "count": "6 个"
     },
     "routing": {
-      "title": "意图路由"
+      "title": "工具选择"
     },
     "plan": {
       "title": "计划状态与收敛"
@@ -250,9 +250,9 @@
       "prompt": "请使用 scan_and_extract_patterns 工具完成以下任务：<描述你的具体需求>"
     },
     "workflow": {
-      "description": "开发工作流智能路由：根据完整任务意图选择准确的 start_*、代码分析、规格或 Memory 入口。",
-      "usage": "不确定该调用哪个工具，或需要防止 Agent 跳过标准流程时使用。",
-      "prompt": "请使用 workflow 为以下任务选择并执行正确研发流程：<完整任务描述>"
+      "description": "Agent 阅读 Skill 和工具 description 后仍不确定该调用哪个 MCP 时使用的兜底工具选择指南。auto 不做自然语言意图识别，也不会自动返回 firstTool。",
+      "usage": "仅在 Agent 确实拿不准工具选择时使用；若已经判断出场景，则显式传 scenario 获取确定性指南。",
+      "prompt": "仅把 workflow 作为以下模糊任务的兜底工具选择指南：<完整任务描述>"
     },
     "plan_heartbeat": {
       "description": "记录 Delegated Plan 的完成步骤、证据、未决事项和 revision，并建立可恢复检查点。",
@@ -278,7 +278,7 @@
   "ui": {
     "eyebrow": "TOOL CATALOG",
     "title": "找到工具，复制一句话，直接开始",
-    "subtitle": "默认 23 个模型工具；配置 Memory 后 29 个；full 兼容面 33 个；另有 1 个 App-only 动作。",
+    "subtitle": "默认 24 个模型工具；配置 Memory 后 30 个；full 兼容面 34 个；另有 1 个 App-only 动作。",
     "searchPlaceholder": "搜索工具名、用途或描述…",
     "all": "全部",
     "default": "默认工具",

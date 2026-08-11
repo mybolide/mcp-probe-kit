@@ -7,7 +7,9 @@ import {
   buildInitialPlanHeartbeatArgs,
   planSnapshotHasRecord,
   planSnapshotNeedsReconciliation,
+  planFromToolResult,
   resolvePlanProjectRoot,
+  shouldAdoptPlanSnapshot,
 } from '../src/lib/plan-workbench-state.js';
 
 declare const __MCP_PROBE_VERSION__: string;
@@ -246,10 +248,18 @@ function renderMemoryCenter(): string {
   <main class="memory-layout"><section class="panel memory-index"><div class="memory-list">${visible.length ? visible.map(memoryCard).join('') : `<div class="empty-state compact-empty"><strong>无结果</strong></div>`}</div>${memoryItems.length > visible.length ? `<button class="load-more" data-action="load-more">更多 ${Math.min(18, memoryItems.length - visible.length)}</button>` : ''}</section>${renderMemoryDetail()}</main>`;
 }
 
-function resultPlan(result: ToolResult = lastResult): Dict {
-  const structured = asDict(result.structuredContent);
-  const metadata = asDict(structured.metadata);
-  return asDict(metadata.plan ?? structured.plan);
+function structuredResult(result: ToolResult | Dict = lastResult): Dict {
+  const envelope = asDict(result);
+  const direct = asDict(envelope.structuredContent);
+  if (Object.keys(direct).length) return direct;
+  const nested = asDict(asDict(envelope.result).structuredContent);
+  if (Object.keys(nested).length) return nested;
+  if ('found' in envelope || 'record' in envelope || 'plan' in envelope) return envelope;
+  return {};
+}
+
+function resultPlan(result: ToolResult | Dict = lastResult): Dict {
+  return planFromToolResult({ structuredContent: structuredResult(result) });
 }
 
 function initialPlan(): Dict {
@@ -364,15 +374,6 @@ function renderTaskWorkbench(): string {
   const planId = text(plan.planId);
   const total = state.steps.length || 0;
   const hasPlan = total > 0;
-  const primaryLabel = !hasPlan
-    ? '返回对话'
-    : state.status === 'blocked'
-      ? '处理阻断'
-      : state.status === 'untracked'
-        ? '同步并继续'
-      : completedCount === total
-        ? '查看结果'
-        : '继续';
   const currentStatus = currentStep ? stepState(currentStep, state) : hasPlan ? 'completed' : 'pending';
   const percent = total ? Math.min(100, Math.round((completedCount / total) * 100)) : 0;
   const statusBadge = state.status === 'blocked'
@@ -407,8 +408,13 @@ function renderTaskWorkbench(): string {
   const emptyPlanHint = hasPlan
     ? ''
     : '<p class="wb-empty-hint">Host 尚未提供可用计划。可返回对话重新调用当前工具。</p>';
+  const workbenchLabel = kind === 'bug-workbench' || planId.startsWith('bugfix-')
+    ? 'Bug 修复'
+    : kind === 'plan-workbench'
+      ? '执行计划'
+      : '功能开发';
   return `<header class="minimal-header wb-header">
-    <h1 title="${escapeHtml(objective)}">${kind === 'bug-workbench' ? 'Bug 修复' : '功能开发'} · ${escapeHtml(truncate(objective, 54))}</h1>
+    <h1 title="${escapeHtml(objective)}">${workbenchLabel} · ${escapeHtml(truncate(objective, 54))}</h1>
     <div class="wb-header-meta">${statusBadge}<span class="status-count">${hasPlan ? `已完成 <strong>${completedCount}</strong> / ${total} 步` : '计划未就绪'}</span><div class="progress-track"><span style="width:${percent}%"></span></div></div>
   </header>
   ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ''}
@@ -427,20 +433,13 @@ function renderTaskWorkbench(): string {
           ${emptyPlanHint}
           ${(outputsBlock || evidenceBlock) ? `<dl class="wb-defs">${outputsBlock}${evidenceBlock}</dl>` : ''}
         </div>
-        <div class="wb-actions task-actions task-actions-end">
+        <div class="wb-actions task-actions task-actions-end wb-readonly-footer">
           ${planId ? `<span class="wb-planid" title="${escapeHtml(planId)}">plan · ${escapeHtml(planId)}</span>` : ''}
-          <div class="wb-buttons">
-            ${planId ? `<button class="wb-secondary" data-action="resume-plan" data-id="${escapeHtml(planId)}">同步状态</button>
-            <button class="wb-secondary" data-action="check-converge" data-id="${escapeHtml(planId)}">收敛</button>` : ''}
-            <button class="primary" data-action="continue-chat">${primaryLabel}</button>
-          </div>
+          <span class="wb-readonly-note">进度由对话执行与 plan_heartbeat 自动更新</span>
         </div>
       </main>
     </div>
-    <details class="wb-plan-mobile">
-      <summary><span class="wb-plan-label">计划步骤</span><span class="wb-plan-count">${completedCount}/${total || 0}</span></summary>
-      ${planSteps}
-    </details>
+    <aside class="wb-plan wb-plan-mobile" aria-label="计划步骤">${planHeading}${planSteps}</aside>
   </section>`;
 }
 
@@ -532,7 +531,7 @@ async function refreshPlanState(showNotice = false, initializeIfMissing = true):
       plan_id: planId,
       ...(projectRoot ? { project_root: projectRoot } : {}),
     }, true);
-    let structured = asDict(result.structuredContent);
+    let structured = structuredResult(result);
 
     if (!result.isError && !planSnapshotHasRecord(structured) && initializeIfMissing) {
       planCheckpointKnownMissing = true;
@@ -544,18 +543,22 @@ async function refreshPlanState(showNotice = false, initializeIfMissing = true):
             plan_id: planId,
             ...(projectRoot ? { project_root: projectRoot } : {}),
           }, true);
-          structured = asDict(result.structuredContent);
+          structured = structuredResult(result);
         }
       }
     }
 
-    if (!result.isError && planSnapshotHasRecord(structured)) {
+    const hasValidSnapshot = !result.isError && planSnapshotHasRecord(structured);
+    if (hasValidSnapshot && shouldAdoptPlanSnapshot(planSnapshot, structured)) {
       planSnapshot = structured;
       planCheckpointKnownMissing = false;
       if (showNotice) {
         const record = asDict(structured.record);
         notice = `已同步检查点：${stringArray(record.completedStepIds).length}/${asArray(asDict(record.plan).steps).length}`;
       }
+    } else if (hasValidSnapshot) {
+      planCheckpointKnownMissing = false;
+      if (showNotice) notice = '已保持当前最新检查点';
     } else {
       planCheckpointKnownMissing = true;
       if (showNotice) {
@@ -571,7 +574,7 @@ async function refreshPlanState(showNotice = false, initializeIfMissing = true):
 }
 
 function syncPlanPolling(): void {
-  if (kind !== 'feature-workbench' && kind !== 'bug-workbench') return;
+  if (!['feature-workbench', 'bug-workbench', 'plan-workbench'].includes(kind)) return;
   if (planPollTimer !== undefined) window.clearInterval(planPollTimer);
   const planId = text(currentPlanState().plan.planId);
   if (!planId) return;
@@ -579,7 +582,7 @@ function syncPlanPolling(): void {
     if (document.visibilityState === 'visible' && currentPlanState().status !== 'converged') {
       void refreshPlanState(false);
     }
-  }, 4000);
+  }, 1800);
 }
 
 root.addEventListener('submit', (event) => {
@@ -615,13 +618,6 @@ root.addEventListener('click', (event) => {
     }
     await loadMemoryList();
   })();
-  if (action === 'resume-plan' && id) void refreshPlanState(true);
-  if (action === 'check-converge' && id) {
-    const state = currentPlanState();
-    const projectRoot = currentPlanProjectRoot(state.plan);
-    void callTool('converge', { plan_id: id, ...(projectRoot ? { project_root: projectRoot } : {}) })
-      .then((result) => { lastResult = result; render(); });
-  }
   if (action === 'rerun-converge' && id) {
     const state = currentPlanState();
     const projectRoot = currentPlanProjectRoot(state.plan);
@@ -654,21 +650,38 @@ app.addEventListener('toolinput', (params) => {
 
 app.addEventListener('toolresult', (params) => {
   lastResult = params as ToolResult;
+  const structured = structuredResult(lastResult);
+  if (shouldAdoptPlanSnapshot(planSnapshot, structured)) {
+    planSnapshot = structured;
+    planCheckpointKnownMissing = false;
+  }
   const receivedPlan = resultPlan(lastResult);
   if (asArray(receivedPlan.steps).length) basePlan = receivedPlan;
   if (kind === 'memory-center') {
-    const structured = asDict(params.structuredContent);
-    const results = asArray(structured.results);
-    const items = asArray(structured.items);
-    const asset = asDict(structured.asset);
+    const memoryStructured = structuredResult(params as ToolResult);
+    const results = asArray(memoryStructured.results);
+    const items = asArray(memoryStructured.items);
+    const asset = asDict(memoryStructured.asset);
     if (results.length) { memoryItems = results; memoryTotal = results.length; }
-    if (items.length) { memoryItems = items; memoryTotal = numeric(structured.total, items.length); }
+    if (items.length) { memoryItems = items; memoryTotal = numeric(memoryStructured.total, items.length); }
     if (asset.id) selectedMemory = asset;
   }
   render();
   syncPlanPolling();
-  if (kind === 'feature-workbench' || kind === 'bug-workbench') {
+  if (['feature-workbench', 'bug-workbench', 'plan-workbench'].includes(kind)) {
     void refreshPlanState(false, true);
+  }
+});
+
+window.addEventListener('focus', () => {
+  if (['feature-workbench', 'bug-workbench', 'plan-workbench'].includes(kind)) {
+    void refreshPlanState(false, false);
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ['feature-workbench', 'bug-workbench', 'plan-workbench'].includes(kind)) {
+    void refreshPlanState(false, false);
   }
 });
 
@@ -689,7 +702,7 @@ async function main(): Promise<void> {
   if (context?.theme) applyDocumentTheme(context.theme);
   if (context?.styles?.variables) applyHostStyleVariables(context.styles.variables);
   if (kind === 'memory-center') await loadMemoryList();
-  if (kind === 'feature-workbench' || kind === 'bug-workbench') {
+  if (['feature-workbench', 'bug-workbench', 'plan-workbench'].includes(kind)) {
     await refreshPlanState(false, true);
   }
   syncPlanPolling();

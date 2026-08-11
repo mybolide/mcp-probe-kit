@@ -30,5 +30,8 @@ describe('generateAgentsMdInner', () => {
     expect(md).toContain('search_memory');
     expect(md).toContain('.mcp-probe-kit/bin/probe.*');
     expect(md).toContain('自动注入');
+    expect(md).toContain('先调用 `resume_plan`');
+    expect(md).toContain('只传 `project_root`');
+    expect(md).toContain('禁止先用 Bash 探索');
   });
 });

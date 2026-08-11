@@ -3,215 +3,110 @@ import {
   buildDevWorkflow,
   detectWorkflowRoute,
   detectWorkflowScenario,
+  renderWorkflowMarkdown,
 } from '../dev-workflow.js';
 
-describe('dev-workflow', () => {
-  test('识别 bugfix 场景', () => {
-    const result = detectWorkflowScenario('登录报错 NullReference 需要排查修复');
-    expect(result.scenario).toBe('bugfix');
+describe('dev-workflow guide contract', () => {
+  test.each([
+    '实现订单导出功能',
+    'Fix the null pointer when saving drafts.',
+    '重新设计移动端导航。',
+    '评估服务边界，同时新增导出接口。',
+    'architecture review copilot',
+    '继续',
+  ])('auto 不从自然语言猜 firstTool: %s', (intent) => {
+    const route = detectWorkflowRoute(intent);
+    expect(route).toMatchObject({
+      scenario: 'unknown',
+      confidence: 'low',
+      routingDecision: {
+        source: 'guide',
+        selectedScenario: null,
+        conflict: false,
+        requiresClarification: false,
+        candidates: [],
+      },
+    });
+    expect(detectWorkflowScenario(intent)).toEqual({ scenario: 'unknown', confidence: 'low' });
   });
 
-  test('明确架构设计任务路由到 architecture，而普通读懂架构仍是 explore', () => {
-    const architecture = detectWorkflowScenario('评估当前模块边界和数据所有权，并设计可回滚的目标架构');
-    expect(architecture).toEqual({ scenario: 'architecture', confidence: 'high' });
-
-    const plan = buildDevWorkflow('评估当前模块边界和数据所有权，并设计可回滚的目标架构');
-    expect(plan.firstTool).toBe('architecture');
-    expect(plan.firstToolArgsHint).toMatchObject({ mode: 'design' });
-
-    const explore = detectWorkflowScenario('帮我读懂当前架构和调用链');
-    expect(explore.scenario).toBe('explore');
+  test('auto plan 返回 Agent 工具选择指南而不是自动路由结果', () => {
+    const plan = buildDevWorkflow('实现订单导出功能');
+    expect(plan.scenario).toBe('unknown');
+    expect(plan.firstTool).toBeNull();
+    expect(plan.selectionGuide?.length).toBeGreaterThan(15);
+    expect(plan.selectionGuide).toEqual(expect.arrayContaining([
+      expect.objectContaining({ firstTool: 'start_feature' }),
+      expect.objectContaining({ firstTool: 'start_bugfix' }),
+      expect.objectContaining({ firstTool: 'architecture' }),
+      expect.objectContaining({ firstTool: 'code_insight' }),
+      expect.objectContaining({ firstTool: 'resume_plan' }),
+    ]));
+    expect(plan.agentSelectionRules?.join('\n')).toContain('Agent');
+    expect(plan.agentSelectionRules?.join('\n')).toContain('多个独立交付');
   });
 
-  test('显式 architecture scenario 直接返回 ARC-8 工具', () => {
-    const plan = buildDevWorkflow('核验实现是否偏离目标架构', { scenario: 'architecture' });
+  test.each([
+    ['feature', 'feature', 'start_feature'],
+    ['bugfix', 'bugfix', 'start_bugfix'],
+    ['bug', 'bugfix', 'start_bugfix'],
+    ['ui', 'ui', 'start_ui'],
+    ['product', 'product', 'start_product'],
+    ['prd', 'product', 'start_product'],
+    ['ralph', 'ralph', 'start_ralph'],
+    ['architecture', 'architecture', 'architecture'],
+    ['arch', 'architecture', 'architecture'],
+    ['explore', 'explore', 'code_insight'],
+    ['commit', 'commit', 'gencommit'],
+    ['work_report', 'work_report', 'git_work_report'],
+    ['report', 'work_report', 'git_work_report'],
+    ['test', 'test', 'gentest'],
+    ['review', 'review', 'code_review'],
+    ['refactor', 'refactor', 'refactor'],
+    ['onboard', 'onboard', 'start_onboard'],
+    ['spec', 'spec', 'check_spec'],
+  ] as const)('显式 scenario=%s 确定性返回 %s / %s', (input, scenario, firstTool) => {
+    const route = detectWorkflowRoute('任意上下文', input);
+    const plan = buildDevWorkflow('任意上下文', { scenario: input });
+    expect(route.scenario).toBe(scenario);
+    expect(route.confidence).toBe('high');
+    expect(route.routingDecision.source).toBe('explicit');
+    expect(route.routingDecision.selectedScenario).toBe(scenario);
+    expect(plan.firstTool).toBe(firstTool);
+  });
+
+  test('显式 feature 使用 intent 生成参数提示，但不依赖 intent 做场景判断', () => {
+    const intent = '实现订单导出功能';
+    const plan = buildDevWorkflow(intent, { scenario: 'feature' });
+    expect(plan.firstToolArgsHint).toEqual({ description: intent, spec_layout: 'auto' });
+  });
+
+  test.each([
+    ['评估当前模块边界', 'assess'],
+    ['设计目标架构和迁移方案', 'design'],
+    ['校验是否符合目标架构', 'validate'],
+    ['检查架构漂移', 'drift'],
+  ] as const)('显式 architecture 后只推断架构子模式: %s', (intent, mode) => {
+    const plan = buildDevWorkflow(intent, { scenario: 'architecture' });
     expect(plan.scenario).toBe('architecture');
     expect(plan.firstTool).toBe('architecture');
-    expect(plan.firstToolArgsHint).toMatchObject({ mode: 'drift' });
+    expect(plan.firstToolArgsHint).toMatchObject({ mode, description: intent });
   });
 
-  test('项目接入和建立上下文路由到 onboard', () => {
-    const intent = '将当前项目接入 MCP Probe Kit 并建立项目上下文。';
-    const result = detectWorkflowScenario(intent);
-    expect(result).toEqual({ scenario: 'onboard', confidence: 'high' });
-
-    const plan = buildDevWorkflow(intent);
-    expect(plan.firstTool).toBe('start_onboard');
+  test('显式 memory 根据后端可用性决定是否给可执行工具', () => {
+    const unavailable = buildDevWorkflow('查历史经验', { scenario: 'memory', memoryAvailable: false });
+    const available = buildDevWorkflow('查历史经验', { scenario: 'memory', memoryAvailable: true });
+    expect(unavailable.firstTool).toBeNull();
+    expect(available.firstTool).toBe('search_memory');
   });
 
-  test('新增只读状态页面按功能交付路由到 feature', () => {
-    const result = detectWorkflowScenario(
-      '为测试项目增加一个只读健康状态页面，展示版本、工具数量和 Memory 状态。'
-    );
-    expect(result.scenario).toBe('feature');
-    expect(result.confidence).toBe('high');
-  });
-
-  test('产品目标和用户价值规划路由到 product', () => {
-    const result = detectWorkflowScenario(
-      '规划健康状态模块的产品目标、用户价值、功能范围和验收标准。'
-    );
-    expect(result.scenario).toBe('product');
-    expect(result.confidence).toBe('high');
-
-    const plan = buildDevWorkflow('规划健康状态模块的产品目标、用户价值、功能范围和验收标准。');
-    expect(plan.firstTool).toBe('start_product');
-  });
-
-  test('识别 feature 场景', () => {
-    const result = detectWorkflowScenario('开发用户认证新功能');
-    expect(result.scenario).toBe('feature');
-  });
-
-  test('新增功能包含规格步骤时仍路由到 feature', () => {
-    const result = detectWorkflowScenario(
-      '为现有 TypeScript 项目新增一个只读的健康检查摘要功能，需要先生成规格、评估影响范围、补充测试，并在完成后进行收敛检查。'
-    );
-    expect(result.scenario).toBe('feature');
-    expect(result.confidence).toBe('high');
-  });
-
-  test('只检查已有规格时路由到 spec', () => {
-    const result = detectWorkflowScenario('仅检查现有订单导出规格和验收标准是否完整，不实现代码');
-    expect(result.scenario).toBe('spec');
-    expect(result.confidence).toBe('high');
-  });
-
-  test('新增页面即使提到规格仍优先路由到 ui', () => {
-    const result = detectWorkflowScenario('新增设置页面和交互组件，先补充页面规格再实现');
-    expect(result.scenario).toBe('ui');
-  });
-
-  test('发布候选开发中的实机验收不会误判为 spec', () => {
-    const result = detectWorkflowScenario([
-      '继续 MCP Probe Kit v4.0.0-rc.2 发布候选开发：',
-      '- 校验 npm next 标签与 Git Tag/package version 一致性；',
-      '- Legacy/Modern 双协议与 Agent Evals；',
-      '- 真实客户端兼容矩阵保持 pending，完成实机验收前不得发布稳定版。',
-    ].join('\n'));
-
-    expect(result.scenario).toBe('feature');
-    expect(result.confidence).not.toBe('low');
-  });
-
-  test('bugfix 计划首工具为 start_bugfix', () => {
-    const plan = buildDevWorkflow('TypeError in checkout');
-    expect(plan.firstTool).toBe('start_bugfix');
-    expect(plan.phases.some((p) => p.steps.some((s) => s.tool === 'start_bugfix'))).toBe(true);
-  });
-
-  test('显式 scenario 覆盖推断', () => {
-    const plan = buildDevWorkflow('随便', { scenario: 'ui' });
-    expect(plan.scenario).toBe('ui');
-    expect(plan.firstTool).toBe('start_ui');
-  });
-
-  test('架构修复与 Bug 修复同时成立时返回 unknown，不按规则数组顺序猜测', () => {
-    const intent = '修复当前架构依赖错误，并重新设计模块边界和数据所有权。';
-    const route = detectWorkflowRoute(intent);
-
-    expect(route.scenario).toBe('unknown');
-    expect(route.confidence).toBe('low');
-    expect(route.routingDecision).toMatchObject({
-      source: 'delivery-rules',
-      conflict: true,
-      requiresClarification: true,
-      selectedScenario: null,
-    });
-    expect(route.routingDecision.candidates.map((item) => item.scenario)).toEqual(
-      expect.arrayContaining(['bugfix', 'architecture']),
-    );
-
-    const plan = buildDevWorkflow(intent);
-    expect(plan.firstTool).toBeNull();
-    expect(plan.routingDecision?.conflict).toBe(true);
-  });
-
-  test('审查与重构关键词同分时返回冲突候选，而不是取数组第一项', () => {
-    const route = detectWorkflowRoute('请审查并重构这段代码，先不要直接修改。');
-
-    expect(route.scenario).toBe('unknown');
-    expect(route.routingDecision).toMatchObject({
-      source: 'keyword-scores',
-      conflict: true,
-      requiresClarification: true,
-    });
-    expect(route.routingDecision.candidates.map((item) => item.scenario)).toEqual(
-      expect.arrayContaining(['review', 'refactor']),
-    );
-  });
-
-  test('已知嵌套关系通过显式支配规则选择 UI，并公开被抑制候选', () => {
-    const route = detectWorkflowRoute('新增设置页面和交互组件，先补充页面规格再实现');
-
-    expect(route.scenario).toBe('ui');
-    expect(route.routingDecision).toMatchObject({
-      source: 'delivery-rules',
-      conflict: false,
-      requiresClarification: false,
-      selectedScenario: 'ui',
-    });
-    expect(route.routingDecision.candidates).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ scenario: 'ui', status: 'selected' }),
-        expect.objectContaining({ scenario: 'feature', status: 'suppressed', suppressedBy: 'ui' }),
-      ]),
-    );
-  });
-
-  test('无有效信号时返回 unknown，不再低置信度猜成 feature', () => {
-    const route = detectWorkflowRoute('帮我处理一下这个事情');
-
-    expect(route.scenario).toBe('unknown');
-    expect(route.confidence).toBe('low');
-    expect(route.routingDecision).toMatchObject({
-      source: 'fallback',
-      conflict: false,
-      requiresClarification: true,
-      selectedScenario: null,
-    });
-  });
-
-  test('显式 scenario 在冲突文本中仍保持最高优先级并记录来源', () => {
-    const route = detectWorkflowRoute(
-      '修复当前架构依赖错误，并重新设计模块边界。',
-      'bugfix',
-    );
-
-    expect(route.scenario).toBe('bugfix');
-    expect(route.routingDecision).toMatchObject({
-      source: 'explicit',
-      conflict: false,
-      selectedScenario: 'bugfix',
-    });
-  });
-
-  test.each([
-    ['修复支付错误并检查调用链', 'bugfix'],
-    ['检查调用链并修复支付错误', 'bugfix'],
-    ['规划产品目标并设计页面原型', 'product'],
-    ['设计页面原型并规划产品目标', 'product'],
-    ['新增只读状态页面', 'feature'],
-    ['新增设置页面和交互组件', 'ui'],
-  ] as const)('词序和嵌套步骤不改变主交付选择: %s', (intent, expected) => {
-    const route = detectWorkflowRoute(intent);
-
-    expect(route.scenario).toBe(expected);
-    expect(route.routingDecision.conflict).toBe(false);
-    expect(route.routingDecision.selectedScenario).toBe(expected);
-  });
-
-  test.each([
-    '审查并重构这段代码',
-    '重构并审查这段代码',
-  ])('独立同级意图无论词序如何都返回冲突: %s', (intent) => {
-    const route = detectWorkflowRoute(intent);
-
-    expect(route.scenario).toBe('unknown');
-    expect(route.routingDecision.conflict).toBe(true);
-    expect(route.routingDecision.candidates.map((item) => item.scenario).sort()).toEqual([
-      'refactor',
-      'review',
-    ]);
+  test('渲染后的 auto 指南明确不做意图识别', () => {
+    const plan = buildDevWorkflow('任意自然语言');
+    const markdown = renderWorkflowMarkdown(plan, '任意自然语言');
+    expect(markdown).toContain('Agent 工具选择指南');
+    expect(markdown).toContain('Agent 判断规则');
+    expect(markdown).toContain('不执行自然语言意图识别');
+    expect(markdown).toContain('start_feature');
+    expect(markdown).toContain('code_insight');
   });
 });

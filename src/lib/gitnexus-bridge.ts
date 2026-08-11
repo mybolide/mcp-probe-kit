@@ -1142,14 +1142,33 @@ export interface BridgeWorkspace {
   cleanup?: () => Promise<void>;
 }
 
+export interface BridgeWorkspaceOptions {
+  bootstrap?: boolean;
+  /**
+   * Keep an explicitly requested subdirectory as the source scope instead of
+   * silently widening analysis to an enclosing Git repository. The scoped
+   * source is copied into an isolated temporary Git workspace so GitNexus can
+   * still operate without seeing files outside the requested root.
+   */
+  preserveRequestedRoot?: boolean;
+}
+
 export async function prepareBridgeWorkspace(
   cwd: string = process.cwd(),
   signal?: AbortSignal,
-  options?: { bootstrap?: boolean }
+  options?: BridgeWorkspaceOptions
 ): Promise<BridgeWorkspace> {
   const resolvedCwd = path.resolve(cwd);
   const gitRoot = findGitRoot(resolvedCwd);
   if (gitRoot) {
+    if (
+      options?.preserveRequestedRoot
+      && path.resolve(gitRoot) !== resolvedCwd
+    ) {
+      return createTempAnalysisWorkspace(resolvedCwd, signal, {
+        bootstrap: options.bootstrap,
+      });
+    }
     return {
       workspaceMode: "direct",
       sourceRoot: gitRoot,
@@ -1311,13 +1330,17 @@ export async function runCodeInsightBridge(
   const modeRequested = request.mode || "auto";
   const modeResolved = resolveMode(request);
   const requestedProjectRoot = resolveRequestedProjectRoot(request.projectRoot);
+  const hasExplicitProjectRoot = Boolean(request.projectRoot?.trim());
+  const reportedSourceRoot = () => hasExplicitProjectRoot
+    ? requestedProjectRoot
+    : findGitRoot(requestedProjectRoot) || requestedProjectRoot;
   const runtimeMode = resolveGitNexusMode();
   const configuredLauncher = resolveGitNexusBridgeCommand();
   const fallbackStrategy: GitNexusLaunchStrategy =
     configuredLauncher?.strategy || (runtimeMode === "off" || runtimeMode === "system" ? "disabled" : "managed");
 
   if (!isBridgeEnabled() || isEnvDisabled("MCP_ENABLE_GITNEXUS_BRIDGE") || runtimeMode === "off") {
-    const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
+    const sourceRoot = reportedSourceRoot();
     return {
       provider: "gitnexus",
       enabled: false,
@@ -1341,7 +1364,7 @@ export async function runCodeInsightBridge(
   }
 
   if (Date.now() < bridgeFailureUntil) {
-    const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
+    const sourceRoot = reportedSourceRoot();
     return {
       provider: "gitnexus",
       enabled: true,
@@ -1397,7 +1420,7 @@ export async function runCodeInsightBridge(
     const message = `GitNexus 托管运行时不可用：${normalizeError(error)}`;
     bridgeFailureReason = message;
     bridgeFailureUntil = Date.now() + FAILURE_CACHE_TTL_MS;
-    const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
+    const sourceRoot = reportedSourceRoot();
     return {
       provider: "gitnexus",
       enabled: true,
@@ -1419,7 +1442,7 @@ export async function runCodeInsightBridge(
   }
 
   if (!launcher) {
-    const sourceRoot = findGitRoot(requestedProjectRoot) || requestedProjectRoot;
+    const sourceRoot = reportedSourceRoot();
     return {
       provider: "gitnexus",
       enabled: true,
@@ -1442,7 +1465,9 @@ export async function runCodeInsightBridge(
     };
   }
 
-  const workspace = await prepareBridgeWorkspace(requestedProjectRoot, request.signal);
+  const workspace = await prepareBridgeWorkspace(requestedProjectRoot, request.signal, {
+    preserveRequestedRoot: hasExplicitProjectRoot,
+  });
   const warnings: string[] = [];
   const indexRefreshError = await tryRefreshWorkspaceIndex(workspace, request.signal);
   if (indexRefreshError) {

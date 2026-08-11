@@ -36,6 +36,26 @@ describe('architecture tool', () => {
     expect(response.content[0].text).toContain('结构化结果是架构工作表和门禁');
   });
 
+  it('assess with explicitly empty evidence is blocked instead of reported as complete', async () => {
+    const response = await architecture({
+      mode: 'assess',
+      description: '评估支付模块拆分',
+      collect_evidence: false,
+      current_facts: [],
+      structural_causes: [],
+      protected_invariants: [],
+    });
+
+    expect(response.isError).toBe(false);
+    expect(response.structuredContent.validation.passed).toBe(false);
+    expect(response.structuredContent.validation.gaps.join('\n')).toContain('ARC-2');
+    expect(response.structuredContent.validation.gaps.join('\n')).toContain('ARC-3');
+    expect(response.structuredContent.arc8Status.completedSteps).toEqual(['arc-1']);
+    expect(response.structuredContent.arc8Status.blockedSteps).toEqual(
+      expect.arrayContaining(['arc-2', 'arc-3']),
+    );
+  });
+
   it('save_to_docs returns Agent actions instead of writing project documents', async () => {
     const response = await architecture({
       mode: 'assess',

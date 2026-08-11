@@ -3,6 +3,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import {
+  assertManagedWriteRootSafe,
+  getManagedWriteRootRejection,
   resolveFromWorkspaceFolderPathsEnv,
   resolveWorkspaceRoot,
   resolveWorkspaceRootWithMeta,
@@ -53,6 +55,27 @@ describe("workspace-root WORKSPACE_FOLDER_PATHS", () => {
     const resolution = resolveWorkspaceRootWithMeta("");
     expect(resolution.root).toBe(path.resolve(child));
     expect(resolution.source).toBe("workspace-env");
+  });
+
+  test("拒绝将用户家目录和文件系统根目录作为托管写入根目录", () => {
+    expect(getManagedWriteRootRejection(os.homedir())).toMatch(/用户家目录/);
+    expect(() => assertManagedWriteRootSafe(os.homedir())).toThrow(/独立的项目子目录/);
+
+    const filesystemRoot = path.parse(path.resolve(process.cwd())).root;
+    expect(getManagedWriteRootRejection(filesystemRoot)).toMatch(/根目录/);
+    expect(() => assertManagedWriteRootSafe(filesystemRoot)).toThrow(/独立的项目子目录/);
+
+    if (process.platform === "win32") {
+      const alternateDriveRoot = filesystemRoot.toLowerCase().startsWith("e:") ? "D:\\" : "E:\\";
+      expect(getManagedWriteRootRejection(alternateDriveRoot)).toMatch(/文件系统根目录/);
+      expect(() => assertManagedWriteRootSafe(alternateDriveRoot)).toThrow(/独立的项目子目录/);
+    }
+  });
+
+  test("允许用户家目录下的独立项目子目录", () => {
+    const child = path.join(os.homedir(), "workspace", "safe-project");
+    expect(getManagedWriteRootRejection(child)).toBeNull();
+    expect(() => assertManagedWriteRootSafe(child)).not.toThrow();
   });
 });
 

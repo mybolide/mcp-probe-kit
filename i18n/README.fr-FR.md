@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit est une boîte à outils de niveau protocole pour explorer le contexte et orchestrer le développement. v4 expose 23 outils au modèle par défaut, 29 avec Memory entièrement configuré et conserve une surface full compatible de 33 outils.
+> mcp-probe-kit est une boîte à outils de niveau protocole pour explorer le contexte et orchestrer le développement. v4 expose 24 outils au modèle par défaut, 30 avec Memory entièrement configuré et conserve une surface full compatible de 34 outils.
 
 **Langues**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | **Français** | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 Boîte à Outils de Développement Complète Alimentée par l'IA - Couvrant l'Ensemble du Cycle de Vie du Développement
 
-Un puissant serveur MCP avec **23 outils visibles par le modèle par défaut**, **29 avec Memory complet** et **33 outils de compatibilité** via `MCP_TOOLSET=full`. Il prend en charge la sortie structurée, les protocoles Legacy/Modern et les MCP Apps officielles.
+Un puissant serveur MCP avec **24 outils visibles par le modèle par défaut**, **30 avec Memory complet** et **34 outils de compatibilité** via `MCP_TOOLSET=full`. Il prend en charge la sortie structurée, les protocoles Legacy/Modern et les MCP Apps officielles.
 
 **🎉 Version candidate v4** : MCP Apps natives, plans reprenables, convergence par preuves, GitNexus Sidecar géré, specs parent-enfant et CLI fallback verrouillé.
 
@@ -68,7 +68,7 @@ v4 transforme l’exécution déléguée de l’Agent en une boucle de livraison
 
 **[Ouvrir les cinq démos MCP Apps interactives en lecture seule](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **Canal preview v4 :** utilisez `mcp-probe-kit@next` (actuellement `4.0.0-rc.8`). npm `latest` reste le canal stable `3.7.0`. Verrouillez une version exacte pour une évaluation de production.
+> **Canal preview v4 :** utilisez `mcp-probe-kit@next` (candidat actuel `4.0.0-rc.9`). npm `latest` reste le canal stable `3.7.0`. Verrouillez une version exacte pour une évaluation de production.
 <!-- v4-showcase:end -->
 
 ---
@@ -89,9 +89,9 @@ v4 transforme l’exécution déléguée de l’Agent en une boucle de livraison
 
 ### 📦 Surfaces d’outils
 
-- **`compact` par défaut** : 23 outils visibles par le modèle ; les entrées autonomes comme `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan` et `converge` sont conservées.
-- **Memory entièrement configuré** : six outils Memory sont ajoutés dynamiquement, soit 29 outils visibles.
-- **`MCP_TOOLSET=full`** : restaure 33 outils de modèle compatibles pour les anciens flux et le diagnostic.
+- **`compact` par défaut** : 24 outils visibles par le modèle ; les entrées autonomes comme `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge` et `architecture` sont conservées.
+- **Memory entièrement configuré** : six outils Memory sont ajoutés dynamiquement, soit 30 outils visibles.
+- **`MCP_TOOLSET=full`** : restaure 34 outils de modèle compatibles pour les anciens flux et le diagnostic.
 - **MCP Apps** : `list_memory_assets` est réservé au Memory Center avec `visibility=["app"]` et ne compte pas dans la surface modèle.
 - `add_feature`, `fix_bug`, `sync_ui_data` et `ask_user` sont masqués par défaut, mais leurs capacités restent disponibles via l’orchestration, les scripts de maintenance ou le mode full.
 

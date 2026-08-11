@@ -30,6 +30,210 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0-rc.9] - 2026-08-11
+
+> Public release candidate following the published `4.0.0-rc.8`. The stabilization iterations that were locally numbered rc.9 through rc.20 were not published; their detailed development history is retained below as internal candidate records.
+
+### Changed
+
+- Restored the intended Agent/tool responsibility boundary: Agents now interpret user intent from conversation context, Skill guidance, and tool descriptions, then call the appropriate MCP tool directly.
+- Changed `workflow` into a fallback navigation guide. `scenario=auto` (or omitted scenario) no longer classifies natural language or guesses `firstTool`; explicit scenarios still return deterministic workflow guidance.
+- Removed the production action/object/regex/dominance intent-classification path and retired the large NLP-regression suites that tested behavior the product no longer owns.
+- Updated Skill, AGENTS guidance, package smoke, local Agent acceptance, and internal eval contracts so they no longer depend on `workflow auto` as an intent classifier.
+- Tightened `ask_user`: explicitly blank top-level questions and blank nested questions are rejected, and omitted nested `required` now remains optional instead of being displayed as required.
+- Reworked package smoke to package the already-frozen runtime bytes from an isolated staging tree instead of running `npm pack` against the source workspace; consumer installation verifies the installed `build/index.js` SHA matches the frozen candidate and the source Build fingerprint remains unchanged.
+
+### Validation
+
+- Repository suite passes 112 files / 612 tests after removing obsolete NLP-classifier tests while retaining the functional, protocol, Git, Plan, Memory, UI, architecture, Skill, and package contracts.
+- `ask_user` + workflow focused contracts pass 3 files / 48 tests.
+- Release static checks pass 38/38, docs verification passes 1080 checks, tool contract audit passes 39/39, protocol smoke passes, and local Agent acceptance passes on the rebuilt development bundle.
+- Frozen package smoke installs an actual `.tgz` whose runtime SHA matches the source frozen Build and proves SHA/size/mtime remain identical before and after the smoke.
+
+---
+
+## Internal candidate 4.0.0-rc.19 - 2026-08-10
+
+### Changed
+
+- Finalized the systemic `workflow scenario=auto` stabilization around one action-object/direct semantic classifier shared by whole requests and coordinated clauses.
+- Added an explicit task-vs-reference gate so product names, documentation references, historical statements, and other noun-only descriptions no longer become execution intents merely because they contain words such as `review`, `test`, `architecture`, `API`, or `refactor`.
+- Preserved independent coordinated deliverables with clause provenance and clause-level candidate revival while continuing to suppress nested spec/test/review steps that belong to one primary delivery.
+- Kept the legacy bare-keyword fallback removed; insufficiently actionable language now remains `unknown` instead of being guessed from isolated nouns.
+- Expanded bilingual task directives, historical Memory retrieval, explicit UI redesign, commit-message generation, strong failure signals, onboarding, refactor objects, and English gerund clause handling at the semantic-rule level.
+
+### Validation
+
+- The unchanged systemic workflow suite passes 6 files / 917 tests after mechanism-level fixes; no assertions were removed or weakened.
+- The complete repository suite passes three consecutive runs at 117 files / 1492 tests each.
+- Agent acceptance passes; Agent evals pass 26/26; stability soak passes 16 scenarios / 81 workflow calls / 0 failures.
+- rc.17 and rc.18 are not accepted as final candidate artifacts because their locked `build/index.js` did not contain the later routing-source changes. rc.19 must pass a fresh complete `release:verify`, and its final bundle must postdate the routing source and have a new SHA before Cursor acceptance.
+
+---
+
+## Internal candidate 4.0.0-rc.18 - 2026-08-10
+
+### Changed
+
+- Reissued the systemic workflow-routing stabilization as a fresh release candidate after detecting that the rc.17 Cursor acceptance had been run against a stale `build/index.js` produced before the rc.17 routing-source changes.
+- Kept the rc.17 semantic-routing design intact: a single action-object/direct classifier, clause-aware nested-vs-independent delivery handling, and no bare-keyword fallback.
+
+### Validation
+
+- rc.17 acceptance evidence is treated as invalid for the intended rc.17 routing implementation because the locked bundle timestamp and SHA predated the routing-source and semantic-test changes.
+- rc.18 must be rebuilt and pass the complete release verification chain before a new Build SHA is handed to Cursor; source/version metadata alone is not accepted as candidate identity.
+
+---
+
+## Internal candidate 4.0.0-rc.17 - 2026-08-10
+
+### Changed
+
+- Reworked `workflow scenario=auto` around a single action-object/direct semantic classifier. Coordinated clauses now use the same classifier as the main request instead of a separate coarse keyword scorer.
+- Added clause provenance and clause-aware dominance so nested steps such as “feature + spec/test” remain one delivery while genuinely independent Feature/UI/Bug/Architecture/Product/Refactor deliverables remain visible conflicts.
+- Removed the legacy bare-keyword fallback from automatic routing. Requests without enough action-object/direct evidence now return `unknown` with clarification instead of guessing from nouns such as `API`, `review`, `refactor`, `PRD`, `regression tests`, or `调用链`.
+- Expanded bilingual semantic coverage for read-only analysis constraints, Memory recall, onboarding, product names containing routing vocabulary, service-boundary architecture work, UI redesign phrasing, and English coordinated/Oxford-comma lists.
+
+### Validation
+
+- Added four systemic workflow suites: 109 semantic-stability cases, 493 deterministic combinatorial cases, 133 perturbation cases, and 63 false-positive safety cases (798 new semantic stress/safety cases total).
+- Combined historical acceptance regressions, core workflow contracts, schema checks, and the new systemic suites pass 8 files / 927 tests.
+- Complete pre-version repository suite passes 117 files / 1492 tests; Agent acceptance passes; Agent evals pass 26/26; stability soak passes 16 scenarios / 81 workflow calls / 0 failures before rc.17 release verification.
+
+---
+
+## Internal candidate 4.0.0-rc.16 - 2026-08-10
+
+### Fixed
+
+- Product-planning intent now survives English/mixed-domain subjects such as a “code review assistant product” when PRD/MVP/roadmap language makes the product deliverable explicit, instead of collapsing to `code_review` because the product itself contains review terminology.
+- Pre-refactor read-only assessment now recognizes “先评估 / 先别改 / 暂时别改” style constraints and routes dependency/call-chain/risk analysis to `code_insight` rather than prematurely starting `refactor`.
+- Coordinated Bug + Feature + UI requests preserve all independently requested deliverables across additional “重做 / 重新做” page wording and clause orderings, instead of silently suppressing one candidate.
+- Explicit refactor-plan delivery suppresses generic Feature noise from phrases such as “做一个分步重构计划 / 准备落地改造” unless a separate new feature is genuinely requested.
+- API/interface contract-drift checks are recognized as architecture drift/validation work even when the request explicitly excludes page styling changes.
+
+### Validation
+
+- Added the five rc.15 independent Cursor acceptance workflow failures plus semantic paraphrases; the focused workflow suite passes 3 files / 128 tests.
+- Complete pre-version suite passes 113 files / 694 tests before rc.16 release verification.
+
+---
+
+## Internal candidate 4.0.0-rc.15 - 2026-08-10
+
+### Fixed
+
+- Hardened workflow routing around explicit negative constraints: negated Feature/UI/Product keywords no longer count as requested deliverables, read-only refactor-risk analysis routes to `code_insight`, test/spec-only requests stay read-only, and explicit Memory lookups no longer become Bug-fix work because the search topic contains failure terms.
+- Expanded coordinated-deliverable parsing for spoken connectors such as `并` / `顺便` and redesign wording such as `重做`, preserving independent Feature + UI and Bug + Feature + UI work as conflicts that require clarification instead of silently collapsing to UI.
+- Product planning now dominates review vocabulary when “code review” is the product subject, while explicit “do not plan a product; review this PR” negation continues to route to code review.
+- `code_insight` now preserves an explicitly supplied `project_root` even when that directory lives inside a larger parent Git repository. GitNexus uses an isolated temporary analysis repo for the requested subtree instead of widening the analysis scope to the enclosing repository.
+
+### Validation
+
+- Added the exact rc.14 independent Cursor Host workflow findings plus paraphrase coverage; workflow acceptance regressions pass 79/79.
+- Added GitNexus and `code_insight` regressions proving explicit subdirectory scope excludes parent-repository files while default nested-Git discovery behavior remains unchanged.
+- Targeted repair coverage passes 103/103 and the complete suite passes 113 files / 684 tests before final rc.15 release verification.
+
+---
+
+## Internal candidate 4.0.0-rc.14 - 2026-08-10
+
+### Fixed
+
+- Explicit test-only requests now honor no-implementation constraints, so phrases such as “only generate test strategy/cases; do not implement feature code” route to standalone test guidance instead of full feature delivery.
+- Analysis-only refactor-risk requests now remain read-only/refactor assessment work; negated phrases such as “do not modify” no longer accidentally trigger Bug-fix delivery through substring matching.
+- Coordinated backend API/field changes plus frontend interaction changes now preserve both Feature and UI as independent deliverables and require clarification instead of silently folding backend work into UI.
+
+### Validation
+
+- Added the three genuine rc.13 Cursor Host routing findings plus paraphrase regressions; targeted routing coverage passes 104/104 and the complete suite passes 113 files / 668 tests before release verification.
+- Reclassified rc.13 Git findings D-004/D-005 as acceptance-fixture errors: their alleged non-Git directories were nested inside the main Git worktree, and `workspace_paths` is not a `git_work_report` tool argument. Product Git-subdirectory upward discovery remains unchanged.
+
+---
+
+## Internal candidate 4.0.0-rc.13 - 2026-08-07
+
+### Fixed
+
+- `init_project_context` now rejects filesystem roots and the user home directory with explicit protected-project-root semantics before any managed file write path is entered.
+- Expanded workflow routing for natural spoken feature and Bug requests, including requests such as “make this export capability” and stuck/spinning login symptoms.
+- Preserved independent Bug + UI and API + UI deliverables instead of silently dropping one side of coordinated requests.
+- Recognized hover/color-only visual corrections as UI work even when the user explicitly says not to touch business logic.
+- Recognized test-adequacy requests such as “check whether this change is covered enough and fill the gaps” as standalone test work.
+- Treated permission/authorization model design as architecture work when the user explicitly excludes UI, preventing negated UI mentions from hijacking routing.
+
+### Validation
+
+- Added the rc.12 Cursor Host findings as regressions, including protected-root handling and all seven paraphrase/adversarial routing failures.
+- Revalidated the complete test suite after the fixes before promoting the candidate version.
+
+---
+
+## Internal candidate 4.0.0-rc.12 - 2026-08-07
+
+### Fixed
+
+- Routed standalone “add tests / regression cases” requests to `gentest`, architecture-boundary assessment to `architecture`, and button-level spacing/typography/hover polish to the UI workflow.
+- Preserved independent Feature + UI conflict semantics regardless of whether “redesign” appears before or after the page object, avoiding UI-only folding for API-plus-page requests.
+- Scoped `code_review` Git diff, file metadata, and untracked-file evidence to an explicitly supplied nested `project_root` while retaining legitimate parent-repository discovery for monorepos.
+- Rejected non-positive or fractional `estimate.team_size` values and unsupported experience levels in both public schema and runtime validation.
+- Required non-empty `ask_user.questions[].question` values and aligned the tool help example with the published object schema, preventing malformed question objects from rendering `undefined`.
+- Added the standalone `test` workflow scenario consistently across routing, public schema, runtime validation, labels, and guidance.
+
+### Validation
+
+- Added the rc.11 Cursor Host failures as regressions, including R13/R14/R17/R18, nested Git scope leakage, invalid estimate inputs, and malformed `ask_user` question objects.
+- Revalidated the complete suite after the fixes before promoting the candidate version.
+
+---
+
+## Internal candidate 4.0.0-rc.11 - 2026-08-07
+
+### Fixed
+
+- Routed concrete existing-state UI symptoms such as “first load empty, appears only after switching” to the Bug workflow instead of leaving them unknown.
+- Preserved feature, Bug, and UI as three unsuppressed conflict candidates for generic parallel wording such as “simultaneously add a feature, fix a Bug, and redesign a page”.
+- Consolidated mixed-version duplicate AGENTS managed blocks to exactly one block while preserving the actual highest-version block verbatim and retaining user-authored content.
+
+### Validation
+
+- Added the exact rc.10 Cursor acceptance failures as regression tests for `WF-M2`, `WF-M17`, and `AGENTS-V1`.
+
+---
+
+## Internal candidate 4.0.0-rc.10 - 2026-08-06
+
+### Fixed
+
+- Routed full-stack administration work that includes page layout, API, and permission scope to the feature workflow instead of treating it as UI-only work.
+- Preserved feature, Bug, and UI as three independent conflict candidates when the user explicitly coordinates three separate deliverables.
+- Rejected any Windows drive root before bootstrap attempts to create managed files, independent of the MCP process current drive.
+- Preserved the pre-call bootstrap write status in `init_project_context`, so Host text and `writtenFiles` no longer claim AGENTS.md was skipped when it was updated during the same tool call.
+- Made non-requirements evidence provenance explicit: `converge` now explains when an evidence summary exists but lacks `reference` or `revision`.
+
+### Validation
+
+- Added exact regressions for the rc.9 Cursor Host findings, including the administration feature sentence, concrete three-way routing conflict, alternate Windows drive root, and pre-call AGENTS update reporting.
+
+---
+
+## Internal candidate 4.0.0-rc.9 - 2026-08-06
+
+### Fixed
+
+- Rejected `init_project` and automatic managed bootstrap writes when the resolved root is the user's home directory, a filesystem root, or a protected system root; valid project subdirectories remain supported.
+- Preserved the highest AGENTS managed-block SemVer across duplicate or mixed-version blocks, preventing an older process from overwriting a later block that appears after a lower-version marker.
+- Treated coordinated feature, Bug, UI, architecture, Product, and refactor deliverables as independent routing candidates before selection, while retaining dominance for genuinely nested Product/UI and other workflow steps.
+- Removed the generic “handle that problem” Bug heuristic and routed reusable repair experience to Memory retrieval when Memory is available.
+- Corrected public README tool-surface counts to 24 compact, 30 compact with Memory, and 34 full, and added a release-blocking parity check.
+
+### Validation
+
+- Added protected-root, no-home-write, mixed-version AGENTS, coordinated multi-intent, vague-intent, Memory-recall, and README-parity regressions.
+- Revalidated the exact Cursor-discovered failure inputs before rebuilding the release candidate.
+
+---
+
 ## [4.0.0-rc.8] - 2026-08-03
 
 ### Fixed

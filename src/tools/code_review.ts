@@ -61,6 +61,9 @@ export async function codeReview(args: any) {
     const headRef = getString(parsedArgs.head_ref);
     const maxDiffChars = getNumber(parsedArgs.max_diff_chars, 120000);
     const diffMode = normalizeGitDiffMode(diffModeText);
+    if (diffMode === "range" && (!baseRef || !headRef)) {
+      throw new Error("diff_mode=range 时必须同时提供 base_ref 和 head_ref");
+    }
     const needsProjectEvidence = Boolean(
       projectRootInput
       || planId

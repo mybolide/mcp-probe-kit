@@ -129,7 +129,7 @@ export function generateWorkflowSkillBody(skillVersion: string = VERSION): strin
 
 1. **先判断目标**：明确单项能力直接调用对应工具；需要从分析到验证完整交付时才调用 \`start_*\`
 2. **独立能力不是必须被编排**：\`code_insight\`、\`fix_bug\`、\`gentest\`、\`code_review\`、Memory 等均可直接调用
-3. **只有拿不准首工具时**才调用 \`workflow\`：\`{ "intent": "<结合当前对话整理的完整任务摘要>" }\`
+3. **只有拿不准该调用哪个工具时**才调用 \`workflow\`。\`workflow\` 是兜底选择指南，不做自然语言意图识别；默认 \`scenario=auto\` 不会根据 \`intent\` 猜 \`firstTool\`。Agent 阅读指南和 tool descriptions 后自行判断，缺关键事实时再澄清用户
 4. \`start_*\` 只组合当前场景实际需要的能力；按返回的 Delegated Plan 逐步执行，不要额外塞入无关工具
 5. 在写代码或改文件前，先完成当前目标真正需要的理解、规格或根因步骤
 
@@ -143,7 +143,7 @@ ${renderArgumentRules()}
 
 ---
 
-## 意图速查（第一个该调的 MCP）
+## 工具选择速查（由 Agent 判断）
 
 ${renderIntentQuickLookup()}
 

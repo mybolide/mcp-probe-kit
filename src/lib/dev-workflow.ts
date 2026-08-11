@@ -8,6 +8,11 @@ import {
   type WorkflowScenario,
 } from './dev-workflow-routing.js';
 import { renderWorkflowRoutingDetails } from './workflow-routing-render.js';
+import { inferArchitectureMode } from './architecture-workflow-mode.js';
+import {
+  WORKFLOW_AGENT_SELECTION_RULES,
+  WORKFLOW_SELECTION_GUIDE,
+} from './workflow-selection-guide.js';
 
 export {
   detectWorkflowRoute,
@@ -92,6 +97,29 @@ function buildPlan(
   };
 
   switch (scenario) {
+    case 'ralph':
+      return {
+        ...base,
+        summary: '使用 start_ralph 建立有界、多轮、前台执行且逐轮留证的迭代计划',
+        firstTool: 'start_ralph',
+        firstToolArgsHint: { goal: intent },
+        phases: withMemory([
+          contextPhase(),
+          {
+            id: 'ralph',
+            title: '有界 Ralph 迭代',
+            when: '明确要求多轮小步实施、逐轮验证和安全停止',
+            steps: [{
+              tool: 'start_ralph',
+              required: true,
+              when: '先生成有界 delegated plan、停止条件和逐轮 Heartbeat 契约',
+            }],
+          },
+        ], memoryAvailable),
+        avoid: [...commonAvoid(), '不要把安全停止或达到轮数上限当作成功', '不要创建后台循环'],
+        memoryNotes: commonMemoryNotes(memoryAvailable),
+      };
+
     case 'product':
       return {
         ...base,
@@ -197,13 +225,7 @@ function buildPlan(
         summary: '使用 architecture / ARC-8 完成架构事实重建、方案权衡、目标设计、验证或漂移核验',
         firstTool: 'architecture',
         firstToolArgsHint: {
-          mode: /漂移|偏离|drift/i.test(intent)
-            ? 'drift'
-            : /验证|校验|评审|审查|validate|review/i.test(intent)
-              ? 'validate'
-              : /设计|规划|迁移|拆分|收口|design/i.test(intent)
-                ? 'design'
-                : 'assess',
+          mode: inferArchitectureMode(intent),
           description: intent,
         },
         phases: withMemory([
@@ -279,6 +301,40 @@ function buildPlan(
           steps: [{ tool: 'gencommit', required: true, when: '需要 commit message' }],
         }],
         avoid: ['不要提交未验证或与当前任务无关的变更'],
+        memoryNotes: [],
+      };
+
+    case 'work_report':
+      return {
+        ...base,
+        summary: '使用 git_work_report 基于真实 Git 历史生成日报、周报或指定周期工作报告',
+        firstTool: 'git_work_report',
+        phases: [{
+          id: 'work-report',
+          title: '生成 Git 工作报告',
+          when: '需要基于真实提交记录生成日报、周报或周期总结',
+          steps: [{
+            tool: 'git_work_report',
+            required: true,
+            when: '先确认日期范围，再读取真实 Git 历史生成报告',
+          }],
+        }],
+        avoid: ['不要把未提交改动写成已完成提交', '不要在日期范围不明确时猜测报告周期'],
+        memoryNotes: [],
+      };
+
+    case 'test':
+      return {
+        ...base,
+        summary: '使用 gentest 为当前代码或改动补充测试与回归用例',
+        firstTool: 'gentest',
+        phases: [{
+          id: 'test',
+          title: '测试设计与补充',
+          when: '已有实现或改动，需要新增单元测试、集成测试或回归用例',
+          steps: [{ tool: 'gentest', required: true, when: '基于真实代码或文件补测试' }],
+        }],
+        avoid: ['不要在未读取真实代码或目标行为时编造测试', '不要把测试建议伪装成已执行通过'],
         memoryNotes: [],
       };
 
@@ -386,11 +442,17 @@ function buildPlan(
       return {
         ...base,
         confidence: 'low',
-        summary: '意图不足，先由 Agent 使用原生对话澄清；当前不建议调用任何 MCP 工具',
+        summary: 'workflow 是 Agent 的兜底工具选择指南，不执行自然语言意图识别；请由 Agent 根据完整对话、Skill 和 tool descriptions 自行选择工具',
         firstTool: null,
         phases: [],
-        avoid: ['不要猜测任务类型后直接写代码', '不要调用 compact 模式不可见的 ask_user'],
+        avoid: [
+          '不要把 workflow 当作所有任务的中央入口或自然语言分类器',
+          '不要期待 scenario=auto 根据 intent 自动返回 firstTool',
+          '多个独立交付由 Agent 拆分或澄清，不要静默丢掉其中一个目标',
+        ],
         memoryNotes: [],
+        selectionGuide: WORKFLOW_SELECTION_GUIDE,
+        agentSelectionRules: WORKFLOW_AGENT_SELECTION_RULES,
       };
 
     case 'feature':
@@ -455,6 +517,14 @@ export function renderWorkflowMarkdown(plan: DevWorkflowPlan, intent: string): s
       }).join('\n\n')
     : '_当前没有可执行工具步骤。_';
   const routingDetails = renderWorkflowRoutingDetails(plan.routingDecision);
+  const selectionGuide = plan.selectionGuide?.length
+    ? `\n## Agent 工具选择指南\n\n${plan.selectionGuide.map((item) =>
+        `- ${item.signal} → \`${item.firstTool}\`${item.note ? `（${item.note}）` : ''}`
+      ).join('\n')}`
+    : '';
+  const agentRules = plan.agentSelectionRules?.length
+    ? `\n## Agent 判断规则\n\n${plan.agentSelectionRules.map((item) => `- ${item}`).join('\n')}`
+    : '';
 
   return `# 开发工作流 · ${plan.scenarioLabel}
 
@@ -475,6 +545,8 @@ ${phases}
 
 ${plan.avoid.map((item) => `- ${item}`).join('\n')}
 ${plan.memoryNotes.length > 0 ? `\n## 记忆\n${plan.memoryNotes.map((item) => `- ${item}`).join('\n')}` : ''}
+${selectionGuide}
+${agentRules}
 
 ---
 

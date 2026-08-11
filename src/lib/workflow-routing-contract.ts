@@ -3,9 +3,12 @@ export type WorkflowScenario =
   | 'bugfix'
   | 'ui'
   | 'product'
+  | 'ralph'
   | 'architecture'
   | 'explore'
   | 'commit'
+  | 'work_report'
+  | 'test'
   | 'review'
   | 'refactor'
   | 'onboard'
@@ -15,6 +18,7 @@ export type WorkflowScenario =
 
 export type WorkflowRoutingSource =
   | 'explicit'
+  | 'guide'
   | 'delivery-rules'
   | 'keyword-scores'
   | 'fallback';

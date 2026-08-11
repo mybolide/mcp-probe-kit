@@ -3,8 +3,7 @@ import { okStructured } from "../lib/response.js";
 import { renderGuidanceHeader } from "../lib/guidance.js";
 import { handleToolError } from "../utils/error-handler.js";
 import type { CommitGuidance } from "../schemas/output/index.js";
-import { resolveWorkspaceRoot } from "../lib/workspace-root.js";
-import { assertGitRepository } from "../lib/git-repository.js";
+import { resolveGitRepositoryForTool } from "../lib/git-repository.js";
 
 const ALLOWED_TYPES: CommitGuidance["allowedTypes"] = [
   { type: "fixed", emoji: "🐛", when: "线上/测试缺陷修复" },
@@ -147,10 +146,7 @@ export async function gencommit(args: any) {
     const input = getString(parsedArgs.input);
     const changes = getString(parsedArgs.changes) || input;
     if (!changes) {
-      assertGitRepository(
-        resolveWorkspaceRoot(getString(parsedArgs.project_root)),
-        "gencommit"
-      );
+      resolveGitRepositoryForTool(getString(parsedArgs.project_root), "gencommit");
     }
 
     const structured: CommitGuidance = {

@@ -45,8 +45,13 @@ export const interviewToolSchemas = [
               question: { type: "string" },
               context: { type: "string" },
               options: { type: "array", items: { type: "string" } },
-              required: { type: "boolean" },
+              required: {
+                type: "boolean",
+                description: "是否必须回答；省略时默认为 false（可选）",
+                default: false,
+              },
             },
+            required: ["question"],
           },
         },
         context: {

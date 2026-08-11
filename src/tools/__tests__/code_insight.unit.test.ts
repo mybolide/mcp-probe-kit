@@ -112,6 +112,39 @@ describe("code_insight 单元测试", () => {
     }
   });
 
+  test("显式 project_root 为父 Git 仓库子目录时降级结果也不得扩到父仓库", async () => {
+    const prev = process.env.MCP_ENABLE_GITNEXUS_BRIDGE;
+    process.env.MCP_ENABLE_GITNEXUS_BRIDGE = "0";
+    const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "code-insight-explicit-scope-"));
+    fs.mkdirSync(path.join(repoRoot, ".git"));
+    const scopedRoot = path.join(repoRoot, "apps", "payments");
+    fs.mkdirSync(path.join(scopedRoot, "src"), { recursive: true });
+    fs.writeFileSync(path.join(repoRoot, "outside.ts"), "export const outside = true;\n", "utf8");
+    fs.writeFileSync(path.join(scopedRoot, "src", "inside.ts"), "export const inside = true;\n", "utf8");
+
+    try {
+      const result = await codeInsight({
+        mode: "query",
+        query: "inside",
+        project_root: scopedRoot,
+        save_to_docs: false,
+      });
+
+      expect(result.isError).toBe(false);
+      const structured = (result as any).structuredContent;
+      expect(structured.sourceRoot).toBe(scopedRoot);
+      expect(structured.analysisRoot).toBe(scopedRoot);
+      expect(structured.localFallback?.files?.map((item: any) => item.path))
+        .toContain("src/inside.ts");
+      expect(structured.localFallback?.files?.map((item: any) => item.path))
+        .not.toContain("outside.ts");
+    } finally {
+      fs.rmSync(repoRoot, { recursive: true, force: true });
+      if (prev === undefined) delete process.env.MCP_ENABLE_GITNEXUS_BRIDGE;
+      else process.env.MCP_ENABLE_GITNEXUS_BRIDGE = prev;
+    }
+  });
+
   test("当前目录为家目录时提示传入 project_root", async () => {
     const prev = process.env.MCP_ENABLE_GITNEXUS_BRIDGE;
     process.env.MCP_ENABLE_GITNEXUS_BRIDGE = "1";

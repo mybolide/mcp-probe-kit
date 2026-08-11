@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { allToolSchemas } from "../../schemas/index.js";
 import { TOOL_ANNOTATIONS } from "../../lib/tool-annotations.js";
@@ -10,9 +12,74 @@ import {
   listToolDefinitionsForToolset,
   prepareAppOnlyToolsForList,
   prepareRegisteredToolForList,
+  executeRegisteredTool,
 } from "../tool-registry.js";
+import { ensureMcpProbeKitBootstrap } from "../../lib/workflow-skill-installer.js";
 
 describe("Tool Registry", () => {
+  test("init_project 保留预调用 bootstrap 的真实首次写入状态", async () => {
+    const parent = path.join(process.cwd(), ".mcp-probe-kit", "test-tmp");
+    fs.mkdirSync(parent, { recursive: true });
+    const root = fs.mkdtempSync(path.join(parent, "tool-registry-init-project-"));
+    try {
+      const args = {
+        input: "Create a minimal task CLI",
+        project_name: "registry-fixture",
+        project_root: root,
+      };
+      const bootstrap = ensureMcpProbeKitBootstrap(root);
+      expect(bootstrap.skill.created).toBe(true);
+      expect(bootstrap.agentsMd.created).toBe(true);
+
+      const result = await executeRegisteredTool("init_project", args, { bootstrap });
+      const structured = (result as any).structuredContent;
+      const text = ((result as any).content ?? [])
+        .map((item: any) => item?.text ?? "")
+        .join("\n");
+
+      expect(structured.bootstrap.skillCreated).toBe(true);
+      expect(structured.bootstrap.agentsCreated).toBe(true);
+      expect(structured.writtenFiles).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ".agents/skills/mcp-probe-kit/SKILL.md", action: "created" }),
+          expect.objectContaining({ path: "AGENTS.md", action: "created" }),
+        ])
+      );
+      expect(text).toContain("本次已创建");
+      expect(text).not.toContain("本次无需写入或更新");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("init_project_context 保留预调用 bootstrap 对 AGENTS.md 的真实更新状态", async () => {
+    const parent = path.join(process.cwd(), ".mcp-probe-kit", "test-tmp");
+    fs.mkdirSync(parent, { recursive: true });
+    const root = fs.mkdtempSync(path.join(parent, "tool-registry-init-context-"));
+    try {
+      fs.writeFileSync(path.join(root, "AGENTS.md"), "# user rules\n", "utf8");
+      const bootstrap = ensureMcpProbeKitBootstrap(root);
+      expect(bootstrap.agentsMd.updated).toBe(true);
+
+      const result = await executeRegisteredTool(
+        "init_project_context",
+        { project_root: root },
+        { bootstrap },
+      );
+      const structured = (result as any).structuredContent;
+      const agentsDelivery = structured.writtenFiles.find((file: any) => file.path === "AGENTS.md");
+      const text = ((result as any).content ?? [])
+        .map((item: any) => item?.text ?? "")
+        .join("\n");
+
+      expect(agentsDelivery?.action).toBe("updated");
+      expect(text).toContain("本次已更新");
+      expect(text).not.toContain("AGENTS.md — 已跳过（已存在）");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("覆盖全部现有工具且名称唯一", () => {
     const definitions = listToolDefinitions();
     const names = definitions.map((definition) => definition.name);

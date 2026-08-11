@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import {
   COMPACT_TOOL_COUNT,
   FULL_TOOL_COUNT,
@@ -6,6 +7,8 @@ import {
 } from './release-surface.mjs';
 
 const inspectorVersion = '2.0.0';
+const toolManifest = JSON.parse(readFileSync('tools-manifest.json', 'utf8'));
+const registeredAppOnly = toolManifest.toolsets?.appOnly?.tools ?? [];
 const compact = runInspector('compact', COMPACT_TOOL_COUNT);
 const full = runInspector('full', FULL_TOOL_COUNT);
 
@@ -30,10 +33,18 @@ for (const hidden of ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user']) {
     `full compatibility model surface missing ${hidden}`,
   );
 }
+assert(
+  registeredAppOnly.length === 1 && registeredAppOnly[0] === 'list_memory_assets',
+  `manifest app-only registry mismatch: ${JSON.stringify(registeredAppOnly)}`,
+);
 for (const surface of [compact, full]) {
   assert(
-    surface.appOnlyNames.includes('list_memory_assets'),
-    `${surface.toolset} Inspector surface is missing list_memory_assets app-only action`,
+    surface.appOnlyNames.length === 0,
+    `${surface.toolset} tools/list leaked app-only actions: ${surface.appOnlyNames.join(', ')}`,
+  );
+  assert(
+    !surface.rawNames.includes('list_memory_assets'),
+    `${surface.toolset} tools/list exposed list_memory_assets to the model/client surface`,
   );
 }
 
@@ -50,6 +61,7 @@ console.log(JSON.stringify({
     modelTools: full.modelNames.length,
     appOnlyTools: full.appOnlyNames,
   },
+  registeredAppOnly,
   coreTools: [
     'workflow',
     'start_feature',
@@ -123,12 +135,8 @@ function runInspector(toolset, expectedModelCount) {
     `Inspector ${toolset} model surface returned ${modelTools.length}, expected ${expectedModelCount}`,
   );
   assert(
-    appOnlyTools.length === 1,
-    `Inspector ${toolset} returned ${appOnlyTools.length} app-only actions, expected 1`,
-  );
-  assert(
-    tools.length === expectedModelCount + appOnlyTools.length,
-    `Inspector ${toolset} raw surface returned ${tools.length}, expected ${expectedModelCount + appOnlyTools.length}`,
+    tools.length === expectedModelCount,
+    `Inspector ${toolset} raw surface returned ${tools.length}, expected model-only ${expectedModelCount}`,
   );
 
   return {

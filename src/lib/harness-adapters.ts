@@ -91,11 +91,20 @@ function generateComateRulesContent(
 `;
 }
 
-function generateClaudePointerBlock(skillCanonical: string, agentsPath: string): string {
+function generateClaudePointerBlock(
+  skillCanonical: string,
+  agentsPath: string,
+  version: string,
+): string {
   return `${CLAUDE_BLOCK_BEGIN}
 ## MCP (mcp-probe-kit)
 
-Before coding, read the \`mcp-probe:context\` block in \`${agentsPath}\` or Skill \`${skillCanonical}\`.
+> ${RULES_POINTER_VERSION_KEY}: ${version}
+
+- If the user says only “continue”, “start”, or “keep going”, call \`resume_plan\` first. Pass \`plan_id\` when known; otherwise pass only \`project_root\` to recover the latest active/blocked Plan.
+- Before confirming there is no resumable Plan, do not inspect the workspace with Bash, call \`workflow\`, or restart with \`start_*\`.
+- When \`resume_plan\` returns \`mustContinue=true\`, do not stop after reporting recovery. Execute \`nextStep/nextTool\` immediately, call \`plan_heartbeat\` after each step, and continue until blocked, cancelled, or converged.
+- For all other work, read the \`mcp-probe:context\` block in \`${agentsPath}\` or Skill \`${skillCanonical}\` before coding.
 ${CLAUDE_BLOCK_END}`;
 }
 
@@ -131,17 +140,11 @@ function adapterNeedsUpdate(
   if (!existing?.trim()) {
     return true;
   }
-  if (kind === "skill-mirror") {
+  if (kind === "skill-mirror" || kind === "claude-pointer") {
     return existing !== nextContent;
   }
   if (!existing.includes(RULES_POINTER_VERSION_KEY) || !existing.includes(version)) {
     return true;
-  }
-  if (kind === "claude-pointer") {
-    return (
-      !existing.includes(CANONICAL_SKILL_REL_PATH) ||
-      Boolean(agentsIndexPath && !existing.includes(agentsIndexPath))
-    );
   }
   if (kind === "rules-pointer" && agentsIndexPath && !existing.includes(agentsIndexPath)) {
     return true;
@@ -168,7 +171,7 @@ function resolveAdapterContent(
     case "claude-pointer":
       return mergeClaudePointer(
         null,
-        generateClaudePointerBlock(CANONICAL_SKILL_REL_PATH, agentsIndexPath)
+        generateClaudePointerBlock(CANONICAL_SKILL_REL_PATH, agentsIndexPath, version)
       );
     default:
       return skillContent;
@@ -186,7 +189,11 @@ function writeAdapterFile(
   const existing = fs.existsSync(absolute) ? fs.readFileSync(absolute, "utf8") : null;
 
   if (adapter.kind === "claude-pointer" && existing) {
-    const block = generateClaudePointerBlock(CANONICAL_SKILL_REL_PATH, agentsIndexPath);
+    const block = generateClaudePointerBlock(
+      CANONICAL_SKILL_REL_PATH,
+      agentsIndexPath,
+      version,
+    );
     const merged = mergeClaudePointer(existing, block);
     if (!adapterNeedsUpdate(existing, merged, adapter.kind, version, agentsIndexPath)) {
       return {
@@ -254,10 +261,11 @@ function collectInstalledAdapterManifest(
 export function ensureHarnessAdapters(
   projectRoot: string,
   skillContent: string,
-  agentsIndexPath = "AGENTS.md"
+  agentsIndexPath = "AGENTS.md",
+  environment: NodeJS.ProcessEnv = process.env,
 ): HarnessAdapterEnsureResult {
   const root = path.resolve(projectRoot);
-  const detection = detectHarnessContext(root);
+  const detection = detectHarnessContext(root, environment);
   const adapters: HarnessAdapterWriteResult[] = [];
   const version = parseSkillInstalledVersion(skillContent) ?? getMcpProbeSkillVersion();
 

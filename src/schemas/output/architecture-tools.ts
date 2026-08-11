@@ -10,9 +10,10 @@ export const ArchitectureResultSchema = {
       properties: {
         completedSteps: { type: 'array', items: { type: 'string' } },
         blockedSteps: { type: 'array', items: { type: 'string' } },
+        notInScopeSteps: { type: 'array', items: { type: 'string' } },
         nextStep: { type: ['string', 'null'] },
       },
-      required: ['completedSteps', 'blockedSteps', 'nextStep'],
+      required: ['completedSteps', 'blockedSteps', 'notInScopeSteps', 'nextStep'],
     },
     problem: {
       type: 'object',

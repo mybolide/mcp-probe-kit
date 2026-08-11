@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit v4 - 可観測な Agent ワークフローと MCP Apps",
-    "description": "MCP Probe Kit v4 は標準23ツール、Memory構成時29ツール、5つのMCP Apps、再開可能な計画、収束ゲート、GitNexus Sidecar、固定バージョンCLI fallbackを提供します。",
+    "description": "MCP Probe Kit v4 は標準24ツール、Memory構成時30ツール、full互換34ツール、5つのMCP Apps、再開可能な計画、収束ゲート、GitNexus Sidecar、固定バージョンCLI fallbackを提供します。",
     "keywords": "MCP Probe Kit, AI開発ツール, コード生成, コードレビュー, Gitツール, UI開発, 開発効率, Cursor, Cline, Claude, MCPサーバー"
   },
   "nav": {
@@ -15,19 +15,19 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "Agent がプロジェクトを理解し、実行計画を進め、ネイティブUIで進捗を可視化",
-    "version": "v4.0.0-rc.8",
+    "version": "v4.0.0-rc.9",
     "quickStart": "クイックスタート",
     "visitMainSite": "ByteZoneXを訪問"
   },
   "sections": {
     "quickStart": {
       "title": "クイックスタート",
-      "description": "5分でMCP Probe Kit v4.0.0-rc.8を始める",
+      "description": "5分でMCP Probe Kit v4.0.0-rc.9を始める",
       "installConfig": "インストールと設定"
     },
     "tools": {
       "title": "ツールドキュメント",
-      "description": "標準23ツール、Memory構成時29ツール、さらに5つのネイティブMCP Apps",
+      "description": "標準24ツール、Memory構成時30ツール、さらに5つのネイティブMCP Apps",
       "allTools": "すべてのツール"
     },
     "guides": {
@@ -65,10 +65,10 @@
   },
   "gettingStarted": {
     "title": "インストールと設定",
-    "subtitle": "5分でMCP Probe Kit v4.0.0-rc.8を始める。Cursor、Cline、Claude Desktopをサポート",
+    "subtitle": "5分でMCP Probe Kit v4.0.0-rc.9を始める。Cursor、Cline、Claude Desktopをサポート",
     "skillBootstrap": {
       "title": "Skill と AGENTS の自動ブートストラップ",
-      "body": "MCP ツール呼び出しごとに AGENTS.md と .agents/skills/mcp-probe-kit/SKILL.md を書き込みます（ルール単一ソース）。.trae/、.lingma/、.comate/ などのディレクトリがある場合は薄いアダプタを自動作成します（v4.0.0-rc.8+、環境変数不要）。"
+      "body": "MCP ツール呼び出しごとに AGENTS.md と .agents/skills/mcp-probe-kit/SKILL.md を書き込みます（ルール単一ソース）。.trae/、.lingma/、.comate/ などのディレクトリがある場合は薄いアダプタを自動作成します（v4.0.0-rc.9+、環境変数不要）。"
     },
     "breadcrumb": {
       "home": "ドキュメント",
@@ -329,7 +329,7 @@
     "subtitle": "MCP Probe Kitは完全な開発プロセスを統合、要件からデプロイまでのベストプラクティスガイド",
     "overview": {
       "title": "完全な開発プロセス",
-      "description": "既定23個、Memory構成時29個のモデル可視ツールで、start_*、計画チェックポイント、収束ゲートを通じて開発全体を支援します。",
+      "description": "既定24個、Memory構成時30個のモデル可視ツールで、start_*、計画チェックポイント、収束ゲートを通じて開発全体を支援します。",
       "coreIdea": "コア哲学：",
       "coreIdeaText": "ワークフローオーケストレーションツール（start_*）を通じて開発プロセス全体を連携し、AIを開発アシスタントにします。"
     },
@@ -584,7 +584,7 @@
     "resources": {
       "title": "その他のリソース",
       "allTools": "完全なツールリファレンス",
-      "allToolsDesc": "33個のfull互換ツールと1個のApp-only操作の詳細を見る",
+      "allToolsDesc": "34個のfull互換ツールと1個のApp-only操作の詳細を見る",
       "gettingStarted": "インストールと設定",
       "gettingStartedDesc": "クイックスタートガイド",
       "migration": "移行ガイド",
@@ -636,7 +636,7 @@
   "apps": {
     "title": "MCP Apps 可視化ワークベンチ",
     "subtitle": "5つのAppが計画、記憶、製品引き継ぎ、証拠ゲートを対応クライアントへ提供します。",
-    "badge": "v4.0.0-rc.8・実Appソースから生成したデモ",
+    "badge": "v4.0.0-rc.9・実Appソースから生成したデモ",
     "howTitle": "使い方",
     "how1": "io.modelcontextprotocol/ui 対応クライアントに mcp-probe-kit@next を設定します。",
     "how2": "start_feature、start_bugfix、start_product、converge、Memoryツールを通常通り呼び出します。",

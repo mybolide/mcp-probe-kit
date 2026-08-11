@@ -64,7 +64,7 @@ export async function resumePlan(
     blockedSteps,
     ...(nextStepId ? { nextStepId } : {}),
     nextAction: nextStepId
-      ? `继续执行步骤 ${nextStepId}，完成后调用 plan_heartbeat 更新证据与状态`
+      ? `立即执行步骤 ${nextStepId}；不要在 resume_plan 后停止或只汇报恢复结果。完成、跳过或阻断该步骤后立即调用 plan_heartbeat 更新累计状态与真实证据，然后继续下一可执行步骤，直到 blocked、cancelled 或 converge 通过`
       : record.unresolvedItems.length > 0
         ? '没有可执行步骤；先关闭 unresolvedItems 或将计划标记 blocked'
         : '没有可执行步骤；检查依赖、跳过理由或调用 converge 评估是否可关闭',

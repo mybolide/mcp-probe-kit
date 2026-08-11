@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP は、コンテキスト探索と開発オーケストレーションのためのプロトコルレベル・ツールキットです。v4 は既定でモデルに23ツール、Memory 完全構成時に29ツールを公開し、33ツールの full 互換面を維持します。
+> Zhishi MCP は、コンテキスト探索と開発オーケストレーションのためのプロトコルレベル・ツールキットです。v4 は既定でモデルに24ツール、Memory 完全構成時に30ツールを公開し、34ツールの full 互換面を維持します。
 
 **言語**: [English](../README.md) | [简体中文](README.zh-CN.md) | **日本語** | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI駆動の完全開発ツールキット - 開発ライフサイクル全体をカバー
 
-強力な MCP (Model Context Protocol) サーバーです。既定では **23個のモデル可視ツール**、Memory 完全構成時は **29個**、`MCP_TOOLSET=full` では **33個の互換ツール**を提供します。構造化出力、Legacy/Modern 両プロトコル、正式な MCP Apps に対応します。
+強力な MCP (Model Context Protocol) サーバーです。既定では **24個のモデル可視ツール**、Memory 完全構成時は **30個**、`MCP_TOOLSET=full` では **34個の互換ツール**を提供します。構造化出力、Legacy/Modern 両プロトコル、正式な MCP Apps に対応します。
 
 **🎉 v4 リリース候補**：ネイティブ MCP Apps、再開可能な計画、証拠収束、管理型 GitNexus Sidecar、親子仕様、固定バージョン CLI fallback。
 
@@ -62,7 +62,7 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 
 **[5つの読み取り専用 MCP Apps ライブデモを開く](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 プレビューチャネル：** `mcp-probe-kit@next`（現在 `4.0.0-rc.8`）を使用します。npm `latest` は安定版 `3.7.0` のままです。本番評価では正確なバージョンを固定してください。
+> **v4 プレビューチャネル：** `mcp-probe-kit@next`（現在の候補は `4.0.0-rc.9`）を使用します。npm `latest` は安定版 `3.7.0` のままです。本番評価では正確なバージョンを固定してください。
 <!-- v4-showcase:end -->
 
 ---
@@ -83,9 +83,9 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 
 ### 📦 ツール面
 
-- **既定 `compact`**: モデル可視ツールは23個。`start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge` などの独立入口を保持します。
-- **Memory 完全構成**: 6個の Memory ツールを動的に追加し、モデル可視数は29個になります。
-- **`MCP_TOOLSET=full`**: 旧フローと診断向けに33個の互換モデルツールを復元します。
+- **既定 `compact`**: モデル可視ツールは24個。`start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge`、`architecture` などの独立入口を保持します。
+- **Memory 完全構成**: 6個の Memory ツールを動的に追加し、モデル可視数は30個になります。
+- **`MCP_TOOLSET=full`**: 旧フローと診断向けに34個の互換モデルツールを復元します。
 - **MCP Apps**: `list_memory_assets` は Memory Center 専用で、`visibility=["app"]` のためモデルツール数には含まれません。
 - `add_feature`、`fix_bug`、`sync_ui_data`、`ask_user` は既定面から外れますが、オーケストレーション、保守スクリプト、full モードで能力を維持します。
 

@@ -90,6 +90,28 @@ describe('plan heartbeat / resume / converge', () => {
     expect(result.record.status).toBe('blocked');
   });
 
+  test('converge 明确指出非 requirements 证据缺少 reference/revision', async () => {
+    const projectRoot = await mkdtemp(join(tmpdir(), 'plan-converge-provenance-'));
+    cleanup.push(projectRoot);
+    await recordPlanHeartbeat({
+      planId: plan().planId,
+      projectRoot,
+      plan: plan(),
+      completedStepIds: ['spec', 'implement', 'test', 'review'],
+      evidence: [
+        { kind: 'requirements', summary: 'FR-1 已确认' },
+        { kind: 'spec', summary: '规格闸门通过' },
+        { kind: 'implementation', summary: '实现完成', revision: 'abc123' },
+        { kind: 'test', summary: '测试通过', reference: 'npm test' },
+        { kind: 'review', summary: '审查通过', reference: 'review-42' },
+      ],
+    });
+
+    const result = await convergePlan({ planId: plan().planId, projectRoot });
+    expect(result.passed).toBe(false);
+    expect(result.blockers).toContain('收敛证据 spec 已有摘要，但缺少 reference 或 revision');
+  });
+
   test('全部步骤和五类证据齐全时收敛，并允许后续正式记忆写入', async () => {
     const projectRoot = await mkdtemp(join(tmpdir(), 'plan-converge-pass-'));
     cleanup.push(projectRoot);

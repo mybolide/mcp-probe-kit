@@ -11,7 +11,7 @@ import {
   resolveProjectContextLayout,
   writeLayoutManifest,
 } from "../project-context-layout.js";
-import { mergeAgentsMdBlock } from "../merge-agents-md.js";
+import { mergeAgentsMdBlock, wrapMcpProbeBlock } from "../merge-agents-md.js";
 
 describe("project-context-layout", () => {
   test("relativeLink from AGENTS.md to docs paths", () => {
@@ -99,5 +99,95 @@ describe("mergeAgentsMdBlock", () => {
     const { content, mergeMode } = mergeAgentsMdBlock(existing, "new inner");
     expect(mergeMode).toBe("replaced-and-moved-to-top");
     expect(content.indexOf("new inner")).toBeLessThan(content.indexOf("# Footer"));
+  });
+
+  test("removes every duplicate managed block and keeps exactly one", () => {
+    const first = wrapMcpProbeBlock("## MCP（必须先调）\nfirst", "4.0.0-rc.7");
+    const second = wrapMcpProbeBlock("## MCP（必须先调）\nsecond", "4.0.0-rc.8");
+    const existing = `${first}\n\n# User rules\n\n${second}\n`;
+
+    const { content, mergeMode } = mergeAgentsMdBlock(
+      existing,
+      "## MCP（必须先调）\nlatest",
+      "4.0.0-rc.8",
+    );
+
+    expect(mergeMode).toBe("replaced-and-moved-to-top");
+    expect((content.match(/<!-- mcp-probe:context begin/g) ?? [])).toHaveLength(1);
+    expect((content.match(/<!-- mcp-probe:context end -->/g) ?? [])).toHaveLength(1);
+    expect((content.match(/^## MCP（必须先调）$/gm) ?? [])).toHaveLength(1);
+    expect(content).toContain("# User rules");
+    expect(content).not.toContain("first");
+    expect(content).not.toContain("second");
+  });
+
+  test("repairs orphaned managed begin marker instead of preserving it forever", () => {
+    const existing = [
+      "<!-- mcp-probe:context begin -->",
+      "## MCP（必须先调）",
+      "old orphaned generated content",
+      "# User rules",
+    ].join("\n");
+
+    const { content } = mergeAgentsMdBlock(
+      existing,
+      "## MCP（必须先调）\nlatest",
+      "4.0.0-rc.8",
+    );
+
+    expect((content.match(/<!-- mcp-probe:context begin/g) ?? [])).toHaveLength(1);
+    expect((content.match(/<!-- mcp-probe:context end -->/g) ?? [])).toHaveLength(1);
+    expect((content.match(/^## MCP（必须先调）$/gm) ?? [])).toHaveLength(1);
+    expect(content).not.toContain("old orphaned generated content");
+  });
+
+  test("removes orphaned end markers and legacy unmarked generated sections", () => {
+    const current = wrapMcpProbeBlock(
+      "## MCP（必须先调）\n需已配置 mcp-probe-kit。\n- 新功能 → `start_feature`",
+      "4.0.0-rc.8",
+    );
+    const legacyUnmarked = [
+      "## MCP（必须先调）",
+      "需已配置 mcp-probe-kit。",
+      "- 新功能 → `start_feature`",
+      "- 缺上下文 → `init_project_context`",
+    ].join("\n");
+    const existing = [
+      current,
+      "<!-- mcp-probe:context end -->",
+      legacyUnmarked,
+      "# User rules",
+      "keep me",
+    ].join("\n\n");
+
+    const { content } = mergeAgentsMdBlock(
+      existing,
+      "## MCP（必须先调）\n需已配置 mcp-probe-kit。\n- 新功能 → `start_feature`",
+      "4.0.0-rc.8",
+    );
+
+    expect((content.match(/<!-- mcp-probe:context begin/g) ?? [])).toHaveLength(1);
+    expect((content.match(/<!-- mcp-probe:context end -->/g) ?? [])).toHaveLength(1);
+    expect((content.match(/^## MCP（必须先调）$/gm) ?? [])).toHaveLength(1);
+    expect(content).toContain("# User rules");
+    expect(content).toContain("keep me");
+  });
+
+  test("preserves a user-authored MCP section that lacks the generated signature", () => {
+    const custom = [
+      "## MCP（必须先调）",
+      "本节由项目维护者编写，介绍 mcp-probe-kit 的团队使用约定。",
+      "仅在新增能力时考虑 `start_feature`，其他规则由团队自行决定。",
+    ].join("\n");
+
+    const { content } = mergeAgentsMdBlock(
+      `${custom}\n\n# User rules\nkeep me\n`,
+      "## MCP（必须先调）\n需已配置 mcp-probe-kit。\n- 新功能 → `start_feature`\n- 缺上下文 → `init_project_context`",
+      "4.0.0-rc.8",
+    );
+
+    expect(content).toContain(custom);
+    expect(content).toContain("# User rules");
+    expect((content.match(/^## MCP（必须先调）$/gm) ?? [])).toHaveLength(2);
   });
 });

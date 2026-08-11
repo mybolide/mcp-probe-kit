@@ -30,6 +30,7 @@ export interface HarnessAdapterTarget {
 
 export interface HarnessDetectionResult {
   markerHarnesses: HarnessId[];
+  environmentHarnesses: HarnessId[];
   detected: HarnessId[];
   skillCanonical: string;
   adaptersToWrite: HarnessAdapterTarget[];
@@ -109,24 +110,51 @@ function detectMarkerHarnesses(projectRoot: string): HarnessId[] {
   return found;
 }
 
-function shouldWriteAdapter(projectRoot: string, adapter: HarnessAdapterTarget): boolean {
-  return fs.existsSync(path.join(projectRoot, adapter.markerDir));
+function detectEnvironmentHarnesses(environment: NodeJS.ProcessEnv): HarnessId[] {
+  const aiAgent = environment.AI_AGENT?.toLowerCase() ?? "";
+  if (
+    environment.CLAUDECODE === "1"
+    || Boolean(environment.CLAUDE_PROJECT_DIR)
+    || aiAgent.includes("claude-code")
+  ) {
+    return ["claude"];
+  }
+  return [];
+}
+
+function shouldWriteAdapter(
+  projectRoot: string,
+  adapter: HarnessAdapterTarget,
+  environmentHarnesses: readonly HarnessId[],
+): boolean {
+  return (
+    fs.existsSync(path.join(projectRoot, adapter.markerDir))
+    || environmentHarnesses.includes(adapter.harnessId)
+  );
 }
 
 /**
  * 零配置 harness 检测：项目里已有工具目录（如 `.trae/`）则写对应薄适配。
  * AGENTS.md 与 canonical Skill 路径始终不变。
  */
-export function detectHarnessContext(projectRoot: string): HarnessDetectionResult {
+export function detectHarnessContext(
+  projectRoot: string,
+  environment: NodeJS.ProcessEnv = process.env,
+): HarnessDetectionResult {
   const root = path.resolve(projectRoot);
   const markerHarnesses = detectMarkerHarnesses(root);
-  const detected = markerHarnesses.length > 0 ? markerHarnesses : (["agents"] as HarnessId[]);
+  const environmentHarnesses = detectEnvironmentHarnesses(environment);
+  const detectedHarnesses = [...new Set([...markerHarnesses, ...environmentHarnesses])];
+  const detected = detectedHarnesses.length > 0
+    ? detectedHarnesses
+    : (["agents"] as HarnessId[]);
   const adaptersToWrite = HARNESS_ADAPTER_TARGETS.filter((adapter) =>
-    shouldWriteAdapter(root, adapter)
+    shouldWriteAdapter(root, adapter, environmentHarnesses)
   );
 
   return {
     markerHarnesses,
+    environmentHarnesses,
     detected,
     skillCanonical: CANONICAL_SKILL_REL_PATH,
     adaptersToWrite,

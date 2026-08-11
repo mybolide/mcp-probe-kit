@@ -56,6 +56,15 @@ export async function convergePlan(
   const missingQualityGates = requiredQualityGates.filter(
     (gateId) => !hasPassingGate(record, gateId)
   );
+  const missingEvidenceBlockers = missingEvidenceKinds.map((kind) => {
+    const summarized = record.evidence.some(
+      (item) => item.kind === kind && item.summary.trim(),
+    );
+    if (kind !== 'requirements' && summarized) {
+      return `收敛证据 ${kind} 已有摘要，但缺少 reference 或 revision`;
+    }
+    return `缺少收敛证据: ${kind}`;
+  });
   const blockers = [
     ...(record.status === 'cancelled' ? ['计划已取消'] : []),
     ...(record.plan.completionCriteria.length === 0
@@ -67,9 +76,7 @@ export async function convergePlan(
     ...(record.unresolvedItems.length > 0
       ? [`仍有未关闭事项: ${record.unresolvedItems.join('；')}`]
       : []),
-    ...(missingEvidenceKinds.length > 0
-      ? [`缺少收敛证据: ${missingEvidenceKinds.join(', ')}`]
-      : []),
+    ...missingEvidenceBlockers,
     ...(missingQualityGates.length > 0
       ? [`质量闸门未通过: ${missingQualityGates.join(', ')}`]
       : []),

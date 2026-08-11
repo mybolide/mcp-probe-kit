@@ -10,6 +10,7 @@ import { classifyMemoryScope, rankMemorySearchResults } from '../lib/memory-rank
 import { buildSrc8DelegatedPlan } from '../lib/src8-plan.js';
 import type { MemoryConfig } from '../lib/memory-config.js';
 import { TOOL_CATALOG } from '../server/tool-catalog.js';
+import { WORKFLOW_SELECTION_GUIDE } from '../lib/workflow-selection-guide.js';
 import type {
   AgentEvalCaseResult,
   AgentEvalCategory,
@@ -97,15 +98,55 @@ function runCase(definition: EvalDefinition): AgentEvalCaseResult {
 
 function evalDefinitions(): EvalDefinition[] {
   return [
+    {
+      id: 'workflow-auto-is-guide-only',
+      category: 'routing',
+      description: 'workflow auto 必须只提供 Agent 选择指南，不得从自然语言猜 firstTool',
+      expected: { scenario: 'unknown', firstTool: null, source: 'guide' },
+      evaluate: () => {
+        const plan = buildDevWorkflow('实现订单导出功能，同时修复支付错误');
+        return {
+          scenario: plan.scenario,
+          firstTool: plan.firstTool,
+          source: plan.routingDecision?.source,
+        };
+      },
+      matches: (actual) => {
+        const value = actual as Record<string, unknown>;
+        return value.scenario === 'unknown'
+          && value.firstTool === null
+          && value.source === 'guide';
+      },
+    },
+    {
+      id: 'workflow-selection-guide-core-coverage',
+      category: 'tool-triggering',
+      description: 'workflow 兜底指南必须覆盖主要工具选择分支，而不是依赖中央意图分类',
+      expected: ['start_feature', 'start_bugfix', 'start_ui', 'architecture', 'code_insight', 'gentest', 'code_review', 'refactor', 'search_memory', 'resume_plan'],
+      evaluate: () => WORKFLOW_SELECTION_GUIDE.map((item) => item.firstTool).join('\n'),
+      matches: (actual) => [
+        'start_feature',
+        'start_bugfix',
+        'start_ui',
+        'architecture',
+        'code_insight',
+        'gentest',
+        'code_review',
+        'refactor',
+        'search_memory',
+        'resume_plan',
+      ].every((tool) => String(actual).includes(tool)),
+    },
     routeCase('route-feature', 'feature', 'start_feature'),
     {
       id: 'route-feature-with-spec-phase',
       category: 'routing',
-      description: '新增功能即使包含生成规格步骤，也必须路由到 start_feature',
+      description: 'Agent 已选择 feature 场景后，规格等内部步骤仍由 start_feature 编排',
       expected: { scenario: 'feature', firstTool: 'start_feature' },
       evaluate: () => {
         const plan = buildDevWorkflow(
-          '为现有 TypeScript 项目新增一个只读的健康检查摘要功能，需要先生成规格、评估影响范围、补充测试，并在完成后进行收敛检查。'
+          '为现有 TypeScript 项目新增一个只读的健康检查摘要功能，需要先生成规格、评估影响范围、补充测试，并在完成后进行收敛检查。',
+          { scenario: 'feature' },
         );
         return { scenario: plan.scenario, firstTool: plan.firstTool };
       },

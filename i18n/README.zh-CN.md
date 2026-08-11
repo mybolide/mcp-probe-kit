@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> 知时MCP 是协议级的上下文探测与研发编排工具箱。v4 默认向模型暴露 23 个清晰入口，完整配置 Memory 后为 29 个，并保留 33 个工具的 full 兼容面。
+> 知时MCP 是协议级的上下文探测与研发编排工具箱。v4 默认向模型暴露 24 个清晰入口，完整配置 Memory 后为 30 个，并保留 34 个工具的 full 兼容面。
 
 **Languages**: [English](../README.md) | **简体中文** | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，默认提供 **23 个模型可见工具**；完整配置 Memory 后提供 **29 个**；通过 `MCP_TOOLSET=full` 可恢复 **33 个兼容工具**。支持结构化输出、Legacy/Modern 双协议和正式 MCP Apps。
+一个强大的 MCP (Model Context Protocol) 服务器，默认提供 **24 个模型可见工具**；完整配置 Memory 后提供 **30 个**；通过 `MCP_TOOLSET=full` 可恢复 **34 个兼容工具**。支持结构化输出、Legacy/Modern 双协议和正式 MCP Apps。
 
 **🎉 v4 候选版本**：原生 MCP Apps、可恢复计划、证据收敛、GitNexus 托管 Sidecar、父子规格和版本锁定 CLI fallback。
 
@@ -62,7 +62,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 **[打开 5 个可交互、只读的 MCP Apps 动态演示](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 预发布通道：** 使用 `mcp-probe-kit@next`（当前 `4.0.0-rc.8`）。npm `latest` 仍为稳定版 `3.7.0`；生产评估建议锁定精确版本。
+> **v4 预发布通道：** 使用 `mcp-probe-kit@next`（当前候选 `4.0.0-rc.9`）。npm `latest` 仍为稳定版 `3.7.0`；生产评估建议锁定精确版本。
 <!-- v4-showcase:end -->
 
 ---
@@ -84,9 +84,9 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 ### 📦 工具面
 
-- **默认 `compact`**：23 个模型可见工具，保留 `start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge` 等独立入口。
-- **完整配置 Memory**：动态增加 6 个 Memory 工具，模型可见数量为 29。
-- **`MCP_TOOLSET=full`**：恢复 33 个兼容模型工具，用于旧流程和诊断。
+- **默认 `compact`**：24 个模型可见工具，保留 `start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge`、`architecture` 等独立入口。
+- **完整配置 Memory**：动态增加 6 个 Memory 工具，模型可见数量为 30。
+- **`MCP_TOOLSET=full`**：恢复 34 个兼容模型工具，用于旧流程和诊断。
 - **MCP Apps**：`list_memory_assets` 仅供 Memory Center 调用，标记为 `visibility=["app"]`，不计入模型工具数量。
 - 默认隐藏 `add_feature`、`fix_bug`、`sync_ui_data`、`ask_user`，但其能力仍由编排、维护脚本或 full 模式保留。
 

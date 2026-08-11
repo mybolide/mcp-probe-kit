@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { discoverProjectRootFromLayout } from "./project-context-layout.js";
@@ -6,6 +7,10 @@ import { discoverProjectRootFromLayout } from "./project-context-layout.js";
 /** Schema / 文档：project_root 参数说明（自动探测，无需用户配置 MCP_PROJECT_ROOT） */
 export const PROJECT_ROOT_SCHEMA_DESCRIPTION =
   "可选。项目根目录绝对路径；未传时自动从 MCP 客户端工作区解析（如 Cursor 注入 WORKSPACE_FOLDER_PATHS、OpenCode/客户端配置的 cwd 等）。仅边缘场景需手动传入。";
+
+
+export const INIT_PROJECT_ROOT_SCHEMA_DESCRIPTION =
+  `${PROJECT_ROOT_SCHEMA_DESCRIPTION} init_project 是新项目初始化入口：显式传入尚不存在的绝对路径时，会创建该目录并仅写入 MCP 托管的 Skill、AGENTS.md 与 CLI fallback 文件；文件系统根目录、用户家目录和系统目录会被拒绝。`;
 
 /** MCP 客户端注入的工作区路径（最高优先级，信任客户端，不向父级 layout 上爬） */
 const RUNTIME_CWD_ENV_KEYS = ["INIT_CWD", "PWD", "CWD"] as const;
@@ -82,6 +87,64 @@ function safeResolve(value: string): string | null {
   }
 }
 
+function normalizeComparablePath(target: string): string {
+  const resolved = path.resolve(target);
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
+function protectedManagedWriteRoots(): Array<{ root: string; label: string }> {
+  const candidates: Array<{ root: string | undefined; label: string }> = [
+    { root: os.homedir(), label: "用户家目录" },
+    { root: path.parse(path.resolve(process.cwd())).root, label: "文件系统根目录" },
+    { root: process.env.SystemRoot, label: "Windows 系统目录" },
+    { root: process.env.WINDIR, label: "Windows 系统目录" },
+    { root: process.env.ProgramFiles, label: "Program Files" },
+    { root: process.env["ProgramFiles(x86)"], label: "Program Files (x86)" },
+    { root: process.env.ProgramData, label: "ProgramData" },
+  ];
+
+  if (process.platform !== "win32") {
+    for (const root of ["/root", "/home", "/Users", "/etc", "/usr", "/var", "/System", "/Library"]) {
+      candidates.push({ root, label: "系统或用户根目录" });
+    }
+  } else {
+    const homeParent = path.dirname(os.homedir());
+    if (homeParent && homeParent !== path.parse(homeParent).root) {
+      candidates.push({ root: homeParent, label: "用户配置文件根目录" });
+    }
+  }
+
+  const deduped = new Map<string, { root: string; label: string }>();
+  for (const candidate of candidates) {
+    if (!candidate.root?.trim()) continue;
+    const normalized = normalizeComparablePath(candidate.root);
+    if (!deduped.has(normalized)) {
+      deduped.set(normalized, { root: path.resolve(candidate.root), label: candidate.label });
+    }
+  }
+  return [...deduped.values()];
+}
+
+export function getManagedWriteRootRejection(target: string): string | null {
+  const normalized = normalizeComparablePath(target);
+  const resolved = path.resolve(target);
+  if (normalized === normalizeComparablePath(path.parse(resolved).root)) {
+    return `文件系统根目录不允许作为 MCP 项目写入根目录: ${resolved}`;
+  }
+  const matched = protectedManagedWriteRoots().find(
+    (candidate) => normalizeComparablePath(candidate.root) === normalized
+  );
+  if (!matched) return null;
+  return `${matched.label}不允许作为 MCP 项目写入根目录: ${path.resolve(target)}`;
+}
+
+export function assertManagedWriteRootSafe(target: string): void {
+  const rejection = getManagedWriteRootRejection(target);
+  if (rejection) {
+    throw new Error(`${rejection}。请传入独立的项目子目录。`);
+  }
+}
+
 function isExistingDirectory(target: string | null): target is string {
   if (!target) {
     return false;
@@ -144,6 +207,7 @@ function findWorkspaceAncestor(start: string | null, packageRoot: string): strin
     if (
       current !== packageRoot &&
       !isFilesystemRoot(current) &&
+      !getManagedWriteRootRejection(current) &&
       looksLikeWorkspaceRoot(current)
     ) {
       return current;
@@ -177,7 +241,7 @@ function isUsableWorkspaceCandidate(target: string | null, packageRoot: string):
   if (!isExistingDirectory(target)) {
     return false;
   }
-  if (target === packageRoot || isFilesystemRoot(target)) {
+  if (target === packageRoot || isFilesystemRoot(target) || getManagedWriteRootRejection(target)) {
     return false;
   }
   return true;

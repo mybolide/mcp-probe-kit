@@ -92,7 +92,12 @@ export function buildArchitectureMethod(input: ArchitectureMethodInput): Archite
   const blockedSteps = steps
     .filter((step) => step.status === 'blocked')
     .map((step) => step.id);
-  const nextStep = steps.find((step) => step.status !== 'completed')?.id ?? null;
+  const notInScopeSteps = steps
+    .filter((step) => step.status === 'not_in_scope')
+    .map((step) => step.id);
+  const nextStep = steps.find((step) =>
+    step.status === 'pending' || step.status === 'blocked'
+  )?.id ?? null;
   const passed = gaps.length === 0 && (mode !== 'drift' || driftFindings.length === 0);
 
   const candidate = {
@@ -113,7 +118,7 @@ export function buildArchitectureMethod(input: ArchitectureMethodInput): Archite
     methodology: ARCHITECTURE_METHODOLOGY,
     methodologyVersion: ARCHITECTURE_METHOD_VERSION,
     summary: buildSummary(mode, passed, gaps, driftFindings),
-    arc8Status: { completedSteps, blockedSteps, nextStep },
+    arc8Status: { completedSteps, blockedSteps, notInScopeSteps, nextStep },
     problem: {
       goal: description,
       scope: uniqueStrings(input.scope),

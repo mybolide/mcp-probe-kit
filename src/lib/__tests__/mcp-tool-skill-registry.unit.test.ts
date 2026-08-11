@@ -22,11 +22,12 @@ describe("mcp-tool-skill-registry", () => {
       expect(content).toContain(`\`${name}\``);
     }
     expect(content).toContain("## 参数构造纪律");
-    expect(content).toContain("禁止把短确认语原样传给");
+    expect(content).toContain("不要先调用 `workflow` 做意图识别");
     expect(content).toContain("spec_layout=auto");
     expect(content).toContain("不得直接调用 `add_feature`");
     expect(content).toContain("明确单项能力直接调用对应工具");
-    expect(content).toContain("只有拿不准首工具时");
+    expect(content).toContain("只有拿不准该调用哪个工具时");
+    expect(content).toContain("不做自然语言意图识别");
     expect(content).toContain("独立能力不是必须被编排");
     expect(content).toContain("托管交付流程在 `converge` 未通过时");
     expect(content).toContain("用户明确进行独立记忆管理时也可直接调用");
@@ -48,7 +49,8 @@ describe("mcp-tool-skill-registry", () => {
     const byName = new Map(allToolSchemas.map((tool) => [tool.name, tool]));
     expect(byName.get("start_feature")?.description).toContain("parent-child");
     expect(byName.get("start_feature")?.description).toContain("当前对话已确认的完整");
-    expect(byName.get("workflow")?.description).toContain("完整任务意图");
+    expect(byName.get("workflow")?.description).toContain("不做自然语言意图识别");
+    expect(byName.get("workflow")?.description).toContain("只返回工具选择规则与速查表");
     expect(byName.get("add_feature")?.description).toContain("不是复杂功能的首个入口");
   });
 });

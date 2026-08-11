@@ -225,7 +225,10 @@ check(!appsPage.includes('ratio-wide') && !appsPage.includes('ratio-gate'), 'app
 
 for (const file of ['docs/index.html', 'docs/pages/apps.html', 'docs/pages/getting-started.html', 'docs/pages/all-tools.html', 'docs/pages/examples.html']) {
   const text = read(file);
-  check(!/30 (?:tools|个工具|����)/i.test(text), `${file} has no obsolete 30-tool product claim`);
+  check(
+    !/(?:23 model|23 个模型|默认 23|23 compact|29 with Memory|配置 Memory 后 29|33 full|full 兼容面 33)/i.test(text),
+    `${file} has no obsolete 23/29/33 current-surface claim`,
+  );
 }
 
 if (failures.length) {

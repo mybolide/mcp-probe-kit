@@ -39,8 +39,14 @@ export function writeProjectFile(
   const posixPath = toPosixRel(relPath);
   const absPath = path.join(path.resolve(projectRoot), ...posixPath.split("/"));
   const existed = fs.existsSync(absPath);
-  if (policy === "ifMissing" && existed) {
-    return { path: posixPath, action: "skipped" };
+  if (existed) {
+    if (policy === "ifMissing") {
+      return { path: posixPath, action: "skipped" };
+    }
+    const existingContent = fs.readFileSync(absPath, "utf8");
+    if (existingContent === content) {
+      return { path: posixPath, action: "skipped" };
+    }
   }
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   fs.writeFileSync(absPath, content, "utf8");

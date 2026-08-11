@@ -147,7 +147,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "routing",
     groupTitle: ROUTING,
     whenToCall:
-      "Agent 阅读 Skill 后仍**不确定第一个工具**时使用；返回可解释决策，不执行工具、不维护任务生命周期。intent 必须是完整任务摘要；多个独立强意图或同分规则会返回 unknown 和候选，不按规则顺序猜测",
+      "Agent 阅读 Skill 和工具 description 后仍**不确定该调用哪个工具**时使用；`auto` 只返回选择指南，不做自然语言意图识别、不替 Agent 猜 firstTool。Agent 已明确场景时可显式传 scenario 获取该场景的确定性流程说明",
   }),
   tool({
     name: "init_project_context",
@@ -420,7 +420,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "plan-control",
     groupTitle: PLAN,
-    whenToCall: "会话中断、重启或切换 Agent 后，按 plan_id 恢复下一可执行步骤",
+    whenToCall: "会话中断、重启、切换 Agent 或用户只说继续时恢复下一可执行步骤；已知 plan_id 时精确恢复，未知时省略 plan_id 自动选择最近 active/blocked Plan；found=true 且 mustContinue=true 后必须立即执行 nextStep，禁止只汇报恢复结果后停止",
   }),
   tool({
     name: "converge",

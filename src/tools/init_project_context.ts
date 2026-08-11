@@ -3,7 +3,12 @@ import { okStructured } from "../lib/response.js";
 import { renderOrchestrationHeader } from "../lib/orchestration-guidance.js";
 import type { ProjectContext } from "../schemas/output/project-tools.js";
 import { detectProjectType } from "../lib/project-detector.js";
-import { resolveWorkspaceRoot, isLikelyProjectNamedRelativePath, buildProjectRootRetryHint } from "../lib/workspace-root.js";
+import {
+  resolveWorkspaceRoot,
+  isLikelyProjectNamedRelativePath,
+  buildProjectRootRetryHint,
+  getManagedWriteRootRejection,
+} from "../lib/workspace-root.js";
 import {
   detectDocumentLocale,
   layoutAbsPath,
@@ -11,14 +16,18 @@ import {
   parseLayoutArgsFromRecord,
   resolveProjectContextLayout,
   toPosixPath,
-  writeLayoutManifest,
+  writeLayoutManifestWithStatus,
   type ProjectContextLayout,
 } from "../lib/project-context-layout.js";
 import { mergeAgentsMdBlock } from "../lib/merge-agents-md.js";
 import { generateAgentsMdInner } from "../lib/agents-md-template.js";
 import { ensureHarnessAdapters } from "../lib/harness-adapters.js";
 import { generateWorkflowSkillContent, MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
-import { getMcpProbeSkillVersion } from "../lib/workflow-skill-version.js";
+import {
+  compareSemver,
+  getMcpProbeSkillVersion,
+  parseAgentsContextVersion,
+} from "../lib/workflow-skill-version.js";
 import {
   buildFileStatusEntries,
   formatFileDeliverySection,
@@ -28,6 +37,7 @@ import {
 } from "../lib/file-delivery.js";
 import * as fs from "fs";
 import * as path from "path";
+import type { ToolExecutionContext } from "../lib/tool-execution-context.js";
 
 const AGENT_MANUAL_WRITE_NOTICE =
   "本工具不会自动生成完整 project-context 与图谱内容，Agent 必须根据 metadata.plan 与 pendingFiles 手动写入这些文件。";
@@ -183,7 +193,11 @@ function generateDevGuide(docs: Array<{ file: string; title: string; purpose: st
 /**
  * 生成项目上下文文档指导
  */
-async function generateProjectContext(layout: ProjectContextLayout, projectRoot?: string) {
+async function generateProjectContext(
+  layout: ProjectContextLayout,
+  projectRoot?: string,
+  context?: ToolExecutionContext,
+) {
   try {
     const resolvedRoot = resolveWorkspaceRoot(projectRoot);
     const projectRootAbs = layout.projectRoot || resolvedRoot;
@@ -216,26 +230,46 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
       graphReady: fs.existsSync(layoutAbsPath(layout, layout.latestMarkdownPath)),
       contextReady: modularExists,
     });
-    const mergedAgents = mergeAgentsMdBlock(existingAgentsRaw, agentsInner);
+    const currentKitVersion = getMcpProbeSkillVersion();
+    const installedAgentsVersion = existingAgentsRaw
+      ? parseAgentsContextVersion(existingAgentsRaw)
+      : null;
+    const preserveHigherVersionAgents = Boolean(
+      existingAgentsRaw
+      && installedAgentsVersion
+      && compareSemver(installedAgentsVersion, currentKitVersion) > 0
+    );
+    const mergedAgents = preserveHigherVersionAgents
+      ? { content: existingAgentsRaw!, mergeMode: 'preserved-higher-version' as const }
+      : mergeAgentsMdBlock(existingAgentsRaw, agentsInner, currentKitVersion);
     const skillPath = layoutAbsPath(layout, MCP_PROBE_SKILL_REL_PATH);
     const skillContent = fs.existsSync(skillPath)
       ? fs.readFileSync(skillPath, "utf8")
       : generateWorkflowSkillContent(getMcpProbeSkillVersion());
     const harnessResult = ensureHarnessAdapters(projectRootAbs, skillContent, layout.indexPath);
-    const manifestWritten = writeLayoutManifest(
+    const manifestDelivery = writeLayoutManifestWithStatus(
       projectRootAbs,
       layout,
       harnessResult.layoutHarness
     );
-    const agentsMdWritten = writeProjectFile(
+    const manifestWritten = manifestDelivery.path;
+    const directAgentsDelivery = writeProjectFile(
       projectRootAbs,
       layout.indexPath,
       mergedAgents.content,
       "always"
     );
+    const bootstrapAgentsAction = context?.bootstrap?.agentsMd.created
+      ? "created" as const
+      : context?.bootstrap?.agentsMd.updated
+        ? "updated" as const
+        : null;
+    const agentsMdWritten: DeliveredFile = bootstrapAgentsAction
+      ? { path: directAgentsDelivery.path, action: bootstrapAgentsAction }
+      : directAgentsDelivery;
     const writtenFiles: DeliveredFile[] = [
       agentsMdWritten,
-      { path: manifestWritten, action: "updated" },
+      manifestDelivery,
       ...harnessResult.adapters
         .filter((a) => a.created || a.updated)
         .map((a) => ({
@@ -281,7 +315,7 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
               id: "bootstrap-code-insight",
               action: `检测到现有 ${layout.legacyIndexPath}，跳过重写分类文档，调用 code_insight 补齐图谱`,
               outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-              note: `调用参数: ${codeInsightArgs}；${layout.indexPath} 与 layout 已由 MCP 写入`,
+              note: `调用参数: ${codeInsightArgs}；${layout.indexPath} 与 layout 已由 MCP 检查，真实写入动作见 writtenFiles`,
             },
             {
               id: "persist-graph-docs",
@@ -303,7 +337,7 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
               id: "bootstrap-code-insight",
               action: "调用 code_insight 做整体图谱分析",
               outputs: [graphDocs.latestMarkdownFilePath, graphDocs.latestJsonFilePath],
-              note: `调用参数: ${codeInsightArgs}；${layout.indexPath} 已由 MCP 写入`,
+              note: `调用参数: ${codeInsightArgs}；${layout.indexPath} 已由 MCP 检查，真实写入动作见 writtenFiles`,
             },
             {
               id: "persist-graph-docs",
@@ -313,15 +347,23 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
           ],
     };
 
+    const managedFileStatus = (file: DeliveredFile): string =>
+      file.action === "created"
+        ? "本次已创建"
+        : file.action === "updated"
+          ? "本次已更新"
+          : "已存在且无需更新";
+    const agentsStatus = managedFileStatus(agentsMdWritten);
+    const manifestStatus = managedFileStatus(manifestDelivery);
     const guide = generateGuideText(detection, projectInfo, docs, layout, resolvedRoot, {
       modularExists,
-      agentsMdWritten: true,
+      managedStatusSummary: `${layout.indexPath}：${agentsStatus}；${manifestWritten}：${manifestStatus}`,
     });
     const header = renderOrchestrationHeader({
       tool: "init_project_context",
       goal: modularExists
-        ? "已生成 delegated 写作计划（保留现有分类文档；AGENTS.md 已由 MCP 写入）"
-        : "已生成 delegated 写作计划（AGENTS.md 与 layout 已由 MCP 写入）",
+        ? `已生成 delegated 写作计划（保留现有分类文档；${layout.indexPath} ${agentsStatus}）`
+        : `已生成 delegated 写作计划（${layout.indexPath} ${agentsStatus}；layout ${manifestStatus}）`,
       tasks: modularExists
         ? ["保留现有分类文档", "Agent 按 plan 落盘图谱"]
         : ["Agent 按 plan 落盘 project-context 分类文档", "code_insight + Agent 落盘图谱"],
@@ -329,7 +371,7 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
         `项目根目录: ${toPosixPath(resolvedRoot)}`,
         `上下文目录: ${docsDir}`,
         `索引: ${layout.indexPath}`,
-        `layout: ${manifestWritten}（已服务端写入）`,
+        `layout: ${manifestWritten}（${manifestStatus}）`,
         AGENT_MANUAL_WRITE_NOTICE,
       ],
     });
@@ -381,7 +423,7 @@ async function generateProjectContext(layout: ProjectContextLayout, projectRoot?
           ? [`保留 ${layout.legacyIndexPath} 与分类文档`]
           : [`由 Agent 按模板创建 ${layout.modularDir}/ 分类文档`]),
         "调用 code_insight，由 Agent 按 metadata.plan 落盘图谱",
-        `${layout.indexPath} 与 ${manifestWritten} 已由 MCP 写入（mergeMode: ${mergedAgents.mergeMode}）`,
+        `${layout.indexPath}：${agentsStatus}；${manifestWritten}：${manifestStatus}（mergeMode: ${mergedAgents.mergeMode}）`,
       ],
       writtenFiles,
       pendingFiles,
@@ -427,18 +469,18 @@ function generateGuideText(
   docs: Array<{ file: string; title: string; purpose: string }>,
   layout: ProjectContextLayout,
   projectRoot: string,
-  options?: { modularExists?: boolean; agentsMdWritten?: boolean }
+  options?: { modularExists?: boolean; managedStatusSummary?: string }
 ): string {
   const timestamp = new Date().toISOString();
   const docsDir = layout.contextRoot;
   const projectContextExists = options?.modularExists === true;
-  const agentsMdWritten = options?.agentsMdWritten === true;
+  const managedStatusSummary = options?.managedStatusSummary ?? "";
   
   return `# 项目上下文文档生成指导
-${agentsMdWritten ? `
+${managedStatusSummary ? `
 ## ⚠️ 文件落盘说明
 
-**MCP 已写入** \`${layout.indexPath}\` 与 \`${layout.manifestPath}\`。  
+**MCP 托管文件状态**：${managedStatusSummary}。
 **分类文档与图谱**须由 Agent 按下方模板与 \`code_insight\` 结果自行落盘（见 pendingFiles）。
 ` : ""}
 
@@ -453,7 +495,7 @@ ${agentsMdWritten ? `
 
 ## 🔎 当前状态
 
-- **${layout.indexPath}**: Agent 入口（${agentsMdWritten ? "已由 MCP 写入" : "待 MCP 写入"}，mcp-probe 块置顶）
+- **${layout.indexPath}**: Agent 入口（${managedStatusSummary ? "已由 MCP 检查，具体状态见上方" : "待 MCP 检查"}，mcp-probe 块置顶）
 - **${layout.legacyIndexPath}**: ${projectContextExists ? "已存在（将保留分类文档）" : "由 Agent 按模板创建"}
 - **图谱文档**: 需要确保 ${layout.latestMarkdownPath} 与 ${layout.latestJsonPath} 可用
 
@@ -902,7 +944,7 @@ ${template}
  * @param args.project_root - 项目根目录，默认当前目录
  * @returns MCP 响应，包含文档生成指导
  */
-export async function initProjectContext(args: any) {
+export async function initProjectContext(args: any, context?: ToolExecutionContext) {
   let docsDir: string = DEFAULT_DOCS_DIR;
   let projectRoot: string = resolveWorkspaceRoot();
 
@@ -947,6 +989,21 @@ export async function initProjectContext(args: any) {
         },
       };
     }
+    const protectedRootRejection = getManagedWriteRootRejection(projectRoot);
+    if (protectedRootRejection) {
+      return {
+        content: [{
+          type: "text",
+          text: `拒绝执行项目上下文初始化：${protectedRootRejection}。请传入独立的项目子目录。`,
+        }],
+        isError: true,
+        structuredContent: {
+          error_code: "PROTECTED_PROJECT_ROOT",
+          rejected_project_root: path.resolve(projectRoot),
+          retry_hint: "请传入独立的项目子目录，不要使用文件系统根目录或用户家目录。",
+        },
+      };
+    }
 
     const layoutArgs = parseLayoutArgsFromRecord({
       docs_dir: docsDir,
@@ -957,7 +1014,7 @@ export async function initProjectContext(args: any) {
     });
     const layout = resolveProjectContextLayout(projectRoot, layoutArgs);
 
-    return await generateProjectContext(layout, projectRoot);
+    return await generateProjectContext(layout, projectRoot, context);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     

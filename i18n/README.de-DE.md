@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit ist ein Protokoll-Toolkit für Kontextanalyse und Entwicklungs-Orchestrierung. v4 zeigt dem Modell standardmäßig 23 Tools, 29 bei vollständiger Memory-Konfiguration und behält eine Full-Kompatibilitätsfläche mit 33 Tools.
+> mcp-probe-kit ist ein Protokoll-Toolkit für Kontextanalyse und Entwicklungs-Orchestrierung. v4 zeigt dem Modell standardmäßig 24 Tools, 30 bei vollständiger Memory-Konfiguration und behält eine Full-Kompatibilitätsfläche mit 34 Tools.
 
 **Sprachen**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | **Deutsch** | [Português (BR)](README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 KI-gestütztes Vollständiges Entwicklungs-Toolkit – Abdeckung des gesamten Entwicklungslebenszyklus
 
-Ein leistungsstarker MCP-Server mit **23 modell-sichtbaren Tools standardmäßig**, **29 bei vollständiger Memory-Konfiguration** und **33 Kompatibilitäts-Tools** über `MCP_TOOLSET=full`. Strukturierte Ausgabe, Legacy/Modern-Doppelprotokoll und offizielle MCP Apps werden unterstützt.
+Ein leistungsstarker MCP-Server mit **24 modell-sichtbaren Tools standardmäßig**, **30 bei vollständiger Memory-Konfiguration** und **34 Kompatibilitäts-Tools** über `MCP_TOOLSET=full`. Strukturierte Ausgabe, Legacy/Modern-Doppelprotokoll und offizielle MCP Apps werden unterstützt.
 
 **🎉 v4 Release Candidate**: native MCP Apps, fortsetzbare Pläne, Nachweis-Konvergenz, verwalteter GitNexus Sidecar, Parent-Child-Specs und versionsgebundener CLI-Fallback.
 
@@ -68,7 +68,7 @@ v4 macht die delegierte Agent-Ausführung zu einem beobachtbaren, fortsetzbaren 
 
 **[Fünf interaktive, schreibgeschützte MCP-App-Demos öffnen](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4-Preview-Kanal:** Verwenden Sie `mcp-probe-kit@next` (aktuell `4.0.0-rc.8`). npm `latest` bleibt der stabile Kanal `3.7.0`. Für Produktionstests eine exakte Version fixieren.
+> **v4-Preview-Kanal:** Verwenden Sie `mcp-probe-kit@next` (aktueller Kandidat `4.0.0-rc.9`). npm `latest` bleibt der stabile Kanal `3.7.0`. Für Produktionstests eine exakte Version fixieren.
 <!-- v4-showcase:end -->
 
 ---
@@ -89,9 +89,9 @@ v4 macht die delegierte Agent-Ausführung zu einem beobachtbaren, fortsetzbaren 
 
 ### 📦 Tool-Flächen
 
-- **Standard `compact`**: 23 modell-sichtbare Tools; eigenständige Einstiegspunkte wie `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan` und `converge` bleiben erhalten.
-- **Vollständige Memory-Konfiguration**: sechs Memory-Tools werden dynamisch ergänzt, insgesamt 29 modell-sichtbare Tools.
-- **`MCP_TOOLSET=full`**: stellt 33 kompatible Modell-Tools für alte Abläufe und Diagnose wieder her.
+- **Standard `compact`**: 24 modell-sichtbare Tools; eigenständige Einstiegspunkte wie `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge` und `architecture` bleiben erhalten.
+- **Vollständige Memory-Konfiguration**: sechs Memory-Tools werden dynamisch ergänzt, insgesamt 30 modell-sichtbare Tools.
+- **`MCP_TOOLSET=full`**: stellt 34 kompatible Modell-Tools für alte Abläufe und Diagnose wieder her.
 - **MCP Apps**: `list_memory_assets` ist nur für das Memory Center sichtbar (`visibility=["app"]`) und zählt nicht zur Modellfläche.
 - `add_feature`, `fix_bug`, `sync_ui_data` und `ask_user` sind standardmäßig ausgeblendet; ihre Fähigkeiten bleiben über Orchestrierung, Wartungsskripte oder den Full-Modus erhalten.
 

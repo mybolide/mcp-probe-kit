@@ -1,6 +1,6 @@
 {
   "name": "mcp-probe-kit",
-  "version": "4.0.0-rc.8",
+  "version": "4.0.0-rc.9",
   "description": "AI-powered MCP development toolkit with 24 default tools, 30 with Memory, 34-tool compatibility mode, ARC-8 architecture support, and MCP Apps workbenches",
   "mcpName": "io.github.mybolide/mcp-probe-kit",
   "type": "module",

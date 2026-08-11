@@ -77,10 +77,15 @@ export function skillFrontmatterNeedsUpgrade(content: string): boolean {
 export function parseAgentsContextVersion(content: string): string | null {
   const pattern = new RegExp(
     `<!--\\s*${AGENTS_CONTEXT_VERSION_MARKER}:\\s*([^\\s>]+)\\s*-->`,
-    "i"
+    "gi"
   );
-  const match = content.match(pattern);
-  return match?.[1]?.trim() ?? null;
+  const versions = [...content.matchAll(pattern)]
+    .map((match) => match[1]?.trim())
+    .filter((version): version is string => Boolean(version));
+  if (versions.length === 0) return null;
+  return versions.reduce((highest, current) =>
+    compareSemver(current, highest) > 0 ? current : highest
+  );
 }
 
 interface ParsedSemver {
@@ -154,10 +159,13 @@ export function skillContentNeedsUpgrade(
   if (!existing?.trim()) {
     return true;
   }
+  const installed = parseSkillInstalledVersion(existing);
+  if (installed && compareSemver(installed, targetVersion) > 0) {
+    return false;
+  }
   if (skillFrontmatterNeedsUpgrade(existing)) {
     return true;
   }
-  const installed = parseSkillInstalledVersion(existing);
   if (!installed) {
     return true;
   }
