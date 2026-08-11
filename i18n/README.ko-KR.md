@@ -22,7 +22,7 @@
 
 강력한 MCP (Model Context Protocol) 서버로, 기본 **24개 모델 가시 도구**, Memory 완전 구성 시 **30개**, `MCP_TOOLSET=full` 사용 시 **34개 호환 도구**를 제공합니다. 구조화 출력, Legacy/Modern 이중 프로토콜, 정식 MCP Apps를 지원합니다.
 
-**🎉 v4 릴리스 후보**: 네이티브 MCP Apps, 재개 가능한 계획, 증거 수렴, 관리형 GitNexus Sidecar, 부모-자식 명세, 버전 고정 CLI fallback.
+**🎉 v4 안정 버전**: 네이티브 MCP Apps, 재개 가능한 계획, 증거 수렴, 관리형 GitNexus Sidecar, 부모-자식 명세, 버전 고정 CLI fallback.
 
 **모든 MCP 클라이언트 지원**: Cursor, Claude Desktop, Cline, Continue 등
 
@@ -62,7 +62,7 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 
 **[읽기 전용 MCP Apps 라이브 데모 5개 열기](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 프리뷰 채널:** `mcp-probe-kit@next`(현재 후보 `4.0.0-rc.10`)를 사용합니다. npm `latest`는 안정 버전 `3.7.0`을 유지합니다. 운영 평가에서는 정확한 버전을 고정하세요.
+> **v4 안정 버전:** `mcp-probe-kit@4.0.0`이 현재 안정 버전이며 npm `latest` 채널입니다.
 <!-- v4-showcase:end -->
 
 ---
@@ -338,7 +338,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@next"]
+      "args": ["mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -357,7 +357,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"]
+      "args": ["-y", "mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -375,7 +375,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@next"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.0.0"],
       "enabled": true
     }
   }
@@ -499,12 +499,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@next 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 설정 후 클라이언트가 도구를 인식하지 못하나요?

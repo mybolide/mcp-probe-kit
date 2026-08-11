@@ -28,7 +28,7 @@
 
 Um poderoso servidor MCP com **24 ferramentas visíveis ao modelo por padrão**, **30 com Memory completo** e **34 ferramentas de compatibilidade** via `MCP_TOOLSET=full`. Suporta saída estruturada, protocolos Legacy/Modern e MCP Apps oficiais.
 
-**🎉 Release candidate v4**: MCP Apps nativas, planos retomáveis, convergência por evidências, GitNexus Sidecar gerenciado, specs pai-filho e CLI fallback fixado.
+**🎉 Versão estável v4**: MCP Apps nativas, planos retomáveis, convergência por evidências, GitNexus Sidecar gerenciado, specs pai-filho e CLI fallback fixado.
 
 **Suporta Todos os Clientes MCP**: Cursor, Claude Desktop, Cline, Continue e mais
 
@@ -68,7 +68,7 @@ A v4 transforma a execução delegada do Agent em um ciclo de entrega observáve
 
 **[Abrir as cinco demos MCP Apps interativas e somente leitura](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **Canal preview da v4:** use `mcp-probe-kit@next` (candidato atual `4.0.0-rc.10`). npm `latest` permanece no canal estável `3.7.0`. Fixe uma versão exata para avaliação em produção.
+> **v4 estável:** `mcp-probe-kit@4.0.0` é a versão estável atual e o canal npm `latest`.
 <!-- v4-showcase:end -->
 
 ---
@@ -134,7 +134,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -155,7 +155,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -307,7 +307,7 @@ Ferramentas UI/UX com `start_ui` como entrada unificada:
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@next"]
+      "args": ["mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -320,7 +320,7 @@ Ferramentas UI/UX com `start_ui` como entrada unificada:
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"]
+      "args": ["-y", "mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -335,7 +335,7 @@ Ferramentas UI/UX com `start_ui` como entrada unificada:
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@next"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.0.0"],
       "enabled": true
     }
   }
@@ -364,7 +364,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -386,7 +386,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -485,7 +485,7 @@ git_work_report --start_date 2026-02-01 --end_date 2026-02-07
 ### Q1: A ferramenta não funciona?
 
 ```bash
-npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: Cliente não reconhece as ferramentas?

@@ -22,7 +22,7 @@
 
 一个强大的 MCP (Model Context Protocol) 服务器，默认提供 **24 个模型可见工具**；完整配置 Memory 后提供 **30 个**；通过 `MCP_TOOLSET=full` 可恢复 **34 个兼容工具**。支持结构化输出、Legacy/Modern 双协议和正式 MCP Apps。
 
-**🎉 v4 候选版本**：原生 MCP Apps、可恢复计划、证据收敛、GitNexus 托管 Sidecar、父子规格和版本锁定 CLI fallback。
+**🎉 v4 正式版**：原生 MCP Apps、可恢复计划、证据收敛、GitNexus 托管 Sidecar、父子规格和版本锁定 CLI fallback。
 
 **支持所有 MCP 客户端**：Cursor、Claude Desktop、Cline、Continue 等
 
@@ -62,7 +62,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 **[打开 5 个可交互、只读的 MCP Apps 动态演示](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 预发布通道：** 使用 `mcp-probe-kit@next`（当前候选 `4.0.0-rc.10`）。npm `latest` 仍为稳定版 `3.7.0`；生产评估建议锁定精确版本。
+> **v4 正式版：** `mcp-probe-kit@4.0.0` 已正式发布，并已成为 npm `latest` 稳定通道。
 <!-- v4-showcase:end -->
 
 ---
@@ -165,7 +165,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "你的-qdrant-api-key",
@@ -195,7 +195,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -423,7 +423,7 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"]
+      "args": ["-y", "mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -455,7 +455,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -477,7 +477,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -520,7 +520,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"]
+      "args": ["-y", "mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -538,7 +538,7 @@ ollama pull nomic-embed-text
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@next"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.0.0"],
       "enabled": true
     }
   }
@@ -680,12 +680,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@next 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 配置后客户端无法识别工具？

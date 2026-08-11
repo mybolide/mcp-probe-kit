@@ -22,7 +22,7 @@
 
 強力な MCP (Model Context Protocol) サーバーです。既定では **24個のモデル可視ツール**、Memory 完全構成時は **30個**、`MCP_TOOLSET=full` では **34個の互換ツール**を提供します。構造化出力、Legacy/Modern 両プロトコル、正式な MCP Apps に対応します。
 
-**🎉 v4 リリース候補**：ネイティブ MCP Apps、再開可能な計画、証拠収束、管理型 GitNexus Sidecar、親子仕様、固定バージョン CLI fallback。
+**🎉 v4 安定版**：ネイティブ MCP Apps、再開可能な計画、証拠収束、管理型 GitNexus Sidecar、親子仕様、固定バージョン CLI fallback。
 
 **すべてのMCPクライアントをサポート**: Cursor、Claude Desktop、Cline、Continueなど
 
@@ -62,7 +62,7 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 
 **[5つの読み取り専用 MCP Apps ライブデモを開く](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 プレビューチャネル：** `mcp-probe-kit@next`（現在の候補は `4.0.0-rc.10`）を使用します。npm `latest` は安定版 `3.7.0` のままです。本番評価では正確なバージョンを固定してください。
+> **v4 安定版：** `mcp-probe-kit@4.0.0` が現在の安定版で、npm `latest` チャネルです。
 <!-- v4-showcase:end -->
 
 ---
@@ -338,7 +338,7 @@ AIは**ステップごとにツールを呼び出してファイルを永続化�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@next"]
+      "args": ["mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -357,7 +357,7 @@ AIは**ステップごとにツールを呼び出してファイルを永続化�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"]
+      "args": ["-y", "mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -375,7 +375,7 @@ AIは**ステップごとにツールを呼び出してファイルを永続化�
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@next"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.0.0"],
       "enabled": true
     }
   }
@@ -499,12 +499,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@next 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 設定後にクライアントがツールを認識しない場合は？

@@ -6,25 +6,25 @@
 
 v4 不要求重写业务代码，但要求运行环境使用 Node.js 20 或更高版本。
 
-## RC 安装
+## 正式版安装
 
-候选版本发布到 npm `next` 标签，不覆盖稳定版 `latest`：
+v4.0.0 已正式发布到 npm `latest`。新安装建议直接使用稳定版：
 
 ```bash
-npm install -g mcp-probe-kit@next
-npm install -g mcp-probe-kit@4.0.0-rc.2
+npm install -g mcp-probe-kit@latest
+npm install -g mcp-probe-kit@4.0.0
 ```
 
-MCP 客户端测试 RC：
+MCP 客户端使用稳定版：
 
 ```json
 {
   "command": "npx",
-  "args": ["-y", "mcp-probe-kit@next"]
+  "args": ["-y", "mcp-probe-kit@4.0.0"]
 }
 ```
 
-只有稳定版 `4.0.0` 发布后，才建议生产环境改用：
+如希望跟随 v4 主版本，也可以使用：
 
 ```json
 {
@@ -33,7 +33,7 @@ MCP 客户端测试 RC：
 }
 ```
 
-RC 不更新 npm `latest`，也不会写入正式 MCP Registry。
+正式版 `4.0.0` 已进入 npm `latest`，并已发布到 MCP Registry。
 
 ## Node.js 与 SDK
 

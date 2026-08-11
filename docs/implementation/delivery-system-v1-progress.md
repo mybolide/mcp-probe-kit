@@ -2,7 +2,7 @@
 
 This file tracks implementation status separately from the frozen requirements document.
 
-> **Current rc.20 surface:** Compact 24, Compact + Memory 30, Full 34, Apps model-visible 30, App-only 1, unique callable names 35. Phase 0 counts below are the historical pre-`architecture` compatibility baseline, not the current tool surface.
+> **Current stable 4.0.0 surface:** Compact 24, Compact + Memory 30, Full 34, Apps model-visible 30, App-only 1, unique callable names 35. Phase 0 counts below are the historical pre-`architecture` compatibility baseline, not the current tool surface.
 
 ## Phase status
 
@@ -519,11 +519,11 @@ build/index.js size: 3668454 bytes
 build/index.js SHA-256: 64231bef472c0a726abc0d95ad50a8a01cf30a4b3ab5a2e7dd872050b09635ba
 ```
 
-The build recorded immediately above is historical pre-rc.20 evidence and is not the current frozen release candidate.
+The build recorded immediately above is historical pre-stable evidence and is not the current stable release evidence.
 
-## rc.20 current release-candidate closure
+## Stable 4.0.0 closure
 
-rc.20 restores the intended responsibility boundary: the Agent interprets the user request and chooses the MCP tool from the conversation, Skill, AGENTS.md and tool descriptions. `workflow` is only a fallback tool-selection guide; `scenario=auto` is guide-only and returns `firstTool=null`, while an explicit `scenario` remains deterministic for compatibility.
+The final internal rc.20 acceptance restored the intended responsibility boundary, and that behavior shipped in stable `4.0.0`: the Agent interprets the user request and chooses the MCP tool from the conversation, Skill, AGENTS.md and tool descriptions. `workflow` is only a fallback tool-selection guide; `scenario=auto` is guide-only and returns `firstTool=null`, while an explicit `scenario` remains deterministic for compatibility.
 
 Current public tool-surface contract:
 
@@ -536,7 +536,7 @@ App-only: 1
 Unique callable names: 35
 ```
 
-Final frozen candidate accepted by Cursor:
+Final public RC acceptance baseline (historical):
 
 ```text
 version: 4.0.0-rc.10
@@ -546,4 +546,4 @@ Cursor final acceptance: PASS / READY_TO_RELEASE
 fresh Agent tool-selection black box: 24 / 24 correct
 ```
 
-The rc.20 candidate remains uncommitted and unpublished until explicit release authorization.
+Stable `4.0.0` is now published on npm `latest`, published to the MCP Registry, and merged to `main`. The public rc.10 fingerprint above is retained only as acceptance evidence.

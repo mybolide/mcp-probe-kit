@@ -29,7 +29,7 @@
 
 A powerful MCP (Model Context Protocol) server with **24 model-visible tools by default**, **30 when Memory is configured**, and a **34-tool compatibility surface** available through `MCP_TOOLSET=full`. It covers the complete workflow from product analysis to final release and supports structured output.
 
-**🎉 v4 release candidate**: native MCP Apps, resumable plans, evidence convergence, managed GitNexus Sidecar, parent-child specs, and a version-locked CLI fallback.
+**🎉 v4 stable release**: native MCP Apps, resumable plans, evidence convergence, managed GitNexus Sidecar, parent-child specs, and a version-locked CLI fallback.
 
 **Supports All MCP Clients**: Cursor, Claude Desktop, Cline, Continue, and more
 
@@ -276,7 +276,7 @@ Core and orchestration tools support **structured output**, returning machine-re
 
 ### 🔌 Official MCP Apps and Memory Center
 
-v4.0.0-rc.10 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
+v4.0.0 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
 
 - MCP Apps are enabled by default and can be disabled with `MCP_ENABLE_UI_APPS=0`.
 - UI metadata and `ui://` resources are exposed only after the client advertises support for `text/html;profile=mcp-app`.
@@ -523,7 +523,7 @@ No installation needed, use the latest version directly.
 
 > **Multi-harness adapters (v3.6.8+)**: `AGENTS.md` and the canonical Skill stay the **single rule source**. If the project already has `.trae/`, `.lingma/`, `.comate/`, `.codebuddy/`, or `.claude/`, matching thin adapters (skill mirror or rules pointer) are written automatically — **no env vars**.
 
-> **Version-locked CLI fallback (v4.0.0-rc.6+)**: Bootstrap also writes `.mcp-probe-kit/bin/probe.cmd|probe.ps1|probe` and `.mcp-probe-kit/runtime.json`. If a modified host or third-party Agent provider connects the MCP server but omits its tools from the Agent session, the generated Skill and Cursor rule instruct the Agent to invoke the same Tool Registry through the project wrapper. The wrapper pins the exact MCP package version, does not install globally, and does not modify the project's `package.json`.
+> **Version-locked CLI fallback (v4.0.0+)**: Bootstrap also writes `.mcp-probe-kit/bin/probe.cmd|probe.ps1|probe` and `.mcp-probe-kit/runtime.json`. If a modified host or third-party Agent provider connects the MCP server but omits its tools from the Agent session, the generated Skill and Cursor rule instruct the Agent to invoke the same Tool Registry through the project wrapper. The wrapper pins the exact MCP package version, does not install globally, and does not modify the project's `package.json`.
 
 Direct CLI examples:
 
@@ -851,7 +851,7 @@ This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connec
 | `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
 | Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
 
-**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0-rc.10 defaults to the 24-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 34-tool compatibility surface with `MCP_TOOLSET=full`.
+**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0 defaults to the 24-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 34-tool compatibility surface with `MCP_TOOLSET=full`.
 
 **What you can try:**
 

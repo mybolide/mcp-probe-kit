@@ -975,8 +975,8 @@ Agent 自述“已完成”只能形成低置信度声明，不能替代测试�
 
 ```json
 {
-  "serverVersion": "4.0.0-rc.8",
-  "gitRevision": "9c34bb5",
+  "serverVersion": "4.0.0",
+  "gitRevision": "<commit-sha>",
   "buildFingerprint": "sha256:...",
   "buildTime": "...",
   "entryPath": "E:/workspace/github/mcp-probe-kit/build/index.js",
