@@ -68,7 +68,7 @@ v4 macht die delegierte Agent-Ausführung zu einem beobachtbaren, fortsetzbaren 
 
 **[Fünf interaktive, schreibgeschützte MCP-App-Demos öffnen](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4-Preview-Kanal:** Verwenden Sie `mcp-probe-kit@next` (aktueller Kandidat `4.0.0-rc.9`). npm `latest` bleibt der stabile Kanal `3.7.0`. Für Produktionstests eine exakte Version fixieren.
+> **v4-Preview-Kanal:** Verwenden Sie `mcp-probe-kit@next` (aktueller Kandidat `4.0.0-rc.10`). npm `latest` bleibt der stabile Kanal `3.7.0`. Für Produktionstests eine exakte Version fixieren.
 <!-- v4-showcase:end -->
 
 ---

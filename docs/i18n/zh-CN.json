@@ -15,14 +15,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "让 Agent 看懂项目、按计划执行，并用可视化工作台追踪真实进度",
-    "version": "v4.0.0-rc.9",
+    "version": "v4.0.0-rc.10",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
   },
   "sections": {
     "quickStart": {
       "title": "快速开始",
-      "description": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.9",
+      "description": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.10",
       "installConfig": "安装配置"
     },
     "tools": {
@@ -65,10 +65,10 @@
   },
   "gettingStarted": {
     "title": "安装配置",
-    "subtitle": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.9，支持 Cursor、Cline 和 Claude Desktop",
+    "subtitle": "5 分钟快速上手 MCP Probe Kit v4.0.0-rc.10，支持 Cursor、Cline 和 Claude Desktop",
     "skillBootstrap": {
       "title": "Skill 与 AGENTS 自动安装",
-      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v4.0.0-rc.9+）。"
+      "body": "任意 MCP 工具调用会写入 AGENTS.md 与 .agents/skills/mcp-probe-kit/SKILL.md（规则单源）。若项目已有 .trae/、.lingma/、.comate/、.codebuddy/、.claude/ 等工具目录，会自动写薄适配层（Skill 镜像或规则指针），无需环境变量（v4.0.0-rc.10+）。"
     },
     "breadcrumb": {
       "home": "文档首页",
@@ -660,7 +660,7 @@
   "apps": {
     "title": "MCP Apps 可视化工作台",
     "subtitle": "五个原生 App 把计划、记忆、产品交付和证据闸门带进支持 MCP Apps 的客户端。",
-    "badge": "v4.0.0-rc.9 · 真实 App 源码演示",
+    "badge": "v4.0.0-rc.10 · 真实 App 源码演示",
     "howTitle": "如何使用",
     "how1": "在支持 io.modelcontextprotocol/ui 的客户端中配置 mcp-probe-kit@next。",
     "how2": "正常调用 start_feature、start_bugfix、start_product、converge 或 Memory 工具。",

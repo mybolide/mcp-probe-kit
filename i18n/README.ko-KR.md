@@ -62,7 +62,7 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 
 **[읽기 전용 MCP Apps 라이브 데모 5개 열기](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 프리뷰 채널:** `mcp-probe-kit@next`(현재 후보 `4.0.0-rc.9`)를 사용합니다. npm `latest`는 안정 버전 `3.7.0`을 유지합니다. 운영 평가에서는 정확한 버전을 고정하세요.
+> **v4 프리뷰 채널:** `mcp-probe-kit@next`(현재 후보 `4.0.0-rc.10`)를 사용합니다. npm `latest`는 안정 버전 `3.7.0`을 유지합니다. 운영 평가에서는 정확한 버전을 고정하세요.
 <!-- v4-showcase:end -->
 
 ---

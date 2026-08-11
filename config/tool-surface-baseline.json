@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineId": "v4.0.0-rc.9-host-acceptance",
+  "baselineId": "v4.0.0-rc.10-host-acceptance",
   "description": "Compatibility baseline for rc.20, where Agents choose tools from Skill/tool guidance and workflow is a fallback navigation guide rather than a natural-language intent classifier.",
   "groups": {
     "compactModel": [

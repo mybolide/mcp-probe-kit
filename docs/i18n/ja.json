@@ -15,14 +15,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "Agent がプロジェクトを理解し、実行計画を進め、ネイティブUIで進捗を可視化",
-    "version": "v4.0.0-rc.9",
+    "version": "v4.0.0-rc.10",
     "quickStart": "クイックスタート",
     "visitMainSite": "ByteZoneXを訪問"
   },
   "sections": {
     "quickStart": {
       "title": "クイックスタート",
-      "description": "5分でMCP Probe Kit v4.0.0-rc.9を始める",
+      "description": "5分でMCP Probe Kit v4.0.0-rc.10を始める",
       "installConfig": "インストールと設定"
     },
     "tools": {
@@ -65,10 +65,10 @@
   },
   "gettingStarted": {
     "title": "インストールと設定",
-    "subtitle": "5分でMCP Probe Kit v4.0.0-rc.9を始める。Cursor、Cline、Claude Desktopをサポート",
+    "subtitle": "5分でMCP Probe Kit v4.0.0-rc.10を始める。Cursor、Cline、Claude Desktopをサポート",
     "skillBootstrap": {
       "title": "Skill と AGENTS の自動ブートストラップ",
-      "body": "MCP ツール呼び出しごとに AGENTS.md と .agents/skills/mcp-probe-kit/SKILL.md を書き込みます（ルール単一ソース）。.trae/、.lingma/、.comate/ などのディレクトリがある場合は薄いアダプタを自動作成します（v4.0.0-rc.9+、環境変数不要）。"
+      "body": "MCP ツール呼び出しごとに AGENTS.md と .agents/skills/mcp-probe-kit/SKILL.md を書き込みます（ルール単一ソース）。.trae/、.lingma/、.comate/ などのディレクトリがある場合は薄いアダプタを自動作成します（v4.0.0-rc.10+、環境変数不要）。"
     },
     "breadcrumb": {
       "home": "ドキュメント",
@@ -636,7 +636,7 @@
   "apps": {
     "title": "MCP Apps 可視化ワークベンチ",
     "subtitle": "5つのAppが計画、記憶、製品引き継ぎ、証拠ゲートを対応クライアントへ提供します。",
-    "badge": "v4.0.0-rc.9・実Appソースから生成したデモ",
+    "badge": "v4.0.0-rc.10・実Appソースから生成したデモ",
     "howTitle": "使い方",
     "how1": "io.modelcontextprotocol/ui 対応クライアントに mcp-probe-kit@next を設定します。",
     "how2": "start_feature、start_bugfix、start_product、converge、Memoryツールを通常通り呼び出します。",

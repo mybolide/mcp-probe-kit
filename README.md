@@ -71,7 +71,7 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 
 **[Open the five live, read-only MCP App demos](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 preview channel:** use `mcp-probe-kit@next` (current candidate `4.0.0-rc.9`). npm `latest` remains the stable `3.7.0` channel. Pin an exact version for production evaluation.
+> **v4 preview channel:** use `mcp-probe-kit@next` (current candidate `4.0.0-rc.10`). npm `latest` remains the stable `3.7.0` channel. Pin an exact version for production evaluation.
 <!-- v4-showcase:end -->
 
 ---
@@ -276,7 +276,7 @@ Core and orchestration tools support **structured output**, returning machine-re
 
 ### 🔌 Official MCP Apps and Memory Center
 
-v4.0.0-rc.9 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
+v4.0.0-rc.10 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io.modelcontextprotocol/ui` extension.
 
 - MCP Apps are enabled by default and can be disabled with `MCP_ENABLE_UI_APPS=0`.
 - UI metadata and `ui://` resources are exposed only after the client advertises support for `text/html;profile=mcp-app`.
@@ -851,7 +851,7 @@ This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connec
 | `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
 | Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
 
-**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0-rc.9 defaults to the 24-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 34-tool compatibility surface with `MCP_TOOLSET=full`.
+**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0-rc.10 defaults to the 24-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 34-tool compatibility surface with `MCP_TOOLSET=full`.
 
 **What you can try:**
 

@@ -539,7 +539,7 @@ Unique callable names: 35
 Final frozen candidate accepted by Cursor:
 
 ```text
-version: 4.0.0-rc.9
+version: 4.0.0-rc.10
 build/index.js size: 3681669 bytes
 build/index.js SHA-256: 3907abeb326db62caa7ceeee0ad1ab76eaed6e6182564139717e9fee5e27ff62
 Cursor final acceptance: PASS / READY_TO_RELEASE

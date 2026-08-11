@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest';
+import { resolve } from 'node:path';
 import { startRalph } from '../start_ralph.js';
+
+const ralphFixtureRoot = resolve('test-fixtures/ralph-fixture').replace(/\\/g, '/');
 
 describe('start_ralph', () => {
   test('max_rounds 作为 max_iterations 兼容别名生效', async () => {
@@ -31,7 +34,7 @@ describe('start_ralph', () => {
   test('生成正式的有界轮次 Plan，并为每轮声明 Heartbeat 证据', async () => {
     const result = await startRalph({
       goal: '小步实现并验证订单状态修复',
-      project_root: 'E:/workspace/test/ralph-fixture',
+      project_root: ralphFixtureRoot,
       max_iterations: 3,
       max_minutes: 15,
       test_command: 'npm test',
@@ -52,7 +55,7 @@ describe('start_ralph', () => {
       requiredEvidenceKinds: ['implementation', 'test', 'review'],
     });
     expect(plan.declaredScope).toMatchObject({
-      projectRoot: 'E:/workspace/test/ralph-fixture',
+      projectRoot: ralphFixtureRoot,
       maxIterations: 3,
       maxMinutes: 15,
       backgroundExecution: false,

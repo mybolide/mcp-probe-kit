@@ -62,7 +62,7 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 
 **[5つの読み取り専用 MCP Apps ライブデモを開く](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 プレビューチャネル：** `mcp-probe-kit@next`（現在の候補は `4.0.0-rc.9`）を使用します。npm `latest` は安定版 `3.7.0` のままです。本番評価では正確なバージョンを固定してください。
+> **v4 プレビューチャネル：** `mcp-probe-kit@next`（現在の候補は `4.0.0-rc.10`）を使用します。npm `latest` は安定版 `3.7.0` のままです。本番評価では正確なバージョンを固定してください。
 <!-- v4-showcase:end -->
 
 ---

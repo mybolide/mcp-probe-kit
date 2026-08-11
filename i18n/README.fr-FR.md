@@ -68,7 +68,7 @@ v4 transforme l’exécution déléguée de l’Agent en une boucle de livraison
 
 **[Ouvrir les cinq démos MCP Apps interactives en lecture seule](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **Canal preview v4 :** utilisez `mcp-probe-kit@next` (candidat actuel `4.0.0-rc.9`). npm `latest` reste le canal stable `3.7.0`. Verrouillez une version exacte pour une évaluation de production.
+> **Canal preview v4 :** utilisez `mcp-probe-kit@next` (candidat actuel `4.0.0-rc.10`). npm `latest` reste le canal stable `3.7.0`. Verrouillez une version exacte pour une évaluation de production.
 <!-- v4-showcase:end -->
 
 ---

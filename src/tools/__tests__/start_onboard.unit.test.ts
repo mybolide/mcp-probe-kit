@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'vitest';
+import { resolve } from 'node:path';
 import { startOnboard } from '../start_onboard.js';
+
+const onboardFixtureRoot = resolve('test-fixtures/onboard-fixture').replace(/\\/g, '/');
 
 describe('start_onboard', () => {
   test('接受 project_root 并把绝对路径透传给 init_project_context', async () => {
-    const projectRoot = 'E:/workspace/test/onboard-fixture';
+    const projectRoot = onboardFixtureRoot;
     const result = await startOnboard({ project_root: projectRoot, docs_dir: 'docs' });
 
     expect(result.isError ?? false).toBe(false);
@@ -19,7 +22,7 @@ describe('start_onboard', () => {
 
   test('生成完整、可恢复、可收敛的项目上手计划', async () => {
     const result = await startOnboard({
-      project_root: 'E:/workspace/test/onboard-fixture',
+      project_root: onboardFixtureRoot,
       docs_dir: 'docs',
     });
     expect(result.isError ?? false).toBe(false);
@@ -39,7 +42,7 @@ describe('start_onboard', () => {
     });
     expect(plan.planId).toMatch(/^onboard-/);
     expect(plan.declaredScope).toMatchObject({
-      projectRoot: 'E:/workspace/test/onboard-fixture',
+      projectRoot: onboardFixtureRoot,
       docsDir: 'docs',
       readOnlyAnalysis: true,
     });
@@ -78,7 +81,7 @@ describe('start_onboard', () => {
 
   test('拒绝可能逃出项目根目录的 docs_dir', async () => {
     const result = await startOnboard({
-      project_root: 'E:/workspace/test/onboard-fixture',
+      project_root: onboardFixtureRoot,
       docs_dir: '../outside',
     });
 

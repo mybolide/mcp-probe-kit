@@ -68,7 +68,7 @@ v4 convierte la ejecución delegada del Agent en un ciclo de entrega observable,
 
 **[Abrir las cinco demos interactivas y de solo lectura](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **Canal preview de v4:** usa `mcp-probe-kit@next` (candidato actual `4.0.0-rc.9`). npm `latest` sigue en la versión estable `3.7.0`. Fija una versión exacta para evaluación en producción.
+> **Canal preview de v4:** usa `mcp-probe-kit@next` (candidato actual `4.0.0-rc.10`). npm `latest` sigue en la versión estable `3.7.0`. Fija una versión exacta para evaluación en producción.
 <!-- v4-showcase:end -->
 
 ---

@@ -62,7 +62,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 **[打开 5 个可交互、只读的 MCP Apps 动态演示](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 预发布通道：** 使用 `mcp-probe-kit@next`（当前候选 `4.0.0-rc.9`）。npm `latest` 仍为稳定版 `3.7.0`；生产评估建议锁定精确版本。
+> **v4 预发布通道：** 使用 `mcp-probe-kit@next`（当前候选 `4.0.0-rc.10`）。npm `latest` 仍为稳定版 `3.7.0`；生产评估建议锁定精确版本。
 <!-- v4-showcase:end -->
 
 ---
