@@ -71,7 +71,7 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 
 **[Open the five live, read-only MCP App demos](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 preview channel:** use `mcp-probe-kit@next` (current candidate `4.0.0-rc.10`). npm `latest` remains the stable `3.7.0` channel. Pin an exact version for production evaluation.
+> **v4 stable:** `mcp-probe-kit@4.0.0` is the current stable release and npm `latest` channel.
 <!-- v4-showcase:end -->
 
 ---
@@ -207,7 +207,7 @@ Full Docker Compose, ports, and troubleshooting: **[docs/memory-local-setup.md](
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "your-qdrant-api-key",
@@ -244,7 +244,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -513,7 +513,7 @@ No installation needed, use the latest version directly.
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"]
+      "args": ["-y", "mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -550,7 +550,7 @@ npx --yes mcp-probe-kit@<exact-version> install-agent --project-root .
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"]
+      "args": ["-y", "mcp-probe-kit@4.0.0"]
     }
   }
 }
@@ -568,7 +568,7 @@ npx --yes mcp-probe-kit@<exact-version> install-agent --project-root .
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@next"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.0.0"],
       "enabled": true
     }
   }
@@ -621,7 +621,7 @@ Lightweight local stack; no Ollama. Deploy Qdrant and `nomic-embed` via Docker C
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@next"],
+      "args": ["-y", "mcp-probe-kit@4.0.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "your-qdrant-api-key",
@@ -824,12 +824,12 @@ Check detailed logs:
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@next 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@next 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: Client not recognizing tools after configuration?

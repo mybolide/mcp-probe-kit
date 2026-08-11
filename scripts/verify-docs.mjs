@@ -177,6 +177,10 @@ for (const file of documentationPages) {
 }
 
 const packageJson = readJson('package.json');
+const isPrerelease = packageJson.version.includes('-');
+const expectedV4Specifier = isPrerelease
+  ? 'mcp-probe-kit@next'
+  : `mcp-probe-kit@${packageJson.version}`;
 check(packageJson.scripts?.['docs:sync-shell'] === 'tsx scripts/sync-doc-shell.ts', 'package exposes docs:sync-shell');
 check(packageJson.scripts?.['docs:build']?.startsWith('npm run docs:sync-shell'), 'docs:build synchronizes the canonical shell first');
 check(existsSync(resolve(root, 'scripts/sync-doc-shell.ts')), 'canonical docs shell generator exists');
@@ -201,8 +205,16 @@ check(allToolsPage.includes('一句话调用'), 'all-tools contains the Chinese 
 
 const gettingStarted = read('docs/pages/getting-started.html');
 check(gettingStarted.includes('w-full max-w-none'), 'getting-started fills the available documentation viewport');
-check(!gettingStarted.includes('mcp-probe-kit@latest'), 'getting-started uses npm next for v4');
-check(gettingStarted.includes('mcp-probe-kit@next'), 'getting-started includes npm next');
+check(
+  gettingStarted.includes(expectedV4Specifier),
+  `getting-started includes ${isPrerelease ? 'npm next' : packageJson.version}`,
+);
+check(
+  isPrerelease
+    ? !gettingStarted.includes('mcp-probe-kit@latest')
+    : !gettingStarted.includes('mcp-probe-kit@next'),
+  `getting-started does not advertise the ${isPrerelease ? 'stable latest' : 'prerelease next'} channel`,
+);
 check(gettingStarted.includes('install-agent'), 'getting-started documents project-local Agent fallback');
 check(!/npm\s+(?:install|i|update)\s+-g\s+mcp-probe-kit/.test(gettingStarted), 'getting-started does not recommend global mcp-probe-kit installation');
 

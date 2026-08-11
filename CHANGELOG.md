@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [4.0.0] - 2026-08-11
+
+### Release
+
+- Promoted the validated v4 release-candidate line to the stable `4.0.0` channel.
+- Stable publication uses npm `latest` and enables MCP Registry publication after the npm release succeeds.
+- Includes the accumulated v4 architecture, workflow, Memory, MCP Apps, GitNexus sidecar, packaging, cross-platform, and release-gate hardening validated through the public RC series, with `4.0.0-rc.10` as the final prerelease baseline.
+
 ### Changed
 
 - Rebuilt `ui_design_system` around a deterministic visual-direction contract instead of independently matching style labels, colors, fonts, effects, and landing-page templates.
