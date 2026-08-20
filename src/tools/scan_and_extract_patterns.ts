@@ -4,6 +4,7 @@ import { parseArgs, getString, getNumber } from '../utils/parseArgs.js';
 import { okStructured } from '../lib/response.js';
 import { handleToolError } from '../utils/error-handler.js';
 import { resolveWorkspaceRoot } from '../lib/workspace-root.js';
+import { SCAN_PATTERN_PERSIST_HINT } from '../lib/memory-persistence-guidance.js';
 
 const DEFAULT_INCLUDE_EXTENSIONS = new Set([
   '.ts',
@@ -318,7 +319,7 @@ export async function scanAndExtractPatterns(args: any) {
     if (content) {
       const pattern = buildPattern(content, filePath);
       return okStructured(
-        `已提取 1 个候选模式${filePath ? `: ${filePath}` : ''}`,
+        `已提取 1 个候选模式${filePath ? `: ${filePath}` : ''}\n${SCAN_PATTERN_PERSIST_HINT}`,
         {
           mode: 'single',
           patterns: [pattern],
@@ -382,7 +383,7 @@ export async function scanAndExtractPatterns(args: any) {
     }
 
     return okStructured(
-      `已扫描 ${files.length} 个文件，提取 ${patterns.length} 个候选模式`,
+      `已扫描 ${files.length} 个文件，提取 ${patterns.length} 个候选模式\n${SCAN_PATTERN_PERSIST_HINT}`,
       {
         mode: 'directory',
         scannedRoot: targetDir.replace(/\\/g, '/'),

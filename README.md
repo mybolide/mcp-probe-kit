@@ -524,6 +524,8 @@ No installation needed, use the latest version directly.
 > **Multi-harness adapters (v3.6.8+)**: `AGENTS.md` and the canonical Skill stay the **single rule source**. If the project already has `.trae/`, `.lingma/`, `.comate/`, `.codebuddy/`, or `.claude/`, matching thin adapters (skill mirror or rules pointer) are written automatically — **no env vars**.
 
 > **Version-locked CLI fallback (v4.0.0+)**: Bootstrap also writes `.mcp-probe-kit/bin/probe.cmd|probe.ps1|probe` and `.mcp-probe-kit/runtime.json`. If a modified host or third-party Agent provider connects the MCP server but omits its tools from the Agent session, the generated Skill and Cursor rule instruct the Agent to invoke the same Tool Registry through the project wrapper. The wrapper pins the exact MCP package version, does not install globally, and does not modify the project's `package.json`.
+>
+> **Memory for CLI fallback**: `install-agent` also creates `.mcp-probe-kit/local.env` (and `local.env.example`). The CLI fallback path (`probe.* exec ...`) does not inherit IDE `mcp.json` env; edit `local.env` with the same `MEMORY_*` keys.
 
 Direct CLI examples:
 
@@ -606,6 +608,8 @@ For full write/search you need both:
 
 1. A **Qdrant** vector database
 2. An **embedding service** in either `ollama` or `openai-compatible` mode
+
+> **Note (CLI fallback)**: If you run the project wrapper (`./.mcp-probe-kit/bin/probe* exec ...`) instead of native MCP, Memory env is read from `.mcp-probe-kit/local.env` (created by `install-agent`).
 
 **Full guide (Docker Compose for Qdrant + Infinity, ports `50008` / `50012`, MCP env, smoke tests):**
 

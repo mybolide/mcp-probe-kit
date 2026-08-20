@@ -424,7 +424,7 @@ export function renderSrc8GateRules(): string {
 3. **Step 4 子步 4a~4e 均须由 Agent 填写** — 见 rootCauseWorksheet
 4. **Step 6 前须满足复现门禁** — failing test / repro / 或说明不可复现的技术原因
 5. **三次修复仍失败** — 回 Step 2/4，不得盲试
-6. **Step 8 须准备记忆候选** — 【现象】【根因】【修复】【验证】；只有 converge 通过后才调用 memorize_asset`;
+6. **Step 8 须准备记忆候选** — 【现象】【根因】【修复】【验证】；面向跨仓库共享，禁止 source_project/source_path；只有 converge 通过后才调用 memorize_asset`;
 }
 
 export function renderReproductionGate(): string {

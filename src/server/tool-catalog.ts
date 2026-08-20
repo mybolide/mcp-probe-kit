@@ -5,6 +5,7 @@ import type {
   ToolTaskPolicy,
   ToolsetType,
 } from "./tool-definition.js";
+import { MEMORIZE_ASSET_WHEN_TO_CALL } from "../lib/memory-persistence-guidance.js";
 
 export interface ToolCatalogEntry {
   name: string;
@@ -361,8 +362,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "memory",
     groupTitle: MEMORY,
-    whenToCall:
-      "托管交付流程在 **converge passed=true** 后沉淀 MemoryCandidate；用户明确进行独立记忆管理时也可直接调用。默认拒绝同身份冲突，确认替代时用 `conflict_policy=supersede`，确需并行结论时显式 `allow_parallel`",
+    whenToCall: MEMORIZE_ASSET_WHEN_TO_CALL,
   }),
   tool({
     name: "update_memory_asset",

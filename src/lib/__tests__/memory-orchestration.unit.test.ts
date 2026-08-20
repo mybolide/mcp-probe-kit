@@ -115,6 +115,7 @@ describe('memory-orchestration', () => {
     expect(step.when).toContain('false_root_cause');
     expect(step.when).toContain('regression_case');
     expect(step.note).toContain('converge passed=true');
+    expect(step.note).toContain('source_project');
     expect(step.outputs).toContain('MemoryCandidate（成功、失败、证伪或回归）');
     expect(step.args).toMatchObject({
       evidence: expect.any(Array),

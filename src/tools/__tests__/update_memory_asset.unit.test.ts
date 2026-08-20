@@ -145,4 +145,18 @@ describe('update_memory_asset 单元测试', () => {
     expect(result.content[0].text).toContain('evidence');
     expect(updateAssetMock).not.toHaveBeenCalled();
   });
+
+  test('传入 source_project 时在访问后端前拒绝', async () => {
+    isEnabledMock.mockReturnValue(true);
+
+    const result = await updateMemoryAsset({
+      asset_id: 'asset-1',
+      source_project: 'acme/api',
+      summary: 'updated summary',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('source_project');
+    expect(updateAssetMock).not.toHaveBeenCalled();
+  });
 });

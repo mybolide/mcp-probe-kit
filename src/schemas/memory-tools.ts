@@ -1,3 +1,9 @@
+import {
+  MEMORIZE_ASSET_TOOL_DESCRIPTION,
+  MEMORY_SHARED_KNOWLEDGE_RULE,
+  SCAN_PATTERN_PERSIST_HINT,
+} from '../lib/memory-persistence-guidance.js';
+
 export const memoryToolSchemas = [
   {
     name: 'search_memory',
@@ -47,20 +53,19 @@ export const memoryToolSchemas = [
   },
   {
     name: 'memorize_asset',
-    description:
-      '沉淀可检索记忆资产。支持成功经验及 failed_approach、false_root_cause、regression_case 负面记忆；负面记忆必须附 evidence，并建议填写 applicability。长流程应先准备 MemoryCandidate，并仅在 converge passed=true 后正式写入。',
+    description: MEMORIZE_ASSET_TOOL_DESCRIPTION,
     inputSchema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: '资产名称' },
+        name: { type: 'string', description: '抽象化资产名称（勿用文件路径或仓库名）' },
         type: { type: 'string', description: '资产类型：bugfix / pattern / component / code / failed_approach / false_root_cause / regression_case' },
-        description: { type: 'string', description: '资产描述' },
-        summary: { type: 'string', description: '检索用一句话摘要（关键词 + 根因/要点）' },
-        content: { type: 'string', description: '完整内容（bugfix 建议结构化四段）' },
+        description: { type: 'string', description: '抽象化描述（现象/模式/问题，勿以项目路径为主）' },
+        summary: { type: 'string', description: '检索用一句话摘要（关键词 + 根因/要点；不含仓库名/路径）' },
+        content: { type: 'string', description: '完整抽象内容（bugfix 建议【现象】【根因】【修复】【验证】；可选末尾【来源参考】一行）' },
         code_snippet: { type: 'string', description: '代码片段，content 的别名' },
-        file_path: { type: 'string', description: '已废弃：勿用于跨仓库沉淀，路径写入 content' },
-        source_project: { type: 'string', description: '项目标识；填写后该资产按项目范围记忆处理' },
-        source_path: { type: 'string', description: '项目内来源路径，仅用于追溯' },
+        file_path: { type: 'string', description: 'Agent 沉淀共享知识时禁止传；路径写入 content 末尾【来源参考】' },
+        source_project: { type: 'string', description: 'Agent 沉淀共享知识时禁止传；仅 Memory Center browse 过滤用' },
+        source_path: { type: 'string', description: 'Agent 沉淀共享知识时禁止传；追溯信息写入 content【来源参考】' },
         usage: { type: 'string', description: '适用场景/使用方式' },
         applicability: { type: 'string', description: '适用条件、边界和不适用场景' },
         evidence: { type: 'array', items: { type: 'string' }, description: '验证证据、失败日志、反例或回归用例；负面记忆必填' },
@@ -103,7 +108,7 @@ export const memoryToolSchemas = [
   {
     name: 'update_memory_asset',
     description:
-      '按 asset_id 更新已有记忆资产（保留原 ID）。可修正内容、证据、适用边界、失效时间及替代关系；content 或生命周期语义变化会重新向量化。',
+      `按 asset_id 更新已有记忆资产（保留原 ID）。可修正内容、证据、适用边界、失效时间及替代关系；content 或生命周期语义变化会重新向量化。${MEMORY_SHARED_KNOWLEDGE_RULE}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -114,9 +119,9 @@ export const memoryToolSchemas = [
         summary: { type: 'string', description: '检索用一句话摘要' },
         content: { type: 'string', description: '完整内容' },
         code_snippet: { type: 'string', description: '代码片段，content 的别名' },
-        file_path: { type: 'string', description: '已废弃：勿用于跨仓库沉淀，路径写入 content' },
-        source_project: { type: 'string', description: '项目标识；填写后按项目范围记忆处理' },
-        source_path: { type: 'string', description: '项目内来源路径' },
+        file_path: { type: 'string', description: 'Agent 更新共享知识时禁止传；路径写入 content 末尾【来源参考】' },
+        source_project: { type: 'string', description: 'Agent 更新共享知识时禁止传；仅 Memory Center browse 过滤用' },
+        source_path: { type: 'string', description: 'Agent 更新共享知识时禁止传；追溯信息写入 content【来源参考】' },
         usage: { type: 'string', description: '适用场景/使用方式' },
         applicability: { type: 'string', description: '适用条件、边界和不适用场景' },
         evidence: { type: 'array', items: { type: 'string' }, description: '验证证据、失败日志、反例或回归用例' },
@@ -138,7 +143,7 @@ export const memoryToolSchemas = [
   },
   {
     name: 'scan_and_extract_patterns',
-    description: '当需要从单段代码、单文件或整个目录中抽取可复用模式，再决定是否沉淀到记忆系统时使用。目录扫描时，优先传 `project_root` 为项目根目录绝对路径，并让 `directory_path` 传相对项目根的路径，例如 `app/utils`；只有无法确定项目根时，才把 `directory_path` 直接设为绝对路径。不要传带项目名的半相对路径，例如 `font-miniapp-api/app/utils`。',
+    description: `当需要从单段代码、单文件或整个目录中抽取可复用模式，再决定是否沉淀到记忆系统时使用。目录扫描时，优先传 project_root 为项目根目录绝对路径，并让 directory_path 传相对项目根的路径，例如 app/utils；只有无法确定项目根时，才把 directory_path 直接设为绝对路径。不要传带项目名的半相对路径，例如 font-miniapp-api/app/utils。${SCAN_PATTERN_PERSIST_HINT}`,
     inputSchema: {
       type: 'object',
       properties: {

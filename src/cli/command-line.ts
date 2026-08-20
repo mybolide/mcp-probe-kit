@@ -14,6 +14,7 @@ import {
   CLI_RUNTIME_MANIFEST_REL_PATH,
   readCliRuntimeManifest,
 } from "../lib/cli-fallback-installer.js";
+import { bootstrapCliLocalEnv } from "../lib/cli-local-env.js";
 import {
   MCP_PROBE_SKILL_REL_PATH,
 } from "../lib/workflow-skill-template.js";
@@ -44,6 +45,8 @@ interface ParsedArgv {
 
 export async function runCommandLine(argv: string[]): Promise<number | null> {
   if (argv.length === 0) return null;
+
+  bootstrapCliLocalEnv();
 
   const parsed = parseArgv(argv);
   try {

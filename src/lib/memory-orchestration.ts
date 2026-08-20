@@ -1,3 +1,4 @@
+import { appendMemoryCandidatePrepNote } from './memory-persistence-guidance.js';
 import type { MemoryAsset, MemorySearchResult } from './memory-client.js';
 import { createMemoryClient } from './memory-client.js';
 import { getMemoryConfig, type MemoryConfig } from './memory-config.js';
@@ -403,7 +404,9 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
         confidence: 0.85,
       },
       outputs: ['MemoryCandidate（成功、失败、证伪或回归）'],
-      note: '本步只准备候选并通过 plan_heartbeat 记录证据；converge passed=true 后再调用 memorize_asset 正式写入',
+      note: appendMemoryCandidatePrepNote(
+        '本步只准备候选并通过 plan_heartbeat 记录证据；converge passed=true 后再调用 memorize_asset 正式写入',
+      ),
     };
   }
 
@@ -423,7 +426,9 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
         confidence: 0.75,
       },
       outputs: ['MemoryCandidate（UI 组件/布局/交互模式）'],
-      note: '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
+      note: appendMemoryCandidatePrepNote(
+        '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
+      ),
     };
   }
 
@@ -443,7 +448,9 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
         confidence: 0.75,
       },
       outputs: ['MemoryCandidate（功能实现/规范）'],
-      note: '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
+      note: appendMemoryCandidatePrepNote(
+        '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
+      ),
     };
   }
 
@@ -462,6 +469,8 @@ export function buildMemoryPlanStep(kind: MemoryPlanKind = 'default') {
       confidence: 0.7,
     },
     outputs: ['MemoryCandidate（可复用资产）'],
-    note: '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
+    note: appendMemoryCandidatePrepNote(
+      '本步只准备候选；converge passed=true 后再调用 memorize_asset 正式写入',
+    ),
   };
 }

@@ -2,6 +2,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { VERSION } from "../version.js";
 import { compareSemver } from "./workflow-skill-version.js";
+import {
+  ensureCliLocalEnvExample,
+  ensureCliLocalEnvTemplate,
+} from "./cli-local-env.js";
 
 export const CLI_RUNTIME_MANIFEST_REL_PATH = ".mcp-probe-kit/runtime.json";
 export const CLI_BIN_DIR_REL_PATH = ".mcp-probe-kit/bin";
@@ -106,6 +110,25 @@ export function ensureCliFallback(
       `${JSON.stringify(manifest, null, 2)}\n`
     )
   );
+
+  const localEnvExample = ensureCliLocalEnvExample(root);
+  if (localEnvExample.created) {
+    files.push({
+      path: localEnvExample.path,
+      created: true,
+      updated: false,
+      skipped: false,
+    });
+  }
+  const localEnvTemplate = ensureCliLocalEnvTemplate(root);
+  if (localEnvTemplate.created) {
+    files.push({
+      path: localEnvTemplate.path,
+      created: true,
+      updated: false,
+      skipped: false,
+    });
+  }
 
   return {
     version,

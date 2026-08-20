@@ -241,6 +241,14 @@ Swagger：`http://127.0.0.1:50012/docs`
 
 Claude Code：写入 `.mcp.json` 的 `mcpServers.mcp-probe-kit.env`。修改后**完全重启** Cursor。
 
+### CLI 降级（local.env）
+
+如果宿主 Agent 看不到 MCP 工具，你会走项目 wrapper 的 CLI 降级通道（`./.mcp-probe-kit/bin/probe* exec ...`）。
+
+此时 CLI 进程不会继承 IDE 的 `mcp.json` env 变量。
+
+请通过 `.mcp-probe-kit/local.env` 配置 Memory（由 `install-agent` 创建）：在文件里填写同样的 `MEMORY_*` 键。
+
 ### 工具与环境变量
 
 | 工具 | 最低要求 |

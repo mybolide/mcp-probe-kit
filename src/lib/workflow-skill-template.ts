@@ -72,6 +72,8 @@ macOS / Linux：
 
 CLI 返回 JSON；读取 \`structuredContent\`、\`content\` 和 \`isError\`，继续执行与原生 MCP 相同的工具链。
 
+CLI 降级通道不会继承 IDE \`mcp.json\` 里的 \`env\`。若需 Memory 等能力，在项目根复制 \`.mcp-probe-kit/local.env.example\` 为 \`.mcp-probe-kit/local.env\` 并填写 \`MEMORY_*\`；已有 shell 环境变量优先。
+
 ### 启动器缺失时自修复
 
 如果 \`.mcp-probe-kit/bin/probe.*\` 不存在，由 Agent 自行执行：

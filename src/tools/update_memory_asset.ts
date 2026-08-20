@@ -14,6 +14,7 @@ import {
   parseMemoryConflictPolicy,
   parseMemoryStatus,
 } from '../lib/memory-quality.js';
+import { assertNoProjectScopedMemoryFields } from '../lib/memory-persistence-guidance.js';
 
 function fieldProvided(args: any, ...keys: string[]): boolean {
   const record =
@@ -111,12 +112,17 @@ export async function updateMemoryAsset(args: any) {
     if (fieldProvided(args, 'usage')) {
       patch.usage = getString(parsed.usage);
     }
-    if (fieldProvided(args, 'source_project', 'project')) {
-      patch.sourceProject = getString(parsed.source_project);
-    }
-    if (fieldProvided(args, 'source_path', 'source', 'file_path', 'path')) {
-      patch.sourcePath = getString(parsed.source_path) || getString(parsed.file_path);
-    }
+    assertNoProjectScopedMemoryFields({
+      sourceProject: fieldProvided(args, 'source_project', 'project')
+        ? getString(parsed.source_project)
+        : undefined,
+      sourcePath: fieldProvided(args, 'source_path', 'source')
+        ? getString(parsed.source_path)
+        : undefined,
+      filePath: fieldProvided(args, 'file_path', 'path')
+        ? getString(parsed.file_path)
+        : undefined,
+    });
     if (fieldProvided(args, 'evidence')) {
       patch.evidence = normalizeStringArray(parsed.evidence);
     }
@@ -173,11 +179,6 @@ export async function updateMemoryAsset(args: any) {
       if (missing.length > 0) {
         warnings.push(`建议 content 包含 ${missing.join('、')}，便于跨仓库检索与复用`);
       }
-    }
-    if (patch.sourceProject || patch.sourcePath) {
-      warnings.push(
-        'source_project/source_path 会将资产识别为项目范围；跨项目共享经验请将必要上下文写入 content'
-      );
     }
 
     const outcome = await client.updateAsset(assetId, patch);

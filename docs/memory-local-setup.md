@@ -250,6 +250,12 @@ Claude Code: put the same keys under `mcpServers.mcp-probe-kit.env` in `.mcp.jso
 
 After changing env, **fully restart** your MCP client (e.g. quit and reopen Cursor).
 
+### CLI fallback (local.env)
+
+If your host Agent cannot see the MCP tools and you use the project wrapper CLI fallback (`./.mcp-probe-kit/bin/probe* exec ...`), then the CLI process will not inherit IDE `mcp.json` env vars.
+
+In that case, configure Memory via `.mcp-probe-kit/local.env` (created by `install-agent`): put the same `MEMORY_*` keys there.
+
 ### Environment variable reference
 
 | Variable | Required | Description |

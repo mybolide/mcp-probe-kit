@@ -1,3 +1,4 @@
+import { CONVERGE_MEMORY_NEXT_ACTION } from '../lib/memory-persistence-guidance.js';
 import { okStructured } from '../lib/response.js';
 import { convergePlan } from '../plans/plan-converge.js';
 import { normalizeEvidenceKinds } from '../plans/plan-types.js';
@@ -59,7 +60,7 @@ export async function converge(args: unknown) {
     });
     const nextAction = result.passed
       ? result.memoryWriteAllowed
-        ? '收敛通过；现在可调用 scan_and_extract_patterns / memorize_asset 正式沉淀已验证知识'
+        ? CONVERGE_MEMORY_NEXT_ACTION
         : '收敛通过；计划未要求正式记忆写入'
       : '收敛拒绝；按 blockers 补齐步骤、证据和未关闭事项后重新调用 converge';
 

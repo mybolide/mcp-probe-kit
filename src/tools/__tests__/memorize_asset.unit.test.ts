@@ -185,6 +185,33 @@ describe('memorize_asset 单元测试', () => {
     expect(upsertAssetWithQualityMock).not.toHaveBeenCalled();
   });
 
+  test('传入 source_project 时在访问后端前拒绝', async () => {
+    isEnabledMock.mockReturnValue(true);
+
+    const result = await memorizeAsset({
+      ...validArgs,
+      source_project: 'acme/api',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('source_project');
+    expect(result.content[0].text).toContain('禁止');
+    expect(upsertAssetWithQualityMock).not.toHaveBeenCalled();
+  });
+
+  test('传入 file_path 时在访问后端前拒绝', async () => {
+    isEnabledMock.mockReturnValue(true);
+
+    const result = await memorizeAsset({
+      ...validArgs,
+      file_path: 'src/lib/foo.ts',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('file_path');
+    expect(upsertAssetWithQualityMock).not.toHaveBeenCalled();
+  });
+
   test('superseded_by 在新建工具层直接拒绝并提示使用 update', async () => {
     isEnabledMock.mockReturnValue(true);
 

@@ -1,4 +1,5 @@
 import { SRC8_METHODOLOGY, resolveAnalysisMode } from './src8-core.js';
+import { appendMemoryCandidatePrepNote } from './memory-persistence-guidance.js';
 
 export type Src8InputEvidence = {
   type: 'symptom' | 'timeline' | 'stack' | 'code' | 'comparison';
@@ -157,7 +158,9 @@ function buildMemoryCandidateStep(
     },
     outputs: ['待收敛的 MemoryCandidate'],
     dependsOn: ['src8-7'],
-    note: '只准备候选并写入 plan_heartbeat 证据；converge passed=true 后再调用 memorize_asset',
+    note: appendMemoryCandidatePrepNote(
+      '只准备候选并写入 plan_heartbeat 证据；converge passed=true 后再调用 memorize_asset',
+    ),
   };
 }
 

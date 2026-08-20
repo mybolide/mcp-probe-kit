@@ -37,7 +37,13 @@ describe("cli-fallback-installer", () => {
 
     expect(result.version).toBe(VERSION);
     expect(result.packageSpec).toBe(`mcp-probe-kit@${VERSION}`);
-    expect(result.files.filter((file) => file.created)).toHaveLength(4);
+    expect(result.files.filter((file) => file.created).length).toBeGreaterThanOrEqual(4);
+    expect(
+      result.files.some((file) => file.path === ".mcp-probe-kit/local.env.example" && file.created),
+    ).toBe(true);
+    expect(
+      result.files.some((file) => file.path === ".mcp-probe-kit/local.env" && file.created),
+    ).toBe(true);
 
     const manifest = readCliRuntimeManifest(root);
     expect(manifest).toMatchObject({

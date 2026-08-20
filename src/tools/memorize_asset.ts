@@ -12,6 +12,7 @@ import {
   parseMemoryConflictPolicy,
   parseMemoryStatus,
 } from '../lib/memory-quality.js';
+import { assertNoProjectScopedMemoryFields } from '../lib/memory-persistence-guidance.js';
 import type {
   MemoryAssetWriteInput,
   MemoryWriteOutcome,
@@ -76,7 +77,13 @@ export async function memorizeAsset(args: any) {
     const summary = getString(parsed.summary);
     const content = getString(parsed.content) || getString(parsed.code_snippet);
     const sourceProject = getString(parsed.source_project);
-    const sourcePath = getString(parsed.source_path) || getString(parsed.file_path);
+    const sourcePath = getString(parsed.source_path);
+    const filePath = getString(parsed.file_path);
+    assertNoProjectScopedMemoryFields({
+      sourceProject,
+      sourcePath,
+      filePath,
+    });
     const usage = getString(parsed.usage);
     const confidence = getNumber(parsed.confidence, 0.7);
     const evidence = normalizeStringArray(parsed.evidence);
@@ -122,11 +129,6 @@ export async function memorizeAsset(args: any) {
     if (isNegativeMemoryType(type) && !applicability) {
       warnings.push('负面记忆建议提供 applicability，明确适用边界，避免过度泛化');
     }
-    if (sourceProject || sourcePath) {
-      warnings.push(
-        'source_project/source_path 会将资产识别为项目范围；跨项目共享经验请将必要上下文写入 content'
-      );
-    }
 
     const writeInput: MemoryAssetWriteInput = {
       name,
@@ -134,8 +136,6 @@ export async function memorizeAsset(args: any) {
       description,
       summary,
       content,
-      sourceProject: sourceProject || undefined,
-      sourcePath: sourcePath || undefined,
       usage: usage || undefined,
       confidence,
       tags,
