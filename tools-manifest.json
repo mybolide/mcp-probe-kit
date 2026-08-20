@@ -1,5 +1,5 @@
 {
-  "version": "4.0.0",
+  "version": "4.0.1",
   "protocol": "2025-11-25",
   "totalTools": 34,
   "toolsets": {
@@ -258,7 +258,7 @@
   },
   "structuredOutput": {
     "description": "Tools supporting structured output (v2.0+)",
-    "version": "4.0.0",
+    "version": "4.0.1",
     "guidanceOnly": {
       "description": "Guidance-type tools (return okText) - AI should execute tasks according to guidance, Schema for reference",
       "count": 6,
