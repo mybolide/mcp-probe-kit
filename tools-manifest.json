@@ -1,6 +1,10 @@
 {
   "version": "4.0.1",
-  "protocol": "2025-11-25",
+  "protocol": "2026-07-28",
+  "supportedProtocols": [
+    "2025-11-25",
+    "2026-07-28"
+  ],
   "totalTools": 34,
   "toolsets": {
     "compact": {

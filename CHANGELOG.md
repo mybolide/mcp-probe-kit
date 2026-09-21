@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `tools-manifest.json` now advertises Current protocol `2026-07-28` and lists dual-era `supportedProtocols` (`2025-11-25`, `2026-07-28`) instead of freezing the Legacy revision.
+
 ---
 
 ## [4.0.0] - 2026-08-11

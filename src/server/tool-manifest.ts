@@ -9,6 +9,15 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
+/** Current MCP revision advertised in tools-manifest (not the handshake pin). */
+export const MANIFEST_PROTOCOL_CURRENT = "2026-07-28";
+/** Legacy handshake revision still served in dual-era auto/legacy modes. */
+export const MANIFEST_PROTOCOL_LEGACY = "2025-11-25";
+export const MANIFEST_SUPPORTED_PROTOCOLS = [
+  MANIFEST_PROTOCOL_LEGACY,
+  MANIFEST_PROTOCOL_CURRENT,
+] as const;
+
 const CATEGORY_ALIASES: Record<string, { id: string; description: string }> = {
   orchestration: {
     id: "orchestration",
@@ -150,6 +159,8 @@ export function mergeToolManifest(existing: JsonRecord, version: string): JsonRe
   return {
     ...existing,
     version,
+    protocol: MANIFEST_PROTOCOL_CURRENT,
+    supportedProtocols: [...MANIFEST_SUPPORTED_PROTOCOLS],
     totalTools: generated.totalTools,
     toolsets: generated.toolsets,
     categories: generated.categories,
