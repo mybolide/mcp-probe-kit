@@ -97,7 +97,6 @@ export function omitPaletteFromVisualContract(
           accent: '',
         },
         accentUsage: contract.visualLanguage.color.accentUsage,
-        forbidden: contract.visualLanguage.color.forbidden,
       },
     },
     craft: {

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [4.0.2] - 2026-09-22
+
 ### Changed
 
 - `start_ui` inlines craft gates and theme emission: Delegated Plan now includes `emit-theme` and `craft-audit`.
