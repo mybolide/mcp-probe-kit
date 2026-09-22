@@ -21,7 +21,7 @@ The tool returns contract version `2.0` with:
 - primary task, screen type, target audience and content density;
 - one coherent visual direction with rationale and reference lessons;
 - information hierarchy, layout, navigation and responsive behavior;
-- typography, OKLCH color tokens, spacing, radius, border, depth, imagery and motion;
+- typography, color tokens (from ui-ux-pro-max product palettes, else preset fallback), spacing, radius, border, depth, imagery and motion;
 - component and content rules;
 - global and project-specific prohibited patterns;
 - seven weighted review dimensions, target score, required viewports and blocking failures.
@@ -30,6 +30,9 @@ The only required artifacts are:
 
 - `docs/design-system.json`
 - `docs/design-system.md`
+- `docs/design-system.theme.css` (CSS variables the implementation must import; do not invent a parallel default theme)
+
+The contract also includes a built-in `craft` object: motion policy, press/easing tokens, source and screenshot checks derived from Emil Kowalski skills (MIT, not vendored), and generated `themeCss`. `start_ui` must write the theme file (`emit-theme`) and run source `craft-audit` before visual acceptance.
 
 Legacy `colors` and `typography` views remain in structured output for compatibility. They are derived from the v2 contract rather than independently selected.
 
@@ -54,28 +57,24 @@ Legacy component, guideline and data search modes remain available. They do not 
 All modes include these mandatory execution stages:
 
 1. Lock visual direction.
-2. Select and save page structure.
-3. Implement one key screen before expanding the surface area.
-4. Capture a real 1440x900 screenshot.
-5. Capture a real 390x844 screenshot.
-6. Score both screenshots against all seven contract dimensions.
-7. Iterate from visible defects when the score is below target, a dimension is below the floor, or a blocking failure is present.
-8. Re-capture and re-score after every iteration.
-9. Pass only when the current screenshots meet the target and contain no blocking failure.
+2. Emit `docs/design-system.theme.css` from the contract.
+3. Select and save page structure.
+4. Implement one key screen before expanding the surface area. The screen must reference the theme file.
+5. Run source craft-audit (press state, no `transition: all`, no default Inter, no `scale(0)`, ease-out enter). Blocking failures stop visual acceptance.
+6. Capture a real 1440x900 screenshot.
+7. Capture a real 390x844 screenshot.
+8. Score both screenshots against all seven contract dimensions, including screenshot craft checks.
+9. Iterate from visible defects when the score is below target, a dimension is below the floor, or a blocking failure is present.
+10. Re-capture and re-score after every iteration.
+11. Pass only when the current screenshots meet the target and contain no blocking failure.
 
 The default target is 8.5/10. Review rounds are bounded from one to five, with a default of three.
 
 A code review, DOM inspection, CSS audit or verbal claim cannot replace screenshot evidence. Historical screenshots cannot be reused as current evidence.
 
-## External Skill boundary
+## 唯一依据
 
-The Skill order for UI work is:
-
-1. `interaction-design`
-2. `frontend-design`
-3. `ui-ux-pro-max`
-
-These Skills may supplement interaction states, accessibility, implementation details and structural references. They cannot reselect the style, palette, typography, density, page structure, avoid list or target score. Conflicting recommendations are discarded.
+`start_ui` 只编排。视觉与配色认 `ui_design_system` 落盘的 `docs/design-system.*`。该工具色表来自 ui-ux-pro-max `colors.csv`（本机 skill 优先，否则内置快照）。内嵌 craft 只管工艺门禁与营销动效/宽屏构图，不定色盘。不要调用 frontend-design / interaction-design。
 
 For React and Next.js, shadcn is used at the component-primitive level after page structure is locked. Full-page blocks are not layout authority.
 

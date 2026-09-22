@@ -24,8 +24,12 @@ describe('ui_design_system visual direction contract', () => {
     expect(structured.artifacts.map((item: any) => item.path)).toEqual([
       'docs/design-system.json',
       'docs/design-system.md',
+      'docs/design-system.theme.css',
     ]);
-    expect(structured.colors.primary['500']).toMatch(/^oklch\(/);
+    expect(structured.craft.tokensFile).toBe('docs/design-system.theme.css');
+    expect(structured.craft.themeCss).toContain(':root');
+    expect(structured.craft.checks.length).toBeGreaterThan(0);
+    expect(structured.colors.primary['500']).toMatch(/^(oklch\(|#)/);
     expect(structured.avoid).toEqual(expect.arrayContaining(['卡片瀑布', '大标题']));
 
     const text = result.content[0]?.text || '';
@@ -34,5 +38,19 @@ describe('ui_design_system visual direction contract', () => {
     expect(text).not.toContain('docs/design-guidelines/');
     expect(text).not.toContain('Glassmorphism + Flat Design');
     expect(text).not.toContain('ASCII Box');
+  });
+
+  it('营销页配色由本工具从 promax 色表或 preset 给出', async () => {
+    const result = await uiDesignSystem({
+      product_type: 'wearable',
+      description: '智能戒指品牌官网',
+      screen_type: 'marketing-page',
+    });
+
+    expect(result.isError).toBe(false);
+    const structured = result.structuredContent as any;
+    expect(structured.direction.id).toBe('product-storytelling');
+    expect(structured.visualLanguage.color.strategy).toMatch(/ui-ux-pro-max|fallback/);
+    expect(String(structured.visualLanguage.color.tokens.accent)).toMatch(/^(oklch\(|#)/);
   });
 });

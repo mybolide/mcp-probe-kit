@@ -1,4 +1,17 @@
 import { VISUAL_DIRECTION_PRESETS } from './visual-direction-presets.js';
+import { resolvePromaxPalette, type PromaxColorRow } from './promax-palette.js';
+import {
+  CRAFT_CHECKS,
+  UI_CRAFT_SOURCE,
+  UI_EASE_IN_OUT,
+  UI_EASE_OUT,
+  UI_THEME_FILE,
+  motionPolicyForScreen,
+  renderThemeCss,
+  slopBlockingFailures,
+  type CraftCheck,
+  type CraftMotionPolicy,
+} from './ui-craft.js';
 
 export type UiDensity = 'compact' | 'comfortable' | 'spacious';
 
@@ -14,6 +27,8 @@ export interface VisualDirectionRequest {
   references?: string | string[];
   avoid?: string | string[];
   targetScore?: number;
+  /** 测试注入；undefined 走 skill/内置表，[] 强制 preset 兜底 */
+  paletteCatalog?: PromaxColorRow[];
 }
 
 export interface VisualDirectionContract {
@@ -53,6 +68,8 @@ export interface VisualDirectionContract {
       strategy: string;
       tokens: Record<string, string>;
       accentUsage: string;
+      catalogSource?: string;
+      catalogProductType?: string;
     };
     shape: {
       radius: Record<string, string>;
@@ -90,6 +107,15 @@ export interface VisualDirectionContract {
     path: string;
     purpose: string;
   }>;
+  craft: {
+    source: string;
+    tokensFile: string;
+    motionPolicy: CraftMotionPolicy;
+    easings: { out: string; inOut: string };
+    press: { scale: number; durationMs: [number, number] };
+    checks: CraftCheck[];
+    themeCss: string;
+  };
 }
 
 export interface DirectionPreset {
@@ -286,7 +312,7 @@ export function buildVisualDirectionContract(request: VisualDirectionRequest): V
         lineHeights: { display: '1.08', heading: '1.2', body: '1.6', dense: '1.4' },
       },
       color: {
-        strategy: '中性色承担约 90% 画面；单一强调色只用于当前状态、主要动作和必要高亮；语义色保持独立。',
+        strategy: 'Preset token 只是无品牌时的 fallback。优先 docs/design-system.* 与明确品牌色，禁止把 storytelling 低饱和米灰/锈铜当作品牌。无品牌时用近白画布、近黑正文、高对比主按钮；强调色只用于主动作，不要铺满标题。',
         tokens: { ...preset.palette },
         accentUsage: '同一屏最多一个高权重强调区域；禁止把强调色铺满卡片、图标和标题。',
       },
@@ -302,7 +328,9 @@ export function buildVisualDirectionContract(request: VisualDirectionRequest): V
         },
       },
       imagery: preset.imagery,
-      motion: '只动画状态变化、层级进入和直接操作反馈；150-240ms ease-out，并提供 reduced-motion 分支。',
+      motion: screenType === 'marketing-page'
+        ? '营销页必须有产品解释动效（可长于 300ms）与首屏进入（opacity + transform，scale>=0.9，ease-out）；只动 transform/opacity；工作台仍 150-240ms。提供 prefers-reduced-motion 减弱分支。'
+        : '只动画状态变化、层级进入和直接操作反馈；150-240ms ease-out，并提供 reduced-motion 分支。不要给正在阅读的数据加装饰动效。',
       spacing: {
         base: 4,
         scale: [4, 8, 12, 16, 24, 32, 48, 64, 96],
@@ -334,13 +362,47 @@ export function buildVisualDirectionContract(request: VisualDirectionRequest): V
         '命中全局或用户禁用项',
         '主要操作、状态或错误只靠颜色表达',
         '没有真实渲染截图或截图未覆盖关键页面',
+        ...slopBlockingFailures(),
       ],
     },
     artifacts: [
       { path: 'docs/design-system.json', purpose: '机器可读的视觉方向、Token、组件规则和验收标准。' },
       { path: 'docs/design-system.md', purpose: '供 Agent 与设计评审使用的精简视觉方向说明。' },
+      { path: UI_THEME_FILE, purpose: '实现必须引用的 CSS 变量，禁止另起默认主题当权威。' },
     ],
+    craft: {
+      source: UI_CRAFT_SOURCE,
+      tokensFile: UI_THEME_FILE,
+      motionPolicy: motionPolicyForScreen(screenType),
+      easings: { out: UI_EASE_OUT, inOut: UI_EASE_IN_OUT },
+      press: { scale: 0.97, durationMs: [100, 160] },
+      checks: CRAFT_CHECKS,
+      themeCss: '',
+    },
   };
+
+  const palette = resolvePromaxPalette({
+    productType,
+    description: request.description,
+    screenType,
+    fallbackTokens: contract.visualLanguage.color.tokens,
+    paletteCatalog: request.paletteCatalog,
+  });
+  contract.visualLanguage.color.tokens = palette.tokens;
+  contract.visualLanguage.color.catalogSource = palette.source;
+  contract.visualLanguage.color.catalogProductType = palette.productType;
+  if (palette.source === 'preset-fallback') {
+    contract.visualLanguage.color.strategy = 'Preset token 只是目录匹配失败时的 fallback。优先 docs/design-system.* 与明确品牌色。无品牌时用近白画布、近黑正文、高对比主按钮；强调色只用于主动作，不要铺满标题。';
+  } else {
+    contract.visualLanguage.color.strategy = `ui-ux-pro-max ${palette.source} · ${palette.productType}${palette.notes ? ` · ${palette.notes}` : ''}。布局与工艺仍走视觉方向契约与 Emil craft，不采用 styles/landing。优先项目已有 design-system 与明确品牌色。`;
+  }
+
+  contract.craft.themeCss = renderThemeCss({
+    tokens: contract.visualLanguage.color.tokens,
+    radius: contract.visualLanguage.shape.radius,
+    shadows: contract.visualLanguage.depth.shadows,
+    motionPolicy: contract.craft.motionPolicy,
+  });
 
   const explicit = String(request.visualDirection || '').trim();
   if (explicit && !VISUAL_DIRECTION_PRESETS[explicit.toLowerCase().replace(/\s+/g, '-')]) {
@@ -404,7 +466,7 @@ ${avoid}
 
 ## 交付标准
 
-必须生成 ${contract.acceptance.requiredViewports.join(' 和 ')} 真实截图，并按 7 个维度评分。低于 ${contract.acceptance.targetScore}/10 或命中阻断项，不得交付。
+必须先写入 ${contract.craft.tokensFile} 并让实现引用契约 token。源码 craft-audit 阻断项未通过不得进入视觉验收。必须生成 ${contract.acceptance.requiredViewports.join(' 和 ')} 真实截图，先判阻断再按 7 个维度评分。低于 ${contract.acceptance.targetScore}/10 或命中阻断项，不得交付。工艺条款派生自 Emil Kowalski skills（MIT），本工具内嵌门禁而非外部 Skill Bridge。
 
 只创建以下两份设计产物：
 ${contract.artifacts.map((item) => `- \`${item.path}\`：${item.purpose}`).join('\n')}`;

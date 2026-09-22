@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `start_ui` inlines craft gates and theme emission: Delegated Plan now includes `emit-theme` and `craft-audit`.
+- `start_ui` orchestrates only: color and visual direction come from `ui_design_system`; the orchestrator text no longer dictates a palette.
+- `ui_design_system` resolves color tokens from ui-ux-pro-max `colors.csv` (installed skill first, else bundled snapshot). Layout/craft stay on the visual-direction contract and Emil gates. Preset OKLCH palettes remain match-failure fallback only.
+- Default `ui_search` filters landing/marketing layouts unless the query or category explicitly requests a marketing page.
+
+### Added
+
+- Built-in `craft` contract on `ui_design_system` (checks, motion policy, generated theme CSS) with MIT attribution to Emil Kowalski skills as the wording source, not a vendored copy.
+
 ### Fixed
 
 - `tools-manifest.json` now advertises Current protocol `2026-07-28` and lists dual-era `supportedProtocols` (`2025-11-25`, `2026-07-28`) instead of freezing the Legacy revision.

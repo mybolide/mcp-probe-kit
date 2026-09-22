@@ -38,4 +38,10 @@ describe('skill-bridge authority boundary', () => {
     expect(section).toContain('禁止覆盖视觉方向、密度、配色、字体、禁用项和验收分数');
     expect(section.indexOf('interaction-design')).toBeLessThan(section.indexOf('ui-ux-pro-max'));
   });
+
+  it('start_ui 可将 Skill Bridge 降级为非计划步骤元数据', () => {
+    const section = renderSkillBridgeSection(status('start_ui'), { asPlanStep: false });
+    expect(section).toContain('Skill 元数据（非计划步骤）');
+    expect(section).toContain('不进入 Delegated Plan');
+  });
 });

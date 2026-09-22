@@ -15,12 +15,6 @@ import {
   renderDelegatedPlanStateProtocol,
   renderDelegatedPlanSteps,
 } from "../lib/delegated-plan-renderer.js";
-import {
-  buildSkillBridgePlanStep,
-  buildSkillHeaderNote,
-  detectSkillBridge,
-  renderSkillBridgeSection,
-} from "../lib/skill-bridge.js";
 import { UIReportSchema, RequirementsLoopSchema } from "../schemas/structured-output.js";
 import type { RequirementsLoopReport } from "../schemas/structured-output.js";
 import {
@@ -29,12 +23,10 @@ import {
   type ToolExecutionContext,
 } from "../lib/tool-execution-context.js";
 import {
-  loadMemoryInjectionContext,
-  renderMemoryGuideSection,
   buildOrchestrationHandles,
 } from "../lib/memory-orchestration.js";
 import { buildUiPlan } from "./start-ui-plan.js";
-import { buildUiReport } from "./start-ui-output.js";
+import { buildUiReport, omitPaletteFromVisualContract, renderUiAuthoritySection } from "./start-ui-output.js";
 import type { DelegatedPlanStep } from "../lib/delegated-plan-contract.js";
 import { buildUiQuestions } from "./start-ui-config.js";
 import { normalizeStartUiRequest } from "./start-ui-request.js";
@@ -70,24 +62,10 @@ export async function startUi(args: any, context?: ToolExecutionContext) {
 
     throwIfAborted(context?.signal, "start_ui 已取消");
     await reportToolProgress(context, 35, "start_ui: 参数解析完成");
-    const skillBridge = detectSkillBridge('start_ui');
-    const skillBridgeStep = buildSkillBridgePlanStep(skillBridge);
-    const skillBridgeSection = renderSkillBridgeSection(skillBridge);
-    headerNotes.push(buildSkillHeaderNote(skillBridge));
-
-    const memoryContext = await loadMemoryInjectionContext(description || templateName, 'ui');
-    const memoryGuideSection = renderMemoryGuideSection(memoryContext);
-    // 记忆优先：先复用历史 UI 资产/模式并规避历史 UI 坑，再进入设计与渲染
-    const memoryRecallStep = memoryContext.enabled
-      ? [{
-          id: 'recall-memory',
-          tool: 'search_memory',
-          when: '开干前（下方「历史经验与坑」已自动注入相似 UI 资产与坑；需要更多时再调）',
-          args: { query: description || templateName, limit: 5 },
-          outputs: [],
-          note: '先复用历史可复用 UI 组件/布局/交互模式，并规避历史 UI 坑（交互/兼容性/可访问性）',
-        }]
-      : [];
+    const authoritySection = renderUiAuthoritySection({
+      motionPolicy: visualContract.craft.motionPolicy,
+      screenType: visualContract.objective.screenType,
+    });
 
     // requirements loop 模式
     if (requirementsMode === "loop") {
@@ -167,9 +145,8 @@ start_ui <描述> --requirements_mode=loop
         visualContract,
         reviewMaxRounds,
         designSystemArgs,
-        memoryEnabled: memoryContext.enabled,
-        memoryRecallSteps: memoryRecallStep as DelegatedPlanStep[],
-        skillBridgeStep: skillBridgeStep as DelegatedPlanStep,
+        memoryEnabled: false,
+        memoryRecallSteps: [],
         requirementSteps,
       });
 
@@ -182,11 +159,11 @@ start_ui <描述> --requirements_mode=loop
         ],
         notes: [
           ...headerNotes,
-          ...(memoryContext.enabled ? ['记忆优先: 已自动注入相似历史 UI 资产与坑（见顶部），先复用并规避同类坑；再决定是否沉淀'] : []),
+          '唯一依据: 现有页面与 design-system + 内嵌 craft；不调用外部 UI Skill',
         ],
       });
 
-      const guide = `${header}${memoryGuideSection}${skillBridgeSection}
+      const guide = `${header}${authoritySection}
 # 快速开始
 
 ## 职责说明
@@ -237,7 +214,7 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
         metadata: {
           plan,
           template: templateMeta,
-          visualDirection: visualContract,
+          visualDirection: omitPaletteFromVisualContract(visualContract),
           reviewPolicy: {
             maxRounds: reviewMaxRounds,
             targetScore: visualContract.acceptance.targetScore,
@@ -245,7 +222,7 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
             dimensions: visualContract.acceptance.dimensions,
             blockingFailures: visualContract.acceptance.blockingFailures,
           },
-          skills: skillBridge,
+          skills: { policy: 'inline-craft-only', externalSkills: [] },
         },
       };
 
@@ -253,7 +230,7 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
 
       return okStructured(
         guide,
-        attachHandles(loopReport, buildOrchestrationHandles(memoryContext)),
+        attachHandles(loopReport, buildOrchestrationHandles()),
         {
           schema: RequirementsLoopSchema,
           note: 'AI 应逐轮补齐 UI 需求；支持 elicitation 时由 Host 收集，否则使用原生对话，再执行结构化 UI 计划',
@@ -279,9 +256,8 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
         visualContract,
         reviewMaxRounds,
         designSystemArgs,
-        memoryEnabled: memoryContext.enabled,
-        memoryRecallSteps: memoryRecallStep as DelegatedPlanStep[],
-        skillBridgeStep: skillBridgeStep as DelegatedPlanStep,
+        memoryEnabled: false,
+        memoryRecallSteps: [],
       });
 
       const header = renderOrchestrationHeader({
@@ -293,11 +269,11 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
         ],
         notes: [
           ...headerNotes,
-          ...(memoryContext.enabled ? ['记忆优先: 已自动注入相似历史 UI 资产与坑（见顶部），先复用并规避同类坑'] : []),
+          '唯一依据: 现有页面与 design-system + 内嵌 craft；不调用外部 UI Skill',
         ],
       });
 
-      const smartPlan = `${header}${memoryGuideSection}${skillBridgeSection}
+      const smartPlan = `${header}${authoritySection}
 # 快速开始
 
 ## 职责说明
@@ -333,14 +309,13 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
         visualContract,
         reviewMaxRounds,
         templateMeta,
-        skillBridge,
       });
 
       await reportToolProgress(context, 95, "start_ui: auto 输出已生成");
 
       return okStructured(
         smartPlan,
-        attachHandles(uiReport, buildOrchestrationHandles(memoryContext)),
+        attachHandles(uiReport, buildOrchestrationHandles()),
         {
           schema: UIReportSchema,
           note: 'AI 应该按照智能计划执行步骤，并在每个步骤完成后更新 structuredContent',
@@ -386,7 +361,7 @@ start_ui "设置页面" --framework=react
       ],
       notes: [
         ...headerNotes,
-        ...(memoryContext.enabled ? ['记忆增强：已注入相关历史 UI 资产候选'] : []),
+        '唯一依据: 现有页面与 design-system + 内嵌 craft；不调用外部 UI Skill',
       ],
     });
 
@@ -400,12 +375,11 @@ start_ui "设置页面" --framework=react
       visualContract,
       reviewMaxRounds,
       designSystemArgs,
-      memoryEnabled: memoryContext.enabled,
-      memoryRecallSteps: memoryRecallStep as DelegatedPlanStep[],
-      skillBridgeStep: skillBridgeStep as DelegatedPlanStep,
+      memoryEnabled: false,
+      memoryRecallSteps: [],
     });
 
-    const guide = `${header}${memoryGuideSection}${skillBridgeSection}
+    const guide = `${header}${authoritySection}
 # 快速开始
 
 ## 职责说明
@@ -444,14 +418,13 @@ ${renderDelegatedPlanSteps(plan.steps)}`;
       visualContract,
       reviewMaxRounds,
       templateMeta,
-      skillBridge,
     });
 
     await reportToolProgress(context, 95, "start_ui: manual 输出已生成");
 
     return okStructured(
       guide,
-      attachHandles(uiReport, buildOrchestrationHandles(memoryContext)),
+        attachHandles(uiReport, buildOrchestrationHandles()),
       {
         schema: UIReportSchema,
         note: 'AI 应该按照指南执行步骤，并在每个步骤完成后更新 structuredContent',

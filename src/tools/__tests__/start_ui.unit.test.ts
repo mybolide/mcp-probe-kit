@@ -217,6 +217,7 @@ describe('start_ui 单元测试', () => {
         'review',
       ]);
       expect(plan.qualityGates).toEqual(expect.arrayContaining([
+        'ui-craft-source-audit',
         'ui-visual-acceptance',
         'ui-responsive-acceptance',
         'ui-state-coverage',
@@ -224,6 +225,8 @@ describe('start_ui 单元测试', () => {
         'ui-code-review',
       ]));
       expect(ids).toEqual(expect.arrayContaining([
+        'emit-theme',
+        'craft-audit',
         'render',
         'capture-desktop',
         'capture-mobile',
@@ -234,9 +237,38 @@ describe('start_ui 单元测试', () => {
         'architecture-drift',
         'update-context',
       ]));
+      expect(ids).not.toContain('skill-bridge');
+      expect(ids).not.toContain('recall-memory');
+      expect(result.content[0].text).toContain('唯一依据');
+      expect(result.content[0].text).toContain('内嵌动效');
+      expect(result.content[0].text).not.toMatch(/Skill Bridge|历史经验与坑/);
+      expect((result as any).structuredContent.metadata.skills.policy).toBe('inline-craft-only');
       expect(result.content[0].text).toContain('plan_heartbeat');
       expect(result.content[0].text).toContain('resume_plan');
       expect(result.content[0].text).toContain('converge');
+    });
+
+    test('营销页内嵌解释动效与全宽 bleed，仍禁止外部 Skill', async () => {
+      const result = await startUi({
+        description: '智能戒指品牌官网',
+        framework: 'html',
+        mode: 'manual',
+        screen_type: 'marketing-page',
+      });
+      const text = result.content[0].text;
+      expect(text).toContain('全宽 bleed');
+      expect(text).toContain('Explanation');
+      expect(text).toContain('ui_design_system');
+      expect(text).toContain('不另定色盘');
+      expect(text).toContain('ui_design_system.craft.themeCss');
+      expect((result as any).structuredContent.designSystem.colors).toEqual({ source: 'ui_design_system' });
+      expect(text).not.toMatch(/锈铜|米灰|近黑正文/);
+      expect(text).toContain('cubic-bezier(0.23, 1, 0.32, 1)');
+      expect(text).toContain('不要调用外部 UI Skill');
+      expect((result as any).structuredContent.metadata.skills.policy).toBe('inline-craft-only');
+      expect((result as any).structuredContent.metadata.visualDirection.visualLanguage.motion).toMatch(/解释动效/);
+      const designStep = (result as any).structuredContent.metadata.plan.steps.find((s: any) => s.id === 'design-system');
+      expect(designStep.tool).toBe('ui_design_system');
     });
 
     test('UI 步骤依赖、验收门禁和报告摘要来自同一计划', async () => {
@@ -251,10 +283,12 @@ describe('start_ui 单元测试', () => {
         plan.steps.map((step: any) => [step.id, step] as [string, any]),
       );
 
-      expect(byId.get('context').dependsOn).toHaveLength(1);
+      expect(byId.get('context').dependsOn).not.toContain('skill-bridge');
+      expect(byId.has('skill-bridge')).toBe(false);
       expect(byId.get('structure').dependsOn).toEqual(['catalog']);
-      expect(byId.get('render').dependsOn).toEqual(['save-structure']);
-      expect(byId.get('visual-review').dependsOn).toEqual(['capture-desktop', 'capture-mobile']);
+      expect(byId.get('emit-theme').dependsOn).toEqual(['catalog']);
+      expect(byId.get('render').dependsOn).toEqual(['save-structure', 'emit-theme']);
+      expect(byId.get('visual-review').dependsOn).toEqual(['capture-desktop', 'capture-mobile', 'craft-audit']);
       expect(byId.get('state-acceptance').dependsOn).toEqual(['visual-acceptance']);
       expect(byId.get('test').dependsOn).toEqual(['state-acceptance']);
       expect(byId.get('review')).toMatchObject({
@@ -302,7 +336,10 @@ describe('start_ui 单元测试', () => {
         density: 'compact',
         target_score: 8.8,
       });
-      expect(structured.designSystem.colors.accent).toMatch(/^oklch\(/);
+      expect(structured.designSystem.colors).toEqual({ source: 'ui_design_system' });
+      expect(structured.designSystem.typography).toEqual({ source: 'ui_design_system' });
+      expect(structured.metadata.visualDirection.craft.themeCss).toBe('');
+      expect(structured.metadata.visualDirection.visualLanguage.color.tokens.accent).toBe('');
       expect(structured.metadata.reviewPolicy).toMatchObject({
         maxRounds: 3,
         targetScore: 8.8,

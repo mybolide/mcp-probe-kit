@@ -121,7 +121,10 @@ export function buildSkillBridgePlanStep(status: SkillBridgeStatus) {
   };
 }
 
-export function renderSkillBridgeSection(status: SkillBridgeStatus): string {
+export function renderSkillBridgeSection(
+  status: SkillBridgeStatus,
+  options?: { asPlanStep?: boolean },
+): string {
   const orderLines = status.skills
     .map((item, index) => `${index + 1}. \`${item.name}\` - ${item.role}`)
     .join("\n");
@@ -134,9 +137,15 @@ export function renderSkillBridgeSection(status: SkillBridgeStatus): string {
     ? "全部 skill 可用，但视觉方向契约与产品约束始终拥有最高优先级。"
     : "部分 skill 缺失：继续执行 MCP 主流程，不阻塞；不得降低视觉方向和验收标准。";
 
-  return `## Skill Bridge（受控增强）
+  const heading = options?.asPlanStep === false
+    ? `## Skill 元数据（非计划步骤）
 
-调用边界：先锁定主契约，再按顺序调用可用 Skill。Skill 只补充交互、实现与结构参考，禁止覆盖视觉方向、密度、配色、字体、禁用项和验收分数。
+工艺门禁已内嵌到 start_ui。以下 Skill 仅可选补充，不进入 Delegated Plan。Skill 只补充交互、实现与结构参考，禁止覆盖视觉方向、密度、配色、字体、禁用项和验收分数。`
+    : `## Skill Bridge（受控增强）
+
+调用边界：先锁定主契约，再按顺序调用可用 Skill。Skill 只补充交互、实现与结构参考，禁止覆盖视觉方向、密度、配色、字体、禁用项和验收分数。`;
+
+  return `${heading}
 
 ${orderLines}
 

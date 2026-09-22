@@ -113,6 +113,51 @@ export const DesignSystemSchema = {
         required: ['path', 'purpose'],
       },
     },
+    craft: {
+      type: 'object',
+      description: 'Built-in start_ui craft gates and generated theme CSS.',
+      properties: {
+        source: { type: 'string' },
+        tokensFile: { type: 'string' },
+        motionPolicy: { type: 'string', enum: ['none', 'minimal', 'expressive'] },
+        easings: {
+          type: 'object',
+          properties: {
+            out: { type: 'string' },
+            inOut: { type: 'string' },
+          },
+          required: ['out', 'inOut'],
+        },
+        press: {
+          type: 'object',
+          properties: {
+            scale: { type: 'number' },
+            durationMs: {
+              type: 'array',
+              items: { type: 'number' },
+              minItems: 2,
+              maxItems: 2,
+            },
+          },
+          required: ['scale', 'durationMs'],
+        },
+        checks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              severity: { type: 'string', enum: ['block', 'warn'] },
+              how: { type: 'string', enum: ['source', 'screenshot', 'both'] },
+              rule: { type: 'string' },
+            },
+            required: ['id', 'severity', 'how', 'rule'],
+          },
+        },
+        themeCss: { type: 'string' },
+      },
+      required: ['source', 'tokensFile', 'motionPolicy', 'easings', 'press', 'checks', 'themeCss'],
+    },
     colors: {
       type: 'object',
       description: 'Backward-compatible color token view.',
@@ -374,6 +419,20 @@ export interface DesignSystem {
     blockingFailures: string[];
   };
   artifacts: Array<{ path: string; purpose: string }>;
+  craft: {
+    source: string;
+    tokensFile: string;
+    motionPolicy: 'none' | 'minimal' | 'expressive';
+    easings: { out: string; inOut: string };
+    press: { scale: number; durationMs: [number, number] };
+    checks: Array<{
+      id: string;
+      severity: 'block' | 'warn';
+      how: 'source' | 'screenshot' | 'both';
+      rule: string;
+    }>;
+    themeCss: string;
+  };
   colors: {
     primary?: Record<string, string>;
     secondary?: Record<string, string>;

@@ -40,10 +40,23 @@ describe('ui_search style policy', () => {
     if (!('structuredContent' in result)) throw new Error('structuredContent 缺失');
     const structured = result.structuredContent as any;
     expect(structured.stylePolicy.explicitStyleRequest).toBe(true);
-    expect(structured.stylePolicy.filteredCount).toBe(0);
     expect(JSON.stringify(structured.results)).toMatch(/Glassmorphism/i);
     const text = String(result.content[0].text);
     expect(text).toContain('结果仅作为参考');
     expect(text).toContain('不得作为默认生产方向');
+  });
+
+  test('默认搜索不返回落地页布局，明确官网意图时保留', async () => {
+    const defaultSearch = await uiSearch({ query: 'dashboard table form', limit: 20 });
+    expect(defaultSearch.isError ?? false).toBe(false);
+    const defaultStructured = (defaultSearch as any).structuredContent;
+    const defaultCategories = JSON.stringify(defaultStructured.results.map((item: any) => item.category));
+    expect(defaultCategories).not.toMatch(/landing/i);
+
+    const landingSearch = await uiSearch({ query: 'landing page hero', category: 'landing', limit: 5 });
+    expect(landingSearch.isError ?? false).toBe(false);
+    const landingStructured = (landingSearch as any).structuredContent;
+    expect(landingStructured.totalResults).toBeGreaterThan(0);
+    expect(JSON.stringify(landingStructured.results.map((item: any) => item.category))).toMatch(/landing/i);
   });
 });

@@ -14,6 +14,7 @@ import type { DesignSystem, UISearchResult, SyncReport } from '../schemas/output
 import { buildVisualDirectionContract, renderVisualDirectionBrief } from '../utils/visual-direction-engine.js';
 import { searchUiStructures } from '../utils/ui-structure-search.js';
 import { applyUiSearchStylePolicy } from '../utils/ui-search-style-policy.js';
+import { filterLandingLayoutResults } from '../utils/ui-craft.js';
 import {
   reportToolProgress,
   throwIfAborted,
@@ -479,8 +480,19 @@ start_ui "设置页面"
     };
 
     const rawResults = searchEngine.search(query, options);
-    const stylePolicy = applyUiSearchStylePolicy(query, rawResults, requestedLimit);
+    const landingPolicy = filterLandingLayoutResults(rawResults, {
+      query,
+      category: args.category,
+    });
+    const stylePolicy = applyUiSearchStylePolicy(query, landingPolicy.results, requestedLimit);
     const results = stylePolicy.results;
+    const combinedFilteredCount = stylePolicy.filteredCount + landingPolicy.filteredCount;
+    const combinedAdvisory = [
+      landingPolicy.filteredCount > 0
+        ? '已过滤默认搜索中的落地页/营销页布局；仅在明确营销或官网意图时返回。'
+        : undefined,
+      stylePolicy.advisory,
+    ].filter(Boolean).join(' ');
 
     if (results.length === 0) {
       const noResultData: UISearchResult = {
@@ -491,8 +503,8 @@ start_ui "设置页面"
         totalResults: 0,
         stylePolicy: {
           explicitStyleRequest: stylePolicy.explicitStyleRequest,
-          filteredCount: stylePolicy.filteredCount,
-          advisory: stylePolicy.advisory,
+          filteredCount: combinedFilteredCount,
+          advisory: combinedAdvisory || undefined,
         },
       };
       
@@ -507,7 +519,7 @@ start_ui "设置页面"
 1. 尝试使用更通用的关键词
 2. 检查拼写是否正确
 3. 移除类别或技术栈限制
-${stylePolicy.advisory ? `\n**设计约束:** ${stylePolicy.advisory}\n` : ''}
+${combinedAdvisory ? `\n**设计约束:** ${combinedAdvisory}\n` : ''}
 `, noResultData, {
         schema: (await import('../schemas/output/ui-ux-tools.js')).UISearchResultSchema,
       });
@@ -562,7 +574,7 @@ ${fields}
 - 查询: ${query}
 - 类别: ${options.category || '全部'}
 - 技术栈: ${options.stack || '全部'}
-${stylePolicy.advisory ? `- 设计约束: ${stylePolicy.advisory}\r\n` : ''}
+${combinedAdvisory ? `- 设计约束: ${combinedAdvisory}\r\n` : ''}
 
 ---
 
@@ -590,8 +602,8 @@ ${formattedResults}
       totalResults: results.length,
       stylePolicy: {
         explicitStyleRequest: stylePolicy.explicitStyleRequest,
-        filteredCount: stylePolicy.filteredCount,
-        advisory: stylePolicy.advisory,
+        filteredCount: combinedFilteredCount,
+        advisory: combinedAdvisory || undefined,
       },
     };
 

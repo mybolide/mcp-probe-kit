@@ -21,7 +21,6 @@ export interface BuildUiPlanInput {
   designSystemArgs: Record<string, unknown>;
   memoryEnabled: boolean;
   memoryRecallSteps: DelegatedPlanStep[];
-  skillBridgeStep: DelegatedPlanStep;
   requirementSteps?: DelegatedPlanStep[];
 }
 
@@ -77,11 +76,19 @@ function buildUiDeliverySteps(input: BuildUiPlanInput): DelegatedPlanStep[] {
   const desktopScreenshot = `${reviewRoot}/desktop-1440x900.png`;
   const mobileScreenshot = `${reviewRoot}/mobile-390x844.png`;
   const reviewReport = `${reviewRoot}/visual-review.json`;
-  const renderDependency = isShadcnStack(framework)
-    ? 'shadcn-components'
-    : 'save-structure';
 
   return [
+    {
+      id: 'emit-theme',
+      type: 'agent_action',
+      action: 'write_design_system_theme',
+      dependsOn: ['catalog'],
+      requiredInputs: ['docs/design-system.json', 'ui_design_system.craft.themeCss'],
+      expectedOutputs: [visualContract.craft.tokensFile],
+      completionEvidence: ['theme 文件内容与 ui_design_system 返回的 token 一致'],
+      outputs: [visualContract.craft.tokensFile],
+      note: 'themeCss 只认 ui_design_system 返回值；start_ui 不预览、不定色盘。必须落盘 CSS 变量；实现不得另起默认 Inter 或 shadcn 主色',
+    },
     {
       id: 'structure',
       type: 'tool',
@@ -115,7 +122,7 @@ function buildUiDeliverySteps(input: BuildUiPlanInput): DelegatedPlanStep[] {
       id: 'render',
       type: 'agent_action',
       action: 'implement_key_ui_screen',
-      dependsOn: [renderDependency],
+      dependsOn: isShadcnStack(framework) ? ['shadcn-components', 'emit-theme'] : ['save-structure', 'emit-theme'],
       requiredInputs: [
         'docs/design-system.json',
         'docs/ui/page-structure.json',
@@ -125,7 +132,7 @@ function buildUiDeliverySteps(input: BuildUiPlanInput): DelegatedPlanStep[] {
       expectedOutputs: ['可运行的关键页面代码、必要交互和状态实现'],
       completionEvidence: ['实际变更文件', '页面能够在目标项目中启动并访问'],
       outputs: [],
-      note: '先完成一个关键页面，不得先批量复制到全部页面',
+      note: '对齐当前项目已有页面的分区与密度；必须引用 design-system.theme.css；营销页按内嵌动效 playbook 做全宽 bleed 与至少一处解释动效，不得只交静止窄栏',
     },
     {
       id: 'capture-desktop',
@@ -137,6 +144,21 @@ function buildUiDeliverySteps(input: BuildUiPlanInput): DelegatedPlanStep[] {
       completionEvidence: ['截图来自本轮真实构建和运行结果'],
       outputs: [desktopScreenshot],
       note: '必须截取真实渲染结果，不接受设计稿、代码推断或历史截图',
+    },
+    {
+      id: 'craft-audit',
+      type: 'agent_action',
+      action: 'audit_ui_craft_gates',
+      dependsOn: ['render'],
+      requiredInputs: [
+        '关键页面源码',
+        'docs/design-system.json craft.checks',
+        visualContract.craft.tokensFile,
+      ],
+      expectedOutputs: ['artifacts/ui-review craft-audit.json'],
+      completionEvidence: ['源码阻断项已记录；未通过不得进入 visual-acceptance'],
+      outputs: [`artifacts/ui-review/${templateName}/craft-audit.json`],
+      note: '对 transition:all、Inter、press 态、scale(0)、ease-in 做源码审计；截图项并入 visual-review',
     },
     {
       id: 'capture-mobile',
@@ -153,7 +175,7 @@ function buildUiDeliverySteps(input: BuildUiPlanInput): DelegatedPlanStep[] {
       id: 'visual-review',
       type: 'agent_action',
       action: 'score_ui_screenshots',
-      dependsOn: ['capture-desktop', 'capture-mobile'],
+      dependsOn: ['capture-desktop', 'capture-mobile', 'craft-audit'],
       requiredInputs: [
         desktopScreenshot,
         mobileScreenshot,
@@ -268,15 +290,8 @@ export function buildUiPlan(input: BuildUiPlanInput): DelegatedPlanContract {
   const projectRoot = input.projectRoot.replace(/\\/g, '/');
   const recallSteps = chainSteps(input.memoryRecallSteps);
   const lastRecallId = recallSteps.at(-1)?.id;
-  const skillBridgeStep = lastRecallId
-    && (!input.skillBridgeStep.dependsOn || input.skillBridgeStep.dependsOn.length === 0)
-    ? { ...input.skillBridgeStep, dependsOn: [lastRecallId] }
-    : { ...input.skillBridgeStep };
-  const requirementSteps = chainSteps(
-    input.requirementSteps ?? [],
-    skillBridgeStep.id,
-  );
-  const contextDependency = requirementSteps.at(-1)?.id ?? skillBridgeStep.id;
+  const requirementSteps = chainSteps(input.requirementSteps ?? [], lastRecallId);
+  const contextDependency = requirementSteps.at(-1)?.id ?? lastRecallId;
   const memoryPreparation = input.memoryEnabled
     ? [{
         ...buildMemoryPlanStep('ui'),
@@ -304,7 +319,8 @@ export function buildUiPlan(input: BuildUiPlanInput): DelegatedPlanContract {
       'Agent 必须按 metadata.plan.steps 顺序执行真实文件、代码、运行、截图、测试和审查操作',
       '首次执行前用完整 plan 建立 plan_heartbeat；每完成、跳过或阻断一步立即累计回写',
       '不得把计划、设计稿或历史截图当作本轮真实实现与验收证据',
-      '视觉验收、交互状态验收、测试和代码审查缺一不可',
+      '只采用当前项目已有设计规范与内嵌 craft 门禁/动效 playbook；禁止调用外部 UI Skill',
+      '源码 craft-audit 阻断项未通过不得视觉验收',
       '使用过 architecture 时必须完成 validate 或 drift；不适用时写明跳过理由',
     ],
     completionCriteria: [
@@ -316,6 +332,7 @@ export function buildUiPlan(input: BuildUiPlanInput): DelegatedPlanContract {
       '所有步骤、证据、验收结果和 revision 已通过 plan_heartbeat 写入检查点',
     ],
     qualityGates: [
+      'ui-craft-source-audit',
       'ui-visual-acceptance',
       'ui-responsive-acceptance',
       'ui-state-coverage',
@@ -328,13 +345,12 @@ export function buildUiPlan(input: BuildUiPlanInput): DelegatedPlanContract {
     },
     steps: [
       ...recallSteps,
-      skillBridgeStep,
       ...requirementSteps,
       {
         id: 'context',
         type: 'tool',
         tool: 'init_project_context',
-        dependsOn: [contextDependency],
+        dependsOn: contextDependency ? [contextDependency] : [],
         when: '缺少 docs/project-context.md',
         args: { project_root: projectRoot },
         expectedOutputs: ['docs/project-context.md'],
@@ -349,6 +365,7 @@ export function buildUiPlan(input: BuildUiPlanInput): DelegatedPlanContract {
         args: input.designSystemArgs,
         expectedOutputs: ['docs/design-system.json', 'docs/design-system.md'],
         outputs: ['docs/design-system.json', 'docs/design-system.md'],
+        note: '文件已存在则读取并沿用，不得用通用 Skill 或默认主题覆盖当前页面规范',
       },
       {
         id: 'catalog',
