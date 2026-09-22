@@ -138,8 +138,7 @@ async function auditMemoryTools(connection, visible, projectRoot) {
     type: 'pattern',
     description: 'Contract audit fixture',
     summary: 'Validated reusable audit fixture',
-    content: 'Use contract audit fixtures to validate model-visible tool closure.',
-    source_project: 'audit/project',
+    content: 'Use contract audit fixtures to validate model-visible tool closure.\n\n【来源参考】audit/project',
     confidence: 0.9,
     tags: ['audit', 'contract'],
   }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });

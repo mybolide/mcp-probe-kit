@@ -450,8 +450,9 @@ async function runMemoryBatch(config, projectRoot) {
     calls: [
       ['memorize_asset', {
         name: 'Real Agent audit memory', type: 'pattern', description: 'Real Agent contract fixture',
-        summary: 'Validated Agent-readable MCP tool response', content: 'Use symmetric text and structured MCP responses.',
-        source_project: 'agent/audit', confidence: 0.9, tags: ['agent-audit'],
+        summary: 'Validated Agent-readable MCP tool response',
+        content: 'Use symmetric text and structured MCP responses.\n\n【来源参考】agent/audit',
+        confidence: 0.9, tags: ['agent-audit'],
       }],
       ['search_memory', { query: 'Agent audit memory', limit: 5 }],
       ['read_memory_asset', { asset_id: '<use-id-from-memorize-result>' }],
