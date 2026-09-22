@@ -662,7 +662,7 @@
     "subtitle": "五个原生 App 把计划、记忆、产品交付和证据闸门带进支持 MCP Apps 的客户端。",
     "badge": "v4.0.2 · 真实 App 源码演示",
     "howTitle": "如何使用",
-    "how1": "在支持 io.modelcontextprotocol/ui 的客户端中配置 mcp-probe-kit@4.0.0。",
+    "how1": "在支持 io.modelcontextprotocol/ui 的客户端中配置 mcp-probe-kit@4.0.2。",
     "how2": "正常调用 start_feature、start_bugfix、start_product、converge 或 Memory 工具。",
     "how3": "Host 协商成功后自动打开对应工作台；不支持 Apps 的客户端仍收到文本和 structuredContent。",
     "featureTitle": "Feature Workbench",

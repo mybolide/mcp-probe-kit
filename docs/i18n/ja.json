@@ -638,7 +638,7 @@
     "subtitle": "5つのAppが計画、記憶、製品引き継ぎ、証拠ゲートを対応クライアントへ提供します。",
     "badge": "v4.0.2・実Appソースから生成したデモ",
     "howTitle": "使い方",
-    "how1": "io.modelcontextprotocol/ui 対応クライアントに mcp-probe-kit@4.0.0 を設定します。",
+    "how1": "io.modelcontextprotocol/ui 対応クライアントに mcp-probe-kit@4.0.2 を設定します。",
     "how2": "start_feature、start_bugfix、start_product、converge、Memoryツールを通常通り呼び出します。",
     "how3": "交渉成功後に対応UIが自動表示され、非対応クライアントはtextとstructuredContentを受け取ります。",
     "featureTitle": "Feature Workbench",

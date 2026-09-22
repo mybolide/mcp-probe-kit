@@ -662,7 +662,7 @@
     "subtitle": "Five Apps bring plans, memory, product handoff, and evidence gates into MCP Apps-capable clients.",
     "badge": "v4.0.2 · demos built from the real App source",
     "howTitle": "How to use them",
-    "how1": "Configure mcp-probe-kit@4.0.0 in a client that supports io.modelcontextprotocol/ui.",
+    "how1": "Configure mcp-probe-kit@4.0.2 in a client that supports io.modelcontextprotocol/ui.",
     "how2": "Call start_feature, start_bugfix, start_product, converge, or a Memory tool normally.",
     "how3": "After capability negotiation the matching workbench opens automatically; non-App clients still receive text and structuredContent.",
     "featureTitle": "Feature Workbench",

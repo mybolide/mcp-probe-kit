@@ -638,7 +638,7 @@
     "subtitle": "5개 App이 계획, 메모리, 제품 인계, 증거 게이트를 MCP Apps 지원 클라이언트에 제공합니다.",
     "badge": "v4.0.2 · 실제 App 소스로 만든 데모",
     "howTitle": "사용 방법",
-    "how1": "io.modelcontextprotocol/ui 지원 클라이언트에 mcp-probe-kit@4.0.0을 설정합니다.",
+    "how1": "io.modelcontextprotocol/ui 지원 클라이언트에 mcp-probe-kit@4.0.2을 설정합니다.",
     "how2": "start_feature, start_bugfix, start_product, converge 또는 Memory 도구를 평소처럼 호출합니다.",
     "how3": "기능 협상 후 해당 워크벤치가 자동으로 열리며, 미지원 클라이언트는 text와 structuredContent를 계속 받습니다.",
     "featureTitle": "Feature Workbench",
