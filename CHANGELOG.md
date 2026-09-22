@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.3-rc.1] - 2026-09-22
+
+### Changed
+
+- npm package contents are now the self-contained `build/index.js` bundle plus `build/resources/ui-ux-data`. TypeScript emit (`.js` / `.d.ts` module tree) is no longer published.
+- MCP SDK and `zod` remain inlined in the bundle. This RC does not change protocol or SDK versions.
+
+---
+
 ## [4.0.2] - 2026-09-22
 
 ### Changed

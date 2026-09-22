@@ -112,7 +112,7 @@ function createFixture(options: {
     devDependencies: {
       '@modelcontextprotocol/ext-apps': '1.7.2',
     },
-    files: ['build', 'README.md', 'LICENSE'],
+    files: ['build/index.js', 'build/resources/ui-ux-data', 'README.md', 'LICENSE'],
     scripts: {
       'clean:build': options.omitBuildClean ? undefined : 'node scripts/clean-build.mjs',
       prebuild: options.omitBuildClean ? 'npm run sync-version' : 'npm run clean:build && npm run sync-version',

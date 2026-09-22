@@ -231,7 +231,7 @@ export function verifyReleaseReadiness(
     'Workflow 工具集必须暴露计划状态、恢复和收敛工具'
   ));
 
-  const requiredPackageFiles = ['build', 'README.md', 'LICENSE'];
+  const requiredPackageFiles = ['build/index.js', 'build/resources/ui-ux-data', 'README.md', 'LICENSE'];
   checks.push(check(
     'package-files',
     requiredPackageFiles.every((item) => packageJson.files?.includes(item)),

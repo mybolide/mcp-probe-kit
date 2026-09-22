@@ -39,7 +39,7 @@ try {
     file: tarballPath,
     prefix: 'package/',
     portable: true,
-  }, ['package.json', 'README.md', 'LICENSE', 'build']);
+  }, ['package.json', 'README.md', 'LICENSE', 'build/index.js', 'build/resources/ui-ux-data']);
   const stagedBuild = await fingerprintFile(join(stagingDir, 'build', 'index.js'));
   assert(
     stagedBuild.sha256 === frozenBuild.sha256 && stagedBuild.size === frozenBuild.size,
@@ -88,6 +88,19 @@ try {
     !remainingRuntimeEntries.includes('@modelcontextprotocol'),
     'standalone smoke must run without installed MCP SDK dependencies'
   );
+  const installedRoot = join(consumerDir, 'node_modules', 'mcp-probe-kit');
+  try {
+    await stat(join(installedRoot, 'build', 'tools', 'start_ui.js'));
+    throw new Error('published package must not include tsc tool modules');
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+      throw error;
+    }
+    if (error instanceof Error && error.message === 'published package must not include tsc tool modules') {
+      throw error;
+    }
+  }
+  await stat(join(installedRoot, 'build', 'resources', 'ui-ux-data', 'promax-colors.csv'));
 
 
   const serverPath = join(
@@ -400,15 +413,11 @@ async function createFrozenPackageStaging(sourceRoot, destinationRoot) {
   for (const filename of ['package.json', 'README.md', 'LICENSE']) {
     await cp(join(sourceRoot, filename), join(destinationRoot, filename), { force: true });
   }
-  await cp(join(sourceRoot, 'build'), join(destinationRoot, 'build'), {
+  await mkdir(join(destinationRoot, 'build', 'resources'), { recursive: true });
+  await cp(join(sourceRoot, 'build', 'index.js'), join(destinationRoot, 'build', 'index.js'), { force: true });
+  await cp(join(sourceRoot, 'build', 'resources', 'ui-ux-data'), join(destinationRoot, 'build', 'resources', 'ui-ux-data'), {
     recursive: true,
     force: true,
-    filter: (source) => {
-      const normalized = source.replaceAll('\\', '/');
-      if (normalized.includes('/__tests__/')) return false;
-      if (/\.test\.(?:js|d\.ts)$/i.test(normalized)) return false;
-      return true;
-    },
   });
 }
 

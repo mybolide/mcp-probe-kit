@@ -6,12 +6,12 @@
     "url": "https://github.com/mybolide/mcp-probe-kit",
     "source": "github"
   },
-  "version": "4.0.2",
+  "version": "4.0.3-rc.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-probe-kit",
-      "version": "4.0.2",
+      "version": "4.0.3-rc.1",
       "transport": {
         "type": "stdio"
       }
