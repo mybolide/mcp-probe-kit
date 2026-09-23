@@ -1,11 +1,8 @@
 name: CI
 
+# Auto CI on push/PR is disabled. Run `npm test` / `npm run release:verify` locally.
 on:
-  push:
-    branches:
-      - main
-      - develop/v4
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

@@ -1,5 +1,5 @@
-# Manual republish to official MCP Registry (e.g. metadata fix without new tag).
-# Tag releases auto-publish via release.yml after npm publish.
+# Manual republish to official MCP Registry only (workflow_dispatch).
+# Tag/push no longer auto-publishes npm or MCP Registry.
 
 name: Publish MCP Registry
 

@@ -1,9 +1,8 @@
 name: Release
 
+# Auto tag/push publishing is disabled. Publish npm locally; GitHub Releases via gh.
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
