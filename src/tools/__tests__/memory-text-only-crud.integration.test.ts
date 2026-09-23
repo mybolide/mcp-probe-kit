@@ -12,7 +12,7 @@ vi.mock('../../lib/memory-client.js', () => ({
     upsertAsset: async (input: any) => {
       const now = '2026-08-01T00:00:00.000Z';
       const asset = {
-        id: 'text-only-asset-1',
+        id: '00000000-0000-4000-8000-000000000001',
         createdAt: now,
         updatedAt: now,
         status: 'active',
@@ -85,7 +85,7 @@ describe('Memory CRUD text-only host flow', () => {
     }));
 
     const assetId = parseAssetId(createdText);
-    expect(assetId).toBe('text-only-asset-1');
+    expect(assetId).toBe('00000000-0000-4000-8000-000000000001');
     expect(createdText).toContain(`read_memory_asset {"asset_id": "${assetId}"}`);
 
     const searchText = textResult(await searchMemory({ query: 'text-only-crud' }));
