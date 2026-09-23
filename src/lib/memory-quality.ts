@@ -79,6 +79,20 @@ export function parseMemoryConflictPolicy(value: unknown): MemoryConflictPolicy 
   return normalized as MemoryConflictPolicy;
 }
 
+/** Qdrant point ids for Memory assets are UUIDs (see buildMemoryStorageId). */
+const MEMORY_ASSET_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isMemoryAssetId(value: string): boolean {
+  return MEMORY_ASSET_ID_RE.test(value.trim());
+}
+
+export function assertMemoryAssetId(assetId: string, fieldName = 'asset_id'): void {
+  if (!isMemoryAssetId(assetId)) {
+    throw new Error(`${fieldName} 必须是 UUID`);
+  }
+}
+
 export function normalizeMemoryProjectIdentity(value: string | undefined): string {
   return (value ?? '')
     .trim()

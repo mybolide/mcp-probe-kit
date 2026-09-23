@@ -229,7 +229,7 @@ Suitable for MCP memory and occasional writes; not for high-concurrency bulk ind
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "YOUR_QDRANT_API_KEY",

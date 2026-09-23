@@ -206,10 +206,12 @@ function atomicWriteFile(filePath: string, content: string): void {
   const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
   fs.writeFileSync(tempPath, content, "utf8");
   try {
-    fs.renameSync(tempPath, filePath);
-  } catch {
-    fs.rmSync(filePath, { force: true });
-    fs.renameSync(tempPath, filePath);
+    try {
+      fs.renameSync(tempPath, filePath);
+    } catch {
+      // Windows cannot rename over an existing file; copy then drop the temp.
+      fs.copyFileSync(tempPath, filePath);
+    }
   } finally {
     fs.rmSync(tempPath, { force: true });
   }
@@ -224,13 +226,23 @@ function ensureExecutable(filePath: string): void {
   }
 }
 
+export function unpublishedPinHint(version: string): string {
+  return (
+    `mcp-probe-kit CLI: npm could not resolve mcp-probe-kit@${version}. ` +
+    `If this exact version is unpublished, npm often reports ETARGET. Do not use @latest/@next or a global install. ` +
+    `Set MCP_PROBE_LOCAL_ENTRY to a local build/index.js, or use ` +
+    `.mcp-probe-kit/local-verify/node_modules/mcp-probe-kit or node_modules/mcp-probe-kit.`
+  );
+}
+
 function renderPowerShellWrapper(version: string, localSourceCheckout: boolean): string {
-  const localBranch = localSourceCheckout
+  const checkoutBranch = localSourceCheckout
     ? String.raw`} elseif (Test-Path -LiteralPath $LocalCheckoutEntry) {
   & node $LocalCheckoutEntry @ProbeArguments
   exit $LASTEXITCODE
 `
-    : '';
+    : "";
+  const hint = unpublishedPinHint(version).replace(/"/g, '`"');
   return `# ${CLI_VERSION_MARKER}: ${version}\n` + String.raw`param(
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]]$ProbeArguments
@@ -240,6 +252,8 @@ $ErrorActionPreference = "Stop"
 $PackageSpec = "mcp-probe-kit@${version}"
 $WrapperRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $LocalCheckoutEntry = Join-Path $WrapperRoot "build\index.js"
+$LocalVerifyEntry = Join-Path $WrapperRoot ".mcp-probe-kit\local-verify\node_modules\mcp-probe-kit\build\index.js"
+$NodeModulesEntry = Join-Path $WrapperRoot "node_modules\mcp-probe-kit\build\index.js"
 $CacheRoot = if ($env:MCP_PROBE_NPX_CACHE) {
   $env:MCP_PROBE_NPX_CACHE
 } elseif ($env:LOCALAPPDATA) {
@@ -251,21 +265,34 @@ $CacheRoot = if ($env:MCP_PROBE_NPX_CACHE) {
 if ($env:MCP_PROBE_LOCAL_ENTRY) {
   & node $env:MCP_PROBE_LOCAL_ENTRY @ProbeArguments
   exit $LASTEXITCODE
-${localBranch}} else {
-  & npx.cmd --yes --cache $CacheRoot $PackageSpec @ProbeArguments
+${checkoutBranch}} elseif (Test-Path -LiteralPath $LocalVerifyEntry) {
+  & node $LocalVerifyEntry @ProbeArguments
   exit $LASTEXITCODE
+} elseif (Test-Path -LiteralPath $NodeModulesEntry) {
+  & node $NodeModulesEntry @ProbeArguments
+  exit $LASTEXITCODE
+} else {
+  $env:NPM_CONFIG_FETCH_RETRIES = "0"
+  & npx.cmd --yes --cache $CacheRoot $PackageSpec @ProbeArguments
+  $ProbeExit = $LASTEXITCODE
+  if ($ProbeExit -ne 0) {
+    [Console]::Error.WriteLine("${hint}")
+  }
+  exit $ProbeExit
 }
 `;
 }
 
 function renderCmdWrapper(version: string, localSourceCheckout: boolean): string {
-  const localBranch = localSourceCheckout
+  const checkoutBranch = localSourceCheckout
     ? `) else if exist "%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js" (\r\n` +
-      `  call node "%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js" %*\r\n`
-    : '';
+      `  call node "%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js" %*\r\n` +
+      `  exit /b !ERRORLEVEL!\r\n`
+    : "";
+  const hint = unpublishedPinHint(version);
   return `@echo off\r\n` +
     `rem ${CLI_VERSION_MARKER}: ${version}\r\n` +
-    `setlocal\r\n` +
+    `setlocal EnableDelayedExpansion\r\n` +
     `for %%I in ("%~dp0..\\..") do set "MCP_PROBE_WRAPPER_ROOT=%%~fI"\r\n` +
     `if defined MCP_PROBE_NPX_CACHE (\r\n` +
     `  set "MCP_PROBE_CACHE=%MCP_PROBE_NPX_CACHE%"\r\n` +
@@ -274,20 +301,32 @@ function renderCmdWrapper(version: string, localSourceCheckout: boolean): string
     `)\r\n` +
     `if defined MCP_PROBE_LOCAL_ENTRY (\r\n` +
     `  call node "%MCP_PROBE_LOCAL_ENTRY%" %*\r\n` +
-    localBranch +
+    `  exit /b !ERRORLEVEL!\r\n` +
+    checkoutBranch +
+    `) else if exist "%MCP_PROBE_WRAPPER_ROOT%\\.mcp-probe-kit\\local-verify\\node_modules\\mcp-probe-kit\\build\\index.js" (\r\n` +
+    `  call node "%MCP_PROBE_WRAPPER_ROOT%\\.mcp-probe-kit\\local-verify\\node_modules\\mcp-probe-kit\\build\\index.js" %*\r\n` +
+    `  exit /b !ERRORLEVEL!\r\n` +
+    `) else if exist "%MCP_PROBE_WRAPPER_ROOT%\\node_modules\\mcp-probe-kit\\build\\index.js" (\r\n` +
+    `  call node "%MCP_PROBE_WRAPPER_ROOT%\\node_modules\\mcp-probe-kit\\build\\index.js" %*\r\n` +
+    `  exit /b !ERRORLEVEL!\r\n` +
     `) else (\r\n` +
+    `  set "NPM_CONFIG_FETCH_RETRIES=0"\r\n` +
     `  call npx.cmd --yes --cache "%MCP_PROBE_CACHE%" mcp-probe-kit@${version} %*\r\n` +
-    `)\r\n` +
-    `set "MCP_PROBE_EXIT=%ERRORLEVEL%"\r\n` +
-    `exit /b %MCP_PROBE_EXIT%\r\n`;
+    `  set "MCP_PROBE_NPX_EXIT=!ERRORLEVEL!"\r\n` +
+    `  if not "!MCP_PROBE_NPX_EXIT!"=="0" (\r\n` +
+    `    echo ${hint} 1>&2\r\n` +
+    `  )\r\n` +
+    `  exit /b !MCP_PROBE_NPX_EXIT!\r\n` +
+    `)\r\n`;
 }
 
 function renderShellWrapper(version: string, localSourceCheckout: boolean): string {
-  const localBranch = localSourceCheckout
+  const checkoutBranch = localSourceCheckout
     ? `if [ -f "$WRAPPER_ROOT/build/index.js" ]; then\n` +
       `  exec node "$WRAPPER_ROOT/build/index.js" "$@"\n` +
       `fi\n`
-    : '';
+    : "";
+  const hint = unpublishedPinHint(version).replace(/"/g, '\\"');
   return `#!/usr/bin/env sh\n` +
     `# ${CLI_VERSION_MARKER}: ${version}\n` +
     `set -eu\n\n` +
@@ -296,6 +335,15 @@ function renderShellWrapper(version: string, localSourceCheckout: boolean): stri
     `if [ -n "\${MCP_PROBE_LOCAL_ENTRY:-}" ]; then\n` +
     `  exec node "$MCP_PROBE_LOCAL_ENTRY" "$@"\n` +
     `fi\n` +
-    localBranch +
-    `exec npx --yes --cache "$CACHE_ROOT" "mcp-probe-kit@${version}" "$@"\n`;
+    checkoutBranch +
+    `if [ -f "$WRAPPER_ROOT/.mcp-probe-kit/local-verify/node_modules/mcp-probe-kit/build/index.js" ]; then\n` +
+    `  exec node "$WRAPPER_ROOT/.mcp-probe-kit/local-verify/node_modules/mcp-probe-kit/build/index.js" "$@"\n` +
+    `fi\n` +
+    `if [ -f "$WRAPPER_ROOT/node_modules/mcp-probe-kit/build/index.js" ]; then\n` +
+    `  exec node "$WRAPPER_ROOT/node_modules/mcp-probe-kit/build/index.js" "$@"\n` +
+    `fi\n` +
+    `NPM_CONFIG_FETCH_RETRIES=0 npx --yes --cache "$CACHE_ROOT" "mcp-probe-kit@${version}" "$@" || {\n` +
+    `  echo "${hint}" >&2\n` +
+    `  exit 1\n` +
+    `}\n`;
 }

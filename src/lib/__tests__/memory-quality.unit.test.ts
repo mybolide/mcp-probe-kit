@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import type { MemoryAsset } from '../memory-model.js';
 import {
+  assertMemoryAssetId,
   assertMemoryLifecycleTransition,
   buildMemoryDedupKey,
   buildMemoryIdentityKey,
   buildMemoryStorageId,
   collectActiveIdentityConflicts,
+  isMemoryAssetId,
   parseMemoryConflictPolicy,
   parseMemoryStatus,
   validateMemoryContentQuality,
@@ -46,6 +48,12 @@ describe('memory quality', () => {
 
     expect(first).toBe(second);
     expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(isMemoryAssetId(first)).toBe(true);
+  });
+
+  test('assertMemoryAssetId 拒绝非 UUID', () => {
+    expect(() => assertMemoryAssetId('does-not-exist-acceptance-test')).toThrow(/asset_id 必须是 UUID/);
+    expect(() => assertMemoryAssetId('00000000-0000-4000-8000-000000000000')).not.toThrow();
   });
 
   test('身份键忽略大小写、常见分隔符和 git 后缀', () => {

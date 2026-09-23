@@ -2,6 +2,7 @@ import { okStructured } from '../lib/response.js';
 import { createMemoryClient } from '../lib/memory-client.js';
 import { handleToolError } from '../utils/error-handler.js';
 import { attachHandles, buildMemoryAssetHandles } from '../lib/handles.js';
+import { assertMemoryAssetId } from '../lib/memory-quality.js';
 
 function isConfirmTrue(value: unknown): boolean {
   return value === true || value === 'true' || value === 1 || value === '1';
@@ -13,6 +14,7 @@ export async function deleteMemoryAsset(args: any) {
     if (!assetId) {
       throw new Error('缺少必填参数: asset_id');
     }
+    assertMemoryAssetId(assetId);
 
     const confirm = isConfirmTrue(args?.confirm);
 

@@ -18,12 +18,12 @@
   },
   {
     "id": "vercel-interactions-keyboard-2",
-    "title": "MUST: Visible focus rings (`:focus-visible`; group with `:focus-within`)",
+    "title": "MUST: Visible, unobscured focus rings (`:focus-visible`; group with `:focus-within`); …",
     "section": "Interactions",
     "subsection": "Keyboard",
     "level": "MUST",
-    "rule": "Visible focus rings (`:focus-visible`; group with `:focus-within`)",
-    "description": "Visible focus rings (`:focus-visible`; group with `:focus-within`)",
+    "rule": "Visible, unobscured focus rings (`:focus-visible`; group with `:focus-within`); sticky/fixed elements never cover focus",
+    "description": "Visible, unobscured focus rings (`:focus-visible`; group with `:focus-within`); sticky/fixed elements never cover focus",
     "category": "ui-guidelines-vercel",
     "source": "vercel-labs/web-interface-guidelines",
     "tags": [
@@ -558,6 +558,22 @@
   },
   {
     "id": "vercel-interactions-touch-drag-37",
+    "title": "MUST: Drag/swipe/pinch/path gestures have a tap/click and keyboard alternative unless …",
+    "section": "Interactions",
+    "subsection": "Touch & Drag",
+    "level": "MUST",
+    "rule": "Drag/swipe/pinch/path gestures have a tap/click and keyboard alternative unless essential",
+    "description": "Drag/swipe/pinch/path gestures have a tap/click and keyboard alternative unless essential",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "keyboard"
+    ]
+  },
+  {
+    "id": "vercel-interactions-touch-drag-38",
     "title": "MUST: If it looks clickable, it must be clickable",
     "section": "Interactions",
     "subsection": "Touch & Drag",
@@ -572,7 +588,7 @@
     ]
   },
   {
-    "id": "vercel-interactions-autofocus-38",
+    "id": "vercel-interactions-autofocus-39",
     "title": "SHOULD: Autofocus on desktop with single primary input; rarely on mobile",
     "section": "Interactions",
     "subsection": "Autofocus",
@@ -589,7 +605,7 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-39",
+    "id": "vercel-animation-animation-40",
     "title": "MUST: Honor `prefers-reduced-motion` (provide reduced variant or disable)",
     "section": "Animation",
     "subsection": "Animation",
@@ -606,7 +622,7 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-40",
+    "id": "vercel-animation-animation-41",
     "title": "SHOULD: Prefer CSS > Web Animations API > JS libraries",
     "section": "Animation",
     "subsection": "Animation",
@@ -622,7 +638,7 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-41",
+    "id": "vercel-animation-animation-42",
     "title": "MUST: Animate compositor-friendly props (`transform`, `opacity`) only",
     "section": "Animation",
     "subsection": "Animation",
@@ -639,7 +655,7 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-42",
+    "id": "vercel-animation-animation-43",
     "title": "NEVER: Animate layout props (`top`, `left`, `width`, `height`)",
     "section": "Animation",
     "subsection": "Animation",
@@ -656,7 +672,7 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-43",
+    "id": "vercel-animation-animation-44",
     "title": "NEVER: `transition: all`—list properties explicitly",
     "section": "Animation",
     "subsection": "Animation",
@@ -672,7 +688,7 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-44",
+    "id": "vercel-animation-animation-45",
     "title": "SHOULD: Animate only to clarify cause/effect or add deliberate delight",
     "section": "Animation",
     "subsection": "Animation",
@@ -688,7 +704,7 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-45",
+    "id": "vercel-animation-animation-46",
     "title": "SHOULD: Choose easing to match the change (size/distance/trigger)",
     "section": "Animation",
     "subsection": "Animation",
@@ -704,13 +720,13 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-46",
-    "title": "MUST: Animations interruptible and input-driven (no autoplay)",
+    "id": "vercel-animation-animation-47",
+    "title": "MUST: Animations interruptible and input-driven; autoplay only for muted, non-essentia…",
     "section": "Animation",
     "subsection": "Animation",
     "level": "MUST",
-    "rule": "Animations interruptible and input-driven (no autoplay)",
-    "description": "Animations interruptible and input-driven (no autoplay)",
+    "rule": "Animations interruptible and input-driven; autoplay only for muted, non-essential loops",
+    "description": "Animations interruptible and input-driven; autoplay only for muted, non-essential loops",
     "category": "ui-guidelines-vercel",
     "source": "vercel-labs/web-interface-guidelines",
     "tags": [
@@ -720,7 +736,23 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-47",
+    "id": "vercel-animation-animation-48",
+    "title": "MUST: Autoplay motion >5s alongside other content has pause, stop, or hide controls",
+    "section": "Animation",
+    "subsection": "Animation",
+    "level": "MUST",
+    "rule": "Autoplay motion >5s alongside other content has pause, stop, or hide controls",
+    "description": "Autoplay motion >5s alongside other content has pause, stop, or hide controls",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "animation"
+    ]
+  },
+  {
+    "id": "vercel-animation-animation-49",
     "title": "MUST: Correct `transform-origin` (motion starts where it \"physically\" should)",
     "section": "Animation",
     "subsection": "Animation",
@@ -737,7 +769,7 @@
     ]
   },
   {
-    "id": "vercel-animation-animation-48",
+    "id": "vercel-animation-animation-50",
     "title": "MUST: SVG transforms on `<g>` wrapper with `transform-box: fill-box`",
     "section": "Animation",
     "subsection": "Animation",
@@ -754,7 +786,7 @@
     ]
   },
   {
-    "id": "vercel-layout-layout-49",
+    "id": "vercel-layout-layout-51",
     "title": "SHOULD: Optical alignment; adjust ±1px when perception beats geometry",
     "section": "Layout",
     "subsection": "Layout",
@@ -770,7 +802,7 @@
     ]
   },
   {
-    "id": "vercel-layout-layout-50",
+    "id": "vercel-layout-layout-52",
     "title": "MUST: Deliberate alignment to grid/baseline/edges—no accidental placement",
     "section": "Layout",
     "subsection": "Layout",
@@ -786,7 +818,7 @@
     ]
   },
   {
-    "id": "vercel-layout-layout-51",
+    "id": "vercel-layout-layout-53",
     "title": "SHOULD: Balance icon/text lockups (weight/size/spacing/color)",
     "section": "Layout",
     "subsection": "Layout",
@@ -802,7 +834,7 @@
     ]
   },
   {
-    "id": "vercel-layout-layout-52",
+    "id": "vercel-layout-layout-54",
     "title": "MUST: Verify mobile, laptop, ultra-wide (simulate ultra-wide at 50% zoom)",
     "section": "Layout",
     "subsection": "Layout",
@@ -819,7 +851,7 @@
     ]
   },
   {
-    "id": "vercel-layout-layout-53",
+    "id": "vercel-layout-layout-55",
     "title": "MUST: Respect safe areas (`env(safe-area-inset-*)`)",
     "section": "Layout",
     "subsection": "Layout",
@@ -835,7 +867,7 @@
     ]
   },
   {
-    "id": "vercel-layout-layout-54",
+    "id": "vercel-layout-layout-56",
     "title": "MUST: Avoid unwanted scrollbars; fix overflows",
     "section": "Layout",
     "subsection": "Layout",
@@ -851,7 +883,7 @@
     ]
   },
   {
-    "id": "vercel-layout-layout-55",
+    "id": "vercel-layout-layout-57",
     "title": "SHOULD: Flex/grid over JS measurement for layout",
     "section": "Layout",
     "subsection": "Layout",
@@ -867,7 +899,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-56",
+    "id": "vercel-content-accessibility-content-accessibility-58",
     "title": "SHOULD: Inline help first; tooltips last resort",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -883,7 +915,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-57",
+    "id": "vercel-content-accessibility-content-accessibility-59",
     "title": "MUST: Skeletons mirror final content to avoid layout shift",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -900,7 +932,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-58",
+    "id": "vercel-content-accessibility-content-accessibility-60",
     "title": "MUST: `<title>` matches current context",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -916,7 +948,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-59",
+    "id": "vercel-content-accessibility-content-accessibility-61",
     "title": "MUST: No dead ends; always offer next step/recovery",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -932,7 +964,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-60",
+    "id": "vercel-content-accessibility-content-accessibility-62",
     "title": "MUST: Design empty/sparse/dense/error states",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -948,13 +980,13 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-61",
-    "title": "SHOULD: Curly quotes (\" \"); avoid widows/orphans (`text-wrap: balance`)",
+    "id": "vercel-content-accessibility-content-accessibility-63",
+    "title": "SHOULD: Curly quotes (“ ”); avoid widows/orphans (`text-wrap: balance`)",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
     "level": "SHOULD",
-    "rule": "Curly quotes (\" \"); avoid widows/orphans (`text-wrap: balance`)",
-    "description": "Curly quotes (\" \"); avoid widows/orphans (`text-wrap: balance`)",
+    "rule": "Curly quotes (“ ”); avoid widows/orphans (`text-wrap: balance`)",
+    "description": "Curly quotes (“ ”); avoid widows/orphans (`text-wrap: balance`)",
     "category": "ui-guidelines-vercel",
     "source": "vercel-labs/web-interface-guidelines",
     "tags": [
@@ -964,7 +996,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-62",
+    "id": "vercel-content-accessibility-content-accessibility-64",
     "title": "MUST: `font-variant-numeric: tabular-nums` for number comparisons",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -981,7 +1013,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-63",
+    "id": "vercel-content-accessibility-content-accessibility-65",
     "title": "MUST: Redundant status cues (not color-only); icons have text labels",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -997,7 +1029,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-64",
+    "id": "vercel-content-accessibility-content-accessibility-66",
     "title": "MUST: Accessible names exist even when visuals omit labels",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1013,7 +1045,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-65",
+    "id": "vercel-content-accessibility-content-accessibility-67",
     "title": "MUST: Use `…` character (not `...`)",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1029,7 +1061,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-66",
+    "id": "vercel-content-accessibility-content-accessibility-68",
     "title": "MUST: `scroll-margin-top` on headings; \"Skip to content\" link; hierarchical `<h1>`–`<h…",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1045,7 +1077,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-67",
+    "id": "vercel-content-accessibility-content-accessibility-69",
     "title": "MUST: Resilient to user-generated content (short/avg/very long)",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1061,7 +1093,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-68",
+    "id": "vercel-content-accessibility-content-accessibility-70",
     "title": "MUST: Locale-aware dates/times/numbers (`Intl.DateTimeFormat`, `Intl.NumberFormat`)",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1078,7 +1110,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-69",
+    "id": "vercel-content-accessibility-content-accessibility-71",
     "title": "SHOULD: `translate=\"no\"` on brand names, code tokens, & identifiers to prevent garbled a…",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1094,7 +1126,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-70",
+    "id": "vercel-content-accessibility-content-accessibility-72",
     "title": "MUST: Accurate `aria-label`; decorative elements `aria-hidden`",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1111,7 +1143,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-71",
+    "id": "vercel-content-accessibility-content-accessibility-73",
     "title": "MUST: Icon-only buttons have descriptive `aria-label`",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1128,7 +1160,7 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-72",
+    "id": "vercel-content-accessibility-content-accessibility-74",
     "title": "MUST: Prefer native semantics (`button`, `a`, `label`, `table`) before ARIA",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1145,7 +1177,24 @@
     ]
   },
   {
-    "id": "vercel-content-accessibility-content-accessibility-73",
+    "id": "vercel-content-accessibility-content-accessibility-75",
+    "title": "MUST: Media has captions/transcripts/descriptions as applicable; controls are keyboard…",
+    "section": "Content & Accessibility",
+    "subsection": "Content & Accessibility",
+    "level": "MUST",
+    "rule": "Media has captions/transcripts/descriptions as applicable; controls are keyboard-operable; decorative media hidden from assistive tech",
+    "description": "Media has captions/transcripts/descriptions as applicable; controls are keyboard-operable; decorative media hidden from assistive tech",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "keyboard",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "vercel-content-accessibility-content-accessibility-76",
     "title": "MUST: Non-breaking spaces: `10&nbsp;MB`, `⌘&nbsp;K`, brand names",
     "section": "Content & Accessibility",
     "subsection": "Content & Accessibility",
@@ -1161,7 +1210,7 @@
     ]
   },
   {
-    "id": "vercel-content-handling-content-handling-74",
+    "id": "vercel-content-handling-content-handling-77",
     "title": "MUST: Text containers handle long content (`truncate`, `line-clamp-*`, `break-words`)",
     "section": "Content Handling",
     "subsection": "Content Handling",
@@ -1176,7 +1225,7 @@
     ]
   },
   {
-    "id": "vercel-content-handling-content-handling-75",
+    "id": "vercel-content-handling-content-handling-78",
     "title": "MUST: Flex children need `min-w-0` to allow truncation",
     "section": "Content Handling",
     "subsection": "Content Handling",
@@ -1191,7 +1240,7 @@
     ]
   },
   {
-    "id": "vercel-content-handling-content-handling-76",
+    "id": "vercel-content-handling-content-handling-79",
     "title": "MUST: Handle empty states—no broken UI for empty strings/arrays",
     "section": "Content Handling",
     "subsection": "Content Handling",
@@ -1206,7 +1255,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-77",
+    "id": "vercel-performance-performance-80",
     "title": "SHOULD: Test iOS Low Power Mode and macOS Safari",
     "section": "Performance",
     "subsection": "Performance",
@@ -1223,7 +1272,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-78",
+    "id": "vercel-performance-performance-81",
     "title": "MUST: Measure reliably (disable extensions that skew runtime)",
     "section": "Performance",
     "subsection": "Performance",
@@ -1240,7 +1289,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-79",
+    "id": "vercel-performance-performance-82",
     "title": "MUST: Track and minimize re-renders (React DevTools/React Scan)",
     "section": "Performance",
     "subsection": "Performance",
@@ -1257,7 +1306,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-80",
+    "id": "vercel-performance-performance-83",
     "title": "MUST: Profile with CPU/network throttling",
     "section": "Performance",
     "subsection": "Performance",
@@ -1274,7 +1323,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-81",
+    "id": "vercel-performance-performance-84",
     "title": "MUST: Batch layout reads/writes; avoid reflows/repaints",
     "section": "Performance",
     "subsection": "Performance",
@@ -1292,7 +1341,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-82",
+    "id": "vercel-performance-performance-85",
     "title": "MUST: Mutations (`POST`/`PATCH`/`DELETE`) target <500ms",
     "section": "Performance",
     "subsection": "Performance",
@@ -1309,7 +1358,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-83",
+    "id": "vercel-performance-performance-86",
     "title": "SHOULD: Prefer uncontrolled inputs; controlled inputs cheap per keystroke",
     "section": "Performance",
     "subsection": "Performance",
@@ -1326,7 +1375,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-84",
+    "id": "vercel-performance-performance-87",
     "title": "MUST: Virtualize large lists (>50 items)",
     "section": "Performance",
     "subsection": "Performance",
@@ -1343,7 +1392,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-85",
+    "id": "vercel-performance-performance-88",
     "title": "MUST: Preload above-fold images; lazy-load the rest",
     "section": "Performance",
     "subsection": "Performance",
@@ -1360,7 +1409,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-86",
+    "id": "vercel-performance-performance-89",
     "title": "MUST: Prevent CLS (explicit image dimensions)",
     "section": "Performance",
     "subsection": "Performance",
@@ -1377,7 +1426,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-87",
+    "id": "vercel-performance-performance-90",
     "title": "SHOULD: `<link rel=\"preconnect\">` for CDN domains",
     "section": "Performance",
     "subsection": "Performance",
@@ -1394,7 +1443,7 @@
     ]
   },
   {
-    "id": "vercel-performance-performance-88",
+    "id": "vercel-performance-performance-91",
     "title": "SHOULD: Critical fonts: `<link rel=\"preload\" as=\"font\">` with `font-display: swap`",
     "section": "Performance",
     "subsection": "Performance",
@@ -1411,7 +1460,41 @@
     ]
   },
   {
-    "id": "vercel-dark-mode-theming-dark-mode-theming-89",
+    "id": "vercel-performance-performance-92",
+    "title": "SHOULD: `<video autoplay muted loop playsinline>` over animated GIF; provide still/reduc…",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "SHOULD",
+    "rule": "`<video autoplay muted loop playsinline>` over animated GIF; provide still/reduced-motion alternative",
+    "description": "`<video autoplay muted loop playsinline>` over animated GIF; provide still/reduced-motion alternative",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-performance-performance-93",
+    "title": "SHOULD: Short non-essential loops include a Safari H.264 MP4 `<picture>` source, `prefer…",
+    "section": "Performance",
+    "subsection": "Performance",
+    "level": "SHOULD",
+    "rule": "Short non-essential loops include a Safari H.264 MP4 `<picture>` source, `prefers-reduced-motion` media condition, and still fallback",
+    "description": "Short non-essential loops include a Safari H.264 MP4 `<picture>` source, `prefers-reduced-motion` media condition, and still fallback",
+    "category": "ui-guidelines-vercel",
+    "source": "vercel-labs/web-interface-guidelines",
+    "tags": [
+      "vercel",
+      "web-interface",
+      "form",
+      "performance"
+    ]
+  },
+  {
+    "id": "vercel-dark-mode-theming-dark-mode-theming-94",
     "title": "MUST: `color-scheme: dark` on `<html>` for dark themes",
     "section": "Dark Mode & Theming",
     "subsection": "Dark Mode & Theming",
@@ -1427,7 +1510,7 @@
     ]
   },
   {
-    "id": "vercel-dark-mode-theming-dark-mode-theming-90",
+    "id": "vercel-dark-mode-theming-dark-mode-theming-95",
     "title": "SHOULD: `<meta name=\"theme-color\">` matches page background",
     "section": "Dark Mode & Theming",
     "subsection": "Dark Mode & Theming",
@@ -1443,7 +1526,7 @@
     ]
   },
   {
-    "id": "vercel-dark-mode-theming-dark-mode-theming-91",
+    "id": "vercel-dark-mode-theming-dark-mode-theming-96",
     "title": "MUST: Native `<select>`: explicit `background-color` and `color` (Windows fix)",
     "section": "Dark Mode & Theming",
     "subsection": "Dark Mode & Theming",
@@ -1459,7 +1542,7 @@
     ]
   },
   {
-    "id": "vercel-hydration-hydration-92",
+    "id": "vercel-hydration-hydration-97",
     "title": "MUST: Inputs with `value` need `onChange` (or use `defaultValue`)",
     "section": "Hydration",
     "subsection": "Hydration",
@@ -1475,7 +1558,7 @@
     ]
   },
   {
-    "id": "vercel-hydration-hydration-93",
+    "id": "vercel-hydration-hydration-98",
     "title": "SHOULD: Guard date/time rendering against hydration mismatch",
     "section": "Hydration",
     "subsection": "Hydration",
@@ -1491,7 +1574,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-94",
+    "id": "vercel-design-design-99",
     "title": "SHOULD: Layered shadows (ambient + direct)",
     "section": "Design",
     "subsection": "Design",
@@ -1506,7 +1589,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-95",
+    "id": "vercel-design-design-100",
     "title": "SHOULD: Crisp edges via semi-transparent borders + shadows",
     "section": "Design",
     "subsection": "Design",
@@ -1521,7 +1604,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-96",
+    "id": "vercel-design-design-101",
     "title": "SHOULD: Nested radii: child ≤ parent; concentric",
     "section": "Design",
     "subsection": "Design",
@@ -1536,7 +1619,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-97",
+    "id": "vercel-design-design-102",
     "title": "SHOULD: Hue consistency: tint borders/shadows/text toward bg hue",
     "section": "Design",
     "subsection": "Design",
@@ -1551,7 +1634,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-98",
+    "id": "vercel-design-design-103",
     "title": "MUST: Accessible charts (color-blind-friendly palettes)",
     "section": "Design",
     "subsection": "Design",
@@ -1566,7 +1649,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-99",
+    "id": "vercel-design-design-104",
     "title": "MUST: Meet contrast—prefer [APCA](https://apcacontrast.com/) over WCAG 2",
     "section": "Design",
     "subsection": "Design",
@@ -1582,7 +1665,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-100",
+    "id": "vercel-design-design-105",
     "title": "MUST: Increase contrast on `:hover`/`:active`/`:focus`",
     "section": "Design",
     "subsection": "Design",
@@ -1599,7 +1682,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-101",
+    "id": "vercel-design-design-106",
     "title": "SHOULD: Match browser UI to bg",
     "section": "Design",
     "subsection": "Design",
@@ -1614,7 +1697,7 @@
     ]
   },
   {
-    "id": "vercel-design-design-102",
+    "id": "vercel-design-design-107",
     "title": "SHOULD: Avoid dark color gradient banding (use background images when needed)",
     "section": "Design",
     "subsection": "Design",

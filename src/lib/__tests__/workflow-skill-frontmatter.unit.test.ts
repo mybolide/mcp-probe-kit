@@ -21,6 +21,8 @@ describe("workflow-skill frontmatter", () => {
     expect(content).toContain("parent-child Spec");
     expect(content).toContain("执行通道与自动降级");
     expect(content).toContain("install-agent --project-root .");
+    expect(content).toContain("未发布精确版本与本地入口");
+    expect(content).toContain("MCP_PROBE_LOCAL_ENTRY");
     expect(content).toContain("mcp-probe-kit@3.6.6");
     expect(content).toContain('mcp-probe-kit-version: "3.6.6"');
     expect(content).toContain("# MCP 调用时机");

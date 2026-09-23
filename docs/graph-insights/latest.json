@@ -1,0 +1,8 @@
+{
+  "target": "ensureCliFallback",
+  "filePath": "src/lib/cli-fallback-installer.ts",
+  "mode": "impact",
+  "direction": "upstream",
+  "risk": "low",
+  "notes": "Wrapper generation only; no start_feature/memory/converge rewrite."
+}

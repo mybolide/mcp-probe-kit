@@ -92,6 +92,24 @@ npx --yes mcp-probe-kit@${skillVersion} install-agent --project-root .
 
 安装后立即改用项目内启动器。不得使用 \`@latest\` 或 \`@next\`，不得全局安装，也不得修改用户项目的 \`package.json\`。Skill、CLI 启动器和 MCP 必须保持同一精确版本 \`${skillVersion}\`。
 
+### 未发布精确版本与本地入口
+
+\`runtime.json\` 的 \`packageSpec\` 即使尚未出现在 npm registry，也必须与 MCP / Skill / AGENTS.md 保持同一精确版本 \`${skillVersion}\`。禁止把启动器改成 \`@latest\` 或 \`@next\`，也禁止为了“能 npx 成功”而改钉已发布的旧版本。
+
+启动器按以下顺序解析 CLI 入口，失败则立即退出并打印路径，不得长时间重试错误版本：
+
+1. \`MCP_PROBE_LOCAL_ENTRY\`（指向本机 \`build/index.js\`）
+2. 源码仓库检出：项目根 \`build/index.js\`（仅当 \`package.json\` 的 name 为 \`mcp-probe-kit\` 且 version 与 pin 一致）
+3. \`.mcp-probe-kit/local-verify/node_modules/mcp-probe-kit/build/index.js\`
+4. \`node_modules/mcp-probe-kit/build/index.js\`
+5. \`npx --yes mcp-probe-kit@${skillVersion}\`（\`NPM_CONFIG_FETCH_RETRIES=0\`）
+
+若自修复 \`install-agent\` 遇到 ETARGET，改用本地入口，例如：
+
+\`\`\`powershell
+node ./build/index.js install-agent --project-root .
+\`\`\`
+
 ### GitNexus 托管运行时
 
 GitNexus 不打包进 mcp-probe-kit 主包，也不做全局安装。优先使用用户显式配置或系统已有的兼容 CLI；否则使用 mcp-probe-kit 管理的精确版本 Sidecar。

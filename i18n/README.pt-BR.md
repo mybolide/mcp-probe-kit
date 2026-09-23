@@ -68,7 +68,7 @@ A v4 transforma a execução delegada do Agent em um ciclo de entrega observáve
 
 **[Abrir as cinco demos MCP Apps interativas e somente leitura](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 estável:** `mcp-probe-kit@4.0.0` é a versão estável atual e o canal npm `latest`.
+> **v4 estável:** `mcp-probe-kit@4.0.3` é a versão estável atual e o canal npm `latest`.
 <!-- v4-showcase:end -->
 
 ---
@@ -134,7 +134,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -155,7 +155,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -307,7 +307,7 @@ Ferramentas UI/UX com `start_ui` como entrada unificada:
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@4.0.0"]
+      "args": ["mcp-probe-kit@4.0.3"]
     }
   }
 }
@@ -320,7 +320,7 @@ Ferramentas UI/UX com `start_ui` como entrada unificada:
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"]
+      "args": ["-y", "mcp-probe-kit@4.0.3"]
     }
   }
 }
@@ -335,7 +335,7 @@ Ferramentas UI/UX com `start_ui` como entrada unificada:
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@4.0.0"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.0.3"],
       "enabled": true
     }
   }
@@ -344,10 +344,10 @@ Ferramentas UI/UX com `start_ui` como entrada unificada:
 
 > **Nota:** OpenCode usa `opencode.json` com esquema diferente. `mcp` substitui `mcpServers`, `command` é um array, `type: "local"` necessário, variáveis de ambiente via `environment`. Veja [OpenCode MCP docs](https://opencode.ai/docs/mcp).
 
-### Método 2: Instalação Global
+### Método 2: Agent fallback local do projeto
 
 ```bash
-npm install -g mcp-probe-kit
+npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
 ```
 
 ### Configuração Opcional do Sistema de Memória
@@ -364,7 +364,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -386,7 +386,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -485,7 +485,7 @@ git_work_report --start_date 2026-02-01 --end_date 2026-02-07
 ### Q1: A ferramenta não funciona?
 
 ```bash
-npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: Cliente não reconhece as ferramentas?
@@ -494,9 +494,9 @@ npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
 2. Verifique o caminho do arquivo de configuração
 3. Verifique a sintaxe JSON
 
-### Q3: Como atualizar?
+### Q3: Como atualizar para a versão estável atual?
 
-**npx:** use `@latest`. **Global:** `npm update -g mcp-probe-kit`
+Fixe `mcp-probe-kit@4.0.3` na config MCP e rode `npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .`. Não use `@next`, `@latest` flutuante nem `npm install -g`.
 
 ### Q4: Por que as ferramentas de grafo estão lentas no Windows?
 

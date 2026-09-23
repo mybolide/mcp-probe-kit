@@ -14,8 +14,11 @@ vi.mock('../../lib/memory-client.js', () => ({
 
 import { deleteMemoryAsset } from '../delete_memory_asset.js';
 
+const SAMPLE_ID = '00000000-0000-4000-8000-000000000001';
+const MISSING_ID = '00000000-0000-4000-8000-000000000000';
+
 const sampleAsset = {
-  id: 'asset-1',
+  id: SAMPLE_ID,
   name: 'obsolete-pattern',
   type: 'pattern',
   description: 'Outdated pattern',
@@ -41,7 +44,7 @@ describe('delete_memory_asset 单元测试', () => {
   test('记忆服务未开启时返回跳过结果', async () => {
     isReadEnabledMock.mockReturnValue(false);
 
-    const result = await deleteMemoryAsset({ asset_id: 'asset-1' });
+    const result = await deleteMemoryAsset({ asset_id: SAMPLE_ID });
 
     expect(result.isError).toBe(false);
     expect(result.content[0].text).toContain('记忆服务未开启');
@@ -53,11 +56,11 @@ describe('delete_memory_asset 单元测试', () => {
     isReadEnabledMock.mockReturnValue(true);
     getAssetMock.mockResolvedValue({
       ...sampleAsset,
-      supersededBy: 'asset-2',
+      supersededBy: '00000000-0000-4000-8000-000000000002',
       status: 'superseded',
     });
 
-    const result = await deleteMemoryAsset({ asset_id: 'asset-1', confirm: true });
+    const result = await deleteMemoryAsset({ asset_id: SAMPLE_ID, confirm: true });
 
     expect(result.isError).toBe(false);
     expect(result.content[0].text).toContain('拒绝硬删除');
@@ -65,7 +68,7 @@ describe('delete_memory_asset 单元测试', () => {
     expect((result as any).structuredContent).toMatchObject({
       deleted: false,
       blocked_by_relations: true,
-      linked_asset_ids: ['asset-2'],
+      linked_asset_ids: ['00000000-0000-4000-8000-000000000002'],
     });
     expect((result as any).structuredContent?.handles?.memory_assets?.[0]?.tool).toBe('update_memory_asset');
     expect(deleteAssetMock).not.toHaveBeenCalled();
@@ -75,7 +78,7 @@ describe('delete_memory_asset 单元测试', () => {
     isReadEnabledMock.mockReturnValue(true);
     getAssetMock.mockResolvedValue(sampleAsset);
 
-    const result = await deleteMemoryAsset({ asset_id: 'asset-1' });
+    const result = await deleteMemoryAsset({ asset_id: SAMPLE_ID });
 
     expect(result.isError).toBe(false);
     if (!('structuredContent' in result) || !result.structuredContent) {
@@ -88,18 +91,46 @@ describe('delete_memory_asset 单元测试', () => {
     expect(deleteAssetMock).not.toHaveBeenCalled();
   });
 
-  test('资产不存在时返回未找到', async () => {
+  test('合法 UUID 但不存在时返回未找到（confirm false）', async () => {
     isReadEnabledMock.mockReturnValue(true);
     getAssetMock.mockResolvedValue(null);
 
-    const result = await deleteMemoryAsset({ asset_id: 'missing-id' });
+    const result = await deleteMemoryAsset({ asset_id: MISSING_ID });
 
     expect(result.isError).toBe(false);
     if (!('structuredContent' in result) || !result.structuredContent) {
       throw new Error('structuredContent 缺失');
     }
     expect(result.content[0].text).toContain('未找到记忆资产');
+    expect(result.content[0].text).not.toMatch(/Qdrant/);
     expect((result as any).structuredContent.deleted).toBe(false);
+    expect((result as any).structuredContent.requires_confirmation).toBe(false);
+    expect(deleteAssetMock).not.toHaveBeenCalled();
+  });
+
+  test('非法 asset_id 返回产品错误而非 Qdrant 原文', async () => {
+    isReadEnabledMock.mockReturnValue(true);
+
+    const result = await deleteMemoryAsset({
+      asset_id: 'does-not-exist-acceptance-test',
+      confirm: false,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/asset_id 必须是 UUID/);
+    expect(result.content[0].text).not.toMatch(/Qdrant|Wrong input|point id/i);
+    expect(getAssetMock).not.toHaveBeenCalled();
+  });
+
+  test('confirm=true 删除不存在的合法 UUID 返回未找到', async () => {
+    isReadEnabledMock.mockReturnValue(true);
+    getAssetMock.mockResolvedValue(null);
+
+    const result = await deleteMemoryAsset({ asset_id: MISSING_ID, confirm: true });
+
+    expect(result.isError).toBe(false);
+    expect(result.content[0].text).toContain('未找到记忆资产');
+    expect(result.content[0].text).not.toMatch(/Qdrant/);
     expect(deleteAssetMock).not.toHaveBeenCalled();
   });
 
@@ -108,7 +139,7 @@ describe('delete_memory_asset 单元测试', () => {
     getAssetMock.mockResolvedValue(sampleAsset);
     deleteAssetMock.mockResolvedValue({ deleted: true, asset: sampleAsset });
 
-    const result = await deleteMemoryAsset({ asset_id: 'asset-1', confirm: true });
+    const result = await deleteMemoryAsset({ asset_id: SAMPLE_ID, confirm: true });
 
     expect(result.isError).toBe(false);
     if (!('structuredContent' in result) || !result.structuredContent) {
@@ -118,7 +149,7 @@ describe('delete_memory_asset 单元测试', () => {
     expect(result.structuredContent.deleted).toBe(true);
     expect(result.structuredContent.requires_confirmation).toBe(false);
     expect(result.structuredContent.asset.name).toBe('obsolete-pattern');
-    expect(getAssetMock).toHaveBeenCalledWith('asset-1');
+    expect(getAssetMock).toHaveBeenCalledWith(SAMPLE_ID);
   });
 
   test('缺少 asset_id 时返回错误', async () => {

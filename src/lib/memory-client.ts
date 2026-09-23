@@ -277,14 +277,30 @@ export class MemoryClient {
       return null;
     }
 
-    const data = await this.requestJson<{ result?: { payload?: Record<string, unknown> } | null }>(
-      `${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}/points/${encodeURIComponent(assetId)}`,
-      {
+    const url = `${this.config.qdrantUrl}/collections/${encodeURIComponent(this.config.qdrantCollection)}/points/${encodeURIComponent(assetId)}`;
+    let response: Response;
+    try {
+      response = await fetch(url, {
         method: 'GET',
         headers: this.buildHeaders(false),
-      }
-    );
+      });
+    } catch (error) {
+      throw this.dependencyError('Qdrant', url, error);
+    }
 
+    // Illegal point id (400) and missing point (404) are "not found" for Memory tools —
+    // never surface raw Qdrant JSON via handleToolError.
+    if (response.status === 400 || response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(
+        `Qdrant 服务请求失败: ${url}，HTTP ${response.status}${body ? `: ${body}` : ''}`,
+      );
+    }
+
+    const data = await response.json() as { result?: { payload?: Record<string, unknown> } | null };
     const rawPayload = data.result?.payload;
     if (!rawPayload) {
       return null;

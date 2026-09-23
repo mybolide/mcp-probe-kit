@@ -259,6 +259,38 @@ describe('memory-client 去重逻辑', () => {
     expect(result.asset).toBeNull();
   });
 
+  test('getAsset 对 Qdrant 400 非法 point id 返回 null，不抛原文', async () => {
+    vi.stubEnv('MEMORY_QDRANT_URL', 'http://127.0.0.1:50008');
+
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({ status: { error: 'Wrong input: Can not recognize "bad-id" as point id' } }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = new MemoryClient();
+    await expect(client.getAsset('does-not-exist-acceptance-test')).resolves.toBeNull();
+  });
+
+  test('getAsset 对 Qdrant 404 返回 null，不抛原文', async () => {
+    vi.stubEnv('MEMORY_QDRANT_URL', 'http://127.0.0.1:50008');
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ status: { error: 'Not found' } }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = new MemoryClient();
+    await expect(
+      client.getAsset('00000000-0000-4000-8000-000000000000'),
+    ).resolves.toBeNull();
+  });
+
   test('updateAsset 更新已存在资产并保留 createdAt', async () => {
     vi.stubEnv('MEMORY_QDRANT_URL', 'http://127.0.0.1:50008');
     vi.stubEnv('MEMORY_EMBEDDING_URL', 'http://127.0.0.1:11434/api/embeddings');

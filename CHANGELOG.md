@@ -11,12 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [4.0.3-rc.1] - 2026-09-22
+## [4.0.3] - 2026-09-23
 
 ### Changed
 
-- npm package contents are now the self-contained `build/index.js` bundle plus `build/resources/ui-ux-data`. TypeScript emit (`.js` / `.d.ts` module tree) is no longer published.
-- MCP SDK and `zod` remain inlined in the bundle. This RC does not change protocol or SDK versions.
+- npm package contents are the self-contained `build/index.js` bundle plus `build/resources/ui-ux-data`. TypeScript emit (`.js` / `.d.ts` module tree) is not published.
+- MCP SDK and `zod` remain inlined in the bundle. Protocol and SDK versions are unchanged from 4.0.2.
+
+### Fixed
+
+- CLI fallback launchers resolve source `build/index.js`, local-verify, and `node_modules` before `npx`, fail fast on unpublished pins, and overwrite existing Windows wrappers with `copyFileSync`.
+- GitNexus/`code_insight` return a degrade payload within a ~5500ms host-safe budget so Cursor Host does not kill `tools/call` at 8s.
+- Memory update/delete validate `asset_id` as UUID and map Qdrant 400/404 to product errors instead of raw dumps.
 
 ---
 

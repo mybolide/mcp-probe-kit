@@ -219,7 +219,7 @@ Swagger：`http://127.0.0.1:50012/docs`
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@latest"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "与 qdrant/.env 中 QDRANT_API_KEY 相同",

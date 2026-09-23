@@ -8,11 +8,11 @@ v4 不要求重写业务代码，但要求运行环境使用 Node.js 20 或更�
 
 ## 正式版安装
 
-v4.0.0 已正式发布到 npm `latest`。新安装建议直接使用稳定版：
+v4.0.3 已正式发布到 npm `latest`。新安装建议直接使用稳定版：
 
 ```bash
-npm install -g mcp-probe-kit@latest
-npm install -g mcp-probe-kit@4.0.0
+npx -y mcp-probe-kit@4.0.3
+npx -y mcp-probe-kit@4.0.3 install-agent
 ```
 
 MCP 客户端使用稳定版：
@@ -20,7 +20,7 @@ MCP 客户端使用稳定版：
 ```json
 {
   "command": "npx",
-  "args": ["-y", "mcp-probe-kit@4.0.0"]
+  "args": ["-y", "mcp-probe-kit@4.0.3"]
 }
 ```
 
@@ -33,7 +33,7 @@ MCP 客户端使用稳定版：
 }
 ```
 
-正式版 `4.0.0` 已进入 npm `latest`，并已发布到 MCP Registry。
+正式版 `4.0.3` 已进入 npm `latest`，并已发布到 MCP Registry。
 
 ## Node.js 与 SDK
 

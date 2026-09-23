@@ -13,6 +13,7 @@ import {
 import {
   parseMemoryConflictPolicy,
   parseMemoryStatus,
+  assertMemoryAssetId,
 } from '../lib/memory-quality.js';
 import { assertNoProjectScopedMemoryFields } from '../lib/memory-persistence-guidance.js';
 
@@ -67,6 +68,7 @@ export async function updateMemoryAsset(args: any) {
     if (!assetId) {
       throw new Error('缺少必填参数: asset_id');
     }
+    assertMemoryAssetId(assetId);
 
     const patch: {
       name?: string;

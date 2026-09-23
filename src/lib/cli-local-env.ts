@@ -21,6 +21,10 @@ export const CLI_LOCAL_ENV_EXAMPLE_CONTENT = `# MCP Probe Kit — local env for 
 #
 # Optional GitNexus runtime preference
 # MCP_GITNEXUS_MODE=managed
+#
+# Unpublished pin (ETARGET): keep the exact runtime.json version.
+# Do not set this to @latest/@next. Point at a local mcp-probe-kit build:
+# MCP_PROBE_LOCAL_ENTRY=
 `;
 
 export const CLI_LOCAL_ENV_CONTENT = CLI_LOCAL_ENV_EXAMPLE_CONTENT;

@@ -97,10 +97,15 @@ export interface EmbeddedGraphContext {
   highlights: string[];
 }
 
-const DEFAULT_CONNECT_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_CONNECT_TIMEOUT_MS", 12000);
-const DEFAULT_CALL_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_TIMEOUT_MS", 20000);
-const DEFAULT_INDEX_REFRESH_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_REFRESH_TIMEOUT_MS", 8000);
-const DEFAULT_FEATURE_GRAPH_BUDGET_MS = readIntEnv("MCP_GITNEXUS_FEATURE_BUDGET_MS", 8000);
+/** Stay under typical Cursor Host tools/call timeout (~8000ms). */
+const DEFAULT_HOST_SAFE_BUDGET_MS = readIntEnv("MCP_GITNEXUS_HOST_BUDGET_MS", 5500);
+const DEFAULT_CONNECT_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_CONNECT_TIMEOUT_MS", 4000);
+const DEFAULT_CALL_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_TIMEOUT_MS", 4500);
+const DEFAULT_INDEX_REFRESH_TIMEOUT_MS = readIntEnv("MCP_GITNEXUS_REFRESH_TIMEOUT_MS", 3500);
+const DEFAULT_FEATURE_GRAPH_BUDGET_MS = readIntEnv(
+  "MCP_GITNEXUS_FEATURE_BUDGET_MS",
+  DEFAULT_HOST_SAFE_BUDGET_MS,
+);
 const FAILURE_CACHE_TTL_MS = readIntEnv("MCP_GITNEXUS_FAILURE_CACHE_TTL_MS", 30000);
 const DEFAULT_IGNORED_DIRS = new Set([
   ".git",
@@ -1331,6 +1336,45 @@ export async function runCodeInsightBridge(
   const modeResolved = resolveMode(request);
   const requestedProjectRoot = resolveRequestedProjectRoot(request.projectRoot);
   const hasExplicitProjectRoot = Boolean(request.projectRoot?.trim());
+  const sourceRootForTimeout = hasExplicitProjectRoot
+    ? requestedProjectRoot
+    : findGitRoot(requestedProjectRoot) || requestedProjectRoot;
+  return withGitNexusDeadline(
+    {
+      signal: request.signal,
+      timeoutMs: DEFAULT_HOST_SAFE_BUDGET_MS,
+      onTimeout: () => ({
+        provider: "gitnexus" as const,
+        enabled: true,
+        available: false,
+        degraded: true,
+        modeRequested,
+        modeResolved,
+        summary: `GitNexus 在 ${DEFAULT_HOST_SAFE_BUDGET_MS}ms 内未完成，已降级以免 Host 工具超时。`,
+        executions: [],
+        warnings: ["host_budget_timeout"],
+        repo: resolvePreferredRepoName(request.repo),
+        launcherStrategy: resolveGitNexusMode() === "off" || resolveGitNexusMode() === "system"
+          ? "disabled" as const
+          : "managed" as const,
+        ambiguities: [],
+        workspaceMode: "direct" as const,
+        sourceRoot: sourceRootForTimeout,
+        analysisRoot: sourceRootForTimeout,
+        pathMapped: false,
+      }),
+    },
+    (signal) => runCodeInsightBridgeUncapped({ ...request, signal }),
+  );
+}
+
+async function runCodeInsightBridgeUncapped(
+  request: CodeInsightRequest
+): Promise<CodeInsightBridgeResult> {
+  const modeRequested = request.mode || "auto";
+  const modeResolved = resolveMode(request);
+  const requestedProjectRoot = resolveRequestedProjectRoot(request.projectRoot);
+  const hasExplicitProjectRoot = Boolean(request.projectRoot?.trim());
   const reportedSourceRoot = () => hasExplicitProjectRoot
     ? requestedProjectRoot
     : findGitRoot(requestedProjectRoot) || requestedProjectRoot;
@@ -1777,6 +1821,64 @@ function toEmbeddedGraphContext(result: CodeInsightBridgeResult): EmbeddedGraphC
   };
 }
 
+/**
+ * Abort slow GitNexus work in time for Cursor Host (~8000ms tools/call).
+ * Do not await sidecar install before starting this timer.
+ */
+export async function withGitNexusDeadline<T>(
+  input: {
+    signal?: AbortSignal;
+    timeoutMs: number;
+    onTimeout: () => T;
+  },
+  work: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const forwardAbort = (): void => controller.abort(input.signal?.reason);
+  if (input.signal?.aborted) {
+    controller.abort(input.signal.reason);
+  } else {
+    input.signal?.addEventListener("abort", forwardAbort, { once: true });
+  }
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort(new Error("GitNexus host-safe budget exceeded"));
+  }, input.timeoutMs);
+
+  try {
+    return await work(controller.signal);
+  } catch (error) {
+    if (!timedOut) throw error;
+    return input.onTimeout();
+  } finally {
+    clearTimeout(timeout);
+    input.signal?.removeEventListener("abort", forwardAbort);
+  }
+}
+
+/**
+ * Shared orchestration budget for start_* graph enrichment.
+ * Defaults to MCP_GITNEXUS_HOST_BUDGET_MS (5500) so the tool can return
+ * a degrade payload before Host kills the call at ~8000ms.
+ */
+export async function withOrchestrationGraphBudget(
+  input: {
+    signal?: AbortSignal;
+    onTimeout: () => EmbeddedGraphContext;
+  },
+  work: (signal: AbortSignal) => Promise<EmbeddedGraphContext>,
+): Promise<EmbeddedGraphContext> {
+  return withGitNexusDeadline(
+    {
+      signal: input.signal,
+      timeoutMs: DEFAULT_FEATURE_GRAPH_BUDGET_MS,
+      onTimeout: input.onTimeout,
+    },
+    work,
+  );
+}
+
 export async function buildFeatureGraphContext(input: {
   featureName: string;
   description: string;
@@ -1784,55 +1886,28 @@ export async function buildFeatureGraphContext(input: {
   repo?: string;
   projectRoot?: string;
 }): Promise<EmbeddedGraphContext> {
-  if (isBridgeEnabled() && !isEnvDisabled("MCP_ENABLE_GITNEXUS_BRIDGE") && resolveGitNexusMode() !== "off") {
-    try {
-      await resolveGitNexusLauncher(input.signal);
-    } catch (error) {
-      if (isAbortError(error)) throw error;
-      return {
+  return withOrchestrationGraphBudget(
+    {
+      signal: input.signal,
+      onTimeout: () => ({
         enabled: true,
         available: false,
         degraded: true,
-        summary: `GitNexus 托管运行时不可用：${normalizeError(error)}`,
-        warnings: ["managed_runtime_unavailable"],
+        summary: `GitNexus 图谱收敛超过 ${DEFAULT_FEATURE_GRAPH_BUDGET_MS}ms，已降级继续功能规划。`,
+        warnings: ["feature_graph_timeout"],
         provider: "gitnexus",
         mode: "query",
         highlights: [],
-      };
-    }
-  }
-
-  const controller = new AbortController();
-  let timedOut = false;
-  const forwardAbort = (): void => controller.abort(input.signal?.reason);
-  input.signal?.addEventListener("abort", forwardAbort, { once: true });
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    controller.abort(new Error("GitNexus feature planning budget exceeded"));
-  }, DEFAULT_FEATURE_GRAPH_BUDGET_MS);
-
-  try {
-    const bridge = await runCodeInsightBridge(buildFeatureGraphRequest({
-      ...input,
-      signal: controller.signal,
-    }));
-    return toEmbeddedGraphContext(bridge);
-  } catch (error) {
-    if (!timedOut) throw error;
-    return {
-      enabled: true,
-      available: false,
-      degraded: true,
-      summary: `GitNexus 图谱收敛超过 ${DEFAULT_FEATURE_GRAPH_BUDGET_MS}ms，已降级继续功能规划。`,
-      warnings: ["feature_graph_timeout"],
-      provider: "gitnexus",
-      mode: "query",
-      highlights: [],
-    };
-  } finally {
-    clearTimeout(timeout);
-    input.signal?.removeEventListener("abort", forwardAbort);
-  }
+      }),
+    },
+    async (signal) => {
+      const bridge = await runCodeInsightBridge(buildFeatureGraphRequest({
+        ...input,
+        signal,
+      }));
+      return toEmbeddedGraphContext(bridge);
+    },
+  );
 }
 
 export function buildFeatureGraphRequest(input: {
@@ -1861,14 +1936,31 @@ export async function buildBugfixGraphContext(input: {
   projectRoot?: string;
 }): Promise<EmbeddedGraphContext> {
   const query = [input.errorMessage, input.stackTrace].filter(Boolean).join("\n");
-  const bridge = await runCodeInsightBridge({
-    mode: "query",
-    query,
-    goal: "Find likely root-cause symbols and impacted flows for bug fixing",
-    taskContext: "start_bugfix diagnosis",
-    repo: input.repo,
-    projectRoot: input.projectRoot,
-    signal: input.signal,
-  });
-  return toEmbeddedGraphContext(bridge);
+  return withOrchestrationGraphBudget(
+    {
+      signal: input.signal,
+      onTimeout: () => ({
+        enabled: true,
+        available: false,
+        degraded: true,
+        summary: `GitNexus 图谱收敛超过 ${DEFAULT_FEATURE_GRAPH_BUDGET_MS}ms，已降级继续缺陷修复规划。`,
+        warnings: ["bugfix_graph_timeout"],
+        provider: "gitnexus",
+        mode: "query",
+        highlights: [],
+      }),
+    },
+    async (signal) => {
+      const bridge = await runCodeInsightBridge({
+        mode: "query",
+        query,
+        goal: "Find likely root-cause symbols and impacted flows for bug fixing",
+        taskContext: "start_bugfix diagnosis",
+        repo: input.repo,
+        projectRoot: input.projectRoot,
+        signal,
+      });
+      return toEmbeddedGraphContext(bridge);
+    },
+  );
 }

@@ -62,7 +62,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 **[打开 5 个可交互、只读的 MCP Apps 动态演示](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 正式版：** `mcp-probe-kit@4.0.0` 已正式发布，并已成为 npm `latest` 稳定通道。
+> **v4 正式版：** `mcp-probe-kit@4.0.3` 已正式发布，并已成为 npm `latest` 稳定通道。
 <!-- v4-showcase:end -->
 
 ---
@@ -165,7 +165,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "你的-qdrant-api-key",
@@ -195,7 +195,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -423,7 +423,7 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"]
+      "args": ["-y", "mcp-probe-kit@4.0.3"]
     }
   }
 }
@@ -455,7 +455,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -477,7 +477,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"],
+      "args": ["-y", "mcp-probe-kit@4.0.3"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -520,7 +520,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"]
+      "args": ["-y", "mcp-probe-kit@4.0.3"]
     }
   }
 }
@@ -538,7 +538,7 @@ ollama pull nomic-embed-text
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@4.0.0"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.0.3"],
       "enabled": true
     }
   }
@@ -547,22 +547,13 @@ ollama pull nomic-embed-text
 
 > **注意：** OpenCode 使用 `opencode.json`，格式与 Cursor/Claude Desktop 不同。用 `mcp` 替代 `mcpServers`，`command` 为数组，需指定 `"type": "local"`，环境变量用 `environment` 而非 `env`。详见 [OpenCode MCP 文档](https://opencode.ai/docs/mcp)。
 
-### 方式二：全局安装
+### 方式二：项目内 Agent fallback
 
 ```bash
-npm install -g mcp-probe-kit
+npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
 ```
 
-配置文件中使用：
-```json
-{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "mcp-probe-kit"
-    }
-  }
-}
-```
+会写入版本锁定的 `.mcp-probe-kit/bin/probe.*`。优先使用原生 MCP；宿主未注入工具时再走这些包装器。不要全局安装。
 
 ### Windows 图谱工具特别说明
 
@@ -680,12 +671,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@4.0.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.3 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 配置后客户端无法识别工具？
@@ -695,15 +686,15 @@ npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
 3. 确认 JSON 格式正确，没有语法错误
 4. 查看客户端的开发者工具或日志中的错误信息
 
-### Q3: 如何更新到最新版本？
+### Q3: 如何更新到当前稳定版？
 
-**npx 方式（推荐）:**
-配置中使用 `@latest` 标签，会自动使用最新版本。
+在 MCP 配置中锁定精确版本：`mcp-probe-kit@4.0.3`。然后刷新项目内 fallback：
 
-**全局安装方式:**
 ```bash
-npm update -g mcp-probe-kit
+npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
 ```
+
+不要使用 `@next`、浮动的 `@latest`，也不要 `npm install -g`。
 
 ### Q4: 为什么 Windows 下图谱工具首次启动很慢，甚至超时？
 

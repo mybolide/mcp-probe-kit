@@ -60,6 +60,7 @@ describe("cli-fallback-installer", () => {
       expect(text).not.toContain("mcp-probe-kit@next");
     }
     const shellPath = path.join(root, CLI_SHELL_REL_PATH);
+    const powershell = fs.readFileSync(path.join(root, CLI_POWERSHELL_REL_PATH), "utf8");
     const shell = fs.readFileSync(shellPath, "utf8");
     expect(shell.startsWith("#!/usr/bin/env sh")).toBe(true);
     expect(shell).toContain('"$@"');
@@ -67,8 +68,15 @@ describe("cli-fallback-installer", () => {
     expect(shell).not.toContain('cd "$PROJECT_ROOT"');
     const cmd = fs.readFileSync(path.join(root, CLI_CMD_REL_PATH), "utf8");
     expect(cmd).toContain("MCP_PROBE_LOCAL_ENTRY");
+    expect(cmd).toContain("local-verify\\node_modules\\mcp-probe-kit\\build\\index.js");
+    expect(cmd).toContain("node_modules\\mcp-probe-kit\\build\\index.js");
+    expect(cmd).toContain("NPM_CONFIG_FETCH_RETRIES");
+    expect(cmd).toContain("could not resolve mcp-probe-kit@");
     expect(cmd).not.toContain("pushd");
     expect(cmd).not.toContain("MCP_PROBE_PROJECT_ROOT");
+    expect(powershell).toContain("local-verify\\node_modules\\mcp-probe-kit\\build\\index.js");
+    expect(shell).toContain(".mcp-probe-kit/local-verify/node_modules/mcp-probe-kit/build/index.js");
+    expect(shell).toContain("could not resolve mcp-probe-kit@");
     if (process.platform !== "win32") {
       expect(fs.statSync(shellPath).mode & 0o111).not.toBe(0);
     }
@@ -128,6 +136,96 @@ describe("cli-fallback-installer", () => {
     const shell = fs.readFileSync(path.join(root, CLI_SHELL_REL_PATH), "utf8");
     expect(cmd).not.toContain('%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js');
     expect(shell).not.toContain('$WRAPPER_ROOT/build/index.js');
+  });
+
+  test("普通项目优先使用 local-verify 入口，而不是 npx", () => {
+    const root = tempRoot();
+    const entryDir = path.join(
+      root,
+      ".mcp-probe-kit",
+      "local-verify",
+      "node_modules",
+      "mcp-probe-kit",
+      "build",
+    );
+    fs.mkdirSync(entryDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(entryDir, "index.js"),
+      'console.log(`LOCAL_VERIFY_OK ${process.argv.slice(2).join(" ")}`);\n',
+      "utf8",
+    );
+
+    ensureCliFallback(root);
+
+    const env = { ...process.env };
+    delete env.MCP_PROBE_LOCAL_ENTRY;
+    const execution = process.platform === "win32"
+      ? spawnSync("cmd.exe", ["/d", "/c", path.join(root, CLI_CMD_REL_PATH), "--version"], {
+          cwd: root,
+          env,
+          encoding: "utf8",
+        })
+      : spawnSync(path.join(root, CLI_SHELL_REL_PATH), ["--version"], {
+          cwd: root,
+          env,
+          encoding: "utf8",
+        });
+    expect(execution.status).toBe(0);
+    expect(execution.stdout).toContain("LOCAL_VERIFY_OK --version");
+  });
+
+  test("npx 解析失败时打印未发布版本提示并以非零退出", () => {
+    const root = tempRoot();
+    ensureCliFallback(root);
+
+    const fakeBin = path.join(root, "fake-bin");
+    fs.mkdirSync(fakeBin, { recursive: true });
+    if (process.platform === "win32") {
+      fs.writeFileSync(
+        path.join(fakeBin, "npx.cmd"),
+        "@echo off\r\necho npm error code ETARGET 1>&2\r\nexit /b 1\r\n",
+        "utf8",
+      );
+    } else {
+      fs.writeFileSync(path.join(fakeBin, "npx"), "#!/usr/bin/env sh\necho npm error code ETARGET >&2\nexit 1\n", {
+        encoding: "utf8",
+        mode: 0o755,
+      });
+    }
+
+    const env = { ...process.env };
+    delete env.MCP_PROBE_LOCAL_ENTRY;
+    const pathKey = Object.keys(env).find((key) => key.toLowerCase() === "path") ?? "PATH";
+    env[pathKey] = `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`;
+    const execution = process.platform === "win32"
+      ? spawnSync("cmd.exe", ["/d", "/c", path.join(root, CLI_CMD_REL_PATH), "--version"], {
+          cwd: root,
+          env,
+          encoding: "utf8",
+        })
+      : spawnSync(path.join(root, CLI_SHELL_REL_PATH), ["--version"], {
+          cwd: root,
+          env,
+          encoding: "utf8",
+        });
+    expect(execution.status).not.toBe(0);
+    const combined = `${execution.stdout}\n${execution.stderr}`;
+    expect(combined).toContain("could not resolve mcp-probe-kit@");
+    expect(combined).toContain("MCP_PROBE_LOCAL_ENTRY");
+  });
+
+  test("已存在启动器可被新版本内容覆盖", () => {
+    const root = tempRoot();
+    ensureCliFallback(root, "1.0.0");
+    const cmdPath = path.join(root, CLI_CMD_REL_PATH);
+    expect(fs.readFileSync(cmdPath, "utf8")).toContain("mcp-probe-kit@1.0.0");
+
+    ensureCliFallback(root, "1.0.1");
+
+    const cmd = fs.readFileSync(cmdPath, "utf8");
+    expect(cmd).toContain("mcp-probe-kit@1.0.1");
+    expect(cmd).toContain("local-verify\\node_modules\\mcp-probe-kit\\build\\index.js");
+    expect(cmd).not.toContain("mcp-probe-kit@1.0.0");
   });
 
   test("同版本重复执行不重写文件", () => {

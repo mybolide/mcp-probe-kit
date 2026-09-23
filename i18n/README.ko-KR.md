@@ -62,7 +62,7 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 
 **[읽기 전용 MCP Apps 라이브 데모 5개 열기](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 안정 버전:** `mcp-probe-kit@4.0.0`이 현재 안정 버전이며 npm `latest` 채널입니다.
+> **v4 안정 버전:** `mcp-probe-kit@4.0.3`이 현재 안정 버전이며 npm `latest` 채널입니다.
 <!-- v4-showcase:end -->
 
 ---
@@ -338,7 +338,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@4.0.0"]
+      "args": ["mcp-probe-kit@4.0.3"]
     }
   }
 }
@@ -357,7 +357,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.0"]
+      "args": ["-y", "mcp-probe-kit@4.0.3"]
     }
   }
 }
@@ -375,7 +375,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@4.0.0"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.0.3"],
       "enabled": true
     }
   }
@@ -384,22 +384,13 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
 
 > **참고:** OpenCode는 `opencode.json`을 사용하며, Cursor/Claude Desktop과 스키마가 다릅니다. `mcpServers` 대신 `mcp`를, `command`는 배열, `"type": "local"`이 필요하며, 환경 변수는 `env`가 아닌 `environment`를 사용합니다. 자세한 내용은 [OpenCode MCP 문서](https://opencode.ai/docs/mcp)를 참조하세요.
 
-### 방법 2: 전역 설치
+### 방법 2: 프로젝트 로컬 Agent fallback
 
 ```bash
-npm install -g mcp-probe-kit
+npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
 ```
 
-설정 파일에서 사용:
-```json
-{
-  "mcpServers": {
-    "mcp-probe-kit": {
-      "command": "mcp-probe-kit"
-    }
-  }
-}
-```
+버전 고정 `.mcp-probe-kit/bin/probe.*`를 생성합니다. 네이티브 MCP를 우선하고, 호스트가 도구를 주입하지 않을 때만 이 래퍼를 사용합니다. 전역 설치하지 마세요.
 
 ### Windows 그래프 도구 안내
 
@@ -499,12 +490,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@4.0.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.3 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 설정 후 클라이언트가 도구를 인식하지 못하나요?
@@ -514,15 +505,15 @@ npx -y mcp-probe-kit@4.0.0 2>&1 | tee ./mcp-probe-kit.log
 3. JSON 형식이 올바르고 구문 오류가 없는지 확인
 4. 클라이언트의 개발자 도구 또는 로그에서 오류 메시지 확인
 
-### Q3: 최신 버전으로 업데이트하는 방법은?
+### Q3: 현재 안정 버전으로 업데이트하는 방법은?
 
-**npx 방식(권장):**
-설정에서 `@latest` 태그를 사용하면 자동으로 최신 버전이 사용됩니다.
+MCP 설정에 정확한 지정자 `mcp-probe-kit@4.0.3`을 고정한 뒤, 프로젝트 로컬 fallback을 갱신합니다.
 
-**전역 설치 방식:**
 ```bash
-npm update -g mcp-probe-kit
+npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
 ```
+
+`@next`, 부동 `@latest`, `npm install -g`는 사용하지 마세요.
 
 ### Q4: Windows 에서 그래프 도구의 첫 실행이 느리거나 시간 초과되는 이유는 무엇인가요?
 

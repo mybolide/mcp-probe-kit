@@ -2,7 +2,7 @@
 
 This file tracks implementation status separately from the frozen requirements document.
 
-> **Current stable 4.0.0 surface:** Compact 24, Compact + Memory 30, Full 34, Apps model-visible 30, App-only 1, unique callable names 35. Phase 0 counts below are the historical pre-`architecture` compatibility baseline, not the current tool surface.
+> **Current stable 4.0.3 surface:** Compact 24, Compact + Memory 30, Full 34, Apps model-visible 30, App-only 1, unique callable names 35. Phase 0 counts below are the historical pre-`architecture` compatibility baseline, not the current tool surface.
 
 ## Phase status
 
