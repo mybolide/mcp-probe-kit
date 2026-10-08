@@ -69,7 +69,7 @@ v4 macht die delegierte Agent-Ausführung zu einem beobachtbaren, fortsetzbaren 
 
 **[Fünf interaktive, schreibgeschützte MCP-App-Demos öffnen](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 Stable:** `mcp-probe-kit@4.0.3` ist die aktuelle stabile Version und der npm-`latest`-Kanal.
+> **v4 Stable:** `mcp-probe-kit@4.1.0` ist die aktuelle stabile Version und der npm-`latest`-Kanal.
 <!-- v4-showcase:end -->
 
 ---
@@ -151,7 +151,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -172,7 +172,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -324,7 +324,7 @@ UI/UX-Tools mit `start_ui` als einheitlichem Einstiegspunkt:
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@4.0.3"]
+      "args": ["mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -337,7 +337,7 @@ UI/UX-Tools mit `start_ui` als einheitlichem Einstiegspunkt:
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"]
+      "args": ["-y", "mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -352,7 +352,7 @@ UI/UX-Tools mit `start_ui` als einheitlichem Einstiegspunkt:
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@4.0.3"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.1.0"],
       "enabled": true
     }
   }
@@ -364,7 +364,7 @@ UI/UX-Tools mit `start_ui` als einheitlichem Einstiegspunkt:
 ### Methode 2: Projektlokales Agent-Fallback
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 ### Optionales Memory-System-Setup
@@ -381,7 +381,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -403,7 +403,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -502,7 +502,7 @@ git_work_report --start_date 2026-02-01 --end_date 2026-02-07
 ### Q1: Tool funktioniert nicht?
 
 ```bash
-npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: Client erkennt Tools nicht?
@@ -513,7 +513,7 @@ npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
 
 ### Q3: Wie auf die aktuelle stabile Version aktualisieren?
 
-`mcp-probe-kit@4.0.3` in der MCP-Config pinnen, dann `npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .` ausführen. Kein `@next`, kein floatendes `@latest`, kein `npm install -g`.
+`mcp-probe-kit@4.1.0` in der MCP-Config pinnen, dann `npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .` ausführen. Kein `@next`, kein floatendes `@latest`, kein `npm install -g`.
 
 ### Q4: Warum sind Graph-Tools unter Windows langsam?
 

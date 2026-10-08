@@ -63,7 +63,7 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 
 **[5つの読み取り専用 MCP Apps ライブデモを開く](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 安定版：** `mcp-probe-kit@4.0.3` が現在の安定版で、npm `latest` チャネルです。
+> **v4 安定版：** `mcp-probe-kit@4.1.0` が現在の安定版で、npm `latest` チャネルです。
 <!-- v4-showcase:end -->
 
 ---
@@ -355,7 +355,7 @@ AIは**ステップごとにツールを呼び出してファイルを永続化�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@4.0.3"]
+      "args": ["mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -374,7 +374,7 @@ AIは**ステップごとにツールを呼び出してファイルを永続化�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"]
+      "args": ["-y", "mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -392,7 +392,7 @@ AIは**ステップごとにツールを呼び出してファイルを永続化�
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@4.0.3"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.1.0"],
       "enabled": true
     }
   }
@@ -404,7 +404,7 @@ AIは**ステップごとにツールを呼び出してファイルを永続化�
 ### 方法2: プロジェクト内 Agent fallback
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 バージョン固定の `.mcp-probe-kit/bin/probe.*` を書き込みます。ネイティブ MCP を優先し、ホストがツールを注入しない場合のみこれらのラッパーを使います。グローバルインストールはしないでください。
@@ -507,12 +507,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@4.0.3 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 設定後にクライアントがツールを認識しない場合は？
@@ -524,10 +524,10 @@ npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
 
 ### Q3: 現在の安定版に更新するには？
 
-MCP 設定で正確な指定子 `mcp-probe-kit@4.0.3` を固定します。次にプロジェクト内 fallback を更新します。
+MCP 設定で正確な指定子 `mcp-probe-kit@4.1.0` を固定します。次にプロジェクト内 fallback を更新します。
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 `@next`、浮動の `@latest`、および `npm install -g` は使わないでください。

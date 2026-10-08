@@ -63,7 +63,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 **[打开 5 个可交互、只读的 MCP Apps 动态演示](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 正式版：** `mcp-probe-kit@4.0.3` 已正式发布，并已成为 npm `latest` 稳定通道。
+> **v4 正式版：** `mcp-probe-kit@4.1.0` 已正式发布，并已成为 npm `latest` 稳定通道。
 <!-- v4-showcase:end -->
 
 ---
@@ -199,7 +199,7 @@ Skill 与 `AGENTS.md` 写明读写时机；[所有工具](https://mcp-probe-kit.
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "你的-qdrant-api-key",
@@ -229,7 +229,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -457,7 +457,7 @@ AI 需要**按步骤调用工具并落盘文件**，而不是由工具内部直�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"]
+      "args": ["-y", "mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -489,7 +489,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -511,7 +511,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -554,7 +554,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"]
+      "args": ["-y", "mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -572,7 +572,7 @@ ollama pull nomic-embed-text
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@4.0.3"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.1.0"],
       "enabled": true
     }
   }
@@ -584,7 +584,7 @@ ollama pull nomic-embed-text
 ### 方式二：项目内 Agent fallback
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 会写入版本锁定的 `.mcp-probe-kit/bin/probe.*`。优先使用原生 MCP；宿主未注入工具时再走这些包装器。不要全局安装。
@@ -705,12 +705,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@4.0.3 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 配置后客户端无法识别工具？
@@ -722,10 +722,10 @@ npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
 
 ### Q3: 如何更新到当前稳定版？
 
-在 MCP 配置中锁定精确版本：`mcp-probe-kit@4.0.3`。然后刷新项目内 fallback：
+在 MCP 配置中锁定精确版本：`mcp-probe-kit@4.1.0`。然后刷新项目内 fallback：
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 不要使用 `@next`、浮动的 `@latest`，也不要 `npm install -g`。

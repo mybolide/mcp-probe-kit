@@ -72,7 +72,7 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 
 **[Open the five live, read-only MCP App demos](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 stable:** `mcp-probe-kit@4.0.3` is the current stable release and npm `latest` channel.
+> **v4 stable:** `mcp-probe-kit@4.1.0` is the current stable release and npm `latest` channel.
 <!-- v4-showcase:end -->
 
 ---
@@ -241,7 +241,7 @@ Full Docker Compose, ports, and troubleshooting: **[docs/memory-local-setup.md](
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "your-qdrant-api-key",
@@ -278,7 +278,7 @@ ollama pull nomic-embed-text
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:6333",
         "MEMORY_QDRANT_COLLECTION": "mcp_probe_memory",
@@ -547,7 +547,7 @@ No installation needed, use the latest version directly.
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"]
+      "args": ["-y", "mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -586,7 +586,7 @@ npx --yes mcp-probe-kit@<exact-version> install-agent --project-root .
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"]
+      "args": ["-y", "mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -604,7 +604,7 @@ npx --yes mcp-probe-kit@<exact-version> install-agent --project-root .
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@4.0.3"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.1.0"],
       "enabled": true
     }
   }
@@ -616,7 +616,7 @@ npx --yes mcp-probe-kit@<exact-version> install-agent --project-root .
 ### Method 2: Project-local Agent fallback
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 This writes version-locked `.mcp-probe-kit/bin/probe.*` launchers. Prefer native MCP; when the host does not inject tools, the Agent uses these wrappers. Do not install the package globally.
@@ -650,7 +650,7 @@ Lightweight local stack; no Ollama. Deploy Qdrant and `nomic-embed` via Docker C
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"],
+      "args": ["-y", "mcp-probe-kit@4.1.0"],
       "env": {
         "MEMORY_QDRANT_URL": "http://127.0.0.1:50008",
         "MEMORY_QDRANT_API_KEY": "your-qdrant-api-key",
@@ -859,12 +859,12 @@ Check detailed logs:
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@4.0.3 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: Client not recognizing tools after configuration?
@@ -939,10 +939,10 @@ Healthy session: `tools/` should auto-populate within seconds of MCP connect —
 
 ### Q3: How to update to the current stable version?
 
-Pin the exact specifier in MCP config: `mcp-probe-kit@4.0.3`. Then refresh the project-local fallback:
+Pin the exact specifier in MCP config: `mcp-probe-kit@4.1.0`. Then refresh the project-local fallback:
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 Do not use `@next`, a floating `@latest` specifier, or a global `npm install -g`.

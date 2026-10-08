@@ -63,7 +63,7 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 
 **[읽기 전용 MCP Apps 라이브 데모 5개 열기](https://mcp-probe-kit.bytezonex.com/pages/apps.html)**
 
-> **v4 안정 버전:** `mcp-probe-kit@4.0.3`이 현재 안정 버전이며 npm `latest` 채널입니다.
+> **v4 안정 버전:** `mcp-probe-kit@4.1.0`이 현재 안정 버전이며 npm `latest` 채널입니다.
 <!-- v4-showcase:end -->
 
 ---
@@ -355,7 +355,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["mcp-probe-kit@4.0.3"]
+      "args": ["mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -374,7 +374,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcpServers": {
     "mcp-probe-kit": {
       "command": "npx",
-      "args": ["-y", "mcp-probe-kit@4.0.3"]
+      "args": ["-y", "mcp-probe-kit@4.1.0"]
     }
   }
 }
@@ -392,7 +392,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
   "mcp": {
     "mcp-probe-kit": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-probe-kit@4.0.3"],
+      "command": ["npx", "-y", "mcp-probe-kit@4.1.0"],
       "enabled": true
     }
   }
@@ -404,7 +404,7 @@ AI는 **단계별로 도구를 호출하고 파일을 영구 저장**해야 하�
 ### 방법 2: 프로젝트 로컬 Agent fallback
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 버전 고정 `.mcp-probe-kit/bin/probe.*`를 생성합니다. 네이티브 MCP를 우선하고, 호스트가 도구를 주입하지 않을 때만 이 래퍼를 사용합니다. 전역 설치하지 마세요.
@@ -507,12 +507,12 @@ git_work_report --date 2026-02-03 --output_file daily-report.md
 
 **Windows (PowerShell):**
 ```powershell
-npx -y mcp-probe-kit@4.0.3 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | Tee-Object -FilePath .\mcp-probe-kit.log
 ```
 
 **macOS/Linux:**
 ```bash
-npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
+npx -y mcp-probe-kit@4.1.0 2>&1 | tee ./mcp-probe-kit.log
 ```
 
 ### Q2: 설정 후 클라이언트가 도구를 인식하지 못하나요?
@@ -524,10 +524,10 @@ npx -y mcp-probe-kit@4.0.3 2>&1 | tee ./mcp-probe-kit.log
 
 ### Q3: 현재 안정 버전으로 업데이트하는 방법은?
 
-MCP 설정에 정확한 지정자 `mcp-probe-kit@4.0.3`을 고정한 뒤, 프로젝트 로컬 fallback을 갱신합니다.
+MCP 설정에 정확한 지정자 `mcp-probe-kit@4.1.0`을 고정한 뒤, 프로젝트 로컬 fallback을 갱신합니다.
 
 ```bash
-npx --yes mcp-probe-kit@4.0.3 install-agent --project-root .
+npx --yes mcp-probe-kit@4.1.0 install-agent --project-root .
 ```
 
 `@next`, 부동 `@latest`, `npm install -g`는 사용하지 마세요.
