@@ -8,6 +8,14 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { createProbeServer } from "../../server/create-server.js";
 import type { ProtocolMode } from "../protocol-capabilities.js";
 import { isMemoryEnabled } from "../../lib/memory-config.js";
+import { isHistorySessionEnabled } from "../../lib/history-session-config.js";
+
+function expectedCompactToolCount(): number {
+  let count = 24;
+  if (isHistorySessionEnabled()) count += 5;
+  if (isMemoryEnabled()) count += 6;
+  return count;
+}
 
 const cleanup: string[] = [];
 
@@ -29,7 +37,7 @@ describe("SDK v2 dual-era stdio", () => {
       expect(session.client.getProtocolEra()).toBe("modern");
       expect(session.client.getServerCapabilities()).not.toHaveProperty("tasks");
       const tools = await session.client.listTools();
-      expect(tools.tools).toHaveLength(isMemoryEnabled() ? 30 : 24);
+      expect(tools.tools).toHaveLength(expectedCompactToolCount());
       expect(tools.tools.map((tool) => tool.name)).toEqual(
         expect.arrayContaining(['plan_heartbeat', 'resume_plan', 'converge'])
       );

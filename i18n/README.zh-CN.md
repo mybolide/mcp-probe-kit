@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> 知时MCP 是协议级的上下文探测与研发编排工具箱。v4 默认向模型暴露 24 个清晰入口，完整配置 Memory 后为 30 个，并保留 34 个工具的 full 兼容面。
+> 知时MCP 是协议级的上下文探测与研发编排工具箱。v4 默认向模型暴露 29 个清晰入口（24 基础 + 5 History Session），完整配置 Memory 后为 35 个，并保留 39 个工具的 full 兼容面。
 
 **Languages**: [English](../README.md) | **简体中文** | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI 驱动的完整研发工具集 - 覆盖开发全流程
 
-一个强大的 MCP (Model Context Protocol) 服务器，默认提供 **24 个模型可见工具**；完整配置 Memory 后提供 **30 个**；通过 `MCP_TOOLSET=full` 可恢复 **34 个兼容工具**。支持结构化输出、Legacy/Modern 双协议和正式 MCP Apps。
+一个强大的 MCP (Model Context Protocol) 服务器，默认提供 **29 个模型可见工具**（24 基础 + 5 History Session；可用 `MCP_HISTORY_SESSION=0` 关闭 History）；完整配置 Memory 后提供 **35 个**；通过 `MCP_TOOLSET=full` 可恢复 **39 个兼容工具**。支持结构化输出、Legacy/Modern 双协议和正式 MCP Apps。
 
 **🎉 v4 正式版**：原生 MCP Apps、可恢复计划、证据收敛、GitNexus 托管 Sidecar、父子规格和版本锁定 CLI fallback。
 
@@ -54,6 +54,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 <strong>Convergence Gate</strong>：步骤或需求/规格/实现/测试/审查证据不完整时拒绝收尾。
 
 - **5 个原生 MCP Apps**：Memory、Feature、Bug、Product 和 Convergence。
+- **History Session（默认开启）**：`docs/history-session/` 下的无损本地会话交接——bootstrap → checkpoint → search/read，无需向量库。
 - **可恢复委托计划**：`plan_heartbeat` 保存真实进度，`resume_plan` 恢复下一可执行步骤。
 - **证据收敛闸门**：`converge` 决定是否允许交付和正式写入长期记忆。
 - **GitNexus 托管 Sidecar**：按版本、平台、架构和 Node 主版本隔离，校验完整性与真实 FTS 能力，失败自动降级。
@@ -73,9 +74,9 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 - [快速开始](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - 5分钟完成安装配置
 - [本地记忆栈（Qdrant + Nomic Embed）](../docs/memory-local-setup.zh-CN.md) - Docker Compose、端口 50008/50012、MCP 配置
-- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 默认、Memory 条件工具、App-only 动作和 full 兼容工具面
+- [所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - 默认（含 History）、Memory 条件工具、App-only 动作和 full 兼容工具面
 - [最佳实践](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - 完整研发流程实战指南
-- [v3 → v4 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - 工具面、协议、Apps、计划状态、Memory 与兼容策略
+- [v3 → v4 迁移指南](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - 工具面、History Session、协议、Apps、计划状态、Memory 与兼容策略
 - [MCP Apps 动态演示](https://mcp-probe-kit.bytezonex.com/pages/apps.html) - 由正式 App 源码生成的 5 个只读工作台
 
 ---
@@ -84,11 +85,44 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 ### 📦 工具面
 
-- **默认 `compact`**：24 个模型可见工具，保留 `start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge`、`architecture` 等独立入口。
-- **完整配置 Memory**：动态增加 6 个 Memory 工具，模型可见数量为 30。
-- **`MCP_TOOLSET=full`**：恢复 34 个兼容模型工具，用于旧流程和诊断。
+- **默认 `compact` + History**：29 个模型可见工具（24 基础 + 5 History），保留 `start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge`、`architecture` 等独立入口。
+- **完整配置 Memory**：再动态增加 6 个 Memory 工具，模型可见数量为 35（关闭 History 时为 30）。
+- **`MCP_TOOLSET=full`**：恢复 39 个兼容模型工具，用于旧流程和诊断。
 - **MCP Apps**：`list_memory_assets` 仅供 Memory Center 调用，标记为 `visibility=["app"]`，不计入模型工具数量。
 - 默认隐藏 `add_feature`、`fix_bug`、`sync_ui_data`、`ask_user`，但其能力仍由编排、维护脚本或 full 模式保留。
+
+### 📜 History Session（默认开启）— 无损项目会话交接
+
+聊天宿主会忘。History Session 在仓库本地留下**无损会话档案**，让下一轮（或新开对话）的 Agent 仍能拿到真实用户原话、决策与待办——不必把整段聊天塞进提示词。
+
+**为什么重要**
+
+- 上下文窗口与「新开对话」会丢掉已确认事实；History 以 Markdown 落在 `docs/history-session/`。
+- **默认开启**，**不依赖 Qdrant / Embedding**——装好 MCP 即可用，与 24 个基础 compact 工具合计 **29** 个模型可见工具。
+- 与其它层分工清晰，互不替代：
+
+| 层 | 职责 | 典型工具 |
+|---|---|---|
+| **History Session** | 本项目会话交接、用户原话、轮次检查点 | `history_session_*` |
+| **Delegated Plan** | 可恢复步骤与证据收敛 | `plan_heartbeat` / `resume_plan` / `converge` |
+| **Memory** | 跨仓库可复用经验（需 `MEMORY_*`） | `search_memory` / `memorize_asset` |
+
+**Agent 怎么用**
+
+1. **新对话开始** — `history_session_bootstrap`，传 `initial_user_input=<用户首条原话>`。Cursor 等无宿主 session 时**省略** `session_key`，落到 `project-active`；禁止伪造随机 UUID。
+2. **每轮最终回复前** — `history_session_checkpoint`，回传 bootstrap 的 `session_key` + `expected_path`，并带本轮 `raw_user_input` / `user_intent`。按 Skill **最低填写清单**写满 `findings` / `decisions` / `files_changed` / `tests` / `runtime_state` / `next_actions`，禁止空数组交差。
+3. **需要旧结论** — `history_session_search` → `history_session_read`（跟 `next_cursor`）。先读 bootstrap 有界 `state`，不要默认全量灌历史。
+4. **编号/索引异常** — `history_session_validate`（必要时 `repair=true`）。
+
+**运维要点**
+
+- 超 `MCP_HISTORY_MAX_LINES` / `MCP_HISTORY_MAX_BYTES`（默认 `800` / `131072`）会软轮转；以返回的新 `expected_path` 为准；轮转会**继承**上一档最新 `initial_user_input`。
+- 归档前脱敏常见密钥；检查点按内容指纹幂等。
+- 关闭：`MCP_HISTORY_SESSION=0|false|off`（隐藏五个 History 工具）。
+- **不要提交** `docs/history-session/` — 写入 `.gitignore`（仅本地交接，不属于发布物）。
+
+Skill 与 `AGENTS.md` 写明读写时机；[所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) 提供每个 `history_session_*` 的一句话调用。
+
 
 ### 🔁 委托计划状态、恢复与收敛
 

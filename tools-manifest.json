@@ -5,10 +5,10 @@
     "2025-11-25",
     "2026-07-28"
   ],
-  "totalTools": 34,
+  "totalTools": 39,
   "toolsets": {
     "compact": {
-      "description": "24 default model tools",
+      "description": "24 base model tools (before History/Memory conditionals)",
       "count": 24,
       "tools": [
         "start_feature",
@@ -36,10 +36,45 @@
         "converge",
         "interview"
       ],
-      "note": "Default model-visible surface"
+      "note": "Base compact names; History Session is ON by default and adds 5 tools at tools/list time"
+    },
+    "compactWithHistory": {
+      "description": "29 model tools when History Session is enabled (default)",
+      "count": 29,
+      "tools": [
+        "start_feature",
+        "start_bugfix",
+        "start_ui",
+        "start_onboard",
+        "start_product",
+        "start_ralph",
+        "workflow",
+        "init_project_context",
+        "init_project",
+        "check_spec",
+        "estimate",
+        "code_insight",
+        "architecture",
+        "gentest",
+        "code_review",
+        "refactor",
+        "gencommit",
+        "git_work_report",
+        "ui_design_system",
+        "ui_search",
+        "plan_heartbeat",
+        "resume_plan",
+        "converge",
+        "interview",
+        "history_session_bootstrap",
+        "history_session_checkpoint",
+        "history_session_validate",
+        "history_session_search",
+        "history_session_read"
+      ]
     },
     "compactWithMemory": {
-      "description": "30 model tools when Memory is configured",
+      "description": "30 model tools when Memory is configured (History off)",
       "count": 30,
       "tools": [
         "start_feature",
@@ -72,6 +107,58 @@
         "update_memory_asset",
         "delete_memory_asset",
         "scan_and_extract_patterns"
+      ]
+    },
+    "compactWithHistoryAndMemory": {
+      "description": "35 model tools when History (default) and Memory are both enabled",
+      "count": 35,
+      "tools": [
+        "start_feature",
+        "start_bugfix",
+        "start_ui",
+        "start_onboard",
+        "start_product",
+        "start_ralph",
+        "workflow",
+        "init_project_context",
+        "init_project",
+        "check_spec",
+        "estimate",
+        "code_insight",
+        "architecture",
+        "gentest",
+        "code_review",
+        "refactor",
+        "gencommit",
+        "git_work_report",
+        "ui_design_system",
+        "ui_search",
+        "plan_heartbeat",
+        "resume_plan",
+        "converge",
+        "interview",
+        "history_session_bootstrap",
+        "history_session_checkpoint",
+        "history_session_validate",
+        "history_session_search",
+        "history_session_read",
+        "search_memory",
+        "read_memory_asset",
+        "memorize_asset",
+        "update_memory_asset",
+        "delete_memory_asset",
+        "scan_and_extract_patterns"
+      ]
+    },
+    "historyConditional": {
+      "description": "5 conditionally visible History Session tools (default ON)",
+      "count": 5,
+      "tools": [
+        "history_session_bootstrap",
+        "history_session_checkpoint",
+        "history_session_validate",
+        "history_session_search",
+        "history_session_read"
       ]
     },
     "memoryConditional": {
@@ -124,6 +211,17 @@
         "scan_and_extract_patterns"
       ]
     },
+    "historySession": {
+      "description": "5 history-session tools",
+      "count": 5,
+      "tools": [
+        "history_session_bootstrap",
+        "history_session_checkpoint",
+        "history_session_validate",
+        "history_session_search",
+        "history_session_read"
+      ]
+    },
     "ui": {
       "description": "4 UI/UX tools (recommend using start_ui unified entry)",
       "count": 4,
@@ -135,8 +233,8 @@
       ]
     },
     "workflow": {
-      "description": "33 workflow tools (includes core + orchestration + interactive + UI + memory)",
-      "count": 33,
+      "description": "38 workflow tools (includes core + orchestration + interactive + UI + memory + history)",
+      "count": 38,
       "tools": [
         "init_project",
         "gencommit",
@@ -167,6 +265,11 @@
         "delete_memory_asset",
         "update_memory_asset",
         "scan_and_extract_patterns",
+        "history_session_bootstrap",
+        "history_session_checkpoint",
+        "history_session_validate",
+        "history_session_search",
+        "history_session_read",
         "plan_heartbeat",
         "resume_plan",
         "converge",
@@ -174,8 +277,8 @@
       ]
     },
     "full": {
-      "description": "All 34 tools",
-      "count": 34,
+      "description": "All 39 tools",
+      "count": 39,
       "note": "Compatibility/debugging surface selected with MCP_TOOLSET=full"
     }
   },
@@ -242,6 +345,16 @@
         "delete_memory_asset",
         "update_memory_asset",
         "scan_and_extract_patterns"
+      ]
+    },
+    "history-session": {
+      "description": "Lossless session history archive tools (5)",
+      "tools": [
+        "history_session_bootstrap",
+        "history_session_checkpoint",
+        "history_session_validate",
+        "history_session_search",
+        "history_session_read"
       ]
     },
     "plan-control": {

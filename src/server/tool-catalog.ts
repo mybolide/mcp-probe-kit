@@ -65,6 +65,7 @@ const CODE_ANALYSIS = "代码分析（可直接调，不必等 start_*）";
 const GIT = "Git";
 const UI = "UI 独立能力（可直接调用，也可由 `start_ui` 组合）";
 const MEMORY = "记忆（需 MEMORY 已配置）";
+const HISTORY = "会话历史档案（默认开启；MCP_HISTORY_SESSION=0|false|off 关闭）";
 const INTERACTIVE = "交互";
 const PLAN = "长任务状态、恢复与正式收敛（按需）";
 
@@ -398,6 +399,62 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "memory",
     groupTitle: MEMORY,
     whenToCall: "从代码库**批量提取**可复用模式并建议沉淀",
+  }),
+  tool({
+    name: "history_session_bootstrap",
+    title: "初始化/恢复会话历史",
+    readOnly: false,
+    idempotent: true,
+    openWorld: false,
+    toolsets: ["workflow"],
+    groupId: "history-session",
+    groupTitle: HISTORY,
+    whenToCall: "新对话开始时**先 bootstrap**（可传 initial_user_input；无宿主 session 可不传 session_key，落到项目当前档）；返回有界状态与 checkpoint_policy；档案在 docs/history-session/（应 gitignore，勿提交）",
+  }),
+  tool({
+    name: "history_session_checkpoint",
+    title: "写入会话检查点",
+    readOnly: false,
+    idempotent: true,
+    openWorld: false,
+    toolsets: ["workflow"],
+    groupId: "history-session",
+    groupTitle: HISTORY,
+    whenToCall:
+      "每轮最终回复前写入检查点；必须回传 session_key/expected_path + raw_user_input/user_intent；按 Skill 最低清单填 findings/decisions/files_changed/tests/runtime_state/next_actions，禁止空数组交差；超行数/字节会软轮转",
+  }),
+  tool({
+    name: "history_session_validate",
+    title: "校验会话历史",
+    readOnly: false,
+    idempotent: true,
+    openWorld: false,
+    toolsets: ["workflow"],
+    groupId: "history-session",
+    groupTitle: HISTORY,
+    whenToCall: "编号缺口、重复 key 或派生状态损坏时校验；`repair=true` 可重建 state/manifest",
+  }),
+  tool({
+    name: "history_session_search",
+    title: "搜索会话历史",
+    readOnly: true,
+    idempotent: true,
+    openWorld: false,
+    toolsets: ["workflow"],
+    groupId: "history-session",
+    groupTitle: HISTORY,
+    whenToCall: "跨会话需要定位旧档时按关键词搜索；再配合 history_session_read 取原文",
+  }),
+  tool({
+    name: "history_session_read",
+    title: "读取会话历史",
+    readOnly: true,
+    idempotent: true,
+    openWorld: false,
+    toolsets: ["workflow"],
+    groupId: "history-session",
+    groupTitle: HISTORY,
+    whenToCall: "`history_session_search` 命中后按 number/path **分页读取**无损 Markdown 原文",
   }),
   tool({
     name: "plan_heartbeat",

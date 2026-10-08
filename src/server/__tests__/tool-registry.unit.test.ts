@@ -105,11 +105,13 @@ describe("Tool Registry", () => {
   });
 
   test("工具集过滤保持既有数量与成员关系", () => {
-    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: false })).toHaveLength(24);
-    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: true })).toHaveLength(30);
+    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: false, historyEnabled: false })).toHaveLength(24);
+    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: false, historyEnabled: true })).toHaveLength(29);
+    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: true, historyEnabled: false })).toHaveLength(30);
+    expect(listToolDefinitionsForToolset("compact", { memoryEnabled: true, historyEnabled: true })).toHaveLength(35);
     expect(listToolDefinitionsForToolset("core")).toHaveLength(13);
     expect(listToolDefinitionsForToolset("ui")).toHaveLength(4);
-    expect(listToolDefinitionsForToolset("workflow")).toHaveLength(33);
+    expect(listToolDefinitionsForToolset("workflow")).toHaveLength(38);
     expect(listToolDefinitionsForToolset("full")).toHaveLength(allToolSchemas.length);
     expect(getToolDefinition("git_work_report")?.toolsets).toEqual([]);
     expect(getToolDefinition("plan_heartbeat")?.annotations?.readOnlyHint).toBe(false);
@@ -141,6 +143,7 @@ describe("Tool Registry", () => {
   test("compact omits internal entries and app-only tools stay outside the model registry", () => {
     const compactNames = listToolDefinitionsForToolset("compact", {
       memoryEnabled: false,
+      historyEnabled: false,
     }).map((definition) => definition.name);
     expect(compactNames).toEqual(
       expect.arrayContaining(["start_product", "gencommit", "converge", "architecture"])

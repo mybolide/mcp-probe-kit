@@ -22,6 +22,8 @@ type Manifest = {
   version: string;
   toolsets: {
     compact: { tools: string[] };
+    compactWithHistory?: { tools: string[] };
+    historyConditional?: { tools: string[] };
     memoryConditional: { tools: string[] };
     full: { count: number };
   };
@@ -36,7 +38,11 @@ const manifest = JSON.parse(
   await readFile(resolve(root, 'tools-manifest.json'), 'utf8'),
 ) as Manifest;
 
-const compact = new Set(manifest.toolsets.compact.tools);
+const history = new Set(manifest.toolsets.historyConditional?.tools ?? []);
+const compact = new Set([
+  ...(manifest.toolsets.compactWithHistory?.tools
+    ?? [...manifest.toolsets.compact.tools, ...history]),
+]);
 const memory = new Set(manifest.toolsets.memoryConditional.tools);
 const outputSchemas = manifest.structuredOutput?.schemas ?? {};
 
@@ -48,6 +54,7 @@ const categoryMap: Record<string, { key: string; title: string; icon: string }> 
   git: { key: 'git', title: 'Git 工具', icon: '📝' },
   ui: { key: 'uiux', title: 'UI/UX', icon: '🎨' },
   memory: { key: 'memory', title: 'Memory', icon: '🧠' },
+  'history-session': { key: 'history', title: '会话历史', icon: '📜' },
   'plan-control': { key: 'plan', title: '计划状态与收敛', icon: '🔁' },
   interactive: { key: 'interactive', title: '交互与访谈', icon: '💬' },
   'app-only': { key: 'apps', title: 'MCP Apps 专用', icon: '◫' },

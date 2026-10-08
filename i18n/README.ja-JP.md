@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP は、コンテキスト探索と開発オーケストレーションのためのプロトコルレベル・ツールキットです。v4 は既定でモデルに24ツール、Memory 完全構成時に30ツールを公開し、34ツールの full 互換面を維持します。
+> Zhishi MCP は、コンテキスト探索と開発オーケストレーションのためのプロトコルレベル・ツールキットです。v4 は既定でモデルに29ツール（基盤24 + History 5）を公開し、Memory 完全構成時に35ツール、full 互換面は39ツールです。
 
 **言語**: [English](../README.md) | [简体中文](README.zh-CN.md) | **日本語** | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI駆動の完全開発ツールキット - 開発ライフサイクル全体をカバー
 
-強力な MCP (Model Context Protocol) サーバーです。既定では **24個のモデル可視ツール**、Memory 完全構成時は **30個**、`MCP_TOOLSET=full` では **34個の互換ツール**を提供します。構造化出力、Legacy/Modern 両プロトコル、正式な MCP Apps に対応します。
+強力な MCP (Model Context Protocol) サーバーです。既定では **29個のモデル可視ツール**（基盤24 + History 5；`MCP_HISTORY_SESSION=0` で History を非表示）、Memory 完全構成時は **35個**、`MCP_TOOLSET=full` では **39個の互換ツール**を提供します。構造化出力、Legacy/Modern 両プロトコル、正式な MCP Apps に対応します。
 
 **🎉 v4 安定版**：ネイティブ MCP Apps、再開可能な計画、証拠収束、管理型 GitNexus Sidecar、親子仕様、固定バージョン CLI fallback。
 
@@ -54,6 +54,7 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 <strong>Convergence Gate</strong>：ステップまたは要件/仕様/実装/テスト/レビュー証拠が不足すると完了を拒否。
 
 - **5つのネイティブ MCP Apps**：Memory、Feature、Bug、Product、Convergence。
+- **History Session（既定 ON）**：`docs/history-session/` のロスレス引き継ぎ（bootstrap → checkpoint → search/read、ベクトルDB不要）。
 - **再開可能な委任計画**：`plan_heartbeat` が実進捗を保存し、`resume_plan` が次の実行ステップを復元。
 - **証拠ベースの収束**：`converge` が納品と長期 Memory 書き込みを制御。
 - **管理型 GitNexus Sidecar**：バージョン、OS、CPU、Node 主版ごとに分離し、整合性と実 FTS を検証。
@@ -83,9 +84,9 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 
 ### 📦 ツール面
 
-- **既定 `compact`**: モデル可視ツールは24個。`start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge`、`architecture` などの独立入口を保持します。
-- **Memory 完全構成**: 6個の Memory ツールを動的に追加し、モデル可視数は30個になります。
-- **`MCP_TOOLSET=full`**: 旧フローと診断向けに34個の互換モデルツールを復元します。
+- **既定 `compact` + History**: モデル可視ツールは29個（基盤24 + History 5）。`start_product`、`gencommit`、`plan_heartbeat`、`resume_plan`、`converge`、`architecture` などの独立入口を保持します。
+- **Memory 完全構成**: さらに6個の Memory ツールを動的に追加し、モデル可視数は35個になります（History OFF 時は30）。
+- **`MCP_TOOLSET=full`**: 旧フローと診断向けに39個の互換モデルツールを復元します。
 - **MCP Apps**: `list_memory_assets` は Memory Center 専用で、`visibility=["app"]` のためモデルツール数には含まれません。
 - `add_feature`、`fix_bug`、`sync_ui_data`、`ask_user` は既定面から外れますが、オーケストレーション、保守スクリプト、full モードで能力を維持します。
 
@@ -102,6 +103,22 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 - Docs: [src8-methodology.md](../docs/src8-methodology.md)
 - `start_bugfix` runs SRC-8 before repair; `fix_bug` injects **rootCauseWorksheet** (Step 4)
 - `fix_bug` は現象、タイムライン、除外した経路、境界、根本原因、証拠、修正計画を含む TBP 構造を返します
+
+
+### 📜 History Session（既定 ON）— ロスレスなプロジェクト引き継ぎ
+
+ホストのチャットは忘れます。History Session は `docs/history-session/` に**ロスレスなローカル履歴**を残し、次の会話でもユーザー原話・決定・未決事項を復元できます（ベクトル DB 不要）。
+
+- **なぜ必要か**: コンテキスト切れや新規チャットでも事実を失わない。既定 ON。Memory/Plan とは別レイヤ。
+- **使い方**: 会話開始で `history_session_bootstrap`（`initial_user_input`；ホスト session が無ければ `session_key` 省略 → `project-active`）→ 最終応答前に `history_session_checkpoint`（最低記入チェックリスト）→ 旧事実は `search` → `read`。
+- **運用**: 行数/バイト超過でソフトローテート（`initial_user_input` 継承）。`MCP_HISTORY_SESSION=0|false|off` で非表示。**コミットしない**（`.gitignore`）。
+
+| 層 | 役割 |
+|---|---|
+| History | 本リポジトリの会話引き継ぎ |
+| Plan | 再開可能なステップと証拠 |
+| Memory | 横断再利用（`MEMORY_*` 必須） |
+
 
 ### 🧠 Memory Retrieval
 

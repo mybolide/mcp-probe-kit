@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit v4 - Observable Agent Workflows and Native MCP Apps",
-    "description": "MCP Probe Kit v4 ships 24 default model tools, 30 with Memory, a 34-tool full compatibility surface, five native MCP Apps, resumable plans, evidence convergence, GitNexus Sidecar, and a version-locked CLI fallback.",
+    "description": "MCP Probe Kit v4 ships 29 default model tools (24 base + 5 History Session), 35 with Memory, a 39-tool full compatibility surface, five native MCP Apps, resumable plans, evidence convergence, GitNexus Sidecar, and a version-locked CLI fallback.",
     "keywords": "MCP Probe Kit, AI development tools, code generation, code review, Git tools, UI development, development efficiency, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {
@@ -27,7 +27,7 @@
     },
     "tools": {
       "title": "Tools Documentation",
-      "description": "24 model-visible tools by default, 30 with Memory, plus five native MCP Apps",
+      "description": "29 model-visible tools by default (History ON), 35 with Memory, plus five native MCP Apps",
       "allTools": "All Tools"
     },
     "guides": {
@@ -353,7 +353,7 @@
     "subtitle": "MCP Probe Kit integrates complete development process, best practices guide from requirements to deployment",
     "overview": {
       "title": "Complete Development Process",
-      "description": "24 model-visible tools by default and 30 with Memory, covering the delivery lifecycle through start_* orchestration, plan checkpoints, and convergence gates.",
+      "description": "29 model-visible tools by default and 35 with Memory, covering History Session handoff, start_* orchestration, plan checkpoints, and convergence gates.",
       "coreIdea": "Core Philosophy:",
       "coreIdeaText": "Chain the entire development process through workflow orchestration tools (start_*), making AI your development assistant."
     },
@@ -608,7 +608,7 @@
     "resources": {
       "title": "More Resources",
       "allTools": "Complete Tools Reference",
-      "allToolsDesc": "View detailed documentation for the 34-tool full compatibility surface plus one App-only action",
+      "allToolsDesc": "View detailed documentation for the 39-tool full compatibility surface plus one App-only action",
       "gettingStarted": "Installation & Configuration",
       "gettingStartedDesc": "Quick start guide",
       "migration": "Migration Guide",

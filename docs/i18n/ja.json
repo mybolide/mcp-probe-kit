@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit v4 - 可観測な Agent ワークフローと MCP Apps",
-    "description": "MCP Probe Kit v4 は標準24ツール、Memory構成時30ツール、full互換34ツール、5つのMCP Apps、再開可能な計画、収束ゲート、GitNexus Sidecar、固定バージョンCLI fallbackを提供します。",
+    "description": "MCP Probe Kit v4 は標準29ツール（基盤24 + History 5）、Memory構成時35ツール、full互換39ツール、5つのMCP Apps、再開可能な計画、収束ゲート、GitNexus Sidecar、固定バージョンCLI fallbackを提供します。",
     "keywords": "MCP Probe Kit, AI開発ツール, コード生成, コードレビュー, Gitツール, UI開発, 開発効率, Cursor, Cline, Claude, MCPサーバー"
   },
   "nav": {
@@ -27,7 +27,7 @@
     },
     "tools": {
       "title": "ツールドキュメント",
-      "description": "標準24ツール、Memory構成時30ツール、さらに5つのネイティブMCP Apps",
+      "description": "標準29ツール（History 含む）、Memory構成時35ツール、さらに5つのネイティブMCP Apps",
       "allTools": "すべてのツール"
     },
     "guides": {
@@ -329,7 +329,7 @@
     "subtitle": "MCP Probe Kitは完全な開発プロセスを統合、要件からデプロイまでのベストプラクティスガイド",
     "overview": {
       "title": "完全な開発プロセス",
-      "description": "既定24個、Memory構成時30個のモデル可視ツールで、start_*、計画チェックポイント、収束ゲートを通じて開発全体を支援します。",
+      "description": "既定29個、Memory構成時35個のモデル可視ツールで、History Session、start_*、計画チェックポイント、収束ゲートを通じて開発全体を支援します。",
       "coreIdea": "コア哲学：",
       "coreIdeaText": "ワークフローオーケストレーションツール（start_*）を通じて開発プロセス全体を連携し、AIを開発アシスタントにします。"
     },
@@ -584,7 +584,7 @@
     "resources": {
       "title": "その他のリソース",
       "allTools": "完全なツールリファレンス",
-      "allToolsDesc": "34個のfull互換ツールと1個のApp-only操作の詳細を見る",
+      "allToolsDesc": "39個のfull互換ツールと1個のApp-only操作の詳細を見る",
       "gettingStarted": "インストールと設定",
       "gettingStartedDesc": "クイックスタートガイド",
       "migration": "移行ガイド",

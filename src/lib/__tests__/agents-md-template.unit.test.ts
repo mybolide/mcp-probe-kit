@@ -28,6 +28,12 @@ describe('generateAgentsMdInner', () => {
     expect(md).toContain('待 Agent 落盘');
     expect(md).toContain('bugfix');
     expect(md).toContain('search_memory');
+    expect(md).toContain('history_session_bootstrap');
+    expect(md).toContain('MCP_HISTORY_SESSION');
+    expect(md).toContain('**写**');
+    expect(md).toContain('**读**');
+    expect(md).toContain('检查点最低清单');
+    expect(md).toContain('resume_plan');
     expect(md).toContain('.mcp-probe-kit/bin/probe.*');
     expect(md).toContain('自动注入');
     expect(md).toContain('先调用 `resume_plan`');

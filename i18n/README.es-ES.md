@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit es un kit a nivel de protocolo para explorar contexto y orquestar el desarrollo. v4 muestra 24 herramientas al modelo por defecto, 30 con Memory completamente configurado y conserva una superficie full compatible de 34 herramientas.
+> mcp-probe-kit es un kit a nivel de protocolo para explorar contexto y orquestar el desarrollo. v4 muestra 29 herramientas al modelo por defecto (24 base + 5 History Session), 35 con Memory completamente configurado y conserva una superficie full compatible de 39 herramientas.
 
 **Idiomas**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | **Español** | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 Kit de Herramientas de Desarrollo Completo Impulsado por IA - Cubriendo Todo el Ciclo de Vida del Desarrollo
 
-Un potente servidor MCP con **24 herramientas visibles para el modelo por defecto**, **30 con Memory completo** y **34 herramientas de compatibilidad** mediante `MCP_TOOLSET=full`. Admite salida estructurada, protocolos Legacy/Modern y MCP Apps oficiales.
+Un potente servidor MCP con **29 herramientas visibles para el modelo por defecto** (24 base + 5 History; `MCP_HISTORY_SESSION=0` las oculta), **35 con Memory completo** y **39 herramientas de compatibilidad** mediante `MCP_TOOLSET=full`. Admite salida estructurada, protocolos Legacy/Modern y MCP Apps oficiales.
 
 **🎉 Versión estable v4**: MCP Apps nativas, planes reanudables, convergencia por evidencias, GitNexus Sidecar administrado, especificaciones padre-hijo y CLI fallback fijado.
 
@@ -60,6 +60,7 @@ v4 convierte la ejecución delegada del Agent en un ciclo de entrega observable,
 <strong>Convergence Gate</strong>: bloquea el cierre cuando faltan pasos o evidencias de requisitos, especificación, implementación, pruebas o revisión.
 
 - **Cinco MCP Apps nativas**: Memory, Feature, Bug, Product y Convergence.
+- **History Session (activado por defecto)**: traspaso local sin pérdida en `docs/history-session/` (bootstrap → checkpoint → search/read, sin vector DB).
 - **Planes delegados reanudables**: `plan_heartbeat` guarda el progreso real y `resume_plan` recupera el siguiente paso.
 - **Convergencia basada en evidencias**: `converge` controla la entrega y la escritura en Memory a largo plazo.
 - **GitNexus Sidecar administrado**: aislamiento por versión, plataforma, arquitectura y Node; integridad y FTS real verificados.
@@ -89,9 +90,9 @@ v4 convierte la ejecución delegada del Agent en un ciclo de entrega observable,
 
 ### 📦 Superficies de herramientas
 
-- **`compact` por defecto**: 24 herramientas visibles para el modelo; conserva entradas independientes como `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge` y `architecture`.
-- **Memory completamente configurado**: añade dinámicamente seis herramientas Memory, para un total de 30 visibles.
-- **`MCP_TOOLSET=full`**: restaura 34 herramientas de modelo compatibles para flujos antiguos y diagnóstico.
+- **`compact` por defecto**: 29 herramientas visibles para el modelo; conserva entradas independientes como `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge` y `architecture`.
+- **Memory completamente configurado**: añade dinámicamente seis herramientas Memory, para un total de 35 visibles.
+- **`MCP_TOOLSET=full`**: restaura 39 herramientas de modelo compatibles para flujos antiguos y diagnóstico.
 - **MCP Apps**: `list_memory_assets` es exclusivo de Memory Center, con `visibility=["app"]`, y no cuenta como herramienta del modelo.
 - `add_feature`, `fix_bug`, `sync_ui_data` y `ask_user` se ocultan por defecto, pero sus capacidades siguen disponibles mediante orquestación, scripts de mantenimiento o el modo full.
 
@@ -109,6 +110,22 @@ v4 convierte la ejecución delegada del Agent en un ciclo de entrega observable,
 
 - `start_bugfix` usa análisis de causa raíz Toyota TBP de 8 pasos por defecto
 - `fix_bug` devuelve esqueleto TBP estructurado con fenómeno, timeline, caminos descartados, frontera, causa raíz, evidencias y plan de reparación
+
+
+### 📜 History Session (activado por defecto) — traspaso local sin pérdida
+
+Los hosts de chat olvidan. History Session guarda un **archivo local sin pérdida** en `docs/history-session/` para recuperar palabras del usuario, decisiones y pendientes en la siguiente conversación — sin base vectorial.
+
+- **Por qué importa**: no pierdes hechos al cortar contexto o abrir un chat nuevo. Activado por defecto. Capa distinta de Memory/Plan.
+- **Uso**: al inicio `history_session_bootstrap` (`initial_user_input`; sin session del host, omite `session_key` → `project-active`) → antes de cada respuesta final `history_session_checkpoint` (checklist mínima) → hechos antiguos con `search` → `read`.
+- **Operación**: soft-rotate por líneas/bytes (hereda `initial_user_input`). Desactivar con `MCP_HISTORY_SESSION=0|false|off`. **No hacer commit** (`.gitignore`).
+
+| Capa | Rol |
+|---|---|
+| History | Traspaso de conversación de este repo |
+| Plan | Pasos reanudables y evidencia |
+| Memory | Reutilización entre repos (requiere `MEMORY_*`) |
+
 
 ### 🧠 Recuperación de Memoria
 

@@ -34,8 +34,17 @@ export const MEMORY_MODEL_TOOL_NAMES = [
   'scan_and_extract_patterns',
 ] as const;
 
+export const HISTORY_SESSION_MODEL_TOOL_NAMES = [
+  'history_session_bootstrap',
+  'history_session_checkpoint',
+  'history_session_validate',
+  'history_session_search',
+  'history_session_read',
+] as const;
+
 export const APP_ONLY_TOOL_NAMES = ['list_memory_assets'] as const;
 
 export const COMPACT_MODEL_TOOL_NAME_SET = new Set<string>(COMPACT_MODEL_TOOL_NAMES);
 export const MEMORY_MODEL_TOOL_NAME_SET = new Set<string>(MEMORY_MODEL_TOOL_NAMES);
+export const HISTORY_SESSION_MODEL_TOOL_NAME_SET = new Set<string>(HISTORY_SESSION_MODEL_TOOL_NAMES);
 export const APP_ONLY_TOOL_NAME_SET = new Set<string>(APP_ONLY_TOOL_NAMES);

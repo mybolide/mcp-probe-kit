@@ -130,7 +130,7 @@ function createFixture(options: {
   }));
   fs.writeFileSync(
     path.join(root, 'README.md'),
-    '24 model-visible tools by default; 30 when Memory is configured; 34-tool compatibility surface',
+    '29 model-visible tools by default; 35 when Memory is also configured; 39-tool compatibility surface',
     'utf8',
   );
   fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
@@ -148,6 +148,10 @@ function createFixture(options: {
     'git_work_report', 'ui_design_system', 'ui_search', 'plan_heartbeat',
     'resume_plan', 'converge', 'interview',
   ];
+  const historyTools = [
+    'history_session_bootstrap', 'history_session_checkpoint', 'history_session_validate',
+    'history_session_search', 'history_session_read',
+  ];
   const memoryTools = [
     'search_memory', 'read_memory_asset', 'memorize_asset',
     'update_memory_asset', 'delete_memory_asset', 'scan_and_extract_patterns',
@@ -155,14 +159,20 @@ function createFixture(options: {
   fs.writeFileSync(path.join(root, 'tools-manifest.json'), JSON.stringify({
     version: options.version,
     structuredOutput: { version: options.version },
-    totalTools: 34,
+    totalTools: 39,
     toolsets: {
       compact: { count: 24, tools: compactTools },
+      compactWithHistory: { count: 29, tools: [...compactTools, ...historyTools] },
       compactWithMemory: { count: 30, tools: [...compactTools, ...memoryTools] },
+      compactWithHistoryAndMemory: {
+        count: 35,
+        tools: [...compactTools, ...historyTools, ...memoryTools],
+      },
+      historyConditional: { count: 5, tools: historyTools },
       memoryConditional: { count: 6, tools: memoryTools },
       appOnly: { count: 1, tools: ['list_memory_assets'] },
       workflow: { tools: ['plan_heartbeat', 'resume_plan', 'converge'] },
-      full: { count: 34 },
+      full: { count: 39 },
     },
   }));
   if (!options.omitBuildClean) {

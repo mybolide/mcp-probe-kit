@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit v4 - 可视化 Agent 研发工作流与 MCP Apps",
-    "description": "MCP Probe Kit v4 提供 24 个默认模型工具、30 个 Memory 工具面、34 个 full 兼容模型工具、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。",
+    "description": "MCP Probe Kit v4 提供 29 个默认模型工具（24 基础 + 5 History Session）、35 个 Memory 工具面、39 个 full 兼容模型工具、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。",
     "keywords": "MCP Probe Kit, AI开发工具, 代码生成, 代码审查, Git工具, UI开发, 研发效率, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {
@@ -27,7 +27,7 @@
     },
     "tools": {
       "title": "工具文档",
-      "description": "默认 24 个模型工具，配置 Memory 后 30 个，并提供 5 个原生 MCP Apps",
+      "description": "默认 29 个模型工具（含 History），配置 Memory 后 35 个，并提供 5 个原生 MCP Apps",
       "allTools": "所有工具"
     },
     "guides": {
@@ -353,7 +353,7 @@
     "subtitle": "MCP Probe Kit 融合完整研发流程，从需求到上线的最佳实践指南",
     "overview": {
       "title": "完整研发流程",
-      "description": "默认 24 个模型可见工具，配置 Memory 后为 30 个；通过 start_*、计划检查点和收敛闸门覆盖完整研发流程。",
+      "description": "默认 29 个模型可见工具，配置 Memory 后为 35 个；通过 History Session、start_*、计划检查点和收敛闸门覆盖完整研发流程。",
       "coreIdea": "核心理念：",
       "coreIdeaText": "通过工作流编排工具（start_*）串联整个开发流程，让 AI 成为你的研发助手。"
     },
@@ -608,7 +608,7 @@
     "resources": {
       "title": "更多资源",
       "allTools": "完整工具参考",
-      "allToolsDesc": "查看 34 个 full 兼容工具和 1 个 App-only 动作的详细说明",
+      "allToolsDesc": "查看 39 个 full 兼容工具和 1 个 App-only 动作的详细说明",
       "gettingStarted": "安装配置",
       "gettingStartedDesc": "快速开始使用",
       "migration": "迁移指南",

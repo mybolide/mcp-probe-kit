@@ -10,16 +10,24 @@ export async function loadToolSurfaceBaseline(url = DEFAULT_BASELINE_URL) {
 
 export function deriveExpectedToolSurfaces(baseline) {
   validateToolSurfaceBaseline(baseline);
-  const compact = unique(baseline.groups.compactModel);
+  const compactBase = unique(baseline.groups.compactModel);
+  const history = unique(baseline.groups.historyModel ?? []);
   const memory = unique(baseline.groups.memoryModel);
   const fullCompatibilityOnly = unique(baseline.groups.fullCompatibilityOnly);
   const appOnly = unique(baseline.groups.appOnly);
 
+  // History Session is default ON, so default compact tools/list includes history tools.
+  const compact = unique([...compactBase, ...history]);
+  const compactWithMemory = unique([...compact, ...memory]);
+  const full = unique([...compactWithMemory, ...fullCompatibilityOnly]);
+
   return {
+    compactBase,
+    history,
     compact,
-    compactWithMemory: unique([...compact, ...memory]),
-    full: unique([...compact, ...memory, ...fullCompatibilityOnly]),
-    appsModelVisible: unique([...compact, ...memory]),
+    compactWithMemory,
+    full,
+    appsModelVisible: compactWithMemory,
     appOnly,
   };
 }
@@ -59,7 +67,7 @@ export function validateToolSurfaceBaseline(baseline) {
     throw new Error('Tool surface baseline is missing groups.');
   }
 
-  for (const groupName of ['compactModel', 'memoryModel', 'fullCompatibilityOnly', 'appOnly']) {
+  for (const groupName of ['compactModel', 'historyModel', 'memoryModel', 'fullCompatibilityOnly', 'appOnly']) {
     const group = baseline.groups[groupName];
     if (!Array.isArray(group) || group.some((name) => typeof name !== 'string' || !name.trim())) {
       throw new Error(`Tool surface baseline group ${groupName} must contain non-empty strings.`);
@@ -72,6 +80,7 @@ export function validateToolSurfaceBaseline(baseline) {
 
   const allGroups = [
     ...baseline.groups.compactModel,
+    ...baseline.groups.historyModel,
     ...baseline.groups.memoryModel,
     ...baseline.groups.fullCompatibilityOnly,
     ...baseline.groups.appOnly,
@@ -81,20 +90,27 @@ export function validateToolSurfaceBaseline(baseline) {
     throw new Error(`Tool surface baseline assigns tools to multiple groups: ${crossGroupDuplicates.join(', ')}`);
   }
 
+  const compactBase = baseline.groups.compactModel.length;
+  const history = baseline.groups.historyModel.length;
+  const memory = baseline.groups.memoryModel.length;
+  const fullOnly = baseline.groups.fullCompatibilityOnly.length;
+  const appOnly = baseline.groups.appOnly.length;
+
   const surfaces = {
-    compact: baseline.groups.compactModel.length,
-    compactWithMemory: baseline.groups.compactModel.length + baseline.groups.memoryModel.length,
-    full:
-      baseline.groups.compactModel.length +
-      baseline.groups.memoryModel.length +
-      baseline.groups.fullCompatibilityOnly.length,
-    appsModelVisible: baseline.groups.compactModel.length + baseline.groups.memoryModel.length,
-    appOnly: baseline.groups.appOnly.length,
+    compactBase,
+    compactWithHistory: compactBase + history,
+    compact: compactBase + history,
+    compactWithMemory: compactBase + history + memory,
+    compactWithHistoryAndMemory: compactBase + history + memory,
+    full: compactBase + history + memory + fullOnly,
+    appsModelVisible: compactBase + history + memory,
+    appOnly,
     uniqueCallable: allGroups.length,
   };
 
   for (const [name, actualCount] of Object.entries(surfaces)) {
     const expectedCount = baseline.expectedCounts?.[name];
+    if (expectedCount === undefined) continue;
     if (expectedCount !== actualCount) {
       throw new Error(
         `Tool surface baseline count ${name} is inconsistent: declared=${expectedCount}, derived=${actualCount}`,

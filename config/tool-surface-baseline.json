@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "baselineId": "v4.0.0-rc.10-host-acceptance",
-  "description": "Compatibility baseline for rc.20, where Agents choose tools from Skill/tool guidance and workflow is a fallback navigation guide rather than a natural-language intent classifier.",
+  "baselineId": "v4.0.3-history-session",
+  "description": "Compatibility baseline including History Session (default ON, +5 tools) and optional Memory (+6). Agents choose tools from Skill/tool guidance; workflow is a fallback navigation guide.",
   "groups": {
     "compactModel": [
       "start_feature",
@@ -29,6 +29,13 @@
       "converge",
       "interview"
     ],
+    "historyModel": [
+      "history_session_bootstrap",
+      "history_session_checkpoint",
+      "history_session_validate",
+      "history_session_search",
+      "history_session_read"
+    ],
     "memoryModel": [
       "search_memory",
       "read_memory_asset",
@@ -48,12 +55,15 @@
     ]
   },
   "expectedCounts": {
-    "compact": 24,
-    "compactWithMemory": 30,
-    "full": 34,
-    "appsModelVisible": 30,
+    "compactBase": 24,
+    "compact": 29,
+    "compactWithHistory": 29,
+    "compactWithMemory": 35,
+    "compactWithHistoryAndMemory": 35,
+    "full": 39,
+    "appsModelVisible": 35,
     "appOnly": 1,
-    "uniqueCallable": 35
+    "uniqueCallable": 40
   },
   "invariants": {
     "appOnlyHiddenFromModel": true,

@@ -1,8 +1,10 @@
 import { isMemoryEnabled } from './memory-config.js';
+import { isHistorySessionEnabled } from './history-session-config.js';
 import { TOOL_CATALOG } from '../server/tool-catalog.js';
 import type { ToolsetType } from '../server/tool-definition.js';
 import {
   COMPACT_MODEL_TOOL_NAMES,
+  HISTORY_SESSION_MODEL_TOOL_NAMES,
   MEMORY_MODEL_TOOL_NAMES,
 } from '../server/tool-visibility.js';
 
@@ -30,6 +32,7 @@ export interface Tool {
 
 export interface ToolsetResolutionOptions {
   memoryEnabled?: boolean;
+  historyEnabled?: boolean;
 }
 
 export function resolveToolsetNames(
@@ -39,10 +42,12 @@ export function resolveToolsetNames(
   if (toolset === 'full') return 'all';
   if (toolset !== 'compact') return TOOLSET_DEFINITIONS[toolset];
 
+  const historyEnabled = options.historyEnabled ?? isHistorySessionEnabled();
   const memoryEnabled = options.memoryEnabled ?? isMemoryEnabled();
-  return memoryEnabled
-    ? [...COMPACT_MODEL_TOOL_NAMES, ...MEMORY_MODEL_TOOL_NAMES]
-    : [...COMPACT_MODEL_TOOL_NAMES];
+  const names: string[] = [...COMPACT_MODEL_TOOL_NAMES];
+  if (historyEnabled) names.push(...HISTORY_SESSION_MODEL_TOOL_NAMES);
+  if (memoryEnabled) names.push(...MEMORY_MODEL_TOOL_NAMES);
+  return names;
 }
 
 export function filterTools(

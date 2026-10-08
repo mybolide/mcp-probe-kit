@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **History Session** (default ON): five model-visible tools — `history_session_bootstrap`, `history_session_checkpoint`, `history_session_validate`, `history_session_search`, `history_session_read`.
+- Lossless project archives under `docs/history-session/` with `project-active` resume, soft rotate (`MCP_HISTORY_MAX_LINES` / `MCP_HISTORY_MAX_BYTES`), and bounded bootstrap state.
+- Skill / AGENTS rules for History read/write timing and a checkpoint minimum-fill checklist.
+- Env knobs: `MCP_HISTORY_SESSION=0|false|off` hides History; rotate thresholds via `MCP_HISTORY_MAX_*`. Documented in CLI `local.env.example`.
+
+### Changed
+
+- Default compact model surface is **29** tools (24 base + 5 History); **35** with Memory; **39** with `MCP_TOOLSET=full` (was 24 / 30 / 34 before History).
+- Docs site, i18n READMEs, all-tools catalog, and migration guide counts updated to 29 / 35 / 39 (+ 1 App-only).
+- Recommend gitignoring `docs/history-session/` — local agent handoff only; do not commit archives.
+- README (all languages) feature spotlight for History Session: why it matters, Agent workflow, vs Plan/Memory, soft-rotate inherit.
+
 ---
 
 ## [4.0.3] - 2026-09-23

@@ -15,7 +15,7 @@
 
 > **Talk is cheap, show me the Context.**
 > 
-> mcp-probe-kit ist ein Protokoll-Toolkit für Kontextanalyse und Entwicklungs-Orchestrierung. v4 zeigt dem Modell standardmäßig 24 Tools, 30 bei vollständiger Memory-Konfiguration und behält eine Full-Kompatibilitätsfläche mit 34 Tools.
+> mcp-probe-kit ist ein Protokoll-Toolkit für Kontextanalyse und Entwicklungs-Orchestrierung. v4 zeigt dem Modell standardmäßig 29 Tools (24 Basis + 5 History Session), 35 bei vollständiger Memory-Konfiguration und behält eine Full-Kompatibilitätsfläche mit 39 Tools.
 
 **Sprachen**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | **Deutsch** | [Português (BR)](README.pt-BR.md)
 
@@ -26,7 +26,7 @@
 
 > 🚀 KI-gestütztes Vollständiges Entwicklungs-Toolkit – Abdeckung des gesamten Entwicklungslebenszyklus
 
-Ein leistungsstarker MCP-Server mit **24 modell-sichtbaren Tools standardmäßig**, **30 bei vollständiger Memory-Konfiguration** und **34 Kompatibilitäts-Tools** über `MCP_TOOLSET=full`. Strukturierte Ausgabe, Legacy/Modern-Doppelprotokoll und offizielle MCP Apps werden unterstützt.
+Ein leistungsstarker MCP-Server mit **29 modell-sichtbaren Tools standardmäßig** (24 Basis + 5 History; mit `MCP_HISTORY_SESSION=0` ausblendbar), **35 bei vollständiger Memory-Konfiguration** und **39 Kompatibilitäts-Tools** über `MCP_TOOLSET=full`. Strukturierte Ausgabe, Legacy/Modern-Doppelprotokoll und offizielle MCP Apps werden unterstützt.
 
 **🎉 v4 Stable Release**: native MCP Apps, fortsetzbare Pläne, Nachweis-Konvergenz, verwalteter GitNexus Sidecar, Parent-Child-Specs und versionsgebundener CLI-Fallback.
 
@@ -60,6 +60,7 @@ v4 macht die delegierte Agent-Ausführung zu einem beobachtbaren, fortsetzbaren 
 <strong>Convergence Gate</strong>: blockiert den Abschluss, wenn Schritte oder Anforderungs-/Spec-/Implementierungs-/Test-/Review-Nachweise fehlen.
 
 - **Fünf native MCP Apps**: Memory, Feature, Bug, Product und Convergence.
+- **History Session (standardmäßig AN)**: verlustfreie lokale Übergabe unter `docs/history-session/` (bootstrap → checkpoint → search/read, ohne Vektordatenbank).
 - **Fortsetzbare delegierte Pläne**: `plan_heartbeat` speichert realen Fortschritt; `resume_plan` stellt den nächsten Schritt wieder her.
 - **Nachweisbasierte Konvergenz**: `converge` steuert Lieferung und langfristige Memory-Schreibvorgänge.
 - **Verwalteter GitNexus Sidecar**: Isolation nach Version, Plattform, Architektur und Node; Integrität und echtes FTS werden geprüft.
@@ -89,9 +90,9 @@ v4 macht die delegierte Agent-Ausführung zu einem beobachtbaren, fortsetzbaren 
 
 ### 📦 Tool-Flächen
 
-- **Standard `compact`**: 24 modell-sichtbare Tools; eigenständige Einstiegspunkte wie `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge` und `architecture` bleiben erhalten.
-- **Vollständige Memory-Konfiguration**: sechs Memory-Tools werden dynamisch ergänzt, insgesamt 30 modell-sichtbare Tools.
-- **`MCP_TOOLSET=full`**: stellt 34 kompatible Modell-Tools für alte Abläufe und Diagnose wieder her.
+- **Standard `compact`**: 29 modell-sichtbare Tools; eigenständige Einstiegspunkte wie `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge` und `architecture` bleiben erhalten.
+- **Vollständige Memory-Konfiguration**: sechs Memory-Tools werden dynamisch ergänzt, insgesamt 35 modell-sichtbare Tools.
+- **`MCP_TOOLSET=full`**: stellt 39 kompatible Modell-Tools für alte Abläufe und Diagnose wieder her.
 - **MCP Apps**: `list_memory_assets` ist nur für das Memory Center sichtbar (`visibility=["app"]`) und zählt nicht zur Modellfläche.
 - `add_feature`, `fix_bug`, `sync_ui_data` und `ask_user` sind standardmäßig ausgeblendet; ihre Fähigkeiten bleiben über Orchestrierung, Wartungsskripte oder den Full-Modus erhalten.
 
@@ -109,6 +110,22 @@ v4 macht die delegierte Agent-Ausführung zu einem beobachtbaren, fortsetzbaren 
 
 - `start_bugfix`: SRC-8 → Fix → Tests; `fix_bug`: **rootCauseWorksheet** (see docs/src8-methodology.md)
 - `fix_bug` liefert strukturiertes TBP-Skelett mit Phänomen, Timeline, ausgeschlossenen Pfaden, Grenze, Ursache, Beweisen und Reparaturplan
+
+
+### 📜 History Session (standardmäßig AN) — verlustfreie lokale Übergabe
+
+Chat-Hosts vergessen. History Session speichert ein **verlustfreies lokales Archiv** unter `docs/history-session/`, damit die nächste Unterhaltung Nutzerwortlaut, Entscheidungen und offene Punkte wiederfindet — ohne Vektordatenbank.
+
+- **Warum wichtig**: Fakten überleben Kontextfenster und neue Chats. Standardmäßig AN. Eigene Schicht neben Memory/Plan.
+- **Nutzung**: Gesprächsstart `history_session_bootstrap` (`initial_user_input`; ohne Host-Session `session_key` weglassen → `project-active`) → vor jeder Endantwort `history_session_checkpoint` (Mindest-Checkliste) → ältere Fakten mit `search` → `read`.
+- **Betrieb**: Soft-Rotate nach Zeilen/Bytes (übernimmt `initial_user_input`). Aus mit `MCP_HISTORY_SESSION=0|false|off`. **Nicht committen** (`.gitignore`).
+
+| Schicht | Rolle |
+|---|---|
+| History | Gesprächsübergabe in diesem Repo |
+| Plan | Wiederaufnehmbare Schritte und Evidenz |
+| Memory | Repo-übergreifende Wiederverwendung (braucht `MEMORY_*`) |
+
 
 ### 🧠 Memory Retrieval
 

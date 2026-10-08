@@ -7,16 +7,18 @@ import {
   validateToolSurfaceBaseline,
 } from '../tool-surface-baseline.mjs';
 
-test('frozen baseline derives the expected Phase 0 surfaces', async () => {
+test('frozen baseline derives the expected History+Memory surfaces', async () => {
   const baseline = await loadToolSurfaceBaseline();
   const surfaces = deriveExpectedToolSurfaces(baseline);
 
-  assert.equal(surfaces.compact.length, 24);
-  assert.equal(surfaces.compactWithMemory.length, 30);
-  assert.equal(surfaces.full.length, 34);
-  assert.equal(surfaces.appsModelVisible.length, 30);
+  assert.equal(surfaces.compactBase.length, 24);
+  assert.equal(surfaces.history.length, 5);
+  assert.equal(surfaces.compact.length, 29);
+  assert.equal(surfaces.compactWithMemory.length, 35);
+  assert.equal(surfaces.full.length, 39);
+  assert.equal(surfaces.appsModelVisible.length, 35);
   assert.deepEqual(surfaces.appOnly, ['list_memory_assets']);
-  assert.equal(new Set([...surfaces.full, ...surfaces.appOnly]).size, 35);
+  assert.equal(new Set([...surfaces.full, ...surfaces.appOnly]).size, 40);
 });
 
 test('baseline validation rejects duplicate or cross-group tool ownership', async () => {
@@ -24,6 +26,7 @@ test('baseline validation rejects duplicate or cross-group tool ownership', asyn
   const invalid = structuredClone(baseline);
   invalid.groups.memoryModel.push(invalid.groups.compactModel[0]);
   invalid.expectedCounts.compactWithMemory += 1;
+  invalid.expectedCounts.compactWithHistoryAndMemory += 1;
   invalid.expectedCounts.full += 1;
   invalid.expectedCounts.appsModelVisible += 1;
   invalid.expectedCounts.uniqueCallable += 1;

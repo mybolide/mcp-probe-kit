@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 도구 카탈로그 - 24/30/34 표면과 한 문장 호출",
-    "description": "MCP Probe Kit v4 전체 도구 카탈로그: 기본 24개, Memory 구성 시 30개, full 호환 34개, App-only 작업 1개. 모든 도구에 복사 가능한 한 문장 호출 제공.",
+    "title": "MCP Probe Kit v4 도구 카탈로그 - 29/35/39 표면과 한 문장 호출",
+    "description": "MCP Probe Kit v4 전체 도구 카탈로그: 기본 29개, Memory 구성 시 35개, full 호환 39개, App-only 작업 1개. 모든 도구에 복사 가능한 한 문장 호출 제공.",
     "keywords": "AI 개발 도구, 코드 생성 도구, 코드 리뷰 도구, Git 자동화, UI 생성, 코드 리팩토링, 성능 최적화, 보안 스캔"
   },
   "page": {
-    "subtitle": "기본 모델 도구 24개, Memory 구성 시 30개, full 호환 34개, App-only 작업 1개"
+    "subtitle": "기본 모델 도구 29개, Memory 구성 시 35개, full 호환 39개, App-only 작업 1개"
   },
   "search": {
     "placeholder": "🔍 도구 이름 또는 설명 검색...",
@@ -54,7 +54,12 @@
     "plan_heartbeat": "계획 체크포인트",
     "resume_plan": "계획 재개",
     "converge": "수렴 게이트",
-    "list_memory_assets": "Memory 탐색"
+    "list_memory_assets": "Memory 탐색",
+    "history_session_bootstrap": "히스토리 부트스트랩",
+    "history_session_checkpoint": "히스토리 체크포인트",
+    "history_session_validate": "히스토리 검증",
+    "history_session_search": "히스토리 검색",
+    "history_session_read": "히스토리 읽기"
   },
   "categories": {
     "workflow": {
@@ -96,6 +101,10 @@
     },
     "apps": {
       "title": "MCP Apps 전용"
+    },
+    "history": {
+      "title": "세션 히스토리",
+      "icon": "📜"
     }
   },
   "toolsData": {
@@ -273,12 +282,37 @@
       "description": "Memory Center 전용 탐색 작업으로 업데이트 순 목록, 필터, 페이지네이션을 제공합니다.",
       "usage": "MCP Apps 기능 협상 후에만 사용되며 모델에는 노출되지 않습니다.",
       "prompt": ""
+    },
+    "history_session_bootstrap": {
+      "description": "docs/history-session/ 아래의 무손실 프로젝트 이력 아카이브를 초기화하거나 재개합니다.",
+      "usage": "대화 시작 시 한 번 호출합니다. 호스트 session이 없으면 session_key를 생략하고 project-active를 사용합니다.",
+      "prompt": "history_session_bootstrap을 initial_user_input과 함께 호출하고, session_key는 생략해 project-active를 사용하세요."
+    },
+    "history_session_checkpoint": {
+      "description": "멱등 체크포인트를 추가합니다. 행/바이트 한도를 넘으면 소프트 로테이트합니다.",
+      "usage": "bootstrap의 session_key/expected_path와 raw_user_input을 전달합니다.",
+      "prompt": "history_session_checkpoint에 session_key, expected_path, raw_user_input을 전달해 호출하세요."
+    },
+    "history_session_validate": {
+      "description": "이력 번호 체계를 검증하고 필요 시 state/manifest를 재구축합니다.",
+      "usage": "번호 공백이나 파생 상태 이상 시 사용. repair=true로 인덱스를 재구축.",
+      "prompt": "번호 공백이 있으면 history_session_validate를 repair=true로 호출하세요."
+    },
+    "history_session_search": {
+      "description": "키워드로 무손실 이력을 검색하고 순위 스니펫을 반환합니다.",
+      "usage": "세션 간에 이전 아카이브를 찾은 뒤 history_session_read로 원문을 읽습니다.",
+      "prompt": "먼저 history_session_search, 이어서 history_session_read로 원문을 읽으세요."
+    },
+    "history_session_read": {
+      "description": "번호 또는 경로로 Markdown 아카이브를 UTF-8 안전하게 페이지 단위로 읽습니다.",
+      "usage": "next_cursor와 expected_hash로 관련 아카이브를 끝까지 읽습니다.",
+      "prompt": "history_session_read를 number 또는 path로 호출하고 next_cursor를 따라가세요."
     }
   },
   "ui": {
     "eyebrow": "TOOL CATALOG",
     "title": "도구를 찾고, 한 문장을 복사해 바로 시작",
-    "subtitle": "기본 모델 도구 24개, Memory 구성 시 30개, full 호환 34개, App-only 작업 1개.",
+    "subtitle": "기본 모델 도구 29개, Memory 구성 시 35개, full 호환 39개, App-only 작업 1개.",
     "searchPlaceholder": "도구 이름, 용도 또는 설명 검색…",
     "all": "전체",
     "default": "기본",

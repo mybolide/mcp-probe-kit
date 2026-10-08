@@ -241,7 +241,20 @@ function compactFixtures(projectRoot) {
     ['ui_search', { mode: 'catalog', category: 'components', limit: 3 }],
     ['start_ui', { description: 'Developer dashboard', framework: 'react', mode: 'manual', project_root: projectRoot }],
     ['start_product', { description: 'AI developer tool catalog for teams', product_name: 'Probe Hub', product_type: 'SaaS', docs_dir: 'docs', project_root: projectRoot }],
+    ...historySessionFixtures(projectRoot),
     ...planLifecycleFixtures(projectRoot),
+  ];
+}
+
+function historySessionFixtures(projectRoot) {
+  return [
+    ['history_session_bootstrap', {
+      project_root: projectRoot,
+      initial_user_input: 'Audit history bootstrap',
+      title: 'Contract audit',
+    }],
+    ['history_session_validate', { project_root: projectRoot, repair: true }],
+    ['history_session_search', { project_root: projectRoot, query: 'Audit', limit: 5 }],
   ];
 }
 

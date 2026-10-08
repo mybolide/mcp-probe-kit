@@ -44,6 +44,8 @@ docs/*.md
 !docs/engineering-control-plane-v1.md
 !docs/mcp-probe-kit-delivery-system-v1.md
 docs/project-context
+# Local agent session archives (project-active; do not commit)
+docs/history-session/
 .kiro
 skills
 

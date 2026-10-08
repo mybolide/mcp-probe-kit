@@ -68,9 +68,9 @@ check(generatedNames.size === expectedToolNames.size, 'generated tool documentat
 for (const name of expectedToolNames) {
   check(generatedNames.has(name), `generated tools include ${name}`);
 }
-check(toolsData.counts.default === 24, 'generated docs expose 24 default model tools');
-check(toolsData.counts.withMemory === 30, 'generated docs expose 30 tools with Memory');
-check(toolsData.counts.full === 34, 'generated docs expose 34-tool full surface');
+check(toolsData.counts.default === 29, 'generated docs expose 29 default model tools');
+check(toolsData.counts.withMemory === 35, 'generated docs expose 35 tools with Memory');
+check(toolsData.counts.full === 39, 'generated docs expose 39-tool full surface');
 check(toolsData.counts.appOnly === 1, 'generated docs expose one App-only action');
 
 for (const lang of globalLanguages) {

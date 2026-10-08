@@ -72,7 +72,7 @@ macOS / Linux：
 
 CLI 返回 JSON；读取 \`structuredContent\`、\`content\` 和 \`isError\`，继续执行与原生 MCP 相同的工具链。
 
-CLI 降级通道不会继承 IDE \`mcp.json\` 里的 \`env\`。若需 Memory 等能力，在项目根复制 \`.mcp-probe-kit/local.env.example\` 为 \`.mcp-probe-kit/local.env\` 并填写 \`MEMORY_*\`；已有 shell 环境变量优先。
+CLI 降级通道不会继承 IDE \`mcp.json\` 里的 \`env\`。若需 Memory 等能力，在项目根复制 \`.mcp-probe-kit/local.env.example\` 为 \`.mcp-probe-kit/local.env\` 并填写 \`MEMORY_*\`；已有 shell 环境变量优先。History Session 默认开启；可用 \`MCP_HISTORY_SESSION=0|false|off\` 关闭，并用 \`MCP_HISTORY_MAX_LINES\` / \`MCP_HISTORY_MAX_BYTES\` 调整软轮转阈值。
 
 ### 启动器缺失时自修复
 
@@ -148,12 +148,67 @@ export function generateWorkflowSkillBody(skillVersion: string = VERSION): strin
 ## 总规则
 
 1. **先判断目标**：明确单项能力直接调用对应工具；需要从分析到验证完整交付时才调用 \`start_*\`
-2. **独立能力不是必须被编排**：\`code_insight\`、\`fix_bug\`、\`gentest\`、\`code_review\`、Memory 等均可直接调用
-3. **只有拿不准该调用哪个工具时**才调用 \`workflow\`。\`workflow\` 是兜底选择指南，不做自然语言意图识别；默认 \`scenario=auto\` 不会根据 \`intent\` 猜 \`firstTool\`。Agent 阅读指南和 tool descriptions 后自行判断，缺关键事实时再澄清用户
-4. \`start_*\` 只组合当前场景实际需要的能力；按返回的 Delegated Plan 逐步执行，不要额外塞入无关工具
-5. 在写代码或改文件前，先完成当前目标真正需要的理解、规格或根因步骤
+2. **独立能力不是必须被编排**：\`code_insight\`、\`fix_bug\`、\`gentest\`、\`code_review\`、Memory、History Session 等均可直接调用
+3. **新对话默认先 \`history_session_bootstrap\`**（History 开启时）：可传 \`initial_user_input\`；无宿主 session 可不传 \`session_key\`；每轮结束前 \`history_session_checkpoint\`；跨会话用 search/read。关闭：\`MCP_HISTORY_SESSION=0|false|off\`
+4. **只有拿不准该调用哪个工具时**才调用 \`workflow\`。\`workflow\` 是兜底选择指南，不做自然语言意图识别；默认 \`scenario=auto\` 不会根据 \`intent\` 猜 \`firstTool\`。Agent 阅读指南和 tool descriptions 后自行判断，缺关键事实时再澄清用户
+5. \`start_*\` 只组合当前场景实际需要的能力；按返回的 Delegated Plan 逐步执行，不要额外塞入无关工具
+6. 在写代码或改文件前，先完成当前目标真正需要的理解、规格或根因步骤
 
 ${renderExecutionChannels(skillVersion)}
+
+---
+
+## History Session（默认开启）读写规则
+
+档案目录：\`docs/history-session/\`。默认开启；关闭：\`MCP_HISTORY_SESSION=0|false|off\`。与 Memory/Qdrant **分离**。
+档案是**项目本地交接材料**，应写入仓库 \`.gitignore\`（忽略整个 \`docs/history-session/\`），**不要提交**到 Git。
+
+### 何时写
+
+1. **新对话开始、回答用户第一问之前**：调用 \`history_session_bootstrap\`  
+   - 传 \`initial_user_input=<用户首条原话>\`  
+   - Cursor 等无宿主 session 时**省略** \`session_key\`（落到项目当前档 \`project-active\`）；**禁止**用日期哈希/随机 UUID 伪造  
+   - 需要刻意开新档时用 \`mode=fresh\`
+2. **每轮任务结束、给出最终回复之前**：调用 \`history_session_checkpoint\`  
+   - 必须回传 bootstrap（或上轮轮转）返回的 \`session_key\` + \`expected_path\`  
+   - 必须带本轮 \`raw_user_input\`（服务端读不到未作为参数传入的聊天原文）  
+   - 超 \`MCP_HISTORY_MAX_LINES\` / \`MCP_HISTORY_MAX_BYTES\` 会软轮转；以返回的新 \`expected_path\` 为准  
+   - 必须按下方「检查点最低填写清单」写满，禁止只写空数组交差
+
+### 何时读
+
+1. **bootstrap 的有界 \`state\` / \`continuity\`**：先读完即可开工；**不要**一上来全量加载历史  
+2. **需要精确旧结论 / 旧用户原话 / 旧决策**：\`history_session_search\` → \`history_session_read\`（按 \`next_cursor\` 分页）  
+3. **编号缺口或派生状态异常**：\`history_session_validate\`（必要时 \`repair=true\`）
+
+### 检查点最低填写清单（合格标准）
+
+每轮 \`history_session_checkpoint\` **至少**包含：
+
+| 字段 | 要求 |
+|---|---|
+| \`raw_user_input\` | **必填**：本轮用户原话（逐字） |
+| \`user_intent\` | **必填**：一句话意图摘要 |
+| \`findings\` | 本轮关键事实/现象；无则写 \`["本轮无新发现"]\` |
+| \`decisions\` | 本轮关键决定；无则写 \`["本轮无新决定"]\` |
+| \`files_changed\` | 改动路径列表；无改文件写 \`["本轮未改文件"]\` |
+| \`tests\` | 跑过的命令与结果；未跑写 \`["本轮未跑测试"]\` |
+| \`runtime_state\` | 分支/HEAD/服务状态等关键运行事实；无可写 \`["无额外运行状态"]\` |
+| \`remaining_issues\` | 未解决问题；无则 \`[]\` |
+| \`next_actions\` | **必填至少 1 条**：下一会话应做什么 |
+| \`notes\` | 可选；证据路径、截图、报告引用 |
+
+说明：空数组 \`[]\` 只允许用在「确实没有」的 \`remaining_issues\`；其他列表字段不要留空糊弄。目标是像旧 ChatGPT 厚档案那样**信息可交接**，但结构落在检查点 JSON，而不是把全量摘要堆进 Markdown 文首。
+
+### 与 Plan / Memory 的边界
+
+| 层 | 用途 | 典型工具 |
+|---|---|---|
+| History Session | 本项目会话交接、用户原话、检查点 | \`history_session_*\` |
+| Delegated Plan | 可恢复步骤与证据收敛 | \`plan_heartbeat\` / \`resume_plan\` / \`converge\` |
+| Memory | 跨仓库可复用经验（需 MEMORY_*） | \`search_memory\` / \`memorize_asset\` |
+
+用户只说“继续”且存在未完成 Plan → **先** \`resume_plan\`；History bootstrap 用于会话档案交接，不替代 Plan 恢复。
 
 ---
 

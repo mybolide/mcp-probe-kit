@@ -27,13 +27,21 @@ describe('toolset-manager', () => {
     vi.unstubAllEnvs();
   });
 
-  it('compact exposes 24 model tools and conditionally six memory tools', () => {
-    expect(resolveToolsetNames('compact', { memoryEnabled: false })).toHaveLength(24);
-    expect(resolveToolsetNames('compact', { memoryEnabled: true })).toHaveLength(30);
-    expect(resolveToolsetNames('compact', { memoryEnabled: false })).toEqual(
-      expect.arrayContaining(['start_product', 'gencommit', 'converge', 'architecture']),
+  it('compact exposes 24 base tools, +5 history (default), +6 memory', () => {
+    expect(resolveToolsetNames('compact', { memoryEnabled: false, historyEnabled: false })).toHaveLength(24);
+    expect(resolveToolsetNames('compact', { memoryEnabled: false, historyEnabled: true })).toHaveLength(29);
+    expect(resolveToolsetNames('compact', { memoryEnabled: true, historyEnabled: false })).toHaveLength(30);
+    expect(resolveToolsetNames('compact', { memoryEnabled: true, historyEnabled: true })).toHaveLength(35);
+    expect(resolveToolsetNames('compact', { memoryEnabled: false, historyEnabled: true })).toEqual(
+      expect.arrayContaining([
+        'start_product',
+        'gencommit',
+        'converge',
+        'architecture',
+        'history_session_bootstrap',
+      ]),
     );
-    expect(resolveToolsetNames('compact', { memoryEnabled: false })).not.toEqual(
+    expect(resolveToolsetNames('compact', { memoryEnabled: false, historyEnabled: false })).not.toEqual(
       expect.arrayContaining(['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user']),
     );
   });
@@ -42,10 +50,11 @@ describe('toolset-manager', () => {
     const tools = [
       { name: 'workflow', description: '', inputSchema: {} },
       { name: 'search_memory', description: '', inputSchema: {} },
+      { name: 'history_session_bootstrap', description: '', inputSchema: {} },
       { name: 'not_registered', description: '', inputSchema: {} },
     ];
     expect(
-      filterTools(tools, 'compact', { memoryEnabled: true }).map((tool) => tool.name),
-    ).toEqual(['workflow', 'search_memory']);
+      filterTools(tools, 'compact', { memoryEnabled: true, historyEnabled: true }).map((tool) => tool.name),
+    ).toEqual(['workflow', 'search_memory', 'history_session_bootstrap']);
   });
 });

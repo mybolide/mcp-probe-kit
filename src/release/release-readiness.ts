@@ -144,15 +144,21 @@ export function verifyReleaseReadiness(
   ));
   checks.push(check(
     'tool-count',
-    toolManifest.totalTools === 34,
+    toolManifest.totalTools === 39,
     'error',
-    34,
+    39,
     toolManifest.totalTools,
-    'Tool Manifest 必须包含 34 个模型可见工具'
+    'Tool Manifest 必须包含 39 个模型可见工具'
   ));
   const compactTools = toolManifest.toolsets?.compact?.tools ?? [];
+  const compactWithHistoryTools =
+    toolManifest.toolsets?.compactWithHistory?.tools ?? [];
   const compactWithMemoryTools =
     toolManifest.toolsets?.compactWithMemory?.tools ?? [];
+  const compactWithHistoryAndMemoryTools =
+    toolManifest.toolsets?.compactWithHistoryAndMemory?.tools ?? [];
+  const historyConditionalTools =
+    toolManifest.toolsets?.historyConditional?.tools ?? [];
   const memoryConditionalTools =
     toolManifest.toolsets?.memoryConditional?.tools ?? [];
   const appOnlyTools = toolManifest.toolsets?.appOnly?.tools ?? [];
@@ -167,21 +173,38 @@ export function verifyReleaseReadiness(
     'error',
     { count: 24, required: ['start_product', 'gencommit', 'converge', 'architecture'], hidden: ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'] },
     { count: toolManifest.toolsets?.compact?.count, tools: compactTools },
-    '默认模型工具面必须固定为审核后的 24 个工具'
+    '基础 compact 工具面必须固定为审核后的 24 个工具'
+  ));
+  checks.push(check(
+    'history-conditional-surface',
+    toolManifest.toolsets?.compactWithHistory?.count === 29 &&
+      compactWithHistoryTools.length === 29 &&
+      toolManifest.toolsets?.historyConditional?.count === 5 &&
+      historyConditionalTools.length === 5,
+    'error',
+    { compactWithHistory: 29, historyConditional: 5 },
+    {
+      compactWithHistory: toolManifest.toolsets?.compactWithHistory?.count,
+      historyConditional: toolManifest.toolsets?.historyConditional?.count,
+    },
+    'History Session 默认开启时必须增量暴露 5 个历史工具'
   ));
   checks.push(check(
     'memory-conditional-surface',
     toolManifest.toolsets?.compactWithMemory?.count === 30 &&
       compactWithMemoryTools.length === 30 &&
       toolManifest.toolsets?.memoryConditional?.count === 6 &&
-      memoryConditionalTools.length === 6,
+      memoryConditionalTools.length === 6 &&
+      toolManifest.toolsets?.compactWithHistoryAndMemory?.count === 35 &&
+      compactWithHistoryAndMemoryTools.length === 35,
     'error',
-    { compactWithMemory: 30, memoryConditional: 6 },
+    { compactWithMemory: 30, memoryConditional: 6, compactWithHistoryAndMemory: 35 },
     {
       compactWithMemory: toolManifest.toolsets?.compactWithMemory?.count,
       memoryConditional: toolManifest.toolsets?.memoryConditional?.count,
+      compactWithHistoryAndMemory: toolManifest.toolsets?.compactWithHistoryAndMemory?.count,
     },
-    'Memory 配置后必须只增量暴露 6 个记忆工具'
+    'Memory 配置后必须只增量暴露 6 个记忆工具；与 History 同时开启时为 35'
   ));
   checks.push(check(
     'app-only-surface',
@@ -195,19 +218,19 @@ export function verifyReleaseReadiness(
   ));
   checks.push(check(
     'full-compatibility-surface',
-    toolManifest.toolsets?.full?.count === 34,
+    toolManifest.toolsets?.full?.count === 39,
     'error',
-    34,
+    39,
     toolManifest.toolsets?.full?.count,
-    'MCP_TOOLSET=full 必须保留 34 工具兼容面'
+    'MCP_TOOLSET=full 必须保留 39 工具兼容面'
   ));
   const readme = fs.existsSync(path.join(workspaceRoot, 'README.md'))
     ? fs.readFileSync(path.join(workspaceRoot, 'README.md'), 'utf8')
     : '';
   const readmeToolSurfaceTerms = [
-    '24 model-visible tools by default',
-    '30 when Memory is configured',
-    '34-tool compatibility surface',
+    '29 model-visible tools by default',
+    '35 when Memory is also configured',
+    '39-tool compatibility surface',
   ];
   checks.push(check(
     'readme-tool-surface',
@@ -217,7 +240,7 @@ export function verifyReleaseReadiness(
     'error',
     readmeToolSurfaceTerms,
     readmeToolSurfaceTerms.filter((term) => readme.includes(term)),
-    'README 工具数量必须与 Tool Manifest 的 24/30/34 工具面一致'
+    'README 工具数量必须与 Tool Manifest 的 29/35/39 工具面一致'
   ));
 
   checks.push(check(

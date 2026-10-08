@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 Tool Catalog - 24/30/34 Surfaces and One-line Calls",
-    "description": "Complete MCP Probe Kit v4 tool catalog: 24 model tools by default, 30 with Memory, a 34-tool full compatibility surface, plus one App-only action. Every tool includes a copyable one-line call.",
+    "title": "MCP Probe Kit v4 Tool Catalog - 29/35/39 Surfaces and One-line Calls",
+    "description": "Complete MCP Probe Kit v4 tool catalog: 29 model tools by default, 35 with Memory, a 39-tool full compatibility surface, plus one App-only action. Every tool includes a copyable one-line call.",
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "24 model-visible tools by default, 30 with Memory, a 34-tool full compatibility surface, plus one App-only action"
+    "subtitle": "29 model-visible tools by default, 35 with Memory, a 39-tool full compatibility surface, plus one App-only action"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -54,7 +54,12 @@
     "plan_heartbeat": "Plan Checkpoint",
     "resume_plan": "Resume Plan",
     "converge": "Convergence Gate",
-    "list_memory_assets": "Browse Memory"
+    "list_memory_assets": "Browse Memory",
+    "history_session_bootstrap": "History Bootstrap",
+    "history_session_checkpoint": "History Checkpoint",
+    "history_session_validate": "History Validate",
+    "history_session_search": "History Search",
+    "history_session_read": "History Read"
   },
   "categories": {
     "workflow": {
@@ -96,6 +101,10 @@
     },
     "apps": {
       "title": "MCP Apps Only"
+    },
+    "history": {
+      "title": "History Session",
+      "icon": "📜"
     }
   },
   "toolsData": {
@@ -273,12 +282,37 @@
       "description": "Memory Center browsing action that lists memory summaries by update time with filters and pagination.",
       "usage": "App-only action used after MCP Apps capability negotiation; hidden from the model.",
       "prompt": ""
+    },
+    "history_session_bootstrap": {
+      "description": "Initialize or resume a lossless project history archive under docs/history-session/.",
+      "usage": "Call once near conversation start; omit session_key for the project-active archive.",
+      "prompt": "Call history_session_bootstrap with initial_user_input; omit session_key for project-active."
+    },
+    "history_session_checkpoint": {
+      "description": "Append an idempotent checkpoint; soft-rotates when archive exceeds line/byte limits.",
+      "usage": "Pass session_key and expected_path from bootstrap, plus raw_user_input before final response.",
+      "prompt": "Call history_session_checkpoint with session_key, expected_path, and raw_user_input."
+    },
+    "history_session_validate": {
+      "description": "Validate history numbering and optionally rebuild state/manifest.",
+      "usage": "Use when sequence gaps or derived state look wrong; set repair=true to rebuild indexes.",
+      "prompt": "Call history_session_validate with repair=true when sequence gaps appear."
+    },
+    "history_session_search": {
+      "description": "Search lossless history archives by keywords and return ranked snippets.",
+      "usage": "Use across sessions, then follow with history_session_read for exact text.",
+      "prompt": "Call history_session_search with query, then history_session_read for exact text."
+    },
+    "history_session_read": {
+      "description": "Read one Markdown archive page by number or path with UTF-8-safe pagination.",
+      "usage": "Follow next_cursor with expected_hash until the relevant archive is complete.",
+      "prompt": "Call history_session_read with number or path; follow next_cursor until done."
     }
   },
   "ui": {
     "eyebrow": "TOOL CATALOG",
     "title": "Find a tool, copy one sentence, start immediately",
-    "subtitle": "24 model tools by default, 30 with Memory, a 34-tool full compatibility surface, plus one App-only action.",
+    "subtitle": "29 model tools by default, 35 with Memory, a 39-tool full compatibility surface, plus one App-only action.",
     "searchPlaceholder": "Search by tool name, purpose, or description…",
     "all": "All",
     "default": "Default",

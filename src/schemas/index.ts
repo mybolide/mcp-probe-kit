@@ -13,6 +13,7 @@ import { interviewToolSchemas } from "./interview-tools.js";
 import { uiUxSchemas } from "./ui-ux-schemas.js";
 import { productDesignSchemas } from "./product-design-schemas.js";
 import { memoryToolSchemas } from "./memory-tools.js";
+import { historySessionToolSchemas } from "./history-session-tools.js";
 import { planToolSchemas } from "./plan-tools.js";
 import { architectureToolSchemas } from "./architecture-tools.js";
 
@@ -29,6 +30,7 @@ export const allToolSchemas = [
   ...uiUxSchemas,
   ...productDesignSchemas,
   ...memoryToolSchemas,
+  ...historySessionToolSchemas,
   ...planToolSchemas,
   ...architectureToolSchemas,
 ];

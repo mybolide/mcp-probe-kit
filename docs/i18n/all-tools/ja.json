@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 ツール一覧 - 24/30/34面と1文呼び出し",
-    "description": "MCP Probe Kit v4 の完全なツール一覧。既定24、Memory構成時30、full互換34、App-only操作1件。各ツールにコピー可能な1文呼び出しを掲載。",
+    "title": "MCP Probe Kit v4 ツール一覧 - 29/35/39面と1文呼び出し",
+    "description": "MCP Probe Kit v4 の完全なツール一覧。既定29、Memory構成時35、full互換39、App-only操作1件。各ツールにコピー可能な1文呼び出しを掲載。",
     "keywords": "AI開発ツール, コード生成ツール, コードレビューツール, Git自動化, UI生成, コードリファクタリング, パフォーマンス最適化, セキュリティスキャン"
   },
   "page": {
-    "subtitle": "既定24モデルツール、Memory構成時30、full互換34、さらにApp-only操作1件"
+    "subtitle": "既定29モデルツール、Memory構成時35、full互換39、さらにApp-only操作1件"
   },
   "search": {
     "placeholder": "🔍 ツール名または説明を検索...",
@@ -54,7 +54,12 @@
     "plan_heartbeat": "計画チェックポイント",
     "resume_plan": "計画再開",
     "converge": "収束ゲート",
-    "list_memory_assets": "Memory閲覧"
+    "list_memory_assets": "Memory閲覧",
+    "history_session_bootstrap": "履歴ブートストラップ",
+    "history_session_checkpoint": "履歴チェックポイント",
+    "history_session_validate": "履歴検証",
+    "history_session_search": "履歴検索",
+    "history_session_read": "履歴読み取り"
   },
   "categories": {
     "workflow": {
@@ -96,6 +101,10 @@
     },
     "apps": {
       "title": "MCP Apps専用"
+    },
+    "history": {
+      "title": "セッション履歴",
+      "icon": "📜"
     }
   },
   "toolsData": {
@@ -273,12 +282,37 @@
       "description": "Memory Center専用の閲覧操作。更新順の要約一覧、フィルター、ページングを提供します。",
       "usage": "MCP Apps交渉後のみ使用され、モデルには公開されません。",
       "prompt": ""
+    },
+    "history_session_bootstrap": {
+      "description": "docs/history-session/ 配下のロスレス履歴アーカイブを初期化または再開します。",
+      "usage": "会話開始時に一度呼びます。ホスト session が無い場合は session_key を省略し project-active を使います。",
+      "prompt": "history_session_bootstrap を initial_user_input 付きで呼び出し、session_key は省略して project-active を使います。"
+    },
+    "history_session_checkpoint": {
+      "description": "冪等なチェックポイントを追記します。行数/バイト上限超過時はソフトローテートします。",
+      "usage": "bootstrap の session_key/expected_path と raw_user_input を渡します。",
+      "prompt": "history_session_checkpoint に session_key、expected_path、raw_user_input を渡して呼び出します。"
+    },
+    "history_session_validate": {
+      "description": "履歴番号付けを検証し、必要なら state/manifest を再構築します。",
+      "usage": "番号欠落や派生状態異常時に使用。repair=true で索引を再構築。",
+      "prompt": "番号欠落時は history_session_validate を repair=true で呼び出します。"
+    },
+    "history_session_search": {
+      "description": "キーワードでロスレス履歴を検索し、順位付きスニペットを返します。",
+      "usage": "セッション横断で旧アーカイブを特定し、history_session_read で原文を取得。",
+      "prompt": "先に history_session_search、続けて history_session_read で原文を取得します。"
+    },
+    "history_session_read": {
+      "description": "番号またはパスで Markdown アーカイブを UTF-8 安全にページ読みします。",
+      "usage": "next_cursor と expected_hash で該当アーカイブを読み切ります。",
+      "prompt": "history_session_read を number または path で呼び出し、next_cursor を辿ります。"
     }
   },
   "ui": {
     "eyebrow": "TOOL CATALOG",
     "title": "ツールを探し、1文をコピーして、すぐ開始",
-    "subtitle": "既定24モデルツール、Memory構成時30、full互換34、さらにApp-only操作1件。",
+    "subtitle": "既定29モデルツール、Memory構成時35、full互換39、さらにApp-only操作1件。",
     "searchPlaceholder": "ツール名、用途、説明を検索…",
     "all": "すべて",
     "default": "既定",

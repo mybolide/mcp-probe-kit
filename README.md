@@ -27,7 +27,7 @@
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server with **24 model-visible tools by default**, **30 when Memory is configured**, and a **34-tool compatibility surface** available through `MCP_TOOLSET=full`. It covers the complete workflow from product analysis to final release and supports structured output.
+A powerful MCP (Model Context Protocol) server with **29 model-visible tools by default** (24 base + 5 History Session; disable History with `MCP_HISTORY_SESSION=0`), **35 when Memory is also configured**, and a **39-tool compatibility surface** available through `MCP_TOOLSET=full`. It covers the complete workflow from product analysis to final release and supports structured output.
 
 **🎉 v4 stable release**: native MCP Apps, resumable plans, evidence convergence, managed GitNexus Sidecar, parent-child specs, and a version-locked CLI fallback.
 
@@ -63,6 +63,7 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 <strong>Convergence Gate</strong> — blocks closure when steps or requirements/spec/implementation/test/review evidence are incomplete.
 
 - **Five native MCP Apps**: Memory Center, Feature Workbench, Bug Workbench, Product Workbench, and Convergence Gate.
+- **History Session (default ON)**: lossless local chat handoff under `docs/history-session/` — bootstrap → checkpoint → search/read, no vector DB required.
 - **Resumable delegated plans**: `plan_heartbeat` persists real progress; `resume_plan` restores the next executable step.
 - **Evidence-based convergence**: `converge` gates delivery and long-term Memory writes.
 - **Managed GitNexus Sidecar**: version/platform/architecture/Node isolation, integrity verification, real FTS probe, and safe degradation.
@@ -82,7 +83,7 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 
 - [Quick Start](https://mcp-probe-kit.bytezonex.com/pages/getting-started.html) - Setup in 5 minutes
 - [Local Memory Stack (Qdrant + Nomic Embed)](docs/memory-local-setup.md) - Docker Compose, ports `50008` / `50012`, MCP env
-- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Default, conditional Memory, App-only, and full compatibility surfaces
+- [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Default (+ History), conditional Memory, App-only, and full compatibility surfaces
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3 → v4 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - Tool surfaces, protocol, Apps, plan state, Memory, and compatibility
 - [MCP Apps Live Demos](https://mcp-probe-kit.bytezonex.com/pages/apps.html) - Five real read-only workbenches generated from the shipped App source
@@ -104,13 +105,46 @@ The default `compact` surface keeps every independently useful workflow while re
 - **🎨 UI/UX Utilities** (2) — `ui_design_system`, `ui_search`
 - **🗣️ Structured Interview** (1) — `interview`
 
-That is **24 model-visible tools by default**. When the full Memory stack is configured, six Memory tools are added dynamically, bringing the model-visible surface to **30**:
+That is **24 base compact tools**, plus **5 History Session tools by default** (`history_session_bootstrap|checkpoint|validate|search|read`) for a **29**-tool model surface. Set `MCP_HISTORY_SESSION=0|false|off` to hide History. When the full Memory stack is configured, six Memory tools are added dynamically, bringing the model-visible surface to **35** (or **30** if History is off):
 
 `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
 
-For compatibility and diagnostics, `MCP_TOOLSET=full` restores all **34 model tools**. The compact surface deliberately omits `add_feature`, `fix_bug`, `sync_ui_data`, and `ask_user`: their implementations remain available through orchestration, maintenance scripts, or full compatibility mode.
+For compatibility and diagnostics, `MCP_TOOLSET=full` restores all **39 model tools**. The compact surface deliberately omits `add_feature`, `fix_bug`, `sync_ui_data`, and `ask_user`: their implementations remain available through orchestration, maintenance scripts, or full compatibility mode.
 
 `workflow` is a **fallback tool-selection guide, not a natural-language intent classifier**. The Agent normally chooses the appropriate MCP tool directly from the current conversation, Skill, and tool descriptions. `scenario=auto` returns guidance only (`firstTool=null`); an explicit `scenario` returns deterministic guidance for a scenario the Agent has already selected.
+
+### 📜 History Session (default ON) — lossless project handoff
+
+Chat hosts forget. History Session keeps a **lossless, project-local archive** so the next Agent turn (or a new conversation) can resume with real user wording, decisions, and open items — without stuffing the whole chat into the prompt.
+
+**Why it matters**
+
+- Host context windows and “new chat” resets drop prior findings; History persists them as Markdown under `docs/history-session/`.
+- **Default ON** and **no Qdrant / embedding stack** — works out of the box alongside the 24 base compact tools (29 model-visible tools total).
+- Complements, does not replace, the other layers:
+
+| Layer | Job | Typical tools |
+|---|---|---|
+| **History Session** | This project’s conversation handoff, verbatim user input, turn checkpoints | `history_session_*` |
+| **Delegated Plan** | Resumable steps, evidence, converge gates | `plan_heartbeat` / `resume_plan` / `converge` |
+| **Memory** | Cross-repo reusable experience (needs `MEMORY_*`) | `search_memory` / `memorize_asset` |
+
+**How Agents use it**
+
+1. **Start of a conversation** — `history_session_bootstrap` with `initial_user_input=<user’s first message>`. Omit `session_key` on hosts without a platform session (Cursor etc.); the server resumes the `project-active` archive. Do not invent random UUIDs.
+2. **Before each final reply** — `history_session_checkpoint` with the bootstrap `session_key` + `expected_path`, plus this turn’s `raw_user_input` / `user_intent`. Fill the Skill **minimum checklist** (`findings`, `decisions`, `files_changed`, `tests`, `runtime_state`, `next_actions`) — no empty-array padding.
+3. **Need an older fact** — `history_session_search` → `history_session_read` (follow `next_cursor`). Prefer bounded bootstrap `state` first; do not load full history by default.
+4. **Numbering / index damage** — `history_session_validate` (`repair=true` when needed).
+
+**Operational details**
+
+- Soft-rotate when an archive exceeds `MCP_HISTORY_MAX_LINES` / `MCP_HISTORY_MAX_BYTES` (defaults `800` / `131072`); checkpoint returns the new `expected_path`. Rotated archives **carry forward** the latest `initial_user_input`.
+- Redacts common secrets in archived text; checkpoints are idempotent by content fingerprint.
+- Disable with `MCP_HISTORY_SESSION=0|false|off` (hides the five tools).
+- **Do not commit** `docs/history-session/` — add it to `.gitignore` (local handoff only; not part of the npm package story).
+
+Skill and `AGENTS.md` spell out the read/write timing rules; the All Tools catalog lists one-line call prompts for each `history_session_*` tool.
+
 
 ### 🔁 Delegated Plan State, Recovery, and Convergence
 
@@ -659,6 +693,12 @@ ollama pull nomic-embed-text
 "MEMORY_EMBEDDING_MODEL": "text-embedding-3-small"
 ```
 
+#### History Session Environment Variables
+
+- `MCP_HISTORY_SESSION`: default ON; set `0|false|off` to hide the five `history_session_*` tools
+- `MCP_HISTORY_MAX_LINES`: soft-rotate line threshold (default `800`)
+- `MCP_HISTORY_MAX_BYTES`: soft-rotate byte threshold (default `131072`)
+
 #### Memory Environment Variables
 
 - `MEMORY_QDRANT_URL`: Qdrant base URL, required for all memory features
@@ -846,7 +886,7 @@ This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connec
 | `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
 | Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
 
-**What we do:** `tools/list` omits `outputSchema` by default, and v4.0.0 defaults to the 24-tool compact model surface. Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 34-tool compatibility surface with `MCP_TOOLSET=full`.
+**What we do:** `tools/list` omits `outputSchema` by default, and the default compact model surface is 29 tools (24 base + 5 History Session). Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 39-tool compatibility surface with `MCP_TOOLSET=full`.
 
 **What you can try:**
 

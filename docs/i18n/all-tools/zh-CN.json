@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 工具目录 - 24/30/34 工具面与一句话调用",
-    "description": "MCP Probe Kit v4 完整工具目录：默认 24 个模型工具，Memory 配置后 30 个，full 兼容面 34 个，另有 1 个 App-only 动作。每个工具提供可复制的一句话调用方式。",
+    "title": "MCP Probe Kit v4 工具目录 - 29/35/39 工具面与一句话调用",
+    "description": "MCP Probe Kit v4 完整工具目录：默认 29 个模型工具，Memory 配置后 35 个，full 兼容面 39 个，另有 1 个 App-only 动作。每个工具提供可复制的一句话调用方式。",
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "默认 24 个模型工具，Memory 配置后 30 个，full 兼容面 34 个，另有 1 个 App-only 动作"
+    "subtitle": "默认 29 个模型工具，Memory 配置后 35 个，full 兼容面 39 个，另有 1 个 App-only 动作"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -54,7 +54,12 @@
     "plan_heartbeat": "计划检查点",
     "resume_plan": "恢复计划",
     "converge": "收敛闸门",
-    "list_memory_assets": "App 浏览记忆"
+    "list_memory_assets": "App 浏览记忆",
+    "history_session_bootstrap": "历史初始化",
+    "history_session_checkpoint": "历史检查点",
+    "history_session_validate": "历史校验",
+    "history_session_search": "历史搜索",
+    "history_session_read": "历史读取"
   },
   "categories": {
     "workflow": {
@@ -96,6 +101,10 @@
     },
     "apps": {
       "title": "MCP Apps 专用"
+    },
+    "history": {
+      "title": "会话历史",
+      "icon": "📜"
     }
   },
   "toolsData": {
@@ -273,12 +282,37 @@
       "description": "Memory Center 专用浏览动作，按更新时间列出记忆摘要并支持筛选和分页。",
       "usage": "仅由协商成功的 MCP App 调用，不暴露给模型。",
       "prompt": ""
+    },
+    "history_session_bootstrap": {
+      "description": "初始化或恢复 docs/history-session/ 下的无损项目历史档案。",
+      "usage": "新对话开始时调用一次；无宿主 session 可不传 session_key，落到项目当前档。",
+      "prompt": "调用 history_session_bootstrap 并传 initial_user_input；无宿主 session 可不传 session_key。"
+    },
+    "history_session_checkpoint": {
+      "description": "追加幂等检查点；超过行数/字节阈值时软轮转新档。",
+      "usage": "回传 bootstrap 的 session_key/expected_path，并尽量带 raw_user_input。",
+      "prompt": "调用 history_session_checkpoint，回传 session_key、expected_path 与 raw_user_input。"
+    },
+    "history_session_validate": {
+      "description": "校验历史编号，可选重建 state/manifest。",
+      "usage": "编号缺口或派生状态异常时使用；repair=true 重建索引。",
+      "prompt": "出现编号缺口时调用 history_session_validate（repair=true）。"
+    },
+    "history_session_search": {
+      "description": "按关键词搜索无损历史档案并返回有界片段。",
+      "usage": "跨会话定位旧档后，再用 history_session_read 取原文。",
+      "prompt": "先 history_session_search，再 history_session_read 取原文。"
+    },
+    "history_session_read": {
+      "description": "按编号或路径分页读取 Markdown 档案（UTF-8 安全）。",
+      "usage": "按 next_cursor 与 expected_hash 继续直到读完相关档案。",
+      "prompt": "调用 history_session_read；按 next_cursor 继续直到读完。"
     }
   },
   "ui": {
     "eyebrow": "TOOL CATALOG",
     "title": "找到工具，复制一句话，直接开始",
-    "subtitle": "默认 24 个模型工具；配置 Memory 后 30 个；full 兼容面 34 个；另有 1 个 App-only 动作。",
+    "subtitle": "默认 29 个模型工具；配置 Memory 后 35 个；full 兼容面 39 个；另有 1 个 App-only 动作。",
     "searchPlaceholder": "搜索工具名、用途或描述…",
     "all": "全部",
     "default": "默认工具",

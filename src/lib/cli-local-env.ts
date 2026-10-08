@@ -19,6 +19,11 @@ export const CLI_LOCAL_ENV_EXAMPLE_CONTENT = `# MCP Probe Kit — local env for 
 # MEMORY_QDRANT_COLLECTION=mcp_probe_memory
 # MEMORY_REPO_ID=
 #
+# History Session tools (default ON; set 0|false|off to hide the 5 history_* tools)
+# MCP_HISTORY_SESSION=1
+# MCP_HISTORY_MAX_LINES=800
+# MCP_HISTORY_MAX_BYTES=131072
+#
 # Optional GitNexus runtime preference
 # MCP_GITNEXUS_MODE=managed
 #

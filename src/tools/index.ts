@@ -29,6 +29,14 @@ export { memorizeAsset } from "./memorize_asset.js";
 export { deleteMemoryAsset } from "./delete_memory_asset.js";
 export { updateMemoryAsset } from "./update_memory_asset.js";
 export { scanAndExtractPatterns } from "./scan_and_extract_patterns.js";
+// 会话历史档案
+export {
+  historySessionBootstrap,
+  historySessionCheckpoint,
+  historySessionValidate,
+  historySessionSearch,
+  historySessionRead,
+} from "./history_session.js";
 // 计划状态与收敛
 export { planHeartbeat } from "./plan_heartbeat.js";
 export { resumePlanTool } from "./resume_plan.js";

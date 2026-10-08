@@ -4,6 +4,7 @@ import type { ToolsetType } from "./tool-definition.js";
 import {
   APP_ONLY_TOOL_NAMES,
   COMPACT_MODEL_TOOL_NAMES,
+  HISTORY_SESSION_MODEL_TOOL_NAMES,
   MEMORY_MODEL_TOOL_NAMES,
 } from "./tool-visibility.js";
 
@@ -47,6 +48,10 @@ const CATEGORY_ALIASES: Record<string, { id: string; description: string }> = {
     id: "memory-cursor-history",
     description: "Memory tools",
   },
+  "history-session": {
+    id: "history-session",
+    description: "Lossless session history archive tools",
+  },
   interactive: {
     id: "interactive",
     description: "Interactive tools",
@@ -69,13 +74,17 @@ function namesForGroup(groupId: string): string[] {
 
 export function buildToolManifestSections() {
   const compact = [...COMPACT_MODEL_TOOL_NAMES];
+  const historyConditional = [...HISTORY_SESSION_MODEL_TOOL_NAMES];
   const memoryConditional = [...MEMORY_MODEL_TOOL_NAMES];
+  const compactWithHistory = [...compact, ...historyConditional];
   const compactWithMemory = [...compact, ...memoryConditional];
+  const compactWithHistoryAndMemory = [...compact, ...historyConditional, ...memoryConditional];
   const appOnly = [...APP_ONLY_TOOL_NAMES];
   const core = namesForToolset("core");
   const ui = namesForToolset("ui");
   const workflow = namesForToolset("workflow");
   const memory = namesForGroup("memory");
+  const historySession = namesForGroup("history-session");
 
   const categories: Record<string, JsonRecord> = {};
   const seenGroups = new Set<string>();
@@ -99,15 +108,30 @@ export function buildToolManifestSections() {
     totalTools: TOOL_CATALOG.length,
     toolsets: {
       compact: {
-        description: `${compact.length} default model tools`,
+        description: `${compact.length} base model tools (before History/Memory conditionals)`,
         count: compact.length,
         tools: compact,
-        note: "Default model-visible surface",
+        note: "Base compact names; History Session is ON by default and adds 5 tools at tools/list time",
+      },
+      compactWithHistory: {
+        description: `${compactWithHistory.length} model tools when History Session is enabled (default)`,
+        count: compactWithHistory.length,
+        tools: compactWithHistory,
       },
       compactWithMemory: {
-        description: `${compactWithMemory.length} model tools when Memory is configured`,
+        description: `${compactWithMemory.length} model tools when Memory is configured (History off)`,
         count: compactWithMemory.length,
         tools: compactWithMemory,
+      },
+      compactWithHistoryAndMemory: {
+        description: `${compactWithHistoryAndMemory.length} model tools when History (default) and Memory are both enabled`,
+        count: compactWithHistoryAndMemory.length,
+        tools: compactWithHistoryAndMemory,
+      },
+      historyConditional: {
+        description: `${historyConditional.length} conditionally visible History Session tools (default ON)`,
+        count: historyConditional.length,
+        tools: historyConditional,
       },
       memoryConditional: {
         description: `${memoryConditional.length} conditionally visible Memory tools`,
@@ -129,13 +153,18 @@ export function buildToolManifestSections() {
         count: memory.length,
         tools: memory,
       },
+      historySession: {
+        description: `${historySession.length} history-session tools`,
+        count: historySession.length,
+        tools: historySession,
+      },
       ui: {
         description: `${ui.length} UI/UX tools (recommend using start_ui unified entry)`,
         count: ui.length,
         tools: ui,
       },
       workflow: {
-        description: `${workflow.length} workflow tools (includes core + orchestration + interactive + UI + memory)`,
+        description: `${workflow.length} workflow tools (includes core + orchestration + interactive + UI + memory + history)`,
         count: workflow.length,
         tools: workflow,
       },

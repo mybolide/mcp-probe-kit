@@ -50,9 +50,10 @@ describe('official MCP Apps integration', () => {
         : false).toBe(true);
 
       const tools = await client.listTools();
-      expect(tools.tools).toHaveLength(24);
+      expect(tools.tools).toHaveLength(29);
       expect(tools.tools.some((tool) => tool.name === 'list_memory_assets')).toBe(false);
       expect(tools.tools.some((tool) => tool.name === 'architecture')).toBe(true);
+      expect(tools.tools.some((tool) => tool.name === 'history_session_bootstrap')).toBe(true);
       const feature = tools.tools.find((tool) => tool.name === 'start_feature');
       expect(feature?._meta).toMatchObject({
         ui: {
@@ -92,7 +93,7 @@ describe('official MCP Apps integration', () => {
     }
   });
 
-  test('keeps the Memory-enabled compact surface at 30 tools for MCP Apps clients', async () => {
+  test('keeps the Memory-enabled compact surface at 35 tools for MCP Apps clients', async () => {
     vi.stubEnv('MCP_TOOLSET', 'compact');
     vi.stubEnv('MCP_ENABLE_UI_APPS', 'true');
     vi.stubEnv('MEMORY_QDRANT_URL', 'http://127.0.0.1:6333');
@@ -118,7 +119,7 @@ describe('official MCP Apps integration', () => {
     await client.connect(clientTransport);
     try {
       const tools = await client.listTools();
-      expect(tools.tools).toHaveLength(30);
+      expect(tools.tools).toHaveLength(35);
       expect(tools.tools.some((tool) => tool.name === 'list_memory_assets')).toBe(false);
       expect(tools.tools.map((tool) => tool.name)).toEqual(
         expect.arrayContaining([
@@ -152,7 +153,7 @@ describe('official MCP Apps integration', () => {
     await client.connect(clientTransport);
     try {
       const tools = await client.listTools();
-      expect(tools.tools).toHaveLength(24);
+      expect(tools.tools).toHaveLength(29);
       expect(tools.tools.find((tool) => tool.name === 'start_feature')?._meta?.ui).toBeUndefined();
       expect(tools.tools.some((tool) => tool.name === 'list_memory_assets')).toBe(false);
       const resources = await client.listResources();

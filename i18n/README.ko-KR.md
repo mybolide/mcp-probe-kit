@@ -9,7 +9,7 @@
 
 **Talk is cheap, show me the Context.**
 
-> Zhishi MCP는 컨텍스트 탐색과 개발 오케스트레이션을 위한 프로토콜 수준 툴킷입니다. v4는 기본적으로 모델에 24개 도구를 노출하고, Memory 완전 구성 시 30개, full 호환 모드에서는 34개 도구를 유지합니다.
+> Zhishi MCP는 컨텍스트 탐색과 개발 오케스트레이션을 위한 프로토콜 수준 툴킷입니다. v4는 기본적으로 모델에 29개 도구(기반 24 + History 5)를 노출하고, Memory 완전 구성 시 35개, full 호환 모드에서는 39개 도구를 유지합니다.
 
 **언어**: [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja-JP.md) | **한국어** | [Español](README.es-ES.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Português (BR)](README.pt-BR.md)
 
@@ -20,7 +20,7 @@
 
 > 🚀 AI 기반 완전한 개발 툴킷 - 전체 개발 라이프사이클 커버
 
-강력한 MCP (Model Context Protocol) 서버로, 기본 **24개 모델 가시 도구**, Memory 완전 구성 시 **30개**, `MCP_TOOLSET=full` 사용 시 **34개 호환 도구**를 제공합니다. 구조화 출력, Legacy/Modern 이중 프로토콜, 정식 MCP Apps를 지원합니다.
+강력한 MCP (Model Context Protocol) 서버로, 기본 **29개 모델 가시 도구**(기반 24 + History 5), Memory 완전 구성 시 **35개**, `MCP_TOOLSET=full` 사용 시 **39개 호환 도구**를 제공합니다. 구조화 출력, Legacy/Modern 이중 프로토콜, 정식 MCP Apps를 지원합니다.
 
 **🎉 v4 안정 버전**: 네이티브 MCP Apps, 재개 가능한 계획, 증거 수렴, 관리형 GitNexus Sidecar, 부모-자식 명세, 버전 고정 CLI fallback.
 
@@ -54,6 +54,7 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 <strong>Convergence Gate</strong>: 단계 또는 요구사항/명세/구현/테스트/리뷰 증거가 부족하면 종료를 거부합니다.
 
 - **네이티브 MCP Apps 5개**: Memory, Feature, Bug, Product, Convergence.
+- **History Session(기본 ON)**: `docs/history-session/` 무손실 인수인계(bootstrap → checkpoint → search/read, 벡터 DB 불필요).
 - **재개 가능한 위임 계획**: `plan_heartbeat`가 실제 진행을 저장하고 `resume_plan`이 다음 실행 단계를 복원합니다.
 - **증거 기반 수렴**: `converge`가 전달과 장기 Memory 쓰기를 제한합니다.
 - **관리형 GitNexus Sidecar**: 버전, OS, 아키텍처, Node 메이저별 격리, 무결성 및 실제 FTS 검증, 안전한 축소 동작.
@@ -83,9 +84,9 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 
 ### 📦 도구 표면
 
-- **기본 `compact`**: 모델 가시 도구 24개. `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge`, `architecture` 등 독립적인 진입점을 유지합니다.
-- **Memory 완전 구성**: Memory 도구 6개를 동적으로 추가하여 모델 가시 수가 30개가 됩니다.
-- **`MCP_TOOLSET=full`**: 기존 흐름과 진단을 위해 34개 호환 모델 도구를 복원합니다.
+- **기본 `compact` + History**: 모델 가시 도구 29개(기반 24 + History 5). `start_product`, `gencommit`, `plan_heartbeat`, `resume_plan`, `converge`, `architecture` 등 독립적인 진입점을 유지합니다.
+- **Memory 완전 구성**: Memory 도구 6개를 동적으로 추가하여 모델 가시 수가 35개가 됩니다(History OFF 시 30).
+- **`MCP_TOOLSET=full`**: 기존 흐름과 진단을 위해 39개 호환 모델 도구를 복원합니다.
 - **MCP Apps**: `list_memory_assets`는 Memory Center 전용이며 `visibility=["app"]`로 표시되어 모델 도구 수에 포함되지 않습니다.
 - `add_feature`, `fix_bug`, `sync_ui_data`, `ask_user`는 기본 표면에서 제외되지만 오케스트레이션, 유지보수 스크립트 또는 full 모드에서 기능이 유지됩니다.
 
@@ -102,6 +103,22 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 - Docs: [src8-methodology.md](../docs/src8-methodology.md)
 - `start_bugfix` runs SRC-8 before repair; `fix_bug` injects **rootCauseWorksheet**
 - `fix_bug` 는 현상, 타임라인, 제외한 경로, 경계, 근본 원인, 증거, 수정 계획을 담은 TBP 구조를 반환합니다
+
+
+### 📜 History Session(기본 ON) — 무손실 프로젝트 인수인계
+
+호스트 채팅은 잊습니다. History Session은 `docs/history-session/`에 **무손실 로컬 아카이브**를 남겨 다음 대화에서도 사용자 원문·결정·미결 항목을 복원합니다(벡터 DB 불필요).
+
+- **왜 필요한가**: 컨텍스트/새 채팅으로 사실이 사라지지 않음. 기본 ON. Memory/Plan과 다른 계층.
+- **사용법**: 대화 시작 `history_session_bootstrap`(`initial_user_input`; 호스트 session 없으면 `session_key` 생략 → `project-active`) → 최종 응답 전 `history_session_checkpoint`(최소 작성 체크리스트) → 과거 사실은 `search` → `read`.
+- **운영**: 행/바이트 초과 시 소프트 로테이트(`initial_user_input` 상속). `MCP_HISTORY_SESSION=0|false|off`로 숨김. **커밋 금지**(`.gitignore`).
+
+| 계층 | 역할 |
+|---|---|
+| History | 이 저장소의 대화 인수인계 |
+| Plan | 재개 가능한 단계와 증거 |
+| Memory | 저장소 간 재사용(`MEMORY_*` 필요) |
+
 
 ### 🧠 Memory Retrieval
 

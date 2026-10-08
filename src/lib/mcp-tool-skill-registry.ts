@@ -35,6 +35,7 @@ export const MCP_SKILL_ARGUMENT_RULES = [
   "工具参数必须表达当前任务事实，不要只复制用户最后一条消息；当前项目代码和已落盘 Spec 优先于历史记忆。",
   "只有需要持续状态、跨会话恢复或正式交付的 Delegated Plan 才要求 `plan_heartbeat`；单次只读分析不强制创建 Plan。",
   "拿到托管 Delegated Plan 后首次调用 `plan_heartbeat` 时附完整 plan；每完成、跳过或阻塞步骤后更新检查点。",
+  "History Session 默认开启：新对话先 `history_session_bootstrap`（传 `initial_user_input`；无宿主 session 可不传 `session_key`，落到项目当前档）；每轮最终回复前 `history_session_checkpoint`（回传 `session_key`/`expected_path`，必须带 `raw_user_input`）。检查点须按 Skill「最低填写清单」写满 findings/decisions/files_changed/tests/runtime_state/next_actions，禁止空数组交差。精确旧上下文用 `history_session_search` → `history_session_read`，不要把全量历史塞进 bootstrap。",
 ] as const;
 
 export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = (() => {
@@ -87,6 +88,10 @@ export const MCP_SKILL_COMMON_FLOWS = [
     label: "会话中断后继续",
     chain: "resume_plan → 执行 nextStepId → plan_heartbeat → 最终 converge",
   },
+  {
+    label: "会话历史交接",
+    chain: "history_session_bootstrap → …工作… → history_session_checkpoint；跨会话 search → read",
+  },
 ] as const;
 
 export const MCP_SKILL_AVOID_RULES = [
@@ -99,6 +104,11 @@ export const MCP_SKILL_AVOID_RULES = [
   "长流程执行步骤后**不** `plan_heartbeat`，导致中断后无法恢复",
   "托管交付流程在 `converge` 未通过时就把候选经验正式写入 `memorize_asset`",
   "`delete_memory_asset` 不带 `confirm: true`",
+  "History 开启时跳过 `history_session_bootstrap` / 最终回复前不 `history_session_checkpoint`",
+  "用日期哈希或随机 UUID 伪造 `session_key`（无宿主 session 应省略 key，落到 project-active）",
+  "把 History Session 当成 Memory/Qdrant；跨仓库可复用经验仍走 `search_memory` / `memorize_asset`",
+  "忽略 bootstrap/轮转后返回的新 `expected_path`，继续用旧路径 checkpoint",
+  "`history_session_checkpoint` 只填空数组或省略 `raw_user_input`/`user_intent`/`next_actions`（不满足最低填写清单）",
 ] as const;
 
 export function listMcpToolSkillRegistryNames(): string[] {

@@ -34,6 +34,7 @@ export const WORKFLOW_SELECTION_GUIDE: WorkflowSelectionGuideEntry[] = [
   { signal: '需求本身不清楚，缺关键事实，需要向用户提问', firstTool: 'ask_user / interview' },
   { signal: '工作报告、周报或 Git 工作汇总', firstTool: 'git_work_report' },
   { signal: '用户只说继续/开始/往下做且可能存在未完成 Plan', firstTool: 'resume_plan' },
+  { signal: '新对话开始需要会话交接，或跨会话找回历史结论/用户原话', firstTool: 'history_session_bootstrap' },
 ];
 
 export const WORKFLOW_AGENT_SELECTION_RULES = [

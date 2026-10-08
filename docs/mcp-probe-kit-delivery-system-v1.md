@@ -1,5 +1,8 @@
 # MCP Probe Kit 软件交付系统 V1 最终需求与验收基线
 
+> **History Session amendment (post-freeze):** model surfaces are now Compact+History **29**, +Memory **35**, Full **39** (+1 App-only). Local archives live under `docs/history-session/` and should be gitignored. Historical Phase checklists below that cite 24/30/34 remain as frozen acceptance baselines from earlier phases.
+
+
 > 文档状态：V1 最终需求基线；`4.0.0` 已正式发布，本文同时保留 V1 基线与当前稳定版实现口径。
 >
 > 当前稳定版：`mcp-probe-kit@4.0.3`，npm `latest`；主分支 `main`。
