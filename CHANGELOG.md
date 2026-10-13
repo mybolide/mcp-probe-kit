@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [4.1.1] - 2026-10-13
+
 ### Fixed
 
 - History Session: omitting `session_key` mints `hs_<uuid>` and opens a new archive instead of writing the shared `project-active` file, so parallel Agent chats cannot mix checkpoints. Echo the returned handle to resume; lookup uses the session key only.
