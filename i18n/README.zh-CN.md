@@ -109,7 +109,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 **Agent 怎么用**
 
-1. **新对话开始** — `history_session_bootstrap`，传 `initial_user_input=<用户首条原话>`。Cursor 等无宿主 session 时**省略** `session_key`，落到 `project-active`；禁止伪造随机 UUID。
+1. **新对话开始** — `history_session_bootstrap`，传 `initial_user_input=<用户首条原话>`。无宿主 session 时**第一次**省略 `session_key`，服务器铸 `hs_<uuid>` 开新档（不写入共享 `project-active`）；后续必须回传该 handle，禁止自行编造。
 2. **每轮最终回复前** — `history_session_checkpoint`，回传 bootstrap 的 `session_key` + `expected_path`，并带本轮 `raw_user_input` / `user_intent`。按 Skill **最低填写清单**写满 `findings` / `decisions` / `files_changed` / `tests` / `runtime_state` / `next_actions`，禁止空数组交差。
 3. **需要旧结论** — `history_session_search` → `history_session_read`（跟 `next_cursor`）。先读 bootstrap 有界 `state`，不要默认全量灌历史。
 4. **编号/索引异常** — `history_session_validate`（必要时 `repair=true`）。

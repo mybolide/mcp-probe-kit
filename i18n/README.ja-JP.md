@@ -110,7 +110,7 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 ホストのチャットは忘れます。History Session は `docs/history-session/` に**ロスレスなローカル履歴**を残し、次の会話でもユーザー原話・決定・未決事項を復元できます（ベクトル DB 不要）。
 
 - **なぜ必要か**: コンテキスト切れや新規チャットでも事実を失わない。既定 ON。Memory/Plan とは別レイヤ。
-- **使い方**: 会話開始で `history_session_bootstrap`（`initial_user_input`；ホスト session が無ければ `session_key` 省略 → `project-active`）→ 最終応答前に `history_session_checkpoint`（最低記入チェックリスト）→ 旧事実は `search` → `read`。
+- **使い方**: 会話開始で `history_session_bootstrap`（`initial_user_input`；ホスト session が無ければ初回のみ `session_key` 省略 → サーバが `hs_<uuid>` を発行して新規アーカイブ）→ 以降はその handle を返す → 最終応答前に `history_session_checkpoint` → 旧事実は `search` → `read`。
 - **運用**: 行数/バイト超過でソフトローテート（`initial_user_input` 継承）。`MCP_HISTORY_SESSION=0|false|off` で非表示。**コミットしない**（`.gitignore`）。
 
 | 層 | 役割 |

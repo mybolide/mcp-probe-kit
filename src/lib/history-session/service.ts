@@ -1,7 +1,7 @@
 import * as path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import {
   BOOTSTRAP_RESPONSE_BUDGET,
-  PROJECT_ACTIVE_SESSION_KEY,
   getHistoryLimits,
   type HistorySessionLimits,
 } from '../history-session-config.js';
@@ -44,10 +44,16 @@ import {
   type ScanReport,
 } from './types.js';
 
-export type SessionSource = 'platform_conversation_id' | 'explicit_session_key' | 'project_active';
+export type SessionSource = 'platform_conversation_id' | 'explicit_session_key' | 'minted_handle';
+
+export const MINTED_SESSION_PREFIX = 'hs_';
 
 function nowTimestamp(): string {
   return new Date().toISOString();
+}
+
+export function mintHistorySessionKey(): string {
+  return `${MINTED_SESSION_PREFIX}${randomUUID()}`;
 }
 
 export function resolveSessionKey(args: Record<string, unknown>): {
@@ -58,7 +64,7 @@ export function resolveSessionKey(args: Record<string, unknown>): {
   if (host) return { sessionKey: host, source: 'platform_conversation_id' };
   const explicit = typeof args.session_key === 'string' ? args.session_key.trim() : '';
   if (explicit) return { sessionKey: explicit, source: 'explicit_session_key' };
-  return { sessionKey: PROJECT_ACTIVE_SESSION_KEY, source: 'project_active' };
+  return { sessionKey: mintHistorySessionKey(), source: 'minted_handle' };
 }
 
 function findLatestBySession(report: ScanReport, sessionKey: string): HistoryDocument | undefined {
@@ -70,21 +76,10 @@ function findLatestBySession(report: ScanReport, sessionKey: string): HistoryDoc
 
 function resolveActiveDocument(
   report: ScanReport,
-  historyDir: string,
+  _historyDir: string,
   sessionKey: string,
-  source: SessionSource,
+  _source: SessionSource,
 ): HistoryDocument | undefined {
-  if (source === 'project_active') {
-    const state = readState(historyDir);
-    const n = state?.current_session?.number;
-    if (n) {
-      const byState = report.documents.find((d) => d.number === n);
-      if (byState) return byState;
-    }
-    const byKey = findLatestBySession(report, sessionKey);
-    if (byKey) return byKey;
-    return report.documents.filter((d) => !d.sealed).at(-1) ?? report.documents.at(-1);
-  }
   return findLatestBySession(report, sessionKey);
 }
 
@@ -179,6 +174,11 @@ export function bootstrapHistorySession(
 
     const mode = typeof args.mode === 'string' && args.mode === 'fresh' ? 'fresh' : 'resume';
     const warnings: string[] = [];
+    if (source === 'minted_handle') {
+      warnings.push(
+        'No host/explicit session_key: minted a new handle. Echo this session_key on later history_session_* calls in this conversation. Omitting it opens a new archive and does not merge.',
+      );
+    }
     const requestedInitial = typeof args.initial_user_input === 'string' && args.initial_user_input.trim()
       ? args.initial_user_input
       : undefined;
@@ -297,8 +297,10 @@ export function bootstrapHistorySession(
       persistence_mode: 'model_mediated_tool_calls',
       assistant_instructions:
         mode === 'fresh'
-          ? 'Fresh mode: do not use prior focus/open items. Preserve session_key and current_path. Checkpoint with raw_user_input before final response.'
-          : 'Use the bounded continuity state to begin work. Call history_session_search then history_session_read for exact earlier context. Preserve session_key and current_path. Before the final response, call history_session_checkpoint with verbatim raw_user_input.',
+          ? 'Fresh mode: do not use prior focus/open items. Echo session_key and current_path on later calls. Checkpoint with raw_user_input before final response.'
+          : source === 'minted_handle'
+            ? 'New conversation handle minted. Echo session_key on every later history_session_* call in this chat. Do not invent a key and do not omit it or a new archive will be created. Search/read for older archives. Checkpoint with raw_user_input before final response.'
+            : 'Use the bounded continuity state to begin work. Call history_session_search then history_session_read for exact earlier context. Echo session_key and current_path. Before the final response, call history_session_checkpoint with verbatim raw_user_input.',
       required_next_actions: [
         'review_bounded_state',
         'search_or_read_relevant_archives_when_precision_is_needed',
@@ -366,9 +368,7 @@ export function checkpointHistorySession(
   const lock = lockDirectory(historyDir);
   try {
     let report = scan(projectRoot, historyDir);
-    const source: SessionSource = sessionKey === PROJECT_ACTIVE_SESSION_KEY
-      ? 'project_active'
-      : 'explicit_session_key';
+    const source: SessionSource = 'explicit_session_key';
     let document = resolveActiveDocument(report, historyDir, sessionKey, source)
       ?? findLatestBySession(report, sessionKey);
     if (!document) {

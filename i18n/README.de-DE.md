@@ -117,7 +117,7 @@ v4 macht die delegierte Agent-Ausführung zu einem beobachtbaren, fortsetzbaren 
 Chat-Hosts vergessen. History Session speichert ein **verlustfreies lokales Archiv** unter `docs/history-session/`, damit die nächste Unterhaltung Nutzerwortlaut, Entscheidungen und offene Punkte wiederfindet — ohne Vektordatenbank.
 
 - **Warum wichtig**: Fakten überleben Kontextfenster und neue Chats. Standardmäßig AN. Eigene Schicht neben Memory/Plan.
-- **Nutzung**: Gesprächsstart `history_session_bootstrap` (`initial_user_input`; ohne Host-Session `session_key` weglassen → `project-active`) → vor jeder Endantwort `history_session_checkpoint` (Mindest-Checkliste) → ältere Fakten mit `search` → `read`.
+- **Nutzung**: Gesprächsstart `history_session_bootstrap` (`initial_user_input`; ohne Host-Session `session_key` nur beim ersten Aufruf weglassen → Server vergibt `hs_<uuid>` und öffnet ein neues Archiv) → Handle zurückgeben → vor jeder Endantwort `history_session_checkpoint` (Mindest-Checkliste) → ältere Fakten mit `search` → `read`.
 - **Betrieb**: Soft-Rotate nach Zeilen/Bytes (übernimmt `initial_user_input`). Aus mit `MCP_HISTORY_SESSION=0|false|off`. **Nicht committen** (`.gitignore`).
 
 | Schicht | Rolle |

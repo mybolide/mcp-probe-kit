@@ -110,7 +110,7 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 호스트 채팅은 잊습니다. History Session은 `docs/history-session/`에 **무손실 로컬 아카이브**를 남겨 다음 대화에서도 사용자 원문·결정·미결 항목을 복원합니다(벡터 DB 불필요).
 
 - **왜 필요한가**: 컨텍스트/새 채팅으로 사실이 사라지지 않음. 기본 ON. Memory/Plan과 다른 계층.
-- **사용법**: 대화 시작 `history_session_bootstrap`(`initial_user_input`; 호스트 session 없으면 `session_key` 생략 → `project-active`) → 최종 응답 전 `history_session_checkpoint`(최소 작성 체크리스트) → 과거 사실은 `search` → `read`.
+- **사용법**: 대화 시작 `history_session_bootstrap`(`initial_user_input`; 호스트 session 없으면 첫 호출만 `session_key` 생략 → 서버가 `hs_<uuid>` 발급 후 새 아카이브) → handle 을 이후 호출에 그대로 전달 → 최종 응답 전 `history_session_checkpoint` → 과거 사실은 `search` → `read`.
 - **운영**: 행/바이트 초과 시 소프트 로테이트(`initial_user_input` 상속). `MCP_HISTORY_SESSION=0|false|off`로 숨김. **커밋 금지**(`.gitignore`).
 
 | 계층 | 역할 |

@@ -3,6 +3,8 @@ export {
   checkpointHistorySession,
   validateHistorySession,
   resolveSessionKey,
+  mintHistorySessionKey,
+  MINTED_SESSION_PREFIX,
 } from './service.js';
 export {
   searchHistorySession,

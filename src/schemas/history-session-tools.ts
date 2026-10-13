@@ -2,13 +2,13 @@ export const historySessionToolSchemas = [
   {
     name: 'history_session_bootstrap',
     description:
-      'Initialize or resume a lossless project history archive (docs/history-session/). Call once near the start of a conversation with the user\'s verbatim first request as initial_user_input. Without host/explicit session_key, uses the project-active archive. Returns bounded state (≤64 KiB), not full history. Disable with MCP_HISTORY_SESSION=0|false|off.',
+      'Initialize or resume a lossless project history archive (docs/history-session/). Call once near the start of a conversation with the user\'s verbatim first request as initial_user_input. Echo the returned session_key on later calls in this chat. Without host/explicit session_key, the server mints a new hs_<uuid> handle and opens a new archive (does not merge into a shared project-active file). Never invent a key. Returns bounded state (≤64 KiB). Disable with MCP_HISTORY_SESSION=0|false|off.',
     inputSchema: {
       type: 'object',
       properties: {
         project_root: { type: 'string', description: 'Project root; omit to use workspace resolution' },
         workspace_root: { type: 'string', description: 'Alias of project_root' },
-        session_key: { type: 'string', description: 'Optional explicit session key; omit for project-active archive' },
+        session_key: { type: 'string', description: 'Echo the server-minted handle from a previous bootstrap in this conversation. Omit only on the first call; omitting later opens a new archive instead of merging.' },
         title: { type: 'string', description: 'Archive title when creating a new session' },
         initial_user_input: { type: 'string', description: 'Verbatim first user request for this conversation' },
         history_dir: { type: 'string', description: 'Relative history directory; default docs/history-session' },
@@ -16,7 +16,7 @@ export const historySessionToolSchemas = [
         mode: {
           type: 'string',
           enum: ['resume', 'fresh'],
-          description: 'resume (default) reuses project-active/keyed archive; fresh always creates a new archive',
+          description: 'resume (default) reuses the archive for this session_key; fresh always creates a new archive',
         },
       },
       additionalProperties: true,

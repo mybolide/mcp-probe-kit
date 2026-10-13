@@ -5,11 +5,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   bootstrapHistorySession,
   checkpointHistorySession,
+  MINTED_SESSION_PREFIX,
   readHistorySession,
   searchHistorySession,
   validateHistorySession,
 } from '../history-session/index.js';
-import { PROJECT_ACTIVE_SESSION_KEY } from '../history-session-config.js';
 import { resolveToolsetNames } from '../toolset-manager.js';
 
 const tmpRoots: string[] = [];
@@ -27,23 +27,71 @@ afterEach(() => {
 });
 
 describe('history-session service', () => {
-  it('falls back to project-active when no session key is provided', () => {
+  it('mints a unique handle when no session key is provided and does not merge later omitted-key bootstraps', () => {
     const root = tempProject();
     const first = bootstrapHistorySession(root, {
-      initial_user_input: 'hello project active',
+      initial_user_input: 'hello minted',
       title: 'PA',
     });
-    expect(first.session_key).toBe(PROJECT_ACTIVE_SESSION_KEY);
-    expect(first.session_key_source).toBe('project_active');
+    expect(String(first.session_key).startsWith(MINTED_SESSION_PREFIX)).toBe(true);
+    expect(first.session_key_source).toBe('minted_handle');
     expect(first.created).toBe(true);
 
-    const second = bootstrapHistorySession(root, {
-      initial_user_input: 'hello project active',
+    const omitted = bootstrapHistorySession(root, {
+      initial_user_input: 'hello minted',
     });
-    expect(second.created).toBe(false);
-    expect(second.resumed).toBe(true);
-    expect(second.current_number).toBe(first.current_number);
-    expect(second.current_path).toBe(first.current_path);
+    expect(omitted.created).toBe(true);
+    expect(omitted.session_key).not.toBe(first.session_key);
+    expect(omitted.current_path).not.toBe(first.current_path);
+
+    const echoed = bootstrapHistorySession(root, {
+      session_key: first.session_key,
+    });
+    expect(echoed.created).toBe(false);
+    expect(echoed.resumed).toBe(true);
+    expect(echoed.current_number).toBe(first.current_number);
+    expect(echoed.session_key).toBe(first.session_key);
+  });
+
+  it('isolates parallel bootstraps that omit session_key', () => {
+    const root = tempProject();
+    const release = bootstrapHistorySession(root, {
+      initial_user_input: '可以发布了',
+      title: 'Release',
+    });
+    const bug = bootstrapHistorySession(root, {
+      initial_user_input: '两个 session 串台了',
+      title: 'Crosstalk',
+    });
+
+    expect(bug.session_key).not.toBe(release.session_key);
+    expect(bug.current_path).not.toBe(release.current_path);
+    expect(bug.created).toBe(true);
+    expect(bug.current_number).not.toBe(release.current_number);
+
+    checkpointHistorySession(root, {
+      session_key: bug.session_key,
+      expected_path: bug.current_path,
+      turn_id: 'bug-1',
+      raw_user_input: '两个 session 串台了',
+      user_intent: '修串台',
+      findings: ['并行会话应分档'],
+    });
+    checkpointHistorySession(root, {
+      session_key: release.session_key,
+      expected_path: release.current_path,
+      turn_id: 'rel-1',
+      raw_user_input: '可以发布了',
+      user_intent: '发 4.1.0',
+      findings: ['发布流程'],
+    });
+
+    const bugText = fs.readFileSync(path.join(root, String(bug.current_path)), 'utf8');
+    const releaseText = fs.readFileSync(path.join(root, String(release.current_path)), 'utf8');
+    expect(bugText).toContain('修串台');
+    expect(bugText).not.toContain('发 4.1.0');
+    expect(releaseText).toContain('发 4.1.0');
+    expect(releaseText).not.toContain('修串台');
   });
 
   it('reuses an explicit session_key archive', () => {

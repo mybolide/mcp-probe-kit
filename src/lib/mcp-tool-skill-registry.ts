@@ -105,7 +105,7 @@ export const MCP_SKILL_AVOID_RULES = [
   "托管交付流程在 `converge` 未通过时就把候选经验正式写入 `memorize_asset`",
   "`delete_memory_asset` 不带 `confirm: true`",
   "History 开启时跳过 `history_session_bootstrap` / 最终回复前不 `history_session_checkpoint`",
-  "用日期哈希或随机 UUID 伪造 `session_key`（无宿主 session 应省略 key，落到 project-active）",
+  "自行编造 `session_key`（只回传服务器铸出的 handle；漏传会开新档而不是合并）",
   "把 History Session 当成 Memory/Qdrant；跨仓库可复用经验仍走 `search_memory` / `memorize_asset`",
   "忽略 bootstrap/轮转后返回的新 `expected_path`，继续用旧路径 checkpoint",
   "`history_session_checkpoint` 只填空数组或省略 `raw_user_input`/`user_intent`/`next_actions`（不满足最低填写清单）",

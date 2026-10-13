@@ -31,7 +31,7 @@ function historySection(locale: DocumentLocale): string {
   if (locale === "zh-CN") {
     return `
 会话历史（默认开启；\`MCP_HISTORY_SESSION=0|false|off\` 关闭；详见 Skill「History Session 读写规则」）：
-- **写**：新对话先 \`history_session_bootstrap\`；每轮最终回复前 \`history_session_checkpoint\`（\`session_key\`/\`expected_path\` + \`raw_user_input\`/\`user_intent\`）
+- **写**：新对话先 \`history_session_bootstrap\`（无宿主 key 时服务器铸 \`hs_<uuid>\` 开新档，禁止写入共享 \`project-active\`）；每轮最终回复前 \`history_session_checkpoint\`（必须回传上次 \`session_key\`/\`expected_path\` + \`raw_user_input\`/\`user_intent\`）
 - **检查点最低清单**：\`findings\`/\`decisions\`/\`files_changed\`/\`tests\`/\`runtime_state\`/\`next_actions\` 须写满（无内容用明确占位句，禁止空数组交差）
 - **读**：先用 bootstrap 有界 state；精确旧上下文再 \`history_session_search\` → \`history_session_read\`；不要全量灌历史
 - 档案在 \`docs/history-session/\`（应 \`.gitignore\`，勿提交）；超行数/字节软轮转；与 Memory/Qdrant 分离；“继续”有 Plan → 仍先 \`resume_plan\``;
@@ -39,7 +39,7 @@ function historySection(locale: DocumentLocale): string {
 
   return `
 History Session (default ON; disable with \`MCP_HISTORY_SESSION=0|false|off\`; see Skill “History Session” rules):
-- **Write**: bootstrap at conversation start; checkpoint before each final reply (\`session_key\`/\`expected_path\` + \`raw_user_input\`/\`user_intent\`)
+- **Write**: bootstrap at conversation start (server mints \`hs_<uuid>\` when the host has no session id — do not share \`project-active\`); checkpoint before each final reply (echo prior \`session_key\`/\`expected_path\` + \`raw_user_input\`/\`user_intent\`)
 - **Minimum checkpoint**: fill \`findings\`/\`decisions\`/\`files_changed\`/\`tests\`/\`runtime_state\`/\`next_actions\` (use explicit placeholders when empty — no bare empty arrays)
 - **Read**: bounded bootstrap state first; \`history_session_search\` → \`history_session_read\` for exact older context
 - Archives under \`docs/history-session/\` (gitignore; do not commit); soft-rotate on limits; separate from Memory/Qdrant; “continue” with an open Plan → \`resume_plan\` first`;

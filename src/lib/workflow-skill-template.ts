@@ -149,7 +149,7 @@ export function generateWorkflowSkillBody(skillVersion: string = VERSION): strin
 
 1. **先判断目标**：明确单项能力直接调用对应工具；需要从分析到验证完整交付时才调用 \`start_*\`
 2. **独立能力不是必须被编排**：\`code_insight\`、\`fix_bug\`、\`gentest\`、\`code_review\`、Memory、History Session 等均可直接调用
-3. **新对话默认先 \`history_session_bootstrap\`**（History 开启时）：可传 \`initial_user_input\`；无宿主 session 可不传 \`session_key\`；每轮结束前 \`history_session_checkpoint\`；跨会话用 search/read。关闭：\`MCP_HISTORY_SESSION=0|false|off\`
+3. **新对话默认先 \`history_session_bootstrap\`**（History 开启时）：传 \`initial_user_input\`；无宿主 key 时服务器铸 handle，后续必须回传 \`session_key\`（漏传开新档、不合并）；每轮结束前 \`history_session_checkpoint\`；跨会话用 search/read。关闭：\`MCP_HISTORY_SESSION=0|false|off\`
 4. **只有拿不准该调用哪个工具时**才调用 \`workflow\`。\`workflow\` 是兜底选择指南，不做自然语言意图识别；默认 \`scenario=auto\` 不会根据 \`intent\` 猜 \`firstTool\`。Agent 阅读指南和 tool descriptions 后自行判断，缺关键事实时再澄清用户
 5. \`start_*\` 只组合当前场景实际需要的能力；按返回的 Delegated Plan 逐步执行，不要额外塞入无关工具
 6. 在写代码或改文件前，先完成当前目标真正需要的理解、规格或根因步骤
@@ -167,7 +167,8 @@ ${renderExecutionChannels(skillVersion)}
 
 1. **新对话开始、回答用户第一问之前**：调用 \`history_session_bootstrap\`  
    - 传 \`initial_user_input=<用户首条原话>\`  
-   - Cursor 等无宿主 session 时**省略** \`session_key\`（落到项目当前档 \`project-active\`）；**禁止**用日期哈希/随机 UUID 伪造  
+   - 无宿主 session 时**第一次**可省略 \`session_key\`：服务器会铸 \`hs_<uuid>\` 并开新档（不会写入共享 \`project-active\`）  
+   - **禁止**自行编造 UUID；同一对话后续轮次必须回传上次 bootstrap 的 \`session_key\`，漏传会再开一本而不是合并  
    - 需要刻意开新档时用 \`mode=fresh\`
 2. **每轮任务结束、给出最终回复之前**：调用 \`history_session_checkpoint\`  
    - 必须回传 bootstrap（或上轮轮转）返回的 \`session_key\` + \`expected_path\`  

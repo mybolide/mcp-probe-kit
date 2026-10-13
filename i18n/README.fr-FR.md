@@ -122,7 +122,7 @@ v4 transforme l’exécution déléguée de l’Agent en une boucle de livraison
 Les hôtes de chat oublient. History Session conserve une **archive locale sans perte** sous `docs/history-session/` pour retrouver les propos utilisateur, décisions et points ouverts au tour suivant — sans base vectorielle.
 
 - **Pourquoi c’est utile**: les faits survivent aux fenêtres de contexte et aux nouveaux chats. Activé par défaut. Couche distincte de Memory/Plan.
-- **Usage**: début de conversation `history_session_bootstrap` (`initial_user_input` ; sans session hôte, omettre `session_key` → `project-active`) → avant chaque réponse finale `history_session_checkpoint` (checklist minimale) → faits anciens via `search` → `read`.
+- **Usage**: début de conversation `history_session_bootstrap` (`initial_user_input` ; sans session hôte, omettre `session_key` **une fois** → le serveur émet `hs_<uuid>` et ouvre une nouvelle archive) → renvoyer le handle → avant chaque réponse finale `history_session_checkpoint` (checklist minimale) → faits anciens via `search` → `read`.
 - **Exploitation**: soft-rotate lignes/octets (hérite `initial_user_input`). Désactiver avec `MCP_HISTORY_SESSION=0|false|off`. **Ne pas committer** (`.gitignore`).
 
 | Couche | Rôle |

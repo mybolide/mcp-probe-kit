@@ -117,7 +117,7 @@ A v4 transforma a execução delegada do Agent em um ciclo de entrega observáve
 Hosts de chat esquecem. History Session guarda um **arquivo local sem perda** em `docs/history-session/` para recuperar falas do usuário, decisões e pendências na próxima conversa — sem banco vetorial.
 
 - **Por que importa**: fatos sobrevivem a janelas de contexto e chats novos. Ativado por padrão. Camada distinta de Memory/Plan.
-- **Uso**: no início `history_session_bootstrap` (`initial_user_input`; sem session do host, omita `session_key` → `project-active`) → antes de cada resposta final `history_session_checkpoint` (checklist mínima) → fatos antigos com `search` → `read`.
+- **Uso**: no início `history_session_bootstrap` (`initial_user_input`; sem session do host, omita `session_key` **uma vez** → o servidor gera `hs_<uuid>` e abre um arquivo novo) → ecoar o handle → antes de cada resposta final `history_session_checkpoint` (checklist mínima) → fatos antigos com `search` → `read`.
 - **Operação**: soft-rotate por linhas/bytes (herda `initial_user_input`). Desative com `MCP_HISTORY_SESSION=0|false|off`. **Não faça commit** (`.gitignore`).
 
 | Camada | Papel |

@@ -131,7 +131,7 @@ Chat hosts forget. History Session keeps a **lossless, project-local archive** s
 
 **How Agents use it**
 
-1. **Start of a conversation** — `history_session_bootstrap` with `initial_user_input=<user’s first message>`. Omit `session_key` on hosts without a platform session (Cursor etc.); the server resumes the `project-active` archive. Do not invent random UUIDs.
+1. **Start of a conversation** — `history_session_bootstrap` with `initial_user_input=<user’s first message>`. On hosts without a platform session, omit `session_key` **once**; the server mints `hs_<uuid>` and opens a **new** archive (it does not share `project-active`). Echo that handle on later calls. Do not invent keys.
 2. **Before each final reply** — `history_session_checkpoint` with the bootstrap `session_key` + `expected_path`, plus this turn’s `raw_user_input` / `user_intent`. Fill the Skill **minimum checklist** (`findings`, `decisions`, `files_changed`, `tests`, `runtime_state`, `next_actions`) — no empty-array padding.
 3. **Need an older fact** — `history_session_search` → `history_session_read` (follow `next_cursor`). Prefer bounded bootstrap `state` first; do not load full history by default.
 4. **Numbering / index damage** — `history_session_validate` (`repair=true` when needed).
