@@ -105,6 +105,7 @@ export interface CreateWorkItem {
 
 export class ProjectTaskLedger {
   private readonly db: SqlDatabase;
+  private transactionDepth = 0;
   readonly root: string;
   readonly databasePath: string;
 
@@ -130,14 +131,24 @@ export class ProjectTaskLedger {
   close(): void { this.db.close(); }
 
   private inTransaction<T>(action: () => T): T {
-    this.db.exec("BEGIN IMMEDIATE");
+    const level = this.transactionDepth;
+    const savepoint = `devcontrol_nested_${level}`;
+    this.db.exec(level === 0 ? "BEGIN IMMEDIATE" : `SAVEPOINT ${savepoint}`);
+    this.transactionDepth++;
     try {
       const output = action();
-      this.db.exec("COMMIT");
+      this.db.exec(level === 0 ? "COMMIT" : `RELEASE SAVEPOINT ${savepoint}`);
       return output;
     } catch (error) {
-      this.db.exec("ROLLBACK");
+      if (level === 0) {
+        this.db.exec("ROLLBACK");
+      } else {
+        this.db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+        this.db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+      }
       throw error;
+    } finally {
+      this.transactionDepth--;
     }
   }
 
@@ -283,17 +294,27 @@ export class ProjectTaskLedger {
   next(): Row {
     const tasks = this.list();
     const active = this.db.prepare("SELECT task_id,agent,expires_at FROM dc_leases WHERE singleton=1").get();
+    const activeLease = active && active.expires_at > Date.now()
+      ? { taskId: active.task_id, agent: active.agent, expiresAt: active.expires_at } : null;
     const ready = tasks.filter((t) =>
       (t.status === "ready" || t.status === "in_progress" || t.status === "in_review") &&
-      this.blockers(t.id).length === 0,
+      this.blockers(t.id).length === 0 &&
+      !t.childIds.some((id: string) => this.requireTask(id).status !== "verified"),
     );
-    const product = ready.find((t) => t.track === "product");
+    // A lease represents work already in progress; never recommend a different
+    // task to a second agent while this single-worktree lock is active.
+    const selected = activeLease ? this.get(activeLease.taskId)
+      : ready.find((t) => t.track === "product") ?? ready[0] ?? null;
     return {
-      projectRoot: this.root, nextTask: product ?? ready[0] ?? null,
-      activeLease: active && active.expires_at > Date.now()
-        ? { taskId: active.task_id, agent: active.agent, expiresAt: active.expires_at } : null,
-      blocked: tasks.filter((t) => t.status !== "verified" && this.blockers(t.id).length)
-        .map((t) => ({ id: t.id, blockedBy: this.blockers(t.id) })),
+      projectRoot: this.root, nextTask: selected,
+      activeLease,
+      blocked: tasks.filter((t) => t.status !== "verified" && (
+        this.blockers(t.id).length ||
+        t.childIds.some((id: string) => this.requireTask(id).status !== "verified")
+      )).map((t) => ({
+        id: t.id, blockedBy: this.blockers(t.id),
+        unverifiedChildren: t.childIds.filter((id: string) => this.requireTask(id).status !== "verified"),
+      })),
     };
   }
 
@@ -347,16 +368,26 @@ export class ProjectTaskLedger {
     planId?: string;
   }): Row {
     const absolute = path.resolve(this.root, input.manifestPath);
-    if (!absolute.startsWith(this.root + path.sep)) {
+    const real = fs.realpathSync(absolute);
+    // On macOS /var and /private/var can denote the same directory.
+    // Compare canonical paths, not their pre-realpath string spellings.
+    const relative = path.relative(fs.realpathSync(this.root), real);
+    if (!relative || relative === ".." || relative.startsWith(".." + path.sep) ||
+        path.isAbsolute(relative)) {
       fail("UNSAFE_MANIFEST_PATH", "Spec manifest must remain inside project root");
     }
-    const manifest = parseParentChildManifest(fs.readFileSync(absolute, "utf8"));
+    const manifest = parseParentChildManifest(fs.readFileSync(real, "utf8"));
     if (!manifest) fail("INVALID_MANIFEST", "Expected a valid parent-child spec-manifest.json");
     this.requireTask(input.parentTaskId);
     if (!idPattern.test(input.idPrefix)) fail("INVALID_ID", "Invalid stable task ID prefix");
-    const identities = new Map(manifest.subspecs.map((subspec, index) => [
-      subspec.id, `${input.idPrefix}-${String(index + 1).padStart(2, "0")}`,
+    // IDs derive from the stable upstream subspec identifier, NEVER its
+    // array position: reordering the manifest must not reassign old tasks.
+    const identities = new Map(manifest.subspecs.map((subspec) => [
+      subspec.id, `${input.idPrefix}-${subspec.id.toUpperCase().replace(/[^A-Z0-9-]/g, "-")}`,
     ]));
+    if (new Set(identities.values()).size !== identities.size) {
+      fail("IMPORT_CONFLICT", "Two subspec identifiers map to the same task ID");
+    }
     for (const id of identities.values()) {
       if (!idPattern.test(id)) fail("INVALID_ID", `Imported task ID exceeds size limit: ${id}`);
     }
@@ -364,43 +395,46 @@ export class ProjectTaskLedger {
     if (!input.requiredGates?.length || input.requiredGates.some((gate) => !allowedGates.has(gate))) {
       fail("GATE_REQUIRED", "Provide preapproved nonempty gate list for imported subtasks");
     }
-    const results: Row[] = [];
-    for (const spec of manifest.subspecs) {
+    return this.inTransaction(() => {
+      const results: Row[] = [];
+      for (const spec of manifest.subspecs) {
       const id = identities.get(spec.id)!;
-      const existing = this.db.prepare("SELECT id,parent_id,spec_id FROM dc_tasks WHERE id=?").get(id);
-      const specId = `${input.manifestPath}#${spec.id}`;
-      if (existing) {
-        if (existing.parent_id !== input.parentTaskId || existing.spec_id !== specId) {
-          fail("IMPORT_CONFLICT", `Task ID conflict while importing ${id}`);
-        }
-        results.push(this.get(id));
-      } else {
-        results.push(this.create({
-          id, title: spec.title, parentId: input.parentTaskId,
-          allowedPaths: input.allowedPaths, requiredGates: input.requiredGates,
-          specId, planId: input.planId,
-        }, input.actor ?? "spec-import"));
-      }
-    }
-    // Two phases allow forward references in the manifest's dependency graph.
-    for (const spec of manifest.subspecs) {
-      for (const dep of spec.dependsOn ?? []) {
-        const taskId = identities.get(spec.id)!;
-        if (this.requireTask(taskId).status !== "draft") {
-          if (!this.db.prepare(
-            "SELECT task_id FROM dc_dependencies WHERE task_id=? AND depends_on=?",
-          ).get(taskId, identities.get(dep)!)) {
-            fail("FROZEN_TASK", "Existing approved task dependency differs from manifest");
+        const existing = this.db.prepare("SELECT id,parent_id,spec_id FROM dc_tasks WHERE id=?").get(id);
+        const specId = `${input.manifestPath}#${spec.id}`;
+        if (existing) {
+          if (existing.parent_id !== input.parentTaskId || existing.spec_id !== specId) {
+            fail("IMPORT_CONFLICT", `Task ID conflict while importing ${id}`);
           }
-          continue;
+          results.push(this.get(id));
+        } else {
+          results.push(this.create({
+            id, title: spec.title, parentId: input.parentTaskId,
+            allowedPaths: input.allowedPaths, requiredGates: input.requiredGates,
+            specId, planId: input.planId,
+          }, input.actor ?? "spec-import"));
         }
-        this.addDependency(taskId, identities.get(dep)!, input.actor ?? "spec-import");
       }
-    }
-    return {
-      parentTaskId: input.parentTaskId, importedIds: [...identities.values()],
-      status: "draft", tasks: results.map((r) => this.get(r.id)),
-    };
+      // Two passes allow forward dependency references. All writes form one
+      // transaction: missing dependencies or conflicts cannot half-import.
+      for (const spec of manifest.subspecs) {
+        for (const dep of spec.dependsOn ?? []) {
+          const taskId = identities.get(spec.id)!;
+          if (this.requireTask(taskId).status !== "draft") {
+            if (!this.db.prepare(
+              "SELECT task_id FROM dc_dependencies WHERE task_id=? AND depends_on=?",
+            ).get(taskId, identities.get(dep)!)) {
+              fail("FROZEN_TASK", "Existing approved task dependency differs from manifest");
+            }
+            continue;
+          }
+          this.addDependency(taskId, identities.get(dep)!, input.actor ?? "spec-import");
+        }
+      }
+      return {
+        parentTaskId: input.parentTaskId, importedIds: [...identities.values()],
+        status: "draft", tasks: results.map((r) => this.get(r.id)),
+      };
+    });
   }
 
   addDependency(id: string, dependency: string, actor: string): Row {
@@ -444,7 +478,7 @@ export class ProjectTaskLedger {
     const base = git(this.root, ["rev-parse", "HEAD"]);
     return this.inTransaction(() => {
       const task = this.requireTask(id);
-      if (task.status !== "ready" && task.status !== "in_progress") {
+      if (task.status !== "ready" && task.status !== "in_progress" && task.status !== "in_review") {
         fail("TASK_NOT_READY", `Task ${id} is ${task.status}`);
       }
       if (this.blockers(id).length) fail("TASK_BLOCKED", `Task ${id} depends on ${this.blockers(id).join(", ")}`);
@@ -452,16 +486,64 @@ export class ProjectTaskLedger {
       if (lease && lease.expires_at > Date.now()) {
         fail("LEASE_CONFLICT", `Task ${lease.task_id} is already claimed by ${lease.agent}`);
       }
+      // A crashed agent may have committed files before its lease expired.
+      // Reclaiming that *same* task must not discard its original Git base.
+      if (lease && lease.task_id !== id &&
+          ["in_progress", "in_review"].includes(this.requireTask(lease.task_id).status)) {
+        fail("ABANDONED_TASK", `Expired task ${lease.task_id} must be resumed or reviewed before switching tasks`);
+      }
+      const originalBase = lease?.task_id === id ? String(lease.base_head) : base;
+      if (lease?.task_id === id) {
+        const ancestor = run(this.root, "git", ["merge-base", "--is-ancestor", originalBase, base]);
+        if (!ancestor.passed) fail("GIT_HISTORY_CHANGED", "Cannot resume: prior task baseline is not an ancestor of HEAD");
+      }
       const token = randomUUID();
       this.db.prepare(`
         INSERT OR REPLACE INTO dc_leases(singleton,task_id,agent,token,base_head,expires_at)
         VALUES(1,?,?,?,?,?)
-      `).run(id, agent.trim(), token, base, Date.now() + ttlSeconds * 1000);
-      this.db.prepare(
-        "UPDATE dc_tasks SET status='in_progress',updated_at=? WHERE id=?",
-      ).run(utc(), id);
-      this.audit(id, "claimed", agent, { base, ttlSeconds });
-      return { task: this.get(id), leaseToken: token, baseHead: base };
+      `).run(id, agent.trim(), token, originalBase, Date.now() + ttlSeconds * 1000);
+      if (task.status !== "in_review") {
+        this.db.prepare(
+          "UPDATE dc_tasks SET status='in_progress',updated_at=? WHERE id=?",
+        ).run(utc(), id);
+      }
+      this.audit(id, lease?.task_id === id ? "reclaimed" : "claimed", agent, {
+        base: originalBase, ttlSeconds,
+      });
+      return { task: this.get(id), leaseToken: token, baseHead: originalBase };
+    });
+  }
+
+  renew(id: string, token: string, ttlSeconds = 1800): Row {
+    if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 3600) {
+      fail("INVALID_TTL", "Lease must be 60–3600 seconds");
+    }
+    return this.inTransaction(() => {
+      const current = this.requireLease(id, token);
+      const expiresAt = Date.now() + ttlSeconds * 1000;
+      this.db.prepare("UPDATE dc_leases SET expires_at=? WHERE singleton=1").run(expiresAt);
+      this.audit(id, "lease_renewed", current.agent, { ttlSeconds, expiresAt });
+      return { taskId: id, agent: current.agent, baseHead: current.base_head, expiresAt };
+    });
+  }
+
+  release(id: string, token: string): Row {
+    return this.inTransaction(() => {
+      const current = this.requireLease(id, token);
+      const task = this.requireTask(id);
+      if (task.status !== "in_progress") {
+        fail("TASK_IN_REVIEW", "Task in review cannot be released without review resolution");
+      }
+      // Releasing discards the lease's base revision. Only permit it when no
+      // Git commits or uncommitted changes could be orphaned.
+      if (git(this.root, ["rev-parse", "HEAD"]) !== current.base_head ||
+          git(this.root, ["status", "--porcelain"])) {
+        fail("UNFINISHED_WORK", "Do not release after code changes; renew or reclaim this task instead");
+      }
+      this.db.prepare("DELETE FROM dc_leases WHERE singleton=1").run();
+      this.db.prepare("UPDATE dc_tasks SET status='ready',updated_at=? WHERE id=?").run(utc(), id);
+      this.audit(id, "lease_released", current.agent, { baseHead: current.base_head });
+      return { taskId: id, status: "ready", released: true };
     });
   }
 
@@ -527,8 +609,12 @@ export class ProjectTaskLedger {
     }
     const evidence = this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=?").all(id);
     if (!evidence.length) return { taskId: id, passed: false, reason: "Missing evidence" };
+    const startHead = git(this.root, ["rev-parse", "HEAD"]);
     const dirty = git(this.root, ["status", "--porcelain"]);
     if (dirty) return { taskId: id, passed: false, reason: "Git working tree must be clean" };
+    if (!run(this.root, "git", ["merge-base", "--is-ancestor", lease.base_head, startHead]).passed) {
+      return { taskId: id, passed: false, reason: "Claim baseline is not an ancestor of HEAD" };
+    }
     const files = changedFiles(this.root, lease.base_head);
     const allowedPaths = JSON.parse(task.allowed_paths) as string[];
     const denied = files.filter((f) => !allowedPaths.some((p) => pathAllowed(f, p)));
@@ -538,12 +624,19 @@ export class ProjectTaskLedger {
     const gates = JSON.parse(task.required_gates) as string[];
     if (!gates.length) return { taskId: id, passed: false, reason: "Missing gate definition" };
     const results = Object.fromEntries(gates.map((name) => [name, this.gate(name)]));
-    const passed = Object.values(results).every((r) => r.passed);
+    const stableHead = git(this.root, ["rev-parse", "HEAD"]);
+    const stableTree = git(this.root, ["status", "--porcelain"]);
+    const stable = startHead === stableHead && !stableTree;
+    const passed = stable && Object.values(results).every((r) => r.passed);
     this.inTransaction(() => {
       const current = this.requireLease(id, token);
       if (current.base_head !== lease.base_head) fail("LEASE_CHANGED", "Lease changed during validation");
+      if (git(this.root, ["rev-parse", "HEAD"]) !== startHead ||
+          git(this.root, ["status", "--porcelain"])) {
+        fail("GIT_CHANGED_DURING_VERIFY", "Git changed after gates; re-run verification");
+      }
       this.audit(id, passed ? "verified" : "verify_failed", "devcontrol", {
-        revision: git(this.root, ["rev-parse", "HEAD"]), files, results,
+        revision: startHead, files, results, gitStable: stable,
       });
       if (passed) {
         this.db.prepare(
@@ -552,7 +645,7 @@ export class ProjectTaskLedger {
         this.db.prepare("DELETE FROM dc_leases WHERE singleton=1").run();
       }
     });
-    return { taskId: id, passed, files, results };
+    return { taskId: id, passed, files, results, gitStable: stable };
   }
 
   trace(id: string): Row {

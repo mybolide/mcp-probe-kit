@@ -49,6 +49,8 @@ suite("DevControl dedicated MCP stdio", () => {
       expect(results.map((x) => x.id)).toEqual([1, 2, 3]);
       expect(results[0].result.serverInfo.name).toBe("mcp-probe-kit-devcontrol-rc");
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_import-spec")).toBe(true);
+      expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_renew")).toBe(true);
+      expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_release")).toBe(true);
       expect(results[2].result.structuredContent.nextTask.id).toBe("F1");
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

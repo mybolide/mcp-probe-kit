@@ -43,6 +43,10 @@ export function dispatchDevControl(
     case "claim": return ledger.claim(
       String(input.id), String(input.agent), Number(input.ttlSeconds ?? 1800),
     );
+    case "renew": return ledger.renew(
+      String(input.id), String(input.leaseToken), Number(input.ttlSeconds ?? 1800),
+    );
+    case "release": return ledger.release(String(input.id), String(input.leaseToken));
     case "check": return ledger.checkStaged();
     case "report": return ledger.report(
       String(input.id), String(input.leaseToken),

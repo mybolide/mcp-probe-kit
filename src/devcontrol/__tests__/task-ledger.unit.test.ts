@@ -80,7 +80,9 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.get("F0").status).toBe("verified");
     expect(ledger!.get("F1").status).toBe("ready");
     expect(ledger!.next().nextTask.id).toBe("F1");
-    expect(ledger!.next().blocked).toContainEqual({ id: "F2", blockedBy: ["F1"] });
+    expect(ledger!.next().blocked).toContainEqual({
+      id: "F2", blockedBy: ["F1"], unverifiedChildren: [],
+    });
     expect(ledger!.trace("F0").audit.some((x: any) => x.event === "legacy_import")).toBe(true);
     expect(() => ledger!.claim("F2", "blocked")).toThrowError(DevControlError);
   });
@@ -120,11 +122,122 @@ describe("project ledger and legacy migration", () => {
       planId: "feature-memory-abc",
     };
     const result = ledger!.importSpec(input);
-    expect(result.importedIds).toEqual(["NEYNA-230-01", "NEYNA-230-02"]);
-    expect(ledger!.get("NEYNA-230-02").dependsOn).toEqual(["NEYNA-230-01"]);
-    expect(ledger!.get("NEYNA-230-02").planId).toBe("feature-memory-abc");
-    expect(ledger!.get("NEYNA-230-02").status).toBe("draft");
+    expect(result.importedIds).toEqual(["NEYNA-230-FOUNDATION", "NEYNA-230-CLIENT"]);
+    expect(ledger!.get("NEYNA-230-CLIENT").dependsOn).toEqual(["NEYNA-230-FOUNDATION"]);
+    expect(ledger!.get("NEYNA-230-CLIENT").planId).toBe("feature-memory-abc");
+    expect(ledger!.get("NEYNA-230-CLIENT").status).toBe("draft");
     expect(ledger!.importSpec(input).importedIds).toEqual(result.importedIds);
+    // Reordering upstream parent-child specs must not rename project tasks.
+    save(manifestPath, JSON.stringify({
+      layout: "parent-child",
+      subspecs: [
+        { id: "client", title: "Client", fr: ["FR-002"], dependsOn: ["foundation"] },
+        { id: "foundation", title: "Foundation", fr: ["FR-001"] },
+      ],
+    }));
+    expect(ledger!.importSpec(input).importedIds).toEqual(["NEYNA-230-CLIENT", "NEYNA-230-FOUNDATION"]);
+  });
+
+  it("rolls back an import if a later child conflicts with an existing task", () => {
+    create({ id: "NEYNA-250" });
+    create({ id: "NEYNA-260-BETA", title: "Conflicting existing task" });
+    const manifestPath = "docs/specs/cycle/spec-manifest.json";
+    save(manifestPath, JSON.stringify({
+      layout: "parent-child",
+      subspecs: [
+        { id: "alpha", title: "Alpha", fr: ["FR-001"] },
+        { id: "beta", title: "Beta", fr: ["FR-002"], dependsOn: ["alpha"] },
+      ],
+    }));
+    const original = ledger!.list().length;
+    expect(() => ledger!.importSpec({
+      manifestPath, parentTaskId: "NEYNA-250", idPrefix: "NEYNA-260",
+      allowedPaths: ["tests/contracts/**"], requiredGates: ["docs"],
+    })).toThrow(/conflict/i);
+    expect(ledger!.list().length).toBe(original);
+  });
+
+  it("never recommends an unverified parent over its eligible child", () => {
+    create({ id: "NEYNA-270", title: "Parent" });
+    create({ id: "NEYNA-271", parentId: "NEYNA-270", title: "Child", dependsOn: ["F0"] });
+    ledger!.approve("NEYNA-270", "owner");
+    ledger!.approve("NEYNA-271", "owner");
+    const next = ledger!.next();
+    expect(next.blocked).toContainEqual({
+      id: "NEYNA-270", blockedBy: [], unverifiedChildren: ["NEYNA-271"],
+    });
+    expect(next.nextTask.id).not.toBe("NEYNA-270");
+  });
+
+  it("respects an active lease in next, renews it and releases only an untouched task", () => {
+    create();
+    ledger!.approve("NEYNA-200", "owner");
+    const claimed = ledger!.claim("NEYNA-200", "agent", 600);
+    expect(ledger!.next().nextTask.id).toBe("NEYNA-200");
+    const renewed = ledger!.renew("NEYNA-200", claimed.leaseToken, 1200);
+    expect(renewed.baseHead).toBe(claimed.baseHead);
+    expect(renewed.expiresAt).toBeGreaterThan(Date.now() + 1190_000);
+    expect(() => ledger!.renew("NEYNA-200", "wrong-token")).toThrow(/token/i);
+    const released = ledger!.release("NEYNA-200", claimed.leaseToken);
+    expect(released.released).toBe(true);
+    expect(ledger!.get("NEYNA-200").status).toBe("ready");
+    expect(ledger!.next().activeLease).toBeNull();
+  });
+
+  it("expired task reclaim preserves the original Git baseline and verification includes older commits", () => {
+    create();
+    ledger!.approve("NEYNA-200", "owner");
+    const original = ledger!.claim("NEYNA-200", "agent-a");
+    save("tests/contracts/one.json", "{}");
+    commit("first session work");
+    const require = createRequire(import.meta.url);
+    const { DatabaseSync } = require("node:sqlite") as any;
+    // Simulate time passing in this isolated SQLite test fixture.
+    ledger!.close();
+    const db = new DatabaseSync(path.join(root, ".neyna/state/devcontrol.sqlite3"));
+    db.prepare("UPDATE dc_leases SET expires_at=0 WHERE singleton=1").run();
+    db.close();
+    ledger = new ProjectTaskLedger(root);
+    const reclaimed = ledger!.claim("NEYNA-200", "agent-b");
+    expect(reclaimed.baseHead).toBe(original.baseHead);
+    expect(reclaimed.leaseToken).not.toBe(original.leaseToken);
+    save("tests/contracts/two.json", "{}");
+    commit("second session work");
+    ledger!.report("NEYNA-200", reclaimed.leaseToken, {
+      kind: "test", reference: "real verified test command",
+    }, true);
+    const verified = ledger!.verify("NEYNA-200", reclaimed.leaseToken);
+    expect(verified.passed).toBe(true);
+    expect(verified.files).toContain("tests/contracts/one.json");
+    expect(verified.files).toContain("tests/contracts/two.json");
+  });
+
+  it("refuses to release a lease after real code changes would lose Git provenance", () => {
+    create();
+    ledger!.approve("NEYNA-200", "owner");
+    const claim = ledger!.claim("NEYNA-200", "agent");
+    save("tests/contracts/changed.json", "{}");
+    commit("partial work");
+    expect(() => ledger!.release("NEYNA-200", claim.leaseToken)).toThrow(/renew or reclaim/i);
+  });
+
+  it("fails closed if a validation gate changes working files during verification", () => {
+    // Prepare a hostile gate before claim, so it does not count as an
+    // out-of-scope change made during the claimed task.
+    save("scripts/validate_docs.py",
+      "from pathlib import Path\nPath('README.md').write_text('mutated by gate')\nprint('bad gate success')\n");
+    commit("baseline hostile gate for fixture");
+    create();
+    ledger!.approve("NEYNA-200", "owner");
+    const claim = ledger!.claim("NEYNA-200", "agent");
+    save("tests/contracts/test.json", "{}");
+    commit("task code");
+    ledger!.report("NEYNA-200", claim.leaseToken, {
+      kind: "test", reference: "run actual validation",
+    }, true);
+    // The 'docs' gate mutates README.md *during* verification.
+    expect(() => ledger!.verify("NEYNA-200", claim.leaseToken)).toThrow(/Git changed after gates/);
+    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
   });
 
   it("blocks parent verification while any child is unverified", () => {

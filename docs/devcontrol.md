@@ -15,6 +15,8 @@ continue to support Node 20+. No database server or native npm addon is needed.
 - CLI: mcp-probe-kit devcontrol create --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol approve --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol claim --project-root /path --json '{...}'
+- CLI: mcp-probe-kit devcontrol renew --project-root /path --json '{"id":"TASK-1","leaseToken":"...","ttlSeconds":1800}'
+- CLI: mcp-probe-kit devcontrol release --project-root /path --json '{"id":"TASK-1","leaseToken":"..."}'
 - CLI: mcp-probe-kit devcontrol report --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol verify --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol trace --project-root /path --json '{...}'
@@ -24,6 +26,29 @@ Project tasks are proposed as drafts, approved, claimed, developed, reported for
 review, verified by runnable gates, and audited. Fields include stable task ID,
 parent ID, dependencies, priority, release, file scope, acceptance gates and
 optional links to existing mcp-probe-kit Plan/Spec IDs.
+
+## Interrupted sessions and safe recovery
+
+The CLI/MCP `next` operation shows the **active leased task first** so a second
+Agent cannot silently start a different task in the same worktree. An eligible
+parent is held back while any child remains unverified. Use `renew` before a
+long-running task lease expires; it requires the original lease token.
+
+After expiry the same task may be re-claimed; DevControl preserves the original
+Git base SHA, including committed work from the previous session. Expired leases
+for **another unfinished task** block task switching. `release` only succeeds
+before any Git changes have occurred; release never abandons committed evidence.
+An expired `in_review` task can be reclaimed and re-verified without reopening
+the task or losing the review evidence.
+
+The `import-spec` operation uses stable manifest subspec IDs rather than array
+positions, and its full task/dependency import is **transactional**. Reordering
+subspec entries cannot silently rename existing project tasks. A conflicting
+import rolls back without leaving partially created child tasks.
+
+`verify` requires the original claimed Git base to remain an ancestor of
+HEAD and verifies that HEAD and the working tree remain stable throughout the
+actual gate execution. Changing code during checks rejects verification.
 
 The optional standalone MCP server exposes one command per project task action.
 Agents must explicitly register it; installing the main package does **not**

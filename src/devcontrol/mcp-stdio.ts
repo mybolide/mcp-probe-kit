@@ -5,14 +5,16 @@ import { DevControlError, ProjectTaskLedger } from "./task-ledger.js";
 
 const operations = [
   "next", "list", "get", "create", "subtask", "dependency", "approve",
-  "claim", "check", "report", "verify", "trace", "import-spec",
+  "claim", "renew", "release", "check", "report", "verify", "trace", "import-spec",
 ];
 const requiredFields: Record<string, string[]> = {
   next: [], list: [], get: ["id"],
   create: ["id", "title", "allowedPaths", "requiredGates"],
   subtask: ["id", "title", "parentId", "allowedPaths", "requiredGates"],
   dependency: ["id", "dependsOn"], approve: ["id", "approvedBy"],
-  claim: ["id", "agent"], check: [], report: ["id", "leaseToken", "kind", "reference"],
+  claim: ["id", "agent"], renew: ["id", "leaseToken"],
+  release: ["id", "leaseToken"], check: [],
+  report: ["id", "leaseToken", "kind", "reference"],
   verify: ["id", "leaseToken"], trace: ["id"],
   "import-spec": ["manifestPath", "parentTaskId", "idPrefix", "allowedPaths", "requiredGates"],
 };
@@ -41,7 +43,7 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
           answer = response(parsed.id, {
             protocolVersion: "2025-06-18",
             capabilities: { tools: { listChanged: false } },
-            serverInfo: { name: "mcp-probe-kit-devcontrol-rc", version: "0.2.0" },
+            serverInfo: { name: "mcp-probe-kit-devcontrol-rc", version: "0.3.0" },
             instructions: "Project-level task registry and gates; Delegated Plans remain separate.",
           });
         } else if (parsed.method === "ping") {
@@ -58,7 +60,7 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                 properties: Object.fromEntries(
                   [...new Set([...(requiredFields[operation] ?? []), "actor", "approvedBy",
                     "dependsOn", "parentId", "track", "release", "priority", "specId",
-                    "planId", "ttlSeconds", "kind", "reference", "readyForReview"])]
+                    "planId", "leaseToken", "ttlSeconds", "kind", "reference", "readyForReview"])]
                     .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn"].includes(field)
                       ? { type: "array", items: { type: "string" } }
                       : field === "priority" || field === "ttlSeconds" ? { type: "integer" }
