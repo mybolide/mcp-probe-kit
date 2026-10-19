@@ -36,6 +36,7 @@ import {
   resolveCliProjectForTool,
   resolveRequiredWorkspace,
 } from "./cli-project-resolution.js";
+import { runDevControlCli } from "../devcontrol/command.js";
 
 interface ParsedArgv {
   command: string;
@@ -64,6 +65,8 @@ export async function runCommandLine(argv: string[]): Promise<number | null> {
         return runStatus(parsed);
       case "doctor":
         return await runDoctor(parsed);
+      case "devcontrol":
+        return await runDevControlCli(parsed.positionals, parsed.flags);
       case "help":
       case "--help":
       case "-h":
@@ -78,7 +81,7 @@ export async function runCommandLine(argv: string[]): Promise<number | null> {
         throw new CliError(
           "UNKNOWN_COMMAND",
           `未知命令: ${parsed.command}`,
-          { supported: ["exec", "tools", "schema", "install-agent", "status", "doctor"] }
+          { supported: ["exec", "tools", "schema", "install-agent", "status", "doctor", "devcontrol"] }
         );
     }
   } catch (error) {
@@ -484,4 +487,7 @@ function printHelp(): void {
   process.stdout.write("  mcp-probe-kit install-agent --project-root .\n");
   process.stdout.write("  mcp-probe-kit status --project-root .\n");
   process.stdout.write("  mcp-probe-kit doctor gitnexus [--install]\n");
+  process.stdout.write("  mcp-probe-kit devcontrol next --project-root .\n");
+  process.stdout.write("  mcp-probe-kit devcontrol create --project-root . --json '{...}'\n");
+  process.stdout.write("  mcp-probe-kit devcontrol serve --project-root .  # separate opt-in MCP\n");
 }
