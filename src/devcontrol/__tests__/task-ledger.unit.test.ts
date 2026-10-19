@@ -4,7 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
+import http from "node:http";
 import { ProjectTaskLedger, DevControlError } from "../task-ledger.js";
+import { createDevControlBoardServer } from "../board-server.js";
 
 let root = "";
 let ledger: ProjectTaskLedger | null = null;
@@ -85,6 +87,155 @@ describe("project ledger and legacy migration", () => {
     });
     expect(ledger!.trace("F0").audit.some((x: any) => x.event === "legacy_import")).toBe(true);
     expect(() => ledger!.claim("F2", "blocked")).toThrowError(DevControlError);
+  });
+
+  it("rejects newly generated progress Markdown even under a broadly allowed docs directory", () => {
+    create({
+      id: "NEYNA-280", allowedPaths: ["docs/engineering/**"],
+    });
+    ledger!.approve("NEYNA-280", "owner");
+    const claim = ledger!.claim("NEYNA-280", "agent");
+    save("docs/engineering/agent-daily-progress.md", "auto-generated status");
+    git("add", "docs/engineering/agent-daily-progress.md");
+    const scope = ledger!.checkStaged();
+    expect(scope.passed).toBe(false);
+    expect(scope.deniedFiles).toEqual([]);
+    expect(scope.unapprovedDocs).toEqual(["docs/engineering/agent-daily-progress.md"]);
+    // Even skipping the Hook must not allow automatic task verification.
+    commit("bypass Git hook");
+    ledger!.report("NEYNA-280", claim.leaseToken, {
+      kind: "test", reference: "docs validation",
+    }, true);
+    ledger!.complete("NEYNA-280", claim.leaseToken, {
+      summary: "Agent generated an unapproved progress file",
+      implementation: "Created a process-only status Markdown rather than recording the result in SQLite.",
+      verification: "Expect the scope and verification gates to reject the document addition.",
+    });
+    const result = ledger!.verify("NEYNA-280", claim.leaseToken);
+    expect(result.passed).toBe(false);
+    expect(result.unapprovedDocs).toEqual(["docs/engineering/agent-daily-progress.md"]);
+  });
+
+  it("allows explicitly approved durable docs and formal feature specifications", () => {
+    create({
+      id: "NEYNA-281",
+      allowedPaths: ["docs/engineering/approved.md", "docs/specs/**"],
+    });
+    ledger!.approve("NEYNA-281", "owner");
+    ledger!.claim("NEYNA-281", "agent");
+    save("docs/engineering/approved.md", "authorized durable operating instructions");
+    save("docs/specs/example/spec.md", "required specification");
+    git("add", "docs/engineering/approved.md", "docs/specs/example/spec.md");
+    expect(ledger!.checkStaged().passed).toBe(true);
+    expect(ledger!.checkStaged().unapprovedDocs).toEqual([]);
+  });
+
+  it("blocks nonstandard process notes hidden in an approved Spec directory", () => {
+    create({
+      id: "NEYNA-282",
+      allowedPaths: ["docs/specs/**"],
+    });
+    ledger!.approve("NEYNA-282", "owner");
+    ledger!.claim("NEYNA-282", "agent");
+    save("docs/specs/example/daily-handoff.md", "not an approved Spec");
+    git("add", "docs/specs/example/daily-handoff.md");
+    const result = ledger!.checkStaged();
+    expect(result.passed).toBe(false);
+    expect(result.unapprovedDocs).toEqual(["docs/specs/example/daily-handoff.md"]);
+  });
+
+  it("stores detailed completion as versioned SQLite records, not Markdown", () => {
+    create();
+    ledger!.approve("NEYNA-200", "owner");
+    const claim = ledger!.claim("NEYNA-200", "agent");
+    save("tests/contracts/implemented.json", "{}");
+    commit("actual delivery");
+    const report = {
+      summary: "Text ingestion finished and reviewed",
+      implementation: "Added idempotent event contract examples and a negative payload.",
+      verification: "Ran test suite, all expected conditions passed.",
+      remaining: "Future work: integrate Core database transactions.",
+    };
+    const first = ledger!.complete("NEYNA-200", claim.leaseToken, report);
+    expect(first.revision).toBe(1);
+    expect(() => ledger!.complete("NEYNA-200", "wrong", report)).toThrow(/lease/i);
+    expect(() => ledger!.complete("NEYNA-200", claim.leaseToken, {
+      ...report, summary: "",
+    })).toThrow(/must be nonempty/);
+    const second = ledger!.complete("NEYNA-200", claim.leaseToken, {
+      ...report, summary: "Text ingestion finished after review update",
+    });
+    expect(second.revision).toBe(2);
+    expect(ledger!.trace("NEYNA-200").completionHistory.length).toBe(2);
+    expect(ledger!.trace("NEYNA-200").completion.summary).toBe(second.summary);
+    expect(fs.existsSync(path.join(root, "docs/tasks/NEYNA-200.md"))).toBe(false);
+    expect(ledger!.board().columns.inProgress.some((t: any) => t.id === "NEYNA-200")).toBe(true);
+  });
+
+  it("rejects stale completion notes when later commits change the code", () => {
+    create();
+    ledger!.approve("NEYNA-200", "owner");
+    const claim = ledger!.claim("NEYNA-200", "agent");
+    save("tests/contracts/one.json", "{}");
+    commit("first delivery");
+    ledger!.report("NEYNA-200", claim.leaseToken, { kind: "test", reference: "tested" }, true);
+    ledger!.complete("NEYNA-200", claim.leaseToken, {
+      summary: "Completed first scoped delivery",
+      implementation: "Implemented one event contract in the test fixture.",
+      verification: "Validated isolated test runner against the current Git HEAD.",
+    });
+    save("tests/contracts/two.json", "{}");
+    commit("second delivery");
+    const stale = ledger!.verify("NEYNA-200", claim.leaseToken);
+    expect(stale.passed).toBe(false);
+    expect(stale.reason).toMatch(/older Git commit/);
+    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
+  });
+
+  it("groups SQLite task statuses into exactly three Kanban columns", () => {
+    create();
+    ledger!.approve("NEYNA-200", "owner");
+    ledger!.claim("NEYNA-200", "agent");
+    const board = ledger!.board();
+    expect(Object.keys(board.columns)).toEqual(["todo", "inProgress", "done"]);
+    expect(board.columns.todo.some((row: any) => row.id === "F1")).toBe(true);
+    expect(board.columns.inProgress.some((row: any) => row.id === "NEYNA-200")).toBe(true);
+    expect(board.columns.done.some((row: any) => row.id === "F0")).toBe(true);
+    expect(board.current).toBe("NEYNA-200");
+    expect(board.columns.inProgress[0]).not.toHaveProperty("token");
+    expect(board.counts.todo + board.counts.inProgress + board.counts.done).toBe(4);
+  });
+
+  it("serves a local read-only board with safe HTTP defaults", async () => {
+    const server = createDevControlBoardServer(ledger!);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const bound = server.address();
+      const base = "http://127.0.0.1:" + (bound && typeof bound === "object" ? bound.port : 0);
+      const page = await fetch(base + "/");
+      expect(page.status).toBe(200);
+      expect(await page.text()).toContain("研发任务看板");
+      expect(page.headers.get("content-security-policy")).toContain("script-src 'nonce-");
+      const boardResponse = await fetch(base + "/api/board");
+      expect(boardResponse.status).toBe(200);
+      expect((await boardResponse.json()).columns.done[0].id).toBe("F0");
+      const detailResponse = await fetch(base + "/api/tasks/F1");
+      expect((await detailResponse.json()).task.id).toBe("F1");
+      expect((await fetch(base + "/api/tasks/not-valid")).status).toBe(404);
+      expect((await fetch(base + "/api/board", { method: "POST" })).status).toBe(405);
+      const hostileHostStatus = await new Promise<number>((resolve, reject) => {
+        const req = http.get(base + "/api/board", { headers: { Host: "evil.example:1234" } }, (res) => {
+          res.resume();
+          res.on("end", () => resolve(res.statusCode ?? 0));
+        });
+        req.on("error", reject);
+      });
+      expect(hostileHostStatus).toBe(403);
+      expect((await fetch(base + "/api/missing")).status).toBe(404);
+      expect(boardResponse.headers.get("access-control-allow-origin")).toBeNull();
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 
   it("creates draft child tasks that cannot be claimed before explicit approval", () => {
@@ -206,6 +357,11 @@ describe("project ledger and legacy migration", () => {
     ledger!.report("NEYNA-200", reclaimed.leaseToken, {
       kind: "test", reference: "real verified test command",
     }, true);
+    ledger!.complete("NEYNA-200", reclaimed.leaseToken, {
+      summary: "Completed both interrupted implementation steps",
+      implementation: "Retained the earlier Git base and included both commits.",
+      verification: "Confirmed the full scoped diff and successful validation.",
+    });
     const verified = ledger!.verify("NEYNA-200", reclaimed.leaseToken);
     expect(verified.passed).toBe(true);
     expect(verified.files).toContain("tests/contracts/one.json");
@@ -235,6 +391,11 @@ describe("project ledger and legacy migration", () => {
     ledger!.report("NEYNA-200", claim.leaseToken, {
       kind: "test", reference: "run actual validation",
     }, true);
+    ledger!.complete("NEYNA-200", claim.leaseToken, {
+      summary: "Added a valid isolated test file",
+      implementation: "Committed a contract test and isolated check commands.",
+      verification: "Run actual docs acceptance while monitoring Git working state.",
+    });
     // The 'docs' gate mutates README.md *during* verification.
     expect(() => ledger!.verify("NEYNA-200", claim.leaseToken)).toThrow(/Git changed after gates/);
     expect(ledger!.get("NEYNA-200").status).toBe("in_review");
@@ -260,6 +421,11 @@ describe("project ledger and legacy migration", () => {
     save("apps/client/hijack.dart", "wrong scope");
     commit();
     ledger!.report("NEYNA-200", claim.leaseToken, { kind: "test", reference: "attempt" }, true);
+    ledger!.complete("NEYNA-200", claim.leaseToken, {
+      summary: "Attempted out-of-scope code change",
+      implementation: "Changed a forbidden client-side path instead of the allowed test directory.",
+      verification: "Expected DevControl to reject the committed diff even with a report.",
+    });
     const result = ledger!.verify("NEYNA-200", claim.leaseToken);
     expect(result.passed).toBe(false);
     expect(result.denied).toContain("apps/client/hijack.dart");
@@ -284,10 +450,19 @@ describe("project ledger and legacy migration", () => {
     save("tests/contracts/contract.go", "actual change");
     commit();
     ledger!.report("NEYNA-200", claim.leaseToken, { kind: "test", reference: "unit tests" }, true);
+    expect(ledger!.verify("NEYNA-200", claim.leaseToken)).toMatchObject({
+      passed: false, reason: "Missing structured completion report",
+    });
+    ledger!.complete("NEYNA-200", claim.leaseToken, {
+      summary: "Implemented minimal contract tests",
+      implementation: "Added a new test contract fixture and verified its Git scope.",
+      verification: "Ran Python docs acceptance gate against the committed revision.",
+    });
     const result = ledger!.verify("NEYNA-200", claim.leaseToken);
     expect(result.passed).toBe(true);
     expect(ledger!.get("NEYNA-200").status).toBe("verified");
     expect(ledger!.trace("NEYNA-200").evidence.length).toBe(1);
+    expect(ledger!.trace("NEYNA-200").completion.summary).toBe("Implemented minimal contract tests");
   });
 
   it("replays migration without duplicating tasks", () => {

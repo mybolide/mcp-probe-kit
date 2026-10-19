@@ -25,6 +25,28 @@ interface SqlDatabase {
   close(): void;
 }
 
+function addedFiles(root: string, base: string): string[] {
+  const result = spawnSync(
+    "git", ["diff", "--no-renames", "--name-only", "-z", "--diff-filter=A", base, "HEAD"],
+    { cwd: root, encoding: "buffer", timeout: 12_000 },
+  );
+  if (result.status !== 0 || !Buffer.isBuffer(result.stdout)) {
+    fail("GIT_ERROR", "Cannot determine newly added files");
+  }
+  return result.stdout.toString("utf8").split("\0").filter(Boolean);
+}
+
+/** Creation of any noncanonical Markdown document needs exact approved path. */
+function undocumentedMarkdown(additions: string[], allowedPaths: string[]): string[] {
+  return additions.filter((file) => {
+    if (!file.toLowerCase().endsWith(".md") || allowedPaths.includes(file)) return false;
+    // Existing feature-spec convention: only these four files may be created
+    // by a scoped feature workflow without individually naming each file.
+    const canonical = /^docs\/specs\/[^/]+\/(spec|design|test-plan|evidence)\.md$/i.test(file);
+    return !canonical || !allowedPaths.some((pattern) => pathAllowed(file, pattern));
+  });
+}
+
 const idPattern = /^[A-Z][A-Z0-9-]{1,39}$/;
 const allowedGates = new Set(["docs", "devcontrol_tests", "go_contract"]);
 const utc = () => new Date().toISOString();
@@ -101,6 +123,14 @@ export interface CreateWorkItem {
   priority?: number;
   specId?: string;
   planId?: string;
+}
+
+/** One structured completion report lives in SQLite, not in new Markdown files. */
+export interface CompletionReport {
+  summary: string;
+  implementation: string;
+  verification: string;
+  remaining?: string;
 }
 
 export class ProjectTaskLedger {
@@ -189,6 +219,18 @@ export class ProjectTaskLedger {
         task_id TEXT, event TEXT NOT NULL, actor TEXT NOT NULL,
         details_json TEXT NOT NULL, created_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS dc_completion_notes (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        revision INTEGER NOT NULL,
+        summary TEXT NOT NULL,
+        implementation TEXT NOT NULL,
+        verification TEXT NOT NULL,
+        remaining TEXT NOT NULL DEFAULT '',
+        git_head TEXT NOT NULL,
+        agent TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(task_id, revision)
+      );
     `);
     const alreadyImported = this.db.prepare("SELECT value FROM dc_meta WHERE key='bootstrap'").get();
     if (alreadyImported) return;
@@ -264,7 +306,20 @@ export class ProjectTaskLedger {
     const files = [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
     const patterns = JSON.parse(task.allowed_paths) as string[];
     const denied = files.filter((file) => !patterns.some((pattern) => pathAllowed(file, pattern)));
-    return { passed: denied.length === 0, taskId: task.id, stagedFiles: files, deniedFiles: denied };
+    const created = spawnSync(
+      "git", ["diff", "--cached", "--no-renames", "--name-only", "-z", "--diff-filter=A"],
+      { cwd: this.root, encoding: "buffer", timeout: 12_000 },
+    );
+    if (created.status !== 0 || !Buffer.isBuffer(created.stdout)) {
+      fail("GIT_ERROR", "Cannot inspect new Markdown documents");
+    }
+    const newFiles = created.stdout.toString("utf8").split("\0").filter(Boolean);
+    const unapprovedDocs = undocumentedMarkdown(newFiles, patterns);
+    return {
+      passed: denied.length === 0 && unapprovedDocs.length === 0,
+      taskId: task.id, stagedFiles: files, deniedFiles: denied,
+      unapprovedDocs,
+    };
   }
 
   private task(row: Row): Row {
@@ -283,6 +338,104 @@ export class ProjectTaskLedger {
   get(id: string): Row { return this.task(this.requireTask(id)); }
   list(): Row[] {
     return this.db.prepare("SELECT * FROM dc_tasks ORDER BY priority ASC,id ASC").all().map((r) => this.task(r));
+  }
+
+  /**
+   * Board groups the authoritative database statuses rather than keeping a
+   * second board-specific task state. Cancelled tasks are counted as archived.
+   */
+  board(): Row {
+    const groups: Record<string, Row[]> = {
+      todo: [], inProgress: [], done: [],
+    };
+    const tasks = this.list();
+    let archived = 0;
+    for (const task of tasks) {
+      if (task.status === "cancelled") {
+        archived++;
+        continue;
+      }
+      const blockers = this.blockers(task.id);
+      const unverifiedChildren = task.childIds.filter(
+        (id: string) => this.requireTask(id).status !== "verified",
+      );
+      const latest = this.latestCompletion(task.id);
+      const card = {
+        id: task.id, title: task.title, status: task.status,
+        parentId: task.parentId, childIds: task.childIds, dependsOn: task.dependsOn,
+        track: task.track, release: task.release, priority: task.priority,
+        blockedBy: blockers, unverifiedChildren, updatedAt: task.updatedAt,
+        verifiedAt: task.verifiedAt, completionSummary: latest?.summary ?? null,
+      };
+      const column = task.status === "verified" ? "done" :
+        task.status === "in_progress" || task.status === "in_review" ? "inProgress" : "todo";
+      groups[column].push(card);
+    }
+    return {
+      columns: groups,
+      counts: {
+        todo: groups.todo.length, inProgress: groups.inProgress.length,
+        done: groups.done.length, archived,
+      },
+      current: this.next().nextTask?.id ?? null,
+      updatedAt: utc(),
+    };
+  }
+
+  private latestCompletion(id: string): Row | null {
+    return this.db.prepare(
+      "SELECT * FROM dc_completion_notes WHERE task_id=? ORDER BY revision DESC LIMIT 1",
+    ).get(id) ?? null;
+  }
+
+  /**
+   * Completion reports are append-only revisions, tied to the committed Git
+   * HEAD. An Agent may revise a report before verification, never afterward.
+   */
+  complete(id: string, token: string, input: CompletionReport): Row {
+    const mandatory = ["summary", "implementation", "verification"] as const;
+    for (const field of mandatory) {
+      const value = input?.[field];
+      if (typeof value !== "string" || !value.trim() || value.length > 12_000) {
+        fail("COMPLETION_REQUIRED", `Completion ${field} must be nonempty and at most 12000 characters`);
+      }
+    }
+    if (input.remaining !== undefined &&
+        (typeof input.remaining !== "string" || input.remaining.length > 12_000)) {
+      fail("INVALID_REMAINING", "Remaining work must be text of at most 12000 characters");
+    }
+    const head = git(this.root, ["rev-parse", "HEAD"]);
+    if (git(this.root, ["status", "--porcelain"])) {
+      fail("DIRTY_WORKTREE", "Commit all scoped code before recording completion");
+    }
+    return this.inTransaction(() => {
+      const lease = this.requireLease(id, token);
+      const task = this.requireTask(id);
+      if (!["in_progress", "in_review"].includes(task.status)) {
+        fail("INVALID_STATE", "Only a claimed task can record completion before verification");
+      }
+      const previous = this.latestCompletion(id);
+      const revision = (previous?.revision ?? 0) + 1;
+      const record = {
+        taskId: id, revision,
+        summary: input.summary.trim(),
+        implementation: input.implementation.trim(),
+        verification: input.verification.trim(),
+        remaining: (input.remaining ?? "").trim(),
+        gitHead: head, agent: lease.agent, createdAt: utc(),
+      };
+      this.db.prepare(`
+        INSERT INTO dc_completion_notes
+        (task_id,revision,summary,implementation,verification,remaining,git_head,agent,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?)
+      `).run(id, revision, record.summary, record.implementation,
+        record.verification, record.remaining, head, lease.agent, record.createdAt);
+      this.audit(id, "completion_recorded", lease.agent, {
+        revision, gitHead: head,
+        checksum: createHash("sha256").update(JSON.stringify(record)).digest("hex"),
+      });
+      return record;
+    });
   }
   private blockers(taskId: string): string[] {
     return this.db.prepare(`
@@ -610,6 +763,13 @@ export class ProjectTaskLedger {
     const evidence = this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=?").all(id);
     if (!evidence.length) return { taskId: id, passed: false, reason: "Missing evidence" };
     const startHead = git(this.root, ["rev-parse", "HEAD"]);
+    const note = this.latestCompletion(id);
+    if (!note) {
+      return { taskId: id, passed: false, reason: "Missing structured completion report" };
+    }
+    if (note.git_head !== startHead) {
+      return { taskId: id, passed: false, reason: "Completion report refers to an older Git commit; record a new revision" };
+    }
     const dirty = git(this.root, ["status", "--porcelain"]);
     if (dirty) return { taskId: id, passed: false, reason: "Git working tree must be clean" };
     if (!run(this.root, "git", ["merge-base", "--is-ancestor", lease.base_head, startHead]).passed) {
@@ -618,8 +778,14 @@ export class ProjectTaskLedger {
     const files = changedFiles(this.root, lease.base_head);
     const allowedPaths = JSON.parse(task.allowed_paths) as string[];
     const denied = files.filter((f) => !allowedPaths.some((p) => pathAllowed(f, p)));
-    if (!files.length || denied.length) {
-      return { taskId: id, passed: false, reason: !files.length ? "No committed task diff" : "Out-of-scope files", denied, files };
+    const unapprovedDocs = undocumentedMarkdown(addedFiles(this.root, lease.base_head), allowedPaths);
+    if (!files.length || denied.length || unapprovedDocs.length) {
+      return {
+        taskId: id, passed: false,
+        reason: !files.length ? "No committed task diff" :
+          denied.length ? "Out-of-scope files" : "Unapproved new Markdown documents",
+        denied, unapprovedDocs, files,
+      };
     }
     const gates = JSON.parse(task.required_gates) as string[];
     if (!gates.length) return { taskId: id, passed: false, reason: "Missing gate definition" };
@@ -636,7 +802,7 @@ export class ProjectTaskLedger {
         fail("GIT_CHANGED_DURING_VERIFY", "Git changed after gates; re-run verification");
       }
       this.audit(id, passed ? "verified" : "verify_failed", "devcontrol", {
-        revision: startHead, files, results, gitStable: stable,
+        revision: startHead, completionRevision: note.revision, files, results, gitStable: stable,
       });
       if (passed) {
         this.db.prepare(
@@ -653,6 +819,10 @@ export class ProjectTaskLedger {
     return {
       task: this.get(id),
       evidence: this.db.prepare("SELECT * FROM dc_evidence WHERE task_id=? ORDER BY id").all(id),
+      completion: this.latestCompletion(id),
+      completionHistory: this.db.prepare(
+        "SELECT * FROM dc_completion_notes WHERE task_id=? ORDER BY revision",
+      ).all(id),
       audit: this.db.prepare("SELECT * FROM dc_audit WHERE task_id=? ORDER BY id").all(id)
         .map((r) => ({ ...r, details: JSON.parse(r.details_json), details_json: undefined })),
     };

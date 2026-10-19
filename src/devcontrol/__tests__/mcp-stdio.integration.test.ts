@@ -51,6 +51,8 @@ suite("DevControl dedicated MCP stdio", () => {
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_import-spec")).toBe(true);
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_renew")).toBe(true);
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_release")).toBe(true);
+      expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_complete")).toBe(true);
+      expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_board-data")).toBe(true);
       expect(results[2].result.structuredContent.nextTask.id).toBe("F1");
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

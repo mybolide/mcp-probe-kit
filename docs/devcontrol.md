@@ -1,4 +1,4 @@
-# DevControl V0.2 — optional project task ledger
+# DevControl V0.4 — optional project task ledger and Kanban board
 
 DevControl is a Jira-style **project task registry**, distinct from MCP protocol
 Tasks (short-lived tool executions) and Delegated Plans (feature workflow steps).
@@ -18,14 +18,62 @@ continue to support Node 20+. No database server or native npm addon is needed.
 - CLI: mcp-probe-kit devcontrol renew --project-root /path --json '{"id":"TASK-1","leaseToken":"...","ttlSeconds":1800}'
 - CLI: mcp-probe-kit devcontrol release --project-root /path --json '{"id":"TASK-1","leaseToken":"..."}'
 - CLI: mcp-probe-kit devcontrol report --project-root /path --json '{...}'
+- CLI: mcp-probe-kit devcontrol complete --project-root /path --json '{"id":"TASK-1","leaseToken":"...","summary":"What was delivered","implementation":"Concrete implementation details","verification":"Tests and outcomes","remaining":"Known limitations"}'
 - CLI: mcp-probe-kit devcontrol verify --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol trace --project-root /path --json '{...}'
+- CLI: mcp-probe-kit devcontrol board-data --project-root /path/to/project
+- Board: mcp-probe-kit devcontrol board --project-root /path/to/project --port 4765
 - MCP: mcp-probe-kit devcontrol serve --project-root /path/to/project
 
 Project tasks are proposed as drafts, approved, claimed, developed, reported for
 review, verified by runnable gates, and audited. Fields include stable task ID,
 parent ID, dependencies, priority, release, file scope, acceptance gates and
 optional links to existing mcp-probe-kit Plan/Spec IDs.
+
+## Stop generating task-progress Markdown
+
+**Authoritative task lifecycle and detailed completion records belong in
+SQLite, not in new ad-hoc Markdown documents.** After a task has actual Git
+commits and evidence, the Agent calls `devcontrol complete` with:
+
+- `summary`: outcome in a few sentences,
+- `implementation`: what changed and why,
+- `verification`: executed commands, observed results, and evidence,
+- `remaining`: limitations, risks, follow-ups (empty when there are none).
+
+These records are append-only revisions in `dc_completion_notes`, associated
+with task ID, Agent and exact committed Git SHA. `verify` **rejects** an
+in-review task without a completion record or if its latest note points to an
+earlier Git revision. Detailed task trace and the board drawer read from the
+same database. Previously verified tasks are not assigned invented summaries.
+
+Only durable specifications, normative ADRs, public API contracts and essential
+user/operational documentation should be tracked in Git. Temporary status
+reports, checklists, testing logs and Agent handoff reports belong in the task
+ledger. Existing required `spec.md`, version roadmap and ADR processes still
+apply; this rule does not justify omitting essential design documentation.
+
+The Git Hook and final verification both reject **new Markdown files** unless
+their exact path was approved in the task's `allowedPaths`, or they are a
+canonical feature `docs/specs/<feature>/{spec,design,test-plan,evidence}.md`
+inside an approved feature scope. Broad `docs/**` permission by itself does
+**not** authorize new daily summaries or handoff files. Editing an existing,
+scoped document remains permitted. This is a *document creation policy*, not
+a reason to avoid maintaining approved normative design documents.
+
+## Read-only board (no UI framework)
+
+`devcontrol board --project-root /repo --port 4765` starts a local web viewer:
+**http://127.0.0.1:4765/**. It shows three columns — 待开发 / 进行中 /
+已完成 — using the real `dc_tasks` status, with text search, release filter,
+progress counters, dependencies, parent/child links and completion details.
+
+The server only binds to `127.0.0.1`, rejects unexpected Host headers, uses
+strict Content Security Policy and provides GET-only read endpoints
+`/api/board` and `/api/tasks/:id`. No API writes, login, external CSS/JS,
+framework, database server, or independent Kanban status table are introduced.
+Do not expose this prototype externally or use it to display sensitive notes
+on a shared machine.
 
 ## Interrupted sessions and safe recovery
 

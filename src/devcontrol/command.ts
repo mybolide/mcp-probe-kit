@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { ProjectTaskLedger, DevControlError, type CreateWorkItem } from "./task-ledger.js";
+import { ProjectTaskLedger, DevControlError, type CreateWorkItem, type CompletionReport } from "./task-ledger.js";
 import { serveDevControlStdio } from "./mcp-stdio.js";
+import { serveDevControlBoard } from "./board-server.js";
 
 type FlagMap = Map<string, string | boolean>;
 
@@ -27,6 +28,7 @@ export function dispatchDevControl(
 ): Record<string, unknown> {
   switch (operation) {
     case "next": return ledger.next();
+    case "board-data": return ledger.board();
     case "status":
     case "list": return { tasks: ledger.list() };
     case "get": return ledger.get(String(input.id));
@@ -38,6 +40,9 @@ export function dispatchDevControl(
     case "import-spec": return ledger.importSpec(input as never);
     case "dependency": return ledger.addDependency(
       String(input.id), String(input.dependsOn), String(input.actor ?? "agent-proposal"),
+    );
+    case "complete": return ledger.complete(
+      String(input.id), String(input.leaseToken), input as CompletionReport,
     );
     case "approve": return ledger.approve(String(input.id), String(input.approvedBy));
     case "claim": return ledger.claim(
@@ -64,6 +69,15 @@ export async function runDevControlCli(positionals: string[], flags: FlagMap): P
   const operation = positionals[0]?.trim() ?? "next";
   if (operation === "serve") {
     await serveDevControlStdio(root);
+    return 0;
+  }
+  if (operation === "board") {
+    const rawPort = stringFlag(flags, "port") ?? "4765";
+    const port = Number(rawPort);
+    if (!Number.isSafeInteger(port) || port < 0 || port > 65535) {
+      throw new DevControlError("INVALID_PORT", "Board port must be between 0 and 65535");
+    }
+    await serveDevControlBoard(root, port);
     return 0;
   }
   const ledger = new ProjectTaskLedger(root);
