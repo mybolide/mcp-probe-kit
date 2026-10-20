@@ -59,7 +59,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .issue-controls input{min-width:190px;flex:1}
 .issue-controls select{max-width:180px}
 .issue-table-scroll{overflow-x:auto;max-width:100%;border:1px solid #2d435b;border-radius:9px;overscroll-behavior-x:contain}
-.issue-table{border-collapse:collapse;table-layout:fixed;width:100%;min-width:1040px;font-size:12px}
+.issue-table{border-collapse:collapse;table-layout:fixed;width:100%;min-width:1220px;font-size:13px}
 .issue-table th{background:#1a3048;text-align:left;color:#a5bdd5;padding:13px 12px;position:sticky;top:0;z-index:1;font-weight:650}
 .issue-table td{padding:12px;border-top:1px solid #263b52;line-height:1.65;vertical-align:middle;color:#cbd9e9;overflow-wrap:anywhere}
 .issue-table tbody tr:hover{background:#193049}
@@ -205,8 +205,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       </div>
       <p class="issue-count" id="task-list-count">正在读取版本工作项…</p>
       <div class="issue-table-scroll"><table class="issue-table" aria-label="全部研发工作项列表">
-        <colgroup><col style="width:110px"><col style="width:32%"><col style="width:115px"><col style="width:120px">
-        <col style="width:115px"><col style="width:105px"><col style="width:95px"><col></colgroup>
+        <colgroup><col style="width:112px"><col style="width:285px"><col style="width:105px"><col style="width:90px">
+        <col style="width:100px"><col style="width:85px"><col style="width:130px"><col style="width:313px"></colgroup>
         <thead><tr><th>编号</th><th>工作项 / 标题</th><th>状态</th><th>责任人</th><th>计划完成</th><th>所属阶段</th><th>依赖</th><th>内容 / 验收摘要</th></tr></thead>
         <tbody id="task-rows"><tr><td colspan="8">正在读取项目规划…</td></tr></tbody>
       </table></div>
