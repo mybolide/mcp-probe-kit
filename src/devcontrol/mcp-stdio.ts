@@ -5,6 +5,7 @@ import { DevControlError, ProjectTaskLedger } from "./task-ledger.js";
 import { ensureProjectWorkspaceAtMcpStartup } from "./startup.js";
 
 const operations = [
+  "release-plan", "plan-review", "plan-propose", "plan-approve",
   "onboard", "next", "list", "get", "features", "feature-get", "feature-save", "feature-validate",
   "feature-export", "work-items", "work-record", "architecture-sync",
   "create", "subtask", "dependency", "approve",
@@ -12,6 +13,9 @@ const operations = [
   "trace", "board-data", "import-spec",
 ];
 const requiredFields: Record<string, string[]> = {
+  "release-plan": ["release"], "plan-review": ["plan"],
+  "plan-propose": ["plan","actor"],
+  "plan-approve": ["release","approvedBy","expectedHash"],
   onboard: [], next: [], list: [], "board-data": [], features: [],
   "feature-get": ["name"], "feature-save": ["name", "sections"],
   "feature-validate": ["name"], "feature-export": ["name"],
@@ -82,12 +86,14 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                     "leaseToken", "ttlSeconds", "kind", "reference", "readyForReview",
                     "summary", "implementation", "verification", "remaining",
                     "name", "format", "sections", "featureName", "topLevelDocument",
-                    "sourceRef", "description", "reviewer", "architectureImpact"])]
+                    "sourceRef", "description", "reviewer", "architectureImpact",
+                    "plan", "expectedHash"])]
                     .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn"].includes(field)
                       ? { type: "array", items: { type: "string" } }
                       : field === "priority" || field === "ttlSeconds" ? { type: "integer" }
                       : field === "readyForReview" ? { type: "boolean" }
                       : field === "architectureImpact" ? { type: "boolean" }
+                      : field === "plan" ? { type: "object" }
                       : field === "sections" ? {
                         type: "object", additionalProperties: false, properties: {
                           requirements: { type: "string" },

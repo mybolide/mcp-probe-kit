@@ -13,6 +13,7 @@ import { ensureDatabaseIgnored, resolveProjectDatabase } from "./project-storage
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
+import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "./release-plan.js";
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -50,7 +51,6 @@ function actorInfo(projectRoot: string): { creator: string; device: string } {
     });
     creator = result.status === 0 ? (result.stdout || "").trim() : "";
   }
-
   return { creator: creator.slice(0, 120) || "local-developer",
     device: (process.env.DEVCONTROL_DEVICE_NAME?.trim() || os.hostname()).slice(0, 120) };
 }
@@ -206,6 +206,30 @@ export class ProjectTaskLedger {
 
   close(): void { this.db.close(); }
 
+  hasReviewedProductPlan(): boolean {
+    const releases = [...new Set(this.db.prepare(
+      "SELECT release FROM dc_tasks WHERE track='product' AND status!='cancelled'",
+    ).all().map(row=>String(row.release)))];
+    return releases.length > 0 && releases.every(release=>{
+      const item = this.releasePlan(release);
+      return item.revision > 0 && item.sourceDrift === false;
+    });
+  }
+
+  private planSourceUnchanged(plan: ReleasePlanProposal & { sourceHash?: string }): boolean {
+    if (!plan.sourceHash) return false;
+    try {
+      const file = path.resolve(this.root, plan.scopeSource);
+      const realRoot = fs.realpathSync(this.root);
+      const realFile = fs.realpathSync(file);
+      const relative = path.relative(realRoot, realFile);
+      if (!relative || relative === ".." || relative.startsWith(".." + path.sep) ||
+          path.isAbsolute(relative)) return false;
+      return createHash("sha256").update(fs.readFileSync(realFile))
+        .digest("hex") === plan.sourceHash;
+    } catch { return false; }
+  }
+
   private inTransaction<T>(action: () => T): T {
     const level = this.transactionDepth;
     const savepoint = `devcontrol_nested_${level}`;
@@ -244,6 +268,43 @@ export class ProjectTaskLedger {
         allowed_paths TEXT NOT NULL, required_gates TEXT NOT NULL,
         spec_id TEXT, plan_id TEXT, approved_by TEXT,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL, verified_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS dc_release_plans (
+        release TEXT PRIMARY KEY,
+        revision INTEGER NOT NULL,
+        hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        approved_by TEXT NOT NULL,
+        approved_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_release_proposals (
+        release TEXT PRIMARY KEY,
+        base_revision INTEGER NOT NULL,
+        hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        proposed_by TEXT NOT NULL,
+        proposed_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_release_plan_revisions (
+        release TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        approved_by TEXT NOT NULL,
+        approved_at TEXT NOT NULL,
+        PRIMARY KEY(release,revision)
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_specs (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        requirement_ids_json TEXT NOT NULL,
+        acceptance TEXT NOT NULL,
+        design_ref TEXT NOT NULL DEFAULT '',
+        positive_tests_json TEXT NOT NULL DEFAULT '[]',
+        negative_cases_json TEXT NOT NULL,
+        out_of_scope_json TEXT NOT NULL DEFAULT '[]',
+        deliverables_json TEXT NOT NULL,
+        estimated_hours REAL,
+        plan_revision INTEGER NOT NULL
       );
       CREATE TABLE IF NOT EXISTS dc_dependencies (
         task_id TEXT NOT NULL REFERENCES dc_tasks(id),
@@ -363,8 +424,19 @@ export class ProjectTaskLedger {
       }
       const planHash = fs.existsSync(oldPlanPath)
         ? createHash("sha256").update(fs.readFileSync(oldPlanPath)).digest("hex") : "none";
+      const initialTracked = run(this.root,"git",["ls-files","--cached"],12_000);
+      const tracked = initialTracked.passed ? initialTracked.stdout.split("\n") : [];
+      const existingTrackedCode = tracked.some(p =>
+          /^(?:src|app|apps|lib|services|packages|tests|cmd)\//.test(p));
+      const existingDocumentedBaseline = [
+        ["docs/product/vision.md","docs/project-context.md"],
+        ["docs/CONSTITUTION.md","docs/constitution.md"],
+        ["docs/product/requirements.md","docs/requirements.md"],
+        ["docs/architecture/overview.md","docs/architecture.md"],
+      ].every(candidates=>candidates.some(file=>tracked.includes(file)));
       this.db.prepare("INSERT INTO dc_meta(key,value) VALUES('bootstrap',?)").run(
-        JSON.stringify({ at: utc(), importedTasks: imported.length, planHash }),
+        JSON.stringify({ at: utc(), importedTasks: imported.length,
+          existingTrackedCode, existingDocumentedBaseline, planHash }),
       );
     });
   }
@@ -412,6 +484,7 @@ export class ProjectTaskLedger {
   }
 
   private task(row: Row): Row {
+    const detail = this.db.prepare("SELECT * FROM dc_task_specs WHERE task_id=?").get(row.id);
     return {
       id: row.id, title: row.title, parentId: row.parent_id ?? null,
       track: row.track, release: row.release, priority: row.priority, status: row.status,
@@ -421,10 +494,269 @@ export class ProjectTaskLedger {
         .map((d) => d.depends_on),
       childIds: this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=?").all(row.id).map((c) => c.id),
       updatedAt: row.updated_at, verifiedAt: row.verified_at,
+      spec: detail ? {
+        requirementIds: JSON.parse(detail.requirement_ids_json),
+        acceptance: detail.acceptance,
+        designRef: detail.design_ref,
+        testCases: JSON.parse(detail.positive_tests_json),
+        negativeCases: JSON.parse(detail.negative_cases_json),
+        outOfScope: JSON.parse(detail.out_of_scope_json),
+        deliverables: JSON.parse(detail.deliverables_json),
+        estimatedHours: detail.estimated_hours, planRevision: detail.plan_revision,
+      } : null,
     };
   }
 
   get(id: string): Row { return this.task(this.requireTask(id)); }
+
+  releasePlan(release: string): Row {
+    const frozen = this.db.prepare("SELECT * FROM dc_release_plans WHERE release=?").get(release);
+    const proposal = this.db.prepare("SELECT * FROM dc_release_proposals WHERE release=?").get(release);
+    const frozenSnapshot = frozen ? JSON.parse(frozen.snapshot_json) as ReleasePlanProposal & {
+      sourceHash?: string;
+    } : null;
+    return {
+      release, status: proposal ? "review_pending" : frozen ? "frozen" : "missing",
+      revision: frozen?.revision ?? 0,
+      approvedBy: frozen?.approved_by ?? null,
+      frozenHash: frozen?.hash ?? null,
+      frozen: frozenSnapshot,
+      sourceDrift: frozenSnapshot ? !this.planSourceUnchanged(frozenSnapshot) : false,
+      history: this.db.prepare(
+        "SELECT revision,hash,approved_by,approved_at FROM dc_release_plan_revisions WHERE release=? ORDER BY revision",
+      ).all(release).map(row=>({
+        revision:row.revision,hash:row.hash,
+        approvedBy:row.approved_by,approvedAt:row.approved_at,
+      })),
+      proposal: proposal ? {
+        ...JSON.parse(proposal.snapshot_json),
+        hash: proposal.hash, proposedBy: proposal.proposed_by,
+      } : null,
+    };
+  }
+
+  /** Proposal only: never silently creates executable tasks. */
+  proposeReleasePlan(input: ReleasePlanProposal, actor: string): Row {
+    if (typeof actor !== "string" || !actor.trim()) fail("ACTOR_REQUIRED", "Actor required");
+    const review = reviewReleasePlan(input);
+    if (!review.passed) fail("INCOMPLETE_PLAN", review.issues.join("; "));
+    const sourcePath = path.resolve(this.root, input.scopeSource);
+    const parent = fs.realpathSync(this.root);
+    const real = fs.realpathSync(sourcePath);
+    const relative = path.relative(parent, real);
+    if (!relative || relative.startsWith(".." + path.sep) ||
+        relative === ".." || path.isAbsolute(relative)) {
+      fail("UNSAFE_SCOPE", "Scope document must be inside this Git project");
+    }
+    const sourceText = fs.readFileSync(real, "utf8");
+    // Scope must be an actual committed Git source, not a transient local
+    // rewrite presented to the reviewer as the approved baseline.
+    if (!run(this.root,"git",["ls-files","--error-unmatch","--",input.scopeSource],12_000).passed ||
+        !run(this.root,"git",["diff","--quiet","HEAD","--",input.scopeSource],12_000).passed) {
+      fail("UNCOMMITTED_SCOPE", "Commit the canonical requirements source before plan review");
+    }
+    for (const id of input.requirementIds) {
+      if (!new RegExp(`\\b${id}\\b`).test(sourceText)) {
+        fail("UNKNOWN_REQUIREMENT", `${id} not present in actual ${input.scopeSource}`);
+      }
+    }
+    const sourceHash = createHash("sha256").update(sourceText).digest("hex");
+    for (const node of input.nodes) {
+      if (node.existing) {
+        const prior = this.db.prepare("SELECT status,approved_by,release FROM dc_tasks WHERE id=?").get(node.id);
+        if (!prior || prior.release !== input.release || prior.status === "draft" ||
+            prior.status === "cancelled" || !String(prior.approved_by ?? "").trim()) {
+          fail("INVALID_LEGACY_REFERENCE",
+            `Task ${node.id} cannot bypass detailed Spec validation as an unapproved legacy entry`);
+        }
+      }
+      if (node.kind !== "leaf" || node.existing) continue;
+      const reference = node.designRef ?? "";
+      if (reference.startsWith("feature:")) {
+        const name = reference.slice("feature:".length).replace(/#design$/, "");
+        const row = this.db.prepare("SELECT status FROM dc_features WHERE name=?").get(name);
+        if (!reference.endsWith("#design") || row?.status !== "specified") {
+          fail("UNREVIEWED_DESIGN", `Design reference ${reference} has no validated SQLite Feature`);
+        }
+        continue;
+      }
+      const designFile = reference.split("#")[0];
+      const candidate = path.resolve(this.root,designFile);
+      const resolved = fs.existsSync(candidate) ? fs.realpathSync(candidate) : "";
+      const within = resolved && path.relative(parent,resolved);
+      if (!designFile.startsWith("docs/") ||
+          designFile.split("/").includes("..") ||
+          !within || within === ".." || within.startsWith(".." + path.sep) ||
+          path.isAbsolute(within) || !fs.statSync(resolved).isFile() ||
+          !run(this.root,"git",["ls-files","--error-unmatch","--",designFile],12_000).passed ||
+          !run(this.root,"git",["diff","--quiet","HEAD","--",designFile],12_000).passed) {
+        fail("MISSING_DESIGN_SOURCE", `Design reference not found in tracked project docs: ${reference}`);
+      }
+    }
+    const snapshot = JSON.stringify({ ...input, sourceHash });
+    const hash = createHash("sha256").update(snapshot).digest("hex");
+    return this.inTransaction(() => {
+      const current = this.db.prepare("SELECT * FROM dc_release_plans WHERE release=?").get(input.release);
+      const missingExisting = this.db.prepare(
+        "SELECT id FROM dc_tasks WHERE release=? AND track='product' AND status!='cancelled'",
+      ).all(input.release).map(row => String(row.id)).filter(id =>
+        !input.nodes.some(node => node.id === id));
+      if (missingExisting.length) {
+        fail("INCOMPLETE_BASELINE", "Include every existing product task in the full release tree: "+
+          missingExisting.join(", "));
+      }
+      const revision = current?.revision ?? 0;
+      if (input.baseRevision !== revision) fail("STALE_PLAN", "The approved release plan revision changed");
+      if (current) {
+        // Existing scope is immutable. Amendments can only append leaf tasks,
+        // retaining every prior node with identical definitions and IDs.
+        const previous = JSON.parse(current.snapshot_json) as ReleasePlanProposal;
+        if (input.scopeSource !== previous.scopeSource ||
+            previous.requirementIds.some(id => !input.requirementIds.includes(id))) {
+          fail("SCOPE_CHANGE_REVIEW_REQUIRED",
+            "Cannot silently remove approved requirements or substitute the scope source");
+        }
+        const byId = new Map(input.nodes.map(node => [node.id, node]));
+        for (const node of previous.nodes) {
+          if (JSON.stringify(byId.get(node.id)) !== JSON.stringify(node)) {
+            fail("SCOPE_CHANGE_REVIEW_REQUIRED",
+              `Existing ${node.id} definition changed; submit a separate scope-changing decision`);
+          }
+        }
+        if (input.nodes.length <= previous.nodes.length) {
+          fail("NO_ADDITIONS", "Approved plan unchanged; no new tasks to add");
+        }
+        for (const node of input.nodes) {
+          const old = previous.nodes.find(t => t.id === node.id);
+          if (!old && node.existing) fail("UNREVIEWED_EXISTING", "Cannot mark newly introduced task as legacy");
+        }
+      }
+      const existing = this.db.prepare("SELECT * FROM dc_release_proposals WHERE release=?").get(input.release);
+      if (existing && existing.hash !== hash) {
+        fail("PROPOSAL_PENDING", "An earlier proposal must be reviewed before replacement");
+      }
+      this.db.prepare(`INSERT INTO dc_release_proposals
+        (release,base_revision,hash,snapshot_json,proposed_by,proposed_at)
+        VALUES(?,?,?,?,?,?)
+        ON CONFLICT(release) DO UPDATE SET
+          base_revision=excluded.base_revision,hash=excluded.hash,
+          snapshot_json=excluded.snapshot_json,proposed_by=excluded.proposed_by,
+          proposed_at=excluded.proposed_at`
+      ).run(input.release,input.baseRevision,hash,snapshot,actor.trim(),utc());
+      this.audit(null, "release_plan_proposed", actor, {
+        release: input.release, revision: revision + 1, hash,
+        requirementCount: input.requirementIds.length, taskCount: input.nodes.length,
+      });
+      return { release: input.release, review, hash, nextRevision: revision + 1,
+        status: "review_pending" };
+    });
+  }
+
+  /** Owner-acknowledged atomic import; never overwrite verified legacy tasks. */
+  approveReleasePlan(release: string, approvedBy: string, expectedHash: string): Row {
+    if (!approvedBy?.trim() || !/^[a-f0-9]{64}$/.test(expectedHash)) {
+      fail("PLAN_APPROVAL_REQUIRED", "Approver and exact reviewed proposal hash required");
+    }
+    return this.inTransaction(() => {
+      const pending = this.db.prepare("SELECT * FROM dc_release_proposals WHERE release=?").get(release);
+      if (!pending || pending.hash !== expectedHash) {
+        fail("PLAN_REVIEW_MISMATCH", "No matching proposed version is awaiting review");
+      }
+      const active = this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get();
+      if (active) fail("ACTIVE_TASK", "Wait for the active lease before freezing the plan");
+      const plan = JSON.parse(pending.snapshot_json) as ReleasePlanProposal;
+      const source = path.resolve(this.root,plan.scopeSource);
+      const sourceHash = createHash("sha256").update(fs.readFileSync(source)).digest("hex");
+      if (sourceHash !== (plan as ReleasePlanProposal & { sourceHash:string }).sourceHash ||
+          !run(this.root,"git",["diff","--quiet","HEAD","--",plan.scopeSource],12_000).passed) {
+        fail("SCOPE_DRIFT", "Reviewed requirements changed since proposal; re-review before approval");
+      }
+      const result = reviewReleasePlan(plan);
+      if (!result.passed) fail("INCOMPLETE_PLAN", result.issues.join("; "));
+      const current = this.db.prepare("SELECT revision FROM dc_release_plans WHERE release=?").get(release);
+      if ((current?.revision ?? 0) !== pending.base_revision) fail("STALE_PLAN", "Old plan revision");
+      const revision = Number(pending.base_revision) + 1;
+      // Parent-first creation. Newly approved tasks receive stable IDs,
+      // typed leaf Specs and constraints in ONE SQLite transaction.
+      const nodes = [...plan.nodes];
+      const old = new Set(this.db.prepare("SELECT id FROM dc_tasks").all().map(row => String(row.id)));
+      const added: string[] = [];
+      while (nodes.length) {
+        let progress = false;
+        for (let index = 0; index < nodes.length; index++) {
+          const item = nodes[index];
+          if (item.parentId && !old.has(item.parentId)) continue;
+          const prior = this.db.prepare("SELECT * FROM dc_tasks WHERE id=?").get(item.id);
+          if (prior) {
+            if (!item.existing && !current) fail("TASK_ID_CONFLICT", `Existing task ${item.id} not declared legacy`);
+            if (prior.release !== release || prior.track !== "product" ||
+                prior.title !== item.title || (prior.parent_id ?? null) !== (item.parentId ?? null)) {
+              fail("TASK_ID_CONFLICT", `Task ${item.id} has a different release or parent`);
+            }
+          } else {
+            if (item.existing) fail("TASK_NOT_FOUND", `Referenced legacy task ${item.id} missing`);
+            const created = this.create({
+              id:item.id, title:item.title, parentId:item.parentId,
+              allowedPaths:item.allowedPaths ?? ["docs/**"],
+              requiredGates:item.requiredGates ?? ["docs"],
+              track:"product", release,
+              specId:plan.scopeSource+"#"+item.id,
+              planId:`release:${release}:v${revision}`,
+            }, "release-plan:" + approvedBy);
+            if (created.status !== "draft") fail("PLAN_IMPORT_FAILED", "Expected draft task");
+            this.db.prepare(
+              "UPDATE dc_tasks SET status='ready',approved_by=?,updated_at=? WHERE id=?",
+            ).run(approvedBy.trim(),utc(),item.id);
+            this.audit(item.id,"approved_by_release_plan",approvedBy,{release,revision});
+            added.push(item.id);
+          }
+          if (item.kind === "leaf") {
+            this.db.prepare(`INSERT INTO dc_task_specs
+              (task_id,requirement_ids_json,acceptance,design_ref,
+               positive_tests_json,negative_cases_json,out_of_scope_json,
+               deliverables_json,estimated_hours,plan_revision)
+              VALUES(?,?,?,?,?,?,?,?,?,?)
+              ON CONFLICT(task_id) DO NOTHING`
+            ).run(item.id,JSON.stringify(item.requirementIds ?? []),
+              item.acceptance ?? "",item.designRef ?? "",
+              JSON.stringify(item.testCases ?? []),JSON.stringify(item.negativeCases ?? []),
+              JSON.stringify(item.outOfScope ?? []),JSON.stringify(item.deliverables ?? []),
+              item.estimatedHours ?? null,revision);
+          }
+          old.add(item.id);
+          nodes.splice(index,1);index--;progress = true;
+        }
+        if (!progress) fail("PARENT_CYCLE", "Cannot create plan: unresolved parent tree");
+      }
+      // Dependencies are inserted after all nodes, allowing forward references.
+      for (const item of plan.nodes) for (const dep of item.dependsOn ?? []) {
+        const prior = this.db.prepare(
+          "SELECT depends_on FROM dc_dependencies WHERE task_id=? AND depends_on=?",
+        ).get(item.id,dep);
+        if (!prior) {
+          if (item.existing) fail("EXISTING_TASK_FROZEN", `Unreviewed dependency change on ${item.id}`);
+          this.db.prepare("INSERT INTO dc_dependencies(task_id,depends_on) VALUES(?,?)").run(item.id,dep);
+        }
+      }
+      this.db.prepare(`INSERT INTO dc_release_plans
+        (release,revision,hash,snapshot_json,approved_by,approved_at)
+        VALUES(?,?,?,?,?,?)
+        ON CONFLICT(release) DO UPDATE SET
+          revision=excluded.revision,hash=excluded.hash,
+          snapshot_json=excluded.snapshot_json,approved_by=excluded.approved_by,
+          approved_at=excluded.approved_at`
+      ).run(release,revision,pending.hash,pending.snapshot_json,approvedBy.trim(),utc());
+      this.db.prepare(`INSERT INTO dc_release_plan_revisions
+        (release,revision,hash,snapshot_json,approved_by,approved_at)
+        VALUES(?,?,?,?,?,?)`
+      ).run(release,revision,pending.hash,pending.snapshot_json,approvedBy.trim(),utc());
+      this.db.prepare("DELETE FROM dc_release_proposals WHERE release=?").run(release);
+      this.audit(null,"release_plan_approved",approvedBy,{
+        release,revision,hash:pending.hash,added,
+      });
+      return {release,revision,hash:pending.hash,added,status:"frozen",review:result};
+    });
+  }
   list(): Row[] {
     return this.db.prepare("SELECT * FROM dc_tasks ORDER BY priority ASC,id ASC").all().map((r) => this.task(r));
   }
@@ -728,6 +1060,7 @@ export class ProjectTaskLedger {
         track: task.track, release: task.release, priority: task.priority,
         blockedBy: blockers, unverifiedChildren, updatedAt: task.updatedAt,
         verifiedAt: task.verifiedAt, completionSummary: latest?.summary ?? null,
+        spec: task.spec,
       };
       const column = task.status === "verified" ? "done" :
         task.status === "in_progress" || task.status === "in_review" ? "inProgress" : "todo";
@@ -806,6 +1139,37 @@ export class ProjectTaskLedger {
       WHERE d.task_id=? AND p.status!='verified'
     `).all(taskId).map((r) => r.depends_on);
   }
+  private isApprovedForExecution(task: Row): boolean {
+    const frozen = this.db.prepare(
+      "SELECT snapshot_json FROM dc_release_plans WHERE release=?",
+    ).get(task.release);
+    if (frozen) {
+      const plan = JSON.parse(frozen.snapshot_json) as ReleasePlanProposal & {
+        sourceHash?: string;
+      };
+      return this.planSourceUnchanged(plan) &&
+        plan.nodes.some(node => node.id === task.id && node.kind === "leaf");
+    }
+    // Explicit legacy compatibility until the first frozen plan is approved.
+    // New Git projects (zero imported tasks) fail closed. Once a release is
+    // frozen, legacy allowance is permanently replaced by strict membership.
+    const bootstrap = this.db.prepare(
+      "SELECT value FROM dc_meta WHERE key='bootstrap'",
+    ).get();
+    if (!bootstrap) return false;
+    try {
+      const initial=JSON.parse(bootstrap.value);
+      return Number(initial.importedTasks ?? 0) > 0;
+    } catch { return false; }
+  }
+
+  private executable(task: Row): boolean {
+    return task.status !== "draft" && task.status !== "cancelled" &&
+      !!(JSON.parse(task.required_gates) as string[]).length &&
+      !this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(task.id) &&
+      this.isApprovedForExecution(task);
+  }
+
   next(): Row {
     const tasks = this.list();
     const active = this.db.prepare("SELECT task_id,agent,expires_at FROM dc_leases WHERE singleton=1").get();
@@ -813,6 +1177,7 @@ export class ProjectTaskLedger {
       ? { taskId: active.task_id, agent: active.agent, expiresAt: active.expires_at } : null;
     const ready = tasks.filter((t) =>
       (t.status === "ready" || t.status === "in_progress" || t.status === "in_review") &&
+      this.executable(this.requireTask(t.id)) &&
       this.blockers(t.id).length === 0 &&
       !t.childIds.some((id: string) => this.requireTask(id).status !== "verified"),
     );
@@ -993,6 +1358,11 @@ export class ProjectTaskLedger {
     return this.inTransaction(() => {
       const row = this.requireTask(id);
       if (row.status !== "draft") fail("TASK_FROZEN", "Only draft tasks may be approved");
+      // All new product work must arrive as an Owner-approved full release plan.
+      // This is enforced in the ledger, shared by CLI and MCP.
+      if (row.track === "product" && !this.isApprovedForExecution(row)) {
+        fail("RELEASE_PLAN_REQUIRED", "Approve the complete, reviewed release plan instead of an isolated task");
+      }
       if (!JSON.parse(row.required_gates).length) fail("GATE_REQUIRED", "Acceptance gates must be defined");
       this.db.prepare(
         "UPDATE dc_tasks SET status='ready',approved_by=?,updated_at=? WHERE id=?",
@@ -1010,6 +1380,16 @@ export class ProjectTaskLedger {
       const task = this.requireTask(id);
       if (task.status !== "ready" && task.status !== "in_progress" && task.status !== "in_review") {
         fail("TASK_NOT_READY", `Task ${id} is ${task.status}`);
+      }
+      if (this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(id) &&
+          this.db.prepare("SELECT release FROM dc_release_plans WHERE release=?").get(task.release)) {
+        fail("PARENT_NOT_EXECUTABLE", "Only leaf tasks can be claimed; group progress aggregates verified children");
+      }
+      if (!this.isApprovedForExecution(task)) {
+        fail("RELEASE_PLAN_REQUIRED", "Release tasks must belong to an approved, frozen plan");
+      }
+      if (!(JSON.parse(task.required_gates) as string[]).length) {
+        fail("GATE_REQUIRED", "Acceptance Gates must be defined before execution");
       }
       if (this.blockers(id).length) fail("TASK_BLOCKED", `Task ${id} depends on ${this.blockers(id).join(", ")}`);
       const lease = this.db.prepare("SELECT * FROM dc_leases WHERE singleton=1").get();
@@ -1185,6 +1565,23 @@ export class ProjectTaskLedger {
         this.db.prepare(
           "UPDATE dc_tasks SET status='verified',verified_at=?,updated_at=? WHERE id=?",
         ).run(utc(), utc(), id);
+        // No artificial completion commit for a group: the parent is derived
+        // from its independently verified leaf descendants.
+        let ancestor = task.parent_id as string | null;
+        while (ancestor) {
+          const parent = this.requireTask(ancestor);
+          const incomplete = this.db.prepare(
+            "SELECT id FROM dc_tasks WHERE parent_id=? AND status!='verified' LIMIT 1",
+          ).get(ancestor);
+          if (incomplete || parent.status === "verified") break;
+          this.db.prepare(
+            "UPDATE dc_tasks SET status='verified',verified_at=?,updated_at=? WHERE id=?",
+          ).run(utc(),utc(),ancestor);
+          this.audit(ancestor,"group_verified_by_children","devcontrol",{
+            lastVerifiedChild:id,
+          });
+          ancestor = parent.parent_id;
+        }
         this.db.prepare("DELETE FROM dc_leases WHERE singleton=1").run();
       }
     });

@@ -43,6 +43,12 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .panelhead{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}.link{background:none;border:none;color:#8ce2f0;padding:5px 0;font-size:12px;font-weight:650;text-align:left}.link:hover{text-decoration:underline}
 .priority{background:#1a3044;border:1px solid #315b6a;border-radius:12px;padding:17px}.priority strong{display:block;margin:9px 0 6px;font-size:17px}.priority p{line-height:1.6;color:#a4bed3;font-size:12px;margin:0}.taskid{font-family:ui-monospace,SFMono-Regular,monospace;color:var(--cyan);font-size:11px;letter-spacing:.5px}
 .onboardrow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #283b52}.onboardrow b{font-size:12px}.onboardrow small{display:block;color:#83a3bd;margin-top:4px;line-height:1.65;overflow-wrap:anywhere}.onboardrow .taskid{white-space:nowrap}
+.spec-block{border:1px solid #27435a;border-radius:10px;padding:15px;margin:14px 0;background:#0c1b2c}
+.spec-block h3{font-size:15px;color:#dceaf7;margin:0 0 12px}.spec-block p{margin:7px 0}
+.spec-block .spec-raw{font:12px/1.65 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:55vh;overflow:auto;color:#9cc6dd;background:#0b1522;padding:14px;border-radius:8px}
+.spec-step{border-top:1px solid #29425a;padding:12px 0;overflow-wrap:anywhere}.spec-step strong{color:#d8ebfb}
+.spec-key{display:block;font:11px/1.7 ui-monospace,monospace;color:#73c6d1}
+.spec-warning{border-left:3px solid #dfa852;padding:12px;background:#2b2630;color:#f3ca87;margin:14px 0}
 .flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.flowitem{background:#17273b;border:1px solid #2f435b;border-radius:10px;padding:16px}.flowitem b{display:block;margin:14px 0 7px;font-size:13px}.flowitem p{margin:0;color:#819bb8;font-size:11px;line-height:1.6}.flownum{font-size:11px;color:#81dbe6;font-family:ui-monospace,monospace}
 .preview{display:grid;gap:9px}.previewbtn{display:block;border:1px solid #304259;border-radius:10px;background:#19283b;padding:15px;text-align:left;width:100%;color:var(--text)}.previewbtn:hover{border-color:#60a5bb;background:#20344c}.previewbtn strong{display:block;font-size:13px}.previewbtn small{display:block;font-size:11px;color:#849bb7;margin-top:7px}
 .sectionhead{margin-bottom:24px}.sectionhead h1{margin-bottom:11px}
@@ -154,6 +160,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   <section id="view-tasks" class="view">
     <div class="sectionhead"><div class="eyebrow">DELIVERY / TRACKING</div><h1>任务、进度与交付</h1>
       <p class="sub">实时显示 SQLite 中的待开发、进行中、已完成任务；不可绕过验收手动拖拽完成。</p></div>
+    <section class="panel" style="margin-bottom:18px" aria-label="版本完整规划">
+      <div class="panelhead"><h2>版本完整规划 · 需求 → 父子任务 → 验收</h2><span class="eyebrow" id="plan-state">检查版本计划…</span></div>
+      <p class="sub" id="plan-notice">读取 SQLite 冻结计划与审查状态…</p>
+      <div class="doclist" id="plan-tree" style="margin-top:14px"></div>
+    </section>
     <iframe id="boardframe" class="taskframe" title="DevControl 项目任务看板" loading="lazy" src="/board?embedded=1"></iframe>
   </section>
   <section id="view-issues" class="view">
@@ -187,7 +198,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 (()=>{
   "use strict";
   const $=id=>document.getElementById(id);
-  let project=null,board=null,features=[],onboarding=null;
+  let project=null,board=null,features=[],onboarding=null,releasePlan=null;
   const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",issues:"Bug 与变更",history:"历史会话",docs:"文档中心"};
   const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=String(text);if(cls)x.className=cls;return x;};
   const fetchJSON=async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json();};
@@ -200,6 +211,56 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     if(view==="tasks")$("boardframe").contentWindow?.postMessage({kind:"devcontrol-refresh"},"http://"+location.host);
     if(view==="history")loadHistory();
     if(view==="issues")loadIssues();
+  }
+  function renderReleasePlan(){
+    const status=releasePlan?.status||"missing";
+    $("plan-state").textContent=status==="frozen"?"已审核冻结 · v"+releasePlan.revision:
+      status==="review_pending"?"新增/修订待审核":"未完成整版计划";
+    if(releasePlan?.sourceDrift){
+      $("plan-state").textContent="⚠ 范围已变化 · 需重新审核";
+    }
+    if(releasePlan?.sourceDrift){
+      $("plan-notice").textContent+=" 警告：Git 需求来源与冻结时的摘要不一致，Agent 不得按旧计划继续领取叶子任务。";
+    }
+    $("plan-notice").textContent=status==="missing"?
+      "目前只有历史阶段级任务，尚无逐需求覆盖、可独立验收的完整父子任务树。不可将看板卡片当成详细研发规格。":
+      status==="review_pending"?
+      "以下展示待审版本完整草案，所有新增任务均不得执行；旧版冻结计划仍是当前执行基线。":
+      "以下是 SQLite 中已审核冻结的完整计划。每个叶子任务都必须包含需求映射、实施边界、失败场景与独立验收条件。";
+    const shown=status==="review_pending"?releasePlan?.proposal:releasePlan?.frozen;
+    const nodes=shown?.nodes||[];
+    if(shown){
+      const ids=(shown.requirementIds||[]).join("、");
+      $("plan-notice").textContent+=" 覆盖需求："+ids+
+        "；来源："+(shown.scopeSource||"未知")+"；当前任务节点："+nodes.length+"。";
+    }
+    const tree=$("plan-tree");
+    tree.replaceChildren(...(nodes.length?nodes.map(node=>{
+      const wrap=n("div",null,"spec-block");
+      const header=n("div",null,"onboardrow");
+      const info=n("div");
+      info.append(n("strong",(node.kind==="group"?"◈ 阶段 ":"↳ 叶子任务 ")+node.id+" · "+node.title));
+      info.append(n("small","父任务 "+(node.parentId||"顶层")+" · 依赖 "+((node.dependsOn||[]).join("、")||"无")));
+      header.append(info,n("span",status==="review_pending"?"待审核 · 不可执行":
+        node.kind==="leaf"?"可独立验收":"汇总节点","taskid"));
+      wrap.append(header);
+      if(node.kind==="leaf"){
+        const details=n("details");details.append(n("summary","展开完整任务规格与验收依据"));
+        const group=n("div");
+        for(const [label,value] of [["需求映射",node.requirementIds],["验收结果",node.acceptance],
+          ["设计依据",node.designRef],["正向测试",node.testCases],
+          ["失败与边界",node.negativeCases],["非目标",node.outOfScope],
+          ["交付物",node.deliverables],
+          ["允许修改范围",node.allowedPaths],["验收门禁",node.requiredGates],
+          ["预计工作小时",node.estimatedHours]]){
+          group.append(n("p",label+": "+(Array.isArray(value)?value.join("；"):value??"未确认"),"spec-key"));
+        }
+        details.append(group);wrap.append(details);
+      }
+      return wrap;
+    }):[n("div",status==="review_pending"?
+      "新方案仍在审核，尚未冻结；查看当前已验收的 Spec 或联系项目所有者确认。":
+      "尚无经过完整覆盖检查和审批的版本任务树。","docs-empty")]));
   }
   async function showLanAccess(){
     $("overlay").classList.add("open");
@@ -292,6 +353,53 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         "# 技术设计",f.sections.design||"尚未完善（草稿）",
         "# 研发任务",f.sections.tasks||"尚未完善（草稿）"].join("\n\n");
       markdown(root,text);
+      // A plan and an unfilled template are not completed specifications.
+      // Expose the complete original SQLite data, without summarizing away
+      // dependencies, inputs, outputs, evidence or the template deficiencies.
+      const steps=Array.isArray(f.plan?.steps)?f.plan.steps:[];
+      const draft=f.draft&&typeof f.draft==="object"?f.draft:null;
+      const missing=["requirements","design","tasks"].filter(key=>!String(f.sections?.[key]||"").trim());
+      if(missing.length||f.status!=="specified"){
+        root.prepend(n("p","规格尚未验收："+(missing.length?
+          "缺少 "+missing.join(" / ")+"；":"")+
+          "草案/模板与执行 Plan 不代表可执行的已批准任务。","spec-warning"));
+      }
+      const box=(title)=>{
+        const panel=n("section",null,"spec-block");panel.append(n("h3",title));root.append(panel);return panel;
+      };
+      const planBox=box("完整执行 Plan（项目 SQLite 原始数据）");
+      if(steps.length){
+        for(const step of steps){
+          const row=n("div",null,"spec-step");
+          row.append(n("strong",String(step.id||"未命名步骤")+" · "+
+            String(step.action||step.tool||step.type||"执行步骤")));
+          for(const [key,label] of [["dependsOn","前置依赖"],["requiredInputs","所需输入"],
+            ["expectedOutputs","预期交付"],["completionEvidence","验收证据"],["note","执行限制"]]){
+            const value=step[key];if(value===undefined||value===null)continue;
+            row.append(n("span",label+": "+(Array.isArray(value)?value.join("；"):String(value)),"spec-key"));
+          }
+          planBox.append(row);
+        }
+      }else planBox.append(n("p","尚无可执行步骤；不能推断已完成规划。","sub"));
+      const full=n("details");full.append(n("summary","查看完整 Plan 原始数据（包括全局规则与 Gate）"));
+      full.append(n("pre",JSON.stringify(f.plan||{},null,2),"spec-raw"));planBox.append(full);
+      const templateBox=box("父子规格与草案资料（未审核内容）");
+      const subs=Array.isArray(draft?.subspecs)?draft.subspecs:[];
+      templateBox.append(n("p",subs.length?
+        "子规格草案："+subs.length+" 项（未经过任务审批）":
+        "尚未建立父子子规格。当前模板不等于真实需求或设计。","sub"));
+      for(const sub of subs){
+        const row=n("div",null,"spec-step");
+        row.append(n("strong",String(sub.id||"未命名子规格")+" · "+String(sub.title||"")),
+          n("pre",JSON.stringify(sub,null,2),"spec-raw"));
+        templateBox.append(row);
+      }
+      if(draft){
+        const raw=n("details");
+        raw.append(n("summary","查看原始 Spec 草案与模板（包含待填写项）"),
+          n("pre",JSON.stringify(draft,null,2),"spec-raw"));
+        templateBox.append(raw);
+      }
       const exports=n("div",null,"kpirow");
       for(const [fmt,label,ext] of [["markdown","导出 Markdown","md"],["json","导出 JSON","json"]]){
         const a=n("a",label+" ↓","btn");a.href="/api/features/"+encodeURIComponent(name)+"/export?format="+fmt;
@@ -489,14 +597,16 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       "当前无符合依赖条件的任务；查看看板了解完成情况。";
     setupDocs();
     renderOnboarding();
+    renderReleasePlan();
     renderFeatures();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
   async function reload(){
-    try{const [nextProject,nextBoard,nextFeatures,nextOnboarding]=await Promise.all([
-      fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),fetchJSON("/api/onboarding")]);
+    try{const [nextProject,nextBoard,nextFeatures,nextOnboarding,nextReleasePlan]=await Promise.all([
+      fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),fetchJSON("/api/onboarding"),
+      fetchJSON("/api/release-plan?release=V0.1")]);
       project=nextProject;board=nextBoard;features=nextFeatures.features||[];
-      onboarding=nextOnboarding;render();}
+      onboarding=nextOnboarding;releasePlan=nextReleasePlan;render();}
     catch(e){$("project-intro").textContent="无法读取项目资料："+e.message;}
   }
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));

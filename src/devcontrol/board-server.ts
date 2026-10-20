@@ -13,7 +13,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.8.2";
+export const WORKSPACE_SCHEMA_VERSION = "0.8.3";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
@@ -92,7 +92,8 @@ export function createDevControlBoardServer(
       } else if (route === "/api/project") {
         respond(res, 200, JSON.stringify(projectContext(ledger.root)), nonce, "application/json; charset=utf-8");
       } else if (route === "/api/onboarding") {
-        respond(res, 200, JSON.stringify(projectOnboarding(ledger.root, ledger.list())),
+        respond(res, 200, JSON.stringify(projectOnboarding(
+          ledger.root, ledger.list(), ledger.hasReviewedProductPlan())),
           nonce, "application/json; charset=utf-8");
       } else if (route === "/api/docs") {
         const requested = new URL(req.url ?? "/", "http://localhost").searchParams.get("path") ?? "";
@@ -105,6 +106,12 @@ export function createDevControlBoardServer(
         }
       } else if (route === "/api/board") {
         respond(res, 200, JSON.stringify(ledger.board()), nonce, "application/json; charset=utf-8");
+      } else if (route === "/api/release-plan") {
+        const release = new URL(req.url ?? "/", "http://localhost").searchParams.get("release") ?? "V0.1";
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,39}$/.test(release)) {
+          respond(res, 400, '{"error":"Invalid release"}', nonce, "application/json");return;
+        }
+        respond(res, 200, JSON.stringify(ledger.releasePlan(release)), nonce, "application/json; charset=utf-8");
       } else if (route === "/api/features") {
         respond(res, 200, JSON.stringify({ features: ledger.listFeatures() }),
           nonce, "application/json; charset=utf-8");

@@ -70,9 +70,9 @@ describe("DevControl project-first onboarding", () => {
     const ledger = new ProjectTaskLedger(root);
     ledger.create({ id: "AP-01", title: "Approved isolated task",
       allowedPaths: ["src/**"], requiredGates: ["docs"] }, "agent");
-    ledger.approve("AP-01", "owner");
+    expect(() => ledger.approve("AP-01", "owner")).toThrow(/complete.*release plan/i);
     const result = projectOnboarding(root, ledger.list());
-    expect(result.approvedTaskCount).toBe(1);
+    expect(result.approvedTaskCount).toBe(0);
     expect(result.readiness).toBe("needs_plan");
     expect(result.steps.find(s => s.id === "plan")?.status).toBe("missing");
     ledger.close();
@@ -93,10 +93,11 @@ describe("DevControl project-first onboarding", () => {
       id: "APP-01", title: "Verify existing application",
       allowedPaths: ["src/**"], requiredGates: ["docs"],
     }, "agent-onboarding-fixture");
-    ledger.approve("APP-01", "owner-confirmed");
+    expect(() => ledger.approve("APP-01", "owner-confirmed"))
+      .toThrow(/complete.*release plan/i);
     expect(projectOnboarding(root, ledger.list())).toMatchObject({
-      kind: "existing", readiness: "ready_for_review",
-      taskCount: 1, approvedTaskCount: 1,
+      kind: "existing", readiness: "needs_plan",
+      taskCount: 1, approvedTaskCount: 0,
     });
     ledger.close();
     for (let i = 0; i < 2; i++) {
@@ -105,7 +106,7 @@ describe("DevControl project-first onboarding", () => {
       expect(initialized.structuredContent?.pendingFiles).toEqual([]);
     }
     ledger = new ProjectTaskLedger(root);
-    expect(ledger.list().map(t => [t.id, t.status])).toEqual([["APP-01", "ready"]]);
+    expect(ledger.list().map(t => [t.id, t.status])).toEqual([["APP-01", "draft"]]);
     ledger.close();
     expect(fs.readFileSync(path.join(root, "src/main.ts"), "utf8"))
       .toBe("export const running = true;\n");

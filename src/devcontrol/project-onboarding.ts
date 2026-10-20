@@ -86,7 +86,7 @@ function hasExistingWork(root: string): boolean {
   }
 }
 
-export function projectOnboarding(root: string, tasks: ExistingTask[]): ProjectOnboarding {
+export function projectOnboarding(root: string, tasks: ExistingTask[], reviewedVersionPlan = false): ProjectOnboarding {
   const project = path.resolve(root);
   const approvedTaskCount = tasks.filter(t => t.status !== "draft" &&
     t.status !== "cancelled" && typeof t.approvedBy === "string" &&
@@ -104,7 +104,8 @@ export function projectOnboarding(root: string, tasks: ExistingTask[]): ProjectO
     "docs/roadmap/zero-to-one-plan.md",
     "docs/roadmap/implementation-plan.md",
   ].find(file => validSource(project, file)) ?? null;
-  const approvedPlanExists = approvedTaskCount > 0 && planSource !== null;
+  const approvedPlanExists = approvedTaskCount > 0 && planSource !== null &&
+    reviewedVersionPlan;
   steps.push({
     id: "plan", label: "已批准的研发计划与任务",
     status: approvedPlanExists ? "present" : "missing",

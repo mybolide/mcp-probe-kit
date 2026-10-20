@@ -104,6 +104,63 @@ must review the scope, requirements and plan before new work is approved.
 Draft tasks do not count as an executable plan. Actual execution priority and
 gates still come exclusively from the existing SQLite ledger.
 
+## Full-version plan: Spec-depth quality and change review
+
+**Acceptance target:** planning depth must not regress relative to the older
+three-part Feature Spec (requirements, design, tasks). A Kanban card title,
+estimated percentage or workflow template is not a complete specification.
+The older canonical Git Spec is retained; project SQLite stores actual Feature
+sections, plans, child relationships and task evidence. Web readers display
+these verbatim rather than silently discarding the saved plan or masking blank
+sections.
+
+For new Git projects, the **whole release plan is proposed before development**:
+
+1. `devcontrol plan-review --json '{"plan":{...}}'` checks stable in-scope
+   FR/NFR IDs, a complete group/leaf tree, dependency cycles and coverage.
+   Leaf tasks must have a reviewed design reference, requirement traceability,
+   exact expected deliverables, positive and negative test cases, independently
+   verifiable acceptance, bounded file paths and approved execution Gates.
+   As a planning heuristic only, a newly proposed leaf is estimated at no more
+   than one workday (8 hours); this is **not** a speed, quality or completion
+   metric. Larger work must be split; smaller estimates do not imply correctness.
+2. `devcontrol plan-propose --json '{"plan":{...},"actor":"..."}'`
+   validates canonical committed requirements and existing product task
+   coverage, then persists only a **review_pending** proposal in SQLite. It
+   creates **zero executable tasks**. An incomplete or duplicated proposal
+   fails without partial task creation.
+3. `devcontrol plan-approve --json '{"release":"V0.1",
+   "expectedHash":"<reviewed SHA-256>","approvedBy":"<reviewer>"}'` matches
+   the exact proposal and atomically imports all new task IDs and detailed
+   specifications into SQLite. Only then can Agent task execution start.
+   `approvedBy` is an auditable local label, **not independently authenticated
+   Owner identity**. A protected remote reviewer/CI is still required for a
+   trust boundary stronger than local machine permissions.
+4. Once frozen, plans cannot silently replace, remove or reorder task
+   definitions. New work is added through a reviewed additive proposal on
+   the previous revision. Existing task IDs, verification results and Spec
+   fields remain untouched. Changing already approved work needs a separately
+   reviewed scope decision; no Agent may quietly rewrite the frozen plan.
+5. Only a leaf of a frozen release is executable; parent progress is derived
+   from all children passing their real Gate. HTTP/Web endpoints
+   `/api/release-plan?release=V0.1` and `/api/tasks/ID` are read-only.
+   The same operations are exposed via the DevControl MCP/CLI, with
+   validation enforced by the SQLite ledger rather than tool descriptions.
+
+**Migration boundary:** projects imported from the former Python task ledger
+retain their old task-state behavior until that release receives its first
+reviewed frozen plan. Historical F0/F1 verification is not reversed or
+fabricated. A historical task without any acceptance Gate is not claimable.
+Once a release is frozen, all subsequent eligible work must occur in the
+frozen tree. A brand-new Git project has no migration exemption.
+
+The Web Spec viewer now separates **unfilled templates** from approved
+`requirements/design/tasks` and shows the original complete Plan JSON,
+step prerequisites, required inputs, outputs, evidence, child-spec details and
+draft guidance on demand. A template with placeholder fields remains draft,
+even if its saved JSON is long. UI visibility never substitutes for the
+review/approval and implementation Gate.
+
 Network mode is **explicitly project-scoped**. To let a central computer
 view the project, enable LAN once using `devcontrol lan-enable --project-root .`;
 disable with `lan-disable`. The configuration is in the project's

@@ -1,0 +1,209 @@
+import { afterEach, describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { ProjectTaskLedger } from "../task-ledger.js";
+import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "../release-plan.js";
+import { createDevControlBoardServer } from "../board-server.js";
+import { dispatchDevControl } from "../command.js";
+
+const cleanup: { root: string; ledger: ProjectTaskLedger }[] = [];
+function fixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "devcontrol-release-plan-"));
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  save(root, "docs/product/requirements.md",
+    "# Release scope\nFR-001 has source provenance.\nNFR-002 requires idempotent storage.\n");
+  save(root, "docs/architecture/overview.md",
+    "# Event contract design\nGo owns the canonical event, contract and provenance checks.\n");
+  save(root, "docs/architecture/overview.md",
+    "# Event contract\nThe scoped Core endpoint owns canonical ingest provenance.\n");
+  commit(root);
+  const ledger = new ProjectTaskLedger(root);
+  cleanup.push({ root, ledger });
+  return { root, ledger };
+}
+function save(root: string, file: string, data: string) {
+  const target = path.join(root, file);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, data);
+}
+function commit(root: string) {
+  execFileSync("git", ["add", "-A"], { cwd: root });
+  execFileSync("git", ["-c", "user.name=Test", "-c",
+    "user.email=test@example.invalid", "commit", "-qm", "baseline"], { cwd: root });
+}
+function leaf(id: string, requirements: string[], parentId = "REL-CORE"): ReleasePlanNode {
+  return {
+    id, title: "Verify " + id, kind: "leaf", parentId,
+    requirementIds: requirements, estimatedHours: 2.5,
+    acceptance: "A real observable successful response is accompanied by an inspectable source ID.",
+    designRef: "docs/architecture/overview.md#event-contract",
+    testCases: ["Given a valid source, persist the canonical event without losing provenance."],
+    negativeCases: ["Malformed or unauthorized event must be rejected without writing a valid record."],
+    outOfScope: ["No external cloud provider installation."],
+    deliverables: ["services/core/contracts.go", "services/core/contracts_test.go"],
+    allowedPaths: ["services/core/**"], requiredGates: ["docs"],
+  };
+}
+function plan(): ReleasePlanProposal {
+  return {
+    release: "V0.1", scopeSource: "docs/product/requirements.md",
+    requirementIds: ["FR-001", "NFR-002"],
+    rationale: "This approved version includes a small provenance flow and idempotent contract; all other work is deferred.",
+    baseRevision: 0,
+    nodes: [
+      { id: "REL-CORE", title: "Canonical core event delivery", kind: "group" },
+      leaf("REL-INGEST", ["FR-001"]),
+      { ...leaf("REL-RETRY", ["NFR-002"]), dependsOn: ["REL-INGEST"] },
+    ],
+  };
+}
+afterEach(() => {
+  cleanup.splice(0).forEach(({ ledger, root }) => {
+    ledger.close();fs.rmSync(root, { recursive: true, force: true });
+  });
+});
+
+describe("DevControl full-version planning", () => {
+  it("rejects an uncommitted or symlink-escaped design source without writing a proposal", () => {
+    const {root,ledger}=fixture();
+    save(root,"docs/architecture/overview.md","# Unapproved new design\nChanges are not yet in Git.\n");
+    expect(() => ledger.proposeReleasePlan(plan(),"agent")).toThrow(/design reference/i);
+    expect(ledger.releasePlan("V0.1").status).toBe("missing");
+    const outside=fs.mkdtempSync(path.join(os.tmpdir(),"devcontrol-outside-"));
+    try {
+      const external=path.join(outside,"external.md");
+      fs.writeFileSync(external,"# Outside private design\nMust not be included.");
+      fs.symlinkSync(external,path.join(root,"docs","architecture","external.md"));
+      execFileSync("git",["add","docs/architecture/external.md"],{cwd:root});
+      commit(root);
+      const item=plan();
+      item.nodes[1].designRef="docs/architecture/external.md";
+      expect(() => ledger.proposeReleasePlan(item,"agent")).toThrow(/design reference/i);
+      expect(ledger.list()).toHaveLength(0);
+    } finally {
+      fs.rmSync(outside,{recursive:true,force:true});
+    }
+  });
+  it("enforces the full plan on a completely new Git project, including invalid legacy-style approvals", () => {
+    const {ledger}=fixture();
+    ledger.create({id:"REL-UNPLANNED",title:"A one-off task",
+      release:"V0.1",allowedPaths:["services/core/**"],requiredGates:["docs"]},"agent");
+    expect(ledger.releasePlan("V0.1").status).toBe("missing");
+    expect(() => ledger.approve("REL-UNPLANNED","owner")).toThrow(/release plan/i);
+    expect(() => ledger.proposeReleasePlan(plan(),"agent")).toThrow(/include every existing/i);
+    expect(ledger.get("REL-UNPLANNED").status).toBe("draft");
+    expect(ledger.next().nextTask).toBeNull();
+  });
+  it("rejects incomplete plan, placeholders, uncovered FR, oversized leaves and cycles", () => {
+    const { ledger } = fixture();
+    const candidate = plan();
+    expect(reviewReleasePlan(candidate)).toMatchObject({
+      passed: true, total: 3, leafCount: 2, groupCount: 1, uncoveredRequirements: [],
+    });
+    candidate.nodes[1].acceptance = "TODO";
+    candidate.nodes[2].estimatedHours = 15;
+    candidate.nodes[2].requirementIds = ["FR-001"];
+    candidate.nodes[1].dependsOn = ["REL-RETRY"];
+    const review = reviewReleasePlan(candidate);
+    expect(review.passed).toBe(false);
+    expect(review.issues.join("; ")).toMatch(/hours|workday/);
+    expect(review.issues.join("; ")).toMatch(/Cycle/);
+    expect(review.uncoveredRequirements).toEqual(["NFR-002"]);
+    expect(() => dispatchDevControl(ledger,"plan-propose",{plan:candidate,actor:"agent"}))
+      .toThrow(/INCOMPLETE_PLAN|Uncovered requirements|Cycle/);
+    expect(ledger.list()).toHaveLength(0);
+    expect(ledger.releasePlan("V0.1").status).toBe("missing");
+  });
+
+  it("creates no task until exact Owner-reviewed hash is approved, then executes only leaves", () => {
+    const { ledger } = fixture();
+    const candidate = plan();
+    const proposal = ledger.proposeReleasePlan(candidate, "agent");
+    expect(proposal.status).toBe("review_pending");
+    expect(ledger.list()).toHaveLength(0);
+    expect(ledger.releasePlan("V0.1").revision).toBe(0);
+    expect(() => ledger.approveReleasePlan("V0.1","owner","0".repeat(64)))
+      .toThrow(/matching proposed/i);
+    const approved = ledger.approveReleasePlan("V0.1","owner",String(proposal.hash));
+    expect(approved).toMatchObject({ revision: 1, status:"frozen",
+      added: ["REL-CORE","REL-INGEST","REL-RETRY"] });
+    expect(ledger.list()).toHaveLength(3);
+    expect(ledger.hasReviewedProductPlan()).toBe(true);
+    expect(ledger.get("REL-INGEST")).toMatchObject({
+      parentId:"REL-CORE", status:"ready", spec:{
+        requirementIds:["FR-001"], estimatedHours:2.5, planRevision:1,
+        designRef:"docs/architecture/overview.md#event-contract",
+      },
+    });
+    expect(ledger.next().nextTask.id).toBe("REL-INGEST");
+    expect(() => ledger.claim("REL-CORE","agent")).toThrow(/leaf/);
+    expect(() => ledger.claim("REL-RETRY","agent")).toThrow(/depends/);
+    expect(ledger.releasePlan("V0.1").sourceDrift).toBe(false);
+    expect(ledger.board().columns.todo.find((t: {id:string;spec?:{testCases:string[]}}) =>
+      t.id === "REL-INGEST")?.spec?.testCases)
+      .toHaveLength(1);
+    ledger.create({id:"REL-ADHOC",title:"Unreviewed task",allowedPaths:["src/**"],
+      requiredGates:["docs"],release:"V0.1"},"agent");
+    expect(() => ledger.approve("REL-ADHOC","owner")).toThrow(/complete.*release plan/i);
+    expect(ledger.releasePlan("V0.1").status).toBe("frozen");
+  });
+
+  it("only appends new leaves via reviewed revision, preserving all old task IDs and definitions", () => {
+    const { root, ledger } = fixture();
+    const initial = plan();
+    const first = ledger.proposeReleasePlan(initial,"agent");
+    ledger.approveReleasePlan("V0.1","owner",String(first.hash));
+    const changed = structuredClone(initial);
+    changed.baseRevision = 1;
+    changed.nodes[1].title = "Retitled after approval";
+    expect(() => ledger.proposeReleasePlan(changed,"agent")).toThrow(/definition changed/);
+    const revision = structuredClone(initial);
+    revision.baseRevision = 1;
+    revision.requirementIds.push("FR-002");
+    revision.nodes.push({ ...leaf("REL-QUERY",["FR-002"]), dependsOn:["REL-RETRY"] });
+    expect(() => ledger.proposeReleasePlan(revision,"agent")).toThrow(/FR-002 not present/);
+    save(root,"docs/product/requirements.md",
+      "# Release scope\nFR-001 provenance.\nNFR-002 retries.\nFR-002 lookup requirement.\n");
+    expect(ledger.releasePlan("V0.1").sourceDrift).toBe(true);
+    expect(ledger.hasReviewedProductPlan()).toBe(false);
+    expect(ledger.next().nextTask).toBeNull();
+    expect(() => ledger.claim("REL-INGEST","agent")).toThrow(/frozen plan/i);
+    commit(root);
+    const second = ledger.proposeReleasePlan(revision,"agent");
+    expect(ledger.releasePlan("V0.1").status).toBe("review_pending");
+    expect(ledger.list()).toHaveLength(3);
+    const approved = ledger.approveReleasePlan("V0.1","owner",String(second.hash));
+    expect(approved.added).toEqual(["REL-QUERY"]);
+    expect(ledger.get("REL-INGEST").spec.planRevision).toBe(1);
+    expect(ledger.get("REL-QUERY").spec.planRevision).toBe(2);
+    expect(ledger.releasePlan("V0.1").revision).toBe(2);
+    expect(ledger.releasePlan("V0.1").history.map((row: {revision:number})=>row.revision))
+      .toEqual([1,2]);
+    expect(ledger.list()).toHaveLength(4);
+  });
+
+  it("does not approve when the reviewed requirements change, and keeps HTTP read only", async () => {
+    const { root, ledger } = fixture();
+    const proposal = ledger.proposeReleasePlan(plan(),"agent");
+    save(root,"docs/product/requirements.md",
+      "# Changed before approval\nFR-001 now different.\nNFR-002 still relevant.\n");
+    expect(() => ledger.approveReleasePlan("V0.1","owner",String(proposal.hash)))
+      .toThrow(/changed since proposal/i);
+    expect(ledger.list()).toHaveLength(0);
+    const server=createDevControlBoardServer(ledger);
+    await new Promise<void>(resolve=>server.listen(0,"127.0.0.1",resolve));
+    try{
+      const address=server.address();
+      const base="http://127.0.0.1:"+(
+        typeof address==="object" && address ? address.port : 0);
+      const response=await fetch(base+"/api/release-plan?release=V0.1");
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({status:"review_pending",revision:0});
+      expect((await fetch(base+"/api/release-plan",{method:"POST"})).status).toBe(405);
+    }finally{
+      await new Promise<void>(resolve=>server.close(()=>resolve()));
+    }
+  });
+});

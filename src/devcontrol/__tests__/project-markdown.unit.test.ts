@@ -48,6 +48,17 @@ function render(source: string): TestNode {
 }
 
 describe("DevControl documentation Markdown tables", () => {
+  it("parses the real full Web workbench script after detailed planning panels are added", () => {
+    const html = projectHtml("safe-nonce");
+    const match = /<script nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html);
+    expect(match).not.toBeNull();
+    expect(() => new vm.Script(match![1], { filename: "project-workspace.js" })).not.toThrow();
+    expect(html).toContain('id="plan-tree"');
+    expect(html).toContain("完整 Plan 原始数据");
+    expect(html).toContain("negativeCases");
+    expect(html).toContain("estimatedHours");
+    expect(html).toContain("/api/release-plan?release=V0.1");
+  });
   it("renders an ordinary three-column table into the correct DOM structure", () => {
     const result = render([
       "## Inventory",

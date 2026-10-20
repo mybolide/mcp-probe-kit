@@ -80,7 +80,7 @@ export async function initProject(args: any, context?: ToolExecutionContext) {
       const ledger = new ProjectTaskLedger(projectRoot);
       let onboarding: ReturnType<typeof projectOnboarding>;
       try {
-        onboarding = projectOnboarding(projectRoot, ledger.list());
+        onboarding = projectOnboarding(projectRoot, ledger.list(), ledger.hasReviewedProductPlan());
       } finally {
         ledger.close();
       }

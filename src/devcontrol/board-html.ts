@@ -114,6 +114,19 @@ body.embedded .lane{background:#101b2b}
       root.appendChild(summary);
       field(root, "前置依赖", (task.dependsOn || []).join("、") || "无");
       field(root, "子任务", (task.childIds || []).join("、") || "无");
+      if(task.spec){
+        field(root,"关联需求",task.spec.requirementIds.join("、") || "未明确");
+        field(root,"可独立验收的完成条件",task.spec.acceptance || "未明确");
+        field(root,"设计来源",task.spec.designRef || "未明确");
+        field(root,"正向测试",task.spec.testCases.join("\\n") || "未明确");
+        field(root,"失败/边界场景",task.spec.negativeCases.join("\\n") || "未明确");
+        field(root,"不在本任务范围",task.spec.outOfScope.join("\\n") || "未明确");
+        field(root,"具体交付物",task.spec.deliverables.join("\\n") || "未明确");
+        field(root,"预计实施工作量（非完成率）",task.spec.estimatedHours+" 小时");
+        field(root,"计划修订版本",String(task.spec.planRevision));
+      } else if(task.track==="product"){
+        field(root,"规格完整性","历史阶段级任务：尚未绑定独立验收的叶子规格，不得以任务卡数量代表细化程度。");
+      }
       const completion = data.completion;
       if (completion) {
         field(root, "完成说明", completion.summary);
