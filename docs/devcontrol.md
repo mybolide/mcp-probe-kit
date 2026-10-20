@@ -163,6 +163,39 @@ defined. They are valid pending plan-gate IDs, not a claim that platform
 testing or release verification already exists. A passed `go_contract`
 fixture cannot satisfy `go_http_integration`.
 
+## Work item visibility and substantive task quality
+
+The default Work Items view is a **read-only row list** of every node in the
+current release plan, including review-pending leaves that are not present in
+the executable task table. List, status Kanban and parent-child tree are
+alternative views of the same release and real task records. Every row links
+to a task details panel. Status, owner, target date, dependencies, acceptance
+and source remain explicit; missing responsibility or dates are reported as
+unassigned/unscheduled rather than invented. Pending proposals do not enter
+execution counts or imply a passed Gate.
+
+**Field presence is not substantive approval.** Before a plan can be frozen
+for production development, its reviewer should check the user/system
+trigger, actual business flow, design decision and boundary, dependent
+external decisions, responsibility, testable success and failure branches,
+precise deliverables, and reproducible proof. A title, an estimated number
+of hours, and one happy-path and failure-path sentence are not enough to
+establish equivalence with a full Spec.
+
+Examples of the transferable rule (not project tasks): a document-import
+feature must distinguish permitted files, incomplete parsing, page/source
+anchors and retries; a billing integration must distinguish authorization,
+idempotent callbacks, settlement, refund failure and reconciliation.
+
+**Current Neyna V0.1 pending-proposal audit (2026-10-20):** The 53 new leaves
+all lack a dedicated business-context/trigger description, recorded
+assignee, and actual schedule; each contains only one positive and one
+negative scenario and the same broad out-of-scope statement. This is a
+source-data quality finding, not a UI problem and not a reason to invent
+owners, dates or new approved requirements. The proposal remains
+`review_pending` until deepened and reviewed; previous syntax/coverage
+checks do not mean that the Spec-depth acceptance criterion was met.
+
 The proposed V0.1 plan is displayed as a collapsible parent/child tree
 without increasing verified progress or auto-creating executable tasks.
 Existing verified F0/F1 milestones remain historical evidence; they are not

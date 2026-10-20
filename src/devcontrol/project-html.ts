@@ -51,6 +51,33 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .spec-warning{border-left:3px solid #dfa852;padding:12px;background:#2b2630;color:#f3ca87;margin:14px 0}
 #plan-tree{display:block}.plan-children{margin:12px 0 2px 13px;padding-left:15px;border-left:2px solid #285f74}
 .plan-children>.spec-block{margin:9px 0;background:#0a1a2a}.plan-subtree>summary{cursor:pointer;color:#a4dbe4;padding:9px 0;font-weight:600}
+.task-modes{display:flex;gap:4px;flex-wrap:wrap;border:1px solid #34506a;border-radius:9px;padding:4px;background:#0d1c2f}
+.task-modes button{border:0;background:transparent;color:#9cb6d0;border-radius:7px;padding:10px 18px;font-weight:650;cursor:pointer}
+.task-modes button[aria-pressed="true"]{color:#e9f6ff;background:#25415e}
+.issue-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:15px 0}
+.issue-controls input,.issue-controls select{border:1px solid #36516b;background:#102034;color:#deebf7;border-radius:8px;padding:10px 12px;min-height:40px}
+.issue-controls input{min-width:190px;flex:1}
+.issue-controls select{max-width:180px}
+.issue-table-scroll{overflow-x:auto;max-width:100%;border:1px solid #2d435b;border-radius:9px;overscroll-behavior-x:contain}
+.issue-table{border-collapse:collapse;table-layout:fixed;width:100%;min-width:1040px;font-size:12px}
+.issue-table th{background:#1a3048;text-align:left;color:#a5bdd5;padding:13px 12px;position:sticky;top:0;z-index:1;font-weight:650}
+.issue-table td{padding:12px;border-top:1px solid #263b52;line-height:1.65;vertical-align:middle;color:#cbd9e9;overflow-wrap:anywhere}
+.issue-table tbody tr:hover{background:#193049}
+.issue-table .task-title-cell{color:#e7f4ff;font-weight:600}
+.issue-table .task-title-cell button{border:0;background:none;color:inherit;padding:2px 0;cursor:pointer;text-align:left;line-height:1.6;font-weight:600}
+.issue-table .task-title-cell button:hover{text-decoration:underline;color:#91e4ef}
+.issue-table .issue-id{font:11px ui-monospace,SFMono-Regular,monospace;color:#83c8dd;white-space:nowrap}
+.issue-table .issue-note{color:#89a8c4;font-size:11px}
+.issue-table .phase-row{background:#132a40}.issue-table .phase-row td{border-top:2px solid #355778}
+.issue-state{display:inline-block;padding:4px 8px;border-radius:5px;white-space:nowrap;background:#263c54;color:#c4d8ee}
+.issue-state.pending{background:#4a3723;color:#fad296}
+.issue-state.done{background:#1d503e;color:#9de9c5}
+.issue-state.blocked{background:#493027;color:#ffbaaa}
+.issue-count{font-size:12px;color:#a7bed6;padding:9px 2px}
+.issue-details{display:grid;gap:10px}
+.issue-details section{padding:14px;border:1px solid #2c4660;border-radius:8px;background:#12233a}
+.issue-details h3{margin:0 0 9px;font-size:13px;color:#84dce5}
+.issue-details p{margin:7px 0;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}
 .flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.flowitem{background:#17273b;border:1px solid #2f435b;border-radius:10px;padding:16px}.flowitem b{display:block;margin:14px 0 7px;font-size:13px}.flowitem p{margin:0;color:#819bb8;font-size:11px;line-height:1.6}.flownum{font-size:11px;color:#81dbe6;font-family:ui-monospace,monospace}
 .preview{display:grid;gap:9px}.previewbtn{display:block;border:1px solid #304259;border-radius:10px;background:#19283b;padding:15px;text-align:left;width:100%;color:var(--text)}.previewbtn:hover{border-color:#60a5bb;background:#20344c}.previewbtn strong{display:block;font-size:13px}.previewbtn small{display:block;font-size:11px;color:#849bb7;margin-top:7px}
 .sectionhead{margin-bottom:24px}.sectionhead h1{margin-bottom:11px}
@@ -161,13 +188,35 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   </section>
   <section id="view-tasks" class="view">
     <div class="sectionhead"><div class="eyebrow">DELIVERY / TRACKING</div><h1>任务、进度与交付</h1>
-      <p class="sub">实时显示 SQLite 中的待开发、进行中、已完成任务；不可绕过验收手动拖拽完成。</p></div>
-    <section class="panel" style="margin-bottom:18px" aria-label="版本完整规划">
+      <p class="sub">逐条核对研发内容、负责人、依赖和验收证据；待审核草案与正式任务分开统计，不能通过页面操作越过 Gate。</p></div>
+    <div class="task-modes" role="group" aria-label="任务展示方式">
+      <button id="taskmode-list" type="button" aria-pressed="true" data-taskmode="list">任务列表</button>
+      <button id="taskmode-board" type="button" aria-pressed="false" data-taskmode="board">状态看板</button>
+      <button id="taskmode-tree" type="button" aria-pressed="false" data-taskmode="tree">规划树</button>
+    </div>
+    <div id="task-list-panel">
+      <div class="issue-controls">
+        <input id="task-search" type="search" placeholder="搜索任务编号、具体工作、关联需求或验收条件…" aria-label="搜索工作项">
+        <select id="task-stage" aria-label="按研发阶段筛选"><option value="">全部阶段</option></select>
+        <select id="task-state" aria-label="按审核与执行状态筛选"><option value="">全部状态</option>
+          <option value="pending">规划待审核</option><option value="ready">待开发</option>
+          <option value="active">进行中 / 待验收</option><option value="done">已验收</option>
+          <option value="blocked">阻塞</option></select>
+      </div>
+      <p class="issue-count" id="task-list-count">正在读取版本工作项…</p>
+      <div class="issue-table-scroll"><table class="issue-table" aria-label="全部研发工作项列表">
+        <colgroup><col style="width:110px"><col style="width:32%"><col style="width:115px"><col style="width:120px">
+        <col style="width:115px"><col style="width:105px"><col style="width:95px"><col></colgroup>
+        <thead><tr><th>编号</th><th>工作项 / 标题</th><th>状态</th><th>责任人</th><th>计划完成</th><th>所属阶段</th><th>依赖</th><th>内容 / 验收摘要</th></tr></thead>
+        <tbody id="task-rows"><tr><td colspan="8">正在读取项目规划…</td></tr></tbody>
+      </table></div>
+    </div>
+    <section class="panel hide" id="task-tree-panel" style="margin-top:18px" aria-label="版本完整规划">
       <div class="panelhead"><h2>版本完整规划 · 需求 → 父子任务 → 验收</h2><span class="eyebrow" id="plan-state">检查版本计划…</span></div>
       <p class="sub" id="plan-notice">读取 SQLite 冻结计划与审查状态…</p>
       <div class="doclist" id="plan-tree" style="margin-top:14px"></div>
     </section>
-    <iframe id="boardframe" class="taskframe" title="DevControl 项目任务看板" loading="lazy" src="/board?embedded=1"></iframe>
+    <iframe id="boardframe" class="taskframe hide" title="DevControl 项目任务看板" loading="lazy" src="/board?embedded=1"></iframe>
   </section>
   <section id="view-issues" class="view">
     <div class="sectionhead"><div class="eyebrow">ENGINEERING / ISSUE CONTROL</div><h1>Bug 与架构变更</h1>
@@ -200,7 +249,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 (()=>{
   "use strict";
   const $=id=>document.getElementById(id);
-  let project=null,board=null,features=[],onboarding=null,releasePlan=null;
+  let project=null,board=null,features=[],onboarding=null,releasePlan=null,taskMode="list";
   const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",issues:"Bug 与变更",history:"历史会话",docs:"文档中心"};
   const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=String(text);if(cls)x.className=cls;return x;};
   const fetchJSON=async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json();};
@@ -210,9 +259,173 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     document.querySelectorAll(".view").forEach(e=>e.classList.toggle("active",e.id==="view-"+view));
     $("crumb").textContent=titles[view];
     history.replaceState(null,"","#"+view);
-    if(view==="tasks")$("boardframe").contentWindow?.postMessage({kind:"devcontrol-refresh"},"http://"+location.host);
+    if(view==="tasks"&&taskMode==="board")$("boardframe").contentWindow?.postMessage({kind:"devcontrol-refresh"},location.origin);
     if(view==="history")loadHistory();
     if(view==="issues")loadIssues();
+  }
+  function taskPlanNodes(){
+    const scope=releasePlan?.status==="review_pending"?
+      releasePlan?.proposal:releasePlan?.frozen;
+    return Array.isArray(scope?.nodes)?scope.nodes:[];
+  }
+  function taskRows(){
+    const nodes=taskPlanNodes();
+    const real=Object.values(board?.columns||{}).flat().filter(t=>t.track==="product");
+    const byId=new Map(real.map(t=>[t.id,t]));
+    const byParent=new Map();
+    nodes.forEach(node=>{
+      const p=node.parentId||"";
+      if(!byParent.has(p))byParent.set(p,[]);
+      byParent.get(p).push(node);
+    });
+    const result=[],seen=new Set();
+    const add=(item,depth=0,stage="")=>{
+      if(seen.has(item.id))return;seen.add(item.id);
+      const current=byId.get(item.id);
+      const phase=stage||item.id;
+      const pending=releasePlan?.status==="review_pending"&&!item.existing;
+      const status=pending?"pending":current?.status||"unplanned";
+      result.push({item,current,depth,phase,status,pending});
+      (byParent.get(item.id)||[]).forEach(child=>add(child,depth+1,phase));
+    };
+    (byParent.get("")||[]).forEach(item=>add(item));
+    // Do not hide real tasks missing from the proposed plan.
+    real.filter(item=>!seen.has(item.id)).forEach(item=>{
+      result.push({item:{...item,kind:"leaf",dependsOn:item.dependsOn||[],
+        requirementIds:item.spec?.requirementIds||[],
+        acceptance:item.spec?.acceptance||""},current:item,
+        depth:0,phase:item.parentId||item.id,status:item.status,pending:false});
+    });
+    return result;
+  }
+  function taskStatus(row){
+    const s=row.status;
+    if(s==="pending")return ["草案待审","pending"];
+    if(s==="verified")return ["已验收","done"];
+    if(s==="in_progress")return ["开发中",""];
+    if(s==="in_review")return ["等待验收",""];
+    if(s==="ready"||s==="draft")return [s==="ready"?"待开发":"待审批",""];
+    return [row.item.kind==="group"?"阶段未完成":"尚未入库","blocked"];
+  }
+  function setTaskMode(mode){
+    if(!["list","board","tree"].includes(mode))return;
+    taskMode=mode;
+    for(const b of document.querySelectorAll("[data-taskmode]"))
+      b.setAttribute("aria-pressed",String(b.dataset.taskmode===mode));
+    $("task-list-panel").classList.toggle("hide",mode!=="list");
+    $("task-tree-panel").classList.toggle("hide",mode!=="tree");
+    $("boardframe").classList.toggle("hide",mode!=="board");
+    if(mode==="board")$("boardframe").contentWindow?.postMessage(
+      {kind:"devcontrol-refresh"},location.origin);
+  }
+  function openPlanTask(row){
+    $("overlay").classList.add("open");
+    const task=row.item,actual=row.current,status=taskStatus(row)[0];
+    $("doc-title").textContent=task.id+" · "+task.title;
+    $("doc-source").textContent=(row.pending?"V0.1 · SQLite 待审提案，未批准执行":
+      "V0.1 · 已存在任务台账")+" · "+status;
+    const body=$("doc-content");body.replaceChildren();
+    const content=n("div",null,"issue-details");body.append(content);
+    const section=(heading,value)=>{
+      const box=n("section");
+      box.append(n("h3",heading));
+      if(Array.isArray(value)){
+        if(value.length)for(const v of value)box.append(n("p","• "+String(v)));
+        else box.append(n("p","未明确"));
+      }else box.append(n("p",value===null||value===undefined||value===""?"未明确":String(value)));
+      content.append(box);return box;
+    };
+    section("当前状态与执行边界",row.pending?
+      "规划待审核 · 不可领取、执行或计入版本完成率。":
+      "状态："+status+"。执行以真实 SQLite 状态、依赖和 Gate 为准。");
+    section("负责人 / 计划完成", "负责人：未分配；计划完成时间：未排期。不能依据任务创建时间推断负责人或截止日期。");
+    section("需求来源",task.requirementIds||actual?.spec?.requirementIds||[]);
+    section("具体工作与完成条件",task.acceptance||actual?.spec?.acceptance||"缺少经审核的详细规格");
+    section("技术方案与约束",task.designRef||actual?.spec?.designRef||"无设计链接");
+    section("正向测试",task.testCases||actual?.spec?.testCases||[]);
+    section("异常 / 边界场景",task.negativeCases||actual?.spec?.negativeCases||[]);
+    section("不在本任务范围",task.outOfScope||actual?.spec?.outOfScope||[]);
+    section("交付文件 / 产物",task.deliverables||actual?.spec?.deliverables||[]);
+    section("依赖、阶段与允许变更",[
+      "所属阶段："+row.phase,"父任务："+(task.parentId||"无"),
+      "前置依赖："+((task.dependsOn||actual?.dependsOn||[]).join("、")||"无"),
+      "允许路径："+((task.allowedPaths||actual?.allowedPaths||[]).join("；")||"未明确"),
+      "验收 Gate："+((task.requiredGates||actual?.requiredGates||[]).join("、")||"尚未配置"),
+    ]);
+    if(actual){
+      const btn=n("button","查看正式任务的 Git、测试和审计证据 →","btn");
+      btn.type="button";content.append(btn);
+      btn.addEventListener("click",async()=>{
+        btn.disabled=true;btn.textContent="读取正式交付证据…";
+        try{
+          const data=await fetchJSON("/api/tasks/"+encodeURIComponent(actual.id));
+          section("执行和完成说明",data.completion?
+            [data.completion.summary,data.completion.implementation,data.completion.verification,
+              "遗留问题："+(data.completion.remaining||"无")]:
+            "尚无经提交的完整交付说明");
+          section("提交及审计证据",(data.evidence||[]).map(v=>v.kind+" · "+v.reference));
+        }catch(e){section("执行证据读取失败",e.message);}
+        btn.remove();
+      });
+    }
+    if(row.pending)section("规格缺口与审核提示",[
+      ...(!task.description?["缺少独立的业务场景与触发条件描述。"]:[]),
+      ...((task.testCases||[]).length<=1?["正向测试场景不足，仍需要按相关 Spec 核验边界覆盖。"]:[]),
+      ...((task.negativeCases||[]).length<=1?["反例目前只有一条，不能代表所有失败与异常分支。"]:[]),
+      "负责人未分配、排期未确认；不应仅凭标题、预计工时和单条验收文字批准开发。",
+    ]);
+  }
+  function renderTaskList(){
+    const rows=taskRows();
+    const oldPhase=$("task-stage").value;
+    const phases=[...new Set(rows.map(row=>row.phase))];
+    $("task-stage").replaceChildren(n("option","全部阶段"));
+    $("task-stage").firstElementChild.value="";
+    phases.forEach(phase=>{
+      const opt=n("option",phase);opt.value=phase;$("task-stage").append(opt);
+    });
+    if(phases.includes(oldPhase))$("task-stage").value=oldPhase;
+    const search=$("task-search").value.trim().toLowerCase();
+    const phase=$("task-stage").value,filter=$("task-state").value;
+    const filtered=rows.filter(row=>{
+      const data=row.item;
+      if(phase&&row.phase!==phase)return false;
+      const bucket=row.pending?"pending":
+        row.status==="verified"?"done":
+        ["in_progress","in_review"].includes(row.status)?"active":
+        row.status==="ready"?"ready":"blocked";
+      if(filter&&bucket!==filter)return false;
+      return !search||[data.id,data.title,data.acceptance,(data.requirementIds||[]).join(" "),
+        (data.negativeCases||[]).join(" "),(data.deliverables||[]).join(" ")].join(" ").toLowerCase().includes(search);
+    });
+    const body=$("task-rows");
+    body.replaceChildren(...(filtered.length?filtered.map(row=>{
+      const task=row.item;
+      const tr=n("tr");if(task.kind==="group")tr.className="phase-row";
+      const add=(value,cls)=>{
+        const td=n("td");if(cls)td.className=cls;
+        td.textContent=value;tr.append(td);return td;
+      };
+      add(task.id,"issue-id");
+      const title=add("","task-title-cell");
+      const btn=n("button",(row.depth?"　".repeat(Math.min(row.depth,2))+"↳ ":"")+task.title);
+      btn.type="button";btn.addEventListener("click",()=>openPlanTask(row));title.append(btn);
+      const cell=add("");
+      const [name,cls]=taskStatus(row);cell.append(n("span",name,"issue-state "+cls));
+      add("未分配");
+      add("未排期");
+      add(row.phase);
+      add((task.dependsOn||row.current?.dependsOn||[]).join("、")||"—");
+      add((task.acceptance||row.current?.spec?.acceptance||
+        (task.kind==="group"?"阶段汇总，进度按子任务验收计算":"缺少完整可验收规格")).slice(0,105),"issue-note");
+      return tr;
+    }):[(()=>{const tr=n("tr"),td=n("td","没有符合筛选条件的工作项");
+      td.colSpan=8;tr.append(td);return tr;})()]));
+    const pending=rows.filter(row=>row.pending).length,done=rows.filter(row=>row.status==="verified").length;
+    const shallow=rows.filter(row=>row.pending&&!row.item.description).length;
+    $("task-list-count").textContent="显示 "+filtered.length+" / "+rows.length+" 项 · 规划待审核 "+pending+
+      " 项（不计入正式执行进度） · 历史已验收 "+done+" 项 · 缺少独立业务说明 "+shallow+
+      " 项。点击标题核对规格；负责人和日期暂无真实记录时分别显示未分配、未排期。";
   }
   function renderReleasePlan(){
     const status=releasePlan?.status||"missing";
@@ -619,6 +832,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     setupDocs();
     renderOnboarding();
     renderReleasePlan();
+    renderTaskList();
     renderFeatures();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
@@ -633,6 +847,10 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));
   for(const b of document.querySelectorAll("[data-go]"))b.addEventListener("click",()=>go(b.dataset.go));
   for(const b of document.querySelectorAll("[data-doc]"))b.addEventListener("click",()=>openDoc(b.dataset.doc));
+  for(const b of document.querySelectorAll("[data-taskmode]"))
+    b.addEventListener("click",()=>setTaskMode(b.dataset.taskmode));
+  for(const id of ["task-search","task-stage","task-state"])
+    $(id).addEventListener("input",renderTaskList);
   $("open-vision").addEventListener("click",()=>openDoc("docs/product/vision.md"));
   $("open-roadmap").addEventListener("click",()=>openDoc("docs/roadmap/releases.md"));
   $("open-okr").addEventListener("click",()=>openDoc(project?.okr.source||"docs/okr/README.md"));

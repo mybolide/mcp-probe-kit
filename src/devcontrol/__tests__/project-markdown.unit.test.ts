@@ -58,6 +58,17 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain("negativeCases");
     expect(html).toContain("estimatedHours");
     expect(html).toContain("/api/release-plan?release=V0.1");
+    expect(html).toContain('id="task-rows"');
+    expect(html).toContain('id="task-search"');
+    expect(html).toContain('data-taskmode="list"');
+    expect(html).toContain('data-taskmode="board"');
+    expect(html).toContain('data-taskmode="tree"');
+    expect(html).toContain("规划待审核");
+    expect(html).toContain("未分配");
+    expect(html).toContain("未排期");
+    expect(html).toContain("正式任务的 Git、测试和审计证据");
+    expect(html).toContain("taskMode=\"list\"");
+    expect(html).not.toContain("innerHTML");
   });
   it("renders an ordinary three-column table into the correct DOM structure", () => {
     const result = render([
