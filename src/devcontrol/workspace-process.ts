@@ -21,6 +21,7 @@ import {
 interface RunningProject {
   root: string;
   lanEnabled: boolean;
+  version: string;
   pid: number | null;
   instanceId: string | null;
   startedAt: string | null;
@@ -41,11 +42,12 @@ async function existingProject(port: number): Promise<RunningProject | null> {
         try {
           const meta = JSON.parse(output);
           resolve(response.statusCode === 200 &&
-            meta.version === WORKSPACE_SCHEMA_VERSION &&
+            typeof meta.version === "string" &&
             meta.schema === "devcontrol-project-workspace" &&
             typeof meta.root === "string"
             ? {
               root: meta.root, lanEnabled: meta.lanEnabled === true,
+              version: meta.version,
               pid: Number.isSafeInteger(meta.pid) && meta.pid > 0 ? meta.pid : null,
               instanceId: typeof meta.instanceId === "string" ? meta.instanceId : null,
               startedAt: typeof meta.startedAt === "string" ? meta.startedAt : null,
@@ -117,7 +119,7 @@ function isRecordedInstance(
   record: WorkspaceRuntime | null,
 ): boolean {
   return !!running && !!record && record.port === port &&
-    record.version === WORKSPACE_SCHEMA_VERSION &&
+    record.version === running.version &&
     path.resolve(running.root) === root &&
     running.pid === record.pid && running.pid !== process.pid &&
     !!running.instanceId && running.instanceId === record.instanceId &&
@@ -167,7 +169,8 @@ export async function ensureProjectWorkspaceRunning(
       // A verified prior project instance is deliberately restarted on MCP
       // initialization. Unknown/PID-reused processes must NEVER be signalled.
       if (!(await stopRecordedInstance(port, bindHost, historical!))) continue;
-    } else if (previous && path.resolve(previous.root) === project &&
+    } else if (previous && previous.version === WORKSPACE_SCHEMA_VERSION &&
+        path.resolve(previous.root) === project &&
         previous.lanEnabled === access.lanEnabled) {
       // Migration: a legacy server predates the process registry. Reuse rather
       // than accumulate additional ports; without strong identity never kill it.

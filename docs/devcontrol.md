@@ -77,6 +77,32 @@ initializations from spawning duplicate workbenches. Legacy access key and
 cookie fields are removed from the ignored project-local network configuration
 when it is next read. Foreign listeners, including older unverifiable
 workbench processes, must never be killed on the basis of a port number alone.
+An older schema version can also be restarted on the *recorded* port if its
+reported version, PID, instance ID, creation time and project path match the
+old SQLite record. An unknown legacy process is never terminated.
+
+## New project and existing repository onboarding
+
+For Git projects running Node22+, `init_project` now invokes the same
+SQLite-backed, read-only inspection as `devcontrol onboard --project-root .`.
+Managed Skill and AGENTS.md bootstrap is preserved. The standard initialization
+does not generate another `requirements.md`, `tasks.md`, repetitive report or
+unapproved task backlog. Non-Git and Node20 cases retain the legacy
+initialization instructions.
+
+The new `GET /api/onboarding` endpoint shows goal/context, constitution,
+requirements, architecture and approved task plan from **actual files and
+approved SQLite tasks**. It recognizes several established document paths
+without replacing existing documents. On empty projects it displays missing
+baselines rather than imaginary completed planning; on existing projects it
+preserves source code, task IDs, dependencies, History Session and previous
+approval state. Running the inspection again does not duplicate tasks.
+
+The workspace overview displays the missing-baseline checklist without
+creating an additional navigation area or enabling Web writes. The owner
+must review the scope, requirements and plan before new work is approved.
+Draft tasks do not count as an executable plan. Actual execution priority and
+gates still come exclusively from the existing SQLite ledger.
 
 Network mode is **explicitly project-scoped**. To let a central computer
 view the project, enable LAN once using `devcontrol lan-enable --project-root .`;
@@ -105,6 +131,7 @@ the Node built-in experimental node:sqlite module. Other mcp-probe-kit tools
 continue to support Node 20+. No database server or native npm addon is needed.
 
 - CLI: mcp-probe-kit devcontrol next --project-root /path/to/project
+- CLI: mcp-probe-kit devcontrol onboard --project-root /path/to/project
 - CLI: mcp-probe-kit devcontrol list --project-root /path/to/project
 - CLI: mcp-probe-kit devcontrol create --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol approve --project-root /path --json '{...}'
@@ -125,14 +152,16 @@ continue to support Node 20+. No database server or native npm addon is needed.
 ## Unified project workspace: a newcomer sees the complete development context
 
 The local viewer at `/` is no longer just an isolated task board. It is a
-**Project Workspace** with six navigation areas:
+**Project Workspace** with eight navigation areas:
 
 1. **项目总览** — mission, current eligible work package, actual task counts, onboarding links and verified delivery loop.
 2. **产品与目标** — product vision, version roadmap and phase OKRs.
 3. **需求管理** — PRD FR/NFR identifiers, priorities, acceptance criteria and related feature Specs.
 4. **技术架构** — architecture introduction, real fenced diagrams from source documents, ownership and ADR links.
 5. **任务与进度** — the *existing* SQLite-backed three-column Kanban view, embedded as a same-origin view; standalone `/board` still works.
-6. **文档中心** — canonical Git documentation index, text search and a read-only viewer.
+6. **Bug 与架构变更** — SQLite Bug records and explicit architecture reconciliation.
+7. **项目历史会话** — real project-local History Session search and read.
+8. **文档中心** — canonical Git documentation index, text search and a read-only viewer.
 
 Only source documents are rendered. No project metadata, goal, architectural
 status or requirement completion is fabricated by a model. If the project lacks

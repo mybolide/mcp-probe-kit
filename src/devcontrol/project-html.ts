@@ -42,6 +42,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .twocol{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}.panel{background:#121e2e;border:1px solid #283b52;border-radius:15px;padding:25px;min-width:0}
 .panelhead{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}.link{background:none;border:none;color:#8ce2f0;padding:5px 0;font-size:12px;font-weight:650;text-align:left}.link:hover{text-decoration:underline}
 .priority{background:#1a3044;border:1px solid #315b6a;border-radius:12px;padding:17px}.priority strong{display:block;margin:9px 0 6px;font-size:17px}.priority p{line-height:1.6;color:#a4bed3;font-size:12px;margin:0}.taskid{font-family:ui-monospace,SFMono-Regular,monospace;color:var(--cyan);font-size:11px;letter-spacing:.5px}
+.onboardrow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #283b52}.onboardrow b{font-size:12px}.onboardrow small{display:block;color:#83a3bd;margin-top:4px;line-height:1.65;overflow-wrap:anywhere}.onboardrow .taskid{white-space:nowrap}
 .flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.flowitem{background:#17273b;border:1px solid #2f435b;border-radius:10px;padding:16px}.flowitem b{display:block;margin:14px 0 7px;font-size:13px}.flowitem p{margin:0;color:#819bb8;font-size:11px;line-height:1.6}.flownum{font-size:11px;color:#81dbe6;font-family:ui-monospace,monospace}
 .preview{display:grid;gap:9px}.previewbtn{display:block;border:1px solid #304259;border-radius:10px;background:#19283b;padding:15px;text-align:left;width:100%;color:var(--text)}.previewbtn:hover{border-color:#60a5bb;background:#20344c}.previewbtn strong{display:block;font-size:13px}.previewbtn small{display:block;font-size:11px;color:#849bb7;margin-top:7px}
 .sectionhead{margin-bottom:24px}.sectionhead h1{margin-bottom:11px}
@@ -100,6 +101,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       <h1>了解项目，更清楚下一步</h1><p id="project-intro">正在读取项目愿景与开发规范…</p>
       <div class="meta-row"><span class="chip" id="projectname">PROJECT</span><span class="chip" id="projectstate">读取源文档</span><span class="chip" id="governance-count">工程治理 · —</span><span class="chip">任务进度来自 SQLite</span></div>
     </div>
+    <section class="panel hide" id="onboarding-panel" style="margin-top:18px" aria-label="项目接入状态">
+      <div class="panelhead"><h2 id="onboarding-title">项目接入</h2><span class="eyebrow">PROJECT ONBOARDING</span></div>
+      <p class="sub" id="onboarding-next"></p>
+      <div id="onboarding-steps" style="margin-top:15px"></div>
+    </section>
     <div class="grid stats">
       <div class="stat"><strong id="s-total">—</strong><span>产品主线任务</span></div><div class="stat"><strong id="s-done">—</strong><span>产品已验收</span></div>
       <div class="stat"><strong id="s-active">—</strong><span>产品进行中</span></div><div class="stat"><strong id="s-pending">—</strong><span>产品待开发</span></div>
@@ -181,7 +187,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 (()=>{
   "use strict";
   const $=id=>document.getElementById(id);
-  let project=null,board=null,features=[];
+  let project=null,board=null,features=[],onboarding=null;
   const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",issues:"Bug 与变更",history:"历史会话",docs:"文档中心"};
   const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=String(text);if(cls)x.className=cls;return x;};
   const fetchJSON=async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json();};
@@ -426,6 +432,22 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     $("docs-list").replaceChildren(...matching.map(docButton));
     $("docs-empty").classList.toggle("hide",matching.length>0);
   }
+  function renderOnboarding(){
+    const panel=$("onboarding-panel");
+    if(!onboarding){panel.classList.add("hide");return;}
+    panel.classList.toggle("hide",onboarding.readiness==="ready_for_review");
+    const fresh=onboarding.kind==="new";
+    $("onboarding-title").textContent=fresh?"新项目首次接入":"已有项目基线核对";
+    $("onboarding-next").textContent="下一步："+onboarding.nextAction+
+      "。该清单仅检查真实 Git 与 SQLite 状态，不自动创建或批准任务。";
+    $("onboarding-steps").replaceChildren(...onboarding.steps.map(step=>{
+      const row=n("div",null,"onboardrow");
+      const detail=n("div");detail.append(n("b",step.label),
+        n("small",step.source||step.suggestedPath||step.instruction));
+      row.append(detail,n("span",step.status==="present"?"已找到":"待确认","taskid"));
+      return row;
+    }));
+  }
   function render(){
     $("projectcrumb").textContent=project.name;
     $("projectname").textContent=project.name.toUpperCase();
@@ -466,13 +488,15 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         (candidate.track!=="product"&&productNext?" · 产品主线下一任务："+productNext.id+"（待当前任务结束后领取）":"")):
       "当前无符合依赖条件的任务；查看看板了解完成情况。";
     setupDocs();
+    renderOnboarding();
     renderFeatures();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
   async function reload(){
-    try{const [nextProject,nextBoard,nextFeatures]=await Promise.all([
-      fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features")]);
-      project=nextProject;board=nextBoard;features=nextFeatures.features||[];render();}
+    try{const [nextProject,nextBoard,nextFeatures,nextOnboarding]=await Promise.all([
+      fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),fetchJSON("/api/onboarding")]);
+      project=nextProject;board=nextBoard;features=nextFeatures.features||[];
+      onboarding=nextOnboarding;render();}
     catch(e){$("project-intro").textContent="无法读取项目资料："+e.message;}
   }
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));

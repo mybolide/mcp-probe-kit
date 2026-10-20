@@ -5,14 +5,14 @@ import { DevControlError, ProjectTaskLedger } from "./task-ledger.js";
 import { ensureProjectWorkspaceAtMcpStartup } from "./startup.js";
 
 const operations = [
-  "next", "list", "get", "features", "feature-get", "feature-save", "feature-validate",
+  "onboard", "next", "list", "get", "features", "feature-get", "feature-save", "feature-validate",
   "feature-export", "work-items", "work-record", "architecture-sync",
   "create", "subtask", "dependency", "approve",
   "claim", "renew", "release", "check", "report", "complete", "verify",
   "trace", "board-data", "import-spec",
 ];
 const requiredFields: Record<string, string[]> = {
-  next: [], list: [], "board-data": [], features: [],
+  onboard: [], next: [], list: [], "board-data": [], features: [],
   "feature-get": ["name"], "feature-save": ["name", "sections"],
   "feature-validate": ["name"], "feature-export": ["name"],
   "work-items": [], "work-record": ["kind", "title", "description"],

@@ -4,6 +4,7 @@ import { ProjectTaskLedger, DevControlError, type CreateWorkItem, type Completio
 import { serveDevControlStdio } from "./mcp-stdio.js";
 import { serveDevControlBoard } from "./board-server.js";
 import { ensureProjectWorkspaceRunning } from "./workspace-process.js";
+import { projectOnboarding } from "./project-onboarding.js";
 import {
   configureWorkspaceAccess, lanAddresses, workspaceAccess, WORKSPACE_START_PORT,
 } from "./workspace-access.js";
@@ -31,6 +32,7 @@ export function dispatchDevControl(
   ledger: ProjectTaskLedger, operation: string, input: Record<string, any> = {},
 ): Record<string, unknown> {
   switch (operation) {
+    case "onboard": return { ...projectOnboarding(ledger.root, ledger.list()) };
     case "next": return ledger.next();
     case "features": return { features: ledger.listFeatures() };
     case "feature-get": return ledger.getFeature(String(input.name));

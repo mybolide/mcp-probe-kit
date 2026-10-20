@@ -5,6 +5,7 @@ import { ProjectTaskLedger, DevControlError } from "./task-ledger.js";
 import { boardHtml } from "./board-html.js";
 import { projectHtml } from "./project-html.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
+import { projectOnboarding } from "./project-onboarding.js";
 import { searchHistorySession, readHistorySession } from "../lib/history-session/index.js";
 import {
   allowedHost, isLoopback, isPrivateLanAddress, lanAddresses, workspaceAccess,
@@ -12,7 +13,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.8.0";
+export const WORKSPACE_SCHEMA_VERSION = "0.8.1";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
@@ -90,6 +91,9 @@ export function createDevControlBoardServer(
         respond(res, 200, boardHtml(nonce, embedded), nonce, "text/html; charset=utf-8", "sameorigin");
       } else if (route === "/api/project") {
         respond(res, 200, JSON.stringify(projectContext(ledger.root)), nonce, "application/json; charset=utf-8");
+      } else if (route === "/api/onboarding") {
+        respond(res, 200, JSON.stringify(projectOnboarding(ledger.root, ledger.list())),
+          nonce, "application/json; charset=utf-8");
       } else if (route === "/api/docs") {
         const requested = new URL(req.url ?? "/", "http://localhost").searchParams.get("path") ?? "";
         try {

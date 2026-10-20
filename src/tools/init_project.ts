@@ -6,6 +6,10 @@ import { resolveWorkspaceRootWithMeta } from "../lib/workspace-root.js";
 import { toPosixPath } from "../lib/project-context-layout.js";
 import type { ProjectInit } from "../schemas/output/project-tools.js";
 import type { ToolExecutionContext } from "../lib/tool-execution-context.js";
+import { ProjectTaskLedger } from "../devcontrol/task-ledger.js";
+import { projectOnboarding } from "../devcontrol/project-onboarding.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 const AGENT_MANUAL_WRITE_NOTICE =
   "MCP 的自动写入范围仅限 Skill 与 AGENTS.md；Agent 须按指南手动落盘 pendingFiles 中的 docs、specs、scripts、src。";
@@ -68,6 +72,61 @@ export async function initProject(args: any, context?: ToolExecutionContext) {
     const bootstrapStatusSummary = bootstrapChanged
       ? "MCP 已完成必要的创建或更新；具体状态见下方。"
       : "MCP 已检查托管文件；本次无需写入或更新。";
+    // Git projects on Node22+ use the database-backed DevControl workflow by
+    // default. Preserve the older templates for non-Git/Node20 installation.
+    // In particular, do not recreate task/spec Markdown over existing work.
+    if (Number(process.versions.node.split(".")[0]) >= 22 &&
+        fs.existsSync(path.join(projectRoot, ".git"))) {
+      const ledger = new ProjectTaskLedger(projectRoot);
+      let onboarding: ReturnType<typeof projectOnboarding>;
+      try {
+        onboarding = projectOnboarding(projectRoot, ledger.list());
+      } finally {
+        ledger.close();
+      }
+      const pendingFiles = onboarding.steps
+        .filter(step => step.status === "missing" && step.suggestedPath)
+        .map(step => ({
+          path: step.suggestedPath!,
+          reason: "仅在核对已有资料并获项目所有者确认后，维护此规范性文件；不自动生成",
+        }));
+      const guidance = [
+        "先恢复 History Session、项目规范和 DevControl 已有任务，严禁重置现有状态",
+        ...onboarding.steps.filter(step => step.status === "missing").map(step =>
+          step.label + "：" + step.instruction),
+        "依据已确认的需求创建 SQLite Feature / Task，查重、审批并按依赖执行；不要生成进度 Markdown",
+        "使用 devcontrol onboard / next 审核项目接入和当前可执行任务",
+      ];
+      const data: ProjectInit = {
+        summary: onboarding.kind === "new"
+          ? "DevControl 已初始化独立项目台账；等待真实需求与项目所有者确认"
+          : "DevControl 已无损接入已有 Git 项目；保留代码、文档、任务及历史状态",
+        projectName, projectRoot: toPosixPath(projectRoot),
+        bootstrap: {
+          skillPath: MCP_PROBE_SKILL_REL_PATH, agentsMdPath: agentsRel,
+          skillCreated: bootstrap.skill.created, skillUpdated: bootstrap.skill.updated,
+          agentsCreated: bootstrap.agentsMd.created, agentsUpdated: bootstrap.agentsMd.updated,
+          workspaceWarnings: pathWarnings, rootSource: rootResolution.source,
+          explicitHonored: rootResolution.explicitHonored,
+        },
+        structure: {
+          directories: [".mcp-probe-kit/state/", ".agents/skills/mcp-probe-kit/"],
+          writtenFiles: bootstrapWritten.filter(file => file.action !== "skipped")
+            .map(file => file.path),
+          plannedFiles: pendingFiles.map(file => file.path),
+        },
+        writtenFiles: bootstrapWritten, pendingFiles, nextSteps: guidance,
+      };
+      return okStructured(
+        "DevControl 已按 Git 项目实际状态完成接入检查。此操作只初始化项目本地 SQLite，" +
+          "不编造需求或任务，也不会创建旧式过程 Markdown。\n" +
+          "项目类型：" + onboarding.kind + "；接入状态：" + onboarding.readiness +
+          "；现有任务：" + onboarding.taskCount + "；已获批准：" +
+          onboarding.approvedTaskCount + "。\n下一步：" + onboarding.nextAction,
+        data,
+        { schema: (await import("../schemas/output/project-tools.js")).ProjectInitSchema },
+      );
+    }
     const pendingFiles = [
       { path: "docs/project-context.md", reason: "由 Agent 按指南创建" },
       { path: "docs/constitution.md", reason: "由 Agent 按指南创建" },
