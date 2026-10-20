@@ -288,6 +288,15 @@ export class ProjectTaskLedger {
         proposed_by TEXT NOT NULL,
         proposed_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS dc_release_proposal_drafts (
+        release TEXT NOT NULL,
+        old_hash TEXT NOT NULL,
+        next_hash TEXT NOT NULL,
+        old_snapshot_json TEXT NOT NULL,
+        revised_by TEXT NOT NULL,
+        revised_at TEXT NOT NULL,
+        PRIMARY KEY(release,old_hash)
+      );
       CREATE TABLE IF NOT EXISTS dc_release_plan_revisions (
         release TEXT NOT NULL,
         revision INTEGER NOT NULL,
@@ -525,6 +534,12 @@ export class ProjectTaskLedger {
       frozenHash: frozen?.hash ?? null,
       frozen: frozenSnapshot,
       sourceDrift: frozenSnapshot ? !this.planSourceUnchanged(frozenSnapshot) : false,
+      draftHistory: this.db.prepare(
+        "SELECT old_hash,next_hash,revised_by,revised_at FROM dc_release_proposal_drafts WHERE release=? ORDER BY revised_at",
+      ).all(release).map(row=>({
+        previousHash:row.old_hash,nextHash:row.next_hash,
+        revisedBy:row.revised_by,revisedAt:row.revised_at,
+      })),
       history: this.db.prepare(
         "SELECT revision,hash,approved_by,approved_at FROM dc_release_plan_revisions WHERE release=? ORDER BY revision",
       ).all(release).map(row=>({
@@ -539,7 +554,7 @@ export class ProjectTaskLedger {
   }
 
   /** Proposal only: never silently creates executable tasks. */
-  proposeReleasePlan(input: ReleasePlanProposal, actor: string): Row {
+  proposeReleasePlan(input: ReleasePlanProposal, actor: string, expectedPreviousHash?: string): Row {
     if (typeof actor !== "string" || !actor.trim()) fail("ACTOR_REQUIRED", "Actor required");
     const review = reviewReleasePlan(input);
     if (!review.passed) fail("INCOMPLETE_PLAN", review.issues.join("; "));
@@ -636,7 +651,31 @@ export class ProjectTaskLedger {
       }
       const existing = this.db.prepare("SELECT * FROM dc_release_proposals WHERE release=?").get(input.release);
       if (existing && existing.hash !== hash) {
-        fail("PROPOSAL_PENDING", "An earlier proposal must be reviewed before replacement");
+        if (!expectedPreviousHash || existing.hash !== expectedPreviousHash) {
+          fail("PROPOSAL_PENDING", "Pending proposal differs: supply exact prior hash through explicit plan-revise, not plan-propose");
+        }
+        const old = JSON.parse(existing.snapshot_json) as ReleasePlanProposal;
+        if (old.release !== input.release || old.baseRevision !== input.baseRevision ||
+            old.scopeSource !== input.scopeSource ||
+            JSON.stringify(old.requirementIds) !== JSON.stringify(input.requirementIds)) {
+          fail("DRAFT_SCOPE_CHANGED", "Requirements and release identity cannot change in a content-only pending revision");
+        }
+        const preserved = new Map(input.nodes.map(node=>[node.id,node]));
+        for (const before of old.nodes.filter(node=>node.existing)) {
+          if (JSON.stringify(preserved.get(before.id)) !== JSON.stringify(before)) {
+            fail("HISTORICAL_TASK_CHANGED", "Historical approved or verified task cannot be rewritten");
+          }
+        }
+        this.db.prepare(`INSERT INTO dc_release_proposal_drafts
+          (release,old_hash,next_hash,old_snapshot_json,revised_by,revised_at)
+          VALUES(?,?,?,?,?,?)`).run(input.release,existing.hash,hash,
+            existing.snapshot_json,actor.trim(),utc());
+        this.audit(null,"release_plan_draft_revised",actor,{
+          release:input.release,oldHash:existing.hash,newHash:hash,
+          oldNodes:old.nodes.length,newNodes:input.nodes.length,
+        });
+      } else if (expectedPreviousHash && (!existing || existing.hash !== expectedPreviousHash)) {
+        fail("STALE_DRAFT", "Pending plan is missing or no longer matches reviewed previous hash");
       }
       this.db.prepare(`INSERT INTO dc_release_proposals
         (release,base_revision,hash,snapshot_json,proposed_by,proposed_at)
@@ -668,6 +707,10 @@ export class ProjectTaskLedger {
       const active = this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get();
       if (active) fail("ACTIVE_TASK", "Wait for the active lease before freezing the plan");
       const plan = JSON.parse(pending.snapshot_json) as ReleasePlanProposal;
+      if (plan.nodes.some(node=>node.kind==="leaf"&&!node.existing) &&
+          plan.qualityProfile !== "spec-depth-v2") {
+        fail("SPEC_DEPTH_REQUIRED", "Detailed trigger, workflow, source, cases and evidence required before owner approval");
+      }
       const source = path.resolve(this.root,plan.scopeSource);
       const sourceHash = createHash("sha256").update(fs.readFileSync(source)).digest("hex");
       if (sourceHash !== (plan as ReleasePlanProposal & { sourceHash:string }).sourceHash ||

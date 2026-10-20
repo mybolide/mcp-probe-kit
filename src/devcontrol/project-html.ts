@@ -68,6 +68,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .issue-table .task-title-cell button:hover{text-decoration:underline;color:#91e4ef}
 .issue-table .issue-id{font:11px ui-monospace,SFMono-Regular,monospace;color:#83c8dd;white-space:nowrap}
 .issue-table .issue-note{color:#89a8c4;font-size:11px}
+.issue-table .issue-task-summary{color:#d2e2f0;line-height:1.6;font-size:12px}
+.issue-table .issue-task-warning{color:#f0c38f;line-height:1.6;font-size:11px;margin-top:5px}
 .issue-table .phase-row{background:#132a40}.issue-table .phase-row td{border-top:2px solid #355778}
 .issue-state{display:inline-block;padding:4px 8px;border-radius:5px;white-space:nowrap;background:#263c54;color:#c4d8ee}
 .issue-state.pending{background:#4a3723;color:#fad296}
@@ -340,10 +342,17 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       "状态："+status+"。执行以真实 SQLite 状态、依赖和 Gate 为准。");
     section("负责人 / 计划完成", "负责人：未分配；计划完成时间：未排期。不能依据任务创建时间推断负责人或截止日期。");
     section("需求来源",task.requirementIds||actual?.spec?.requirementIds||[]);
+    section("使用场景 / 触发条件 / 用户期望",task.scenario||"尚无独立业务场景说明");
+    section("按顺序执行的业务与系统流程",task.workflow||[]);
+    section("业务规则与不可变约束",task.businessRules||[]);
     section("具体工作与完成条件",task.acceptance||actual?.spec?.acceptance||"缺少经审核的详细规格");
     section("技术方案与约束",task.designRef||actual?.spec?.designRef||"无设计链接");
+    section("原始需求、Spec 与测试用例依据",task.sourceRefs||[]);
+    section("已确认决策、限制和审查备注",task.reviewNotes||[]);
+    section("待确认问题与阻塞决策",task.openQuestions||[]);
     section("正向测试",task.testCases||actual?.spec?.testCases||[]);
     section("异常 / 边界场景",task.negativeCases||actual?.spec?.negativeCases||[]);
+    section("交付验收应保留的真实证据",task.verificationEvidence||[]);
     section("不在本任务范围",task.outOfScope||actual?.spec?.outOfScope||[]);
     section("交付文件 / 产物",task.deliverables||actual?.spec?.deliverables||[]);
     section("依赖、阶段与允许变更",[
@@ -370,7 +379,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     }
     if(row.pending)section("规格缺口与审核提示",[
       ...(!task.description?["缺少独立的业务场景与触发条件描述。"]:[]),
-      ...((task.testCases||[]).length<=1?["正向测试场景不足，仍需要按相关 Spec 核验边界覆盖。"]:[]),
+      ...(!task.scenario?["缺少用户或系统触发条件及成功输出。"]:[]),
+      ...((task.workflow||[]).length<3?["缺少端到端步骤与状态转换。"]:[]),
+      ...((task.testCases||[]).length<=1?["正向测试场景不足，需要按相关 Spec 核验边界覆盖。"]:[]),
       ...((task.negativeCases||[]).length<=1?["反例目前只有一条，不能代表所有失败与异常分支。"]:[]),
       "负责人未分配、排期未确认；不应仅凭标题、预计工时和单条验收文字批准开发。",
     ]);
@@ -416,16 +427,23 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       add("未排期");
       add(row.phase);
       add((task.dependsOn||row.current?.dependsOn||[]).join("、")||"—");
-      add((task.acceptance||row.current?.spec?.acceptance||
-        (task.kind==="group"?"阶段汇总，进度按子任务验收计算":"缺少完整可验收规格")).slice(0,105),"issue-note");
+      const summary=add("");
+      const scenario=task.scenario||task.acceptance||row.current?.spec?.acceptance||
+        (task.kind==="group"?"阶段汇总，进度按子任务验收计算":"缺少实际业务场景与验收依据");
+      summary.append(n("div",String(scenario).slice(0,110),"issue-task-summary"));
+      if((task.openQuestions||[]).length)
+        summary.append(n("div","待确认："+String(task.openQuestions[0]).slice(0,90),"issue-task-warning"));
+      else if(!task.scenario&&task.kind==="leaf")
+        summary.append(n("div","场景不完整，尚不能按原始 Spec 深度批准","issue-task-warning"));
       return tr;
     }):[(()=>{const tr=n("tr"),td=n("td","没有符合筛选条件的工作项");
       td.colSpan=8;tr.append(td);return tr;})()]));
     const pending=rows.filter(row=>row.pending).length,done=rows.filter(row=>row.status==="verified").length;
-    const shallow=rows.filter(row=>row.pending&&!row.item.description).length;
+    const shallow=rows.filter(row=>row.pending&&
+      (!row.item.scenario||(row.item.workflow||[]).length<3)).length;
     $("task-list-count").textContent="显示 "+filtered.length+" / "+rows.length+" 项 · 规划待审核 "+pending+
-      " 项（不计入正式执行进度） · 历史已验收 "+done+" 项 · 缺少独立业务说明 "+shallow+
-      " 项。点击标题核对规格；负责人和日期暂无真实记录时分别显示未分配、未排期。";
+      " 项（不计入正式执行进度） · 历史已验收 "+done+" 项 · 结构上缺少场景/流程 "+shallow+
+      " 项。字段完整不等于需求正确，仍须人工逐项审核。点击标题核对触发、规则、测试及证据；责任人与排期未知时保持未分配、未排期。";
   }
   function renderReleasePlan(){
     const status=releasePlan?.status||"missing";
@@ -439,6 +457,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       status==="review_pending"?
       "以下展示待审版本完整草案，所有新增任务均不得执行；旧版冻结计划仍是当前执行基线。":
       "以下是 SQLite 中已审核冻结的完整计划。每个叶子任务都必须包含需求映射、实施边界、失败场景与独立验收条件。";
+    if(status==="review_pending"&&releasePlan?.proposal){
+      $("plan-notice").textContent+=" 本次待审稿 SHA-256："+releasePlan.proposal.hash+
+        "；已归档的待审内容修订："+(releasePlan.draftHistory||[]).length+
+        " 次。字段校验通过仍须人工核对业务语义及架构未决。";
+    }
     if(releasePlan?.sourceDrift){
       $("plan-notice").textContent+=" 警告：Git 需求来源与冻结时的摘要不一致，Agent 不得按旧计划继续领取叶子任务。";
     }
@@ -479,9 +502,13 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       }else{
         const details=n("details");details.append(n("summary","展开完整任务规格与验收依据"));
         const group=n("div");
-        for(const [label,value] of [["需求映射",node.requirementIds],["验收结果",node.acceptance],
+        for(const [label,value] of [["需求映射",node.requirementIds],["触发及用户期望",node.scenario],
+          ["业务与系统操作顺序",node.workflow],["不可变业务规则",node.businessRules],
+          ["验收结果",node.acceptance],
           ["设计依据",node.designRef],["正向测试",node.testCases],
           ["失败与边界",node.negativeCases],["非目标",node.outOfScope],
+          ["待决问题",node.openQuestions],["已确认决策及审核备注",node.reviewNotes],
+          ["原文/测试条目出处",node.sourceRefs],["验收证据清单",node.verificationEvidence],
           ["交付物",node.deliverables],
           ["允许修改范围",node.allowedPaths],["验收门禁",node.requiredGates],
           ["预计工作小时",node.estimatedHours]]){

@@ -11,6 +11,17 @@ export interface ReleasePlanNode {
   dependsOn?: string[];
   requirementIds?: string[];
   acceptance?: string;
+  /** Real user/system trigger and observable business outcome, not a task title. */
+  scenario?: string;
+  /** Ordered domain actions and state/ownership transitions. */
+  workflow?: string[];
+  businessRules?: string[];
+  /** Stable references to committed specifications and relevant test cases. */
+  sourceRefs?: string[];
+  /** Explain what is already decided and what is expressly NOT decided. */
+  reviewNotes?: string[];
+  openQuestions?: string[];
+  verificationEvidence?: string[];
   designRef?: string;
   negativeCases?: string[];
   testCases?: string[];
@@ -31,6 +42,7 @@ export interface ReleasePlanProposal {
   rationale: string;
   /** The frozen plan revision this change is based on; 0 for a new release. */
   baseRevision: number;
+  qualityProfile?: "spec-depth-v2";
 }
 
 export interface PlanReview {
@@ -92,6 +104,26 @@ export function reviewReleasePlan(plan: ReleasePlanProposal): PlanReview {
       } else for (const id of item.requirementIds) coverage.add(id);
       // Smallness is an upper bound, not a surrogate for acceptance quality.
       if (!item.existing) {
+        if (plan.qualityProfile === "spec-depth-v2") {
+          if (typeof item.scenario !== "string" || item.scenario.trim().length < 32) {
+            issues.push(item.id + ": specific user/system trigger and outcome missing");
+          }
+          for (const [name,values,min] of [
+            ["workflow",item.workflow,3],["businessRules",item.businessRules,2],
+            ["sourceRefs",item.sourceRefs,2],["reviewNotes",item.reviewNotes,1],
+            ["verificationEvidence",item.verificationEvidence,2],
+            ["testCases",item.testCases,2],["negativeCases",item.negativeCases,2],
+          ] as const) {
+            if (!Array.isArray(values) || values.length < min ||
+                values.some(x => typeof x !== "string" || x.trim().length < 12)) {
+              issues.push(item.id + ": specific " + name + " requires at least " + min + " substantive entries");
+            }
+          }
+          if (item.openQuestions !== undefined && (!Array.isArray(item.openQuestions) ||
+              item.openQuestions.some(x => typeof x !== "string" || !x.trim()))) {
+            issues.push(item.id + ": openQuestions must be string array");
+          }
+        }
         if (typeof item.estimatedHours !== "number" ||
             !Number.isFinite(item.estimatedHours) ||
             item.estimatedHours <= 0 || item.estimatedHours > 8) {

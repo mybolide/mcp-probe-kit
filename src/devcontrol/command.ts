@@ -36,6 +36,9 @@ export function dispatchDevControl(
     case "release-plan": return ledger.releasePlan(String(input.release ?? "V0.1"));
     case "plan-review": return { ...reviewReleasePlan(input.plan) };
     case "plan-propose": return ledger.proposeReleasePlan(input.plan, String(input.actor ?? ""));
+    case "plan-revise": return ledger.proposeReleasePlan(
+      input.plan, String(input.actor ?? ""), String(input.expectedPreviousHash ?? ""),
+    );
     case "plan-approve": return ledger.approveReleasePlan(
       String(input.release), String(input.approvedBy), String(input.expectedHash),
     );

@@ -39,8 +39,25 @@ function leaf(id: string, requirements: string[], parentId = "REL-CORE"): Releas
     requirementIds: requirements, estimatedHours: 2.5,
     acceptance: "A real observable successful response is accompanied by an inspectable source ID.",
     designRef: "docs/architecture/overview.md#event-contract",
-    testCases: ["Given a valid source, persist the canonical event without losing provenance."],
-    negativeCases: ["Malformed or unauthorized event must be rejected without writing a valid record."],
+    testCases: [
+      "Given a valid source, persist the canonical event without losing provenance.",
+      "After process restart, lookup by event ID retrieves the original source and timestamp.",
+    ],
+    negativeCases: [
+      "Malformed or unauthorized event must be rejected without writing a valid record.",
+      "A source ID from another identity is rejected without disclosing private text.",
+    ],
+    scenario: "A user submits a note during a meeting and queries the event again the following day.",
+    workflow: ["Validate source and caller before accepting the event.",
+      "Create canonical event with one Core-assigned ID in a transaction.",
+      "Restart the service and confirm source and time identity are preserved."],
+    businessRules: ["Only Core owns event data and received time.",
+      "Client retries must not create duplicate user facts."],
+    sourceRefs: ["docs/product/requirements.md#FR-001",
+      "docs/architecture/overview.md"],
+    reviewNotes: ["Storage choice is still proposed and must be reviewed before implementation."],
+    verificationEvidence: ["HTTP request/response with source ID and version.",
+      "Actual persistent record count and restart test logs."],
     outOfScope: ["No external cloud provider installation."],
     deliverables: ["services/core/contracts.go", "services/core/contracts_test.go"],
     allowedPaths: ["services/core/**"], requiredGates: ["docs"],
@@ -52,6 +69,7 @@ function plan(): ReleasePlanProposal {
     requirementIds: ["FR-001", "NFR-002"],
     rationale: "This approved version includes a small provenance flow and idempotent contract; all other work is deferred.",
     baseRevision: 0,
+    qualityProfile: "spec-depth-v2",
     nodes: [
       { id: "REL-CORE", title: "Canonical core event delivery", kind: "group" },
       leaf("REL-INGEST", ["FR-001"]),
@@ -62,6 +80,48 @@ function plan(): ReleasePlanProposal {
 afterEach(() => {
   cleanup.splice(0).forEach(({ ledger, root }) => {
     ledger.close();fs.rmSync(root, { recursive: true, force: true });
+  });
+});
+
+describe("Pending release plan content revision", () => {
+  it("blocks approval of legacy one-test-line task plans before Spec-depth revision", () => {
+    const {ledger}=fixture();
+    const shallow=structuredClone(plan());
+    delete shallow.qualityProfile;
+    const old=ledger.proposeReleasePlan(shallow,"agent");
+    expect(() => ledger.approveReleasePlan("V0.1","owner",String(old.hash)))
+      .toThrow(/trigger.*workflow.*source|Spec.depth|Detailed trigger/i);
+    expect(ledger.list()).toHaveLength(0);
+    expect(ledger.releasePlan("V0.1").status).toBe("review_pending");
+  });
+
+  it("safely revises an unapproved draft by CAS hash and archives the previous snapshot", () => {
+    const {ledger}=fixture();
+    const first=ledger.proposeReleasePlan(plan(),"planning-agent");
+    const oldPlan=ledger.releasePlan("V0.1").proposal;
+    const changed=structuredClone(plan());
+    changed.nodes[1].scenario =
+      "The user changes the text import location, and the Core must preserve source ownership.";
+    changed.nodes[1].workflow?.push("Verify the evidence ID after rereading the source event.");
+    changed.nodes[1].negativeCases?.push(
+      "An unauthorized client may not revise an immutable received timestamp.");
+    expect(() => ledger.proposeReleasePlan(changed,"agent")).toThrow(/PROPOSAL_PENDING|Pending proposal/i);
+    expect(() => ledger.proposeReleasePlan(changed,"agent","0".repeat(64))).toThrow(/prior hash/i);
+    const revised=dispatchDevControl(ledger,"plan-revise",{
+      plan:changed,actor:"agent",expectedPreviousHash:first.hash,
+    });
+    expect(revised.hash).not.toBe(first.hash);
+    expect(ledger.list()).toHaveLength(0);
+    expect(ledger.releasePlan("V0.1")).toMatchObject({
+      revision:0,status:"review_pending",proposal:{
+        hash:revised.hash,qualityProfile:"spec-depth-v2",
+      },
+    });
+    expect(ledger.releasePlan("V0.1").proposal.nodes[1].scenario).not.toBe(oldPlan.nodes[1].scenario);
+    expect(() => ledger.proposeReleasePlan(changed,"agent",String(first.hash))).toThrow(/STALE_DRAFT|no longer matches/i);
+    const audit=ledger as unknown as { db:{prepare:(sql:string)=>{get:(...args:unknown[])=>any}} };
+    expect(audit.db.prepare("SELECT old_hash,next_hash FROM dc_release_proposal_drafts WHERE release=?")
+      .get("V0.1")).toMatchObject({old_hash:first.hash,next_hash:revised.hash});
   });
 });
 
@@ -143,7 +203,7 @@ describe("DevControl full-version planning", () => {
     expect(ledger.releasePlan("V0.1").sourceDrift).toBe(false);
     expect(ledger.board().columns.todo.find((t: {id:string;spec?:{testCases:string[]}}) =>
       t.id === "REL-INGEST")?.spec?.testCases)
-      .toHaveLength(1);
+      .toHaveLength(2);
     ledger.create({id:"REL-ADHOC",title:"Unreviewed task",allowedPaths:["src/**"],
       requiredGates:["docs"],release:"V0.1"},"agent");
     expect(() => ledger.approve("REL-ADHOC","owner")).toThrow(/complete.*release plan/i);

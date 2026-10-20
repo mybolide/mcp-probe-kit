@@ -196,6 +196,36 @@ owners, dates or new approved requirements. The proposal remains
 `review_pending` until deepened and reviewed; previous syntax/coverage
 checks do not mean that the Spec-depth acceptance criterion was met.
 
+### Pending draft content review, never silent plan replacement
+
+`plan-revise` is the **only** way to replace an unapproved plan with richer
+task content. Its JSON input includes `plan`, `actor`, and exact
+`expectedPreviousHash` read from `release-plan`. A different hash,
+missing previous proposal, changed release/scope/requirements, or edits to a
+previously approved historical task all cause a transaction rollback.
+The old proposal snapshot and both hashes are saved in SQLite
+`dc_release_proposal_drafts` and `dc_audit`. Revision does **not** create,
+approve, claim or verify any executable task. Proposed task IDs and approved
+releases remain separate, and Web access stays read-only.
+
+`qualityProfile: "spec-depth-v2"` requires **for each new leaf**, beyond
+title and file paths: a concrete event trigger and user outcome, an ordered
+domain workflow, at least two nonempty business invariants, source links,
+the actual unresolved decisions, review notes, two positive and two
+adversarial scenarios, plus an independent list of evidence. Structural
+validation proves only these fields and plan dependencies are well-formed:
+it does **not** prove accurate business requirements or runnable tests.
+The plan approval API now rejects old shallow proposals without this profile.
+The Owner must review content, dependencies, correctness, actual ownership,
+and scope before the frozen-plan transaction may be invoked.
+
+For this V0.1 draft, the prior `apps/mobile/` paths contradicted accepted
+ADR-0002's `apps/client/` single Flutter client. The candidate content
+revision corrects those unapproved paths only, without rewriting F0/F1
+verified milestones. Audio thresholds/ASR provider and storage/identity
+remain unresolved and are disclosed as blockers, not invented as approved
+architecture.
+
 The proposed V0.1 plan is displayed as a collapsible parent/child tree
 without increasing verified progress or auto-creating executable tasks.
 Existing verified F0/F1 milestones remain historical evidence; they are not
