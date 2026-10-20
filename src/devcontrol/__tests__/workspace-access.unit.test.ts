@@ -8,6 +8,7 @@ import {
   lanAddresses, workspaceAccess, WORKSPACE_START_PORT,
 } from "../workspace-access.js";
 import { ensureProjectWorkspaceAtMcpStartup } from "../startup.js";
+import { readWorkspaceRuntime, writeWorkspaceRuntime } from "../workspace-runtime.js";
 
 const roots: string[] = [];
 function project(): string {
@@ -41,6 +42,37 @@ describe("project workbench LAN access", () => {
     expect(workspaceAccess(second).lanEnabled).toBe(false);
     expect(workspaceAccess(first).lanEnabled).toBe(true);
     if (process.platform !== "win32") expect(fs.statSync(file).mode & 0o077).toBe(0);
+  });
+
+  it("scrubs obsolete access credentials while keeping LAN settings", () => {
+    const root = project();
+    configureWorkspaceAccess(root, { lanEnabled: true });
+    const file = path.join(root, ".mcp-probe-kit/state/workspace-server.json");
+    fs.writeFileSync(file, JSON.stringify({
+      lanEnabled: true, basePort: 39222, accessKey: "legacy",
+      accessCode: "legacy", cookieSecret: "legacy",
+    }));
+    expect(workspaceAccess(root)).toEqual({ lanEnabled: true, basePort: 39222 });
+    expect(JSON.parse(fs.readFileSync(file, "utf8"))).toEqual({
+      lanEnabled: true, basePort: 39222,
+    });
+  });
+
+  it("persists runtime port and identity independently in each Git project's SQLite", () => {
+    const first = project(), second = project();
+    expect(readWorkspaceRuntime(first)).toBeNull();
+    const runtime = {
+      port: 39100, pid: 12345, instanceId: "instance-a",
+      startedAt: "2026-10-20T00:00:00.000Z", version: "0.8.0", lanEnabled: true,
+    };
+    writeWorkspaceRuntime(first, runtime);
+    expect(readWorkspaceRuntime(first)).toEqual(runtime);
+    expect(readWorkspaceRuntime(second)).toBeNull();
+    writeWorkspaceRuntime(first, { ...runtime, port: 39101, pid: 12346 });
+    expect(readWorkspaceRuntime(first)).toMatchObject({ port: 39101, pid: 12346 });
+    expect(execFileSync("git", ["status", "--porcelain"], {
+      cwd: first, encoding: "utf8",
+    })).toBe("");
   });
 
   it("permits private LAN IPv4 clients while rejecting public and malformed addresses", () => {

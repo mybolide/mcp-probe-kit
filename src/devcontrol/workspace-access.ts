@@ -38,11 +38,19 @@ export function workspaceAccess(project: string): WorkspaceAccess {
   };
   const parsed = JSON.parse(fs.readFileSync(filename, "utf8")) as Partial<WorkspaceAccess>;
   const port = Number(parsed.basePort);
-  return {
+  const access = {
     lanEnabled: parsed.lanEnabled === true,
     basePort: Number.isSafeInteger(port) && port >= 1025 && port <= 65535
       ? port : WORKSPACE_START_PORT,
   };
+  // Automatically scrub abandoned credential fields from pre-passwordless
+  // installations. The Web workbench no longer has an authentication flow.
+  if (Object.keys(parsed).some((key) => !["lanEnabled", "basePort"].includes(key))) {
+    ensureDatabaseIgnored(project, resolveProjectDatabase(project));
+    fs.writeFileSync(filename, JSON.stringify(access, null, 2) + "\n", { mode: 0o600 });
+    try { fs.chmodSync(filename, 0o600); } catch { /* Windows */ }
+  }
+  return access;
 }
 
 export function configureWorkspaceAccess(

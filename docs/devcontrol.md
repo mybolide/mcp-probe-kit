@@ -66,6 +66,18 @@ next 79 ports (`38181`, `38182`, etc.). The startup probe only reuses a
 service presenting the matching project root, schema version and LAN mode.
 The SQLite remains inside **each Git project**, not in a central shared DB.
 
+The selected port now persists in the project's `dc_workspace_runtime` SQLite
+table together with its PID, random process instance ID, creation timestamp,
+workspace schema and LAN mode. On reconnect, the MCP prioritizes the recorded
+port; an existing server is terminated and restarted there **only** when its
+loopback-only instance metadata matches the project's SQLite record. When
+ownership cannot be proven, no process is terminated and the next port is
+probed instead. An atomic per-project startup lock prevents competing MCP
+initializations from spawning duplicate workbenches. Legacy access key and
+cookie fields are removed from the ignored project-local network configuration
+when it is next read. Foreign listeners, including older unverifiable
+workbench processes, must never be killed on the basis of a port number alone.
+
 Network mode is **explicitly project-scoped**. To let a central computer
 view the project, enable LAN once using `devcontrol lan-enable --project-root .`;
 disable with `lan-disable`. The configuration is in the project's

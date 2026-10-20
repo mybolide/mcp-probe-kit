@@ -12,7 +12,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.7.1";
+export const WORKSPACE_SCHEMA_VERSION = "0.8.0";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
@@ -70,6 +70,12 @@ export function createDevControlBoardServer(
         respond(res, 200, JSON.stringify({
           root: ledger.root, schema: "devcontrol-project-workspace",
           version: WORKSPACE_SCHEMA_VERSION, lanEnabled: enabledNow,
+          // Process identity is only exposed to the local supervisor, not LAN guests.
+          ...(local ? {
+            pid: process.pid,
+            instanceId: process.env.DEVCONTROL_WORKSPACE_INSTANCE_ID ?? null,
+            startedAt: process.env.DEVCONTROL_WORKSPACE_STARTED_AT ?? null,
+          } : {}),
         }), nonce, "application/json; charset=utf-8");
       } else if (route === "/api/access") {
         const serverAddress = server.address();
