@@ -3,6 +3,7 @@ import path from "node:path";
 import { ProjectTaskLedger, DevControlError, type CreateWorkItem, type CompletionReport } from "./task-ledger.js";
 import { serveDevControlStdio } from "./mcp-stdio.js";
 import { serveDevControlBoard } from "./board-server.js";
+import { installMacDesktopLauncher, openDesktopWorkspace } from "./desktop-launcher.js";
 
 type FlagMap = Map<string, string | boolean>;
 
@@ -78,6 +79,18 @@ export async function runDevControlCli(positionals: string[], flags: FlagMap): P
       throw new DevControlError("INVALID_PORT", "Board port must be between 0 and 65535");
     }
     await serveDevControlBoard(root, port);
+    return 0;
+  }
+  if (operation === "desktop-install") {
+    const result = installMacDesktopLauncher(root);
+    process.stdout.write(JSON.stringify({ ok: true, operation, result }, null, 2) + "\n");
+    return 0;
+  }
+  if (operation === "desktop-open") {
+    const result = await openDesktopWorkspace(root, {
+      noBrowser: flags.has("no-browser"),
+    });
+    process.stdout.write(JSON.stringify({ ok: true, operation, result }, null, 2) + "\n");
     return 0;
   }
   const ledger = new ProjectTaskLedger(root);

@@ -2,7 +2,7 @@
  * Zero-dependency browser UI. Data is rendered with textContent, never by
  * interpolating task or agent-provided strings into HTML/DOM markup.
  */
-export function boardHtml(nonce: string): string {
+export function boardHtml(nonce: string, embedded = false): string {
   return `<!doctype html>
 <html lang="zh-CN"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -46,9 +46,14 @@ h1{font-size:clamp(27px,3vw,40px);letter-spacing:-1.25px;margin:8px 0 9px;font-w
 .details-meta{border-top:1px solid #2b3e56;border-bottom:1px solid #2b3e56;padding:12px 0;display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12px}
 .details-meta small{display:block;color:#7a93b2;margin-bottom:4px}
 .notice{margin-top:16px;border-radius:8px;padding:12px;color:#d8bf9c;background:#34291d;font-size:12px;line-height:1.7}
+body.embedded{background:transparent}
+body.embedded .shell{max-width:none;margin:0;padding:0 2px 18px}
+body.embedded .top,body.embedded .footer{display:none}
+body.embedded .bar{margin:0 0 19px;background:#121f31}
+body.embedded .lane{background:#101b2b}
 @media(max-width:850px){.grid{grid-template-columns:1fr}.lane{min-height:140px}.stats{gap:20px}.shell{padding-top:23px}.bar{align-items:stretch}.progressbox{max-width:none}}
 </style></head>
-<body>
+<body class="${embedded ? "embedded" : ""}">
 <main class="shell">
   <div class="top"><div><div class="eyebrow">DEVCONTROL / PROJECT INTELLIGENCE</div><h1>研发任务看板</h1>
     <p class="sub">任务状态来自 SQLite · 交付记录有 Git 和测试证据 · 不再重复生成过程文档</p></div>
@@ -193,6 +198,9 @@ h1{font-size:clamp(27px,3vw,40px);letter-spacing:-1.25px;margin:8px 0 9px;font-w
   el("close").addEventListener("click", () => el("overlay").classList.remove("open"));
   el("overlay").addEventListener("click", event => {
     if (event.target === el("overlay")) el("overlay").classList.remove("open");
+  });
+  window.addEventListener("message",event=>{
+    if(event.origin===location.origin&&event.data?.kind==="devcontrol-refresh")reload();
   });
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") el("overlay").classList.remove("open");

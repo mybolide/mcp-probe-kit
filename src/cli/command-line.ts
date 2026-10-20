@@ -491,5 +491,6 @@ function printHelp(): void {
   process.stdout.write("  mcp-probe-kit devcontrol create --project-root . --json '{...}'\n");
   process.stdout.write("  mcp-probe-kit devcontrol complete --project-root . --json '{...}'\n");
   process.stdout.write("  mcp-probe-kit devcontrol board --project-root . --port 4765\n");
+  process.stdout.write("  mcp-probe-kit devcontrol desktop-install --project-root .  # one-time Finder app\n");
   process.stdout.write("  mcp-probe-kit devcontrol serve --project-root .  # separate opt-in MCP\n");
 }

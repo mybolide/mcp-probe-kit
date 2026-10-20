@@ -1,4 +1,4 @@
-# DevControl V0.4 — optional project task ledger and Kanban board
+# DevControl V0.5 — project workspace, task ledger and one-click entry
 
 DevControl is a Jira-style **project task registry**, distinct from MCP protocol
 Tasks (short-lived tool executions) and Delegated Plans (feature workflow steps).
@@ -23,7 +23,61 @@ continue to support Node 20+. No database server or native npm addon is needed.
 - CLI: mcp-probe-kit devcontrol trace --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol board-data --project-root /path/to/project
 - Board: mcp-probe-kit devcontrol board --project-root /path/to/project --port 4765
+- macOS one-time launcher install: mcp-probe-kit devcontrol desktop-install --project-root /path/to/project
 - MCP: mcp-probe-kit devcontrol serve --project-root /path/to/project
+
+## Unified project workspace: a newcomer sees the complete development context
+
+The local viewer at `/` is no longer just an isolated task board. It is a
+**Project Workspace** with six navigation areas:
+
+1. **项目总览** — mission, current eligible work package, actual task counts, onboarding links and verified delivery loop.
+2. **产品与目标** — product vision, version roadmap and phase OKRs.
+3. **需求管理** — PRD FR/NFR identifiers, priorities, acceptance criteria and related feature Specs.
+4. **技术架构** — architecture introduction, real fenced diagrams from source documents, ownership and ADR links.
+5. **任务与进度** — the *existing* SQLite-backed three-column Kanban view, embedded as a same-origin view; standalone `/board` still works.
+6. **文档中心** — canonical Git documentation index, text search and a read-only viewer.
+
+Only source documents are rendered. No project metadata, goal, architectural
+status or requirement completion is fabricated by a model. If the project lacks
+`docs/product/vision.md`, `docs/product/requirements.md`, etc., the workspace
+shows a missing-source state rather than inventing information.
+
+`GET /api/project` dynamically reads the current project docs index;
+`GET /api/docs?path=...` reads only approved Markdown from the repo. Git and
+SQLite stay separate single sources of truth. Responses are read-only and
+limited to the local loopback server; private `docs/history-session/`, unsafe
+paths, symlink escapes, oversized files and paths outside indexed project docs
+are denied. The browser inserts arbitrary document content using
+`textContent`, not `innerHTML`.
+
+## No repeated command on macOS
+
+Run **once during project installation** (the Agent can do this for the user):
+
+```sh
+mcp-probe-kit devcontrol desktop-install --project-root /path/to/project
+```
+
+This creates a visible local `<Project> Workbench.app` in the project root.
+From then on, double-click it in Finder or drag it to the Dock. The app:
+
+- locates the Git project relative to itself,
+- uses the installed (not auto-downloaded) mcp-probe-kit CLI with Node 22,
+- reuses an existing workbench for that **same** project if one is running,
+- otherwise launches the loopback-only server on an available localhost port,
+- opens the system default browser, with no Terminal window.
+
+It does **not** register launchd at login, install a system daemon, expose
+an HTTP listener to the LAN or start a background cloud service. The lightweight
+Node HTTP process remains available for subsequent clicks until the user logs
+out or terminates it. Each project gets its own local launcher. Finder bundles
+are generated locally and ignored in the developer's Git exclude file; they
+are not source artifacts. The launcher is currently macOS-only. Other clients
+can still use CLI/MCP, and MCP Apps can later reuse the same presentation data.
+
+For CLI-based troubleshooting the `desktop-open --no-browser` operation
+returns the local URL without opening a browser.
 
 Project tasks are proposed as drafts, approved, claimed, developed, reported for
 review, verified by runnable gates, and audited. Fields include stable task ID,
