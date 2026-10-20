@@ -7,9 +7,8 @@ import { createRequire } from "node:module";
 import http from "node:http";
 import vm from "node:vm";
 import { ProjectTaskLedger, DevControlError } from "../task-ledger.js";
-import { createDevControlBoardServer } from "../board-server.js";
+import { createDevControlBoardServer, WORKSPACE_SCHEMA_VERSION } from "../board-server.js";
 import { projectContext, readProjectDoc, safeProjectDocument } from "../project-catalog.js";
-import { installMacDesktopLauncher } from "../desktop-launcher.js";
 import { projectHtml } from "../project-html.js";
 import { bootstrapHistorySession, checkpointHistorySession } from "../../lib/history-session/index.js";
 
@@ -291,30 +290,6 @@ describe("project ledger and legacy migration", () => {
     expect(() => readProjectDoc(root, "docs/engineering/leak.md")).toThrow();
   });
 
-  it.skipIf(process.platform !== "darwin")(
-    "creates one-click Finder app without registering a login daemon or project status files", () => {
-      const program = path.join(root, "fake-installed-probe.js");
-      save("fake-installed-probe.js", "console.log('installed');");
-      commit("fixture runtime");
-      const result = installMacDesktopLauncher(root, program);
-      const entry = path.join(result.bundle, "Contents/MacOS/launcher");
-      expect(result.displayName).toContain("Workbench");
-      expect(fs.existsSync(entry)).toBe(true);
-      expect(fs.statSync(entry).mode & 0o111).toBeGreaterThan(0);
-      const shell = fs.readFileSync(entry, "utf8");
-      expect(shell).toContain("desktop-open --project-root");
-      // .../<project>/<launcher>.app/Contents/MacOS -> three parents.
-      expect(shell).toContain('/../../.."');
-      expect(shell).not.toContain('/../../../.."');
-      expect(fs.readFileSync(path.join(result.bundle, "Contents/Info.plist"), "utf8"))
-        .toContain("CFBundleExecutable");
-      expect(fs.readFileSync(path.join(root, ".git/info/exclude"), "utf8"))
-        .toContain(path.basename(result.bundle));
-      expect(git("status", "--porcelain")).toBe("");
-      expect(installMacDesktopLauncher(root, program).bundle).toBe(result.bundle);
-    },
-  );
-
   it("rejects newly generated progress Markdown even under a broadly allowed docs directory", () => {
     create({
       id: "NEYNA-280", allowedPaths: ["docs/engineering/**"],
@@ -441,7 +416,7 @@ describe("project ledger and legacy migration", () => {
       const page = await fetch(base + "/");
       expect(page.status).toBe(200);
       const meta = await (await fetch(base + "/api/meta")).json();
-      expect(meta.version).toBe("0.6.0");
+      expect(meta.version).toBe(WORKSPACE_SCHEMA_VERSION);
       expect(meta.root).toBe(root);
       expect(await page.text()).toContain("DevControl · 项目工作台");
       expect(page.headers.get("content-security-policy")).toContain("script-src 'nonce-");

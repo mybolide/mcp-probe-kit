@@ -2,6 +2,7 @@
 import readline from "node:readline";
 import { dispatchDevControl } from "./command.js";
 import { DevControlError, ProjectTaskLedger } from "./task-ledger.js";
+import { ensureProjectWorkspaceAtMcpStartup } from "./startup.js";
 
 const operations = [
   "next", "list", "get", "features", "feature-get", "feature-save", "feature-validate",
@@ -36,6 +37,13 @@ function error(id: unknown, code: number, message: string) {
 }
 export async function serveDevControlStdio(projectRoot: string): Promise<void> {
   const ledger = new ProjectTaskLedger(projectRoot);
+  void ensureProjectWorkspaceAtMcpStartup(projectRoot)
+    .then((result) => {
+      if (result.started) console.error(`[DevControl] Workbench: ${result.url}`);
+    })
+    .catch((error: unknown) => {
+      console.error(`[DevControl] Auto-start failed: ${error instanceof Error ? error.message : String(error)}`);
+    });
   const lines = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
   try {
     for await (const line of lines) {

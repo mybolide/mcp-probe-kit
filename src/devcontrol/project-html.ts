@@ -86,7 +86,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 </aside>
 <main class="main">
   <header class="bar"><div class="breadcrumbs"><span id="projectcrumb">项目</span><span>/</span><b id="crumb">总览</b></div>
-  <div class="actions"><span class="badge" id="branch">Git · 读取中</span><button class="btn" id="reload" type="button">↻ 同步信息</button></div></header>
+  <div class="actions"><span class="badge" id="branch">Git · 读取中</span>
+    <button class="btn" id="share-lan" type="button">局域网连接</button>
+    <button class="btn" id="reload" type="button">↻ 同步信息</button></div></header>
   <section id="view-overview" class="view active">
     <div class="hero"><div class="eyebrow">SINGLE SOURCE OF TRUTH  /  PROJECT OVERVIEW</div>
       <h1>了解项目，更清楚下一步</h1><p id="project-intro">正在读取项目愿景与开发规范…</p>
@@ -186,6 +188,29 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     if(view==="tasks")$("boardframe").contentWindow?.postMessage({kind:"devcontrol-refresh"},"http://"+location.host);
     if(view==="history")loadHistory();
     if(view==="issues")loadIssues();
+  }
+  async function showLanAccess(){
+    $("overlay").classList.add("open");
+    $("doc-title").textContent="局域网连接";
+    $("doc-source").textContent="仅限本机开发者查看项目访问码";
+    $("doc-content").replaceChildren(n("p","检查当前项目网络设置…","sub"));
+    try{
+      const d=await fetchJSON("/api/access");
+      const lines=d.lanEnabled ? [
+        "# 中枢电脑访问地址",...(d.urls||[]), "",
+        "# 项目访问码",d.accessKey||"（未创建）","",
+        "从中枢电脑打开上述地址，输入项目访问码即可浏览需求、架构、任务和 History Session。",
+        "访问码属于当前项目，不与其他项目共用。请勿在不可信网络中直接使用 HTTP。"
+      ] : [
+        "# 当前仅允许本机访问",
+        "当前项目尚未启用局域网模式。管理员可以在项目 MCP 配置中启用 LAN 访问。",
+        "启用后工作台会自动监听局域网地址，并使用项目独立访问码保护研发资料。"
+      ];
+      markdown($("doc-content"),lines.join("\n\n"));
+    }catch{
+      $("doc-content").replaceChildren(n("p",
+        "访问码只能在项目所在的开发机上查看。请回到该电脑打开 DevControl 的“局域网连接”。","error"));
+    }
   }
   async function loadIssues(){
     const container=$("issues-list");
@@ -407,6 +432,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   $("history-refresh").addEventListener("click",loadHistory);
   $("history-search").addEventListener("keydown",e=>{if(e.key==="Enter")loadHistory();});
   $("reload").addEventListener("click",reload);
+  $("share-lan").addEventListener("click",showLanAccess);
   $("close").addEventListener("click",()=>$("overlay").classList.remove("open"));
   $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))$("overlay").classList.remove("open");});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")$("overlay").classList.remove("open");});

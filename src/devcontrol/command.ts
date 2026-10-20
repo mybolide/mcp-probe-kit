@@ -3,7 +3,10 @@ import path from "node:path";
 import { ProjectTaskLedger, DevControlError, type CreateWorkItem, type CompletionReport } from "./task-ledger.js";
 import { serveDevControlStdio } from "./mcp-stdio.js";
 import { serveDevControlBoard } from "./board-server.js";
-import { installDesktopLauncher, openDesktopWorkspace } from "./desktop-launcher.js";
+import { ensureProjectWorkspaceRunning } from "./workspace-process.js";
+import {
+  configureWorkspaceAccess, lanAddresses, workspaceAccess, WORKSPACE_START_PORT,
+} from "./workspace-access.js";
 
 type FlagMap = Map<string, string | boolean>;
 
@@ -88,12 +91,35 @@ export function dispatchDevControl(
 export async function runDevControlCli(positionals: string[], flags: FlagMap): Promise<number> {
   const root = path.resolve(stringFlag(flags, "project-root") ?? process.cwd());
   const operation = positionals[0]?.trim() ?? "next";
+  if (operation === "lan-enable" || operation === "lan-disable") {
+    const access = configureWorkspaceAccess(root, {
+      lanEnabled: operation === "lan-enable",
+      rotateKey: flags.has("rotate-key"),
+    });
+    process.stdout.write(JSON.stringify({
+      ok: true, operation, lanEnabled: access.lanEnabled,
+      basePort: access.basePort, addresses: lanAddresses(),
+      message: "MCP startup or desktop-open will apply this project setting. Only local dashboard reveals its access key.",
+    }, null, 2) + "\n");
+    return 0;
+  }
+  if (operation === "lan-access") {
+    const access = workspaceAccess(root);
+    process.stdout.write(JSON.stringify({
+      ok: true, operation,
+      lanEnabled: access.lanEnabled, basePort: access.basePort,
+      accessKey: access.lanEnabled ? access.accessKey : null,
+      addresses: lanAddresses(),
+      warning: "Treat the project access key as a secret. HTTP LAN traffic is not encrypted; use VPN/HTTPS on untrusted networks.",
+    }, null, 2) + "\n");
+    return 0;
+  }
   if (operation === "serve") {
     await serveDevControlStdio(root);
     return 0;
   }
   if (operation === "board") {
-    const rawPort = stringFlag(flags, "port") ?? "4765";
+    const rawPort = stringFlag(flags, "port") ?? String(WORKSPACE_START_PORT);
     const port = Number(rawPort);
     if (!Number.isSafeInteger(port) || port < 0 || port > 65535) {
       throw new DevControlError("INVALID_PORT", "Board port must be between 0 and 65535");
@@ -101,15 +127,8 @@ export async function runDevControlCli(positionals: string[], flags: FlagMap): P
     await serveDevControlBoard(root, port);
     return 0;
   }
-  if (operation === "desktop-install") {
-    const result = installDesktopLauncher(root);
-    process.stdout.write(JSON.stringify({ ok: true, operation, result }, null, 2) + "\n");
-    return 0;
-  }
-  if (operation === "desktop-open") {
-    const result = await openDesktopWorkspace(root, {
-      noBrowser: flags.has("no-browser"),
-    });
+  if (operation === "workspace-status") {
+    const result = await ensureProjectWorkspaceRunning(root);
     process.stdout.write(JSON.stringify({ ok: true, operation, result }, null, 2) + "\n");
     return 0;
   }

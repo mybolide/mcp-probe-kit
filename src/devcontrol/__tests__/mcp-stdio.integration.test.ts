@@ -28,7 +28,12 @@ suite("DevControl dedicated MCP stdio", () => {
         path.join(repository, "node_modules/tsx/dist/cli.mjs"),
         path.join(repository, "src/index.ts"), "devcontrol", "serve",
         "--project-root", root,
-      ], { cwd: repository, stdio: ["pipe", "pipe", "pipe"] });
+      ], {
+        cwd: repository, stdio: ["pipe", "pipe", "pipe"],
+        // The JSON-RPC protocol test is not a dashboard startup test:
+        // do not leak detached workbench processes from ephemeral fixtures.
+        env: { ...process.env, MCP_DEVCONTROL_AUTOSTART: "0" },
+      });
       const requests = [
         { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } },
         { jsonrpc: "2.0", method: "notifications/initialized" },

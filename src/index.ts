@@ -10,6 +10,7 @@ import { createProbeServer } from "./server/create-server.js";
 import { getProtocolModeFromEnv } from "./protocol/protocol-capabilities.js";
 import type { InternalTaskRecord } from "./tasks/task-types.js";
 import { runCommandLine } from "./cli/command-line.js";
+import { ensureProjectWorkspaceAtMcpStartup } from "./devcontrol/startup.js";
 
 /** 启动日志标识：用于确认客户端是否加载当前 build。 */
 const MCP_BUILD_TAG = "v4-cli-fallback-20260802";
@@ -27,6 +28,19 @@ async function runMcpServer(): Promise<void> {
   const protocolMode = getProtocolModeFromEnv();
   const startup = ensureMcpProbeKitBootstrapAtStartup();
   reportStartupBootstrap(startup);
+  // Project injection/MCP connection is the only trigger needed to make the
+  // dashboard available. Never write to stdout (reserved for MCP protocol).
+  void ensureProjectWorkspaceAtMcpStartup(startup.workspace.root)
+    .then((result) => {
+      if (result.started) {
+        console.error(`[DevControl] Project workbench ready: ${result.url}`);
+      } else if (result.reason) {
+        console.error(`[DevControl] Workbench skipped: ${result.reason}`);
+      }
+    })
+    .catch((error: unknown) => {
+      console.error(`[DevControl] Workbench startup failed: ${error instanceof Error ? error.message : String(error)}`);
+    });
 
   if (protocolMode === "legacy") {
     const runtime = createProbeServer({ protocolMode });

@@ -1,4 +1,4 @@
-# DevControl V0.6 candidate — per-project SQLite, native Feature and History Session
+# DevControl V0.7 candidate — MCP-managed project Web workspace
 
 DevControl is a Jira-style **project task registry**, distinct from MCP protocol
 Tasks (short-lived tool executions) and Delegated Plans (feature workflow steps).
@@ -50,21 +50,40 @@ sync request, and `feature-validate` blocks until the required top-level
 design file has a real new Git commit plus explicit review. The system does
 not quietly rewrite approved ADRs/architecture docs.
 
-## macOS and Windows distribution
+## MCP auto-start, high ports and LAN workbench
 
-The same local workbench has a macOS Finder `.app` entry and Windows
-`.cmd` double-click entry. `desktop-install` creates the host-appropriate
-launcher. `desktop-open` reuses the same project-specific loopback server,
-without a shared global SQLite instance.
+The **existing MCP server** automatically ensures the current Git project's
+Web workspace is running. Its Node process serves the same project-local
+SQLite and HTML view for Windows, macOS and other Node22 hosts. A detached
+child process is reused across MCP reconnects; startup does not open a browser.
+No Finder app, Windows CMD/EXE client, desktop package, frontend framework,
+system daemon or OS installer is built or maintained. For diagnostic purposes
+only, `devcontrol workspace-status --project-root .` reports its selected URL.
+To disable automatic startup, set `MCP_DEVCONTROL_AUTOSTART=0`.
 
-The separate CI workflow `.github/workflows/devcontrol-desktop.yml` builds
-and tests on actual `macos-latest` and `windows-latest` runners, then produces
-bundles with a bundled official Node22 runtime. The packaging script rejects
-Homebrew's 84 KiB dynamically linked Node shim rather than advertising an
-unusable "standalone Mac build". Windows release compatibility is **pending a
-successful Windows CI run**; writing a Windows launcher is not proof of
-Windows runtime verification. These are bundled-runtime distributions, not
-single native `.exe` builds.
+The default base port is **38180**, and independent projects scan up to the
+next 79 ports (`38181`, `38182`, etc.). The startup probe only reuses a
+service presenting the matching project root, schema version and LAN mode.
+The SQLite remains inside **each Git project**, not in a central shared DB.
+
+Network mode is **explicitly project-scoped**. To allow an authorized
+central computer to view the project, enable LAN once for that project via
+`devcontrol lan-enable --project-root .`; to disable, use `lan-disable`.
+`--rotate-key` rotates the access key on either command. LAN configuration
+and key are local, Git-ignored project files with restricted permissions.
+When enabled, DevControl listens on the local network and protects all
+project APIs, specs, Bug details and History Session behind a project-specific
+login with an HttpOnly signed cookie. The dashboard's **局域网连接** view shows
+the central computer's URL and access code only to a local reader. Remote
+readers cannot retrieve the key from `/api/access`.
+
+Important: LAN mode currently uses **HTTP without transport encryption**.
+Only enable it on a trusted network; use an authenticated VPN or HTTPS proxy
+when the traffic crosses untrusted network segments. The workbench remains
+read-only and never exposes write APIs to remote browsers.
+
+Windows and macOS must still be validated by platform-specific CI **for
+the same Node MCP package**; no OS-specific client build or release is needed.
 
 ## Runtime and entry points
 
@@ -84,8 +103,10 @@ continue to support Node 20+. No database server or native npm addon is needed.
 - CLI: mcp-probe-kit devcontrol verify --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol trace --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol board-data --project-root /path/to/project
-- Board: mcp-probe-kit devcontrol board --project-root /path/to/project --port 4765
-- macOS one-time launcher install: mcp-probe-kit devcontrol desktop-install --project-root /path/to/project
+- Workbench diagnostics: mcp-probe-kit devcontrol workspace-status --project-root /path/to/project
+- LAN enable: mcp-probe-kit devcontrol lan-enable --project-root /path/to/project
+- LAN access info: mcp-probe-kit devcontrol lan-access --project-root /path/to/project
+- LAN disable: mcp-probe-kit devcontrol lan-disable --project-root /path/to/project
 - MCP: mcp-probe-kit devcontrol serve --project-root /path/to/project
 
 ## Unified project workspace: a newcomer sees the complete development context
@@ -113,33 +134,12 @@ paths, symlink escapes, oversized files and paths outside indexed project docs
 are denied. The browser inserts arbitrary document content using
 `textContent`, not `innerHTML`.
 
-## No repeated command on macOS
+## No client and no repeated command
 
-Run **once during project installation** (the Agent can do this for the user):
-
-```sh
-mcp-probe-kit devcontrol desktop-install --project-root /path/to/project
-```
-
-This creates a visible local `<Project> Workbench.app` in the project root.
-From then on, double-click it in Finder or drag it to the Dock. The app:
-
-- locates the Git project relative to itself,
-- uses the installed (not auto-downloaded) mcp-probe-kit CLI with Node 22,
-- reuses an existing workbench for that **same** project if one is running,
-- otherwise launches the loopback-only server on an available localhost port,
-- opens the system default browser, with no Terminal window.
-
-It does **not** register launchd at login, install a system daemon, expose
-an HTTP listener to the LAN or start a background cloud service. The lightweight
-Node HTTP process remains available for subsequent clicks until the user logs
-out or terminates it. Each project gets its own local launcher. Finder bundles
-are generated locally and ignored in the developer's Git exclude file; they
-are not source artifacts. The launcher is currently macOS-only. Other clients
-can still use CLI/MCP, and MCP Apps can later reuse the same presentation data.
-
-For CLI-based troubleshooting the `desktop-open --no-browser` operation
-returns the local URL without opening a browser.
+The main MCP startup and the optional dedicated DevControl MCP stdio server
+both trigger idempotent workbench startup. This is the whole user-facing
+installation lifecycle. Open the reported URL in any browser or on the
+trusted central LAN machine; there is no separate desktop executable.
 
 Project tasks are proposed as drafts, approved, claimed, developed, reported for
 review, verified by runnable gates, and audited. Fields include stable task ID,
@@ -179,17 +179,16 @@ a reason to avoid maintaining approved normative design documents.
 
 ## Read-only board (no UI framework)
 
-`devcontrol board --project-root /repo --port 4765` starts a local web viewer:
-**http://127.0.0.1:4765/**. It shows three columns — 待开发 / 进行中 /
+`devcontrol workspace-status --project-root /repo` resolves the automatically
+started Web viewer, normally **http://127.0.0.1:38180/** on the development
+computer. It shows three columns — 待开发 / 进行中 /
 已完成 — using the real `dc_tasks` status, with text search, release filter,
 progress counters, dependencies, parent/child links and completion details.
 
-The server only binds to `127.0.0.1`, rejects unexpected Host headers, uses
-strict Content Security Policy and provides GET-only read endpoints
-`/api/board` and `/api/tasks/:id`. No API writes, login, external CSS/JS,
-framework, database server, or independent Kanban status table are introduced.
-Do not expose this prototype externally or use it to display sensitive notes
-on a shared machine.
+With LAN disabled, the server only binds to `127.0.0.1`. With LAN enabled,
+all remote access requires the project access code. Strict Host validation,
+Content Security Policy and read-only API routes remain in force. No independent
+Kanban status table is introduced.
 
 ## Interrupted sessions and safe recovery
 
