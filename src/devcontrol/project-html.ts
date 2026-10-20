@@ -61,15 +61,15 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .issue-table-scroll{overflow-x:auto;max-width:100%;border:1px solid #2d435b;border-radius:9px;overscroll-behavior-x:contain}
 .issue-table{border-collapse:collapse;table-layout:fixed;width:100%;min-width:1220px;font-size:13px}
 .issue-table th{background:#1a3048;text-align:left;color:#a5bdd5;padding:13px 12px;position:sticky;top:0;z-index:1;font-weight:650}
-.issue-table td{padding:12px;border-top:1px solid #263b52;line-height:1.65;vertical-align:middle;color:#cbd9e9;overflow-wrap:anywhere}
+.issue-table td{padding:10px 12px;border-top:1px solid #263b52;line-height:1.48;vertical-align:middle;color:#cbd9e9;overflow-wrap:anywhere}
 .issue-table tbody tr:hover{background:#193049}
 .issue-table .task-title-cell{color:#e7f4ff;font-weight:600}
 .issue-table .task-title-cell button{border:0;background:none;color:inherit;padding:2px 0;cursor:pointer;text-align:left;line-height:1.6;font-weight:600}
 .issue-table .task-title-cell button:hover{text-decoration:underline;color:#91e4ef}
 .issue-table .issue-id{font:11px ui-monospace,SFMono-Regular,monospace;color:#83c8dd;white-space:nowrap}
 .issue-table .issue-note{color:#89a8c4;font-size:11px}
-.issue-table .issue-task-summary{color:#d2e2f0;line-height:1.6;font-size:12px}
-.issue-table .issue-task-warning{color:#f0c38f;line-height:1.6;font-size:11px;margin-top:5px}
+.issue-table .issue-task-summary{color:#d2e2f0;line-height:1.5;font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.issue-table .issue-task-warning{color:#f0c38f;line-height:1.5;font-size:11px;margin-top:4px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:100%}
 .issue-table .phase-row{background:#132a40}.issue-table .phase-row td{border-top:2px solid #355778}
 .issue-state{display:inline-block;padding:4px 8px;border-radius:5px;white-space:nowrap;background:#263c54;color:#c4d8ee}
 .issue-state.pending{background:#4a3723;color:#fad296}
