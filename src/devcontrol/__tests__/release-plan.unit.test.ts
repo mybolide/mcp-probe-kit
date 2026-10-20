@@ -206,4 +206,17 @@ describe("DevControl full-version planning", () => {
       await new Promise<void>(resolve=>server.close(()=>resolve()));
     }
   });
+
+  it("rejects release claims if product-specific gates are not actually executable", () => {
+    const {ledger}=fixture();
+    const candidate=plan();
+    candidate.nodes[1].requiredGates=["go_http_integration"];
+    candidate.nodes[2].requiredGates=["ios_device_e2e","v01_release_e2e"];
+    expect(reviewReleasePlan(candidate).passed).toBe(true);
+    const inspect=ledger as unknown as {gate:(name:string)=>{passed:boolean,error:string}};
+    expect(inspect.gate("go_http_integration")).toMatchObject({passed:false});
+    expect(inspect.gate("flutter_test")).toMatchObject({passed:false});
+    expect(inspect.gate("ios_device_e2e")).toMatchObject({passed:false});
+    expect(inspect.gate("v01_release_e2e")).toMatchObject({passed:false});
+  });
 });

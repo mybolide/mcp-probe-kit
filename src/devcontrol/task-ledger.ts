@@ -83,7 +83,10 @@ function undocumentedMarkdown(additions: string[], allowedPaths: string[]): stri
 }
 
 const idPattern = /^[A-Z][A-Z0-9-]{1,39}$/;
-const allowedGates = new Set(["docs", "devcontrol_tests", "go_contract"]);
+const allowedGates = new Set([
+  "docs", "devcontrol_tests", "go_contract", "go_http_integration",
+  "flutter_test", "ios_device_e2e", "v01_release_e2e",
+]);
 const utc = () => new Date().toISOString();
 
 export class DevControlError extends Error {
@@ -1513,6 +1516,32 @@ export class ProjectTaskLedger {
         return { passed: false, error: "No non-vacuous Go contract tests" };
       }
       return run(tests, "go", ["test", "./..."]);
+    }
+    if (name === "go_http_integration") {
+      const core = path.join(this.root, "services/core");
+      if (!fs.existsSync(path.join(core, "go.mod"))) {
+        return { passed: false, error: "Real Go Core module missing; contract fixtures do not satisfy this gate" };
+      }
+      const integration = path.join(core, "internal/http_integration_test.go");
+      if (!fs.existsSync(integration) ||
+          !/^func TestHTTP\w*\s*\(/m.test(fs.readFileSync(integration, "utf8"))) {
+        return { passed: false, error: "Executable Go Core HTTP integration tests missing" };
+      }
+      return run(core, "go", ["test", "-tags=integration", "./..."]);
+    }
+    if (name === "flutter_test") {
+      const mobile = path.join(this.root, "apps/mobile");
+      if (!fs.existsSync(path.join(mobile, "pubspec.yaml")) ||
+          !fs.existsSync(path.join(mobile, "test"))) {
+        return { passed: false, error: "Real Flutter app and test suite missing" };
+      }
+      return run(mobile, "flutter", ["test"]);
+    }
+    if (name === "ios_device_e2e") {
+      return { passed: false, error: "Physical iPhone/VAD evidence runner not configured; simulator screenshots cannot pass" };
+    }
+    if (name === "v01_release_e2e") {
+      return { passed: false, error: "Real multi-input iPhone→Core→memory acceptance gate not configured" };
     }
     return { passed: false, error: `Unknown gate ${name}` };
   }

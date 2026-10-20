@@ -49,6 +49,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .spec-step{border-top:1px solid #29425a;padding:12px 0;overflow-wrap:anywhere}.spec-step strong{color:#d8ebfb}
 .spec-key{display:block;font:11px/1.7 ui-monospace,monospace;color:#73c6d1}
 .spec-warning{border-left:3px solid #dfa852;padding:12px;background:#2b2630;color:#f3ca87;margin:14px 0}
+#plan-tree{display:block}.plan-children{margin:12px 0 2px 13px;padding-left:15px;border-left:2px solid #285f74}
+.plan-children>.spec-block{margin:9px 0;background:#0a1a2a}.plan-subtree>summary{cursor:pointer;color:#a4dbe4;padding:9px 0;font-weight:600}
 .flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.flowitem{background:#17273b;border:1px solid #2f435b;border-radius:10px;padding:16px}.flowitem b{display:block;margin:14px 0 7px;font-size:13px}.flowitem p{margin:0;color:#819bb8;font-size:11px;line-height:1.6}.flownum{font-size:11px;color:#81dbe6;font-family:ui-monospace,monospace}
 .preview{display:grid;gap:9px}.previewbtn{display:block;border:1px solid #304259;border-radius:10px;background:#19283b;padding:15px;text-align:left;width:100%;color:var(--text)}.previewbtn:hover{border-color:#60a5bb;background:#20344c}.previewbtn strong{display:block;font-size:13px}.previewbtn small{display:block;font-size:11px;color:#849bb7;margin-top:7px}
 .sectionhead{margin-bottom:24px}.sectionhead h1{margin-bottom:11px}
@@ -219,14 +221,14 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     if(releasePlan?.sourceDrift){
       $("plan-state").textContent="⚠ 范围已变化 · 需重新审核";
     }
-    if(releasePlan?.sourceDrift){
-      $("plan-notice").textContent+=" 警告：Git 需求来源与冻结时的摘要不一致，Agent 不得按旧计划继续领取叶子任务。";
-    }
     $("plan-notice").textContent=status==="missing"?
       "目前只有历史阶段级任务，尚无逐需求覆盖、可独立验收的完整父子任务树。不可将看板卡片当成详细研发规格。":
       status==="review_pending"?
       "以下展示待审版本完整草案，所有新增任务均不得执行；旧版冻结计划仍是当前执行基线。":
       "以下是 SQLite 中已审核冻结的完整计划。每个叶子任务都必须包含需求映射、实施边界、失败场景与独立验收条件。";
+    if(releasePlan?.sourceDrift){
+      $("plan-notice").textContent+=" 警告：Git 需求来源与冻结时的摘要不一致，Agent 不得按旧计划继续领取叶子任务。";
+    }
     const shown=status==="review_pending"?releasePlan?.proposal:releasePlan?.frozen;
     const nodes=shown?.nodes||[];
     if(shown){
@@ -235,16 +237,33 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         "；来源："+(shown.scopeSource||"未知")+"；当前任务节点："+nodes.length+"。";
     }
     const tree=$("plan-tree");
-    tree.replaceChildren(...(nodes.length?nodes.map(node=>{
+    const children=new Map();
+    for(const node of nodes){
+      const parent=node.parentId||"";
+      if(!children.has(parent))children.set(parent,[]);
+      children.get(parent).push(node);
+    }
+    const actual=Object.values(board?.columns||{}).flat();
+    const renderNode=(node)=>{
       const wrap=n("div",null,"spec-block");
       const header=n("div",null,"onboardrow");
       const info=n("div");
       info.append(n("strong",(node.kind==="group"?"◈ 阶段 ":"↳ 叶子任务 ")+node.id+" · "+node.title));
       info.append(n("small","父任务 "+(node.parentId||"顶层")+" · 依赖 "+((node.dependsOn||[]).join("、")||"无")));
-      header.append(info,n("span",status==="review_pending"?"待审核 · 不可执行":
-        node.kind==="leaf"?"可独立验收":"汇总节点","taskid"));
+      const old=actual.find(t=>t.id===node.id);
+      const badge=status==="review_pending"?
+        (node.existing?(old?.status==="verified"?"历史已验收":"历史阶段基线"):"新增待审 · 不可执行"):
+        node.kind==="leaf"?"可独立验收":"汇总节点";
+      header.append(info,n("span",badge,"taskid"));
       wrap.append(header);
-      if(node.kind==="leaf"){
+      if(node.kind==="group"){
+        const sub=children.get(node.id)||[];
+        const branch=n("details",null,"plan-subtree");
+        branch.append(n("summary","展开 "+sub.length+" 个细分任务（含完整验收与异常案例）"));
+        const nested=n("div",null,"plan-children");
+        nested.append(...sub.map(child=>renderNode(child)));
+        branch.append(nested);wrap.append(branch);
+      }else{
         const details=n("details");details.append(n("summary","展开完整任务规格与验收依据"));
         const group=n("div");
         for(const [label,value] of [["需求映射",node.requirementIds],["验收结果",node.acceptance],
@@ -258,7 +277,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         details.append(group);wrap.append(details);
       }
       return wrap;
-    }):[n("div",status==="review_pending"?
+    };
+    tree.replaceChildren(...(nodes.length?(children.get("")||[]).map(renderNode):[
+      n("div",status==="review_pending"?
       "新方案仍在审核，尚未冻结；查看当前已验收的 Spec 或联系项目所有者确认。":
       "尚无经过完整覆盖检查和审批的版本任务树。","docs-empty")]));
   }

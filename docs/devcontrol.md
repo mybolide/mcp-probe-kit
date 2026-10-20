@@ -154,6 +154,21 @@ fabricated. A historical task without any acceptance Gate is not claimable.
 Once a release is frozen, all subsequent eligible work must occur in the
 frozen tree. A brand-new Git project has no migration exemption.
 
+Product-specific acceptance gates are deliberately distinct from the initial
+document and schema-contract checks. `go_http_integration` requires actual
+Core HTTP integration tests, `flutter_test` requires a real Flutter test
+suite, and `ios_device_e2e` / `v01_release_e2e` currently **fail closed**
+until a genuine physical-device and complete product-flow evidence runner is
+defined. They are valid pending plan-gate IDs, not a claim that platform
+testing or release verification already exists. A passed `go_contract`
+fixture cannot satisfy `go_http_integration`.
+
+The proposed V0.1 plan is displayed as a collapsible parent/child tree
+without increasing verified progress or auto-creating executable tasks.
+Existing verified F0/F1 milestones remain historical evidence; they are not
+retrospective proof of V0.1 feature tests. The user must review the exact
+proposal hash and unresolved architecture/runner blockers before approving.
+
 The Web Spec viewer now separates **unfilled templates** from approved
 `requirements/design/tasks` and shows the original complete Plan JSON,
 step prerequisites, required inputs, outputs, evidence, child-spec details and

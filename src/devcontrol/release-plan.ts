@@ -45,7 +45,10 @@ export interface PlanReview {
 
 const stableId = /^[A-Z][A-Z0-9-]{1,39}$/;
 const requirementId = /^(?:FR|NFR)-\d{3,}$/;
-const allowedGates = new Set(["docs", "go_contract", "devcontrol_tests"]);
+const allowedGates = new Set([
+  "docs", "go_contract", "devcontrol_tests", "go_http_integration",
+  "flutter_test", "ios_device_e2e", "v01_release_e2e",
+]);
 const unfilled = /\[(?:填写|待补)|\b(?:TODO|TBD)\b/i;
 
 export function reviewReleasePlan(plan: ReleasePlanProposal): PlanReview {
