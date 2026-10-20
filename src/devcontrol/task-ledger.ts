@@ -693,6 +693,14 @@ export class ProjectTaskLedger {
                 prior.title !== item.title || (prior.parent_id ?? null) !== (item.parentId ?? null)) {
               fail("TASK_ID_CONFLICT", `Task ${item.id} has a different release or parent`);
             }
+            if (item.kind === "group" && prior.status === "verified") {
+              const newlyIncomplete = plan.nodes.filter(child=>child.parentId === item.id)
+                .some(child => this.db.prepare(
+                  "SELECT status FROM dc_tasks WHERE id=?",
+                ).get(child.id)?.status !== "verified");
+              if (newlyIncomplete) fail("VERIFIED_PARENT_FROZEN",
+                `Cannot attach unverified work under verified historical task ${item.id}; preserve the original delivery evidence`);
+            }
           } else {
             if (item.existing) fail("TASK_NOT_FOUND", `Referenced legacy task ${item.id} missing`);
             const created = this.create({
