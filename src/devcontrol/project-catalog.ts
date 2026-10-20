@@ -200,9 +200,14 @@ export function projectContext(root: string): ProjectContext {
   const architectureContent = readMarkdown(root, sections.architecture);
   const diagram = architectureContent?.match(/```(?:text|plaintext)?\s*\n([\s\S]*?)\n```/i)?.[1]?.trim() ?? "";
   const items = (requirementMarkdown ?? "").split("\n").flatMap((line) => {
-    const match = /^\|\s*((?:FR|NFR)-\d+)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/.exec(line);
-    return match ? [{ id: match[1].trim(), title: plainText(match[2]),
-      stage: plainText(match[3]), acceptance: plainText(match[4]) }] : [];
+    const cells = line.trim().startsWith("|")
+      ? line.trim().split("|").slice(1, -1).map((cell) => plainText(cell)) : [];
+    if (!/^(?:FR|NFR)-\d+$/.test(cells[0] ?? "") || cells.length < 3) return [];
+    return [{
+      id: cells[0], title: cells[1],
+      stage: cells[2] && cells.length >= 4 ? cells[2] : "NFR",
+      acceptance: cells.length >= 4 ? cells[3] : cells[2],
+    }];
   });
   const okrPath = docs.find((document) => document.startsWith("docs/okr/")) ?? "docs/okr/README.md";
   const count = (pattern: RegExp): number =>

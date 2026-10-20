@@ -82,7 +82,7 @@ export function installMacDesktopLauncher(root: string, cliEntry = process.argv[
   // explicit so a local project install never fetches a remote npm 'latest'.
   const script = `#!/bin/sh
 set -eu
-PROJECT_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd -P)
+PROJECT_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd -P)
 if [ -x "/opt/homebrew/opt/node@22/bin/node" ]; then
   NODE="/opt/homebrew/opt/node@22/bin/node"
 elif [ -x "/usr/local/bin/node" ]; then

@@ -102,6 +102,8 @@ describe("project ledger and legacy migration", () => {
       expect(output).toContain('id="' + section + '"');
     }
     expect(output).toContain("/board?embedded=1");
+    expect(output).toContain("工程治理");
+    expect(output).toContain("产品主线任务");
     expect(output).toContain('nonce="safe-nonce"');
     const inlineScript = /<script nonce="safe-nonce">([\s\S]*?)<\/script>/.exec(output)?.[1];
     expect(inlineScript).toBeTruthy();
@@ -127,7 +129,7 @@ describe("project ledger and legacy migration", () => {
       "| --- | --- | --- | --- | --- |",
       "| FR-001 | 来源可追溯 | P0 | 核验原始记录 | KR1.1 |",
       "| FR-002 | 记忆查询 | P0 | 引用支持 | KR1.3 |",
-      "| NFR-001 | 隐私隔离 | P0 | 权限检查 | KR0 |",
+      "| NFR-001 | 隐私隔离 | 权限检查 |",
       "FR-001 重复说明不应重复计数。",
     ].join("\n"));
     save("docs/architecture/overview.md",
@@ -151,7 +153,7 @@ describe("project ledger and legacy migration", () => {
     expect(project.requirements.items).toEqual([
       { id: "FR-001", title: "来源可追溯", stage: "P0", acceptance: "核验原始记录" },
       { id: "FR-002", title: "记忆查询", stage: "P0", acceptance: "引用支持" },
-      { id: "NFR-001", title: "隐私隔离", stage: "P0", acceptance: "权限检查" },
+      { id: "NFR-001", title: "隐私隔离", stage: "NFR", acceptance: "权限检查" },
     ]);
     expect(project.documents.some((d) => d.path === "docs/specs/memory/spec.md")).toBe(true);
     expect(project.documents.some((d) => d.path === "docs/architecture/decisions/ADR-0001-example.md"))
@@ -202,7 +204,9 @@ describe("project ledger and legacy migration", () => {
       expect(fs.statSync(entry).mode & 0o111).toBeGreaterThan(0);
       const shell = fs.readFileSync(entry, "utf8");
       expect(shell).toContain("desktop-open --project-root");
-      expect(shell).toContain("../../../..");
+      // .../<project>/<launcher>.app/Contents/MacOS -> three parents.
+      expect(shell).toContain('/../../.."');
+      expect(shell).not.toContain('/../../../.."');
       expect(fs.readFileSync(path.join(result.bundle, "Contents/Info.plist"), "utf8"))
         .toContain("CFBundleExecutable");
       expect(fs.readFileSync(path.join(root, ".git/info/exclude"), "utf8"))
