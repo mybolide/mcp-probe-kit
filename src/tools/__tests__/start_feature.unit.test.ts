@@ -1,10 +1,19 @@
 import { describe, test, expect } from 'vitest';
-import { startFeature } from '../start_feature.js';
+import { startFeature as startFeatureTool } from '../start_feature.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ProjectTaskLedger } from '../../devcontrol/task-ledger.js';
+
+// Legacy test cases exercise plan templates only. Without this wrapper,
+// omitted project_root resolves to the real Neyna host workspace and these
+// fixtures silently pollute the user's project SQLite database.
+// The explicit sqlite integration test below still exercises the real default.
+const startFeature = (args: any) => startFeatureTool({
+  ...args,
+  storage_mode: args?.storage_mode ?? 'files',
+});
 
 function structured(result: Awaited<ReturnType<typeof startFeature>>): any {
   if (!('structuredContent' in result)) throw new Error('structuredContent 缺失');
