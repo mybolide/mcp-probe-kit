@@ -65,6 +65,7 @@ body.embedded .lane{background:#101b2b}
     <div class="stat"><strong id="pending">—</strong><span>待开发</span></div>
   </div><div class="progressbox"><small><span>已完成比例</span><span id="percent">—</span></small><div class="progress"><div id="progressbar"></div></div></div></div>
   <div class="filters"><input id="search" type="search" placeholder="搜索任务 ID / 标题 / 交付说明…" aria-label="搜索任务">
+    <select id="track" aria-label="任务类型筛选"><option value="">全部任务</option><option value="product">产品研发</option><option value="governance">工程治理</option></select>
     <select id="release" aria-label="版本筛选"><option value="">全部版本</option></select>
     <button class="refresh" id="refresh" type="button">刷新看板</button></div>
   <section class="grid" aria-label="Kanban 看板">
@@ -153,9 +154,9 @@ body.embedded .lane{background:#101b2b}
   }
   function render() {
     if (!board) return;
-    const text = el("search").value.trim().toLowerCase(), release = el("release").value;
+    const text = el("search").value.trim().toLowerCase(), release = el("release").value, track=el("track").value;
     for (const key of ["todo", "inProgress", "done"]) {
-      const rows = board.columns[key].filter(t => (!release || t.release === release) &&
+      const rows = board.columns[key].filter(t => (!release || t.release === release) && (!track || t.track===track) &&
         (!text || [t.id,t.title,t.completionSummary || ""].join(" ").toLowerCase().includes(text)));
       const content = rows.map(card);
       el(key).replaceChildren(...(content.length ? content : [node("div","暂无匹配任务","empty")]));
@@ -194,6 +195,7 @@ body.embedded .lane{background:#101b2b}
   }
   el("search").addEventListener("input", render);
   el("release").addEventListener("change", render);
+  el("track").addEventListener("change", render);
   el("refresh").addEventListener("click", reload);
   el("close").addEventListener("click", () => el("overlay").classList.remove("open"));
   el("overlay").addEventListener("click", event => {

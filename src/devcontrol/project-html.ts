@@ -88,11 +88,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   <section id="view-overview" class="view active">
     <div class="hero"><div class="eyebrow">SINGLE SOURCE OF TRUTH  /  PROJECT OVERVIEW</div>
       <h1>了解项目，更清楚下一步</h1><p id="project-intro">正在读取项目愿景与开发规范…</p>
-      <div class="meta-row"><span class="chip" id="projectname">PROJECT</span><span class="chip" id="projectstate">读取源文档</span><span class="chip">任务进度来自 SQLite</span></div>
+      <div class="meta-row"><span class="chip" id="projectname">PROJECT</span><span class="chip" id="projectstate">读取源文档</span><span class="chip" id="governance-count">工程治理 · —</span><span class="chip">任务进度来自 SQLite</span></div>
     </div>
     <div class="grid stats">
-      <div class="stat"><strong id="s-total">—</strong><span>项目任务</span></div><div class="stat"><strong id="s-done">—</strong><span>已验证完成</span></div>
-      <div class="stat"><strong id="s-active">—</strong><span>当前进行中</span></div><div class="stat"><strong id="s-pending">—</strong><span>待启动</span></div>
+      <div class="stat"><strong id="s-total">—</strong><span>产品主线任务</span></div><div class="stat"><strong id="s-done">—</strong><span>产品已验收</span></div>
+      <div class="stat"><strong id="s-active">—</strong><span>产品进行中</span></div><div class="stat"><strong id="s-pending">—</strong><span>产品待开发</span></div>
     </div>
     <div class="grid twocol">
       <section class="panel"><div class="panelhead"><h2>当前研发焦点</h2><button class="link" data-go="tasks">查看任务看板 →</button></div>
@@ -260,18 +260,23 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     $("architecture-summary").textContent=project.architecture.summary||"架构文档尚未建立。";
     $("architecture-diagram").textContent=project.architecture.diagram;
     $("architecture-diagram").classList.toggle("hide",!project.architecture.diagram);
-    const cnt=board.counts;
-    const total=cnt.todo+cnt.inProgress+cnt.done;
-    $("s-total").textContent=String(total);
-    $("s-done").textContent=String(cnt.done);
-    $("s-active").textContent=String(cnt.inProgress);
-    $("s-pending").textContent=String(cnt.todo);
+    // Governance tasks must not inflate the perceived product delivery rate.
+    const all=Object.values(board.columns).flat();
+    const productTasks=all.filter(t=>t.track==="product");
+    const governance=all.filter(t=>t.track==="governance");
+    $("s-total").textContent=String(productTasks.length);
+    $("s-done").textContent=String(productTasks.filter(t=>t.status==="verified").length);
+    $("s-active").textContent=String(productTasks.filter(t=>["in_progress","in_review"].includes(t.status)).length);
+    $("s-pending").textContent=String(productTasks.filter(t=>["draft","ready"].includes(t.status)).length);
+    $("governance-count").textContent="工程治理 · "+governance.filter(t=>t.status==="verified").length+"/"+governance.length+" 完成";
     $("next-id").textContent=board.current||"NO ELIGIBLE TASK";
-    const candidate=Object.values(board.columns).flat().find(t=>t.id===board.current);
+    const candidate=all.find(t=>t.id===board.current);
+    const productNext=productTasks.find(t=>t.status!=="verified"&&!t.blockedBy.length&&!t.unverifiedChildren.length);
     $("next-title").textContent=candidate?.title||"暂无可执行任务";
     $("next-detail").textContent=candidate?
       ("版本："+candidate.release+" · 状态："+candidate.status+
-        (candidate.blockedBy.length?" · 前置依赖："+candidate.blockedBy.join("、"):"")):
+        (candidate.blockedBy.length?" · 前置依赖："+candidate.blockedBy.join("、"):"")+
+        (candidate.track!=="product"&&productNext?" · 产品主线下一任务："+productNext.id+"（待当前任务结束后领取）":"")):
       "当前无符合依赖条件的任务；查看看板了解完成情况。";
     setupDocs();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
