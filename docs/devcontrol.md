@@ -165,14 +165,16 @@ fixture cannot satisfy `go_http_integration`.
 
 ## Work item visibility and substantive task quality
 
-The default Work Items view is a **read-only row list** of every node in the
-current release plan, including review-pending leaves that are not present in
-the executable task table. List, status Kanban and parent-child tree are
-alternative views of the same release and real task records. Every row links
-to a task details panel. Status, owner, target date, dependencies, acceptance
-and source remain explicit; missing responsibility or dates are reported as
-unassigned/unscheduled rather than invented. Pending proposals do not enter
-execution counts or imply a passed Gate.
+The Work Items view presents exactly **three tabs: 未开始 / 开发中 / 已完成**.
+Each tab contains individual clickable tasks, not planning-stage containers.
+`draft`, `ready` and pending release proposals display under 未开始;
+pending proposals retain a separate **待审核** badge and cannot be executed.
+`in_progress` and `in_review` display under 开发中 (review is not completion),
+while only `verified` displays under 已完成. Cancelled tasks do not enter
+these three active-work tabs. The detailed drawer still exposes requirements,
+ownership, dependencies, acceptance, source references and unresolved
+decisions; unknown owners/dates remain unknown. The SQLite plan and task
+ledger stay authoritative; the simplified UI never rewrites actual states.
 
 **Field presence is not substantive approval.** Before a plan can be frozen
 for production development, its reviewer should check the user/system
@@ -226,7 +228,7 @@ verified milestones. Audio thresholds/ASR provider and storage/identity
 remain unresolved and are disclosed as blockers, not invented as approved
 architecture.
 
-The proposed V0.1 plan is displayed as a collapsible parent/child tree
+The proposed V0.1 plan is displayed as individual unstarted task cards
 without increasing verified progress or auto-creating executable tasks.
 Existing verified F0/F1 milestones remain historical evidence; they are not
 retrospective proof of V0.1 feature tests. The user must review the exact
@@ -293,7 +295,7 @@ The local viewer at `/` is no longer just an isolated task board. It is a
 2. **产品与目标** — product vision, version roadmap and phase OKRs.
 3. **需求管理** — PRD FR/NFR identifiers, priorities, acceptance criteria and related feature Specs.
 4. **技术架构** — architecture introduction, real fenced diagrams from source documents, ownership and ADR links.
-5. **任务与进度** — the *existing* SQLite-backed three-column Kanban view, embedded as a same-origin view; standalone `/board` still works.
+5. **任务与进度** — exactly three task tabs (未开始 / 开发中 / 已完成) populated by existing SQLite ledger and pending plan. Clicking a task shows its entire reviewed/unreviewed Spec; standalone `/board` is retained only for compatibility, not linked in the normal task UI.
 6. **Bug 与架构变更** — SQLite Bug records and explicit architecture reconciliation.
 7. **项目历史会话** — real project-local History Session search and read.
 8. **文档中心** — canonical Git documentation index, text search and a read-only viewer.
@@ -354,13 +356,14 @@ inside an approved feature scope. Broad `docs/**` permission by itself does
 scoped document remains permitted. This is a *document creation policy*, not
 a reason to avoid maintaining approved normative design documents.
 
-## Read-only board (no UI framework)
+## Read-only project workbench (no new UI framework)
 
 `devcontrol workspace-status --project-root /repo` resolves the automatically
 started Web viewer, normally **http://127.0.0.1:38180/** on the development
-computer. It shows three columns — 待开发 / 进行中 /
-已完成 — using the real `dc_tasks` status, with text search, release filter,
-progress counters, dependencies, parent/child links and completion details.
+computer. The default Work Items view uses three compact tabs — 未开始 /
+开发中 / 已完成 — over real `dc_tasks` and pending proposal data. Historical
+F0/F1 completed milestones remain visible, stage-only planning containers
+are hidden, and the source/drill-down paths are preserved.
 
 With LAN disabled, the server only binds to `127.0.0.1`. With LAN enabled,
 private LAN readers access it without login. Strict Host validation, private

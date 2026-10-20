@@ -199,9 +199,12 @@ describe("project ledger and legacy migration", () => {
     ]) {
       expect(output).toContain('id="' + section + '"');
     }
-    expect(output).toContain("/board?embedded=1");
+    expect(output).toContain('data-tasktab="not_started"');
+    expect(output).toContain('data-tasktab="in_progress"');
+    expect(output).toContain('data-tasktab="completed"');
+    expect(output).not.toContain("/board?embedded=1");
     expect(output).toContain("工程治理");
-    expect(output).toContain("产品主线任务");
+    expect(output).toContain("任务总数（含待审核）");
     expect(output).toContain('nonce="safe-nonce"');
     const inlineScript = /<script nonce="safe-nonce">([\s\S]*?)<\/script>/.exec(output)?.[1];
     expect(inlineScript).toBeTruthy();

@@ -1,6 +1,6 @@
 /**
  * The DevControl Project Workspace presents canonical project documentation
- * and the existing Kanban view. No new frontend framework or duplicated status.
+ * and one simplified task list with three status buckets. Canonical states stay in SQLite.
  */
 export function projectHtml(nonce: string): string {
   return String.raw`<!doctype html>
@@ -49,28 +49,23 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .spec-step{border-top:1px solid #29425a;padding:12px 0;overflow-wrap:anywhere}.spec-step strong{color:#d8ebfb}
 .spec-key{display:block;font:11px/1.7 ui-monospace,monospace;color:#73c6d1}
 .spec-warning{border-left:3px solid #dfa852;padding:12px;background:#2b2630;color:#f3ca87;margin:14px 0}
-#plan-tree{display:block}.plan-children{margin:12px 0 2px 13px;padding-left:15px;border-left:2px solid #285f74}
-.plan-children>.spec-block{margin:9px 0;background:#0a1a2a}.plan-subtree>summary{cursor:pointer;color:#a4dbe4;padding:9px 0;font-weight:600}
-.task-modes{display:flex;gap:4px;flex-wrap:wrap;border:1px solid #34506a;border-radius:9px;padding:4px;background:#0d1c2f}
-.task-modes button{border:0;background:transparent;color:#9cb6d0;border-radius:7px;padding:10px 18px;font-weight:650;cursor:pointer}
-.task-modes button[aria-pressed="true"]{color:#e9f6ff;background:#25415e}
+.task-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:5px;border-radius:11px;background:#102036;border:1px solid #2d435b}
+.task-tabs button{border:0;background:transparent;color:#a5b9d0;border-radius:8px;padding:13px 12px;font-weight:650;text-align:center}
+.task-tabs button[aria-selected="true"]{color:#e9f8ff;background:#264865;box-shadow:inset 0 -2px #7ee5e8}
+.task-tabs .count{font-size:11px;color:#8ea7bd;margin-left:7px}.task-tabs button[aria-selected="true"] .count{color:#aef0f2}
+.simple-task-list{display:grid;gap:9px;margin-top:12px}
+.simple-task{display:block;width:100%;background:#122034;border:1px solid #2b4057;border-radius:11px;text-align:left;color:inherit;padding:18px 19px;cursor:pointer}
+.simple-task:hover{background:#1b3048;border-color:#46758d}
+.simple-task:focus-visible{outline:2px solid var(--cyan)}
+.simple-task-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.simple-task-title{font-size:14px;font-weight:650;line-height:1.55;color:#e6f3ff}
+.simple-task-meta{font-size:11px;color:#8aa8be;margin-top:5px}
+.simple-task-summary{font-size:12px;color:#adc4d8;line-height:1.6;margin-top:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.simple-task .issue-state{flex:none;font-size:11px}
 .issue-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:15px 0}
 .issue-controls input,.issue-controls select{border:1px solid #36516b;background:#102034;color:#deebf7;border-radius:8px;padding:10px 12px;min-height:40px}
 .issue-controls input{min-width:190px;flex:1}
 .issue-controls select{max-width:180px}
-.issue-table-scroll{overflow-x:auto;max-width:100%;border:1px solid #2d435b;border-radius:9px;overscroll-behavior-x:contain}
-.issue-table{border-collapse:collapse;table-layout:fixed;width:100%;min-width:1220px;font-size:13px}
-.issue-table th{background:#1a3048;text-align:left;color:#a5bdd5;padding:13px 12px;position:sticky;top:0;z-index:1;font-weight:650}
-.issue-table td{padding:10px 12px;border-top:1px solid #263b52;line-height:1.48;vertical-align:middle;color:#cbd9e9;overflow-wrap:anywhere}
-.issue-table tbody tr:hover{background:#193049}
-.issue-table .task-title-cell{color:#e7f4ff;font-weight:600}
-.issue-table .task-title-cell button{border:0;background:none;color:inherit;padding:2px 0;cursor:pointer;text-align:left;line-height:1.6;font-weight:600}
-.issue-table .task-title-cell button:hover{text-decoration:underline;color:#91e4ef}
-.issue-table .issue-id{font:11px ui-monospace,SFMono-Regular,monospace;color:#83c8dd;white-space:nowrap}
-.issue-table .issue-note{color:#89a8c4;font-size:11px}
-.issue-table .issue-task-summary{color:#d2e2f0;line-height:1.5;font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.issue-table .issue-task-warning{color:#f0c38f;line-height:1.5;font-size:11px;margin-top:4px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:100%}
-.issue-table .phase-row{background:#132a40}.issue-table .phase-row td{border-top:2px solid #355778}
 .issue-state{display:inline-block;padding:4px 8px;border-radius:5px;white-space:nowrap;background:#263c54;color:#c4d8ee}
 .issue-state.pending{background:#4a3723;color:#fad296}
 .issue-state.done{background:#1d503e;color:#9de9c5}
@@ -92,7 +87,6 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .docitem{border:1px solid #304257;border-radius:11px;background:#142237;color:#e7f0fc;text-align:left;padding:16px;min-width:0}.docitem:hover{background:#1d3047;border-color:#60a7ca}
 .docitem b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.docitem small{font:10px ui-monospace,monospace;color:#83a3be;display:block;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .docs-empty{color:#99b0c4;padding:34px;border:1px dashed #2d4057;border-radius:12px}
-.taskframe{width:100%;min-height:1050px;border:0;background:transparent;display:block}
 .overlay{position:fixed;inset:0;background:#020913c9;display:none;align-items:stretch;justify-content:flex-end;z-index:30}.overlay.open{display:flex}
 .drawer{width:min(860px,100%);background:#0d1726;border-left:1px solid #385272;box-shadow:-16px 0 65px #0008;overflow-y:auto;padding:30px clamp(20px,3vw,38px);height:100vh}
 .drawerhead{display:flex;justify-content:space-between;align-items:center;gap:12px}.drawer h2{font-size:25px;margin:25px 0 8px}
@@ -113,8 +107,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 </style></head>
 <body><div class="layout">
 <aside class="sidebar">
-  <div class="brand"><div class="mark">◇</div><div><strong>DevControl</strong><small>ENGINEERING OS</small></div></div>
-  <div class="group-label">PROJECT WORKSPACE</div>
+  <div class="brand"><div class="mark">◇</div><div><strong>DevControl</strong><small>研发工作台</small></div></div>
+  <div class="group-label">项目工作台</div>
   <nav class="nav" aria-label="研发工作台导航">
     <button type="button" class="navbtn active" data-view="overview"><span class="symbol">◈</span>项目总览</button>
     <button type="button" class="navbtn" data-view="product"><span class="symbol">◎</span>产品与目标</button>
@@ -125,7 +119,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     <button type="button" class="navbtn" data-view="history"><span class="symbol">◷</span>项目历史会话</button>
     <button type="button" class="navbtn" data-view="docs"><span class="symbol">▣</span>文档中心</button>
   </nav>
-  <div class="sidefooter"><div class="status"><span class="pulse"></span>LOCAL WORKSPACE</div>
+  <div class="sidefooter"><div class="status"><span class="pulse"></span>本地工作台</div>
     <p>单一事实来源<br>产品 / 架构 / 任务 / 证据同步呈现</p></div>
 </aside>
 <main class="main">
@@ -134,27 +128,27 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     <button class="btn" id="share-lan" type="button">局域网连接</button>
     <button class="btn" id="reload" type="button">↻ 同步信息</button></div></header>
   <section id="view-overview" class="view active">
-    <div class="hero"><div class="eyebrow">SINGLE SOURCE OF TRUTH  /  PROJECT OVERVIEW</div>
+    <div class="hero"><div class="eyebrow">项目概览</div>
       <h1>了解项目，更清楚下一步</h1><p id="project-intro">正在读取项目愿景与开发规范…</p>
       <div class="meta-row"><span class="chip" id="projectname">PROJECT</span><span class="chip" id="projectstate">读取源文档</span><span class="chip" id="governance-count">工程治理 · —</span><span class="chip">任务进度来自 SQLite</span></div>
     </div>
     <section class="panel hide" id="onboarding-panel" style="margin-top:18px" aria-label="项目接入状态">
-      <div class="panelhead"><h2 id="onboarding-title">项目接入</h2><span class="eyebrow">PROJECT ONBOARDING</span></div>
+      <div class="panelhead"><h2 id="onboarding-title">项目接入</h2><span class="eyebrow">接入检查</span></div>
       <p class="sub" id="onboarding-next"></p>
       <div id="onboarding-steps" style="margin-top:15px"></div>
     </section>
     <div class="grid stats">
-      <div class="stat"><strong id="s-total">—</strong><span>产品主线任务</span></div><div class="stat"><strong id="s-done">—</strong><span>产品已验收</span></div>
-      <div class="stat"><strong id="s-active">—</strong><span>产品进行中</span></div><div class="stat"><strong id="s-pending">—</strong><span>产品待开发</span></div>
+      <div class="stat"><strong id="s-total">—</strong><span>任务总数（含待审核）</span></div><div class="stat"><strong id="s-done">—</strong><span>已完成</span></div>
+      <div class="stat"><strong id="s-active">—</strong><span>开发中</span></div><div class="stat"><strong id="s-pending">—</strong><span>未开始（含待审核）</span></div>
     </div>
     <div class="grid twocol">
-      <section class="panel"><div class="panelhead"><h2>当前研发焦点</h2><button class="link" data-go="tasks">查看任务看板 →</button></div>
-        <div class="priority"><span class="taskid" id="next-id">WORK PACKAGE</span><strong id="next-title">读取下一任务…</strong><p id="next-detail">由任务依赖与验收状态决定，不随聊天内容任意跳步。</p></div>
+      <section class="panel"><div class="panelhead"><h2>当前研发焦点</h2><button class="link" data-go="tasks">查看任务 →</button></div>
+        <div class="priority"><span class="taskid" id="next-id">当前任务</span><strong id="next-title">读取下一任务…</strong><p id="next-detail">由任务依赖与验收状态决定，不随聊天内容任意跳步。</p></div>
       </section>
-      <section class="panel"><div class="panelhead"><h2>新人快速上手</h2><span class="eyebrow">ONBOARDING</span></div>
+      <section class="panel"><div class="panelhead"><h2>新人快速上手</h2><span class="eyebrow">入门指引</span></div>
         <div class="preview" id="quickdocs"><p class="sub">正在读取规范性文件索引…</p></div></section>
     </div>
-    <section class="panel" style="margin-top:18px"><div class="panelhead"><h2>从需求到可验证交付</h2><span class="eyebrow">ENGINEERING FLOW</span></div>
+    <section class="panel" style="margin-top:18px"><div class="panelhead"><h2>从需求到可验证交付</h2><span class="eyebrow">研发流程</span></div>
       <div class="flow"><div class="flowitem"><span class="flownum">01 / DEFINE</span><b>产品目标</b><p>愿景、OKR、需求定义要解决的问题</p></div>
       <div class="flowitem"><span class="flownum">02 / DESIGN</span><b>架构与规格</b><p>模块所有权、ADR、功能 Spec</p></div>
       <div class="flowitem"><span class="flownum">03 / EXECUTE</span><b>任务与计划</b><p>父子任务、依赖、Agent 执行</p></div>
@@ -162,71 +156,53 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     </section>
   </section>
   <section id="view-product" class="view">
-    <div class="sectionhead"><div class="eyebrow">PRODUCT / VISION</div><h1>产品定位与阶段目标</h1><p class="sub">从原始愿景与路线图读取，不产生重复的项目介绍文件。</p></div>
-    <div class="widebox"><div class="eyebrow">WHY THIS PROJECT EXISTS</div><h2 id="vision-title" style="margin-top:14px">产品愿景</h2><p class="body" id="vision-summary">读取中…</p><button class="link" id="open-vision" type="button">阅读完整产品愿景 →</button></div>
+    <div class="sectionhead"><div class="eyebrow">产品愿景</div><h1>产品定位与阶段目标</h1><p class="sub">从原始愿景与路线图读取，不产生重复的项目介绍文件。</p></div>
+    <div class="widebox"><div class="eyebrow">项目使命</div><h2 id="vision-title" style="margin-top:14px">产品愿景</h2><p class="body" id="vision-summary">读取中…</p><button class="link" id="open-vision" type="button">阅读完整产品愿景 →</button></div>
     <div class="cards">
-      <div class="info"><div class="eyebrow">ROADMAP</div><h3 style="margin-top:12px" id="roadmap-title">版本路线图</h3><p id="roadmap-summary">读取中…</p><div class="foot"><span class="docpath" id="roadmap-source"></span><button class="link" id="open-roadmap">查看版本路线 →</button></div></div>
-      <div class="info"><div class="eyebrow">MEASURABLE OUTCOMES</div><h3 style="margin-top:12px" id="okr-title">阶段 OKR 与原则</h3><p id="okr-summary">读取中…</p><div class="foot"><span class="docpath" id="okr-source">docs/okr/</span><button class="link" id="open-okr">查看阶段 OKR →</button></div></div>
+      <div class="info"><div class="eyebrow">版本规划</div><h3 style="margin-top:12px" id="roadmap-title">版本路线图</h3><p id="roadmap-summary">读取中…</p><div class="foot"><span class="docpath" id="roadmap-source"></span><button class="link" id="open-roadmap">查看版本路线 →</button></div></div>
+      <div class="info"><div class="eyebrow">阶段目标</div><h3 style="margin-top:12px" id="okr-title">阶段目标与原则</h3><p id="okr-summary">读取中…</p><div class="foot"><span class="docpath" id="okr-source">docs/okr/</span><button class="link" id="open-okr">查看阶段目标 →</button></div></div>
     </div>
   </section>
   <section id="view-requirements" class="view">
-    <div class="sectionhead"><div class="eyebrow">REQUIREMENTS / SCOPE</div><h1>需求与功能边界</h1><p class="sub">每个功能编号在 PRD 中定义，关联 Spec 与任务；此处只读原始需求。</p></div>
+    <div class="sectionhead"><div class="eyebrow">需求范围</div><h1>需求与功能边界</h1><p class="sub">每个功能编号在需求文档中定义，关联规格与任务；此处只读原始需求。</p></div>
     <div class="widebox"><h2 id="requirements-title">产品需求</h2><p class="body">下面的数量由需求文档中实际 FR/NFR 编号去重计算，不是完成比例。</p>
       <div class="kpirow"><div class="kpi"><b id="fr-count">—</b><span>功能需求 FR</span></div><div class="kpi"><b id="nfr-count">—</b><span>非功能需求 NFR</span></div></div>
       <button class="link" id="open-requirements">查看完整产品需求 →</button></div>
     <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能需求清单</h2><button class="link" data-doc="docs/product/requirements.md">查看完整 PRD →</button></div>
       <div class="doclist" id="requirement-list"></div></div>
-    <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>SQLite 功能提案与规格</h2><span class="eyebrow">START FEATURE / DATABASE</span></div>
+    <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能提案与规格</h2><span class="eyebrow">数据库记录</span></div>
       <p class="sub" style="margin-bottom:18px">start_feature 直接记录在当前项目数据库；点击阅读，按需导出 Markdown 或 JSON，不默认创建重复文档。</p>
       <div class="doclist" id="db-features"></div></div>
     <div class="panel"><div class="panelhead"><h2>既有 Git 功能规格</h2><button class="link" data-go="docs">全部文档 →</button></div><div class="doclist" id="specdocs"></div></div>
   </section>
   <section id="view-architecture" class="view">
-    <div class="sectionhead"><div class="eyebrow">ARCHITECTURE / OWNERSHIP</div><h1>系统架构与工程边界</h1><p class="sub">新人从这里理解组件、所有权以及重要技术决策。</p></div>
+    <div class="sectionhead"><div class="eyebrow">架构与职责</div><h1>系统架构与工程边界</h1><p class="sub">新人从这里理解组件、所有权以及重要技术决策。</p></div>
     <div class="widebox"><h2 id="architecture-title">总体架构</h2><p class="body" id="architecture-summary">读取中…</p>
       <pre id="architecture-diagram" class="hide" style="white-space:pre;max-width:100%;overflow-x:auto;font:12px/1.5 ui-monospace,monospace;background:#0a1929;border:1px solid #2a4e68;border-radius:10px;color:#b4def0;padding:18px;margin:18px 0"></pre>
       <button class="link" id="open-architecture">查看完整架构说明 →</button></div>
     <div class="cards" id="architecture-docs"></div>
   </section>
   <section id="view-tasks" class="view">
-    <div class="sectionhead"><div class="eyebrow">DELIVERY / TRACKING</div><h1>任务、进度与交付</h1>
-      <p class="sub">逐条核对研发内容、负责人、依赖和验收证据；待审核草案与正式任务分开统计，不能通过页面操作越过 Gate。</p></div>
-    <div class="task-modes" role="group" aria-label="任务展示方式">
-      <button id="taskmode-list" type="button" aria-pressed="true" data-taskmode="list">任务列表</button>
-      <button id="taskmode-board" type="button" aria-pressed="false" data-taskmode="board">状态看板</button>
-      <button id="taskmode-tree" type="button" aria-pressed="false" data-taskmode="tree">规划树</button>
+    <div class="sectionhead"><div class="eyebrow">任务管理</div><h1>任务列表</h1>
+      <p class="sub">按实际任务状态查看进度；待审核任务归入未开始，不等于获准开发。</p></div>
+    <div class="task-tabs" role="tablist" aria-label="任务状态">
+      <button type="button" role="tab" data-tasktab="not_started" aria-selected="true" aria-controls="task-list-panel">未开始 <span id="count-not_started" class="count">0</span></button>
+      <button type="button" role="tab" data-tasktab="in_progress" aria-selected="false" aria-controls="task-list-panel">开发中 <span id="count-in_progress" class="count">0</span></button>
+      <button type="button" role="tab" data-tasktab="completed" aria-selected="false" aria-controls="task-list-panel">已完成 <span id="count-completed" class="count">0</span></button>
     </div>
-    <div id="task-list-panel">
-      <div class="issue-controls">
-        <input id="task-search" type="search" placeholder="搜索任务编号、具体工作、关联需求或验收条件…" aria-label="搜索工作项">
-        <select id="task-stage" aria-label="按研发阶段筛选"><option value="">全部阶段</option></select>
-        <select id="task-state" aria-label="按审核与执行状态筛选"><option value="">全部状态</option>
-          <option value="pending">规划待审核</option><option value="ready">待开发</option>
-          <option value="active">进行中 / 待验收</option><option value="done">已验收</option>
-          <option value="blocked">阻塞</option></select>
-      </div>
-      <p class="issue-count" id="task-list-count">正在读取版本工作项…</p>
-      <div class="issue-table-scroll"><table class="issue-table" aria-label="全部研发工作项列表">
-        <colgroup><col style="width:112px"><col style="width:285px"><col style="width:105px"><col style="width:90px">
-        <col style="width:100px"><col style="width:85px"><col style="width:130px"><col style="width:313px"></colgroup>
-        <thead><tr><th>编号</th><th>工作项 / 标题</th><th>状态</th><th>责任人</th><th>计划完成</th><th>所属阶段</th><th>依赖</th><th>内容 / 验收摘要</th></tr></thead>
-        <tbody id="task-rows"><tr><td colspan="8">正在读取项目规划…</td></tr></tbody>
-      </table></div>
+    <div id="task-list-panel" role="tabpanel" aria-label="当前状态的任务">
+      <div class="issue-controls"><input id="task-search" type="search" placeholder="搜索任务…" aria-label="搜索任务"></div>
+      <p class="issue-count" id="task-list-count">正在读取任务…</p>
+      <div id="task-rows" class="simple-task-list" aria-live="polite"></div>
     </div>
-    <section class="panel hide" id="task-tree-panel" style="margin-top:18px" aria-label="版本完整规划">
-      <div class="panelhead"><h2>版本完整规划 · 需求 → 父子任务 → 验收</h2><span class="eyebrow" id="plan-state">检查版本计划…</span></div>
-      <p class="sub" id="plan-notice">读取 SQLite 冻结计划与审查状态…</p>
-      <div class="doclist" id="plan-tree" style="margin-top:14px"></div>
-    </section>
-    <iframe id="boardframe" class="taskframe hide" title="DevControl 项目任务看板" loading="lazy" src="/board?embedded=1"></iframe>
   </section>
   <section id="view-issues" class="view">
-    <div class="sectionhead"><div class="eyebrow">ENGINEERING / ISSUE CONTROL</div><h1>Bug 与架构变更</h1>
+    <div class="sectionhead"><div class="eyebrow">缺陷与变更</div><h1>缺陷与架构变更</h1>
       <p class="sub">项目本地 SQLite 中的缺陷和影响架构的设计变更。相同条目去重，顶层设计必须随变更审核。</p></div>
     <div class="doclist" id="issues-list"></div>
   </section>
   <section id="view-history" class="view">
-    <div class="sectionhead"><div class="eyebrow">HISTORY SESSION / CONTINUITY</div><h1>项目历史会话</h1>
+    <div class="sectionhead"><div class="eyebrow">项目记录</div><h1>项目历史会话</h1>
       <p class="sub">直接读取 mcp-probe-kit 的 History Session；支持搜索、读取原始检查点与跨会话恢复。它不是 Qdrant 共享记忆。</p></div>
     <div class="documentbar"><input class="search" id="history-search" type="search"
       placeholder="搜索决策、上下文、问题、历史开发记录…" aria-label="搜索项目历史会话">
@@ -235,23 +211,23 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     <div class="docs-empty hide" id="history-empty">没有匹配的项目历史会话。</div>
   </section>
   <section id="view-docs" class="view">
-    <div class="sectionhead"><div class="eyebrow">KNOWLEDGE / CANONICAL DOCS</div><h1>项目文档中心</h1><p class="sub">Git 文档是规范事实源；任务状态、完成说明则在 SQLite，避免重复维护。</p></div>
+    <div class="sectionhead"><div class="eyebrow">项目文档</div><h1>项目文档中心</h1><p class="sub">Git 文档是规范事实源；任务状态、完成说明则在 SQLite，避免重复维护。</p></div>
     <div class="documentbar"><input id="doc-search" class="search" type="search" placeholder="搜索产品、架构、需求、ADR、Spec…" aria-label="搜索文档"></div>
     <div id="docs-list" class="doclist"></div><div class="docs-empty hide" id="docs-empty">没有匹配的文档，或项目尚未建立规范索引。</div>
   </section>
   <footer style="padding-top:25px;margin-top:20px;border-top:1px solid #203249;color:#6e829b;font-size:11px">
-    DevControl Project Workspace · 数据取自当前 Git 项目与本地任务数据库 · <span id="synced">等待同步</span>
+    DevControl 项目工作台 · 数据取自当前 Git 项目与本地任务数据库 · <span id="synced">等待同步</span>
   </footer>
 </main></div>
 <div id="overlay" class="overlay" role="presentation"><aside class="drawer" role="dialog" aria-modal="true" aria-label="项目文档">
-  <div class="drawerhead"><span class="eyebrow">CANONICAL DOCUMENT</span><button id="close" class="btn" type="button">关闭 ×</button></div>
+  <div class="drawerhead"><span class="eyebrow">任务详情 / 原始依据</span><button id="close" class="btn" type="button">关闭 ×</button></div>
   <h2 id="doc-title">文档</h2><div class="source" id="doc-source"></div><div id="doc-content" class="content"></div>
 </aside></div>
 <script nonce="${nonce}">
 (()=>{
   "use strict";
   const $=id=>document.getElementById(id);
-  let project=null,board=null,features=[],onboarding=null,releasePlan=null,taskMode="list";
+  let project=null,board=null,features=[],onboarding=null,releasePlan=null,taskTab="not_started";
   const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",issues:"Bug 与变更",history:"历史会话",docs:"文档中心"};
   const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=String(text);if(cls)x.className=cls;return x;};
   const fetchJSON=async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json();};
@@ -261,7 +237,6 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     document.querySelectorAll(".view").forEach(e=>e.classList.toggle("active",e.id==="view-"+view));
     $("crumb").textContent=titles[view];
     history.replaceState(null,"","#"+view);
-    if(view==="tasks"&&taskMode==="board")$("boardframe").contentWindow?.postMessage({kind:"devcontrol-refresh"},location.origin);
     if(view==="history")loadHistory();
     if(view==="issues")loadIssues();
   }
@@ -287,12 +262,13 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       const phase=stage||item.id;
       const pending=releasePlan?.status==="review_pending"&&!item.existing;
       const status=pending?"pending":current?.status||"unplanned";
-      result.push({item,current,depth,phase,status,pending});
+      // Planning stages are dependency containers, not user-facing tasks.
+      if(item.kind!=="group")result.push({item,current,depth,phase,status,pending});
       (byParent.get(item.id)||[]).forEach(child=>add(child,depth+1,phase));
     };
     (byParent.get("")||[]).forEach(item=>add(item));
     // Do not hide real tasks missing from the proposed plan.
-    real.filter(item=>!seen.has(item.id)).forEach(item=>{
+    real.filter(item=>!seen.has(item.id) && item.status!=="cancelled").forEach(item=>{
       result.push({item:{...item,kind:"leaf",dependsOn:item.dependsOn||[],
         requirementIds:item.spec?.requirementIds||[],
         acceptance:item.spec?.acceptance||""},current:item,
@@ -302,28 +278,36 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   }
   function taskStatus(row){
     const s=row.status;
-    if(s==="pending")return ["草案待审","pending"];
-    if(s==="verified")return ["已验收","done"];
+    if(s==="pending")return ["待审核","pending"];
+    if(s==="verified")return ["已完成","done"];
     if(s==="in_progress")return ["开发中",""];
     if(s==="in_review")return ["等待验收",""];
-    if(s==="ready"||s==="draft")return [s==="ready"?"待开发":"待审批",""];
-    return [row.item.kind==="group"?"阶段未完成":"尚未入库","blocked"];
+    if(s==="ready"||s==="draft")return ["未开始",""];
+    return ["未开始","blocked"];
   }
-  function setTaskMode(mode){
-    if(!["list","board","tree"].includes(mode))return;
-    taskMode=mode;
-    for(const b of document.querySelectorAll("[data-taskmode]"))
-      b.setAttribute("aria-pressed",String(b.dataset.taskmode===mode));
-    $("task-list-panel").classList.toggle("hide",mode!=="list");
-    $("task-tree-panel").classList.toggle("hide",mode!=="tree");
-    $("boardframe").classList.toggle("hide",mode!=="board");
-    if(mode==="board")$("boardframe").contentWindow?.postMessage(
-      {kind:"devcontrol-refresh"},location.origin);
+  function taskBucket(row){
+    if(row.status==="cancelled")return null;
+    if(row.status==="verified")return "completed";
+    if(row.status==="in_progress"||row.status==="in_review")return "in_progress";
+    // Not-yet-approved plans must not be counted as in development.
+    return "not_started";
+  }
+  function displayTaskTitle(task){
+    // Historical task IDs/titles in SQLite must remain unchanged.
+    const historical={"F0":"基础环境与架构","F1":"最小事件与接口契约"};
+    return historical[task.id]||task.title;
+  }
+  function setTaskTab(tab){
+    if(!["not_started","in_progress","completed"].includes(tab))return;
+    taskTab=tab;
+    for(const b of document.querySelectorAll("[data-tasktab]"))
+      b.setAttribute("aria-selected",String(b.dataset.tasktab===tab));
+    renderTaskList();
   }
   function openPlanTask(row){
     $("overlay").classList.add("open");
     const task=row.item,actual=row.current,status=taskStatus(row)[0];
-    $("doc-title").textContent=task.id+" · "+task.title;
+    $("doc-title").textContent=task.id+" · "+displayTaskTitle(task);
     $("doc-source").textContent=(row.pending?"V0.1 · SQLite 待审提案，未批准执行":
       "V0.1 · 已存在任务台账")+" · "+status;
     const body=$("doc-content");body.replaceChildren();
@@ -378,7 +362,6 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       });
     }
     if(row.pending)section("规格缺口与审核提示",[
-      ...(!task.description?["缺少独立的业务场景与触发条件描述。"]:[]),
       ...(!task.scenario?["缺少用户或系统触发条件及成功输出。"]:[]),
       ...((task.workflow||[]).length<3?["缺少端到端步骤与状态转换。"]:[]),
       ...((task.testCases||[]).length<=1?["正向测试场景不足，需要按相关 Spec 核验边界覆盖。"]:[]),
@@ -387,141 +370,35 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     ]);
   }
   function renderTaskList(){
-    const rows=taskRows();
-    const oldPhase=$("task-stage").value;
-    const phases=[...new Set(rows.map(row=>row.phase))];
-    $("task-stage").replaceChildren(n("option","全部阶段"));
-    $("task-stage").firstElementChild.value="";
-    phases.forEach(phase=>{
-      const opt=n("option",phase);opt.value=phase;$("task-stage").append(opt);
-    });
-    if(phases.includes(oldPhase))$("task-stage").value=oldPhase;
+    const rows=taskRows().filter(row=>taskBucket(row)!==null);
+    for(const bucket of ["not_started","in_progress","completed"]){
+      $("count-"+bucket).textContent=String(rows.filter(row=>taskBucket(row)===bucket).length);
+    }
     const search=$("task-search").value.trim().toLowerCase();
-    const phase=$("task-stage").value,filter=$("task-state").value;
     const filtered=rows.filter(row=>{
+      if(taskBucket(row)!==taskTab)return false;
       const data=row.item;
-      if(phase&&row.phase!==phase)return false;
-      const bucket=row.pending?"pending":
-        row.status==="verified"?"done":
-        ["in_progress","in_review"].includes(row.status)?"active":
-        row.status==="ready"?"ready":"blocked";
-      if(filter&&bucket!==filter)return false;
-      return !search||[data.id,data.title,data.acceptance,(data.requirementIds||[]).join(" "),
+      return !search||[data.id,displayTaskTitle(data),data.scenario,data.acceptance,(data.requirementIds||[]).join(" "),
         (data.negativeCases||[]).join(" "),(data.deliverables||[]).join(" ")].join(" ").toLowerCase().includes(search);
     });
-    const body=$("task-rows");
-    body.replaceChildren(...(filtered.length?filtered.map(row=>{
+    $("task-rows").replaceChildren(...(filtered.length?filtered.map(row=>{
       const task=row.item;
-      const tr=n("tr");if(task.kind==="group")tr.className="phase-row";
-      const add=(value,cls)=>{
-        const td=n("td");if(cls)td.className=cls;
-        td.textContent=value;tr.append(td);return td;
-      };
-      add(task.id,"issue-id");
-      const title=add("","task-title-cell");
-      const btn=n("button",(row.depth?"　".repeat(Math.min(row.depth,2))+"↳ ":"")+task.title);
-      btn.type="button";btn.addEventListener("click",()=>openPlanTask(row));title.append(btn);
-      const cell=add("");
-      const [name,cls]=taskStatus(row);cell.append(n("span",name,"issue-state "+cls));
-      add("未分配");
-      add("未排期");
-      add(row.phase);
-      add((task.dependsOn||row.current?.dependsOn||[]).join("、")||"—");
-      const summary=add("");
-      const scenario=task.scenario||task.acceptance||row.current?.spec?.acceptance||
-        (task.kind==="group"?"阶段汇总，进度按子任务验收计算":"缺少实际业务场景与验收依据");
-      summary.append(n("div",String(scenario).slice(0,110),"issue-task-summary"));
-      if((task.openQuestions||[]).length)
-        summary.append(n("div","待确认："+String(task.openQuestions[0]).slice(0,90),"issue-task-warning"));
-      else if(!task.scenario&&task.kind==="leaf")
-        summary.append(n("div","场景不完整，尚不能按原始 Spec 深度批准","issue-task-warning"));
-      return tr;
-    }):[(()=>{const tr=n("tr"),td=n("td","没有符合筛选条件的工作项");
-      td.colSpan=8;tr.append(td);return tr;})()]));
-    const pending=rows.filter(row=>row.pending).length,done=rows.filter(row=>row.status==="verified").length;
-    const shallow=rows.filter(row=>row.pending&&
-      (!row.item.scenario||(row.item.workflow||[]).length<3)).length;
-    $("task-list-count").textContent="显示 "+filtered.length+" / "+rows.length+" 项 · 规划待审核 "+pending+
-      " 项（不计入正式执行进度） · 历史已验收 "+done+" 项 · 结构上缺少场景/流程 "+shallow+
-      " 项。字段完整不等于需求正确，仍须人工逐项审核。点击标题核对触发、规则、测试及证据；责任人与排期未知时保持未分配、未排期。";
-  }
-  function renderReleasePlan(){
-    const status=releasePlan?.status||"missing";
-    $("plan-state").textContent=status==="frozen"?"已审核冻结 · v"+releasePlan.revision:
-      status==="review_pending"?"新增/修订待审核":"未完成整版计划";
-    if(releasePlan?.sourceDrift){
-      $("plan-state").textContent="⚠ 范围已变化 · 需重新审核";
-    }
-    $("plan-notice").textContent=status==="missing"?
-      "目前只有历史阶段级任务，尚无逐需求覆盖、可独立验收的完整父子任务树。不可将看板卡片当成详细研发规格。":
-      status==="review_pending"?
-      "以下展示待审版本完整草案，所有新增任务均不得执行；旧版冻结计划仍是当前执行基线。":
-      "以下是 SQLite 中已审核冻结的完整计划。每个叶子任务都必须包含需求映射、实施边界、失败场景与独立验收条件。";
-    if(status==="review_pending"&&releasePlan?.proposal){
-      $("plan-notice").textContent+=" 本次待审稿 SHA-256："+releasePlan.proposal.hash+
-        "；已归档的待审内容修订："+(releasePlan.draftHistory||[]).length+
-        " 次。字段校验通过仍须人工核对业务语义及架构未决。";
-    }
-    if(releasePlan?.sourceDrift){
-      $("plan-notice").textContent+=" 警告：Git 需求来源与冻结时的摘要不一致，Agent 不得按旧计划继续领取叶子任务。";
-    }
-    const shown=status==="review_pending"?releasePlan?.proposal:releasePlan?.frozen;
-    const nodes=shown?.nodes||[];
-    if(shown){
-      const ids=(shown.requirementIds||[]).join("、");
-      $("plan-notice").textContent+=" 覆盖需求："+ids+
-        "；来源："+(shown.scopeSource||"未知")+"；当前任务节点："+nodes.length+"。";
-    }
-    const tree=$("plan-tree");
-    const children=new Map();
-    for(const node of nodes){
-      const parent=node.parentId||"";
-      if(!children.has(parent))children.set(parent,[]);
-      children.get(parent).push(node);
-    }
-    const actual=Object.values(board?.columns||{}).flat();
-    const renderNode=(node)=>{
-      const wrap=n("div",null,"spec-block");
-      const header=n("div",null,"onboardrow");
-      const info=n("div");
-      info.append(n("strong",(node.kind==="group"?"◈ 阶段 ":"↳ 叶子任务 ")+node.id+" · "+node.title));
-      info.append(n("small","父任务 "+(node.parentId||"顶层")+" · 依赖 "+((node.dependsOn||[]).join("、")||"无")));
-      const old=actual.find(t=>t.id===node.id);
-      const badge=status==="review_pending"?
-        (node.existing?(old?.status==="verified"?"历史已验收":"历史阶段基线"):"新增待审 · 不可执行"):
-        node.kind==="leaf"?"可独立验收":"汇总节点";
-      header.append(info,n("span",badge,"taskid"));
-      wrap.append(header);
-      if(node.kind==="group"){
-        const sub=children.get(node.id)||[];
-        const branch=n("details",null,"plan-subtree");
-        branch.append(n("summary","展开 "+sub.length+" 个细分任务（含完整验收与异常案例）"));
-        const nested=n("div",null,"plan-children");
-        nested.append(...sub.map(child=>renderNode(child)));
-        branch.append(nested);wrap.append(branch);
-      }else{
-        const details=n("details");details.append(n("summary","展开完整任务规格与验收依据"));
-        const group=n("div");
-        for(const [label,value] of [["需求映射",node.requirementIds],["触发及用户期望",node.scenario],
-          ["业务与系统操作顺序",node.workflow],["不可变业务规则",node.businessRules],
-          ["验收结果",node.acceptance],
-          ["设计依据",node.designRef],["正向测试",node.testCases],
-          ["失败与边界",node.negativeCases],["非目标",node.outOfScope],
-          ["待决问题",node.openQuestions],["已确认决策及审核备注",node.reviewNotes],
-          ["原文/测试条目出处",node.sourceRefs],["验收证据清单",node.verificationEvidence],
-          ["交付物",node.deliverables],
-          ["允许修改范围",node.allowedPaths],["验收门禁",node.requiredGates],
-          ["预计工作小时",node.estimatedHours]]){
-          group.append(n("p",label+": "+(Array.isArray(value)?value.join("；"):value??"未确认"),"spec-key"));
-        }
-        details.append(group);wrap.append(details);
+      const button=n("button",null,"simple-task");button.type="button";
+      const head=n("div",null,"simple-task-head");
+      head.append(n("span",displayTaskTitle(task),"simple-task-title"));
+      const [label,cls]=taskStatus(row);
+      if(row.pending||row.status==="in_review"){
+        head.append(n("span",label,"issue-state "+cls));
       }
-      return wrap;
-    };
-    tree.replaceChildren(...(nodes.length?(children.get("")||[]).map(renderNode):[
-      n("div",status==="review_pending"?
-      "新方案仍在审核，尚未冻结；查看当前已验收的 Spec 或联系项目所有者确认。":
-      "尚无经过完整覆盖检查和审批的版本任务树。","docs-empty")]));
+      button.append(head,n("div",task.id+" · "+row.phase,"simple-task-meta"));
+      const scenario=task.scenario||task.acceptance||row.current?.spec?.acceptance||"尚无任务说明";
+      button.append(n("div",scenario,"simple-task-summary"));
+      button.addEventListener("click",()=>openPlanTask(row));
+      return button;
+    }):[n("div",search?"没有匹配的任务。":"当前没有任务。","docs-empty")]));
+    const pending=rows.filter(row=>row.pending&&taskBucket(row)===taskTab).length;
+    $("task-list-count").textContent="显示 "+filtered.length+" 项"+
+      (pending?" · 其中 "+pending+" 项待审核（尚未允许开发）":"");
   }
   async function showLanAccess(){
     $("overlay").classList.add("open");
@@ -840,25 +717,25 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     $("architecture-diagram").classList.toggle("hide",!project.architecture.diagram);
     // Governance tasks must not inflate the perceived product delivery rate.
     const all=Object.values(board.columns).flat();
-    const productTasks=all.filter(t=>t.track==="product");
+    const productTasks=taskRows().filter(row=>taskBucket(row)!==null);
     const governance=all.filter(t=>t.track==="governance");
     $("s-total").textContent=String(productTasks.length);
-    $("s-done").textContent=String(productTasks.filter(t=>t.status==="verified").length);
-    $("s-active").textContent=String(productTasks.filter(t=>["in_progress","in_review"].includes(t.status)).length);
-    $("s-pending").textContent=String(productTasks.filter(t=>["draft","ready"].includes(t.status)).length);
+    $("s-done").textContent=String(productTasks.filter(t=>taskBucket(t)==="completed").length);
+    $("s-active").textContent=String(productTasks.filter(t=>taskBucket(t)==="in_progress").length);
+    $("s-pending").textContent=String(productTasks.filter(t=>taskBucket(t)==="not_started").length);
     $("governance-count").textContent="工程治理 · "+governance.filter(t=>t.status==="verified").length+"/"+governance.length+" 完成";
-    $("next-id").textContent=board.current||"NO ELIGIBLE TASK";
+    $("next-id").textContent=board.current||"暂无可领取任务";
     const candidate=all.find(t=>t.id===board.current);
-    const productNext=productTasks.find(t=>t.status!=="verified"&&!t.blockedBy.length&&!t.unverifiedChildren.length);
+    const productNext=all.filter(t=>t.track==="product")
+      .find(t=>t.status!=="verified"&&!t.blockedBy.length&&!t.unverifiedChildren.length);
     $("next-title").textContent=candidate?.title||"暂无可执行任务";
     $("next-detail").textContent=candidate?
       ("版本："+candidate.release+" · 状态："+candidate.status+
         (candidate.blockedBy.length?" · 前置依赖："+candidate.blockedBy.join("、"):"")+
         (candidate.track!=="product"&&productNext?" · 产品主线下一任务："+productNext.id+"（待当前任务结束后领取）":"")):
-      "当前无符合依赖条件的任务；查看看板了解完成情况。";
+      "当前无符合依赖条件的任务；可在任务列表查看工作进度。";
     setupDocs();
     renderOnboarding();
-    renderReleasePlan();
     renderTaskList();
     renderFeatures();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
@@ -874,10 +751,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));
   for(const b of document.querySelectorAll("[data-go]"))b.addEventListener("click",()=>go(b.dataset.go));
   for(const b of document.querySelectorAll("[data-doc]"))b.addEventListener("click",()=>openDoc(b.dataset.doc));
-  for(const b of document.querySelectorAll("[data-taskmode]"))
-    b.addEventListener("click",()=>setTaskMode(b.dataset.taskmode));
-  for(const id of ["task-search","task-stage","task-state"])
-    $(id).addEventListener("input",renderTaskList);
+  for(const b of document.querySelectorAll("[data-tasktab]"))
+    b.addEventListener("click",()=>setTaskTab(b.dataset.tasktab));
+  $("task-search").addEventListener("input",renderTaskList);
   $("open-vision").addEventListener("click",()=>openDoc("docs/product/vision.md"));
   $("open-roadmap").addEventListener("click",()=>openDoc("docs/roadmap/releases.md"));
   $("open-okr").addEventListener("click",()=>openDoc(project?.okr.source||"docs/okr/README.md"));
