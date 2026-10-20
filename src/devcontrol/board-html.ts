@@ -124,9 +124,9 @@ body.embedded .lane{background:#101b2b}
         field(root, "记录版本", "第 " + completion.revision + " 版 · " + completion.created_at);
       } else root.appendChild(node("div", "当前没有结构化完成报告。历史任务不会自动编造验收说明。", "notice"));
       const refs = (data.evidence || []).map(x => x.kind + ": " + x.reference);
-      field(root, "证据索引", refs.join("\n") || "无");
+      field(root, "证据索引", refs.join("\\n") || "无");
       field(root, "审计事件", (data.audit || []).slice(-12).map(x =>
-        x.created_at + " · " + x.event + " · " + x.actor).join("\n") || "无");
+        x.created_at + " · " + x.event + " · " + x.actor).join("\\n") || "无");
     } catch (error) {
       el("details").replaceChildren(node("p", error.message || "加载失败", "notice"));
     }

@@ -13,7 +13,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.8.1";
+export const WORKSPACE_SCHEMA_VERSION = "0.8.2";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
