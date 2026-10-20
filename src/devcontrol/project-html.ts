@@ -63,6 +63,12 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .content h1,.content h2,.content h3{margin:27px 0 12px;color:#e8f4ff;letter-spacing:0;font-size:19px}
 .content h1{font-size:25px}.content h3{font-size:15px}.content p{margin:10px 0}.content pre{white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #294764;background:#071223;color:#abd0df;padding:16px;border-radius:8px;font:12px/1.6 ui-monospace,monospace}
 .content ul{padding-left:21px}.content li{margin-bottom:6px}.content blockquote{border-left:3px solid #5a9fae;margin-left:0;padding:5px 16px;color:#8ab7c8;background:#142539}
+.content .md-table-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;margin:16px 0;border:1px solid #2c4963;border-radius:9px}
+.content .md-table{border-collapse:collapse;width:100%;min-width:max-content;line-height:1.6}
+.content .md-table th,.content .md-table td{border:1px solid #2c4963;padding:11px 14px;min-width:115px;max-width:340px;overflow-wrap:anywhere;white-space:normal;vertical-align:top}
+.content .md-table th{background:#18314b;color:#e1f4ff;font-weight:700}
+.content .md-table tbody tr:nth-child(even){background:#132439}
+.content .md-table tbody tr:hover{background:#1b3249}
 .hide{display:none!important}.error{color:#ffcb99;font-size:12px}.kpirow{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0}.kpi{background:#1b3044;border:1px solid #2e526c;border-radius:10px;padding:15px;min-width:140px}.kpi b{display:block;font-size:25px}.kpi span{font-size:11px;color:#9bb6cf}
 @media(max-width:1050px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.twocol{grid-template-columns:1fr}}
 @media(max-width:760px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:12px;display:block}.brand{padding:5px 8px 10px}.nav{flex-direction:row;overflow-x:auto;padding:0 3px 5px}.navbtn{width:auto;white-space:nowrap;padding:9px 11px}.group-label,.sidefooter{display:none}.main{padding:22px 15px 40px}.bar{flex-wrap:wrap}.hero{min-height:0}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.cards,.doclist{grid-template-columns:1fr}.taskframe{min-height:1000px}.stats{gap:9px}.stat{padding:15px}.stat strong{font-size:23px}}
@@ -310,16 +316,66 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     return b;
   }
   function strip(s){return s.replace(/\[([^\]]+)\]\([^)]+\)/g,"$1").replace(/[*_]/g,"").replace(new RegExp(String.fromCharCode(96),"g"),"").trim();}
+  // GFM-style pipe cells; a pipe escaped with a backslash or inside an inline
+  // code span belongs to the cell, rather than creating a new column.
+  function tableCells(line){
+    let raw=line.trim();
+    if(!raw.includes("|"))return null;
+    if(raw.startsWith("|"))raw=raw.slice(1);
+    if(raw.endsWith("|")&&!raw.endsWith(String.fromCharCode(92)+"|"))raw=raw.slice(0,-1);
+    const cells=[];let cell="",ticks=0;
+    const tick=String.fromCharCode(96),slash=String.fromCharCode(92);
+    for(let i=0;i<raw.length;i++){
+      const ch=raw[i];
+      if(ch===slash&&raw[i+1]==="|"){cell+="|";i++;continue;}
+      if(ch===tick){
+        let count=1;while(raw[i+count]===tick)count++;
+        ticks=ticks===0?count:ticks===count?0:ticks;
+        cell+=tick.repeat(count);i+=count-1;continue;
+      }
+      if(ch==="|"&&ticks===0){cells.push(cell.trim());cell="";continue;}
+      cell+=ch;
+    }
+    cells.push(cell.trim());return cells;
+  }
+  function tableDivider(cells,count){
+    return cells&&cells.length===count&&
+      cells.every(cell=>/^:?-{3,}:?$/.test(cell));
+  }
+  function appendTable(out,header,divider,rows){
+    const scroll=n("div",null,"md-table-scroll");
+    const table=n("table",null,"md-table"),head=n("thead"),body=n("tbody");
+    const align=divider.map(cell=>cell.startsWith(":")&&cell.endsWith(":")?"center":
+      cell.endsWith(":")?"right":"left");
+    const headerRow=n("tr");
+    header.forEach((cell,j)=>{const th=n("th",strip(cell));th.scope="col";th.style.textAlign=align[j];headerRow.append(th);});
+    head.append(headerRow);
+    rows.forEach(cells=>{
+      const row=n("tr");
+      header.forEach((_,j)=>{const td=n("td",strip(cells[j]||""));td.style.textAlign=align[j];row.append(td);});
+      body.append(row);
+    });
+    table.append(head,body);scroll.append(table);out.append(scroll);
+  }
   function markdown(container,source){
     const lines=source.split(/\r?\n/);const out=document.createDocumentFragment();
-    let fenced=false,pre=[],list=null,table=[];
+    let fenced=false,pre=[],list=null;
     const flushList=()=>{if(list){out.append(list);list=null;}};
-    const flushTable=()=>{if(table.length){out.append(n("pre",table.join("\n")));table=[];}};
     const flushPre=()=>{if(pre.length){out.append(n("pre",pre.join("\n")));pre=[];}};
-    for(const line of lines){
-      if(line.trim().startsWith(String.fromCharCode(96).repeat(3))){flushList();flushTable();if(fenced)flushPre();fenced=!fenced;continue;}
+    for(let i=0;i<lines.length;i++){
+      const line=lines[i];
+      if(line.trim().startsWith(String.fromCharCode(96).repeat(3))){flushList();if(fenced)flushPre();fenced=!fenced;continue;}
       if(fenced){pre.push(line);continue;}
-      if(/^\|/.test(line.trim())){flushList();table.push(line);continue;}flushTable();
+      const header=tableCells(line),divider=tableCells(lines[i+1]||"");
+      if(header&&tableDivider(divider,header.length)){
+        flushList();const rows=[];
+        while(i+2<lines.length){
+          const cells=tableCells(lines[i+2]);
+          if(!cells)break;
+          rows.push(cells);i++;
+        }
+        appendTable(out,header,divider,rows);i++;continue;
+      }
       const h=/^(#{1,4})\s+(.+)/.exec(line);
       if(h){flushList();out.append(n("h"+Math.min(3,h[1].length),strip(h[2])));continue;}
       const bullet=/^\s*[-*+]\s+(.+)/.exec(line);
@@ -329,7 +385,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       if(/^>/.test(line)){out.append(n("blockquote",strip(line.replace(/^>\s*/,""))));continue;}
       out.append(n("p",strip(line)));
     }
-    flushList();flushTable();flushPre();container.replaceChildren(out);
+    flushList();flushPre();container.replaceChildren(out);
   }
   async function openDoc(source){
     $("overlay").classList.add("open");
