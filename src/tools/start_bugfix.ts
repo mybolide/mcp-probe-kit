@@ -493,7 +493,9 @@ ${renderDelegatedPlanStateProtocol({
 
     // Keep Bug identity and root-cause evidence in the local project ledger,
     // while retaining the existing SRC-8 plan and optional global memory.
-    if (fs.existsSync(path.join(layout.projectRoot, ".git")) &&
+    // Do not infer a different host repository from a tool test/session:
+    // creating persistent Bug records requires an explicit project_root.
+    if (projectRoot && fs.existsSync(path.join(layout.projectRoot, ".git")) &&
         Number.parseInt(process.versions.node.split(".")[0] || "0", 10) >= 22) {
       const ledger = new ProjectTaskLedger(layout.projectRoot);
       try {
