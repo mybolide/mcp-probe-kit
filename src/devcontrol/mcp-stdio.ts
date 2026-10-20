@@ -4,12 +4,19 @@ import { dispatchDevControl } from "./command.js";
 import { DevControlError, ProjectTaskLedger } from "./task-ledger.js";
 
 const operations = [
-  "next", "list", "get", "create", "subtask", "dependency", "approve",
+  "next", "list", "get", "features", "feature-get", "feature-save", "feature-validate",
+  "feature-export", "work-items", "work-record", "architecture-sync",
+  "create", "subtask", "dependency", "approve",
   "claim", "renew", "release", "check", "report", "complete", "verify",
   "trace", "board-data", "import-spec",
 ];
 const requiredFields: Record<string, string[]> = {
-  next: [], list: [], "board-data": [], get: ["id"],
+  next: [], list: [], "board-data": [], features: [],
+  "feature-get": ["name"], "feature-save": ["name", "sections"],
+  "feature-validate": ["name"], "feature-export": ["name"],
+  "work-items": [], "work-record": ["kind", "title", "description"],
+  "architecture-sync": ["id", "reviewer"],
+  get: ["id"],
   create: ["id", "title", "allowedPaths", "requiredGates"],
   subtask: ["id", "title", "parentId", "allowedPaths", "requiredGates"],
   dependency: ["id", "dependsOn"], approve: ["id", "approvedBy"],
@@ -65,11 +72,21 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                     "planId", "id", "title", "allowedPaths", "requiredGates",
                     "manifestPath", "parentTaskId", "idPrefix", "agent",
                     "leaseToken", "ttlSeconds", "kind", "reference", "readyForReview",
-                    "summary", "implementation", "verification", "remaining"])]
+                    "summary", "implementation", "verification", "remaining",
+                    "name", "format", "sections", "featureName", "topLevelDocument",
+                    "sourceRef", "description", "reviewer", "architectureImpact"])]
                     .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn"].includes(field)
                       ? { type: "array", items: { type: "string" } }
                       : field === "priority" || field === "ttlSeconds" ? { type: "integer" }
-                      : field === "readyForReview" ? { type: "boolean" } : { type: "string" }]),
+                      : field === "readyForReview" ? { type: "boolean" }
+                      : field === "architectureImpact" ? { type: "boolean" }
+                      : field === "sections" ? {
+                        type: "object", additionalProperties: false, properties: {
+                          requirements: { type: "string" },
+                          design: { type: "string" },
+                          tasks: { type: "string" },
+                        },
+                      } : { type: "string" }]),
                 ),
               },
             })),

@@ -11,6 +11,7 @@ import { createDevControlBoardServer } from "../board-server.js";
 import { projectContext, readProjectDoc, safeProjectDocument } from "../project-catalog.js";
 import { installMacDesktopLauncher } from "../desktop-launcher.js";
 import { projectHtml } from "../project-html.js";
+import { bootstrapHistorySession, checkpointHistorySession } from "../../lib/history-session/index.js";
 
 let root = "";
 let ledger: ProjectTaskLedger | null = null;
@@ -91,6 +92,104 @@ describe("project ledger and legacy migration", () => {
     });
     expect(ledger!.trace("F0").audit.some((x: any) => x.event === "legacy_import")).toBe(true);
     expect(() => ledger!.claim("F2", "blocked")).toThrowError(DevControlError);
+  });
+
+  it("creates database-native feature drafts without Markdown and handles stable revisions", () => {
+    const initial = ledger!.saveFeature({
+      name: "personal-insights", description: "Provide evidence-backed insight cards",
+      layout: "flat", plan: { planId: "feature-personal-insights", steps: [{ id: "design" }] },
+      draft: { specLayout: "flat" },
+    });
+    expect(initial.revision).toBe(1);
+    expect(ledger!.saveFeature({
+      name: "personal-insights", description: "Provide evidence-backed insight cards",
+      layout: "flat", plan: { planId: "feature-personal-insights", steps: [{ id: "other" }] },
+      draft: { specLayout: "flat" },
+    }).revision).toBe(1);
+    expect(ledger!.validateFeature("personal-insights").passed).toBe(false);
+    const result = ledger!.reviseFeature("personal-insights", {
+      requirements: "FR-1: The client should surface meaningful evidence-backed insights for the user.",
+      design: "An existing feature module renders the summary, without changing top-level architecture.",
+      tasks: "1. Implement the existing feature widget. 2. Execute contract and acceptance tests.",
+    }, "engineer", false);
+    expect(result.revision).toBe(2);
+    expect(ledger!.validateFeature("personal-insights").passed).toBe(true);
+    expect(ledger!.getFeature("personal-insights").status).toBe("specified");
+    const exported = ledger!.exportFeature("personal-insights");
+    expect(exported).toContain("FR-1:");
+    expect(JSON.parse(ledger!.exportFeature("personal-insights", "json")).revision).toBe(2);
+    expect(fs.existsSync(path.join(root, "docs/specs/personal-insights/tasks.md"))).toBe(false);
+    expect(ledger!.listFeatures()).toContainEqual(expect.objectContaining({ name: "personal-insights" }));
+    expect(() => ledger!.saveFeature({
+      name: "personal-insights", description: "Incompatible replacement", layout: "flat",
+      plan: {}, draft: null,
+    })).toThrow(/cannot be silently replaced/i);
+  });
+
+  it("deduplicates project Bugs and rejects semantically identical new tasks", () => {
+    const first = ledger!.recordWorkItem({
+      kind: "bug", title: "后台蓝牙同步 停止！", description: "First diagnosis",
+    });
+    const again = ledger!.recordWorkItem({
+      kind: "bug", title: "后台蓝牙同步停止", description: "Duplicate report",
+    });
+    expect(first.id).toBe(again.id);
+    expect(again.reused).toBe(true);
+    expect(first.device).toBeTruthy();
+    expect(first.creator).toBeTruthy();
+    expect(ledger!.listWorkItems("bug")).toHaveLength(1);
+    expect(() => ledger!.recordWorkItem({
+      kind: "memory" as never, title: "BLE battery optimization", description: "Wrong subsystem",
+    })).toThrow(/History Session/);
+    create({ id: "NEYNA-290", title: "Implement X" });
+    expect(() => create({ id: "NEYNA-291", title: "Implement   X!!!" })).toThrow(/matching task already exists/i);
+    expect(create({ id: "NEYNA-292", title: "Implement X", dependsOn: ["F1"] }).id).toBe("NEYNA-292");
+  });
+
+  it("requires top-level architecture reconciliation and a real Git commit before design approval", () => {
+    save("docs/architecture/overview.md", "# Overview\nInitial architecture baseline\n");
+    commit("architecture baseline");
+    ledger!.saveFeature({
+      name: "watch-sensors", description: "Add sensor ingestion with new ownership boundary",
+      layout: "flat", plan: {}, draft: {},
+    });
+    expect(() => ledger!.reviseFeature("watch-sensors", {
+      design: "A native watch receiver becomes a new architectural component serving sensor data.",
+    })).toThrow(/architectureImpact/);
+    ledger!.reviseFeature("watch-sensors", {
+      requirements: "FR-1: Collect real foreground sensor events and attach provenance in records.",
+      design: "Introduce a native watch collector behind the Core ingestion API and preserve provenance.",
+      tasks: "Implement watch ingestion and execute provenance contract and interruption tests.",
+    }, "developer", true, "docs/architecture/overview.md");
+    const outstanding = ledger!.listWorkItems("architecture_change");
+    expect(outstanding).toHaveLength(1);
+    expect(ledger!.validateFeature("watch-sensors")).toMatchObject({ passed: false });
+    expect(() => ledger!.syncArchitecture(outstanding[0].id, "reviewer")).toThrow(/not changed/i);
+    save("docs/architecture/overview.md",
+      "# Overview\nWatch collector is a separate module owned by Core ingestion contracts.\n");
+    commit("sync approved top-level architecture");
+    expect(ledger!.syncArchitecture(outstanding[0].id, "reviewer").status).toBe("synced");
+    expect(ledger!.validateFeature("watch-sensors").passed).toBe(true);
+    expect(ledger!.getFeature("watch-sensors").status).toBe("specified");
+  });
+
+  it("isolates a new project's database inside its own Git root without adding tracked files", () => {
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), "isolated-devcontrol-"));
+    execFileSync("git", ["init", "-q"], { cwd: other });
+    let otherLedger: ProjectTaskLedger | undefined;
+    try {
+      otherLedger = new ProjectTaskLedger(other);
+      expect(otherLedger.databasePath).toBe(path.join(other, ".mcp-probe-kit/state/devcontrol.sqlite3"));
+      expect(otherLedger.listFeatures()).toEqual([]);
+      expect(otherLedger.listWorkItems()).toEqual([]);
+      expect(execFileSync("git", ["status", "--porcelain"], { cwd: other, encoding: "utf8" })).toBe("");
+      expect(otherLedger.databasePath).not.toBe(ledger!.databasePath);
+      otherLedger.saveFeature({ name: "independent", description: "Independent project",
+        layout: "flat", plan: {}, draft: null });
+      expect(ledger!.listFeatures().find((item: any) => item.name === "independent")).toBeUndefined();
+    } finally {
+      otherLedger?.close(); fs.rmSync(other, { recursive: true, force: true });
+    }
   });
 
   it("renders a valid zero-dependency workspace client with all required sections", () => {
@@ -341,6 +440,9 @@ describe("project ledger and legacy migration", () => {
       const base = "http://127.0.0.1:" + (bound && typeof bound === "object" ? bound.port : 0);
       const page = await fetch(base + "/");
       expect(page.status).toBe(200);
+      const meta = await (await fetch(base + "/api/meta")).json();
+      expect(meta.version).toBe("0.6.0");
+      expect(meta.root).toBe(root);
       expect(await page.text()).toContain("DevControl · 项目工作台");
       expect(page.headers.get("content-security-policy")).toContain("script-src 'nonce-");
       expect(page.headers.get("content-security-policy")).toContain("frame-src 'self'");
@@ -355,6 +457,29 @@ describe("project ledger and legacy migration", () => {
       expect((await boardResponse.json()).columns.done[0].id).toBe("F0");
       const detailResponse = await fetch(base + "/api/tasks/F1");
       expect((await detailResponse.json()).task.id).toBe("F1");
+      const proposal = ledger!.saveFeature({
+        name: "ui-session", description: "Record project history in its native subsystem",
+        layout: "flat", plan: {}, draft: null,
+      });
+      expect(proposal.revision).toBe(1);
+      const featureList = await (await fetch(base + "/api/features")).json();
+      expect(featureList.features.some((f: any) => f.name === "ui-session")).toBe(true);
+      const exported = await fetch(base + "/api/features/ui-session/export?format=markdown");
+      expect(exported.headers.get("content-disposition")).toContain("feature-ui-session.md");
+      expect(await exported.text()).toContain("Record project history");
+      const boot = bootstrapHistorySession(root, {
+        session_key: "board-history", initial_user_input: "History Session project decision",
+      });
+      checkpointHistorySession(root, {
+        session_key: "board-history", expected_path: boot.current_path, turn_id: "note",
+        decisions: ["Keep History Session separate from global memory"],
+      });
+      const sessions = await (await fetch(base + "/api/history?q=History")).json();
+      expect(sessions.total).toBeGreaterThan(0);
+      const historyPage = await (await fetch(base + "/api/history/1?max_bytes=512")).json();
+      expect(historyPage.content).toContain("History Session");
+      expect((await fetch(base + "/api/history/99")).status).toBe(404);
+      expect((await (await fetch(base + "/api/work-items")).json()).items).toEqual([]);
       expect((await fetch(base + "/api/tasks/not-valid")).status).toBe(404);
       expect((await fetch(base + "/api/board", { method: "POST" })).status).toBe(405);
       const hostileHostStatus = await new Promise<number>((resolve, reject) => {

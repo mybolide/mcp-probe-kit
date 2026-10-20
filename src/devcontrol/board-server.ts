@@ -5,6 +5,9 @@ import { ProjectTaskLedger, DevControlError } from "./task-ledger.js";
 import { boardHtml } from "./board-html.js";
 import { projectHtml } from "./project-html.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
+import { searchHistorySession, readHistorySession } from "../lib/history-session/index.js";
+
+export const WORKSPACE_SCHEMA_VERSION = "0.6.0";
 
 function respond(
   res: ServerResponse, status: number, body: string, nonce = "",
@@ -41,6 +44,11 @@ export function createDevControlBoardServer(source: string | ProjectTaskLedger):
     try {
       if (route === "/") {
         respond(res, 200, projectHtml(nonce), nonce, "text/html; charset=utf-8", "none", true);
+      } else if (route === "/api/meta") {
+        respond(res, 200, JSON.stringify({
+          root: ledger.root, schema: "devcontrol-project-workspace",
+          version: WORKSPACE_SCHEMA_VERSION,
+        }), nonce, "application/json; charset=utf-8");
       } else if (route === "/board") {
         const embedded = new URL(req.url ?? "/", "http://localhost").searchParams.get("embedded") === "1";
         respond(res, 200, boardHtml(nonce, embedded), nonce, "text/html; charset=utf-8", "sameorigin");
@@ -57,6 +65,52 @@ export function createDevControlBoardServer(source: string | ProjectTaskLedger):
         }
       } else if (route === "/api/board") {
         respond(res, 200, JSON.stringify(ledger.board()), nonce, "application/json; charset=utf-8");
+      } else if (route === "/api/features") {
+        respond(res, 200, JSON.stringify({ features: ledger.listFeatures() }),
+          nonce, "application/json; charset=utf-8");
+      } else if (route === "/api/work-items") {
+        respond(res, 200, JSON.stringify({ items: ledger.listWorkItems() }),
+          nonce, "application/json; charset=utf-8");
+      } else if (route === "/api/history") {
+        const params = new URL(req.url ?? "/", "http://localhost").searchParams;
+        respond(res, 200, JSON.stringify(searchHistorySession(ledger.root, {
+          query: params.get("q") ?? "",
+          limit: Math.min(30, Math.max(1, Number(params.get("limit")) || 20)),
+          cursor: Math.max(0, Number(params.get("cursor")) || 0),
+        })), nonce, "application/json; charset=utf-8");
+      } else if (/^\/api\/history\/[1-9]\d*$/.test(route)) {
+        const number = Number(route.slice("/api/history/".length));
+        if (!Number.isSafeInteger(number)) {
+          respond(res, 400, "Invalid archive number"); return;
+        }
+        const params = new URL(req.url ?? "/", "http://localhost").searchParams;
+        const result = readHistorySession(ledger.root, {
+          number,
+          cursor: Math.max(0, Number(params.get("cursor")) || 0),
+          max_bytes: Math.min(32_768, Math.max(128, Number(params.get("max_bytes")) || 16_384)),
+          expected_hash: params.get("expected_hash") ?? "",
+        });
+        respond(res, 200, JSON.stringify(result), nonce, "application/json; charset=utf-8");
+      } else if (/^\/api\/features\/[a-z0-9]+(?:-[a-z0-9]+)*\/(?:export)$/.test(route)) {
+        const name = route.slice("/api/features/".length).replace(/\/export$/, "");
+        const fmt = new URL(req.url ?? "/", "http://localhost").searchParams.get("format");
+        if (fmt !== "markdown" && fmt !== "json") {
+          respond(res, 400, "Choose markdown or json"); return;
+        }
+        const content = ledger.exportFeature(name, fmt);
+        res.writeHead(200, {
+          "Content-Type": fmt === "json" ? "application/json; charset=utf-8" : "text/markdown; charset=utf-8",
+          "Content-Disposition": `attachment; filename="feature-${name}.${fmt === "json" ? "json" : "md"}"`,
+          "Cache-Control": "no-store",
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "no-referrer",
+          "Content-Security-Policy": "default-src 'none'",
+        });
+        res.end(content);
+      } else if (/^\/api\/features\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(route)) {
+        const name = route.slice("/api/features/".length);
+        respond(res, 200, JSON.stringify(ledger.getFeature(name)),
+          nonce, "application/json; charset=utf-8");
       } else if (route.startsWith("/api/tasks/")) {
         const id = decodeURIComponent(route.slice("/api/tasks/".length));
         if (!/^[A-Z][A-Z0-9-]{1,39}$/.test(id)) {
@@ -74,7 +128,10 @@ export function createDevControlBoardServer(source: string | ProjectTaskLedger):
         respond(res, 404, "Not found");
       }
     } catch (error) {
-      const notFound = error instanceof DevControlError && error.code === "TASK_NOT_FOUND";
+      const notFound = error instanceof DevControlError &&
+        ["TASK_NOT_FOUND", "FEATURE_NOT_FOUND"].includes(error.code) ||
+        (error instanceof Error &&
+          (error as Error & { code?: string }).code === "HISTORY_READ_NOT_FOUND");
       respond(res, notFound ? 404 : 500, JSON.stringify({ error: notFound ? "Unknown task" : "Server error" }),
         nonce, "application/json");
     }

@@ -44,6 +44,7 @@ import {
   createDelegatedPlanId,
   type DelegatedPlanStep,
 } from "../lib/delegated-plan-contract.js";
+import { ProjectTaskLedger } from "../devcontrol/task-ledger.js";
 
 /**
  * start_feature 智能编排工具
@@ -180,6 +181,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       spec_layout?: string;
       subspecs?: unknown;
       requirements_mode?: string;
+      storage_mode?: string;
       loop_max_rounds?: number;
       loop_question_budget?: number;
       loop_assumption_cap?: number;
@@ -192,6 +194,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         template_profile: "auto",
         spec_layout: "auto",
         requirements_mode: "steady",
+        storage_mode: "auto",
         loop_max_rounds: 2,
         loop_question_budget: 5,
         loop_assumption_cap: 3,
@@ -206,6 +209,7 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
         spec_layout: ["layout", "specLayout", "规格布局"],
         subspecs: ["sub_specs", "子规格", "子模块"],
         requirements_mode: ["mode", "requirements_mode", "loop", "需求模式"],
+        storage_mode: ["storageMode", "storage", "存储方式"],
         loop_max_rounds: ["max_rounds", "rounds", "最大轮次"],
         loop_question_budget: ["question_budget", "问题数量", "问题预算"],
         loop_assumption_cap: ["assumption_cap", "假设上限"],
@@ -233,6 +237,10 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
     const templateProfile = getString(parsedArgs.template_profile) || "auto";
     const specLayoutRequest = normalizeSpecLayoutRequest(parsedArgs.spec_layout);
     const requirementsMode = getString(parsedArgs.requirements_mode) || "steady";
+    const storageMode = getString(parsedArgs.storage_mode) || "auto";
+    if (!["auto", "sqlite", "files"].includes(storageMode)) {
+      throw new Error("storage_mode 仅支持 auto、sqlite、files");
+    }
     const maxRounds = getNumber(parsedArgs.loop_max_rounds, 2);
     const questionBudget = getNumber(parsedArgs.loop_question_budget, 5);
     const assumptionCap = getNumber(parsedArgs.loop_assumption_cap, 3);
@@ -323,6 +331,14 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       parseLayoutArgsFromRecord({ docs_dir: docsDir })
     );
     const projectRootAbs = layout.projectRoot;
+    const hasProjectGit = fs.existsSync(path.join(projectRootAbs, ".git"));
+    const sqliteSupported = Number.parseInt(process.versions.node.split(".")[0] || "0", 10) >= 22;
+    if (storageMode === "sqlite" && (!hasProjectGit || !sqliteSupported)) {
+      throw new Error("SQLite Feature 模式要求一个已初始化 Git 的项目及 Node.js 22+");
+    }
+    // Project-native SQLite by default. 'files' is a backward-compatible
+    // explicit escape hatch for older projects/hosts without Node 22.
+    const useProjectSqlite = storageMode !== "files" && hasProjectGit && sqliteSupported;
     const graphDocs = {
       latestMarkdownPath: layout.latestMarkdownPath,
       latestJsonPath: layout.latestJsonPath,
@@ -374,7 +390,15 @@ ${graphContext.highlights.length > 0
       .filter(Boolean)
       .join("\n");
 
-    const memoryContext = await loadMemoryInjectionContext(`${featureName}\n${description}`, 'feature');
+    // SQLite project mode uses mcp-probe-kit's History Session, not Qdrant.
+    // Keep the original Qdrant workflow available for explicit legacy files.
+    const memoryContext = useProjectSqlite
+      ? {
+          enabled: false, available: false, degraded: false,
+          query: `${featureName}\n${description}`,
+          results: [], assetsById: {},
+        }
+      : await loadMemoryInjectionContext(`${featureName}\n${description}`, 'feature');
     const memoryGuideSection = renderMemoryGuideSection(memoryContext);
     // 记忆优先：把"先检索消化历史经验/坑"作为编排的显式第一步
     const memoryRecallStep = memoryContext.enabled
@@ -553,6 +577,23 @@ ${graphGuideSection}`;
         },
       };
 
+      if (useProjectSqlite) {
+        const store = new ProjectTaskLedger(projectRootAbs);
+        try {
+          const record = store.saveFeature({
+            name: featureName, description, layout: specLayout,
+            status: "needs_decomposition",
+            plan: plan as unknown as Record<string, unknown>, draft: null,
+          });
+          loopReport.metadata = {
+            ...loopReport.metadata,
+            projectFeature: {
+              name: record.name, revision: record.revision,
+              storage: "project-sqlite",
+            },
+          };
+        } finally { store.close(); }
+      }
       await reportToolProgress(context, 95, "start_feature: loop 输出已生成");
 
       return okStructured(
@@ -570,7 +611,9 @@ ${graphGuideSection}`;
       goal: `开发新功能：${featureName}`,
       tasks: [
         '按 delegated plan 顺序调用工具',
-        '生成规格文档、完成工作量估算、实施、测试与代码审查',
+        useProjectSqlite
+          ? '维护当前项目 SQLite 规格、完成估算、实施、测试与审查，不生成重复的规格 Markdown'
+          : '生成规格文档、完成工作量估算、实施、测试与代码审查',
         '每完成一个步骤立即调用 plan_heartbeat 回写真实状态和证据',
       ],
         notes: [
@@ -581,7 +624,40 @@ ${graphGuideSection}`;
     });
 
     const specPlanSteps: DelegatedPlanStep[] = embeddedSpecDraft
-      ? [
+      ? (useProjectSqlite ? [
+          {
+            id: 'write-spec',
+            type: 'agent_action',
+            action: 'save_feature_sections_to_project_sqlite',
+            requiredInputs: ['SQLite Feature ID', 'structuredContent.metadata.specDraft'],
+            expectedOutputs: ['完善的 requirements/design/tasks SQLite 内容'],
+            completionEvidence: ['DevControl feature-save 返回修订版本'],
+            outputs: [],
+            note: '调用 DevControl 的 feature-save（MCP 或 CLI）完善规格内容；不得额外创建过程性 Markdown。',
+          },
+          {
+            id: 'check-spec',
+            type: 'agent_action',
+            action: 'validate_project_sqlite_feature',
+            dependsOn: ['write-spec'],
+            requiredInputs: ['当前项目数据库中的功能规格'],
+            expectedOutputs: ['DevControl feature-validate 返回 passed=true'],
+            completionEvidence: ['有效的功能规格 ID、修订版本和校验结果'],
+            outputs: [],
+            note: '通过 DevControl MCP 或 CLI 执行 feature-validate。未通过不得进入实现阶段；旧 check_spec 仅适用于文件规格。',
+          },
+          {
+            id: 'estimate',
+            type: 'tool',
+            tool: 'estimate',
+            dependsOn: ['check-spec'],
+            args: {
+              task_description: `实现 ${featureName} 功能：${description}`,
+              code_context: `DevControl SQLite 中 ${featureName} 的需求/设计/任务规格`,
+            },
+            outputs: [],
+          },
+        ] : [
           {
             id: 'write-spec',
             type: 'agent_action',
@@ -610,7 +686,7 @@ ${graphGuideSection}`;
             },
             outputs: [],
           },
-        ]
+        ])
       : [
           {
             id: 'resume-with-subspecs',
@@ -639,7 +715,9 @@ ${graphGuideSection}`;
             type: 'agent_action',
             action: 'implement_feature_from_tasks',
             dependsOn: ['check-spec', 'estimate'],
-            requiredInputs: [`${docsDir}/specs/${featureName}/tasks.md`],
+            requiredInputs: [useProjectSqlite
+              ? `DevControl SQLite 中 ${featureName} 的已校验任务规格`
+              : `${docsDir}/specs/${featureName}/tasks.md`],
             expectedOutputs: ['完成任务清单对应的生产代码与必要迁移'],
             completionEvidence: ['实际变更文件与完成的任务条目', '关键行为与规格一致'],
             outputs: [],
@@ -686,14 +764,16 @@ ${graphGuideSection}`;
       globalRules: [
         'Agent 必须按步骤顺序调用 MCP，并使用宿主能力完成真实文件与代码操作',
         '首次执行前必须用完整 plan 建立 plan_heartbeat 检查点；每完成、跳过或阻断一步立即累计回写',
-        'check_spec 未通过前不得进入实现阶段',
+        useProjectSqlite ? 'DevControl feature-validate 未通过前不得进入实现阶段' : 'check_spec 未通过前不得进入实现阶段',
         '不得把 delegated plan 的输出误认为代码已经实施',
-        '历史记忆仅作为参考，当前项目事实与代码优先',
+        useProjectSqlite
+          ? '项目上下文来自 History Session（非 Qdrant 全局记忆），必须先恢复会话再查历史'
+          : '历史记忆仅作为参考，当前项目事实与代码优先',
       ],
       completionCriteria: [
-        '规格文档已生成并通过 check_spec',
+        useProjectSqlite ? '功能规格直接记录在项目 SQLite 并通过 feature-validate' : '规格文档已生成并通过 check_spec',
         '工作量与主要风险已完成评估',
-        'Agent 已按 tasks.md 完成实现、测试与代码审查',
+        useProjectSqlite ? 'Agent 已按 SQLite 已校验的 tasks 完成实现、测试与代码审查' : 'Agent 已按 tasks.md 完成实现、测试与代码审查',
         '所有步骤状态与证据已通过 plan_heartbeat 写入检查点',
       ],
       declaredScope: {
@@ -703,12 +783,30 @@ ${graphGuideSection}`;
         specLayout,
       },
       memoryPolicy: {
-        recallBeforeExecution: memoryContext.enabled,
-        extractAfterValidation: memoryContext.enabled,
+        recallBeforeExecution: useProjectSqlite ? true : memoryContext.enabled,
+        extractAfterValidation: useProjectSqlite ? false : memoryContext.enabled,
       },
       steps: [
-        ...memoryRecallStep,
-        {
+        ...(useProjectSqlite ? [{
+          id: 'history-recall',
+          type: 'agent_action' as const,
+          action: 'review_project_history_session',
+          requiredInputs: ['项目 History Session 的 bootstrap 状态',
+            '历史 session_key 与已有检查点'],
+          expectedOutputs: ['通过 history_session_search/read 取得相关决策、历史问题与未完成事项'],
+          outputs: [],
+          note: '使用 mcp-probe-kit 的 history_session_bootstrap/search/read 查询项目会话历史；不是 Qdrant memorize_asset。',
+        }] : memoryRecallStep),
+        useProjectSqlite ? {
+          id: 'context',
+          type: 'agent_action',
+          action: 'review_existing_project_documents',
+          dependsOn: ['history-recall'],
+          requiredInputs: ['项目已有产品愿景、顶层架构与规范性决策'],
+          expectedOutputs: ['复用现有权威项目文档，不新增过程 Markdown'],
+          outputs: [],
+          note: '通过已有 Git 文档和工作台理解项目，不调用 init_project_context 生成重复文档。',
+        } : {
           id: 'context',
           tool: 'init_project_context',
           when: `缺少 ${layout.indexPath} 或 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}`,
@@ -722,11 +820,11 @@ ${graphGuideSection}`;
         ...subspecDecompositionSteps,
         ...specPlanSteps,
         ...deliverySteps,
-        ...memoryPreparationSteps,
+        ...(!useProjectSqlite ? memoryPreparationSteps : []),
       ] as DelegatedPlanStep[],
     });
 
-    const specDraftSection = embeddedSpecDraft
+    let specDraftSection = embeddedSpecDraft
       ? `
 ## 内嵌规格草稿
 
@@ -735,6 +833,9 @@ ${graphGuideSection}`;
 ## Parent-Child 分解
 
 当前尚未提供子规格定义。先完成 \`decompose-spec\`，再按计划重新调用 \`start_feature\` 并传入 SubspecDefinition[]。`;
+    if (useProjectSqlite) {
+      specDraftSection = "本项目 SQLite 已保存功能、计划和规格草稿；调用 DevControl feature-save 完善 requirements/design/tasks，再调用 feature-validate 检查。默认不生成流程 Markdown；可从项目看板导出。";
+    }
     const guide = `${header}${memoryGuideSection}
 # 新功能开发闭环
 
@@ -765,7 +866,9 @@ ${graphGuideSection}`;
         {
           name: '生成功能规格',
           status: 'pending',
-          description: '使用 start_feature 内嵌的 specDraft 写入并补全需求、设计和任务文档',
+          description: useProjectSqlite
+            ? '通过 DevControl feature-save 完善本项目 SQLite 中的功能需求、设计、任务'
+            : '使用 start_feature 内嵌的 specDraft 写入并补全需求、设计和任务文档',
         },
         {
           name: '工作量估算',
@@ -775,7 +878,7 @@ ${graphGuideSection}`;
         {
           name: '实施功能',
           status: 'pending',
-          description: '按照 tasks.md 完成真实代码、迁移与必要配置修改',
+          description: useProjectSqlite ? '按 SQLite 规格实施代码' : '按照 tasks.md 完成真实代码、迁移与必要配置修改',
         },
         {
           name: '测试与审查',
@@ -788,15 +891,15 @@ ${graphGuideSection}`;
         '检查并读取项目上下文文档',
         `如果缺少 ${graphDocs.latestMarkdownPath} / ${graphDocs.latestJsonPath}，先调用 init_project_context 补齐图谱初始化`,
         `优先读取 ${graphDocs.latestMarkdownPath} 获取模块依赖与调用链摘要`,
-        '使用 structuredContent.metadata.specDraft 写入并补全功能规格文档',
-        '调用 check_spec 校验规格完整性，未通过先补全再重跑（通过前不要写实现代码）',
+        useProjectSqlite ? '执行 DevControl feature-save，完善项目 SQLite 的功能规格' : '使用 structuredContent.metadata.specDraft 写入并补全功能规格文档',
+        useProjectSqlite ? '执行 DevControl feature-validate，必须通过才允许实现' : '调用 check_spec 校验规格完整性，未通过先补全再重跑（通过前不要写实现代码）',
         '调用 estimate 工具进行工作量估算',
-        '按照 tasks.md 开始开发',
+        useProjectSqlite ? '按通过校验的 SQLite tasks 开始开发' : '按照 tasks.md 开始开发',
         '每完成、跳过或阻断一个 Plan 步骤，立即调用 plan_heartbeat 累计回写状态和证据',
         '实现完成后执行受影响测试、完整回归和 code_review',
         '全部步骤与证据写入检查点后调用 converge',
       ],
-      specArtifacts: [
+      specArtifacts: useProjectSqlite ? [] : [
         {
           path: `${docsDir}/specs/${featureName}/requirements.md`,
           type: 'requirements',
@@ -829,6 +932,24 @@ ${graphGuideSection}`;
       },
     };
 
+    if (useProjectSqlite) {
+      const store = new ProjectTaskLedger(projectRootAbs);
+      try {
+        const feature = store.saveFeature({
+          name: featureName, description, layout: specLayout,
+          status: embeddedSpecDraft ? 'draft' : 'needs_decomposition',
+          plan: plan as unknown as Record<string, unknown>,
+          draft: embeddedSpecDraft as unknown as Record<string, unknown> | null,
+        });
+        featureReport.metadata = {
+          ...featureReport.metadata,
+          projectFeature: {
+            name: feature.name, revision: feature.revision, status: feature.status,
+            storage: 'project-sqlite',
+          },
+        };
+      } finally { store.close(); }
+    }
     await reportToolProgress(context, 95, "start_feature: 执行计划输出已生成");
 
     return okStructured(

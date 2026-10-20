@@ -48,6 +48,7 @@ import {
   type TemplateProfileResolved,
 } from "./start-bugfix-guidance.js";
 import { buildBugfixReport } from "./start-bugfix-report.js";
+import { ProjectTaskLedger } from "../devcontrol/task-ledger.js";
 
 /** Bug 修复编排：[检查上下文] → SRC-8 → gentest → converge。 */
 type AnalysisMode = 'src8' | 'tbp8';
@@ -490,6 +491,24 @@ ${renderDelegatedPlanStateProtocol({
       templateMeta,
     });
 
+    // Keep Bug identity and root-cause evidence in the local project ledger,
+    // while retaining the existing SRC-8 plan and optional global memory.
+    if (fs.existsSync(path.join(layout.projectRoot, ".git")) &&
+        Number.parseInt(process.versions.node.split(".")[0] || "0", 10) >= 22) {
+      const ledger = new ProjectTaskLedger(layout.projectRoot);
+      try {
+        const bug = ledger.recordWorkItem({
+          kind: "bug", title: errorMessage.slice(0, 250),
+          description: [errorMessage, stackTrace && "Stack trace:\n" + stackTrace,
+            codeContext && "Context:\n" + codeContext].filter(Boolean).join("\n\n"),
+          featureName: featureNameInput || undefined, sourceRef: plan.planId,
+        });
+        bugfixReport.metadata = {
+          ...bugfixReport.metadata,
+          projectBug: { id: bug.id, reused: bug.reused, storage: "project-sqlite" },
+        };
+      } finally { ledger.close(); }
+    }
     await reportToolProgress(context, 95, "start_bugfix: 执行计划输出已生成");
 
     return okStructured(

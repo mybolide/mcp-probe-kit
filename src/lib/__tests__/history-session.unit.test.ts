@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   bootstrapHistorySession,
@@ -27,6 +28,68 @@ afterEach(() => {
 });
 
 describe('history-session service', () => {
+  it('uses the project SQLite for Git-backed session archives without creating numbered Markdown', () => {
+    const root = tempProject();
+    execFileSync('git', ['init','-q'], { cwd: root });
+    const boot = bootstrapHistorySession(root, {
+      session_key: 'sql-session-a', initial_user_input: '需要避免工程文档膨胀',
+      title: 'SQLite Project History',
+    });
+    expect(boot.created).toBe(true);
+    expect(boot.current_path).toBe('docs/history-session/1.md'); // virtual read locator
+    const initialFile = path.join(root, String(boot.current_path));
+    expect(fs.existsSync(initialFile)).toBe(false);
+    expect(fs.existsSync(path.join(root, '.mcp-probe-kit/state/devcontrol.sqlite3'))).toBe(true);
+    const checked = checkpointHistorySession(root, {
+      session_key: 'sql-session-a', expected_path: boot.current_path,
+      turn_id: 'turn-1', raw_user_input: '项目需要完整开发记忆',
+      decisions: ['统一使用 History Session 而非 Qdrant 共享记忆'],
+      next_actions: ['检查 Windows 运行包'],
+    });
+    expect(checked.ok).toBe(true);
+    const echoed = bootstrapHistorySession(root, { session_key: 'sql-session-a' });
+    expect(echoed.resumed).toBe(true);
+    const results = searchHistorySession(root, { query: 'History Session' });
+    expect(results.total).toBe(1);
+    const page = readHistorySession(root, { number: 1, max_bytes: 110 });
+    expect(page.content_hash).toMatch(/^[a-f0-9]{64}$/);
+    const remaining = readHistorySession(root, { number: 1,
+      expected_hash: page.content_hash, cursor: page.next_cursor, max_bytes: 64 });
+    expect(remaining.content).toBeTruthy();
+    expect(validateHistorySession(root, {}).sequence_valid).toBe(true);
+    expect(fs.existsSync(initialFile)).toBe(false);
+    expect(fs.existsSync(path.join(root, 'docs/history-session/memory/state.json'))).toBe(false);
+    const workingTree = execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'});
+    expect(workingTree).toBe('');
+  });
+
+  it('imports historical numbered Markdown into SQLite without deleting originals or duplicating archives', () => {
+    const root = tempProject();
+    execFileSync('git', ['init','-q'], { cwd: root });
+    const original = bootstrapHistorySession(root, {
+      session_key: 'old-session', title: 'Old archive', initial_user_input: 'legacy text',
+      history_dir: 'legacy-history', // old file-based archive for controlled import
+    });
+    const legacyFile = path.join(root, 'docs/history-session/1.md');
+    fs.mkdirSync(path.dirname(legacyFile),{recursive:true});
+    fs.copyFileSync(path.join(root,String(original.current_path)),legacyFile);
+    const boot = bootstrapHistorySession(root, {
+      session_key: 'old-session',
+    });
+    expect(boot.resumed).toBe(true);
+    expect(boot.current_number).toBe(1);
+    const change = checkpointHistorySession(root, {
+      session_key: 'old-session', expected_path: boot.current_path,
+      turn_id: 'later', raw_user_input: 'now stored inside SQLite',
+    });
+    expect(change.ok).toBe(true);
+    expect(fs.readFileSync(legacyFile,'utf8')).not.toContain('now stored inside SQLite');
+    const current = readHistorySession(root,{number:1});
+    expect(current.content).toContain('now stored inside SQLite');
+    const second = bootstrapHistorySession(root,{ session_key: 'new-session' });
+    expect(second.current_number).toBe(2);
+    expect(fs.existsSync(path.join(root,'docs/history-session/2.md'))).toBe(false);
+  });
   it('mints a unique handle when no session key is provided and does not merge later omitted-key bootstraps', () => {
     const root = tempProject();
     const first = bootstrapHistorySession(root, {

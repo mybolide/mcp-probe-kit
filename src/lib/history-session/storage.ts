@@ -18,6 +18,14 @@ import {
   type ScanReport,
 } from './types.js';
 import { DEFAULT_HISTORY_DIR } from '../history-session-config.js';
+import {
+  readSqliteHistoryDocuments,
+  readSqliteHistoryDerived,
+  sqliteProjectForHistoryDir,
+  writeSqliteHistoryDerived,
+  writeSqliteHistoryDocument,
+} from './sqlite-store.js';
+import { ensureDatabaseIgnored, resolveProjectDatabase } from '../../devcontrol/project-storage.js';
 
 const STATE_ITEM_LIMIT = 12;
 const STATE_TEXT_LIMIT = 512;
@@ -53,8 +61,13 @@ export function ensureDirectory(dir: string): void {
 }
 
 export function lockDirectory(historyDir: string): HistoryLock {
-  ensureDirectory(historyDir);
-  const lockPath = path.join(historyDir, '.history.lock');
+  const sqliteProject = sqliteProjectForHistoryDir(historyDir);
+  const directory = sqliteProject
+    ? path.dirname(resolveProjectDatabase(sqliteProject))
+    : historyDir;
+  if (sqliteProject) ensureDatabaseIgnored(sqliteProject, resolveProjectDatabase(sqliteProject));
+  ensureDirectory(directory);
+  const lockPath = path.join(directory, '.history.lock');
   const fd = fs.openSync(lockPath, 'a+');
   try {
     fs.fchmodSync?.(fd, 0o600);
@@ -67,6 +80,39 @@ export function lockDirectory(historyDir: string): HistoryLock {
 
 export function scan(projectRoot: string, historyDir: string): ScanReport {
   const report = emptyScanReport();
+  const sqliteProject = sqliteProjectForHistoryDir(historyDir);
+  if (sqliteProject) {
+    for (const doc of readSqliteHistoryDocuments(sqliteProject)) {
+      const content = doc.content;
+      const virtualPath = relativeArchivePath(projectRoot, historyDir, doc.number);
+      const status = (metadata(content, 'Status') ?? 'active').toLowerCase();
+      report.documents.push({
+        number: doc.number, path: virtualPath, content,
+        sessionKey: metadata(content, 'Session key'),
+        createdAt: metadata(content, 'Created'),
+        updatedAt: metadata(content, 'Updated'),
+        sealed: status === 'sealed',
+      });
+    }
+    report.documents.sort((a, b) => a.number - b.number);
+    report.numbers = report.documents.map((doc) => doc.number);
+    const latest = latestNumber(report);
+    if (latest !== undefined) {
+      const present = new Set(report.numbers);
+      for (let i = 1; i <= latest; i += 1) {
+        if (!present.has(i)) report.missingNumbers.push(i);
+      }
+    }
+    const activeKeys = new Map<string, number>();
+    for (const doc of report.documents) {
+      if (doc.sessionKey && !doc.sealed) {
+        activeKeys.set(doc.sessionKey, (activeKeys.get(doc.sessionKey) ?? 0) + 1);
+      }
+    }
+    report.duplicateSessionKeys = [...activeKeys.entries()]
+      .filter(([, count]) => count > 1).map(([key]) => key).sort();
+    return report;
+  }
   if (!fs.existsSync(historyDir)) return report;
   const root = path.resolve(projectRoot);
   for (const name of fs.readdirSync(historyDir)) {
@@ -125,6 +171,12 @@ export function scan(projectRoot: string, historyDir: string): ScanReport {
 }
 
 export function writeMarkdown(filePath: string, content: string): void {
+  const sqliteProject = sqliteProjectForHistoryDir(path.dirname(filePath));
+  const name = path.basename(filePath);
+  if (sqliteProject && /^[1-9]\d*\.md$/.test(name)) {
+    writeSqliteHistoryDocument(sqliteProject, Number(name.slice(0, -3)), content);
+    return;
+  }
   atomicWrite(filePath, content);
 }
 
@@ -212,20 +264,28 @@ export function buildState(
 }
 
 export function readState(historyDir: string): MemoryState | undefined {
+  const project = sqliteProjectForHistoryDir(historyDir);
+  if (project) return readSqliteHistoryDerived<MemoryState>(project, 'state');
   return readJson(path.join(historyDir, 'memory', 'state.json'));
 }
 
 export function writeState(historyDir: string, state: MemoryState): void {
+  const project = sqliteProjectForHistoryDir(historyDir);
+  if (project) { writeSqliteHistoryDerived(project, 'state', state); return; }
   ensureDirectory(path.join(historyDir, 'memory'));
   atomicWrite(path.join(historyDir, 'memory', 'state.json'), `${JSON.stringify(state, null, 2)}\n`);
 }
 
 export function writeManifest(historyDir: string, manifest: MemoryManifest): void {
+  const project = sqliteProjectForHistoryDir(historyDir);
+  if (project) { writeSqliteHistoryDerived(project, 'manifest', manifest); return; }
   ensureDirectory(path.join(historyDir, 'memory'));
   atomicWrite(path.join(historyDir, 'memory', 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 export function readManifest(historyDir: string): MemoryManifest | undefined {
+  const project = sqliteProjectForHistoryDir(historyDir);
+  if (project) return readSqliteHistoryDerived<MemoryManifest>(project, 'manifest');
   return readJson(path.join(historyDir, 'memory', 'manifest.json'));
 }
 

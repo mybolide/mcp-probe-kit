@@ -12,10 +12,76 @@ import http from "node:http";
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { DevControlError } from "./task-ledger.js";
+import { WORKSPACE_SCHEMA_VERSION } from "./board-server.js";
 
 function xml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+function openLocalUrl(url: string): void {
+  if (!/^http:\/\/127\.0\.0\.1:\d+\/$/.test(url)) {
+    throw new DevControlError("UNSAFE_URL", "Only local DevControl URLs may be opened");
+  }
+  if (process.platform === "win32") {
+    // cmd's builtin start needs a blank title argument. URL is validated and
+    // contains no shell metacharacters; no arbitrary user input is evaluated.
+    execFileSync("cmd.exe", ["/d", "/s", "/c", `start "" "${url}"`], {
+      timeout: 8_000, windowsHide: true,
+    });
+  } else if (process.platform === "darwin") {
+    execFileSync("/usr/bin/open", [url], { timeout: 8_000 });
+  } else {
+    execFileSync("xdg-open", [url], { timeout: 8_000 });
+  }
+}
+
+/** Windows double-clickable project launcher, without a shell service/daemon. */
+export function installWindowsDesktopLauncher(root: string, cliEntry = process.argv[1]): {
+  bundle: string; displayName: string; status: string;
+} {
+  if (process.platform !== "win32") {
+    throw new DevControlError("UNSUPPORTED_OS", "Windows launcher can only be installed on Windows");
+  }
+  const project = path.resolve(root);
+  if (!fs.existsSync(path.join(project, ".git"))) {
+    throw new DevControlError("NOT_GIT_PROJECT", "Launcher requires its own Git project root");
+  }
+  const entry = path.resolve(cliEntry);
+  if (!fs.existsSync(entry)) throw new DevControlError("CLI_NOT_FOUND", "DevControl runtime was not found");
+  const file = path.join(project, safeAppName(path.basename(project)) + " Workbench.cmd");
+  // Encoded paths containing '%' could be expanded by cmd.exe. Reject them
+  // rather than generate a script whose arguments are mutated at runtime.
+  if ([entry, project].some((value) => /[%\r\n"\u0000]/.test(value))) {
+    throw new DevControlError("UNSAFE_WINDOWS_PATH", "Windows launcher paths cannot contain %, quotes or newlines");
+  }
+  const script = [
+    "@echo off",
+    "setlocal DisableDelayedExpansion",
+    "set \"PROJECT_ROOT=%~dp0\"",
+    "set \"NODE=node\"",
+    'if exist "%PROJECT_ROOT%.mcp-probe-kit\\runtime\\node.exe" set "NODE=%PROJECT_ROOT%.mcp-probe-kit\\runtime\\node.exe"',
+    `set "ENTRY=${entry}"`,
+    'if not exist "%ENTRY%" (',
+    "  echo DevControl runtime is missing. Reinstall the workspace.",
+    "  pause",
+    "  exit /b 1",
+    ")",
+    '"%NODE%" "%ENTRY%" devcontrol desktop-open --project-root "%PROJECT_ROOT%."',
+    "if errorlevel 1 pause",
+    "",
+  ].join("\r\n");
+  fs.writeFileSync(file, script, "utf8");
+  excludeLocalApp(project, path.basename(file));
+  return { bundle: file, displayName: path.basename(file), status: "ready-for-double-click" };
+}
+
+export function installDesktopLauncher(root: string, cliEntry = process.argv[1]): {
+  bundle: string; displayName: string; status: string;
+} {
+  if (process.platform === "darwin") return installMacDesktopLauncher(root, cliEntry);
+  if (process.platform === "win32") return installWindowsDesktopLauncher(root, cliEntry);
+  throw new DevControlError("UNSUPPORTED_OS", "Desktop launcher supports macOS and Windows");
 }
 
 function shellQuote(value: string): string {
@@ -37,7 +103,7 @@ function excludeLocalApp(root: string, bundleName: string): void {
   if (!exclude) return; // Git worktrees may have a .git file; no unsafe writes.
   fs.mkdirSync(path.dirname(exclude), { recursive: true });
   const previous = fs.existsSync(exclude) ? fs.readFileSync(exclude, "utf8") : "";
-  const rule = "/" + bundleName + "/";
+  const rule = "/" + bundleName + (bundleName.endsWith(".app") ? "/" : "");
   if (!previous.split("\n").includes(rule)) {
     fs.appendFileSync(exclude, (previous.endsWith("\n") || !previous ? "" : "\n") +
       "# Local DevControl Finder launcher (generated)\n" + rule + "\n");
@@ -111,7 +177,7 @@ exec "$NODE" "$ENTRY" devcontrol desktop-open --project-root "$PROJECT_ROOT"
 async function existingRoot(port: number): Promise<string | null> {
   return await new Promise((resolve) => {
     const request = http.get({
-      hostname: "127.0.0.1", port, path: "/api/project", timeout: 900,
+      hostname: "127.0.0.1", port, path: "/api/meta", timeout: 900,
     }, (response) => {
       let text = "";
       response.setEncoding("utf8");
@@ -121,7 +187,11 @@ async function existingRoot(port: number): Promise<string | null> {
       });
       response.on("end", () => {
         try {
-          resolve(response.statusCode === 200 ? String(JSON.parse(text).root ?? "") : null);
+          const data = JSON.parse(text);
+          resolve(response.statusCode === 200 &&
+            data.version === WORKSPACE_SCHEMA_VERSION &&
+            data.schema === "devcontrol-project-workspace" ?
+              String(data.root ?? "") : null);
         } catch { resolve(null); }
       });
     });
@@ -154,7 +224,7 @@ export async function openDesktopWorkspace(
     const previous = await existingRoot(port);
     if (previous && path.resolve(previous) === project) {
       const url = `http://127.0.0.1:${port}/`;
-      if (!options.noBrowser) execFileSync("/usr/bin/open", [url], { timeout: 8000 });
+      if (!options.noBrowser) openLocalUrl(url);
       return { url, reused: true, pid: null };
     }
     if (previous || !(await canBind(port))) continue;
@@ -173,7 +243,7 @@ export async function openDesktopWorkspace(
       await wait(140);
       if (await existingRoot(port) === project) {
         const url = `http://127.0.0.1:${port}/`;
-        if (!options.noBrowser) execFileSync("/usr/bin/open", [url], { timeout: 8000 });
+        if (!options.noBrowser) openLocalUrl(url);
         return { url, reused: false, pid: child.pid ?? null };
       }
       if (child.exitCode !== null) break;

@@ -9,6 +9,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import { createRequire } from "node:module";
+import { ensureDatabaseIgnored, resolveProjectDatabase } from "./project-storage.js";
+import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
 
@@ -18,6 +20,39 @@ interface SqlStmt {
   get(...args: Value[]): Row | undefined;
   all(...args: Value[]): Row[];
   run(...args: Value[]): { changes: number };
+}
+
+// Session memory has its own History Session subsystem. This table must not
+// masquerade as the global Qdrant memory asset system or the session archive.
+type WorkItemKind = "bug" | "architecture_change";
+
+export interface ProjectWorkItemInput {
+  kind: WorkItemKind;
+  title: string;
+  description: string;
+  featureName?: string;
+  topLevelDocument?: string;
+  sourceRef?: string;
+}
+
+function normalizedLabel(value: string): string {
+  return value.normalize("NFKC").toLocaleLowerCase("en")
+    .replace(/[\s\p{P}\p{S}]+/gu, "").trim();
+}
+
+function actorInfo(projectRoot: string): { creator: string; device: string } {
+  // Display labels are deliberately local, never transmitted to any service.
+  // Do not store user home directory, IP, MAC address or machine UUID.
+  let creator = process.env.DEVCONTROL_ACTOR?.trim() || "";
+  if (!creator) {
+    const result = spawnSync("git", ["config", "user.name"], {
+      cwd: projectRoot, encoding: "utf8", timeout: 2_000,
+    });
+    creator = result.status === 0 ? (result.stdout || "").trim() : "";
+  }
+
+  return { creator: creator.slice(0, 120) || "local-developer",
+    device: (process.env.DEVCONTROL_DEVICE_NAME?.trim() || os.hostname()).slice(0, 120) };
 }
 interface SqlDatabase {
   exec(query: string): void;
@@ -133,6 +168,16 @@ export interface CompletionReport {
   remaining?: string;
 }
 
+export interface FeatureProposal {
+  name: string;
+  description: string;
+  layout: "flat" | "parent-child";
+  plan: Record<string, unknown>;
+  draft: Record<string, unknown> | null;
+  /** Requirements clarification can precede a complete decomposition. */
+  status?: "needs_decomposition" | "draft";
+}
+
 export class ProjectTaskLedger {
   private readonly db: SqlDatabase;
   private transactionDepth = 0;
@@ -144,7 +189,8 @@ export class ProjectTaskLedger {
     if (!fs.existsSync(path.join(this.root, ".git"))) {
       fail("NOT_GIT_PROJECT", "DevControl requires a Git project root");
     }
-    this.databasePath = dbPath ?? path.join(this.root, ".neyna/state/devcontrol.sqlite3");
+    this.databasePath = dbPath ?? resolveProjectDatabase(this.root);
+    ensureDatabaseIgnored(this.root, this.databasePath);
     fs.mkdirSync(path.dirname(this.databasePath), { recursive: true });
     if (Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10) < 22) {
       fail("NODE_22_REQUIRED", "DevControl SQLite requires Node 22+, while the rest of probe-kit supports Node 20+");
@@ -230,6 +276,49 @@ export class ProjectTaskLedger {
         agent TEXT NOT NULL,
         created_at TEXT NOT NULL,
         PRIMARY KEY(task_id, revision)
+      );
+      CREATE TABLE IF NOT EXISTS dc_features (
+        name TEXT PRIMARY KEY,
+        description TEXT NOT NULL,
+        layout TEXT NOT NULL CHECK(layout IN ('flat','parent-child')),
+        status TEXT NOT NULL CHECK(status IN ('needs_decomposition','draft','specified')),
+        plan_json TEXT NOT NULL,
+        draft_json TEXT NOT NULL,
+        sections_json TEXT NOT NULL,
+        fingerprint TEXT NOT NULL,
+        revision INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_feature_revisions (
+        name TEXT NOT NULL REFERENCES dc_features(name),
+        revision INTEGER NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(name,revision)
+      );
+      CREATE TABLE IF NOT EXISTS dc_work_items (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL CHECK(kind IN ('bug','architecture_change')),
+        title TEXT NOT NULL,
+        normalized_title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'draft',
+        feature_name TEXT,
+        top_level_document TEXT,
+        source_ref TEXT,
+        creator TEXT NOT NULL,
+        device TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(kind,normalized_title)
+      );
+      CREATE TABLE IF NOT EXISTS dc_work_item_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id TEXT NOT NULL REFERENCES dc_work_items(id),
+        event TEXT NOT NULL,
+        details_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
       );
     `);
     const alreadyImported = this.db.prepare("SELECT value FROM dc_meta WHERE key='bootstrap'").get();
@@ -338,6 +427,279 @@ export class ProjectTaskLedger {
   get(id: string): Row { return this.task(this.requireTask(id)); }
   list(): Row[] {
     return this.db.prepare("SELECT * FROM dc_tasks ORDER BY priority ASC,id ASC").all().map((r) => this.task(r));
+  }
+
+  private feature(row: Row): Row {
+    return {
+      name: row.name, description: row.description, layout: row.layout,
+      status: row.status, plan: JSON.parse(row.plan_json),
+      draft: JSON.parse(row.draft_json), sections: JSON.parse(row.sections_json),
+      revision: row.revision, createdAt: row.created_at, updatedAt: row.updated_at,
+    };
+  }
+
+  listFeatures(): Row[] {
+    return this.db.prepare("SELECT * FROM dc_features ORDER BY updated_at DESC,name").all()
+      .map((row) => ({
+        name: row.name, description: row.description, layout: row.layout,
+        status: row.status, revision: row.revision, updatedAt: row.updated_at,
+      }));
+  }
+
+  getFeature(name: string): Row {
+    const found = this.db.prepare("SELECT * FROM dc_features WHERE name=?").get(name);
+    if (!found) fail("FEATURE_NOT_FOUND", `Unknown project feature: ${name}`);
+    return this.feature(found!);
+  }
+
+  listWorkItems(kind?: WorkItemKind): Row[] {
+    const rows = kind
+      ? this.db.prepare("SELECT * FROM dc_work_items WHERE kind=? ORDER BY updated_at DESC").all(kind)
+      : this.db.prepare("SELECT * FROM dc_work_items ORDER BY updated_at DESC").all();
+    return rows.map((row) => ({
+      id: row.id, kind: row.kind, title: row.title, description: row.description,
+      status: row.status, featureName: row.feature_name ?? null,
+      topLevelDocument: row.top_level_document ?? null,
+      sourceRef: row.source_ref ?? null, creator: row.creator, device: row.device,
+      createdAt: row.created_at, updatedAt: row.updated_at,
+    }));
+  }
+
+  recordWorkItem(input: ProjectWorkItemInput): Row {
+    if (!input || !["bug", "architecture_change"].includes(input.kind)) {
+      fail("INVALID_WORK_ITEM", "Only bug or architecture_change records are supported; use History Session for project memory");
+    }
+    const title = input.title?.trim(), description = input.description?.trim();
+    if (!title || title.length > 250 || !description || description.length > 64_000) {
+      fail("INVALID_WORK_ITEM", "Work item requires a title (max 250) and description (max 64 KiB)");
+    }
+    const key = normalizedLabel(title);
+    if (!key) fail("INVALID_WORK_ITEM", "Work item title must have distinctive characters");
+    const doc = input.topLevelDocument?.trim() || null;
+    if (input.kind === "architecture_change" &&
+        (!doc || !/^docs\/architecture\/[a-zA-Z0-9/_-]+\.md$/.test(doc) || doc.includes(".."))) {
+      fail("ARCHITECTURE_SOURCE_REQUIRED",
+        "Architecture changes must name the exact top-level docs/architecture/*.md file");
+    }
+    const prefix = input.kind === "bug" ? "BUG" : "ARC";
+    const id = prefix + "-" + createHash("sha256").update(key).digest("hex").slice(0, 15).toUpperCase();
+    return this.inTransaction(() => {
+      const existing = this.db.prepare(
+        "SELECT * FROM dc_work_items WHERE kind=? AND normalized_title=?",
+      ).get(input.kind, key);
+      if (existing) return {
+        id: existing.id, kind: existing.kind, title: existing.title,
+        status: existing.status, reused: true, creator: existing.creator,
+        device: existing.device,
+      };
+      const time = utc(), identity = actorInfo(this.root);
+      this.db.prepare(`
+        INSERT INTO dc_work_items(id,kind,title,normalized_title,description,status,
+          feature_name,top_level_document,source_ref,creator,device,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).run(id, input.kind, title, key, description,
+        input.kind === "architecture_change" ? "requires_top_level_sync" : "draft",
+        input.featureName ?? null, doc, input.sourceRef ?? null,
+        identity.creator, identity.device, time, time);
+      this.db.prepare(
+        "INSERT INTO dc_work_item_audit(item_id,event,details_json,created_at) VALUES(?,?,?,?)",
+      ).run(id, "created", JSON.stringify({ actor: identity.creator, device: identity.device }), time);
+      return { id, kind: input.kind, title, status: input.kind === "architecture_change" ?
+        "requires_top_level_sync" : "draft", reused: false,
+        creator: identity.creator, device: identity.device,
+        architectureReviewRequired: input.kind === "architecture_change" };
+    });
+  }
+
+  syncArchitecture(id: string, reviewer: string): Row {
+    if (!reviewer?.trim()) fail("REVIEWER_REQUIRED", "Architecture sync requires reviewer identity");
+    return this.inTransaction(() => {
+      const row = this.db.prepare("SELECT * FROM dc_work_items WHERE id=?").get(id);
+      if (!row || row.kind !== "architecture_change") {
+        fail("ARCHITECTURE_NOT_FOUND", "Unknown architecture change request");
+      }
+      if (row.status === "synced") return { id, status: "synced", reused: true };
+      const base = String(row.source_ref ?? "");
+      const head = git(this.root, ["rev-parse", "HEAD"]);
+      if (!base || !run(this.root, "git", ["merge-base", "--is-ancestor", base, head]).passed) {
+        fail("ARCHITECTURE_BASE_MISSING", "Architecture change requires original Git base");
+      }
+      if (git(this.root, ["status", "--porcelain"])) {
+        fail("DIRTY_WORKTREE", "Commit architecture documents before synchronizing");
+      }
+      if (!changedFiles(this.root, base).includes(String(row.top_level_document))) {
+        fail("ARCHITECTURE_NOT_UPDATED",
+          `The approved top-level design ${row.top_level_document} has not changed since proposal`);
+      }
+      this.db.prepare(
+        "UPDATE dc_work_items SET status='synced',updated_at=? WHERE id=?",
+      ).run(utc(), id);
+      this.db.prepare(
+        "INSERT INTO dc_work_item_audit(item_id,event,details_json,created_at) VALUES(?,?,?,?)",
+      ).run(id, "architecture_synced", JSON.stringify({
+        reviewer: reviewer.trim(), document: row.top_level_document, gitHead: head,
+      }), utc());
+      return { id, status: "synced", gitHead: head, document: row.top_level_document };
+    });
+  }
+
+  /**
+   * start_feature writes a proposal into the project database immediately.
+   * Replays with identical payload are idempotent; revised requirements create
+   * a revision. A proposal is not an approved task or a passing Spec.
+   */
+  saveFeature(input: FeatureProposal, actor = "start_feature"): Row {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.name) || input.name.length > 120) {
+      fail("INVALID_FEATURE", "Feature name must be a stable kebab-case identifier");
+    }
+    if (typeof input.description !== "string" || !input.description.trim() ||
+        input.description.length > 64_000) {
+      fail("INVALID_FEATURE", "Feature description must be nonempty and at most 64 KiB");
+    }
+    if (!["flat", "parent-child"].includes(input.layout)) {
+      fail("INVALID_FEATURE", "Unsupported feature spec layout");
+    }
+    const status = input.status ?? "draft";
+    if (!["draft", "needs_decomposition"].includes(status)) {
+      fail("INVALID_FEATURE", "Only unapproved feature proposals can be created");
+    }
+    const plan = JSON.stringify(input.plan ?? {});
+    const draft = JSON.stringify(input.draft ?? null);
+    if (plan.length + draft.length > 750_000) {
+      fail("FEATURE_TOO_LARGE", "Feature plan and draft exceed project storage limits");
+    }
+    const fingerprint = createHash("sha256").update(JSON.stringify({
+      description: input.description.trim(), layout: input.layout, status,
+      subspecs: input.draft?.subspecs ?? null,
+    })).digest("hex");
+    return this.inTransaction(() => {
+      const current = this.db.prepare("SELECT * FROM dc_features WHERE name=?").get(input.name);
+      if (current?.fingerprint === fingerprint) return this.feature(current);
+      if (current?.status === "specified") {
+        fail("FROZEN_FEATURE", "Specified feature cannot be silently replaced by start_feature");
+      }
+      const updatedAt = utc();
+      const revision = current ? Number(current.revision) + 1 : 1;
+      const sections = current?.sections_json ?? JSON.stringify({
+        requirements: "", design: "", tasks: "",
+      });
+      this.db.prepare(`
+        INSERT INTO dc_features(name,description,layout,status,plan_json,draft_json,
+                                sections_json,fingerprint,revision,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(name) DO UPDATE SET
+          description=excluded.description,layout=excluded.layout,
+          status=excluded.status,plan_json=excluded.plan_json,
+          draft_json=excluded.draft_json,fingerprint=excluded.fingerprint,
+          revision=excluded.revision,updated_at=excluded.updated_at
+      `).run(input.name, input.description.trim(), input.layout, status,
+        plan, draft, sections, fingerprint, revision, current?.created_at ?? updatedAt, updatedAt);
+      const snapshot = this.getFeature(input.name);
+      this.db.prepare(
+        "INSERT INTO dc_feature_revisions(name,revision,snapshot_json,created_at) VALUES(?,?,?,?)",
+      ).run(input.name, revision, JSON.stringify(snapshot), updatedAt);
+      this.audit(null, current ? "feature_revised" : "feature_proposed", actor, {
+        name: input.name, revision, layout: input.layout, status,
+      });
+      return snapshot;
+    });
+  }
+
+  reviseFeature(
+    name: string, sections: Record<string, string>, actor = "agent",
+    architectureImpact?: boolean, topLevelDocument = "docs/architecture/overview.md",
+  ): Row {
+    const fields = ["requirements", "design", "tasks"];
+    if (!sections || typeof sections !== "object" || Array.isArray(sections) ||
+        !Object.keys(sections).length || Object.keys(sections).some((key) => !fields.includes(key)) ||
+        Object.values(sections).some((value) => typeof value !== "string" || value.length > 120_000)) {
+      fail("INVALID_SPEC", "Provide requirements/design/tasks text only, each under 120 KiB");
+    }
+    return this.inTransaction(() => {
+      const row = this.db.prepare("SELECT * FROM dc_features WHERE name=?").get(name);
+      if (!row) fail("FEATURE_NOT_FOUND", `Unknown feature ${name}`);
+      const merged = { ...JSON.parse(row.sections_json), ...sections };
+      const designChanged = Object.prototype.hasOwnProperty.call(sections, "design") &&
+        String(merged.design) !== String(JSON.parse(row.sections_json).design ?? "");
+      if (designChanged && typeof architectureImpact !== "boolean") {
+        fail("ARCHITECTURE_IMPACT_REQUIRED",
+          "Any new feature design must explicitly declare architectureImpact=true or false");
+      }
+      const revision = Number(row.revision) + 1;
+      const updatedAt = utc();
+      this.db.prepare(
+        "UPDATE dc_features SET sections_json=?,status='draft',revision=?,updated_at=? WHERE name=?",
+      ).run(JSON.stringify(merged), revision, updatedAt, name);
+      const snapshot = this.getFeature(name);
+      this.db.prepare(
+        "INSERT INTO dc_feature_revisions(name,revision,snapshot_json,created_at) VALUES(?,?,?,?)",
+      ).run(name, revision, JSON.stringify(snapshot), updatedAt);
+      this.audit(null, "feature_spec_revised", actor, { name, revision, sections: Object.keys(sections) });
+      if (designChanged && architectureImpact) {
+        this.recordWorkItem({
+          kind: "architecture_change",
+          title: `Feature ${name} architectural design sync revision ${revision}`,
+          description: `Design revision ${revision} impacts the top-level architecture; reconcile ${topLevelDocument} with this feature before approval.`,
+          featureName: name, topLevelDocument,
+          sourceRef: git(this.root, ["rev-parse", "HEAD"]),
+        });
+      }
+      return snapshot;
+    });
+  }
+
+  validateFeature(name: string): Row {
+    const feature = this.getFeature(name);
+    const issues: string[] = [];
+    if (feature.status === "needs_decomposition") issues.push("子规格尚未完成分解");
+    const sections = feature.sections as Record<string, string>;
+    const outstandingArchitecture = this.listWorkItems("architecture_change")
+      .filter((item) => item.featureName === name && item.status !== "synced");
+    if (outstandingArchitecture.length) {
+      issues.push("顶层架构同步尚未验收：" + outstandingArchitecture.map((item) => item.id).join(", "));
+    }
+    for (const kind of ["requirements", "design", "tasks"]) {
+      const body = String(sections[kind] ?? "").trim();
+      if (body.length < 30) issues.push(`${kind} 内容不足`);
+      if (/\[(?:填写|待补|TODO)|\bTODO\b|\bTBD\b/.test(body)) {
+        issues.push(`${kind} 存在占位符`);
+      }
+    }
+    if (feature.layout === "parent-child") {
+      const draft = feature.draft as Record<string, any> | null;
+      if (!Array.isArray(draft?.subspecs) || !draft.subspecs.length) {
+        issues.push("parent-child 尚无子规格清单");
+      }
+    }
+    const passed = issues.length === 0;
+    if (passed && feature.status !== "specified") {
+      this.inTransaction(() => {
+        this.db.prepare("UPDATE dc_features SET status='specified',updated_at=? WHERE name=?")
+          .run(utc(), name);
+        this.audit(null, "feature_specified", "devcontrol", { name, revision: feature.revision });
+      });
+    }
+    return { name, passed, revision: feature.revision, issues };
+  }
+
+  exportFeature(name: string, format: "markdown" | "json" = "markdown"): string {
+    const feature = this.getFeature(name);
+    if (format === "json") return JSON.stringify(feature, null, 2) + "\n";
+    if (format !== "markdown") fail("INVALID_EXPORT", "Export format must be markdown or json");
+    const sections = feature.sections as Record<string, string>;
+    const plan = feature.plan as Record<string, any>;
+    const steps = Array.isArray(plan.steps) ? plan.steps as Row[] : [];
+    return [
+      `# Feature — ${name}`, "",
+      `> 状态：${feature.status}；项目本地 SQLite 导出；修订：${feature.revision}`,
+      "", "## 功能目标", "", feature.description as string,
+      "", "## 需求", "", sections.requirements || "尚未完善（草稿）",
+      "", "## 技术设计", "", sections.design || "尚未完善（草稿）",
+      "", "## 研发任务", "", sections.tasks || "尚未完善（草稿）",
+      "", "## 执行计划索引", "",
+      ...steps.map((step) => `- ${step.id ?? ""}：${step.action ?? step.tool ?? step.type ?? ""}`),
+      "", `导出版本：${feature.updatedAt}`, "",
+    ].join("\n");
   }
 
   /**
@@ -482,6 +844,20 @@ export class ProjectTaskLedger {
     if (!input.requiredGates.length) fail("GATE_REQUIRED", "A task cannot be verified without gates");
     const dependsOn = [...new Set(input.dependsOn ?? [])];
     return this.inTransaction(() => {
+      // Equality is task semantics, not title alone: distinct dependencies,
+      // parents and file scopes can legitimately share a short display title.
+      const duplicate = this.db.prepare(
+        "SELECT * FROM dc_tasks WHERE track=? AND release=? AND status!='cancelled'",
+      ).all(input.track ?? "product", input.release ?? "V0.1").find((item) =>
+        normalizedLabel(item.title) === normalizedLabel(input.title) &&
+        (item.parent_id ?? null) === (input.parentId ?? null) &&
+        JSON.stringify([...JSON.parse(item.allowed_paths)].sort()) === JSON.stringify([...allowedPaths].sort()) &&
+        JSON.stringify([...JSON.parse(item.required_gates)].sort()) === JSON.stringify([...input.requiredGates].sort()) &&
+        JSON.stringify(this.db.prepare("SELECT depends_on FROM dc_dependencies WHERE task_id=?").all(item.id)
+          .map((r) => r.depends_on).sort()) === JSON.stringify([...dependsOn].sort()));
+      if (duplicate) {
+        fail("DUPLICATE_TASK", `A matching task already exists: ${duplicate.id} (${duplicate.title})`);
+      }
       if (input.parentId) {
         const parent = this.requireTask(input.parentId);
         if (parent.status === "verified" || parent.status === "cancelled") {
@@ -505,6 +881,7 @@ export class ProjectTaskLedger {
       }
       this.audit(input.id, "created_proposal", actor, {
         parentId: input.parentId ?? null, dependsOn, specId: input.specId, planId: input.planId,
+        device: actorInfo(this.root).device,
       });
       return this.get(input.id);
     });

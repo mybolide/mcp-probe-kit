@@ -1,0 +1,56 @@
+name: DevControl macOS and Windows Desktop Bundles
+
+# Candidate artifacts only. Publishing/releases remain a separate owner action.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/devcontrol/**"
+      - "src/tools/start_feature.ts"
+      - "src/tools/start_bugfix.ts"
+      - "scripts/build-devcontrol-desktop.mjs"
+      - ".github/workflows/devcontrol-desktop.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-candidate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: node scripts/build-devcontrol-desktop.mjs
+      - name: Verify bundled Node and DevControl (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          "./dist/devcontrol-macos-$(node -p 'process.arch')/.mcp-probe-kit/runtime/node" --version
+          "./dist/devcontrol-macos-$(node -p 'process.arch')/.mcp-probe-kit/runtime/node" \
+            "./dist/devcontrol-macos-$(node -p 'process.arch')/.mcp-probe-kit/app/index.js" \
+            devcontrol board-data --project-root .
+      - name: Verify bundled Node and DevControl (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $arch = node -p "process.arch"
+          $prefix = "dist/devcontrol-windows-$arch/.mcp-probe-kit"
+          & "$prefix/runtime/node.exe" --version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          & "$prefix/runtime/node.exe" "$prefix/app/index.js" devcontrol board-data --project-root .
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: devcontrol-${{ runner.os }}-${{ runner.arch }}
+          path: dist/devcontrol-*/
+          include-hidden-files: true
+          if-no-files-found: error

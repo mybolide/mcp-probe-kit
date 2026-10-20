@@ -3,7 +3,7 @@ import path from "node:path";
 import { ProjectTaskLedger, DevControlError, type CreateWorkItem, type CompletionReport } from "./task-ledger.js";
 import { serveDevControlStdio } from "./mcp-stdio.js";
 import { serveDevControlBoard } from "./board-server.js";
-import { installMacDesktopLauncher, openDesktopWorkspace } from "./desktop-launcher.js";
+import { installDesktopLauncher, openDesktopWorkspace } from "./desktop-launcher.js";
 
 type FlagMap = Map<string, string | boolean>;
 
@@ -29,6 +29,26 @@ export function dispatchDevControl(
 ): Record<string, unknown> {
   switch (operation) {
     case "next": return ledger.next();
+    case "features": return { features: ledger.listFeatures() };
+    case "feature-get": return ledger.getFeature(String(input.name));
+    case "feature-save": return ledger.reviseFeature(
+      String(input.name), input.sections, String(input.actor ?? "agent"),
+      input.architectureImpact, input.topLevelDocument,
+    );
+    case "feature-validate": return ledger.validateFeature(String(input.name));
+    case "feature-export": return {
+      name: String(input.name), format: input.format ?? "markdown",
+      content: ledger.exportFeature(String(input.name), input.format ?? "markdown"),
+    };
+    case "work-items": return { items: ledger.listWorkItems(input.kind) };
+    case "work-record": return ledger.recordWorkItem({
+      kind: input.kind, title: input.title, description: input.description,
+      featureName: input.featureName, topLevelDocument: input.topLevelDocument,
+      sourceRef: input.sourceRef,
+    });
+    case "architecture-sync": return ledger.syncArchitecture(
+      String(input.id), String(input.reviewer ?? ""),
+    );
     case "board-data": return ledger.board();
     case "status":
     case "list": return { tasks: ledger.list() };
@@ -82,7 +102,7 @@ export async function runDevControlCli(positionals: string[], flags: FlagMap): P
     return 0;
   }
   if (operation === "desktop-install") {
-    const result = installMacDesktopLauncher(root);
+    const result = installDesktopLauncher(root);
     process.stdout.write(JSON.stringify({ ok: true, operation, result }, null, 2) + "\n");
     return 0;
   }

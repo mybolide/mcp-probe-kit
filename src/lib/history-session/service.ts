@@ -35,6 +35,7 @@ import {
   writeMarkdown,
   writeState,
 } from './storage.js';
+import { usesHistorySqlite } from './sqlite-store.js';
 import {
   latestNumber,
   sequenceValid,
@@ -294,6 +295,8 @@ export function bootstrapHistorySession(
       state: { ...state, ...continuity },
       continuity,
       history_read_mode: 'bounded_state_with_on_demand_search_and_read',
+      storage_backend: usesHistorySqlite(projectRoot, historyDir) ? 'project-sqlite' : 'markdown',
+      archive_locator_kind: usesHistorySqlite(projectRoot, historyDir) ? 'virtual-history-path' : 'file-path',
       persistence_mode: 'model_mediated_tool_calls',
       assistant_instructions:
         mode === 'fresh'
@@ -407,6 +410,7 @@ export function checkpointHistorySession(
         current_number: document.number,
         current_path: document.path,
         duplicate_ignored: true,
+        storage_backend: usesHistorySqlite(projectRoot, historyDir) ? 'project-sqlite' : 'markdown',
         rotated,
         content_hash: sha256Text(document.content),
         user_input_captured: Boolean(record.raw_user_input),
@@ -429,6 +433,7 @@ export function checkpointHistorySession(
       current_number: document.number,
       current_path: document.path,
       duplicate_ignored: false,
+      storage_backend: usesHistorySqlite(projectRoot, historyDir) ? 'project-sqlite' : 'markdown',
       revision: record.revision,
       rotated,
       content_hash: sha256Text(updated),
@@ -462,6 +467,7 @@ export function validateHistorySession(
       history_count: report.documents.length,
       total_archive_bytes: totalBytes(report),
       repaired: repair,
+      storage_backend: usesHistorySqlite(projectRoot, historyDir) ? 'project-sqlite' : 'markdown',
     };
   } finally {
     lock.release();

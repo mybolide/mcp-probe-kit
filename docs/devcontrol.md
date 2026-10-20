@@ -1,8 +1,70 @@
-# DevControl V0.5 — project workspace, task ledger and one-click entry
+# DevControl V0.6 candidate — per-project SQLite, native Feature and History Session
 
 DevControl is a Jira-style **project task registry**, distinct from MCP protocol
 Tasks (short-lived tool executions) and Delegated Plans (feature workflow steps).
 It is developed as an opt-in experiment and does not alter the main MCP toolset.
+
+## Project memory ownership (never confuse the two memory systems)
+
+**Project memory is mcp-probe-kit History Session**, provided by
+`history_session_bootstrap`, `history_session_checkpoint`,
+`history_session_search` and `history_session_read`. Its archive contents,
+pagination, redaction, original user input and continuity state retain their
+existing semantics. DevControl exposes the same records in the local
+`项目历史会话` workspace section. History Session uses the **same project-local
+SQLite database**, in separate `hs_*` tables. A default Git project with Node22
+no longer creates numbered `docs/history-session/N.md` files. Existing
+numbered archives are imported once transactionally, left on disk untouched for
+rollback, and subsequent updates go to SQLite only. Returned archive paths are
+virtual locators for the History Session read API, not instructions to create
+Markdown. If Node22 is unavailable, the directory is customized, or
+`MCP_HISTORY_STORAGE=files`, the old Markdown backend remains available.
+
+The `memorize_asset`/`search_memory` tools are a **different**, optional,
+cross-project Qdrant vector-memory service. They are not modified, migrated,
+queried by the project workspace, or silently written by the new SQLite
+feature workflow.
+
+## Native Feature, Bug and design records
+
+On Node22+ Git projects, `start_feature` now defaults to storing the full
+feature proposal, parent-child draft, delegated Plan and revision history in
+the local `dc_features` tables, **without generating requirements.md,
+design.md or tasks.md**. The plan first reviews History Session and existing
+normative documents, then uses `devcontrol feature-save` and
+`devcontrol feature-validate`. A proposal does not bypass task approval.
+`storage_mode=files` explicitly opts into the original document workflow.
+`feature-export` exposes Markdown or JSON on demand; the workspace includes
+download actions for individual feature records.
+
+`start_bugfix` can register a deduplicated project-local issue, preserving
+its SRC-8 analysis workflow. `dc_work_items` contains Bugs and proposed
+architecture changes **only**, not History Session memory. Items and tasks
+capture creator and local device labels. Task deduplication evaluates
+name/track/release/parent/dependencies/scopes/gates rather than matching
+ambiguous short titles alone.
+
+When a feature design changes, its author must explicitly declare whether it
+affects the top-level architecture. Impacting changes open an architecture
+sync request, and `feature-validate` blocks until the required top-level
+design file has a real new Git commit plus explicit review. The system does
+not quietly rewrite approved ADRs/architecture docs.
+
+## macOS and Windows distribution
+
+The same local workbench has a macOS Finder `.app` entry and Windows
+`.cmd` double-click entry. `desktop-install` creates the host-appropriate
+launcher. `desktop-open` reuses the same project-specific loopback server,
+without a shared global SQLite instance.
+
+The separate CI workflow `.github/workflows/devcontrol-desktop.yml` builds
+and tests on actual `macos-latest` and `windows-latest` runners, then produces
+bundles with a bundled official Node22 runtime. The packaging script rejects
+Homebrew's 84 KiB dynamically linked Node shim rather than advertising an
+unusable "standalone Mac build". Windows release compatibility is **pending a
+successful Windows CI run**; writing a Windows launcher is not proof of
+Windows runtime verification. These are bundled-runtime distributions, not
+single native `.exe` builds.
 
 ## Runtime and entry points
 

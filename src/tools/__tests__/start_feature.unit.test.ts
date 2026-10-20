@@ -1,5 +1,10 @@
 import { describe, test, expect } from 'vitest';
 import { startFeature } from '../start_feature.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { ProjectTaskLedger } from '../../devcontrol/task-ledger.js';
 
 function structured(result: Awaited<ReturnType<typeof startFeature>>): any {
   if (!('structuredContent' in result)) throw new Error('structuredContent 缺失');
@@ -10,6 +15,33 @@ describe('start_feature 单元测试', () => {
   test('缺少必填参数时返回错误', async () => {
     const result = await startFeature({});
     expect(result.isError).toBe(true);
+  });
+
+  test('明确 Git 项目时 start_feature 默认把 Feature 和执行计划持久化到独立 SQLite', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'probe-feature-native-'));
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    try {
+      const result = await startFeature({
+        feature_name: 'native-memory',
+        description: '为本地工程写入可追溯的功能规划和分层职责测试。',
+        project_root: root, storage_mode: 'sqlite', spec_layout: 'flat',
+      });
+      expect(result.isError).not.toBe(true);
+      const value = structured(result);
+      expect(value.metadata.projectFeature.storage).toBe('project-sqlite');
+      expect(value.metadata.plan.steps.find((item: any) => item.id === 'check-spec').action)
+        .toBe('validate_project_sqlite_feature');
+      const db = new ProjectTaskLedger(root);
+      try {
+        expect(db.databasePath).toBe(path.join(root, '.mcp-probe-kit/state/devcontrol.sqlite3'));
+        expect(db.getFeature('native-memory').status).toBe('draft');
+        expect(db.getFeature('native-memory').plan.planId).toBe(value.metadata.plan.planId);
+        expect(db.listFeatures()).toHaveLength(1);
+        expect(db.getFeature('native-memory').revision).toBe(1);
+      } finally { db.close(); }
+      expect(fs.existsSync(path.join(root,'docs/specs/native-memory/requirements.md'))).toBe(false);
+      expect(execFileSync('git', ['status','--porcelain'], {cwd:root,encoding:'utf8'})).toBe('');
+    } finally { fs.rmSync(root,{ recursive:true, force:true }); }
   });
 
   test('复杂需求默认 auto 触发 parent-child 并要求先拆分再回到 start_feature', async () => {
@@ -53,6 +85,7 @@ describe('start_feature 单元测试', () => {
       feature_name: 'user-auth',
       description: '用户认证功能',
       docs_dir: 'docs',
+      storage_mode: 'files',
     });
     const value = structured(result);
     const plan = value.metadata.plan;
@@ -78,7 +111,7 @@ describe('start_feature 单元测试', () => {
   });
 
   test('输出文本由 structured plan 渲染且没有隐藏工具指导', async () => {
-    const result = await startFeature({ feature_name: 'user-auth', description: '用户认证功能' });
+    const result = await startFeature({ feature_name: 'user-auth', description: '用户认证功能', storage_mode: 'files' });
     const text = result.content[0].text;
     expect(text).toMatch(/执行计划/);
     expect(text).toMatch(/check_spec/);

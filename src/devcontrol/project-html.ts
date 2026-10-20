@@ -77,6 +77,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     <button type="button" class="navbtn" data-view="requirements"><span class="symbol">☰</span>需求管理</button>
     <button type="button" class="navbtn" data-view="architecture"><span class="symbol">⌘</span>技术架构</button>
     <button type="button" class="navbtn" data-view="tasks"><span class="symbol">▤</span>任务与进度</button>
+    <button type="button" class="navbtn" data-view="issues"><span class="symbol">⚑</span>Bug 与架构变更</button>
+    <button type="button" class="navbtn" data-view="history"><span class="symbol">◷</span>项目历史会话</button>
     <button type="button" class="navbtn" data-view="docs"><span class="symbol">▣</span>文档中心</button>
   </nav>
   <div class="sidefooter"><div class="status"><span class="pulse"></span>LOCAL WORKSPACE</div>
@@ -123,7 +125,10 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       <button class="link" id="open-requirements">查看完整产品需求 →</button></div>
     <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能需求清单</h2><button class="link" data-doc="docs/product/requirements.md">查看完整 PRD →</button></div>
       <div class="doclist" id="requirement-list"></div></div>
-    <div class="panel"><div class="panelhead"><h2>功能规格与验收设计</h2><button class="link" data-go="docs">全部文档 →</button></div><div class="doclist" id="specdocs"></div></div>
+    <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>SQLite 功能提案与规格</h2><span class="eyebrow">START FEATURE / DATABASE</span></div>
+      <p class="sub" style="margin-bottom:18px">start_feature 直接记录在当前项目数据库；点击阅读，按需导出 Markdown 或 JSON，不默认创建重复文档。</p>
+      <div class="doclist" id="db-features"></div></div>
+    <div class="panel"><div class="panelhead"><h2>既有 Git 功能规格</h2><button class="link" data-go="docs">全部文档 →</button></div><div class="doclist" id="specdocs"></div></div>
   </section>
   <section id="view-architecture" class="view">
     <div class="sectionhead"><div class="eyebrow">ARCHITECTURE / OWNERSHIP</div><h1>系统架构与工程边界</h1><p class="sub">新人从这里理解组件、所有权以及重要技术决策。</p></div>
@@ -136,6 +141,20 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     <div class="sectionhead"><div class="eyebrow">DELIVERY / TRACKING</div><h1>任务、进度与交付</h1>
       <p class="sub">实时显示 SQLite 中的待开发、进行中、已完成任务；不可绕过验收手动拖拽完成。</p></div>
     <iframe id="boardframe" class="taskframe" title="DevControl 项目任务看板" loading="lazy" src="/board?embedded=1"></iframe>
+  </section>
+  <section id="view-issues" class="view">
+    <div class="sectionhead"><div class="eyebrow">ENGINEERING / ISSUE CONTROL</div><h1>Bug 与架构变更</h1>
+      <p class="sub">项目本地 SQLite 中的缺陷和影响架构的设计变更。相同条目去重，顶层设计必须随变更审核。</p></div>
+    <div class="doclist" id="issues-list"></div>
+  </section>
+  <section id="view-history" class="view">
+    <div class="sectionhead"><div class="eyebrow">HISTORY SESSION / CONTINUITY</div><h1>项目历史会话</h1>
+      <p class="sub">直接读取 mcp-probe-kit 的 History Session；支持搜索、读取原始检查点与跨会话恢复。它不是 Qdrant 共享记忆。</p></div>
+    <div class="documentbar"><input class="search" id="history-search" type="search"
+      placeholder="搜索决策、上下文、问题、历史开发记录…" aria-label="搜索项目历史会话">
+      <button class="btn" id="history-refresh">检索历史</button></div>
+    <div class="doclist" id="history-list"></div>
+    <div class="docs-empty hide" id="history-empty">没有匹配的项目历史会话。</div>
   </section>
   <section id="view-docs" class="view">
     <div class="sectionhead"><div class="eyebrow">KNOWLEDGE / CANONICAL DOCS</div><h1>项目文档中心</h1><p class="sub">Git 文档是规范事实源；任务状态、完成说明则在 SQLite，避免重复维护。</p></div>
@@ -154,8 +173,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 (()=>{
   "use strict";
   const $=id=>document.getElementById(id);
-  let project=null,board=null;
-  const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",docs:"文档中心"};
+  let project=null,board=null,features=[];
+  const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",issues:"Bug 与变更",history:"历史会话",docs:"文档中心"};
   const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=String(text);if(cls)x.className=cls;return x;};
   const fetchJSON=async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json();};
   function go(view){
@@ -165,6 +184,94 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     $("crumb").textContent=titles[view];
     history.replaceState(null,"","#"+view);
     if(view==="tasks")$("boardframe").contentWindow?.postMessage({kind:"devcontrol-refresh"},"http://"+location.host);
+    if(view==="history")loadHistory();
+    if(view==="issues")loadIssues();
+  }
+  async function loadIssues(){
+    const container=$("issues-list");
+    try{
+      const data=await fetchJSON("/api/work-items");
+      container.replaceChildren(...(data.items.length?data.items.map(item=>{
+        const b=n("button",null,"docitem");b.type="button";
+        b.append(n("span",item.kind==="bug"?"BUG":item.status==="synced"?"已同步顶层设计":"待同步顶层设计","taskid"),
+          n("b",item.title),n("small",item.creator+" · "+item.device+" · "+(item.topLevelDocument||item.id)));
+        b.addEventListener("click",()=>{
+          $("overlay").classList.add("open");
+          $("doc-title").textContent=item.title;
+          $("doc-source").textContent=item.id+" · "+item.status;
+          markdown($("doc-content"),[
+            "# 条目内容",item.description,
+            "# 来源",item.sourceRef||"未填写",
+            "# 对应功能",item.featureName||"未关联",
+            "# 顶层架构",item.topLevelDocument||"不适用",
+            "# 创建者与设备",item.creator+" / "+item.device,
+          ].join("\n\n"));
+        });return b;
+      }):[n("div","当前项目尚无 Bug 或待审架构变更。","docs-empty")]));
+    }catch(e){container.replaceChildren(n("div","读取失败："+e.message,"error"));}
+  }
+  async function loadHistory(){
+    const container=$("history-list");
+    try{
+      const q=$("history-search").value.trim();
+      const data=await fetchJSON("/api/history?q="+encodeURIComponent(q)+"&limit=30");
+      container.replaceChildren(...(data.results.length?data.results.map(hit=>{
+        const b=n("button",null,"docitem");b.type="button";
+        b.append(n("span","SESSION #"+hit.number,"taskid"),n("b",hit.title),
+          n("small",hit.path+" · "+(hit.updated_at||"") ));
+        b.addEventListener("click",()=>openHistory(hit.number,hit.title));
+        return b;
+      }):[n("div","暂无项目历史会话或搜索无结果。","docs-empty")]));
+    }catch(e){container.replaceChildren(n("div","读取失败："+e.message,"error"));}
+  }
+  async function openHistory(number,title){
+    $("overlay").classList.add("open");$("doc-title").textContent=title;
+    $("doc-source").textContent="History Session #"+number+" · 项目本地归档";
+    $("doc-content").replaceChildren(n("p","读取历史检查点中…"));
+    try{
+      let cursor=0,expectedHash="",pages=[];
+      // Bounded original API: same hash through cursor pagination.
+      for(let i=0;i<32;i++){
+        const data=await fetchJSON("/api/history/"+number+"?cursor="+cursor+
+          "&expected_hash="+encodeURIComponent(expectedHash));
+        pages.push(data.content);
+        expectedHash=data.content_hash;
+        if(data.next_cursor===null)break;
+        cursor=data.next_cursor;
+      }
+      markdown($("doc-content"),pages.join(""));
+    }catch(e){$("doc-content").replaceChildren(n("p","无法读取历史："+e.message,"error"));}
+  }
+  async function openFeature(name){
+    $("overlay").classList.add("open");$("doc-title").textContent="读取功能记录…";
+    $("doc-source").textContent="项目 SQLite · "+name;
+    $("doc-content").replaceChildren(n("p","读取中…"));
+    try{
+      const f=await fetchJSON("/api/features/"+encodeURIComponent(name));
+      $("doc-title").textContent=f.name;
+      $("doc-source").textContent="版本 "+f.revision+" · "+f.layout+" · "+f.status+" · "+f.updatedAt;
+      const root=$("doc-content");
+      const text=["# 功能目标",f.description,
+        "# 需求",f.sections.requirements||"尚未完善（草稿）",
+        "# 技术设计",f.sections.design||"尚未完善（草稿）",
+        "# 研发任务",f.sections.tasks||"尚未完善（草稿）"].join("\n\n");
+      markdown(root,text);
+      const exports=n("div",null,"kpirow");
+      for(const [fmt,label,ext] of [["markdown","导出 Markdown","md"],["json","导出 JSON","json"]]){
+        const a=n("a",label+" ↓","btn");a.href="/api/features/"+encodeURIComponent(name)+"/export?format="+fmt;
+        a.download="feature-"+name+"."+ext;a.style.textDecoration="none";exports.append(a);
+      }
+      root.prepend(exports);
+    }catch(e){$("doc-content").replaceChildren(n("p","无法读取功能："+e.message,"error"));}
+  }
+  function renderFeatures(){
+    const rows=features||[];
+    $("db-features").replaceChildren(...(rows.length?rows.map(f=>{
+      const b=n("button",null,"docitem");b.type="button";
+      b.append(n("span",f.status==="specified"?"规格已校验":"草稿待完善","taskid"),
+        n("b",f.name),n("small","SQLite · "+f.layout+" · 版本 "+f.revision));
+      b.addEventListener("click",()=>openFeature(f.name));return b;
+    }):[n("div","暂无 SQLite 功能提案；首次调用 start_feature 后自动显示。","docs-empty")]));
   }
   function preview(doc){
     const b=n("button",null,"previewbtn");
@@ -279,10 +386,13 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         (candidate.track!=="product"&&productNext?" · 产品主线下一任务："+productNext.id+"（待当前任务结束后领取）":"")):
       "当前无符合依赖条件的任务；查看看板了解完成情况。";
     setupDocs();
+    renderFeatures();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
   async function reload(){
-    try{[project,board]=await Promise.all([fetchJSON("/api/project"),fetchJSON("/api/board")]);render();}
+    try{const [nextProject,nextBoard,nextFeatures]=await Promise.all([
+      fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features")]);
+      project=nextProject;board=nextBoard;features=nextFeatures.features||[];render();}
     catch(e){$("project-intro").textContent="无法读取项目资料："+e.message;}
   }
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));
@@ -294,6 +404,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   $("open-requirements").addEventListener("click",()=>openDoc("docs/product/requirements.md"));
   $("open-architecture").addEventListener("click",()=>openDoc("docs/architecture/overview.md"));
   $("doc-search").addEventListener("input",renderDocs);
+  $("history-refresh").addEventListener("click",loadHistory);
+  $("history-search").addEventListener("keydown",e=>{if(e.key==="Enter")loadHistory();});
   $("reload").addEventListener("click",reload);
   $("close").addEventListener("click",()=>$("overlay").classList.remove("open"));
   $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))$("overlay").classList.remove("open");});
