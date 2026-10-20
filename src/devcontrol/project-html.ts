@@ -192,24 +192,23 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   async function showLanAccess(){
     $("overlay").classList.add("open");
     $("doc-title").textContent="局域网连接";
-    $("doc-source").textContent="仅限本机开发者查看项目访问码";
+    $("doc-source").textContent="局域网中枢电脑直接打开，无须账号和密码";
     $("doc-content").replaceChildren(n("p","检查当前项目网络设置…","sub"));
     try{
       const d=await fetchJSON("/api/access");
       const lines=d.lanEnabled ? [
         "# 中枢电脑访问地址",...(d.urls||[]), "",
-        "# 项目访问码",d.accessKey||"（未创建）","",
-        "从中枢电脑打开上述地址，输入项目访问码即可浏览需求、架构、任务和 History Session。",
-        "访问码属于当前项目，不与其他项目共用。请勿在不可信网络中直接使用 HTTP。"
+        "浏览器直接打开上述地址，即可查看需求、架构、任务和 History Session，无须登录。",
+        "同一局域网中的其他设备也能够读取这些资料，请仅在受信任的私有网络中启用。"
       ] : [
         "# 当前仅允许本机访问",
-        "当前项目尚未启用局域网模式。管理员可以在项目 MCP 配置中启用 LAN 访问。",
-        "启用后工作台会自动监听局域网地址，并使用项目独立访问码保护研发资料。"
+        "当前项目尚未启用局域网模式；可用 DevControl lan-enable 开启私有局域网只读访问。",
+        "启用后无需账号密码，其他私有局域网设备可直接打开当前项目地址。"
       ];
       markdown($("doc-content"),lines.join("\n\n"));
     }catch{
       $("doc-content").replaceChildren(n("p",
-        "访问码只能在项目所在的开发机上查看。请回到该电脑打开 DevControl 的“局域网连接”。","error"));
+        "无法获取当前项目的局域网地址，请检查 MCP 服务和网络连接。","error"));
     }
   }
   async function loadIssues(){

@@ -94,12 +94,11 @@ export async function runDevControlCli(positionals: string[], flags: FlagMap): P
   if (operation === "lan-enable" || operation === "lan-disable") {
     const access = configureWorkspaceAccess(root, {
       lanEnabled: operation === "lan-enable",
-      rotateKey: flags.has("rotate-key"),
     });
     process.stdout.write(JSON.stringify({
       ok: true, operation, lanEnabled: access.lanEnabled,
       basePort: access.basePort, addresses: lanAddresses(),
-      message: "MCP startup or desktop-open will apply this project setting. Only local dashboard reveals its access key.",
+      message: "MCP startup applies this project LAN setting. All private LAN readers can access the read-only workspace without logging in.",
     }, null, 2) + "\n");
     return 0;
   }
@@ -108,9 +107,8 @@ export async function runDevControlCli(positionals: string[], flags: FlagMap): P
     process.stdout.write(JSON.stringify({
       ok: true, operation,
       lanEnabled: access.lanEnabled, basePort: access.basePort,
-      accessKey: access.lanEnabled ? access.accessKey : null,
       addresses: lanAddresses(),
-      warning: "Treat the project access key as a secret. HTTP LAN traffic is not encrypted; use VPN/HTTPS on untrusted networks.",
+      warning: "No login: any device on an allowed private LAN can read project information. HTTP is not encrypted. Disable LAN or use a trusted VPN/HTTPS proxy on untrusted networks.",
     }, null, 2) + "\n");
     return 0;
   }

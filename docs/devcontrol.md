@@ -66,21 +66,22 @@ next 79 ports (`38181`, `38182`, etc.). The startup probe only reuses a
 service presenting the matching project root, schema version and LAN mode.
 The SQLite remains inside **each Git project**, not in a central shared DB.
 
-Network mode is **explicitly project-scoped**. To allow an authorized
-central computer to view the project, enable LAN once for that project via
-`devcontrol lan-enable --project-root .`; to disable, use `lan-disable`.
-`--rotate-key` rotates the access key on either command. LAN configuration
-and key are local, Git-ignored project files with restricted permissions.
-When enabled, DevControl listens on the local network and protects all
-project APIs, specs, Bug details and History Session behind a project-specific
-login with an HttpOnly signed cookie. The dashboard's **局域网连接** view shows
-the central computer's URL and access code only to a local reader. Remote
-readers cannot retrieve the key from `/api/access`.
+Network mode is **explicitly project-scoped**. To let a central computer
+view the project, enable LAN once using `devcontrol lan-enable --project-root .`;
+disable with `lan-disable`. The configuration is in the project's
+Git-ignored SQLite state directory. In LAN mode, DevControl accepts only
+private IPv4 sources (RFC1918) and Host headers belonging to this computer.
+**There is no password, login screen, access key or cookie**; the dashboard's
+**局域网连接** view shows the actual URLs and central browsers open them
+directly. All workspace pages, Feature proposals, Bug details, architecture
+and History Session are readable to every device allowed on that LAN.
 
-Important: LAN mode currently uses **HTTP without transport encryption**.
-Only enable it on a trusted network; use an authenticated VPN or HTTPS proxy
-when the traffic crosses untrusted network segments. The workbench remains
-read-only and never exposes write APIs to remote browsers.
+Important: LAN mode is intentionally **unauthenticated HTTP**. Private IP
+checks are not an identity or authorization system and a forwarded/NAT
+connection can also appear to originate from private space. Only use it on a
+trusted LAN, do not forward the port to the Internet, and disable LAN on
+untrusted networks. Protect remote access via network/VPN controls if needed.
+The Web API remains read-only.
 
 Windows and macOS must still be validated by platform-specific CI **for
 the same Node MCP package**; no OS-specific client build or release is needed.
@@ -186,9 +187,9 @@ computer. It shows three columns — 待开发 / 进行中 /
 progress counters, dependencies, parent/child links and completion details.
 
 With LAN disabled, the server only binds to `127.0.0.1`. With LAN enabled,
-all remote access requires the project access code. Strict Host validation,
-Content Security Policy and read-only API routes remain in force. No independent
-Kanban status table is introduced.
+private LAN readers access it without login. Strict Host validation, private
+source filtering, Content Security Policy and read-only API routes remain in
+force. No independent Kanban status table is introduced.
 
 ## Interrupted sessions and safe recovery
 

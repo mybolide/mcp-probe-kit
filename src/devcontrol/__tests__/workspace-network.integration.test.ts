@@ -20,9 +20,9 @@ afterEach(() => {
 });
 
 describe("project workbench HTTP LAN access", () => {
-  it("requires a project access key from remote clients and instantly revokes a rotated key", async () => {
+  it("allows trusted private LAN readers without login and revokes access on lan-disable", async () => {
     const root = project();
-    const config = configureWorkspaceAccess(root, { lanEnabled: true });
+    configureWorkspaceAccess(root, { lanEnabled: true });
     const ledger = new ProjectTaskLedger(root);
     const server = createDevControlBoardServer(ledger);
     // Simulate a remote network socket without binding a public IP in a test
@@ -37,39 +37,41 @@ describe("project workbench HTTP LAN access", () => {
       const address = server.address();
       const base = "http://127.0.0.1:" +
         (typeof address === "object" && address ? address.port : 0);
-      expect((await fetch(base + "/api/board")).status).toBe(401);
-      expect((await fetch(base + "/api/access")).status).toBe(401);
+      expect((await fetch(base + "/api/board")).status).toBe(200);
+      expect((await fetch(base + "/api/history")).status).toBe(200);
       const guest = await fetch(base + "/");
       expect(guest.status).toBe(200);
-      expect(await guest.text()).toContain("局域网登录");
-      const rejected = await fetch(base + "/login", {
-        method: "POST", redirect: "manual",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ accessKey: "not-the-key" }),
-      });
-      expect(rejected.status).toBe(401);
-      const accepted = await fetch(base + "/login", {
-        method: "POST", redirect: "manual",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ accessKey: config.accessKey }),
-      });
-      expect(accepted.status).toBe(303);
-      const cookie = accepted.headers.get("set-cookie");
-      expect(cookie).toContain("HttpOnly");
-      expect((await fetch(base + "/api/board", {
-        headers: { Cookie: cookie! },
-      })).status).toBe(200);
-      expect((await fetch(base + "/api/access", {
-        headers: { Cookie: cookie! },
-      })).status).toBe(403); // Only local sockets may see the key.
-      configureWorkspaceAccess(root, { lanEnabled: true, rotateKey: true });
-      expect((await fetch(base + "/api/board", {
-        headers: { Cookie: cookie! },
-      })).status).toBe(401);
+      expect(await guest.text()).toContain("项目总览");
+      const access = await fetch(base + "/api/access");
+      expect(access.status).toBe(200);
+      expect(await access.text()).not.toContain("accessKey");
+      expect((await fetch(base + "/login", { method: "POST" })).status).toBe(405);
       configureWorkspaceAccess(root, { lanEnabled: false });
-      expect((await fetch(base + "/api/board", {
-        headers: { Cookie: cookie! },
-      })).status).toBe(401);
+      expect((await fetch(base + "/api/board")).status).toBe(403);
+      expect((await fetch(base + "/")).status).toBe(403);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      ledger.close();
+    }
+  });
+
+  it("rejects non-private IPv4 readers regardless of Host or cookies", async () => {
+    const root = project();
+    configureWorkspaceAccess(root, { lanEnabled: true });
+    const ledger = new ProjectTaskLedger(root);
+    const server = createDevControlBoardServer(ledger);
+    server.prependListener("request", (request) => {
+      Object.defineProperty(request.socket, "remoteAddress", {
+        configurable: true, value: "8.8.8.8",
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      const base = "http://127.0.0.1:" +
+        (typeof address === "object" && address ? address.port : 0);
+      expect((await fetch(base + "/api/project")).status).toBe(403);
+      expect((await fetch(base + "/")).status).toBe(403);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       ledger.close();
@@ -87,7 +89,7 @@ describe("project workbench HTTP LAN access", () => {
       const filename = path.join(root, ".mcp-probe-kit/state/workspace-server.json");
       fs.mkdirSync(path.dirname(filename), { recursive: true });
       fs.writeFileSync(filename, JSON.stringify({
-        lanEnabled: false, basePort: port, accessKey: "",
+        lanEnabled: false, basePort: port,
       }));
       const reused = await ensureProjectWorkspaceRunning(root, {
         cliEntry: process.execPath,
