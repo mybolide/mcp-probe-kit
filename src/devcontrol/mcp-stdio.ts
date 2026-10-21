@@ -3,6 +3,9 @@ import readline from "node:readline";
 import { dispatchDevControl } from "./command.js";
 import { DevControlError, ProjectTaskLedger } from "./task-ledger.js";
 import { ensureProjectWorkspaceAtMcpStartup } from "./startup.js";
+import { ensureProjectWorkspaceRunning } from "./workspace-process.js";
+import { lanAddresses } from "./workspace-access.js";
+import { resolveWorkbenchLocale } from "./i18n.js";
 
 const operations = [
   "release-plan", "plan-review", "plan-propose", "plan-revise", "plan-approve",
@@ -11,13 +14,17 @@ const operations = [
   "create", "subtask", "dependency", "approve",
   "claim", "renew", "release", "check", "report", "complete", "verify",
   "trace", "board-data", "import-spec",
+  "git-contributors", "assign", "execution-contract", "workspace-link",
 ];
 const requiredFields: Record<string, string[]> = {
-  "release-plan": ["release"], "plan-review": ["plan"],
+  "release-plan": [], "plan-review": ["plan"],
   "plan-propose": ["plan","actor"],
   "plan-revise": ["plan","actor","expectedPreviousHash"],
   "plan-approve": ["release","approvedBy","expectedHash"],
   onboard: [], next: [], list: [], "board-data": [], features: [],
+  "git-contributors": [], assign:["id","owner","assignedBy","decisionRef"],
+  "execution-contract":["id"],
+  "workspace-link":[],
   "feature-get": ["name"], "feature-save": ["name", "sections"],
   "feature-validate": ["name"], "feature-export": ["name"],
   "work-items": [], "work-record": ["kind", "title", "description"],
@@ -88,7 +95,8 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                     "summary", "implementation", "verification", "remaining",
                     "name", "format", "sections", "featureName", "topLevelDocument",
                     "sourceRef", "description", "reviewer", "architectureImpact",
-                    "plan", "expectedHash", "expectedPreviousHash"])]
+                    "plan", "expectedHash", "expectedPreviousHash",
+                    "owner","assignedBy","decisionRef","language"])]
                     .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn"].includes(field)
                       ? { type: "array", items: { type: "string" } }
                       : field === "priority" || field === "ttlSeconds" ? { type: "integer" }
@@ -114,11 +122,23 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
             answer = error(parsed.id, -32602, "Invalid DevControl tool or parameters");
           } else {
             try {
-              const result = dispatchDevControl(ledger, operation, params.arguments);
+              const result=operation==="workspace-link" ?
+                await (async()=>{
+                  const language=typeof params.arguments.language==="string"?
+                    resolveWorkbenchLocale(params.arguments.language):null;
+                  const suffix=(language?"?lang="+encodeURIComponent(language):"")+"#tasks";
+                  const host=await ensureProjectWorkspaceRunning(projectRoot);
+                  return {localUrl:host.url+suffix,
+                    lanUrls:host.lanEnabled?lanAddresses().map(ip=>
+                      "http://"+ip+":"+host.port+"/"+suffix):[],
+                    language:language??"browser-preference",
+                    languageSource:language?"explicit chat-host hint":"browser Accept-Language fallback",
+                    note:"Language is scoped to a viewer URL, never shared in the project database."};
+                })():dispatchDevControl(ledger, operation, params.arguments);
               answer = response(parsed.id, {
                 content: [{ type: "text", text: JSON.stringify(result) }],
                 structuredContent: result,
-                isError: result.passed === false,
+                isError: "passed" in result && result.passed === false,
               });
             } catch (err) {
               const info = err instanceof DevControlError

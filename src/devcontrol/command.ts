@@ -6,6 +6,7 @@ import { serveDevControlBoard } from "./board-server.js";
 import { ensureProjectWorkspaceRunning } from "./workspace-process.js";
 import { projectOnboarding } from "./project-onboarding.js";
 import { reviewReleasePlan } from "./release-plan.js";
+import { resolveWorkbenchLocale } from "./i18n.js";
 import {
   configureWorkspaceAccess, lanAddresses, workspaceAccess, WORKSPACE_START_PORT,
 } from "./workspace-access.js";
@@ -33,7 +34,7 @@ export function dispatchDevControl(
   ledger: ProjectTaskLedger, operation: string, input: Record<string, any> = {},
 ): Record<string, unknown> {
   switch (operation) {
-    case "release-plan": return ledger.releasePlan(String(input.release ?? "V0.1"));
+    case "release-plan": return ledger.releasePlan(String(input.release ?? ledger.primaryRelease()));
     case "plan-review": return { ...reviewReleasePlan(input.plan) };
     case "plan-propose": return ledger.proposeReleasePlan(input.plan, String(input.actor ?? ""));
     case "plan-revise": return ledger.proposeReleasePlan(
@@ -69,6 +70,10 @@ export function dispatchDevControl(
     case "status":
     case "list": return { tasks: ledger.list() };
     case "get": return ledger.get(String(input.id));
+    case "git-contributors": return ledger.gitContributors();
+    case "assign": return ledger.assign(String(input.id),String(input.owner ?? ""),
+      String(input.assignedBy ?? ""),String(input.decisionRef ?? ""));
+    case "execution-contract": return ledger.executionContract(String(input.id));
     case "create": return ledger.create(input as CreateWorkItem, String(input.actor ?? "agent-proposal"));
     case "subtask": {
       if (!input.parentId) throw new DevControlError("PARENT_REQUIRED", "Subtask needs parentId");
@@ -138,8 +143,20 @@ export async function runDevControlCli(positionals: string[], flags: FlagMap): P
     await serveDevControlBoard(root, port);
     return 0;
   }
-  if (operation === "workspace-status") {
+  if (operation === "workspace-status" || operation === "workspace-link") {
     const result = await ensureProjectWorkspaceRunning(root);
+    if(operation==="workspace-link"){
+      const raw=stringFlag(flags,"lang");
+      const language=raw?resolveWorkbenchLocale(raw):null;
+      const suffix=(language?"?lang="+encodeURIComponent(language):"")+"#tasks";
+      process.stdout.write(JSON.stringify({ok:true,operation,
+        localUrl:result.url+suffix,
+        lanUrls:result.lanEnabled?lanAddresses().map(ip=>
+          "http://"+ip+":"+result.port+"/"+suffix):[],
+        language:language??"browser-preference",
+      },null,2)+"\n");
+      return 0;
+    }
     process.stdout.write(JSON.stringify({ ok: true, operation, result }, null, 2) + "\n");
     return 0;
   }

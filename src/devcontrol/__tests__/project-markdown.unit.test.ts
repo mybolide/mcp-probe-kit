@@ -55,7 +55,7 @@ describe("DevControl documentation Markdown tables", () => {
     expect(() => new vm.Script(match![1], { filename: "project-workspace.js" })).not.toThrow();
     expect(html).toContain("negativeCases");
     expect(html).toContain("verificationEvidence");
-    expect(html).toContain("/api/release-plan?release=V0.1");
+    expect(html).toContain('fetchJSON("/api/release-plan")');
     expect(html).toContain('id="task-rows"');
     expect(html).toContain('id="task-search"');
     for (const [id,label] of [["not_started","未开始"],["in_progress","开发中"],["completed","已完成"]]){

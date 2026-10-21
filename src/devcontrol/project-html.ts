@@ -2,9 +2,11 @@
  * The DevControl Project Workspace presents canonical project documentation
  * and one simplified task list with three status buckets. Canonical states stay in SQLite.
  */
-export function projectHtml(nonce: string): string {
+import { enUi, type WorkbenchLocale } from "./i18n.js";
+
+export function projectHtml(nonce: string, locale: WorkbenchLocale = "zh-CN"): string {
   return String.raw`<!doctype html>
-<html lang="zh-CN">
+<html lang="${locale}">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark"><title>DevControl · 项目工作台</title>
@@ -227,15 +229,37 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 (()=>{
   "use strict";
   const $=id=>document.getElementById(id);
+  const locale=${JSON.stringify(locale)};
+  const languagePack=${JSON.stringify(enUi)};
+  const translate=(value)=>locale==="en" ? (languagePack[value]||value) : value;
+  function localizeChrome(){
+    if(locale!=="en")return;
+    const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+    const candidates=[];let node;
+    while((node=walker.nextNode())){
+      const parent=node.parentElement;
+      if(parent&&["SCRIPT","STYLE","PRE","CODE"].includes(parent.tagName))continue;
+      if(languagePack[node.nodeValue?.trim()||""])candidates.push(node);
+    }
+    for(const item of candidates){
+      const value=item.nodeValue||"",key=value.trim();
+      item.nodeValue=value.replace(key,languagePack[key]);
+    }
+    for(const item of document.querySelectorAll("[placeholder]")){
+      const current=item.getAttribute("placeholder");
+      if(current&&languagePack[current])item.setAttribute("placeholder",languagePack[current]);
+    }
+    document.title="DevControl · Project workspace";
+  }
   let project=null,board=null,features=[],onboarding=null,releasePlan=null,taskTab="not_started";
   const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",issues:"Bug 与变更",history:"历史会话",docs:"文档中心"};
-  const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=String(text);if(cls)x.className=cls;return x;};
+  const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=translate(String(text));if(cls)x.className=cls;return x;};
   const fetchJSON=async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json();};
   function go(view){
     if(!titles[view])return;
     document.querySelectorAll(".navbtn").forEach(e=>e.classList.toggle("active",e.dataset.view===view));
     document.querySelectorAll(".view").forEach(e=>e.classList.toggle("active",e.id==="view-"+view));
-    $("crumb").textContent=titles[view];
+    $("crumb").textContent=translate(titles[view]);
     history.replaceState(null,"","#"+view);
     if(view==="history")loadHistory();
     if(view==="issues")loadIssues();
@@ -308,8 +332,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     $("overlay").classList.add("open");
     const task=row.item,actual=row.current,status=taskStatus(row)[0];
     $("doc-title").textContent=task.id+" · "+displayTaskTitle(task);
-    $("doc-source").textContent=(row.pending?"V0.1 · SQLite 待审提案，未批准执行":
-      "V0.1 · 已存在任务台账")+" · "+status;
+    const releaseName=String(releasePlan?.release||actual?.release||"");
+    $("doc-source").textContent=(row.pending?
+      (locale==="en"?"SQLite proposal pending approval · cannot execute":"SQLite 待审提案，未批准执行"):
+      (locale==="en"?"Approved task ledger":"已存在任务台账"));
+    $("doc-source").textContent=releaseName+" · "+$("doc-source").textContent+" · "+translate(status);
     const body=$("doc-content");body.replaceChildren();
     const content=n("div",null,"issue-details");body.append(content);
     const section=(heading,value)=>{
@@ -324,7 +351,13 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     section("当前状态与执行边界",row.pending?
       "规划待审核 · 不可领取、执行或计入版本完成率。":
       "状态："+status+"。执行以真实 SQLite 状态、依赖和 Gate 为准。");
-    section("负责人 / 计划完成", "负责人：未分配；计划完成时间：未排期。不能依据任务创建时间推断负责人或截止日期。");
+    section("负责人 / 计划完成",[
+      translate("负责人")+": "+(actual?.owner||translate("未分配")),
+      (locale==="en"?"Assignment evidence: ":"分配依据：")+
+        (actual?.ownerAssignment?.decisionRef||(locale==="en"?"Not assigned by reviewer":"尚无正式分配决定")),
+      locale==="en"?"Target date: Unscheduled (not inferred from Git commit timestamps)":
+        "计划完成时间：未排期（不从 Git 提交时间推断）",
+    ]);
     section("需求来源",task.requirementIds||actual?.spec?.requirementIds||[]);
     section("使用场景 / 触发条件 / 用户期望",task.scenario||"尚无独立业务场景说明");
     section("按顺序执行的业务与系统流程",task.workflow||[]);
@@ -390,15 +423,17 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       if(row.pending||row.status==="in_review"){
         head.append(n("span",label,"issue-state "+cls));
       }
-      button.append(head,n("div",task.id+" · "+row.phase,"simple-task-meta"));
+      button.append(head,n("div",task.id+" · "+row.phase+" · "+translate("负责人")+": "+
+        (row.current?.owner||translate("未分配")),"simple-task-meta"));
       const scenario=task.scenario||task.acceptance||row.current?.spec?.acceptance||"尚无任务说明";
       button.append(n("div",scenario,"simple-task-summary"));
       button.addEventListener("click",()=>openPlanTask(row));
       return button;
     }):[n("div",search?"没有匹配的任务。":"当前没有任务。","docs-empty")]));
     const pending=rows.filter(row=>row.pending&&taskBucket(row)===taskTab).length;
-    $("task-list-count").textContent="显示 "+filtered.length+" 项"+
-      (pending?" · 其中 "+pending+" 项待审核（尚未允许开发）":"");
+    $("task-list-count").textContent=locale==="en"?
+      ("Showing "+filtered.length+" tasks"+(pending?" · "+pending+" pending review (not authorized to implement)":"")):
+      ("显示 "+filtered.length+" 项"+(pending?" · 其中 "+pending+" 项待审核（尚未允许开发）":""));
   }
   async function showLanAccess(){
     $("overlay").classList.add("open");
@@ -743,7 +778,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   async function reload(){
     try{const [nextProject,nextBoard,nextFeatures,nextOnboarding,nextReleasePlan]=await Promise.all([
       fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),fetchJSON("/api/onboarding"),
-      fetchJSON("/api/release-plan?release=V0.1")]);
+      fetchJSON("/api/release-plan")]);
       project=nextProject;board=nextBoard;features=nextFeatures.features||[];
       onboarding=nextOnboarding;releasePlan=nextReleasePlan;render();}
     catch(e){$("project-intro").textContent="无法读取项目资料："+e.message;}
@@ -767,6 +802,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   $("close").addEventListener("click",()=>$("overlay").classList.remove("open"));
   $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))$("overlay").classList.remove("open");});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")$("overlay").classList.remove("open");});
+  localizeChrome();
   const requested=location.hash.slice(1);if(titles[requested])go(requested);
   reload();setInterval(()=>{if(document.visibilityState==="visible")reload();},30000);
 })();

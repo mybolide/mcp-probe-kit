@@ -83,6 +83,32 @@ afterEach(() => {
   });
 });
 
+describe("Task ownership and frozen execution contract",()=>{
+  it("shows Git candidates but requires explicit owner assignment and resolved decisions before claiming", () => {
+    const {ledger}=fixture();
+    expect(ledger.gitContributors()).toMatchObject({
+      assignedAutomatically:false,contributors:[{name:"Test",count:1}],
+    });
+    const candidate=plan();
+    candidate.nodes[1].openQuestions=["Decide migration lifetime and data retention before implementation."];
+    const approved=ledger.proposeReleasePlan(candidate,"planner");
+    ledger.approveReleasePlan("V0.1","reviewer",String(approved.hash));
+    expect(() => ledger.claim("REL-INGEST","coding-agent"))
+      .toThrow(/EXECUTION_CONTRACT_BLOCKED|not assigned/);
+    ledger.assign("REL-INGEST","owner-A","reviewer","review/minutes-123");
+    expect(ledger.executionContract("REL-INGEST")).toMatchObject({
+      eligible:false,issues:[expect.stringContaining("Unresolved design decisions")],
+      owner:"owner-A",spec:{scenario:expect.any(String)},
+    });
+    expect(() => ledger.claim("REL-INGEST","coding-agent"))
+      .toThrow(/Unresolved design decisions/);
+    expect(() => ledger.assign("REL-INGEST","", "reviewer","ticket-1"))
+      .toThrow(/assignment|Owner|reviewer/i);
+    expect(ledger.next().nextTask).toBeNull();
+    expect(ledger.get("REL-INGEST").status).toBe("ready");
+  });
+});
+
 describe("Pending release plan content revision", () => {
   it("blocks approval of legacy one-test-line task plans before Spec-depth revision", () => {
     const {ledger}=fixture();
@@ -197,8 +223,17 @@ describe("DevControl full-version planning", () => {
         designRef:"docs/architecture/overview.md#event-contract",
       },
     });
+    expect(ledger.next().nextTask).toBeNull();
+    expect(ledger.executionContract("REL-INGEST").issues).toContain("Task owner is not assigned");
+    const assignment=dispatchDevControl(ledger,"assign",{
+      id:"REL-INGEST",owner:"Implementer One",assignedBy:"reviewer",
+      decisionRef:"planning-review:REL-INGEST",
+    });
+    expect(assignment).toMatchObject({owner:"Implementer One",
+      ownerAssignment:{assignedBy:"reviewer",decisionRef:"planning-review:REL-INGEST"}});
     expect(ledger.next().nextTask.id).toBe("REL-INGEST");
     expect(() => ledger.claim("REL-CORE","agent")).toThrow(/leaf/);
+    ledger.assign("REL-RETRY","Implementer Two","reviewer","planning-review:REL-RETRY");
     expect(() => ledger.claim("REL-RETRY","agent")).toThrow(/depends/);
     expect(ledger.releasePlan("V0.1").sourceDrift).toBe(false);
     expect(ledger.board().columns.todo.find((t: {id:string;spec?:{testCases:string[]}}) =>

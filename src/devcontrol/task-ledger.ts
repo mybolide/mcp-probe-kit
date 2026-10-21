@@ -318,6 +318,13 @@ export class ProjectTaskLedger {
         estimated_hours REAL,
         plan_revision INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS dc_task_assignments (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        owner TEXT NOT NULL,
+        assigned_by TEXT NOT NULL,
+        decision_ref TEXT NOT NULL,
+        assigned_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS dc_dependencies (
         task_id TEXT NOT NULL REFERENCES dc_tasks(id),
         depends_on TEXT NOT NULL REFERENCES dc_tasks(id),
@@ -497,11 +504,17 @@ export class ProjectTaskLedger {
 
   private task(row: Row): Row {
     const detail = this.db.prepare("SELECT * FROM dc_task_specs WHERE task_id=?").get(row.id);
+    const assignment=this.db.prepare(
+      "SELECT owner,assigned_by,decision_ref,assigned_at FROM dc_task_assignments WHERE task_id=?",
+    ).get(row.id);
     return {
       id: row.id, title: row.title, parentId: row.parent_id ?? null,
       track: row.track, release: row.release, priority: row.priority, status: row.status,
       allowedPaths: JSON.parse(row.allowed_paths), requiredGates: JSON.parse(row.required_gates),
       specId: row.spec_id, planId: row.plan_id, approvedBy: row.approved_by,
+      owner:assignment?.owner??null,
+      ownerAssignment:assignment?{assignedBy:assignment.assigned_by,
+        decisionRef:assignment.decision_ref,assignedAt:assignment.assigned_at}:null,
       dependsOn: this.db.prepare("SELECT depends_on FROM dc_dependencies WHERE task_id=?").all(row.id)
         .map((d) => d.depends_on),
       childIds: this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=?").all(row.id).map((c) => c.id),
@@ -520,6 +533,96 @@ export class ProjectTaskLedger {
   }
 
   get(id: string): Row { return this.task(this.requireTask(id)); }
+
+  /** Select an actual project release, not a hardcoded name from the pilot project. */
+  primaryRelease(): string {
+    const proposal=this.db.prepare(
+      "SELECT release FROM dc_release_proposals ORDER BY proposed_at DESC LIMIT 1",
+    ).get();
+    if(proposal)return String(proposal.release);
+    const frozen=this.db.prepare(
+      "SELECT release FROM dc_release_plans ORDER BY approved_at DESC LIMIT 1",
+    ).get();
+    if(frozen)return String(frozen.release);
+    const product=this.db.prepare(
+      "SELECT release FROM dc_tasks WHERE track='product' ORDER BY updated_at DESC LIMIT 1",
+    ).get();
+    return product?String(product.release):"";
+  }
+
+  /** Git contribution is a reviewable hint, not a task assignment. */
+  gitContributors(): Row {
+    const result=spawnSync("git",["log","-n","1000","--format=%an%x1f%ae","--no-merges"],
+      {cwd:this.root,encoding:"utf8",timeout:12_000,maxBuffer:1_000_000});
+    if(result.status!==0||result.error)return {
+      contributors:[],source:"git log",assignedAutomatically:false};
+    const counts=new Map<string,{name:string;count:number;identity:string}>();
+    for(const line of result.stdout.split("\n")){
+      const [name,email]=line.split("\x1f");
+      if(!name?.trim()||!email?.trim())continue;
+      const identity=createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0,16);
+      const before=counts.get(identity);
+      if(before)before.count++;
+      else counts.set(identity,{name:name.trim(),count:1,identity});
+    }
+    return {contributors:[...counts.values()].sort((a,b)=>b.count-a.count),
+      source:"git log (last 1000 commits, excluding merges)",assignedAutomatically:false,
+      warning:"A Git author is not automatically a task owner or reviewer"};
+  }
+
+  /** Record an explicit assignment decision; no Git author inference. */
+  assign(id:string,owner:string,assignedBy:string,decisionRef:string):Row {
+    if(typeof owner!=="string"||!owner.trim()||owner.trim().length>120||
+       typeof assignedBy!=="string"||!assignedBy.trim()||assignedBy.trim().length>120||
+       typeof decisionRef!=="string"||decisionRef.trim().length<8||decisionRef.length>500){
+      fail("ASSIGNMENT_DECISION_REQUIRED","Owner, reviewer and decision reference are required");
+    }
+    return this.inTransaction(()=>{
+      const row=this.requireTask(id);
+      if(["verified","cancelled","in_progress","in_review"].includes(row.status)||
+         this.db.prepare("SELECT task_id FROM dc_leases WHERE task_id=?").get(id)){
+        fail("ASSIGNMENT_FROZEN","Only unclaimed unstarted tasks can be reassigned");
+      }
+      const prior=this.db.prepare("SELECT owner FROM dc_task_assignments WHERE task_id=?").get(id);
+      this.db.prepare(`INSERT INTO dc_task_assignments
+        (task_id,owner,assigned_by,decision_ref,assigned_at) VALUES(?,?,?,?,?)
+        ON CONFLICT(task_id) DO UPDATE SET owner=excluded.owner,
+        assigned_by=excluded.assigned_by,decision_ref=excluded.decision_ref,
+        assigned_at=excluded.assigned_at`).run(
+        id,owner.trim(),assignedBy.trim(),decisionRef.trim(),utc());
+      this.audit(id,prior?"task_reassigned":"task_assigned",assignedBy.trim(),{
+        oldOwner:prior?.owner??null,owner:owner.trim(),decisionRef:decisionRef.trim(),
+        device:actorInfo(this.root).device,
+      });
+      return this.get(id);
+    });
+  }
+
+  /** A reviewable, frozen execution brief, not an invitation to redesign. */
+  executionContract(id:string):Row {
+    const task=this.get(id);
+    const frozen=this.releasePlan(task.release);
+    const plan=frozen.frozen as ReleasePlanProposal|null;
+    const node=plan?.nodes.find((item:ReleasePlanNode)=>item.id===id);
+    const strict=plan?.qualityProfile==="spec-depth-v2"&&!node?.existing;
+    const issues:string[]=[];
+    if(strict){
+      if(!node||node.kind!=="leaf")issues.push("Missing reviewed leaf execution contract");
+      if(!task.owner)issues.push("Task owner is not assigned");
+      if(node?.openQuestions?.length)issues.push("Unresolved design decisions: "+node.openQuestions.join("; "));
+      if(frozen.sourceDrift)issues.push("Canonical requirements have changed");
+      if(!node?.scenario||!node.workflow?.length||!node.businessRules?.length)
+        issues.push("Incomplete frozen trigger, workflow or business invariants");
+    }
+    return {taskId:id,eligible:issues.length===0,issues,
+      profile:plan?.qualityProfile??null,planHash:frozen.frozenHash,
+      owner:task.owner,assignment:task.ownerAssignment,
+      spec:strict?node:task.spec,
+      allowedPaths:task.allowedPaths,requiredGates:task.requiredGates,
+      dependencies:task.dependsOn,approvedBy:task.approvedBy,
+      limits:"Implement only the reviewed contract and allowed paths. Route changes to planning review.",
+    };
+  }
 
   releasePlan(release: string): Row {
     const frozen = this.db.prepare("SELECT * FROM dc_release_plans WHERE release=?").get(release);
@@ -1110,6 +1213,7 @@ export class ProjectTaskLedger {
       const latest = this.latestCompletion(task.id);
       const card = {
         id: task.id, title: task.title, status: task.status,
+        owner:task.owner,
         parentId: task.parentId, childIds: task.childIds, dependsOn: task.dependsOn,
         track: task.track, release: task.release, priority: task.priority,
         blockedBy: blockers, unverifiedChildren, updatedAt: task.updatedAt,
@@ -1221,7 +1325,8 @@ export class ProjectTaskLedger {
     return task.status !== "draft" && task.status !== "cancelled" &&
       !!(JSON.parse(task.required_gates) as string[]).length &&
       !this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(task.id) &&
-      this.isApprovedForExecution(task);
+      this.isApprovedForExecution(task) &&
+      this.executionContract(task.id).eligible;
   }
 
   next(): Row {
@@ -1442,6 +1547,8 @@ export class ProjectTaskLedger {
       if (!this.isApprovedForExecution(task)) {
         fail("RELEASE_PLAN_REQUIRED", "Release tasks must belong to an approved, frozen plan");
       }
+      const contract=this.executionContract(id);
+      if(!contract.eligible)fail("EXECUTION_CONTRACT_BLOCKED",contract.issues.join("; "));
       if (!(JSON.parse(task.required_gates) as string[]).length) {
         fail("GATE_REQUIRED", "Acceptance Gates must be defined before execution");
       }
@@ -1474,7 +1581,8 @@ export class ProjectTaskLedger {
       this.audit(id, lease?.task_id === id ? "reclaimed" : "claimed", agent, {
         base: originalBase, ttlSeconds,
       });
-      return { task: this.get(id), leaseToken: token, baseHead: originalBase };
+      return { task: this.get(id), executionContract:contract,
+        leaseToken: token, baseHead: originalBase };
     });
   }
 
@@ -1593,6 +1701,9 @@ export class ProjectTaskLedger {
     const lease = this.requireLease(id, token);
     const task = this.requireTask(id);
     if (task.status !== "in_review") fail("NOT_IN_REVIEW", "Submit evidence and request review first");
+    const contract=this.executionContract(id);
+    if(!contract.eligible)return {taskId:id,passed:false,
+      reason:"Execution contract no longer valid",issues:contract.issues};
     const children = this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? AND status!='verified'").all(id);
     if (children.length) {
       return { taskId: id, passed: false, reason: "Children not verified", childIds: children.map((r) => r.id) };

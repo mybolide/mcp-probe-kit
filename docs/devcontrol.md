@@ -165,6 +165,85 @@ fixture cannot satisfy `go_http_integration`.
 
 ## Work item visibility and substantive task quality
 
+### Shared operating policy: planning freedom, frozen execution
+
+This contract is **project-independent**; no example project, release number,
+implementation language, filename layout or particular reviewer is implicitly
+part of the rules. The three UI tabs are a projection of real state, not three
+separate tables.
+
+**Discovery / product design / assignment** is the only stage in which
+alternative solutions, task decomposition and dependency changes may be
+proposed. Each proposed leaf must reference the authoritative requirement
+and design, describe the external trigger, the exact workflow and domain
+constraints, positive and failure cases, allowed file scope, required tests,
+deliverables and concrete completion evidence. Open decisions remain
+visible, not silently answered by an implementing Agent.
+
+**Review / freeze** accepts an exact plan-content hash and preserves the
+previous draft in project-local SQLite. Approved content cannot be replaced
+by free-form later chat or a new Agent session. An accountable task owner is
+assigned *explicitly*, separately from the execution agent, using a reviewer
+name and decision reference. `git-contributors` returns history-derived
+**suggestions only**: a Git author, committer or current Git configuration
+never automatically becomes a responsible owner.
+
+**Execution** is constrained: `next` and `claim` inspect the frozen leaf
+contract. For a new `spec-depth-v2` release, missing task ownership, an
+open design decision, missing workflow/invariants, or source drift blocks
+claiming. A claim returns the full immutable contract, including scope,
+dependency and acceptance cases, alongside the lease. Agents should
+implement the stated solution and may not silently alter the product goal,
+external interfaces, non-goals or acceptance denominator. If implementation
+reveals an ambiguity or a missing capability, stop that task and submit a
+change proposal for product/design review; do not improvise a new product
+scope. Additional requests go into the pending plan and respect prior
+dependencies, rather than automatically preempting the active task.
+
+**Inspection / verification** use project-local Git and SQLite evidence.
+`check` validates staged file paths. `report` and `complete` attach
+committed implementation and test evidence to the leased task; `verify`
+rechecks the contract, clean Git state, changed-path scopes, and configured
+quality Gates. Missing physical-device, third-party or acceptance runners
+are failures/Not Run, not a shortcut to Verified. Parent progress derives
+from actually verified children. An execution Agent's own assertions are
+not sufficient product acceptance.
+
+#### What is enforced today versus what still needs independent security
+
+The code enforces scope hashes, dependency blocks, single active worktree
+lease, the reviewed task scope, owner presence on frozen Spec-depth tasks,
+explicit recorded ownership decisions and configured quality-gate results.
+However, the current CLI/MCP transports accept a *caller-supplied*
+`assignedBy`/`approvedBy` string: this is audit metadata, **not proof of
+an authenticated human reviewer**. A full multi-user product still needs
+identity-backed roles and reviewer authentication, plus a required CI
+pipeline / Git hooks or branch protection; otherwise an Agent that bypasses
+MCP and commits directly can evade the pre-commit check. This must not be
+represented as a completed mandatory approval barrier.
+
+#### Language, viewer identity and source text
+
+Workbench UI locale is per reader. `?lang=zh-CN` or `?lang=en` overrides
+the browser's Accept-Language. The MCP `workspace-link` tool accepts a
+host-provided `language` taken from the **current chat** and returns a
+matching local/LAN link. This interface does not read ChatGPT conversations
+directly; without an explicit host hint it falls back to the browser
+language. UI strings live in a common catalog independent of project names.
+Canonical Git specs, task names, original evidence and user-entered fields
+remain in their authored language. Initial English chrome translation is
+not yet a guarantee that every dynamic page/notification or source document
+is localized. Other languages need catalogs and independent browser tests.
+
+**Examples only (not generic rules):** In a warehouse receiving workflow,
+the owner may explore carrier scan formats and assign the import subtask
+before freezing it; the coder may not redesign shipment reconciliation
+because an unexpected barcode appears. In a scientific dataset export,
+the reviewer may choose anonymization and provenance requirements; the
+coder may not remove privacy checks or change the measurement units to
+improve a test result. Each example exercises the same owner/change-control/
+source-evidence rule despite having unrelated domain entities.
+
 The Work Items view presents exactly **three tabs: 未开始 / 开发中 / 已完成**.
 Each tab contains individual clickable tasks, not planning-stage containers.
 `draft`, `ready` and pending release proposals display under 未开始;

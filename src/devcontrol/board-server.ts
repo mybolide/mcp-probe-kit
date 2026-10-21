@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { ProjectTaskLedger, DevControlError } from "./task-ledger.js";
 import { boardHtml } from "./board-html.js";
 import { projectHtml } from "./project-html.js";
+import { resolveWorkbenchLocale } from "./i18n.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
 import { projectOnboarding } from "./project-onboarding.js";
 import { searchHistorySession, readHistorySession } from "../lib/history-session/index.js";
@@ -13,7 +14,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.8.9";
+export const WORKSPACE_SCHEMA_VERSION = "0.9.0";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
@@ -66,7 +67,10 @@ export function createDevControlBoardServer(
     }
     try {
       if (route === "/") {
-        respond(res, 200, projectHtml(nonce), nonce, "text/html; charset=utf-8", "none", true);
+        const reqUrl=new URL(req.url ?? "/", "http://localhost");
+        const locale=resolveWorkbenchLocale(reqUrl.searchParams.get("lang"),
+          String(req.headers["accept-language"]??""));
+        respond(res, 200, projectHtml(nonce, locale), nonce, "text/html; charset=utf-8", "none", true);
       } else if (route === "/api/meta") {
         respond(res, 200, JSON.stringify({
           root: ledger.root, schema: "devcontrol-project-workspace",
@@ -107,8 +111,9 @@ export function createDevControlBoardServer(
       } else if (route === "/api/board") {
         respond(res, 200, JSON.stringify(ledger.board()), nonce, "application/json; charset=utf-8");
       } else if (route === "/api/release-plan") {
-        const release = new URL(req.url ?? "/", "http://localhost").searchParams.get("release") ?? "V0.1";
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,39}$/.test(release)) {
+        const release = new URL(req.url ?? "/", "http://localhost").searchParams.get("release") ??
+          ledger.primaryRelease();
+        if (release && !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,39}$/.test(release)) {
           respond(res, 400, '{"error":"Invalid release"}', nonce, "application/json");return;
         }
         respond(res, 200, JSON.stringify(ledger.releasePlan(release)), nonce, "application/json; charset=utf-8");
