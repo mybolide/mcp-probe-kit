@@ -187,6 +187,11 @@ assigned *explicitly*, separately from the execution agent, using a reviewer
 name and decision reference. `git-contributors` returns history-derived
 **suggestions only**: a Git author, committer or current Git configuration
 never automatically becomes a responsible owner.
+The read-only Web task detail can list contributor suggestions from
+`GET /api/contributors` (names, contribution counts and pseudonymous
+fingerprints, not raw emails). Formal `assign` is an MCP/CLI operation with
+`id`, `owner`, `assignedBy`, `decisionRef` and an auditable device.
+It is not an authenticated identity proof.
 
 **Execution** is constrained: `next` and `claim` inspect the frozen leaf
 contract. For a new `spec-depth-v2` release, missing task ownership, an

@@ -44,6 +44,9 @@ describe("Per-reader project-neutral language",()=>{
       expect(ledger.primaryRelease()).toBe("SHIPPING-RELEASE");
       const projectRelease=await (await fetch(base+"/api/release-plan")).json();
       expect(projectRelease).toMatchObject({release:"SHIPPING-RELEASE",status:"missing"});
+      const suggestions=await (await fetch(base+"/api/contributors")).json();
+      expect(suggestions).toMatchObject({contributors:[],assignedAutomatically:false});
+      expect((await fetch(base+"/api/contributors",{method:"POST"})).status).toBe(405);
     }finally{
       await new Promise<void>(resolve=>server.close(()=>resolve()));
       ledger.close();fs.rmSync(root,{recursive:true,force:true});

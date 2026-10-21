@@ -231,7 +231,12 @@ describe("DevControl full-version planning", () => {
     });
     expect(assignment).toMatchObject({owner:"Implementer One",
       ownerAssignment:{assignedBy:"reviewer",decisionRef:"planning-review:REL-INGEST"}});
+    expect(ledger.board().columns.todo.find((t: {id:string;owner?:string})=>t.id==="REL-INGEST")
+      ?.owner).toBe("Implementer One");
     expect(ledger.next().nextTask.id).toBe("REL-INGEST");
+    const approvedContract=dispatchDevControl(ledger,"execution-contract",{id:"REL-INGEST"});
+    expect(approvedContract).toMatchObject({eligible:true,
+      owner:"Implementer One",spec:{workflow:expect.arrayContaining([expect.any(String)])}});
     expect(() => ledger.claim("REL-CORE","agent")).toThrow(/leaf/);
     ledger.assign("REL-RETRY","Implementer Two","reviewer","planning-review:REL-RETRY");
     expect(() => ledger.claim("REL-RETRY","agent")).toThrow(/depends/);

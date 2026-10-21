@@ -358,6 +358,26 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       locale==="en"?"Target date: Unscheduled (not inferred from Git commit timestamps)":
         "计划完成时间：未排期（不从 Git 提交时间推断）",
     ]);
+    if(!actual?.owner){
+      const hint=section(locale==="en"?"Git contributors — suggestions, not assignees":
+        "Git 参与者建议（不是自动负责人）",
+        locale==="en"?"Loading historical authors; a reviewer must explicitly assign responsibility.":
+          "读取 Git 历史作者；仍须由审核人明确分配负责人。");
+      fetchJSON("/api/contributors").then(data=>{
+        if(!$("doc-title").textContent.startsWith(task.id+" · "))return;
+        const people=(data.contributors||[]).slice(0,8);
+        hint.replaceChildren(n("h3",locale==="en"?"Historical Git contributors (not assigned)":
+          "Git 历史参与者（未分配）"));
+        if(people.length)for(const person of people)
+          hint.append(n("p",person.name+" · "+person.count+
+            (locale==="en"?" past commits":" 次历史提交")));
+        else hint.append(n("p",locale==="en"?"No contributor history available.":
+          "尚无可读取的 Git 提交作者。"));
+        hint.append(n("p",locale==="en"?
+          "Responsibility is assigned only with a reviewed MCP assignment decision.":
+          "只有经过审核、记录决定依据的 MCP 任务分配，才会成为正式负责人。"));
+      }).catch(()=>{});
+    }
     section("需求来源",task.requirementIds||actual?.spec?.requirementIds||[]);
     section("使用场景 / 触发条件 / 用户期望",task.scenario||"尚无独立业务场景说明");
     section("按顺序执行的业务与系统流程",task.workflow||[]);
