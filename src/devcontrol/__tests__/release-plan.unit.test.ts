@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { ProjectTaskLedger } from "../task-ledger.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "../release-plan.js";
 import { createDevControlBoardServer } from "../board-server.js";
@@ -91,12 +92,40 @@ afterEach(() => {
 });
 
 describe("Task ownership and frozen execution contract",()=>{
-  it("reads current local Git config, not previous commit authors, and still requires explicit assignment", () => {
+  it("adds device attribution columns to existing SQLite without discarding old owner rows",()=>{
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),"devcontrol-legacy-owner-"));
+    execFileSync("git",["init","-q"],{cwd:root});
+    save(root,"README.md","Initial project");
+    commit(root);
+    const databasePath=path.join(root,"old-devcontrol.sqlite3");
+    const {DatabaseSync}=createRequire(import.meta.url)("node:sqlite") as {
+      DatabaseSync:new(file:string)=>{exec(sql:string):void;
+        prepare(sql:string):{get(...args:string[]):Record<string,any>|undefined};
+        close():void};
+    };
+    const old=new DatabaseSync(databasePath);
+    old.exec("CREATE TABLE dc_task_assignments (task_id TEXT PRIMARY KEY, owner TEXT NOT NULL,"+
+      "assigned_by TEXT NOT NULL,decision_ref TEXT NOT NULL,assigned_at TEXT NOT NULL);"+
+      "INSERT INTO dc_task_assignments VALUES('LEGACY-1','Old Engineer','legacy-review',"+
+      "'old-record','2026-01-01T00:00:00Z');");
+    old.close();
+    const ledger=new ProjectTaskLedger(root,databasePath);
+    cleanup.push({root,ledger});
+    const upgraded=new DatabaseSync(databasePath);
+    expect(upgraded.prepare("SELECT owner,decision_ref,device,identity_source "+
+      "FROM dc_task_assignments WHERE task_id='LEGACY-1'").get()).toMatchObject({
+        owner:"Old Engineer",decision_ref:"old-record",device:"",identity_source:"",
+      });
+    upgraded.close();
+  });
+
+  it("records the local Git developer on creation, then the claiming machine; ownership does not block a reviewed task", () => {
     const {ledger,root}=fixture();
     execFileSync("git",["config","--local","user.name","Warehouse Engineer"],{cwd:root});
     execFileSync("git",["config","--local","user.email","local@example.invalid"],{cwd:root});
     expect(dispatchDevControl(ledger,"local-developer",{})).toMatchObject({
-      name:"Warehouse Engineer",source:"repository",configured:true,ownerAssigned:false,
+      name:"Warehouse Engineer",source:"repository",configured:true,
+      assignmentPolicy:"on-task-create-or-claim",
     });
     const candidate=plan();
     candidate.nodes[1].openQuestions=["Decide migration lifetime and data retention before implementation."];
@@ -108,21 +137,29 @@ describe("Task ownership and frozen execution contract",()=>{
     resolved.nodes[1].openQuestions=[];
     const revised=ledger.proposeReleasePlan(resolved,"planner",String(proposal.hash));
     ledger.approveReleasePlan("V0.1","reviewer",String(revised.hash));
-    expect(() => ledger.claim("REL-INGEST","coding-agent"))
-      .toThrow(/EXECUTION_CONTRACT_BLOCKED|not assigned/);
-    ledger.assign("REL-INGEST","owner-A","reviewer","review/minutes-123");
+    expect(ledger.get("REL-INGEST")).toMatchObject({
+      owner:"Warehouse Engineer",ownerAssignment:{
+        assignedBy:"Warehouse Engineer",identitySource:"repository",
+        decisionRef:"local-git:created",device:expect.any(String),
+      },
+    });
     expect(ledger.executionContract("REL-INGEST")).toMatchObject({
-      eligible:true,issues:[],owner:"owner-A",
+      eligible:true,issues:[],owner:"Warehouse Engineer",
       spec:{scenario:expect.any(String),inputs:expect.any(Array),
         outputs:expect.any(Array),allowedChangedFiles:expect.any(Array)},
     });
-    expect(() => ledger.assign("REL-INGEST","", "reviewer","ticket-1"))
-      .toThrow(/assignment|Owner|reviewer/i);
     expect(ledger.next().nextTask.id).toBe("REL-INGEST");
+    execFileSync("git",["config","--local","user.name","Research Engineer"],{cwd:root});
+    const oldDevice=process.env.DEVCONTROL_DEVICE_NAME;
+    process.env.DEVCONTROL_DEVICE_NAME="Research Laptop";
     const running=ledger.claim("REL-INGEST","coding-agent");
+    if(oldDevice===undefined)delete process.env.DEVCONTROL_DEVICE_NAME;
+    else process.env.DEVCONTROL_DEVICE_NAME=oldDevice;
+    expect(running.task).toMatchObject({owner:"Research Engineer",
+      ownerAssignment:{device:"Research Laptop",decisionRef:"local-git:claimed"}});
+    expect(ledger.trace("REL-INGEST").audit.some(
+      (event:{event:string})=>event.event==="developer_changed")).toBe(true);
     expect(running.executionContract.spec.allowedChangedFiles).toContain("services/core/contracts.go");
-    expect(()=>ledger.assign("REL-INGEST","other","reviewer","review/override-123"))
-      .toThrow(/ASSIGNMENT_FROZEN|unclaimed/i);
     expect(ledger.checkStaged().passed).toBe(false);
     save(root,"services/core/contracts.go","package core\n");
     execFileSync("git",["add","services/core/contracts.go"],{cwd:root});
@@ -272,22 +309,14 @@ describe("DevControl full-version planning", () => {
         designRef:"docs/architecture/overview.md#event-contract",
       },
     });
-    expect(ledger.next().nextTask).toBeNull();
-    expect(ledger.executionContract("REL-INGEST").issues).toContain("Task owner is not assigned");
-    const assignment=dispatchDevControl(ledger,"assign",{
-      id:"REL-INGEST",owner:"Implementer One",assignedBy:"reviewer",
-      decisionRef:"planning-review:REL-INGEST",
-    });
-    expect(assignment).toMatchObject({owner:"Implementer One",
-      ownerAssignment:{assignedBy:"reviewer",decisionRef:"planning-review:REL-INGEST"}});
+    expect(ledger.get("REL-INGEST").owner).toBeTruthy();
     expect(ledger.board().columns.todo.find((t: {id:string;owner?:string})=>t.id==="REL-INGEST")
-      ?.owner).toBe("Implementer One");
+      ?.owner).toBe(ledger.localDeveloper().name);
     expect(ledger.next().nextTask.id).toBe("REL-INGEST");
     const approvedContract=dispatchDevControl(ledger,"execution-contract",{id:"REL-INGEST"});
     expect(approvedContract).toMatchObject({eligible:true,
-      owner:"Implementer One",spec:{workflow:expect.arrayContaining([expect.any(String)])}});
+      owner:expect.any(String),spec:{workflow:expect.arrayContaining([expect.any(String)])}});
     expect(() => ledger.claim("REL-CORE","agent")).toThrow(/leaf/);
-    ledger.assign("REL-RETRY","Implementer Two","reviewer","planning-review:REL-RETRY");
     expect(() => ledger.claim("REL-RETRY","agent")).toThrow(/depends/);
     expect(ledger.releasePlan("V0.1").sourceDrift).toBe(false);
     expect(ledger.board().columns.todo.find((t: {id:string;spec?:{testCases:string[]}}) =>

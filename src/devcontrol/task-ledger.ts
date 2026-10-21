@@ -333,7 +333,9 @@ export class ProjectTaskLedger {
         owner TEXT NOT NULL,
         assigned_by TEXT NOT NULL,
         decision_ref TEXT NOT NULL,
-        assigned_at TEXT NOT NULL
+        assigned_at TEXT NOT NULL,
+        device TEXT NOT NULL DEFAULT '',
+        identity_source TEXT NOT NULL DEFAULT ''
       );
       CREATE TABLE IF NOT EXISTS dc_dependencies (
         task_id TEXT NOT NULL REFERENCES dc_tasks(id),
@@ -411,6 +413,14 @@ export class ProjectTaskLedger {
         created_at TEXT NOT NULL
       );
     `);
+    // Keep existing assignment rows intact when upgrading a project database.
+    const assignmentColumns = new Set(
+      this.db.prepare("PRAGMA table_info(dc_task_assignments)").all().map(row=>row.name),
+    );
+    if(!assignmentColumns.has("device"))
+      this.db.exec("ALTER TABLE dc_task_assignments ADD COLUMN device TEXT NOT NULL DEFAULT ''");
+    if(!assignmentColumns.has("identity_source"))
+      this.db.exec("ALTER TABLE dc_task_assignments ADD COLUMN identity_source TEXT NOT NULL DEFAULT ''");
     const alreadyImported = this.db.prepare("SELECT value FROM dc_meta WHERE key='bootstrap'").get();
     if (alreadyImported) return;
     // Import from the previous Neyna Python experiment without deleting or
@@ -522,7 +532,7 @@ export class ProjectTaskLedger {
   private task(row: Row): Row {
     const detail = this.db.prepare("SELECT * FROM dc_task_specs WHERE task_id=?").get(row.id);
     const assignment=this.db.prepare(
-      "SELECT owner,assigned_by,decision_ref,assigned_at FROM dc_task_assignments WHERE task_id=?",
+      "SELECT owner,assigned_by,decision_ref,assigned_at,device,identity_source FROM dc_task_assignments WHERE task_id=?",
     ).get(row.id);
     return {
       id: row.id, title: row.title, parentId: row.parent_id ?? null,
@@ -531,7 +541,8 @@ export class ProjectTaskLedger {
       specId: row.spec_id, planId: row.plan_id, approvedBy: row.approved_by,
       owner:assignment?.owner??null,
       ownerAssignment:assignment?{assignedBy:assignment.assigned_by,
-        decisionRef:assignment.decision_ref,assignedAt:assignment.assigned_at}:null,
+        decisionRef:assignment.decision_ref,assignedAt:assignment.assigned_at,
+        device:assignment.device,identitySource:assignment.identity_source}:null,
       dependsOn: this.db.prepare("SELECT depends_on FROM dc_dependencies WHERE task_id=?").all(row.id)
         .map((d) => d.depends_on),
       childIds: this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=?").all(row.id).map((c) => c.id),
@@ -570,31 +581,27 @@ export class ProjectTaskLedger {
   /** The effective Git identity of THIS checkout now, never historical authors. */
   localDeveloper(): Row { return localDeveloper(this.root); }
 
-  /** Record an explicit assignment decision; no Git author inference. */
-  assign(id:string,owner:string,assignedBy:string,decisionRef:string):Row {
-    if(typeof owner!=="string"||!owner.trim()||owner.trim().length>120||
-       typeof assignedBy!=="string"||!assignedBy.trim()||assignedBy.trim().length>120||
-       typeof decisionRef!=="string"||decisionRef.trim().length<8||decisionRef.length>500){
-      fail("ASSIGNMENT_DECISION_REQUIRED","Owner, reviewer and decision reference are required");
-    }
-    return this.inTransaction(()=>{
-      const row=this.requireTask(id);
-      if(["verified","cancelled","in_progress","in_review"].includes(row.status)||
-         this.db.prepare("SELECT task_id FROM dc_leases WHERE task_id=?").get(id)){
-        fail("ASSIGNMENT_FROZEN","Only unclaimed unstarted tasks can be reassigned");
-      }
-      const prior=this.db.prepare("SELECT owner FROM dc_task_assignments WHERE task_id=?").get(id);
-      this.db.prepare(`INSERT INTO dc_task_assignments
-        (task_id,owner,assigned_by,decision_ref,assigned_at) VALUES(?,?,?,?,?)
-        ON CONFLICT(task_id) DO UPDATE SET owner=excluded.owner,
-        assigned_by=excluded.assigned_by,decision_ref=excluded.decision_ref,
-        assigned_at=excluded.assigned_at`).run(
-        id,owner.trim(),assignedBy.trim(),decisionRef.trim(),utc());
-      this.audit(id,prior?"task_reassigned":"task_assigned",assignedBy.trim(),{
-        oldOwner:prior?.owner??null,owner:owner.trim(),decisionRef:decisionRef.trim(),
-        device:actorInfo(this.root).device,
-      });
-      return this.get(id);
+  /** Track the machine that created or claimed a task, not a permission role. */
+  private recordLocalDeveloper(id:string,event:"created"|"claimed"):void {
+    const local=this.localDeveloper();
+    const device=actorInfo(this.root).device;
+    const owner=String(local.name||device).slice(0,120);
+    const prior=this.db.prepare(
+      "SELECT owner,device FROM dc_task_assignments WHERE task_id=?",
+    ).get(id);
+    // Same workstation reclaims should not generate redundant owner history.
+    if(prior?.owner===owner&&prior.device===device)return;
+    this.db.prepare(`INSERT INTO dc_task_assignments
+      (task_id,owner,assigned_by,decision_ref,assigned_at,device,identity_source)
+      VALUES(?,?,?,?,?,?,?)
+      ON CONFLICT(task_id) DO UPDATE SET owner=excluded.owner,
+      assigned_by=excluded.assigned_by,decision_ref=excluded.decision_ref,
+      assigned_at=excluded.assigned_at,device=excluded.device,
+      identity_source=excluded.identity_source`).run(
+      id,owner,owner,"local-git:"+event,utc(),device,String(local.source));
+    this.audit(id,prior?"developer_changed":"developer_recorded",owner,{
+      event,previousOwner:prior?.owner??null,previousDevice:prior?.device??null,
+      owner,device,source:local.source,
     });
   }
 
@@ -609,7 +616,6 @@ export class ProjectTaskLedger {
     const issues:string[]=[];
     if(strict){
       if(!node||node.kind!=="leaf")issues.push("Missing reviewed leaf execution contract");
-      if(!task.owner)issues.push("Task owner is not assigned");
       if(node?.openQuestions?.length)issues.push("Unresolved design decisions: "+node.openQuestions.join("; "));
       if(frozen.sourceDrift)issues.push("Canonical requirements have changed");
       if(!node?.scenario||!node.workflow?.length||!node.businessRules?.length)
@@ -617,7 +623,8 @@ export class ProjectTaskLedger {
     }
     return {taskId:id,eligible:issues.length===0,issues,
       profile:plan?.qualityProfile??null,planHash:frozen.frozenHash,
-      owner:task.owner,assignment:task.ownerAssignment,
+      owner:task.owner??this.localDeveloper().name,
+      assignment:task.ownerAssignment,
       spec:strict?node:task.spec,
       allowedPaths:task.allowedPaths,requiredGates:task.requiredGates,
       dependencies:task.dependsOn,approvedBy:task.approvedBy,
@@ -1408,12 +1415,13 @@ export class ProjectTaskLedger {
         input.track ?? "product", input.release ?? "V0.1",
         input.priority ?? 50, JSON.stringify(allowedPaths), JSON.stringify(input.requiredGates),
         input.specId ?? null, input.planId ?? null, utc(), utc());
+      this.recordLocalDeveloper(input.id,"created");
       for (const dep of dependsOn) {
         this.db.prepare("INSERT INTO dc_dependencies(task_id,depends_on) VALUES(?,?)").run(input.id, dep);
       }
       this.audit(input.id, "created_proposal", actor, {
         parentId: input.parentId ?? null, dependsOn, specId: input.specId, planId: input.planId,
-        device: actorInfo(this.root).device,
+        device: actorInfo(this.root).device,developer:this.localDeveloper().name,
       });
       return this.get(input.id);
     });
@@ -1577,6 +1585,7 @@ export class ProjectTaskLedger {
         if (!ancestor.passed) fail("GIT_HISTORY_CHANGED", "Cannot resume: prior task baseline is not an ancestor of HEAD");
       }
       const token = randomUUID();
+      this.recordLocalDeveloper(id,"claimed");
       this.db.prepare(`
         INSERT OR REPLACE INTO dc_leases(singleton,task_id,agent,token,base_head,expires_at)
         VALUES(1,?,?,?,?,?)
@@ -1589,7 +1598,7 @@ export class ProjectTaskLedger {
       this.audit(id, lease?.task_id === id ? "reclaimed" : "claimed", agent, {
         base: originalBase, ttlSeconds,
       });
-      return { task: this.get(id), executionContract:contract,
+      return { task: this.get(id), executionContract:this.executionContract(id),
         leaseToken: token, baseHead: originalBase };
     });
   }

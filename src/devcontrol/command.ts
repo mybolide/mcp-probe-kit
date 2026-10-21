@@ -72,8 +72,6 @@ export function dispatchDevControl(
     case "list": return { tasks: ledger.list() };
     case "get": return ledger.get(String(input.id));
     case "local-developer": return ledger.localDeveloper();
-    case "assign": return ledger.assign(String(input.id),String(input.owner ?? ""),
-      String(input.assignedBy ?? ""),String(input.decisionRef ?? ""));
     case "execution-contract": return ledger.executionContract(String(input.id));
     case "hook-status": return { ...hookStatus(ledger.root) };
     case "hook-install": return { ...installHook(ledger.root, path.resolve(process.argv[1]??"")) };

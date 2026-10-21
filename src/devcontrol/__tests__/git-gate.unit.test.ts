@@ -27,7 +27,8 @@ describe("Current developer identity and Git pre-commit guard",()=>{
     const current=localDeveloper(root);
     expect(current).toMatchObject({
       name:"Current Developer",source:"repository",configured:true,
-      role:"local-developer",ownerAssigned:false,needsConfirmation:false,
+      role:"local-developer",assignmentPolicy:"on-task-create-or-claim",
+      device:expect.any(String),needsConfirmation:false,
     });
     expect(JSON.stringify(current)).not.toContain("@");
     const second=fixture();

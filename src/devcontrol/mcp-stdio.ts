@@ -14,7 +14,7 @@ const operations = [
   "create", "subtask", "dependency", "approve",
   "claim", "renew", "release", "check", "report", "complete", "verify",
   "trace", "board-data", "import-spec",
-  "local-developer", "assign", "execution-contract", "workspace-link",
+  "local-developer", "execution-contract", "workspace-link",
   "hook-status", "hook-install",
 ];
 const requiredFields: Record<string, string[]> = {
@@ -23,7 +23,7 @@ const requiredFields: Record<string, string[]> = {
   "plan-revise": ["plan","actor","expectedPreviousHash"],
   "plan-approve": ["release","approvedBy","expectedHash"],
   onboard: [], next: [], list: [], "board-data": [], features: [],
-  "local-developer": [], assign:["id","owner","assignedBy","decisionRef"],
+  "local-developer": [],
   "hook-status": [], "hook-install": [],
   "execution-contract":["id"],
   "workspace-link":[],
@@ -98,7 +98,7 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                     "name", "format", "sections", "featureName", "topLevelDocument",
                     "sourceRef", "description", "reviewer", "architectureImpact",
                     "plan", "expectedHash", "expectedPreviousHash",
-                    "owner","assignedBy","decisionRef","language"])]
+                    "language"])]
                     .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn"].includes(field)
                       ? { type: "array", items: { type: "string" } }
                       : field === "priority" || field === "ttlSeconds" ? { type: "integer" }

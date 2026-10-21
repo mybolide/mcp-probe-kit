@@ -4,6 +4,7 @@
  * This is a display hint; it never grants task ownership or approval rights.
  */
 import { spawnSync } from "node:child_process";
+import os from "node:os";
 
 export interface LocalDeveloper {
   name: string | null;
@@ -11,7 +12,8 @@ export interface LocalDeveloper {
   configured: boolean;
   needsConfirmation: boolean;
   role: "local-developer";
-  ownerAssigned: false;
+  device: string;
+  assignmentPolicy: "on-task-create-or-claim";
 }
 
 function git(root:string,args:string[]):string|null {
@@ -42,5 +44,7 @@ export function localDeveloper(root:string):LocalDeveloper {
   return {name:name||null,source,
     configured:["repository","global","system"].includes(source),
     needsConfirmation:source==="git-fallback"||source==="unset",
-    role:"local-developer",ownerAssigned:false};
+    role:"local-developer",
+    device:(process.env.DEVCONTROL_DEVICE_NAME?.trim()||os.hostname()).slice(0,120),
+    assignmentPolicy:"on-task-create-or-claim"};
 }

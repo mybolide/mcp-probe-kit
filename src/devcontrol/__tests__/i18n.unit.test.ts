@@ -49,7 +49,8 @@ describe("Per-reader project-neutral language",()=>{
       const developer=await (await fetch(base+"/api/local-developer")).json();
       expect(developer).toMatchObject({
         name:"Science Dataset Engineer",source:"repository",
-        role:"local-developer",ownerAssigned:false,
+        role:"local-developer",assignmentPolicy:"on-task-create-or-claim",
+        device:expect.any(String),
       });
       expect(JSON.stringify(developer)).not.toContain("science@example.invalid");
       expect((await fetch(base+"/api/local-developer",{method:"POST"})).status).toBe(405);

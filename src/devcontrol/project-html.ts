@@ -253,9 +253,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   }
   let project=null,board=null,features=[],onboarding=null,releasePlan=null,localGit=null,taskTab="not_started";
   const developerHint=()=>localGit?.name?
-    (locale==="en"?"Local developer":"本机开发")+"："+localGit.name+
-      (localGit.needsConfirmation?(locale==="en"?" (Git fallback, confirm identity)":"（Git 自动推断，待确认）"):""):
-    (locale==="en"?"Local developer: not configured":"本机开发：未配置 Git 身份");
+    localGit.name+" · "+(localGit.device||"") :
+    (locale==="en"?"Git developer unavailable":"未识别本机 Git 开发身份");
   const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",issues:"Bug 与变更",history:"历史会话",docs:"文档中心"};
   const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=translate(String(text));if(cls)x.className=cls;return x;};
   const fetchJSON=async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json();};
@@ -355,23 +354,20 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     section("当前状态与执行边界",row.pending?
       "规划待审核 · 不可领取、执行或计入版本完成率。":
       "状态："+status+"。执行以真实 SQLite 状态、依赖和 Gate 为准。");
+    const displayOwner=actual?.owner||(row.pending?localGit?.name:null);
     section("负责人 / 计划完成",[
-      translate("负责人")+": "+(actual?.owner||translate("未分配")),
-      (locale==="en"?"Assignment evidence: ":"分配依据：")+
-        (actual?.ownerAssignment?.decisionRef||(locale==="en"?"Not assigned by reviewer":"尚无正式分配决定")),
-      locale==="en"?"Target date: Unscheduled (not inferred from Git commit timestamps)":
-        "计划完成时间：未排期（不从 Git 提交时间推断）",
+      translate("负责人")+": "+(displayOwner||
+        (locale==="en"?"Not recorded on historical task":"历史任务未记录")),
+      (locale==="en"?"Development machine: ":"开发电脑：")+
+        (actual?.ownerAssignment?.device||localGit?.device||"—"),
+      actual?.ownerAssignment?.decisionRef ?
+        (locale==="en"?"Recorded at ":"记录于 ")+actual.ownerAssignment.decisionRef :
+        (row.pending ?
+          (locale==="en"?"Planning preview; recorded on task creation/claim":
+            "规划预览；创建或领取任务时自动写入本机负责人") :
+          (locale==="en"?"Historical attribution unavailable":"历史开发归属未记录")),
+      locale==="en"?"Target date: Unscheduled":"计划完成时间：未排期",
     ]);
-    section(locale==="en"?"Host Git developer (not assigned owner)":"工作台主机的本机 Git 开发身份（非正式负责人）",[
-      developerHint(),
-      locale==="en"?"Only a reviewed assignment in SQLite sets the responsible task owner.":
-        "本机 Git 信息只填充开发身份提示；任务正式负责人必须经审核后单独分配。",
-    ]);
-    if(!actual?.owner){
-      section(locale==="en"?"Assignment required":"正式负责人待分配",
-        locale==="en"?"Git configuration cannot authorize a reviewer or approve task ownership.":
-          "本机 Git 配置不能代替审核人分配任务，也不能提供审批权限。");
-    }
     section("需求来源",task.requirementIds||actual?.spec?.requirementIds||[]);
     section("使用场景 / 触发条件 / 用户期望",task.scenario||"尚无独立业务场景说明");
     section("按顺序执行的业务与系统流程",task.workflow||[]);
@@ -423,7 +419,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       ...((task.workflow||[]).length<3?["缺少端到端步骤与状态转换。"]:[]),
       ...((task.testCases||[]).length<=1?["正向测试场景不足，需要按相关 Spec 核验边界覆盖。"]:[]),
       ...((task.negativeCases||[]).length<=1?["反例目前只有一条，不能代表所有失败与异常分支。"]:[]),
-      "负责人未分配、排期未确认；不应仅凭标题、预计工时和单条验收文字批准开发。",
+      "规划仍待审核；不能仅凭标题、预计工时和单条验收文字批准开发。",
     ]);
   }
   function renderTaskList(){
@@ -447,9 +443,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       if(row.pending||row.status==="in_review"){
         head.append(n("span",label,"issue-state "+cls));
       }
+      const owner=row.current?.owner||(row.pending?localGit?.name:null);
+      const device=row.current?.ownerAssignment?.device||localGit?.device;
       button.append(head,n("div",task.id+" · "+row.phase+" · "+
-        (row.current?.owner?translate("负责人")+": "+row.current.owner:
-          developerHint()+" · "+(locale==="en"?"Owner pending assignment":"负责人待分配")),
+        translate("负责人")+": "+(owner||(locale==="en"?"Not recorded":"历史未记录"))+
+        (device?" · "+(locale==="en"?"Device":"设备")+": "+device:""),
         "simple-task-meta"));
       const scenario=task.scenario||task.acceptance||row.current?.spec?.acceptance||"尚无任务说明";
       button.append(n("div",scenario,"simple-task-summary"));

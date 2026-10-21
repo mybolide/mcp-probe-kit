@@ -172,7 +172,7 @@ implementation language, filename layout or particular reviewer is implicitly
 part of the rules. The three UI tabs are a projection of real state, not three
 separate tables.
 
-**Discovery / product design / assignment** is the only stage in which
+**Discovery / product design / task decomposition** is the stage in which
 alternative solutions, task decomposition and dependency changes may be
 proposed. Each proposed leaf must reference the authoritative requirement
 and design, describe the external trigger, the exact workflow and domain
@@ -182,19 +182,19 @@ visible, not silently answered by an implementing Agent.
 
 **Review / freeze** accepts an exact plan-content hash and preserves the
 previous draft in project-local SQLite. Approved content cannot be replaced
-by free-form later chat or a new Agent session. An accountable task owner is
-assigned *explicitly*, separately from the execution agent, using a reviewer
-name and decision reference. `local-developer` reads the **current checkout's
-effective Git identity** (repository configuration, inherited configuration,
-environment override or Git's fallback). It does not inspect commit history,
-the most frequent author, blame or the author of HEAD. Git can infer a name
-from the OS when `user.name` is unset; that result is visibly marked
-*unconfirmed* and never becomes an accountable reviewer or task owner.
-The Web detail and task list show this host-local developer hint via
-`GET /api/local-developer`; the separate LAN viewer is not assumed to be
-the developer on the host. No email is returned. Formal `assign` is an MCP/CLI operation with
-`id`, `owner`, `assignedBy`, `decisionRef` and an auditable device.
-It is not an authenticated identity proof.
+by free-form later chat or a new Agent session. Task ownership is only a
+**lightweight record of which developer workstation performed the work**.
+`local-developer` reads this checkout's *currently effective* Git identity
+(repository/global/system settings, environment, or Git's OS fallback), never
+historical commits or the most frequent author. When a task is created, its
+owner and device are recorded automatically; on another workstation's claim,
+the task's current owner/device are updated with an audit trail. Neither event
+needs a separate assignment or reviewer approval. If no Git name is available,
+use the host's device label. `GET /api/local-developer` displays this
+host-local developer; a LAN viewer does not become the host's developer.
+The read-only API does not expose raw Git email addresses. A task pending in
+the plan has no executable SQLite row, so the list labels the *current host*
+as the prospective developer without falsely backfilling historical owners.
 
 **New-project v3 execution contract (existing SQLite databases preserve
 their current plan profile):** New independently created projects require
@@ -204,8 +204,8 @@ reviewed `inputs`, `outputs`, `preconditions`, `stateTransitions`,
 The latter must be inside the original approved `allowedPaths`; both
 `check` and final `verify` reject staged/committed changes to any other
 file. Review can store a pending draft with open questions; the *freeze*
-rejects unresolved product decisions, and `claim` still requires an assigned
-owner. Field presence and passing gates do not establish semantic product
+rejects unresolved product decisions, while `claim` automatically records
+the executing workstation. Field presence and passing gates do not establish semantic product
 correctness; owner review still examines original sources and expected
 observable behavior. Existing project databases and frozen plans are not
 silently rewritten or auto-approved.
@@ -221,7 +221,7 @@ for an external enforcement boundary. Windows has not been independently
 verified.
 
 **Execution** is constrained: `next` and `claim` inspect the frozen leaf
-contract. For a new `spec-depth-v2` release, missing task ownership, an
+contract. For a reviewed Spec-depth release, an
 open design decision, missing workflow/invariants, or source drift blocks
 claiming. A claim returns the full immutable contract, including scope,
 dependency and acceptance cases, alongside the lease. Agents should
@@ -243,16 +243,15 @@ not sufficient product acceptance.
 
 #### What is enforced today versus what still needs independent security
 
-The code enforces scope hashes, dependency blocks, single active worktree
-lease, the reviewed task scope, owner presence on frozen Spec-depth tasks,
-explicit recorded ownership decisions and configured quality-gate results.
-However, the current CLI/MCP transports accept a *caller-supplied*
-`assignedBy`/`approvedBy` string: this is audit metadata, **not proof of
-an authenticated human reviewer**. A full multi-user product still needs
-identity-backed roles and reviewer authentication, plus a required CI
-pipeline / Git hooks or branch protection; otherwise an Agent that bypasses
-MCP and commits directly can evade the pre-commit check. This must not be
-represented as a completed mandatory approval barrier.
+The code enforces plan hashes, dependency blocks, single-worktree leases,
+the reviewed task scope and configured quality gates. Developer names/device
+are **tracking metadata, not authentication** and never block a task solely
+for lacking an earlier assignment. Plan approval remains a separate decision;
+`approvedBy` is a caller-provided audit label, not an authenticated signature.
+Git hooks are bypassable; stronger CI/role systems are possible future
+integrations but are NOT prerequisites of basic task creation and claiming.
+The product priority is actionable, correctly decomposed tasks, not an
+additional permission-management subsystem.
 
 #### Language, viewer identity and source text
 
