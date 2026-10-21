@@ -26,9 +26,15 @@ const signature="# Managed by mcp-probe-kit DevControl commit gate v1";
 export function hookStatus(root:string):HookStatus {
   const config=spawnSync("git",["config","--get","core.hooksPath"],
     {cwd:root,encoding:"utf8",timeout:6_000});
-  if(config.status===0&&config.stdout.trim())
-    return {state:"custom-path",hookPath:config.stdout.trim(),installed:false,
-      details:"Existing core.hooksPath is owned by the project; integrate without replacing it"};
+  if(config.status===0&&config.stdout.trim()){
+    const custom=config.stdout.trim();
+    const file=path.join(path.isAbsolute(custom)?custom:path.resolve(root,custom),"pre-commit");
+    const checks=fs.existsSync(file)&&fs.statSync(file).isFile() &&
+      fs.readFileSync(file,"utf8").includes("devcontrol check");
+    return {state:"custom-path",hookPath:custom,installed:false,
+      details:checks?"Existing project-owned pre-commit already invokes devcontrol check; preserved":
+        "Existing core.hooksPath is owned by the project; integrate without replacing it"};
+  }
   const dir=path.resolve(root,git(root,["rev-parse","--git-path","hooks"]));
   const hookPath=path.join(dir,"pre-commit");
   if(!fs.existsSync(hookPath))

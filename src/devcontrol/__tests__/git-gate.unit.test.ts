@@ -70,5 +70,9 @@ describe("Current developer identity and Git pre-commit guard",()=>{
     execFileSync("git",["config","--local","core.hooksPath",".team-hooks"],{cwd:root});
     expect(hookStatus(root).state).toBe("custom-path");
     expect(()=>installHook(root,entry)).toThrow(/HOOK_CONFLICT|Existing Git hook/);
+    fs.mkdirSync(path.join(root,".team-hooks"));
+    fs.writeFileSync(path.join(root,".team-hooks","pre-commit"),
+      "#!/bin/sh\nexec node local-cli.mjs devcontrol check --project-root .\n");
+    expect(hookStatus(root).details).toContain("already invokes devcontrol check");
   });
 });
