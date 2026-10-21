@@ -34,7 +34,7 @@ function historySection(locale: DocumentLocale): string {
 - **写**：新对话先 \`history_session_bootstrap\`（无宿主 key 时服务器铸 \`hs_<uuid>\` 开新档，禁止写入共享 \`project-active\`）；每轮最终回复前 \`history_session_checkpoint\`（必须回传上次 \`session_key\`/\`expected_path\` + \`raw_user_input\`/\`user_intent\`）
 - **检查点最低清单**：\`findings\`/\`decisions\`/\`files_changed\`/\`tests\`/\`runtime_state\`/\`next_actions\` 须写满（无内容用明确占位句，禁止空数组交差）
 - **读**：先用 bootstrap 有界 state；精确旧上下文再 \`history_session_search\` → \`history_session_read\`；不要全量灌历史
-- 档案在 \`docs/history-session/\`（应 \`.gitignore\`，勿提交）；超行数/字节软轮转；与 Memory/Qdrant 分离；“继续”有 Plan → 仍先 \`resume_plan\``;
+- 历史文件模式在 docs/history-session/；Git+Node22 的 History Session 默认落项目 SQLite 的 hs_* 表；实时运行库/旧文件通常忽略，只有项目 Owner 明确批准且用一致性 SQLite 备份的协作项目才能将完整会话提交 Git（不能提交 WAL/活跃租约）；与 Memory/Qdrant 分离，继续时先 resume_plan`;
   }
 
   return `
@@ -42,7 +42,7 @@ History Session (default ON; disable with \`MCP_HISTORY_SESSION=0|false|off\`; s
 - **Write**: bootstrap at conversation start (server mints \`hs_<uuid>\` when the host has no session id — do not share \`project-active\`); checkpoint before each final reply (echo prior \`session_key\`/\`expected_path\` + \`raw_user_input\`/\`user_intent\`)
 - **Minimum checkpoint**: fill \`findings\`/\`decisions\`/\`files_changed\`/\`tests\`/\`runtime_state\`/\`next_actions\` (use explicit placeholders when empty — no bare empty arrays)
 - **Read**: bounded bootstrap state first; \`history_session_search\` → \`history_session_read\` for exact older context
-- Archives under \`docs/history-session/\` (gitignore; do not commit); soft-rotate on limits; separate from Memory/Qdrant; “continue” with an open Plan → \`resume_plan\` first`;
+- Legacy archives under docs/history-session/; Git+Node22 defaults to project SQLite hs_* history. Live state and legacy files are ignored unless the project Owner authorizes consistent full SQLite Git snapshots; never commit WAL or active leases. Separate from Memory/Qdrant; resume_plan first when continuing`;
 }
 
 function memorySection(locale: DocumentLocale): string {
@@ -99,6 +99,8 @@ export function generateAgentsMdInner(input: AgentsMdTemplateInput): string {
 - 缺上下文 → \`init_project_context\`
 - 提交 → \`gencommit\`
 
+**Git + Node22 DevControl 工作流（仅在项目实际启用时）**：start_feature/start_bugfix 只提供委托计划，业务方案和完整版本的原子 WorkItem 由 Agent 阅读 PRD、ADR、代码后自主规划并独立复审；Feature 使用 SQLite feature-save/validate，不默认生成 docs/specs 或任务 Markdown。整版先 release-work-review/stage，明确批准后才 release-work-approve；每次 devcontrol next/execution-contract、claim 一项，真实测试、check、Git Hook 提交、complete/report/verify 后继续。History 要真正持久化；共享完整 SQLite 仅限项目所有者明确授权的一致性快照，不得提交正在写的 WAL 或活跃租约。具体步骤见 Skill 的 DevControl 章节。
+
 ${contextLineZh}
 ${graphLineZh}${historySection(locale)}${memorySection(locale)}`;
   }
@@ -122,6 +124,8 @@ Requires mcp-probe-kit. ${formatAgentsSkillReferenceEn(skillLink)} (Skill file a
 - Unfamiliar code / impact → \`code_insight\` (context / impact / auto)
 - Missing context → \`init_project_context\`
 - Commit → \`gencommit\`
+
+**Git + Node22 DevControl (only when enabled in this project)**: start_feature/start_bugfix only delegate a workflow; the Agent owns business decisions and complete-release atomic WorkItem planning and independent review. Use SQLite feature-save/validate (no docs/specs task Markdown by default), release-work-review/stage, and explicit release-work-approve. Then devcontrol next/execution-contract, claim ONE item, implement and run real tests, check, normal Git commit, complete/report/verify. History must persist; share full SQLite only via Owner-approved consistent project snapshots, never raw live WAL or active leases. See the Skill DevControl section.
 
 ${contextLineEn}
 ${graphLineEn}${historySection(locale)}${memorySection(locale)}`;

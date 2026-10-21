@@ -4,6 +4,7 @@
  */
 
 import { VERSION } from "../version.js";
+import { DEVCONTROL_AGENT_GUIDANCE } from "./devcontrol-agent-guidance.js";
 import {
   MCP_INTENT_QUICK_LOOKUP,
   MCP_SKILL_ARGUMENT_RULES,
@@ -11,7 +12,7 @@ import {
   MCP_SKILL_COMMON_FLOWS,
   MCP_TOOL_SKILL_GROUPS,
 } from "./mcp-tool-skill-registry.js";
-import { SKILL_VERSION_FRONTMATTER_KEY } from "./workflow-skill-version.js";
+import { SKILL_GUIDANCE_MARKER, SKILL_GUIDANCE_REVISION, SKILL_VERSION_FRONTMATTER_KEY } from "./workflow-skill-version.js";
 
 export const MCP_PROBE_SKILL_REL_PATH = ".agents/skills/mcp-probe-kit/SKILL.md";
 
@@ -144,6 +145,7 @@ export function generateWorkflowSkillBody(skillVersion: string = VERSION): strin
 
 > 本 Skill 负责：**什么情况直接调用独立能力，什么情况使用完整交付编排，以及调用前如何构造完整参数**。不是中央意图识别器。
 > 由 mcp-probe-kit 自动安装；支持 MCP 的 Agent 客户端可从 \`.agents/skills/\` 加载。
+<!-- ${SKILL_GUIDANCE_MARKER}: ${SKILL_GUIDANCE_REVISION} -->
 
 ## 总规则
 
@@ -154,14 +156,16 @@ export function generateWorkflowSkillBody(skillVersion: string = VERSION): strin
 5. \`start_*\` 只组合当前场景实际需要的能力；按返回的 Delegated Plan 逐步执行，不要额外塞入无关工具
 6. 在写代码或改文件前，先完成当前目标真正需要的理解、规格或根因步骤
 
+${DEVCONTROL_AGENT_GUIDANCE}
+
 ${renderExecutionChannels(skillVersion)}
 
 ---
 
 ## History Session（默认开启）读写规则
 
-档案目录：\`docs/history-session/\`。默认开启；关闭：\`MCP_HISTORY_SESSION=0|false|off\`。与 Memory/Qdrant **分离**。
-档案是**项目本地交接材料**，应写入仓库 \`.gitignore\`（忽略整个 \`docs/history-session/\`），**不要提交**到 Git。
+旧文件模式的会话档案存于 docs/history-session/，Git/Node22 默认使用项目 SQLite hs_* 表（旧文件兼容导入）。History 默认开启；关闭：MCP_HISTORY_SESSION=0|false|off。它与 Memory/Qdrant **分离**。
+通常忽略本机运行库和旧文件。**只有项目 Owner 明确授权**时才按项目定义的 SQLite Online Backup 一致性快照流程将完整会话纳入 Git；禁止直接提交仍在写入的 WAL/SHM、活跃租约或不经授权公开历史。
 
 ### 何时写
 
@@ -249,7 +253,7 @@ ${renderAvoidRules()}
 
 export const MCP_PROBE_SKILL_NAME = "mcp-probe-kit";
 
-export const MCP_PROBE_SKILL_DESCRIPTION = `在已配置 mcp-probe-kit 的项目中，于新功能、Bug、UI、重构或提交前读取；区分独立能力与完整交付编排，汇总当前对话构造完整参数，并在不确定首工具时提供 workflow 兜底。完整新功能由 start_feature 选择 flat 或 parent-child Spec；Skill 不承担中央意图识别，start_* 只组合当前场景实际需要的能力。`;
+export const MCP_PROBE_SKILL_DESCRIPTION = `在已配置 mcp-probe-kit 的项目中，于新功能、Bug、UI、重构或提交前读取；区分独立能力与完整交付编排，汇总当前对话构造完整参数，并在不确定首工具时提供 workflow 兜底。Git/Node22 DevControl 项目由 Agent 自主规划整版 SQLite 原子任务、Review 和逐项真实验收；旧 files 模式才使用文件式 Spec。Skill 不承担中央意图识别，start_* 只组合场景所需能力。`;
 
 export function formatSkillFrontmatter(skillVersion: string = VERSION): string {
   return `---

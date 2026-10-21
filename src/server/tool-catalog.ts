@@ -80,7 +80,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "orchestration",
     groupTitle: ORCHESTRATION,
     whenToCall:
-      "需要从需求、规格、实施、测试、审查到收敛完成**完整新功能交付**时使用；先把当前对话确认的完整范围汇总到 description，默认 `spec_layout=auto`，复杂多模块需求使用 parent-child；仅做规格、影响分析或测试时可直接调用对应能力",
+      "需要新功能完整交付时使用，向 Agent 返回委托流程模板；业务需求、技术决策、工作项规划和测试由 Agent 自主负责。Git/Node22 DevControl 项目使用 SQLite Feature/整版原子 WorkItem，不默认生成 Spec 文件；显式 legacy files 模式才使用 spec_layout 和 parent-child。",
   }),
   tool({
     name: "start_bugfix",
@@ -183,7 +183,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "project-spec",
     groupTitle: PROJECT_SPEC,
     whenToCall:
-      "仅在规格布局已确定时生成 `docs/specs/<feature>/`；复杂需求不得把它当首个入口，通常由 `start_feature` 的 plan 触发",
+      "仅供显式 legacy files 模式生成 `docs/specs/<feature>/` 文件模板；Git/Node22 DevControl 项目应使用 SQLite feature-save/validate，不把 add_feature 当业务拆分入口。",
   }),
   tool({
     name: "check_spec",

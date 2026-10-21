@@ -173,6 +173,32 @@ describe("workflow-skill-installer", () => {
     expect(fs.readFileSync(skillPath, "utf8")).toBe(content);
   });
 
+  test("同版旧 Skill 缺少新版 Agent 指导时，自动升级且第二次幂等", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-devcontrol-upgrade-"));
+    tempDirs.push(root);
+    const skillPath = path.join(root, MCP_PROBE_SKILL_REL_PATH);
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath,
+      formatSkillFrontmatter(VERSION) + "\n\n# MCP 调用时机 — 旧版同版本内容\n", "utf8");
+    fs.writeFileSync(path.join(root, "AGENTS.md"), "# Project custom rules\nKeep this rule.\n", "utf8");
+
+    const first = ensureMcpProbeKitBootstrap(root);
+    expect(first.skill.updated).toBe(true);
+    const skill = fs.readFileSync(skillPath, "utf8");
+    const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+    expect(skill).toContain("mcp-probe:guidance-revision");
+    expect(skill).toContain("Agent 主导业务");
+    expect(skill).toContain("release-work-approve");
+    expect(skill).toContain("默认不生成 docs/specs");
+    expect(agents).toContain("complete/report/verify");
+    expect(agents).toContain("Keep this rule.");
+    const second = ensureMcpProbeKitBootstrap(root);
+    expect(second.skill.updated).toBe(false);
+    expect(second.agentsMd.updated).toBe(false);
+    expect(fs.readFileSync(skillPath, "utf8")).toBe(skill);
+    expect(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8")).toBe(agents);
+  });
+
   test("rc.2 Skill 会自动升级到当前安装版本", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wf-skill-"));
     tempDirs.push(root);

@@ -30,8 +30,8 @@ export const MCP_INTENT_QUICK_LOOKUP: McpIntentQuickEntry[] = WORKFLOW_SELECTION
 export const MCP_SKILL_ARGUMENT_RULES = [
   "用户只说“继续 / 开始 / 往下做”且存在最近的 Delegated Plan 或已知 plan_id 时，直接调用 `resume_plan` 恢复检查点并从 nextStepId 继续；`mustContinue=true` 时禁止只汇报恢复结果，必须立即执行 nextStep/nextTool 并逐步 heartbeat；plan_id 丢失时只传 project_root，由工具自动选择最近的 active/blocked Plan；只有不存在可恢复 Plan 时，才结合当前对话、已有 Spec 和用户已确认决定下一工具。不要先调用 `workflow` 做意图识别。",
   "先判断当前目标是一个明确的单项能力，还是需要完整交付；单项能力直接调用对应工具，完整交付才使用 `start_*`。",
-  "完整新功能交付调用 `start_feature`，并传 `description=<完整范围摘要>`、`spec_layout=auto` 和明确的 `project_root`；让编排器决定 flat 或 parent-child。",
-  "跨模块、多阶段、大版本或架构升级不得直接调用 `add_feature`；只有布局和 `subspecs` 已明确时，才按 `start_feature` 返回的 plan 调用它。",
+  "完整功能交付调用 `start_feature`，传真实项目根与完整范围摘要；它只返回委托工作流模板，业务需求澄清、技术决策和拆分始终由 Agent 负责。Git/Node22 DevControl 项目使用 SQLite Feature 与完整版本原子任务，不要求生成 Spec Markdown；显式 legacy files 模式才考虑 flat/parent-child Spec。",
+  "跨模块、多阶段、大版本或架构升级由 Agent 从 PRD/ADR/代码规划整版一行一事 WorkItem，独立 Review 后交给 DevControl 审批；不要强制调用 `add_feature` 生成文件树。只有项目已显式选择 legacy files 模式且需求已明确时，才按返回的 plan 使用文件 Spec 工具。",
   "工具参数必须表达当前任务事实，不要只复制用户最后一条消息；当前项目代码和已落盘 Spec 优先于历史记忆。",
   "只有需要持续状态、跨会话恢复或正式交付的 Delegated Plan 才要求 `plan_heartbeat`；单次只读分析不强制创建 Plan。",
   "拿到托管 Delegated Plan 后首次调用 `plan_heartbeat` 时附完整 plan；每完成、跳过或阻塞步骤后更新检查点。",
@@ -58,7 +58,7 @@ export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = (() => {
 export const MCP_SKILL_COMMON_FLOWS = [
   {
     label: "新功能",
-    chain: "start_feature → plan_heartbeat → add_feature → check_spec（通过）→ 写代码 → gentest → code_review → converge（通过）→ memorize_asset（可选）→ gencommit",
+    chain: "Git/Node22 DevControl: start_feature → Agent完整版本规划 → feature-save/validate → release-work-review/stage → 整版批准 → next/execution-contract/claim单任务 → 真实测试/check/commit/complete/report/verify → converge；legacy files 模式另行采用 add_feature/check_spec",
   },
   {
     label: "完整修 Bug",
@@ -99,7 +99,7 @@ export const MCP_SKILL_AVOID_RULES = [
   "把 `workflow` 当作所有任务的强制入口",
   "把 `start_*` 当作所有原子能力的上级，导致单项分析也被强制套入完整流程",
   "把用户的“继续 / 开始 / 往下做”交给 `workflow` 做意图识别，或原样当作 `start_feature.description`",
-  "大型跨模块需求绕过 `start_feature` 直接手写单体 Spec",
+  "Git/Node22 DevControl 项目未经 Agent 整版规划和复审、未经明确批准就绕过 SQLite ReleaseWorkPlan 直接开始实现；显式 legacy files 项目则不得把大型跨模块需求写成单体 Spec",
   "`check_spec` **未通过**就写功能代码",
   "长流程执行步骤后**不** `plan_heartbeat`，导致中断后无法恢复",
   "托管交付流程在 `converge` 未通过时就把候选经验正式写入 `memorize_asset`",

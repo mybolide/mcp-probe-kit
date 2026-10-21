@@ -3,6 +3,10 @@ import { VERSION } from "../version.js";
 /** Skill frontmatter 版本字段 */
 export const SKILL_VERSION_FRONTMATTER_KEY = "mcp-probe-kit-version";
 
+/** Independently upgrade managed guidance without inventing an npm release. */
+export const SKILL_GUIDANCE_REVISION = "devcontrol-agent-led-20261021";
+export const SKILL_GUIDANCE_MARKER = "mcp-probe:guidance-revision";
+
 /** @deprecated 旧版 HTML 版本标记，仍用于解析历史文件 */
 export const SKILL_VERSION_MARKER = "mcp-probe-kit-skill-version";
 
@@ -167,6 +171,10 @@ export function skillContentNeedsUpgrade(
     return true;
   }
   if (!installed) {
+    return true;
+  }
+  if (compareSemver(installed, targetVersion) === 0 &&
+    !existing.includes("<!-- " + SKILL_GUIDANCE_MARKER + ": " + SKILL_GUIDANCE_REVISION + " -->")) {
     return true;
   }
   return compareSemver(installed, targetVersion) < 0;

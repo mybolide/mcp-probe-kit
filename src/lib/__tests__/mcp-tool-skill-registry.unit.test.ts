@@ -23,8 +23,10 @@ describe("mcp-tool-skill-registry", () => {
     }
     expect(content).toContain("## 参数构造纪律");
     expect(content).toContain("不要先调用 `workflow` 做意图识别");
-    expect(content).toContain("spec_layout=auto");
-    expect(content).toContain("不得直接调用 `add_feature`");
+    expect(content).toContain("显式 legacy files 模式才考虑 flat/parent-child Spec");
+    expect(content).toContain("不要求生成 Spec Markdown");
+    expect(content).toContain("Agent 主导业务");
+    expect(content).toContain("release-work-approve");
     expect(content).toContain("明确单项能力直接调用对应工具");
     expect(content).toContain("只有拿不准该调用哪个工具时");
     expect(content).toContain("不做自然语言意图识别");
