@@ -184,14 +184,41 @@ visible, not silently answered by an implementing Agent.
 previous draft in project-local SQLite. Approved content cannot be replaced
 by free-form later chat or a new Agent session. An accountable task owner is
 assigned *explicitly*, separately from the execution agent, using a reviewer
-name and decision reference. `git-contributors` returns history-derived
-**suggestions only**: a Git author, committer or current Git configuration
-never automatically becomes a responsible owner.
-The read-only Web task detail can list contributor suggestions from
-`GET /api/contributors` (names, contribution counts and pseudonymous
-fingerprints, not raw emails). Formal `assign` is an MCP/CLI operation with
+name and decision reference. `local-developer` reads the **current checkout's
+effective Git identity** (repository configuration, inherited configuration,
+environment override or Git's fallback). It does not inspect commit history,
+the most frequent author, blame or the author of HEAD. Git can infer a name
+from the OS when `user.name` is unset; that result is visibly marked
+*unconfirmed* and never becomes an accountable reviewer or task owner.
+The Web detail and task list show this host-local developer hint via
+`GET /api/local-developer`; the separate LAN viewer is not assumed to be
+the developer on the host. No email is returned. Formal `assign` is an MCP/CLI operation with
 `id`, `owner`, `assignedBy`, `decisionRef` and an auditable device.
 It is not an authenticated identity proof.
+
+**New-project v3 execution contract (existing SQLite databases preserve
+their current plan profile):** New independently created projects require
+`spec-depth-v3` at the first version freeze. Each leaf must specify
+reviewed `inputs`, `outputs`, `preconditions`, `stateTransitions`,
+`forbiddenChanges`, `stopConditions` and exact `allowedChangedFiles`.
+The latter must be inside the original approved `allowedPaths`; both
+`check` and final `verify` reject staged/committed changes to any other
+file. Review can store a pending draft with open questions; the *freeze*
+rejects unresolved product decisions, and `claim` still requires an assigned
+owner. Field presence and passing gates do not establish semantic product
+correctness; owner review still examines original sources and expected
+observable behavior. Existing project databases and frozen plans are not
+silently rewritten or auto-approved.
+
+**Local commit guard:** `hook-status` inspects project Git hook configuration.
+`hook-install` is an explicit opt-in for an empty hook slot. It installs a
+thin pre-commit wrapper over the same `devcontrol check`, uses exclusive
+creation, and refuses to overwrite another team's pre-commit hook or an
+existing `core.hooksPath`. On repos already using a custom hook, the operator
+must deliberately chain the check. This is bypassable with `--no-verify`
+or Git configuration; trusted CI and protected branches remain required
+for an external enforcement boundary. Windows has not been independently
+verified.
 
 **Execution** is constrained: `next` and `claim` inspect the frozen leaf
 contract. For a new `spec-depth-v2` release, missing task ownership, an

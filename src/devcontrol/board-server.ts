@@ -14,7 +14,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.9.1";
+export const WORKSPACE_SCHEMA_VERSION = "0.9.2";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
@@ -110,9 +110,10 @@ export function createDevControlBoardServer(
         }
       } else if (route === "/api/board") {
         respond(res, 200, JSON.stringify(ledger.board()), nonce, "application/json; charset=utf-8");
-      } else if (route === "/api/contributors") {
-        // Git authors are suggestions only; the API never changes owner assignments.
-        respond(res, 200, JSON.stringify(ledger.gitContributors()), nonce,
+      } else if (route === "/api/local-developer") {
+        // This host's effective Git author profile, not the historical author list
+        // and not the LAN viewer's local Git identity.
+        respond(res, 200, JSON.stringify(ledger.localDeveloper()), nonce,
           "application/json; charset=utf-8");
       } else if (route === "/api/release-plan") {
         const release = new URL(req.url ?? "/", "http://localhost").searchParams.get("release") ??

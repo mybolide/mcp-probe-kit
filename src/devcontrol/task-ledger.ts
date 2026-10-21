@@ -14,6 +14,7 @@ import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "./release-plan.js";
+import { localDeveloper } from "./local-developer.js";
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -195,6 +196,7 @@ export class ProjectTaskLedger {
     this.databasePath = dbPath ?? resolveProjectDatabase(this.root);
     ensureDatabaseIgnored(this.root, this.databasePath);
     fs.mkdirSync(path.dirname(this.databasePath), { recursive: true });
+    const firstDatabase = !fs.existsSync(this.databasePath);
     if (Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10) < 22) {
       fail("NODE_22_REQUIRED", "DevControl SQLite requires Node 22+, while the rest of probe-kit supports Node 20+");
     }
@@ -205,6 +207,14 @@ export class ProjectTaskLedger {
     this.db = new sqlite.DatabaseSync(this.databasePath);
     this.db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=8000;");
     this.migrate();
+    // New independent projects start with the stricter planning contract.
+    // Existing databases (including pending v2 proposals) are grandfathered;
+    // changing their minimum requires a separate reviewed migration.
+    if(firstDatabase && !fs.existsSync(path.join(this.root,".neyna/devcontrol-plan.json"))){
+      this.db.prepare(
+        "INSERT OR IGNORE INTO dc_meta(key,value) VALUES('minimumReleaseProfile','spec-depth-v3')",
+      ).run();
+    }
   }
 
   close(): void { this.db.close(); }
@@ -485,7 +495,13 @@ export class ProjectTaskLedger {
     }
     const files = [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
     const patterns = JSON.parse(task.allowed_paths) as string[];
-    const denied = files.filter((file) => !patterns.some((pattern) => pathAllowed(file, pattern)));
+    const contract=this.executionContract(task.id);
+    const spec=contract.profile==="spec-depth-v3"?
+      contract.spec as ReleasePlanNode:null;
+    const exact=spec?.allowedChangedFiles;
+    const denied = files.filter((file) =>
+      !patterns.some((pattern) => pathAllowed(file, pattern)) ||
+      (exact && !exact.includes(file)));
     const created = spawnSync(
       "git", ["diff", "--cached", "--no-renames", "--name-only", "-z", "--diff-filter=A"],
       { cwd: this.root, encoding: "buffer", timeout: 12_000 },
@@ -496,9 +512,10 @@ export class ProjectTaskLedger {
     const newFiles = created.stdout.toString("utf8").split("\0").filter(Boolean);
     const unapprovedDocs = undocumentedMarkdown(newFiles, patterns);
     return {
-      passed: denied.length === 0 && unapprovedDocs.length === 0,
+      passed: files.length>0 && denied.length === 0 && unapprovedDocs.length === 0,
       taskId: task.id, stagedFiles: files, deniedFiles: denied,
-      unapprovedDocs,
+      unapprovedDocs,exactFileScope:exact??null,
+      ...(files.length?{}:{reason:"No staged task changes"}),
     };
   }
 
@@ -550,25 +567,8 @@ export class ProjectTaskLedger {
     return product?String(product.release):"";
   }
 
-  /** Git contribution is a reviewable hint, not a task assignment. */
-  gitContributors(): Row {
-    const result=spawnSync("git",["log","-n","1000","--format=%an%x1f%ae","--no-merges"],
-      {cwd:this.root,encoding:"utf8",timeout:12_000,maxBuffer:1_000_000});
-    if(result.status!==0||result.error)return {
-      contributors:[],source:"git log",assignedAutomatically:false};
-    const counts=new Map<string,{name:string;count:number;identity:string}>();
-    for(const line of result.stdout.split("\n")){
-      const [name,email]=line.split("\x1f");
-      if(!name?.trim()||!email?.trim())continue;
-      const identity=createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0,16);
-      const before=counts.get(identity);
-      if(before)before.count++;
-      else counts.set(identity,{name:name.trim(),count:1,identity});
-    }
-    return {contributors:[...counts.values()].sort((a,b)=>b.count-a.count),
-      source:"git log (last 1000 commits, excluding merges)",assignedAutomatically:false,
-      warning:"A Git author is not automatically a task owner or reviewer"};
-  }
+  /** The effective Git identity of THIS checkout now, never historical authors. */
+  localDeveloper(): Row { return localDeveloper(this.root); }
 
   /** Record an explicit assignment decision; no Git author inference. */
   assign(id:string,owner:string,assignedBy:string,decisionRef:string):Row {
@@ -604,7 +604,8 @@ export class ProjectTaskLedger {
     const frozen=this.releasePlan(task.release);
     const plan=frozen.frozen as ReleasePlanProposal|null;
     const node=plan?.nodes.find((item:ReleasePlanNode)=>item.id===id);
-    const strict=plan?.qualityProfile==="spec-depth-v2"&&!node?.existing;
+    const strict=(plan?.qualityProfile==="spec-depth-v2"||
+      plan?.qualityProfile==="spec-depth-v3")&&!node?.existing;
     const issues:string[]=[];
     if(strict){
       if(!node||node.kind!=="leaf")issues.push("Missing reviewed leaf execution contract");
@@ -811,9 +812,16 @@ export class ProjectTaskLedger {
       if (active) fail("ACTIVE_TASK", "Wait for the active lease before freezing the plan");
       const plan = JSON.parse(pending.snapshot_json) as ReleasePlanProposal;
       if (plan.nodes.some(node=>node.kind==="leaf"&&!node.existing) &&
-          plan.qualityProfile !== "spec-depth-v2") {
+          plan.qualityProfile !== "spec-depth-v2" &&
+          plan.qualityProfile !== "spec-depth-v3") {
         fail("SPEC_DEPTH_REQUIRED", "Detailed trigger, workflow, source, cases and evidence required before owner approval");
       }
+      const minimum=this.db.prepare("SELECT value FROM dc_meta WHERE key='minimumReleaseProfile'").get();
+      if(minimum?.value==="spec-depth-v3"&&plan.qualityProfile!=="spec-depth-v3")
+        fail("SPEC_V3_REQUIRED","New project releases require an exact, reviewed v3 execution contract");
+      if(plan.qualityProfile==="spec-depth-v3"&&plan.nodes.some(node=>
+        node.kind==="leaf"&&!node.existing&&(node.openQuestions?.length??0)>0))
+        fail("UNRESOLVED_PRODUCT_DECISION","Resolve open v3 decisions before freezing an execution plan");
       const source = path.resolve(this.root,plan.scopeSource);
       const sourceHash = createHash("sha256").update(fs.readFileSync(source)).digest("hex");
       if (sourceHash !== (plan as ReleasePlanProposal & { sourceHash:string }).sourceHash ||
@@ -1725,7 +1733,10 @@ export class ProjectTaskLedger {
     }
     const files = changedFiles(this.root, lease.base_head);
     const allowedPaths = JSON.parse(task.allowed_paths) as string[];
-    const denied = files.filter((f) => !allowedPaths.some((p) => pathAllowed(f, p)));
+    const exact=(contract.profile==="spec-depth-v3"?
+      (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
+    const denied = files.filter((f) =>
+      !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
     const unapprovedDocs = undocumentedMarkdown(addedFiles(this.root, lease.base_head), allowedPaths);
     if (!files.length || denied.length || unapprovedDocs.length) {
       return {

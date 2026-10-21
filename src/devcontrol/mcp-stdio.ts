@@ -14,7 +14,8 @@ const operations = [
   "create", "subtask", "dependency", "approve",
   "claim", "renew", "release", "check", "report", "complete", "verify",
   "trace", "board-data", "import-spec",
-  "git-contributors", "assign", "execution-contract", "workspace-link",
+  "local-developer", "assign", "execution-contract", "workspace-link",
+  "hook-status", "hook-install",
 ];
 const requiredFields: Record<string, string[]> = {
   "release-plan": [], "plan-review": ["plan"],
@@ -22,7 +23,8 @@ const requiredFields: Record<string, string[]> = {
   "plan-revise": ["plan","actor","expectedPreviousHash"],
   "plan-approve": ["release","approvedBy","expectedHash"],
   onboard: [], next: [], list: [], "board-data": [], features: [],
-  "git-contributors": [], assign:["id","owner","assignedBy","decisionRef"],
+  "local-developer": [], assign:["id","owner","assignedBy","decisionRef"],
+  "hook-status": [], "hook-install": [],
   "execution-contract":["id"],
   "workspace-link":[],
   "feature-get": ["name"], "feature-save": ["name", "sections"],

@@ -7,6 +7,7 @@ import { ensureProjectWorkspaceRunning } from "./workspace-process.js";
 import { projectOnboarding } from "./project-onboarding.js";
 import { reviewReleasePlan } from "./release-plan.js";
 import { resolveWorkbenchLocale } from "./i18n.js";
+import { hookStatus, installHook } from "./git-gate.js";
 import {
   configureWorkspaceAccess, lanAddresses, workspaceAccess, WORKSPACE_START_PORT,
 } from "./workspace-access.js";
@@ -70,10 +71,12 @@ export function dispatchDevControl(
     case "status":
     case "list": return { tasks: ledger.list() };
     case "get": return ledger.get(String(input.id));
-    case "git-contributors": return ledger.gitContributors();
+    case "local-developer": return ledger.localDeveloper();
     case "assign": return ledger.assign(String(input.id),String(input.owner ?? ""),
       String(input.assignedBy ?? ""),String(input.decisionRef ?? ""));
     case "execution-contract": return ledger.executionContract(String(input.id));
+    case "hook-status": return { ...hookStatus(ledger.root) };
+    case "hook-install": return { ...installHook(ledger.root, path.resolve(process.argv[1]??"")) };
     case "create": return ledger.create(input as CreateWorkItem, String(input.actor ?? "agent-proposal"));
     case "subtask": {
       if (!input.parentId) throw new DevControlError("PARENT_REQUIRED", "Subtask needs parentId");

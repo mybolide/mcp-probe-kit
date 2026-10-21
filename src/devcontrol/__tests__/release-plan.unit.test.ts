@@ -58,6 +58,13 @@ function leaf(id: string, requirements: string[], parentId = "REL-CORE"): Releas
     reviewNotes: ["Storage choice is still proposed and must be reviewed before implementation."],
     verificationEvidence: ["HTTP request/response with source ID and version.",
       "Actual persistent record count and restart test logs."],
+    inputs:["Caller identity plus validated note payload with a stable origin reference."],
+    outputs:["Persisted event ID and immutable source provenance in the API response."],
+    preconditions:["Reviewed Core contract is present and the required project gates are configured."],
+    stateTransitions:["Validated intake moves from unrecorded to stored exactly once per source key."],
+    forbiddenChanges:["Do not redefine source ownership, event timestamps, or the public HTTP contract."],
+    stopConditions:["Stop execution and request design review when a required storage decision is missing."],
+    allowedChangedFiles:["services/core/contracts.go","services/core/contracts_test.go"],
     outOfScope: ["No external cloud provider installation."],
     deliverables: ["services/core/contracts.go", "services/core/contracts_test.go"],
     allowedPaths: ["services/core/**"], requiredGates: ["docs"],
@@ -69,7 +76,7 @@ function plan(): ReleasePlanProposal {
     requirementIds: ["FR-001", "NFR-002"],
     rationale: "This approved version includes a small provenance flow and idempotent contract; all other work is deferred.",
     baseRevision: 0,
-    qualityProfile: "spec-depth-v2",
+    qualityProfile: "spec-depth-v3",
     nodes: [
       { id: "REL-CORE", title: "Canonical core event delivery", kind: "group" },
       leaf("REL-INGEST", ["FR-001"]),
@@ -84,28 +91,46 @@ afterEach(() => {
 });
 
 describe("Task ownership and frozen execution contract",()=>{
-  it("shows Git candidates but requires explicit owner assignment and resolved decisions before claiming", () => {
-    const {ledger}=fixture();
-    expect(ledger.gitContributors()).toMatchObject({
-      assignedAutomatically:false,contributors:[{name:"Test",count:1}],
+  it("reads current local Git config, not previous commit authors, and still requires explicit assignment", () => {
+    const {ledger,root}=fixture();
+    execFileSync("git",["config","--local","user.name","Warehouse Engineer"],{cwd:root});
+    execFileSync("git",["config","--local","user.email","local@example.invalid"],{cwd:root});
+    expect(dispatchDevControl(ledger,"local-developer",{})).toMatchObject({
+      name:"Warehouse Engineer",source:"repository",configured:true,ownerAssigned:false,
     });
     const candidate=plan();
     candidate.nodes[1].openQuestions=["Decide migration lifetime and data retention before implementation."];
-    const approved=ledger.proposeReleasePlan(candidate,"planner");
-    ledger.approveReleasePlan("V0.1","reviewer",String(approved.hash));
+    const proposal=ledger.proposeReleasePlan(candidate,"planner");
+    expect(()=>ledger.approveReleasePlan("V0.1","reviewer",String(proposal.hash)))
+      .toThrow(/UNRESOLVED_PRODUCT_DECISION|Resolve open v3 decisions/);
+    expect(ledger.list()).toHaveLength(0);
+    const resolved=structuredClone(candidate);
+    resolved.nodes[1].openQuestions=[];
+    const revised=ledger.proposeReleasePlan(resolved,"planner",String(proposal.hash));
+    ledger.approveReleasePlan("V0.1","reviewer",String(revised.hash));
     expect(() => ledger.claim("REL-INGEST","coding-agent"))
       .toThrow(/EXECUTION_CONTRACT_BLOCKED|not assigned/);
     ledger.assign("REL-INGEST","owner-A","reviewer","review/minutes-123");
     expect(ledger.executionContract("REL-INGEST")).toMatchObject({
-      eligible:false,issues:[expect.stringContaining("Unresolved design decisions")],
-      owner:"owner-A",spec:{scenario:expect.any(String)},
+      eligible:true,issues:[],owner:"owner-A",
+      spec:{scenario:expect.any(String),inputs:expect.any(Array),
+        outputs:expect.any(Array),allowedChangedFiles:expect.any(Array)},
     });
-    expect(() => ledger.claim("REL-INGEST","coding-agent"))
-      .toThrow(/Unresolved design decisions/);
     expect(() => ledger.assign("REL-INGEST","", "reviewer","ticket-1"))
       .toThrow(/assignment|Owner|reviewer/i);
-    expect(ledger.next().nextTask).toBeNull();
-    expect(ledger.get("REL-INGEST").status).toBe("ready");
+    expect(ledger.next().nextTask.id).toBe("REL-INGEST");
+    const running=ledger.claim("REL-INGEST","coding-agent");
+    expect(running.executionContract.spec.allowedChangedFiles).toContain("services/core/contracts.go");
+    expect(()=>ledger.assign("REL-INGEST","other","reviewer","review/override-123"))
+      .toThrow(/ASSIGNMENT_FROZEN|unclaimed/i);
+    expect(ledger.checkStaged().passed).toBe(false);
+    save(root,"services/core/contracts.go","package core\n");
+    execFileSync("git",["add","services/core/contracts.go"],{cwd:root});
+    expect(ledger.checkStaged()).toMatchObject({passed:true,deniedFiles:[]});
+    save(root,"services/core/arbitrary.go","package core\n");
+    execFileSync("git",["add","services/core/arbitrary.go"],{cwd:root});
+    expect(ledger.checkStaged()).toMatchObject({passed:false,
+      deniedFiles:["services/core/arbitrary.go"]});
   });
 });
 
@@ -140,7 +165,7 @@ describe("Pending release plan content revision", () => {
     expect(ledger.list()).toHaveLength(0);
     expect(ledger.releasePlan("V0.1")).toMatchObject({
       revision:0,status:"review_pending",proposal:{
-        hash:revised.hash,qualityProfile:"spec-depth-v2",
+        hash:revised.hash,qualityProfile:"spec-depth-v3",
       },
     });
     expect(ledger.releasePlan("V0.1").proposal.nodes[1].scenario).not.toBe(oldPlan.nodes[1].scenario);
@@ -152,6 +177,30 @@ describe("Pending release plan content revision", () => {
 });
 
 describe("DevControl full-version planning", () => {
+  it("defaults new project databases to v3 while preserving pending v2 proposals for review", () => {
+    const {ledger}=fixture();
+    const legacy=structuredClone(plan());legacy.qualityProfile="spec-depth-v2";
+    expect(reviewReleasePlan(legacy).passed).toBe(true);
+    const proposal=ledger.proposeReleasePlan(legacy,"planning-agent");
+    expect(()=>ledger.approveReleasePlan("V0.1","owner",String(proposal.hash)))
+      .toThrow(/SPEC_V3_REQUIRED|v3 execution contract/i);
+    expect(ledger.releasePlan("V0.1")).toMatchObject({
+      status:"review_pending",revision:0,
+    });
+    expect(ledger.list()).toHaveLength(0);
+  });
+
+  it("rejects incomplete v3 execution contracts, forbidden placeholders and out-of-scope exact files",()=>{
+    const candidate=plan();
+    candidate.nodes[1].inputs=[];
+    candidate.nodes[1].forbiddenChanges=["TODO"];
+    candidate.nodes[1].allowedChangedFiles=["outside/rogue.go"];
+    const reviewed=reviewReleasePlan(candidate);
+    expect(reviewed.passed).toBe(false);
+    expect(reviewed.issues.join("; ")).toMatch(/v3 requires concrete inputs/);
+    expect(reviewed.issues.join("; ")).toMatch(/forbiddenChanges/);
+    expect(reviewed.issues.join("; ")).toMatch(/exact allowedChangedFiles/);
+  });
   it("rejects an uncommitted or symlink-escaped design source without writing a proposal", () => {
     const {root,ledger}=fixture();
     save(root,"docs/architecture/overview.md","# Unapproved new design\nChanges are not yet in Git.\n");

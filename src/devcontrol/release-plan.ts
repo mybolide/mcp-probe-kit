@@ -22,6 +22,15 @@ export interface ReleasePlanNode {
   reviewNotes?: string[];
   openQuestions?: string[];
   verificationEvidence?: string[];
+  /** v3: frozen execution contract — no design choices left to a coder. */
+  inputs?: string[];
+  outputs?: string[];
+  preconditions?: string[];
+  stateTransitions?: string[];
+  forbiddenChanges?: string[];
+  stopConditions?: string[];
+  /** Exact tracked files allowed to change (in addition to existing path rules). */
+  allowedChangedFiles?: string[];
   designRef?: string;
   negativeCases?: string[];
   testCases?: string[];
@@ -42,7 +51,7 @@ export interface ReleasePlanProposal {
   rationale: string;
   /** The frozen plan revision this change is based on; 0 for a new release. */
   baseRevision: number;
-  qualityProfile?: "spec-depth-v2";
+  qualityProfile?: "spec-depth-v2" | "spec-depth-v3";
 }
 
 export interface PlanReview {
@@ -104,7 +113,7 @@ export function reviewReleasePlan(plan: ReleasePlanProposal): PlanReview {
       } else for (const id of item.requirementIds) coverage.add(id);
       // Smallness is an upper bound, not a surrogate for acceptance quality.
       if (!item.existing) {
-        if (plan.qualityProfile === "spec-depth-v2") {
+        if (plan.qualityProfile === "spec-depth-v2" || plan.qualityProfile === "spec-depth-v3") {
           if (typeof item.scenario !== "string" || item.scenario.trim().length < 32) {
             issues.push(item.id + ": specific user/system trigger and outcome missing");
           }
@@ -122,6 +131,27 @@ export function reviewReleasePlan(plan: ReleasePlanProposal): PlanReview {
           if (item.openQuestions !== undefined && (!Array.isArray(item.openQuestions) ||
               item.openQuestions.some(x => typeof x !== "string" || !x.trim()))) {
             issues.push(item.id + ": openQuestions must be string array");
+          }
+        }
+        if(plan.qualityProfile==="spec-depth-v3"){
+          for(const [name,values] of [
+            ["inputs",item.inputs],["outputs",item.outputs],
+            ["preconditions",item.preconditions],["stateTransitions",item.stateTransitions],
+            ["forbiddenChanges",item.forbiddenChanges],["stopConditions",item.stopConditions],
+          ] as const){
+            if(!Array.isArray(values)||!values.length||
+               values.some(value=>typeof value!=="string"||value.trim().length<15||unfilled.test(value))){
+              issues.push(item.id+": v3 requires concrete "+name);
+            }
+          }
+          const exact=item.allowedChangedFiles;
+          if(!Array.isArray(exact)||!exact.length||
+             new Set(exact).size!==exact.length||
+             exact.some(f=>typeof f!=="string"||!f||f.startsWith("/")||
+               f.includes("\\")||f.split("/").includes("..")||f.includes("*")||
+               !(item.allowedPaths??[]).some(p=>p.endsWith("/**")?
+                 f.startsWith(p.slice(0,-3)+"/"):f===p))){
+            issues.push(item.id+": v3 exact allowedChangedFiles must be within task allowedPaths");
           }
         }
         if (typeof item.estimatedHours !== "number" ||

@@ -251,7 +251,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     }
     document.title="DevControl · Project workspace";
   }
-  let project=null,board=null,features=[],onboarding=null,releasePlan=null,taskTab="not_started";
+  let project=null,board=null,features=[],onboarding=null,releasePlan=null,localGit=null,taskTab="not_started";
+  const developerHint=()=>localGit?.name?
+    (locale==="en"?"Local developer":"本机开发")+"："+localGit.name+
+      (localGit.needsConfirmation?(locale==="en"?" (Git fallback, confirm identity)":"（Git 自动推断，待确认）"):""):
+    (locale==="en"?"Local developer: not configured":"本机开发：未配置 Git 身份");
   const titles={overview:"总览",product:"产品与目标",requirements:"需求管理",architecture:"技术架构",tasks:"任务进度",issues:"Bug 与变更",history:"历史会话",docs:"文档中心"};
   const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text!==undefined&&text!==null)x.textContent=translate(String(text));if(cls)x.className=cls;return x;};
   const fetchJSON=async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json();};
@@ -358,30 +362,30 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       locale==="en"?"Target date: Unscheduled (not inferred from Git commit timestamps)":
         "计划完成时间：未排期（不从 Git 提交时间推断）",
     ]);
+    section(locale==="en"?"Host Git developer (not assigned owner)":"工作台主机的本机 Git 开发身份（非正式负责人）",[
+      developerHint(),
+      locale==="en"?"Only a reviewed assignment in SQLite sets the responsible task owner.":
+        "本机 Git 信息只填充开发身份提示；任务正式负责人必须经审核后单独分配。",
+    ]);
     if(!actual?.owner){
-      const hint=section(locale==="en"?"Git contributors — suggestions, not assignees":
-        "Git 参与者建议（不是自动负责人）",
-        locale==="en"?"Loading historical authors; a reviewer must explicitly assign responsibility.":
-          "读取 Git 历史作者；仍须由审核人明确分配负责人。");
-      fetchJSON("/api/contributors").then(data=>{
-        if(!$("doc-title").textContent.startsWith(task.id+" · "))return;
-        const people=(data.contributors||[]).slice(0,8);
-        hint.replaceChildren(n("h3",locale==="en"?"Historical Git contributors (not assigned)":
-          "Git 历史参与者（未分配）"));
-        if(people.length)for(const person of people)
-          hint.append(n("p",person.name+" · "+person.count+
-            (locale==="en"?" past commits":" 次历史提交")));
-        else hint.append(n("p",locale==="en"?"No contributor history available.":
-          "尚无可读取的 Git 提交作者。"));
-        hint.append(n("p",locale==="en"?
-          "Responsibility is assigned only with a reviewed MCP assignment decision.":
-          "只有经过审核、记录决定依据的 MCP 任务分配，才会成为正式负责人。"));
-      }).catch(()=>{});
+      section(locale==="en"?"Assignment required":"正式负责人待分配",
+        locale==="en"?"Git configuration cannot authorize a reviewer or approve task ownership.":
+          "本机 Git 配置不能代替审核人分配任务，也不能提供审批权限。");
     }
     section("需求来源",task.requirementIds||actual?.spec?.requirementIds||[]);
     section("使用场景 / 触发条件 / 用户期望",task.scenario||"尚无独立业务场景说明");
     section("按顺序执行的业务与系统流程",task.workflow||[]);
     section("业务规则与不可变约束",task.businessRules||[]);
+    if(task.inputs||task.outputs||task.preconditions||task.forbiddenChanges||
+      task.stateTransitions||task.stopConditions||task.allowedChangedFiles){
+      section(locale==="en"?"Frozen input contract":"冻结的输入契约",task.inputs||[]);
+      section(locale==="en"?"Required outputs":"必须产生的输出",task.outputs||[]);
+      section(locale==="en"?"Execution preconditions":"执行前置条件",task.preconditions||[]);
+      section(locale==="en"?"Required state transitions":"必须遵循的状态转换",task.stateTransitions||[]);
+      section(locale==="en"?"Forbidden changes":"禁止擅自更改的内容",task.forbiddenChanges||[]);
+      section(locale==="en"?"Stop and request review when":"停止开发并返回审核的条件",task.stopConditions||[]);
+      section(locale==="en"?"Exact Git file allowlist":"精确 Git 变更文件白名单",task.allowedChangedFiles||[]);
+    }
     section("具体工作与完成条件",task.acceptance||actual?.spec?.acceptance||"缺少经审核的详细规格");
     section("技术方案与约束",task.designRef||actual?.spec?.designRef||"无设计链接");
     section("原始需求、Spec 与测试用例依据",task.sourceRefs||[]);
@@ -443,8 +447,10 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       if(row.pending||row.status==="in_review"){
         head.append(n("span",label,"issue-state "+cls));
       }
-      button.append(head,n("div",task.id+" · "+row.phase+" · "+translate("负责人")+": "+
-        (row.current?.owner||translate("未分配")),"simple-task-meta"));
+      button.append(head,n("div",task.id+" · "+row.phase+" · "+
+        (row.current?.owner?translate("负责人")+": "+row.current.owner:
+          developerHint()+" · "+(locale==="en"?"Owner pending assignment":"负责人待分配")),
+        "simple-task-meta"));
       const scenario=task.scenario||task.acceptance||row.current?.spec?.acceptance||"尚无任务说明";
       button.append(n("div",scenario,"simple-task-summary"));
       button.addEventListener("click",()=>openPlanTask(row));
@@ -796,11 +802,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
   async function reload(){
-    try{const [nextProject,nextBoard,nextFeatures,nextOnboarding,nextReleasePlan]=await Promise.all([
+    try{const [nextProject,nextBoard,nextFeatures,nextOnboarding,nextReleasePlan,nextDeveloper]=await Promise.all([
       fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),fetchJSON("/api/onboarding"),
-      fetchJSON("/api/release-plan")]);
+      fetchJSON("/api/release-plan"),fetchJSON("/api/local-developer")]);
       project=nextProject;board=nextBoard;features=nextFeatures.features||[];
-      onboarding=nextOnboarding;releasePlan=nextReleasePlan;render();}
+      onboarding=nextOnboarding;releasePlan=nextReleasePlan;localGit=nextDeveloper;render();}
     catch(e){$("project-intro").textContent="无法读取项目资料："+e.message;}
   }
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));

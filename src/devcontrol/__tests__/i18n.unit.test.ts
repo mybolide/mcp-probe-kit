@@ -44,9 +44,16 @@ describe("Per-reader project-neutral language",()=>{
       expect(ledger.primaryRelease()).toBe("SHIPPING-RELEASE");
       const projectRelease=await (await fetch(base+"/api/release-plan")).json();
       expect(projectRelease).toMatchObject({release:"SHIPPING-RELEASE",status:"missing"});
-      const suggestions=await (await fetch(base+"/api/contributors")).json();
-      expect(suggestions).toMatchObject({contributors:[],assignedAutomatically:false});
-      expect((await fetch(base+"/api/contributors",{method:"POST"})).status).toBe(405);
+      execFileSync("git",["config","--local","user.name","Science Dataset Engineer"],{cwd:root});
+      execFileSync("git",["config","--local","user.email","science@example.invalid"],{cwd:root});
+      const developer=await (await fetch(base+"/api/local-developer")).json();
+      expect(developer).toMatchObject({
+        name:"Science Dataset Engineer",source:"repository",
+        role:"local-developer",ownerAssigned:false,
+      });
+      expect(JSON.stringify(developer)).not.toContain("science@example.invalid");
+      expect((await fetch(base+"/api/local-developer",{method:"POST"})).status).toBe(405);
+      expect((await fetch(base+"/api/contributors")).status).toBe(404);
     }finally{
       await new Promise<void>(resolve=>server.close(()=>resolve()));
       ledger.close();fs.rmSync(root,{recursive:true,force:true});
