@@ -62,6 +62,10 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain("linkedByRequirement.get(req.id)||[]");
     expect(html).toContain('function openRequirement(req,linked,progress)');
     expect(html).toContain('id="task-progress-bar"');
+    expect(html).toContain('n("span",brief.summary,"work-summary")');
+    expect(html).toContain('section("任务说明",brief.description');
+    expect(html).toContain('section("必须完成什么 · 验收目标",brief.acceptance');
+    expect(html).toContain('section("文件修改范围",brief.paths.length');
     expect(html).toContain('"正式工作项已验证 "+verifiedTasks');
     expect(html).toContain('const productTasks=currentReleaseRows();');
     expect(html).toContain('const actualOwner=row.current?.owner||item.owner;');
@@ -102,6 +106,33 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('row.status==="verified"');
     expect(html).toContain('if(item.kind!=="group")result.push');
     expect(html).not.toContain("innerHTML");
+  });
+  it("shows a frozen task acceptance as a brief without inventing implementation details", () => {
+    const html=projectHtml("nonce");
+    const start=html.indexOf("  function taskBrief(row){");
+    const end=html.indexOf("  function releaseReviewFindings(){",start);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    const brief=vm.runInNewContext(html.slice(start,end)+"\ntaskBrief;") as
+      (row: {item:Record<string,unknown>;current?:Record<string,unknown>})=>{
+        description:string;acceptance:string;summary:string;
+        requirementIds:string[];paths:string[];gates:string[];
+      };
+    const frozen=brief({item:{id:"F2-24",title:"确认身份失效后的拒绝行为",
+      acceptance:"本地会话失效的 API 响应可明确复现",
+      requirementIds:["FR-004","NFR-002"],
+      allowedPaths:["docs/architecture/**"],requiredGates:["docs"]}});
+    expect(frozen.description).toBe("");
+    expect(frozen.summary).toBe("验收目标：本地会话失效的 API 响应可明确复现");
+    expect(Array.from(frozen.requirementIds)).toEqual(["FR-004","NFR-002"]);
+    expect(Array.from(frozen.paths)).toEqual(["docs/architecture/**"]);
+    expect(Array.from(frozen.gates)).toEqual(["docs"]);
+    const detailed=brief({item:{id:"F2-25",description:"验证失效凭据必须被拒绝",
+      acceptance:"明确返回未授权",requiredGates:["go_http_integration"]}});
+    expect(detailed.summary).toBe("任务说明：验证失效凭据必须被拒绝");
+    expect(detailed.acceptance).toBe("明确返回未授权");
+    const unknown=brief({item:{id:"F2-unknown"}});
+    expect(unknown.summary).toBe("任务规格尚未记录说明及验收目标");
   });
   it("excludes old verified F0/F1 tasks from a frozen V0.1 progress denominator", () => {
     const html=projectHtml("nonce");
@@ -144,7 +175,10 @@ describe("DevControl documentation Markdown tables", () => {
     const end = html.indexOf("  function renderTaskList(){", start);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
-    const source = html.slice(start, end) + "\nopenPlanTask;";
+    const briefStart=html.indexOf("  function taskBrief(row){");
+    const briefEnd=html.indexOf("  function releaseReviewFindings(){",briefStart);
+    expect(briefStart).toBeGreaterThan(0);
+    const source = html.slice(briefStart, briefEnd)+html.slice(start, end)+"\nopenPlanTask;";
     const content = new TestNode("div");
     const title = new TestNode("h2");
     const provenance = new TestNode("small");

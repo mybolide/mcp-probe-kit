@@ -74,6 +74,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .work-grid-row:hover{background:#203951}
 .work-grid-row span{overflow-wrap:anywhere}
 .work-grid-row .work-id{display:block;color:#79a9c5;font:10px ui-monospace,monospace;margin-bottom:5px}
+.work-grid-row .work-title{display:block;color:#eaf5ff;line-height:1.55}
+.work-grid-row .work-summary{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;color:#bbd1e4;font-weight:400;line-height:1.6;margin-top:6px}
+.work-grid-row .work-context{display:block;color:#82a9c4;font-size:10px;margin-top:6px;line-height:1.4}
 .work-grid-row .issue-state{width:fit-content}
 .issue-controls select{background:#12253c;color:#d7e6f6;border:1px solid #35516c;border-radius:8px;padding:9px;min-width:112px}
 .task-phase-items{padding:10px;display:grid;gap:9px}.task-phase-items .simple-task{background:#132238}
@@ -407,6 +410,20 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     const historical={"F0":"基础环境与架构","F1":"最小事件与接口契约"};
     return historical[task.id]||task.title;
   }
+  function taskBrief(row){
+    const item=row.item,detail=row.current?.spec||{};
+    const description=String(item.description||item.scenario||detail.description||detail.scenario||"").trim();
+    const acceptance=String(item.acceptance||detail.acceptance||"").trim();
+    return {
+      description,
+      acceptance,
+      summary:description?("任务说明："+description):
+        (acceptance?("验收目标："+acceptance):"任务规格尚未记录说明及验收目标"),
+      requirementIds:item.requirementIds||detail.requirementIds||[],
+      paths:item.allowedPaths||row.current?.allowedPaths||[],
+      gates:item.requiredGates||row.current?.requiredGates||[],
+    };
+  }
   function releaseReviewFindings(){
     const plan=releaseWorkPlan?.status==="frozen"?
       releaseWorkPlan.frozen?.plan:releaseWorkPlan?.proposal?.plan;
@@ -549,7 +566,23 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       });
     };
     if(task._planOrigin==="release-work"){
-      section("一项任务 · 一项可验收结果",task.acceptance);
+      const brief=taskBrief(row);
+      section("任务说明",brief.description||
+        "冻结任务未单独记录实施说明。目前只明确了下方验收目标，不能将标题当成详细设计；执行前须核对需求、工程设计和任务范围。");
+      section("必须完成什么 · 验收目标",brief.acceptance||"冻结任务尚未记录可验收目标，须先补充并评审。");
+      section("对应需求",brief.requirementIds.length?brief.requirementIds:
+        ["该工作项尚未记录需求编号，应按正式评审补齐。"]);
+      if(task.workflow?.length)section("已批准的执行步骤",task.workflow);
+      else if(!brief.description)section("实施步骤的规格状态",
+        "冻结工作项未提供独立的执行步骤。本页面不推测实现方式；领取前应核对技术方案，缺少必要规格时先履行变更评审。");
+      if(task.inputs?.length)section("输入与前置条件",task.inputs);
+      if(task.outputs?.length)section("交付输出",task.outputs);
+      if(task.negativeCases?.length)section("失败与边界场景",task.negativeCases);
+      if(task.testCases?.length)section("验证场景",task.testCases);
+      section("文件修改范围",brief.paths.length?brief.paths:
+        ["未记录允许文件范围；领取开发任务前必须核验合同。"]);
+      section("必须通过的质量门禁",brief.gates.length?brief.gates:
+        ["未记录测试 Gate；须以实时 execution-contract 为准。"]);
       section("工作项信息",[
         "状态："+status,"类型："+(task.type||"—"),
         "责任角色："+(task.ownerRole||"尚未分工"),
@@ -567,8 +600,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       if(task.checklist?.length)section("完成检查",task.checklist);
       if(task.remark)section("备注",task.remark);
       if(task.blockingReason)section("阻塞原因",task.blockingReason);
-      section("依赖",task.dependsOn||[]);
-      section("验收要求",task.requiredGates||[]);
+      section("前置依赖",task.dependsOn||[]);
       if(task.featureReviewIssues?.length)section("整版评审未通过",task.featureReviewIssues);
       if(row.pending)section("开发限制","当前版本尚未整体审批。此工作项不可领取或执行。");
       showDelivery();
@@ -669,8 +701,14 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       shell.append(headings);
       for(const row of filtered){
         const item=row.item,button=n("button",null,"work-grid-row");button.type="button";
+        const brief=taskBrief(row);
         const title=n("span");title.append(n("small",item.id+" · "+(item.stageId||""),"work-id"),
-          n("strong",displayTaskTitle(item)));
+          n("strong",displayTaskTitle(item),"work-title"),
+          n("span",brief.summary,"work-summary"),
+          n("small",[
+            brief.requirementIds.length?("需求 "+brief.requirementIds.join("、")):"未关联需求",
+            brief.gates.length?("Gate "+brief.gates.join("、")):"未记录 Gate",
+          ].join(" · "),"work-context"));
         const [status,state]=taskStatus(row);
         const actualOwner=row.current?.owner||item.owner;
         const actualDevice=row.current?.ownerAssignment?.device;
