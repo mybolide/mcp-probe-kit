@@ -63,7 +63,7 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('function openRequirement(req,linked,progress)');
     expect(html).toContain('id="task-progress-bar"');
     expect(html).toContain('n("span",brief.summary,"work-summary")');
-    expect(html).toContain('section("任务说明",brief.description');
+    expect(html).toContain('section("任务说明",task.purpose||brief.description');
     expect(html).toContain('section("必须完成什么 · 验收目标",brief.acceptance');
     expect(html).toContain('section("文件修改范围",brief.paths.length');
     expect(html).toContain('"正式工作项已验证 "+verifiedTasks');
@@ -202,6 +202,8 @@ describe("DevControl documentation Markdown tables", () => {
           evidence: [{ kind: "sqlite_decision", reference: "F2-23:revision-1" }],
           decision: { status: "decided", decision: "OS Secret Store",
             rationale: "用户凭据不进 Git", verificationPlan: "真实 HTTP 测试另行执行" },
+          detailAudit: {taskId:"F2-23",passed:false,missing:["purpose","workflow"],
+            issues:[],retroactiveGateApplied:false},
         };
       },
       translate: (text: string) => text,
@@ -229,6 +231,8 @@ describe("DevControl documentation Markdown tables", () => {
     expect(rendered).toContain("遗留工作：真实设备测试待完成");
     expect(rendered).toContain("F2-23:revision-1");
     expect(rendered).toContain("OS Secret Store");
+    expect(rendered).toContain("任务规格完整性检查");
+    expect(rendered).toContain("当前冻结任务仍缺少 2 项详细说明");
     expect(rendered).not.toContain("负责人：待分配");
   });
   it("projects actual SQLite states into exactly three buckets without converting pending drafts into started work", () => {

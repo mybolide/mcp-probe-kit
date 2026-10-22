@@ -559,6 +559,19 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
             "后续验证："+data.decision.verificationPlan,
           ]);
         }
+        if(data.detailAudit?.audit!==null&&Array.isArray(data.detailAudit?.missing)){
+          const labels={purpose:"背景与目的",scenario:"触发场景",inputs:"输入与前置条件",
+            outputs:"交付输出",workflow:"执行步骤",businessRules:"业务及系统约束",
+            negativeCases:"失败与边界场景",testCases:"验证用例",
+            verificationEvidence:"交付与验收证据",outOfScope:"不在本任务范围",
+            sourceRefs:"原始需求及设计来源"};
+          const missing=data.detailAudit.missing.map(key=>labels[key]||key);
+          section("任务规格完整性检查",data.detailAudit.passed?
+            "详细任务说明已覆盖全部检查项。验收仍需真实执行证据。":
+            ["当前冻结任务仍缺少 "+missing.length+" 项详细说明："+missing.join("、"),
+              "这是原始规划资料的缺口，不改变历史 Verified、已批准范围或任务领取权限；需正式评审后补充。",
+              ...(data.detailAudit.issues||[])]);
+        }
       }).catch(e=>{
         if(!content.isConnected)return;
         fill(completionBox,"执行和完成说明",["读取失败："+e.message]);
@@ -567,8 +580,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     };
     if(task._planOrigin==="release-work"){
       const brief=taskBrief(row);
-      section("任务说明",brief.description||
+      section("任务说明",task.purpose||brief.description||
         "冻结任务未单独记录实施说明。目前只明确了下方验收目标，不能将标题当成详细设计；执行前须核对需求、工程设计和任务范围。");
+      if(task.purpose&&brief.description)section("触发场景与用户期望",brief.description);
       section("必须完成什么 · 验收目标",brief.acceptance||"冻结任务尚未记录可验收目标，须先补充并评审。");
       section("对应需求",brief.requirementIds.length?brief.requirementIds:
         ["该工作项尚未记录需求编号，应按正式评审补齐。"]);
@@ -577,8 +591,12 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         "冻结工作项未提供独立的执行步骤。本页面不推测实现方式；领取前应核对技术方案，缺少必要规格时先履行变更评审。");
       if(task.inputs?.length)section("输入与前置条件",task.inputs);
       if(task.outputs?.length)section("交付输出",task.outputs);
+      if(task.businessRules?.length)section("业务与系统约束",task.businessRules);
       if(task.negativeCases?.length)section("失败与边界场景",task.negativeCases);
       if(task.testCases?.length)section("验证场景",task.testCases);
+      if(task.verificationEvidence?.length)section("交付与验收证据要求",task.verificationEvidence);
+      if(task.outOfScope?.length)section("不在本任务范围",task.outOfScope);
+      if(task.sourceRefs?.length)section("需求与设计参考",task.sourceRefs);
       section("文件修改范围",brief.paths.length?brief.paths:
         ["未记录允许文件范围；领取开发任务前必须核验合同。"]);
       section("必须通过的质量门禁",brief.gates.length?brief.gates:

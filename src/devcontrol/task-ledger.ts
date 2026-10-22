@@ -17,7 +17,7 @@ import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } fro
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
 import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
-import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
+import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, reviewDetailedWorkItems, auditAtomicWorkItemDetail, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
 import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
 
@@ -1013,6 +1013,10 @@ export class ProjectTaskLedger {
       "SELECT id FROM dc_tasks WHERE status='verified'"
     ).all().map(row=>String(row.id)));
     issues.push(...reviewAtomicWorkItems(workItems,ids,existingIds));
+    if(input.qualityProfile==="task-detail-v1")
+      issues.push(...reviewDetailedWorkItems(workItems));
+    else if(input.qualityProfile!==undefined)
+      issues.push("Unknown release task detail quality profile");
     // The host Agent is responsible for semantic judgement. DevControl only
     // verifies a separate review artifact tied to the exact roster snapshot.
     issues.push(...reviewAgentReview(input));
@@ -1205,6 +1209,20 @@ export class ProjectTaskLedger {
       event,previousOwner:prior?.owner??null,previousDevice:prior?.device??null,
       owner,device,source:local.source,
     });
+  }
+
+  /** A reviewable, frozen execution brief, not an invitation to redesign. */
+  taskDetailAudit(id:string):Row {
+    const task=this.get(id);
+    const roster=this.releaseWorkPlan(String(task.release));
+    const item=(roster.status==="frozen"?roster.frozen?.plan?.workItems:
+      roster.proposal?.plan?.workItems)?.find((entry:{id:string})=>entry.id===id);
+    if(!item)return {taskId:id,scope:"not-in-release-work-plan",audit:null};
+    const audit=auditAtomicWorkItemDetail(item);
+    return {scope:roster.status,release:task.release,
+      planHash:roster.frozenHash??roster.proposalHash??null,
+      qualityProfile:(roster.status==="frozen"?roster.frozen?.plan:roster.proposal?.plan)?.qualityProfile??"legacy",
+      ...audit,retroactiveGateApplied:false};
   }
 
   /** A reviewable, frozen execution brief, not an invitation to redesign. */

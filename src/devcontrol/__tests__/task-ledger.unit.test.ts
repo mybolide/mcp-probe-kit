@@ -586,6 +586,11 @@ describe("project ledger and legacy migration", () => {
     const complete=withReview(plan);
     const review=ledger!.reviewReleaseWork(complete as any);
     expect(review).toMatchObject({passed:true,workItemCount:4});
+    const strictPlan={...plan,qualityProfile:"task-detail-v1"};
+    const strictReview=ledger!.reviewReleaseWork(withReview(strictPlan) as any);
+    expect(strictReview.passed).toBe(false);
+    expect(strictReview.issues).toContain("WORK-101: detailed task brief missing purpose");
+    expect(strictReview.issues).toContain("WORK-101: detailed task brief missing testCases");
     expect(review.reviewSubjectHash).toBe(complete.agentReview.subjectHash);
     const stale={...complete,workItems:complete.workItems.map((item:any,index:number)=>index===0?
       {...item,acceptance:"首次写入后得到可持久查询的编号"}:item)};
@@ -633,6 +638,11 @@ describe("project ledger and legacy migration", () => {
     expect(approved.added).toEqual(items.map(item=>item.id));
     const contract=ledger!.executionContract("WORK-101");
     expect(contract).toMatchObject({eligible:true,profile:"atomic-work-item"});
+    const audit=ledger!.taskDetailAudit("WORK-101");
+    expect(audit).toMatchObject({taskId:"WORK-101",passed:false,
+      scope:"frozen",qualityProfile:"legacy",retroactiveGateApplied:false});
+    expect(audit.missing).toContain("purpose");
+    expect(ledger!.executionContract("WORK-101").eligible).toBe(true);
     expect(contract.spec).toMatchObject({title:"实现本地事件创建接口",
       acceptance:"首次写入返回稳定事件编号"});
     expect(ledger!.get("WORK-101").owner).toBe("Core Agent");

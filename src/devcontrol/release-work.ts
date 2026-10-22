@@ -19,12 +19,63 @@ export interface AtomicWorkItem {
   requirementIds?:string[];
   /** ONE observable outcome. No long embedded implementation document. */
   acceptance:string;
+  /** Reviewed task-specific context, distinct from the single acceptance outcome. */
+  purpose?:string;
+  scenario?:string;
+  inputs?:string[];
+  outputs?:string[];
+  workflow?:string[];
+  businessRules?:string[];
+  negativeCases?:string[];
+  testCases?:string[];
+  verificationEvidence?:string[];
+  outOfScope?:string[];
+  sourceRefs?:string[];
   remark?:string;
   blockingReason?:string;
   checklist?:string[];
   allowedPaths:string[];
   requiredGates:string[];
   estimatedHours?:number;
+}
+
+export const TASK_DETAIL_FIELDS=[
+  "purpose","scenario","inputs","outputs","workflow","businessRules",
+  "negativeCases","testCases","verificationEvidence","outOfScope","sourceRefs",
+] as const;
+
+export type TaskDetailField=typeof TASK_DETAIL_FIELDS[number];
+/** Read-only depth audit. No invented content, no changes to an approved roster. */
+export function auditAtomicWorkItemDetail(item:AtomicWorkItem):{
+  taskId:string;passed:boolean;missing:TaskDetailField[];issues:string[];
+} {
+  const missing:TaskDetailField[]=[];
+  const issues:string[]=[];
+  const single=(field:"purpose"|"scenario",min:number)=>{
+    const value=item[field];
+    if(typeof value!=="string"||value.trim().length<min)missing.push(field);
+    else if(value.length>1200)issues.push(item.id+": "+field+" too long for one atomic task");
+  };
+  const grouped=(field:Exclude<TaskDetailField,"purpose"|"scenario">,min=1)=>{
+    const values=item[field];
+    if(!Array.isArray(values)||values.length<min||values.some(v=>typeof v!=="string"||v.trim().length<8))
+      missing.push(field);
+    else if(values.length>8||values.some(v=>v.length>500))
+      issues.push(item.id+": "+field+" too broad for one independently verifiable task");
+  };
+  single("purpose",16);
+  single("scenario",16);
+  grouped("inputs");grouped("outputs");grouped("workflow",2);
+  grouped("businessRules");grouped("negativeCases");grouped("testCases");
+  grouped("verificationEvidence");grouped("outOfScope");grouped("sourceRefs");
+  return {taskId:item.id,passed:missing.length===0&&issues.length===0,missing,issues};
+}
+
+export function reviewDetailedWorkItems(items:AtomicWorkItem[]):string[] {
+  return items.flatMap(item=>{
+    const audit=auditAtomicWorkItemDetail(item);
+    return [...audit.missing.map(field=>item.id+": detailed task brief missing "+field),...audit.issues];
+  });
 }
 
 /** Evidence of independent Agent reasoning, NOT proof that business coverage is correct. */
@@ -60,6 +111,7 @@ export function releaseReviewSubjectHash(input:ReleaseWorkPlan):string {
     release:input.release,scopeSource:input.scopeSource,stages:input.stages,
     requiredRequirementIds:input.requiredRequirementIds??[],
     requirementsSource:input.requirementsSource??null,workItems:input.workItems,
+    ...(input.qualityProfile?{qualityProfile:input.qualityProfile}:{}),
   })).digest("hex");
 }
 
@@ -102,6 +154,8 @@ export interface ReleaseWorkStage {
 }
 export interface ReleaseWorkPlan {
   release:string;
+  /** Opt-in strict depth for new, separately reviewed plans. Existing frozen plans stay valid. */
+  qualityProfile?:"task-detail-v1";
   scopeSource:string;
   stages:ReleaseWorkStage[];
   workItems:AtomicWorkItem[];
