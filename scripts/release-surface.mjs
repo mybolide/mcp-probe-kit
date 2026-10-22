@@ -9,6 +9,8 @@ const manifest = readJson('../tools-manifest.json');
 
 export const PACKAGE_VERSION = packageJson.version;
 export const COMPACT_TOOL_COUNT = manifest.toolsets?.compact?.count ?? 24;
+export const COMPACT_WITH_HISTORY_TOOL_COUNT =
+  manifest.toolsets?.compactWithHistory?.count ?? COMPACT_TOOL_COUNT + 5;
 export const COMPACT_WITH_MEMORY_TOOL_COUNT =
   manifest.toolsets?.compactWithMemory?.count ?? 30;
 export const MEMORY_CONDITIONAL_TOOL_COUNT =

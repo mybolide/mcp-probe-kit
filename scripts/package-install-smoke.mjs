@@ -6,7 +6,7 @@ import { delimiter, join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { create as createTar } from 'tar';
-import { COMPACT_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
+import { COMPACT_WITH_HISTORY_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
 
 const npmExecPath = process.env.npm_execpath;
 const root = process.cwd();
@@ -308,8 +308,8 @@ try {
     await client.connect(transport);
     const tools = await client.listTools();
     assert(
-      tools.tools.length === COMPACT_TOOL_COUNT,
-      `packed server exposed ${tools.tools.length} tools, expected ${COMPACT_TOOL_COUNT}`
+      tools.tools.length === COMPACT_WITH_HISTORY_TOOL_COUNT,
+      `packed server exposed ${tools.tools.length} tools, expected ${COMPACT_WITH_HISTORY_TOOL_COUNT}`
     );
     const routed = await client.callTool({
       name: 'workflow',
