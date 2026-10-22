@@ -18,6 +18,8 @@ import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
 import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
 import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
+import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
+  type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -406,6 +408,19 @@ export class ProjectTaskLedger {
         revision INTEGER NOT NULL, snapshot_json TEXT NOT NULL,
         created_at TEXT NOT NULL, PRIMARY KEY(task_id,revision)
       );
+      CREATE TABLE IF NOT EXISTS dc_ideas (
+        id TEXT PRIMARY KEY, release TEXT NOT NULL, title TEXT NOT NULL,
+        description TEXT NOT NULL, source_ref TEXT NOT NULL, submitted_by TEXT NOT NULL,
+        status TEXT NOT NULL, revision INTEGER NOT NULL,
+        baseline_hash TEXT NOT NULL, assessment_json TEXT,
+        assessment_hash TEXT, review_json TEXT, review_hash TEXT,
+        disposition_json TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_idea_revisions (
+        idea_id TEXT NOT NULL REFERENCES dc_ideas(id),
+        revision INTEGER NOT NULL, event TEXT NOT NULL, snapshot_json TEXT NOT NULL,
+        created_at TEXT NOT NULL, PRIMARY KEY(idea_id,revision)
+      );
       CREATE TABLE IF NOT EXISTS dc_features (
         name TEXT PRIMARY KEY,
         description TEXT NOT NULL,
@@ -638,6 +653,198 @@ export class ProjectTaskLedger {
     }:null,history:this.db.prepare(
       "SELECT revision,snapshot_json,created_at FROM dc_task_decision_revisions WHERE task_id=? ORDER BY revision"
     ).all(id).map(row=>({...row,snapshot:JSON.parse(row.snapshot_json),snapshot_json:undefined}))};
+  }
+
+  /** The frozen release is the only source of executable stage/task IDs. */
+  private ideaContext(release:string):{
+    hash:string;stages:Set<string>;tasks:Set<string>;stageOf:Map<string,string>;
+  } {
+    const row=this.db.prepare(
+      "SELECT hash,snapshot_json FROM dc_release_work_plans WHERE release=?").get(release);
+    if(!row)fail("RELEASE_NOT_FROZEN","Ideas can be scheduled only against a frozen release");
+    const plan=(JSON.parse(row.snapshot_json) as {plan:ReleaseWorkPlan}).plan;
+    return {hash:row.hash,
+      stages:new Set(plan.stages.map(stage=>stage.id)),
+      tasks:new Set(plan.workItems.map(item=>item.id)),
+      stageOf:new Map(plan.workItems.map(item=>[item.id,item.stageId]))};
+  }
+
+  private ideaRow(id:string):Row {
+    const row=this.db.prepare("SELECT * FROM dc_ideas WHERE id=?").get(id);
+    if(!row)fail("IDEA_NOT_FOUND","Unknown idea");
+    return row;
+  }
+
+  getIdea(id:string):Row {
+    const row=this.ideaRow(id);
+    return {id:row.id,release:row.release,title:row.title,
+      description:row.description,sourceRef:row.source_ref,submittedBy:row.submitted_by,
+      status:row.status,revision:row.revision,baselineHash:row.baseline_hash,
+      assessment:row.assessment_json?JSON.parse(row.assessment_json):null,
+      assessmentHash:row.assessment_hash??null,
+      review:row.review_json?JSON.parse(row.review_json):null,
+      reviewHash:row.review_hash??null,
+      disposition:row.disposition_json?JSON.parse(row.disposition_json):null,
+      createdAt:row.created_at,updatedAt:row.updated_at,
+      history:this.db.prepare(
+        "SELECT revision,event,snapshot_json,created_at FROM dc_idea_revisions WHERE idea_id=? ORDER BY revision"
+      ).all(id).map(x=>({revision:x.revision,event:x.event,
+        snapshot:JSON.parse(x.snapshot_json),createdAt:x.created_at}))};
+  }
+
+  listIdeas(release?:string):Row {
+    const rows=release
+      ?this.db.prepare("SELECT id FROM dc_ideas WHERE release=? ORDER BY created_at,id").all(release)
+      :this.db.prepare("SELECT id FROM dc_ideas ORDER BY created_at,id").all();
+    return {ideas:rows.map(row=>this.getIdea(row.id))};
+  }
+
+  private appendIdeaRevision(id:string,revision:number,event:string,record:Row):void {
+    this.db.prepare("INSERT INTO dc_idea_revisions VALUES(?,?,?,?,?)")
+      .run(id,revision,event,JSON.stringify(record),utc());
+    this.audit(null,"idea_"+event,record.actor??"devcontrol",
+      {ideaId:id,revision,event});
+  }
+
+  captureIdea(input:{
+    release:string;title:string;description:string;sourceRef:string;submittedBy:string;
+  }):Row {
+    const release=String(input?.release??"").trim();
+    const context=this.ideaContext(release);
+    for(const [key,min,max] of [
+      ["title",4,180],["description",12,10000],
+      ["sourceRef",3,400],["submittedBy",2,120],
+    ] as const){
+      const val=input?.[key];
+      if(typeof val!=="string"||val.trim().length<min||val.length>max)
+        fail("INVALID_IDEA",key+" is missing or exceeds its safe bound");
+    }
+    return this.inTransaction(()=>{
+      const id="IDEA-"+randomUUID();
+      const timestamp=utc();
+      this.db.prepare(`INSERT INTO dc_ideas
+        (id,release,title,description,source_ref,submitted_by,status,revision,
+          baseline_hash,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(id,release,input.title.trim(),input.description.trim(),
+          input.sourceRef.trim(),input.submittedBy.trim(),"captured",1,
+          context.hash,timestamp,timestamp);
+      this.appendIdeaRevision(id,1,"captured",
+        {title:input.title,description:input.description,sourceRef:input.sourceRef,
+          baselineHash:context.hash,actor:input.submittedBy});
+      return {...this.getIdea(id),executableTaskCreated:false};
+    });
+  }
+
+  assessIdea(id:string,assessment:IdeaAssessment,expectedRevision:number):Row {
+    return this.inTransaction(()=>{
+      const row=this.ideaRow(id);
+      if(row.status!=="captured"&&row.status!=="assessed")
+        fail("IDEA_FROZEN","Only captured/assessed ideas can be re-assessed");
+      if(row.revision!==expectedRevision)fail("STALE_IDEA","Idea revision changed");
+      const context=this.ideaContext(row.release);
+      if(row.baseline_hash!==context.hash)
+        fail("STALE_RELEASE","Release baseline changed; re-capture impact proposal");
+      const issues=assessIdeaShape(assessment,context.stages,context.tasks);
+      if(["within_task","after_task"].includes(assessment?.placement)&&
+        context.stageOf.get(assessment.targetTaskId??"")!==assessment.targetStageId)
+        issues.push("insertion stage must match the target frozen work item");
+      if(issues.length)fail("IDEA_ASSESSMENT_INVALID",issues.join("; "));
+      const hash=ideaSubjectHash({id,release:row.release,title:row.title,
+        description:row.description,sourceRef:row.source_ref,
+        baselineHash:row.baseline_hash,assessment});
+      const revision=row.revision+1;
+      this.db.prepare(`UPDATE dc_ideas SET status='assessed',revision=?,assessment_json=?,
+        assessment_hash=?,review_json=NULL,review_hash=NULL,
+        disposition_json=NULL,updated_at=? WHERE id=?`)
+        .run(revision,JSON.stringify(assessment),hash,utc(),id);
+      this.appendIdeaRevision(id,revision,"assessed",
+        {assessment,assessmentHash:hash,actor:assessment.assessedBy});
+      return {...this.getIdea(id),executableTaskCreated:false};
+    });
+  }
+
+  reviewIdea(id:string,review:IdeaIndependentReview,expectedRevision:number):Row {
+    return this.inTransaction(()=>{
+      const row=this.ideaRow(id);
+      if(row.status!=="assessed")fail("IDEA_NOT_ASSESSED","Assess before independent review");
+      if(row.revision!==expectedRevision)fail("STALE_IDEA","Idea revision changed");
+      const context=this.ideaContext(row.release);
+      if(row.baseline_hash!==context.hash)
+        fail("STALE_RELEASE","Frozen release changed; re-evaluate idea");
+      const assessment=JSON.parse(row.assessment_json) as IdeaAssessment;
+      const expected=ideaSubjectHash({id,release:row.release,title:row.title,
+        description:row.description,sourceRef:row.source_ref,
+        baselineHash:row.baseline_hash,assessment});
+      if(expected!==row.assessment_hash)
+        fail("STALE_IDEA","Stored assessment was changed");
+      const issues=reviewIdeaShape(review,assessment.assessedBy,expected,context.tasks);
+      if(assessment.targetTaskId){
+        const task=this.db.prepare("SELECT status FROM dc_tasks WHERE id=?")
+          .get(assessment.targetTaskId);
+        if(task?.status!=="ready")
+          issues.push("Insertion anchor is no longer ready; re-assess placement");
+        if(review.checks?.some(check=>!check.taskIds?.includes(assessment.targetTaskId!)))
+          issues.push("Every independent dimension must consider the insertion anchor");
+      }
+      if(issues.length)fail("IDEA_REVIEW_INVALID",issues.join("; "));
+      const reviewHash=createHash("sha256").update(JSON.stringify(review)).digest("hex");
+      const revision=row.revision+1;
+      this.db.prepare(`UPDATE dc_ideas SET status='reviewed',revision=?,review_json=?,
+        review_hash=?,updated_at=? WHERE id=?`)
+        .run(revision,JSON.stringify(review),reviewHash,utc(),id);
+      this.appendIdeaRevision(id,revision,"reviewed",
+        {review,reviewHash,actor:review.reviewer});
+      return {...this.getIdea(id),executableTaskCreated:false};
+    });
+  }
+
+  decideIdea(id:string,input:{
+    disposition:"adopt"|"defer"|"reject";approvedBy:string;
+    expectedRevision:number;expectedReviewHash:string;reason:string;
+    explicitAuthorization:boolean;
+  }):Row {
+    return this.inTransaction(()=>{
+      const row=this.ideaRow(id);
+      if(row.status!=="reviewed")fail("IDEA_REVIEW_REQUIRED","Review the idea first");
+      if(row.revision!==input.expectedRevision)
+        fail("STALE_IDEA","Idea revision changed");
+      if(row.review_hash!==input.expectedReviewHash)
+        fail("IDEA_REVIEW_MISMATCH","Exact independent review hash required");
+      if(input.explicitAuthorization!==true)
+        fail("EXPLICIT_AUTHORIZATION_REQUIRED",
+          "The Owner must explicitly authorize the reviewed disposition");
+      const context=this.ideaContext(row.release);
+      if(row.baseline_hash!==context.hash)
+        fail("STALE_RELEASE","Frozen release changed since idea review");
+      if(!["adopt","defer","reject"].includes(input.disposition)||
+        typeof input.approvedBy!=="string"||input.approvedBy.trim().length<2||
+        typeof input.reason!=="string"||input.reason.trim().length<12)
+        fail("INVALID_DISPOSITION","Explicit Owner label, disposition and reason required");
+      const assessment=JSON.parse(row.assessment_json) as IdeaAssessment;
+      if(input.disposition==="adopt"&&assessment.recommendation!=="adopt")
+        fail("ASSESSMENT_MISMATCH","Reassess and re-review before overriding to adopt");
+      if(assessment.targetTaskId){
+        const target=this.db.prepare("SELECT status FROM dc_tasks WHERE id=?")
+          .get(assessment.targetTaskId);
+        if(target?.status!=="ready")
+          fail("STALE_PLACEMENT","The chosen task already started; reassess placement");
+      }
+      const status=input.disposition==="adopt"?"approved_for_planning":
+        input.disposition==="defer"?"deferred":"rejected";
+      const revision=row.revision+1;
+      const disposition={decision:input.disposition,reason:input.reason.trim(),
+        approvedBy:input.approvedBy.trim(),reviewHash:row.review_hash,
+        at:utc(),authorization:"audit_label_not_verified_identity"};
+      this.db.prepare(`UPDATE dc_ideas SET status=?,revision=?,disposition_json=?,
+        updated_at=? WHERE id=?`)
+        .run(status,revision,JSON.stringify(disposition),utc(),id);
+      this.appendIdeaRevision(id,revision,"decided",
+        {disposition,actor:input.approvedBy});
+      return {...this.getIdea(id),executableTaskCreated:false,
+        frozenPlanChanged:false,
+        nextGate:status==="approved_for_planning"?
+          "Release-change review and explicit whole-version approval required":"none"};
+    });
   }
 
   checkStaged(): Row {

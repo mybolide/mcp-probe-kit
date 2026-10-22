@@ -30,6 +30,7 @@ export const MCP_INTENT_QUICK_LOOKUP: McpIntentQuickEntry[] = WORKFLOW_SELECTION
 export const MCP_SKILL_ARGUMENT_RULES = [
   "用户只说“继续 / 开始 / 往下做”且存在最近的 Delegated Plan 或已知 plan_id 时，直接调用 `resume_plan` 恢复检查点并从 nextStepId 继续；`mustContinue=true` 时禁止只汇报恢复结果，必须立即执行 nextStep/nextTool 并逐步 heartbeat；plan_id 丢失时只传 project_root，由工具自动选择最近的 active/blocked Plan；只有不存在可恢复 Plan 时，才结合当前对话、已有 Spec 和用户已确认决定下一工具。不要先调用 `workflow` 做意图识别。",
   "先判断当前目标是一个明确的单项能力，还是需要完整交付；单项能力直接调用对应工具，完整交付才使用 `start_*`。",
+  "用户在开发途中表达的建议、新思路、不同技术选型默认是**候选而非立即执行命令**。先用 DevControl idea-capture 存入 SQLite，宿主 Agent 阅读产品目标/历史/真实代码与冻结工作项独立评估合理性、替代方案、依赖、风险、回归和插入时机，再 idea-assess → 不同审核标签的 idea-review → 用户明确授权 idea-decide(explicitAuthorization=true)。approved_for_planning 仅表示可另行发起全版变更 Review；不得直接改冻结任务/抢跑代码，不要把MCP结构检查误认为产品价值判断。用户明确指示的当前已批准任务仍按现有 execution-contract 执行，无需每句话都建立 idea。",
   "完整功能交付调用 `start_feature`，传真实项目根与完整范围摘要；它只返回委托工作流模板，业务需求澄清、技术决策和拆分始终由 Agent 负责。Git/Node22 DevControl 项目使用 SQLite Feature 与完整版本原子任务，不要求生成 Spec Markdown；显式 legacy files 模式才考虑 flat/parent-child Spec。",
   "跨模块、多阶段、大版本或架构升级由 Agent 从 PRD/ADR/代码规划整版一行一事 WorkItem，独立 Review 后交给 DevControl 审批；不要强制调用 `add_feature` 生成文件树。只有项目已显式选择 legacy files 模式且需求已明确时，才按返回的 plan 使用文件 Spec 工具。",
   "工具参数必须表达当前任务事实，不要只复制用户最后一条消息；当前项目代码和已落盘 Spec 优先于历史记忆。",
@@ -56,6 +57,10 @@ export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = (() => {
 })();
 
 export const MCP_SKILL_COMMON_FLOWS = [
+  {
+    label: "开发中收到新想法",
+    chain: "分析意图（是讨论/候选/明确执行授权）→ idea-capture(候选) → Agent独立影响评估 idea-assess → idea-review(真实任务锚点/4维) → Owner明确授权才 idea-decide(true) → 后续单独全版变更评审；不改现有冻结计划/任务顺序",
+  },
   {
     label: "新功能",
     chain: "Git/Node22 DevControl: start_feature → Agent完整版本规划 → feature-save/validate → release-work-review/stage → 整版批准 → next/execution-contract/claim单任务 → 真实测试/check/commit/complete/report/verify → converge；legacy files 模式另行采用 add_feature/check_spec",
@@ -95,6 +100,7 @@ export const MCP_SKILL_COMMON_FLOWS = [
 ] as const;
 
 export const MCP_SKILL_AVOID_RULES = [
+  "把用户随口提出的技术建议/产品灵感立刻当作已批准的开发指令，跳过替代方案、依赖/安全/测试影响评估和独立 Review，直接修改冻结任务或改变正在执行的单工作项",
   "有对应 MCP 却**直接大段写实现**",
   "把 `workflow` 当作所有任务的强制入口",
   "把 `start_*` 当作所有原子能力的上级，导致单项分析也被强制套入完整流程",

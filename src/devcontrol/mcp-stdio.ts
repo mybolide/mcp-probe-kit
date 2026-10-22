@@ -8,6 +8,7 @@ import { lanAddresses } from "./workspace-access.js";
 import { resolveWorkbenchLocale } from "./i18n.js";
 
 const operations = [
+  "idea-capture", "idea-list", "idea-get", "idea-assess", "idea-review", "idea-decide",
   "release-work-plan", "release-work-review", "release-work-stage", "release-work-approve",
   "release-plan", "plan-review", "plan-propose", "plan-revise", "plan-approve",
   "onboard", "next", "list", "get", "features", "feature-get", "feature-save", "feature-validate",
@@ -22,6 +23,13 @@ const operations = [
   "hook-status", "hook-install",
 ];
 const requiredFields: Record<string, string[]> = {
+  "idea-capture":["release","title","description","sourceRef","submittedBy"],
+  "idea-list":[],
+  "idea-get":["id"],
+  "idea-assess":["id","expectedRevision","assessment"],
+  "idea-review":["id","expectedRevision","review"],
+  "idea-decide":["id","expectedRevision","expectedReviewHash","approvedBy",
+    "disposition","reason","explicitAuthorization"],
   "release-work-plan": ["release"],
   "release-work-review": ["plan"],
   "release-work-stage": ["plan","actor"],
@@ -120,13 +128,14 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                     "sourceRef", "description", "reviewer", "architectureImpact",
                     "plan", "expectedHash", "expectedPreviousHash",
                     "step", "status", "evidence", "expectedRevision", "expectedFeatureRevision", "taskId", "role",
-                    "language"])]
+                    "language","submittedBy","assessment","review","disposition",
+                    "expectedReviewHash","reason","explicitAuthorization"])]
                     .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn", "evidence"].includes(field)
                       ? { type: "array", items: { type: "string" } }
                       : ["priority", "ttlSeconds", "step", "expectedRevision", "expectedFeatureRevision"].includes(field) ? { type: "integer" }
-                      : field === "readyForReview" ? { type: "boolean" }
+                      : ["readyForReview","explicitAuthorization"].includes(field) ? { type: "boolean" }
                       : field === "architectureImpact" ? { type: "boolean" }
-                      : field === "plan" ? { type: "object" }
+                      : ["plan","assessment","review"].includes(field) ? { type: "object" }
                       : field === "sections" ? {
                         type: "object", additionalProperties: false, properties: {
                           requirements: { type: "string" },

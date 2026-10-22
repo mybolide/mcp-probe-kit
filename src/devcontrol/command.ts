@@ -106,6 +106,22 @@ export function dispatchDevControl(
     case "local-developer": return ledger.localDeveloper();
     case "execution-contract": return ledger.executionContract(String(input.id));
     case "decision-get": return ledger.getDecision(String(input.id));
+    case "idea-capture": return ledger.captureIdea({
+      release:input.release,title:input.title,description:input.description,
+      sourceRef:input.sourceRef,submittedBy:input.submittedBy,
+    });
+    case "idea-list": return ledger.listIdeas(input.release);
+    case "idea-get": return ledger.getIdea(String(input.id));
+    case "idea-assess": return ledger.assessIdea(
+      String(input.id),input.assessment,input.expectedRevision);
+    case "idea-review": return ledger.reviewIdea(
+      String(input.id),input.review,input.expectedRevision);
+    case "idea-decide": return ledger.decideIdea(String(input.id),{
+      disposition:input.disposition,approvedBy:input.approvedBy,
+      expectedRevision:input.expectedRevision,
+      expectedReviewHash:input.expectedReviewHash,reason:input.reason,
+      explicitAuthorization:input.explicitAuthorization,
+    });
     case "decision-save": return ledger.recordDecision(
       String(input.id),String(input.leaseToken),{
         question:input.question,decision:input.decision,

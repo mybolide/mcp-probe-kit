@@ -8,6 +8,7 @@ import http from "node:http";
 import vm from "node:vm";
 import { ProjectTaskLedger, DevControlError } from "../task-ledger.js";
 import { releaseReviewSubjectHash, REVIEW_DIMENSIONS } from "../release-work.js";
+import { IDEA_REVIEW_DIMENSIONS } from "../idea-review.js";
 import { createDevControlBoardServer, WORKSPACE_SCHEMA_VERSION } from "../board-server.js";
 import { projectContext, readProjectDoc, safeProjectDocument } from "../project-catalog.js";
 import { projectHtml } from "../project-html.js";
@@ -83,6 +84,276 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it("holds chat ideas in SQLite until impact assessment, separate review and explicit planning disposition",()=>{
+    const dbPath=path.join(root,".neyna/state/devcontrol.sqlite3");
+    const sqlite=createRequire(import.meta.url)("node:sqlite") as {
+      DatabaseSync:new(path:string)=>{prepare(sql:string):{
+        run(...args:unknown[]):unknown;get(...args:unknown[]):Record<string,any>|undefined
+      };close():void};
+    };
+    const store=new sqlite.DatabaseSync(dbPath);
+    const frozen={plan:{release:"V0.1",stages:[{id:"F1"}],
+      workItems:[{id:"F1",stageId:"F1"}]}};
+    const frozenHash="f".repeat(64);
+    store.prepare(`INSERT INTO dc_release_work_plans
+      (release,revision,hash,snapshot_json,approved_by,approved_at)
+      VALUES(?,?,?,?,?,?)`).run("V0.1",1,frozenHash,
+        JSON.stringify(frozen),"test-owner",new Date().toISOString());
+    store.close();
+    const captured=ledger!.captureIdea({release:"V0.1",
+      title:"Switch Neyna product business storage to PostgreSQL",
+      description:"New owner proposal should be evaluated, not trigger immediate code changes.",
+      sourceRef:"user-conversation-2026-10-22",submittedBy:"host-agent"});
+    expect(captured).toMatchObject({status:"captured",revision:1,executableTaskCreated:false});
+    expect(ledger!.get("F1").status).toBe("ready");
+    expect(()=>ledger!.decideIdea(captured.id,{disposition:"adopt",
+      expectedRevision:1,expectedReviewHash:"x",approvedBy:"Owner",reason:"New storage direction",
+      explicitAuthorization:true}))
+      .toThrow(/Review/);
+    const assessment={recommendation:"adopt" as const,placement:"after_task" as const,
+      targetStageId:"F1",targetTaskId:"F1",affectedTaskIds:["F1"],
+      rationale:"PostgreSQL provides the product storage boundary requested by the Owner.",
+      alternatives:"Separate code changes into staged and independently tested PostgreSQL tasks.",
+      dependencyImpact:"Go module bootstrapping and integration tests must be ready before DB migration.",
+      securityAndTestImpact:"Connection loss and least-privilege negative tests become mandatory.",
+      versionImpact:"Propose a revised frozen release roster with a new atomic testing task.",
+      evidenceRefs:["source:user-owner-proposal","task:F1"],
+      assessedBy:"analysis-agent"};
+    expect(()=>ledger!.assessIdea(captured.id,{
+      ...assessment,targetTaskId:"UNKNOWN"
+    },1)).toThrow(/insertion/i);
+    const assessed=ledger!.assessIdea(captured.id,assessment,1);
+    expect(assessed).toMatchObject({status:"assessed",revision:2,executableTaskCreated:false});
+    const checks=["product_fit","dependency_integrity","timing_priority",
+      "security_and_testing"].map(dimension=>({dimension,
+        conclusion:"Independent evidence and task dependency review for "+dimension,
+        taskIds:["F1"]}));
+    expect(()=>ledger!.reviewIdea(captured.id,{reviewer:"analysis-agent",
+      method:"independent-agent-pass",subjectHash:assessed.assessmentHash,checks} as never,2))
+      .toThrow(/independent/i);
+    expect(()=>ledger!.reviewIdea(captured.id,{reviewer:"second-reviewer",
+      method:"independent-agent-pass",subjectHash:"a".repeat(64),checks} as never,2))
+      .toThrow(/stale/i);
+    const reviewed=ledger!.reviewIdea(captured.id,{reviewer:"second-reviewer",
+      method:"independent-agent-pass",subjectHash:assessed.assessmentHash,checks} as never,2);
+    expect(reviewed).toMatchObject({status:"reviewed",revision:3});
+    expect(()=>ledger!.decideIdea(captured.id,{disposition:"adopt",
+      expectedRevision:3,expectedReviewHash:"b".repeat(64),approvedBy:"Owner",
+      reason:"Plan current integration",explicitAuthorization:true})).toThrow(/hash/i);
+    const decided=ledger!.decideIdea(captured.id,{disposition:"adopt",
+      expectedRevision:3,expectedReviewHash:reviewed.reviewHash,
+      approvedBy:"Owner",reason:"Add to reviewed planning queue, not implementation",
+      explicitAuthorization:true});
+    expect(decided).toMatchObject({status:"approved_for_planning",
+      executableTaskCreated:false,frozenPlanChanged:false});
+    expect(ledger!.getIdea(captured.id).history).toHaveLength(4);
+    expect(ledger!.get("F1").status).toBe("ready");
+    expect(ledger!.releaseWorkPlan("V0.1").frozenHash).toBe(frozenHash);
+    expect(git("status","--porcelain")).toBe("");
+    expect(()=>ledger!.assessIdea(captured.id,assessment,4)).toThrow(/Only/);
+  });
+  it("keeps a user idea as a non-executable candidate until reasoned impact, separate review and explicit authorization",()=>{
+    save("docs/roadmap/idea-version.md",
+      "# Approved scope\n\n| 阶段 | 说明 |\n| --- | --- |\n| F0 | Verified baseline |\n| F2 | Go Core and validation |\n");
+    commit("freeze idea review baseline");
+    const workItems=[
+      {id:"IDEA-CORE",title:"Build the Go Core entrypoint",stageId:"F2",
+        type:"development",ownerRole:"Core Agent",platform:"Go",
+        dependsOn:["F0"],acceptance:"Core starts under real integration checks",
+        allowedPaths:["services/core/cmd/**"],requiredGates:["docs"]},
+      {id:"IDEA-QA",title:"Test Core API behavior",stageId:"F2",
+        type:"testing",ownerRole:"QA Agent",platform:"Go",
+        dependsOn:["IDEA-CORE"],acceptance:"Actual restart and invalid token tests pass",
+        allowedPaths:["tests/**"],requiredGates:["docs"]},
+      {id:"IDEA-INT",title:"Test client to Core integration",stageId:"F2",
+        type:"integration",ownerRole:"Integration Agent",platform:"iOS",
+        dependsOn:["IDEA-QA"],acceptance:"Physical device integration evidence is recorded",
+        allowedPaths:["tests/**"],requiredGates:["docs"]},
+      {id:"IDEA-REL",title:"Evaluate actual release evidence",stageId:"F2",
+        type:"release",ownerRole:"Release Agent",platform:"Release",
+        dependsOn:["IDEA-INT"],acceptance:"Go, privacy and device release checks are independently verified",
+        allowedPaths:["docs/**"],requiredGates:["docs"]},
+    ] as any[];
+    const base={release:"V0.1",scopeSource:"docs/roadmap/idea-version.md",
+      stages:[{id:"F0",verifiedTaskIds:["F0"]},{id:"F2"}],
+      workItems,rationale:"Independent version review covers code, QA, integration and release phases."};
+    const plan={...base,agentReview:{
+      reviewer:"independent-planning-agent",method:"independent-agent-pass",
+      subjectHash:releaseReviewSubjectHash(base as any),
+      sourceRefs:["docs/roadmap/idea-version.md"],reviewedStageIds:["F0","F2"],
+      checks:REVIEW_DIMENSIONS.map(dimension=>({dimension,
+        conclusion:"Independently assessed original product scope and risks: "+dimension,
+        workItemIds:["IDEA-CORE","IDEA-QA"]})),
+    }};
+    const staged=ledger!.stageReleaseWork(plan as any,"planner");
+    expect(staged.status).toBe("review_pending");
+    ledger!.approveReleaseWork("V0.1",staged.hash);
+    const frozenHash=ledger!.releaseWorkPlan("V0.1").frozenHash;
+    const baseline=git("rev-parse","HEAD");
+    const candidate=ledger!.captureIdea({release:"V0.1",
+      title:"Owner suggests PostgreSQL in place of the early SQLite candidate",
+      description:"Assess whether to switch user-data persistence without modifying the active Core task.",
+      sourceRef:"owner-conversation:new-direction",submittedBy:"conversation-agent"});
+    expect(candidate.status).toBe("captured");
+    expect(candidate.executableTaskCreated).toBe(false);
+    expect(ledger!.get("IDEA-CORE").status).toBe("ready");
+    const impact={
+      recommendation:"adopt" as const,placement:"after_task" as const,
+      targetStageId:"F2",targetTaskId:"IDEA-CORE",
+      affectedTaskIds:["IDEA-CORE","IDEA-QA","IDEA-INT"],
+      assessedBy:"planning-agent",
+      rationale:"The owner explicitly chooses PostgreSQL for Neyna business data, not DevControl SQLite.",
+      alternatives:"Defer the provider selection or use a dedicated PostgreSQL Store Port after Go bootstrap.",
+      dependencyImpact:"PostgreSQL integration needs module scaffolding and database-specific tests after bootstrap.",
+      securityAndTestImpact:"Test credentials, migration failure, deletion restoration and unavailable database handling.",
+      versionImpact:"Propose inserting a separate task after the Core bootstrap and before dependent API integration.",
+      evidenceRefs:["docs/roadmap/idea-version.md","IDEA-CORE","IDEA-QA"],
+    };
+    expect(()=>ledger!.assessIdea(candidate.id,{
+      ...impact,targetTaskId:"NONEXISTENT"},candidate.revision))
+      .toThrow(/targetTaskId|existing|insertion/i);
+    const assessed=ledger!.assessIdea(candidate.id,impact,candidate.revision);
+    expect(assessed.status).toBe("assessed");
+    expect(assessed.assessmentHash).toMatch(/^[a-f0-9]{64}$/);
+    const review={
+      reviewer:"separate-review-agent",method:"independent-agent-pass" as const,
+      subjectHash:assessed.assessmentHash,
+      checks:IDEA_REVIEW_DIMENSIONS.map(dimension=>({
+        dimension,conclusion:"Independently checked exact baseline, dependencies and regression risk for "+dimension,
+        taskIds:["IDEA-CORE","IDEA-QA"],
+      })),
+    };
+    expect(()=>ledger!.reviewIdea(candidate.id,{
+      ...review,reviewer:"planning-agent"},assessed.revision))
+      .toThrow(/separate/i);
+    expect(()=>ledger!.reviewIdea(candidate.id,{
+      ...review,subjectHash:"f".repeat(64)},assessed.revision))
+      .toThrow(/stale/i);
+    const reviewed=ledger!.reviewIdea(candidate.id,review as any,assessed.revision);
+    expect(reviewed.status).toBe("reviewed");
+    expect(()=>ledger!.decideIdea(candidate.id,{
+      disposition:"adopt",approvedBy:"owner-audit-label",
+      expectedReviewHash:reviewed.reviewHash,expectedRevision:reviewed.revision,
+      reason:"Keep the suggested architecture change for a separately approved release amendment.",
+      explicitAuthorization:false,
+    })).toThrow(/explicitly authorize/i);
+    expect(()=>ledger!.decideIdea(candidate.id,{
+      disposition:"adopt",approvedBy:"owner-audit-label",
+      expectedReviewHash:"f".repeat(64),expectedRevision:reviewed.revision,
+      reason:"Owner approved this change for a later separate version planning pass.",
+      explicitAuthorization:true,
+    })).toThrow(/Exact independent review hash/);
+    const authorized=ledger!.decideIdea(candidate.id,{
+      disposition:"adopt",approvedBy:"owner-audit-label",
+      expectedReviewHash:reviewed.reviewHash,expectedRevision:reviewed.revision,
+      reason:"Owner approved a separate proposal, not direct coding or immediate reordering.",
+      explicitAuthorization:true,
+    });
+    expect(authorized).toMatchObject({status:"approved_for_planning",
+      executableTaskCreated:false,frozenPlanChanged:false});
+    expect(authorized.history).toHaveLength(4);
+    expect(ledger!.listIdeas("V0.1").ideas).toHaveLength(1);
+    expect(ledger!.releaseWorkPlan("V0.1").frozenHash).toBe(frozenHash);
+    expect(ledger!.get("IDEA-CORE").status).toBe("ready");
+    expect(ledger!.get("IDEA-QA").dependsOn).toEqual(["IDEA-CORE"]);
+    expect(git("rev-parse","HEAD")).toBe(baseline);
+    expect(git("status","--porcelain")).toBe("");
+  });
+  it("does not turn a new idea into executable work or change the frozen release without reviewed planning",()=>{
+    save("docs/roadmap/idea-release.md",
+      "# Scope\n\n| 阶段 | 内容 |\n| --- | --- |\n| F0 | 已验证基础 |\n| F2 | Core 实现与验收 |\n");
+    commit("scope baseline");
+    const items=[
+      {id:"ID-DEC",title:"确定鉴权方案",type:"decision",stageId:"F2",
+        ownerRole:"Security",platform:"Go",dependsOn:["F0"],
+        acceptance:"清楚记录安全选择和风险",allowedPaths:[],requiredGates:["sqlite_decision"]},
+      {id:"ID-DEV",title:"实现HTTP接口",type:"development",stageId:"F2",
+        ownerRole:"Core",platform:"Go",dependsOn:["ID-DEC"],
+        acceptance:"运行端到端 Go HTTP 测试",allowedPaths:["services/core/**"],requiredGates:["docs"]},
+      {id:"ID-QA",title:"测试安全拒绝行为",type:"testing",stageId:"F2",
+        ownerRole:"QA",platform:"Go",dependsOn:["ID-DEV"],
+        acceptance:"真实拒绝请求测试通过",allowedPaths:["tests/**"],requiredGates:["docs"]},
+      {id:"ID-INT",title:"完成接口集成验证",type:"integration",stageId:"F2",
+        ownerRole:"Integration",platform:"Go",dependsOn:["ID-QA"],
+        acceptance:"跨模块真实集成验证通过",allowedPaths:["tests/**"],requiredGates:["docs"]},
+      {id:"ID-REL",title:"确认发布门禁",type:"release",stageId:"F2",
+        ownerRole:"Release",platform:"Go",dependsOn:["ID-INT"],
+        acceptance:"发布测试证据完整有效",allowedPaths:["docs/**"],requiredGates:["docs"]},
+    ] as any[];
+    const base={release:"V0.1",scopeSource:"docs/roadmap/idea-release.md",
+      stages:[{id:"F0",verifiedTaskIds:["F0"]},{id:"F2"}],workItems:items,
+      rationale:"Fully review the security design, real implementation, test and release chain before freeze."};
+    const plan={...base,agentReview:{reviewer:"separate-planning-reviewer",
+      method:"independent-agent-pass" as const,
+      subjectHash:releaseReviewSubjectHash(base as any),
+      sourceRefs:["docs/roadmap/idea-release.md"],reviewedStageIds:["F0","F2"],
+      checks:REVIEW_DIMENSIONS.map(dimension=>({dimension,
+        conclusion:"Inspected the original design risks and proper timing for "+dimension,
+        workItemIds:["ID-DEC","ID-DEV"]})),
+    }};
+    expect(ledger!.reviewReleaseWork(plan as any).passed).toBe(true);
+    const proposal=ledger!.stageReleaseWork(plan as any,"planning-agent");
+    ledger!.approveReleaseWork("V0.1",proposal.hash);
+    const baseline=ledger!.releaseWorkPlan("V0.1").frozenHash;
+    const initialCount=ledger!.list().length,head=git("rev-parse","HEAD");
+    const idea=ledger!.captureIdea({release:"V0.1",title:"考虑支持 PostgreSQL",
+      description:"User proposed changing the production database; analyze risks and schedule before changing any tasks.",
+      sourceRef:"user-request:database-2026-10-22",submittedBy:"idea-capture-agent"});
+    expect(idea).toMatchObject({status:"captured",revision:1,executableTaskCreated:false});
+    expect(ledger!.list()).toHaveLength(initialCount);
+    const assessment={
+      recommendation:"adopt" as const,placement:"after_task" as const,
+      targetStageId:"F2",targetTaskId:"ID-DEC",affectedTaskIds:["ID-DEC","ID-DEV"],
+      rationale:"The new provider changes production storage semantics and must be assessed before HTTP implementation.",
+      alternatives:"Retain the initial proposed provider versus schedule a reviewed PostgreSQL implementation.",
+      dependencyImpact:"Database driver and migration design must precede Core endpoint persistence work.",
+      securityAndTestImpact:"Introduce real PostgreSQL integration, backup recovery and deletion regression tests.",
+      versionImpact:"A frozen release amendment is required before additional product tasks can execute.",
+      evidenceRefs:["docs/roadmap/idea-release.md","frozen-task:ID-DEC"],
+      assessedBy:"business-analysis-agent",
+    };
+    expect(()=>ledger!.assessIdea(idea.id,{...assessment,targetTaskId:"NOT-IN-PLAN"},1))
+      .toThrow(/affectedTaskIds|targetTaskId/);
+    const assessed=ledger!.assessIdea(idea.id,assessment,1);
+    expect(assessed).toMatchObject({status:"assessed",revision:2});
+    expect(()=>ledger!.assessIdea(idea.id,assessment,1)).toThrow(/revision changed/);
+    const checks=IDEA_REVIEW_DIMENSIONS.map(dimension=>({dimension,
+      conclusion:"Independent assessment of requirements, timing and test impact for "+dimension,
+      taskIds:["ID-DEC","ID-DEV"]}));
+    expect(()=>ledger!.reviewIdea(idea.id,{reviewer:assessment.assessedBy,
+      method:"independent-agent-pass",subjectHash:assessed.assessmentHash,checks},2))
+      .toThrow(/separate independent/);
+    const reviewed=ledger!.reviewIdea(idea.id,{
+      reviewer:"separate-review-agent",method:"independent-agent-pass",
+      subjectHash:assessed.assessmentHash,checks},2);
+    expect(reviewed).toMatchObject({status:"reviewed",revision:3});
+    expect(()=>ledger!.decideIdea(idea.id,{
+      disposition:"adopt",approvedBy:"user-explicit-authorization",
+      expectedRevision:3,expectedReviewHash:"0".repeat(64),
+      reason:"Accept after evaluating product needs and rollback risk.",
+      explicitAuthorization:true}))
+      .toThrow(/review hash/);
+    const decided=ledger!.decideIdea(idea.id,{
+      disposition:"adopt",approvedBy:"user-explicit-authorization",
+      expectedRevision:3,expectedReviewHash:reviewed.reviewHash,
+      reason:"Accept for subsequent formal release amendment planning, not immediate coding.",
+      explicitAuthorization:true});
+    expect(decided).toMatchObject({
+      status:"approved_for_planning",revision:4,
+      frozenPlanChanged:false,executableTaskCreated:false});
+    expect(ledger!.getIdea(idea.id).history).toHaveLength(4);
+    expect(ledger!.listIdeas("V0.1").ideas).toHaveLength(1);
+    expect(ledger!.releaseWorkPlan("V0.1").frozenHash).toBe(baseline);
+    expect(ledger!.list()).toHaveLength(initialCount);
+    expect(ledger!.get("ID-DEV").status).toBe("ready");
+    expect(git("rev-parse","HEAD")).toBe(head);
+    expect(git("status","--porcelain")).toBe("");
+    expect(()=>ledger!.decideIdea(idea.id,{
+      disposition:"adopt",approvedBy:"someone",expectedRevision:3,
+      expectedReviewHash:reviewed.reviewHash,reason:"Try to approve twice without new review.",
+      explicitAuthorization:true}))
+      .toThrow(/Review the idea first/);
+  });
   it("records frozen architecture decisions solely in SQLite without ADR Markdown or Git commits",()=>{
     save("docs/roadmap/decision-version.md",
       "# Test scope\n\n| 阶段 | 说明 |\n| --- | --- |\n| F0 | 基线 |\n| F2 | 设计与验收 |\n");
