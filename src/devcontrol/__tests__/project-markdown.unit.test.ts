@@ -8,6 +8,7 @@ class TestNode {
   className = "";
   scope = "";
   textContent = "";
+  isConnected = true;
   constructor(readonly tagName: string, content?: string) {
     this.textContent = content ?? "";
   }
@@ -81,12 +82,73 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).not.toContain("ENGINEERING OS");
     expect(html).toContain("未分配");
     expect(html).toContain("未排期");
-    expect(html).toContain("正式任务的 Git、测试和审计证据");
+    expect(html).toContain('showDelivery();');
+    expect(html).toContain('"完成总结："+note.summary');
+    expect(html).toContain('"实际交付："+note.implementation');
     expect(html).toContain('taskTab="not_started"');
     expect(html).toContain('row.status==="in_review"');
     expect(html).toContain('row.status==="verified"');
     expect(html).toContain('if(item.kind!=="group")result.push');
     expect(html).not.toContain("innerHTML");
+  });
+  it("renders verified frozen work item completion, decision and real owner without another click", async () => {
+    const html = projectHtml("nonce");
+    const start = html.indexOf("  function openPlanTask(row){");
+    const end = html.indexOf("  function renderTaskList(){", start);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    const source = html.slice(start, end) + "\nopenPlanTask;";
+    const content = new TestNode("div");
+    const title = new TestNode("h2");
+    const provenance = new TestNode("small");
+    const elements: Record<string, TestNode | { classList: { add: () => void } }> = {
+      overlay: { classList: { add() {} } }, "doc-content": content,
+      "doc-title": title, "doc-source": provenance,
+    };
+    const n = (tag: string, text?: string | null, cls?: string) => {
+      const el = new TestNode(tag, text ?? undefined);
+      if (cls) el.className = cls;
+      return el;
+    };
+    const calls: string[] = [];
+    const openPlanTask = vm.runInNewContext(source, {
+      n, $: (id: string) => elements[id],
+      fetchJSON: async (url: string) => {
+        calls.push(url);
+        return {
+          completion: { summary: "安全密钥决策已完成", implementation: "独立安全存储",
+            verification: "SQLite decision 已验证", remaining: "真实设备测试待完成" },
+          evidence: [{ kind: "sqlite_decision", reference: "F2-23:revision-1" }],
+          decision: { status: "decided", decision: "OS Secret Store",
+            rationale: "用户凭据不进 Git", verificationPlan: "真实 HTTP 测试另行执行" },
+        };
+      },
+      translate: (text: string) => text,
+      taskStatus: () => ["已完成"],
+      displayTaskTitle: (task: { title: string }) => task.title,
+      releasePlan: null, locale: "zh-CN", localGit: null,
+    }) as (row: unknown) => void;
+    openPlanTask({
+      item: { id: "F2-23", title: "明确 Core API 密钥来源", _planOrigin: "release-work",
+        release: "V0.1", type: "decision", ownerRole: "技术架构", dependsOn: ["F2-01"],
+        requiredGates: ["docs"], acceptance: "密钥不进 Git" },
+      current: { id: "F2-23", status: "verified", owner: "kyle",
+        ownerAssignment: { device: "development-mac" }, verifiedAt: "2026-10-22T04:25:56Z" },
+      pending: false, phase: "F2",
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    const texts = (node: TestNode): string[] => [node.textContent, ...node.children.flatMap(texts)];
+    const rendered = texts(content).join(" ");
+    expect(calls).toEqual(["/api/tasks/F2-23"]);
+    expect(rendered).toContain("负责人：kyle");
+    expect(rendered).toContain("开发电脑：development-mac");
+    expect(rendered).toContain("完成总结：安全密钥决策已完成");
+    expect(rendered).toContain("验证结果：SQLite decision 已验证");
+    expect(rendered).toContain("遗留工作：真实设备测试待完成");
+    expect(rendered).toContain("F2-23:revision-1");
+    expect(rendered).toContain("OS Secret Store");
+    expect(rendered).not.toContain("负责人：待分配");
   });
   it("projects actual SQLite states into exactly three buckets without converting pending drafts into started work", () => {
     const html=projectHtml("nonce");

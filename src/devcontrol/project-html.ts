@@ -494,15 +494,54 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       }else box.append(n("p",value===null||value===undefined||value===""?"未明确":String(value)));
       content.append(box);return box;
     };
+    const showDelivery=()=>{
+      if(!actual||row.pending)return;
+      const completionBox=section("执行和完成说明","正在读取真实交付记录…");
+      const evidenceBox=section("提交及审计证据","正在读取验收证据…");
+      const fill=(box,heading,lines)=>{
+        box.replaceChildren(n("h3",heading),...lines.map(line=>n("p",line)));
+      };
+      fetchJSON("/api/tasks/"+encodeURIComponent(actual.id)).then(data=>{
+        // An old request must not overwrite a newer task's details.
+        if(!content.isConnected)return;
+        const note=data.completion;
+        fill(completionBox,"执行和完成说明",note?[
+          "完成总结："+note.summary,
+          "实际交付："+note.implementation,
+          "验证结果："+note.verification,
+          "遗留工作："+(note.remaining||"无"),
+        ]:["尚无经提交的完整交付说明；任务未验收时不得显示为已完成。"]);
+        fill(evidenceBox,"提交及审计证据",(data.evidence||[]).length?
+          data.evidence.map(v=>v.kind+" · "+v.reference):["尚无正式提交的验收证据"]);
+        if(data.decision){
+          section("工程决策详情",[
+            "决策状态："+data.decision.status+"（不代表产品 G2 已批准）",
+            "具体决定："+data.decision.decision,
+            "依据与取舍："+data.decision.rationale,
+            "后续验证："+data.decision.verificationPlan,
+          ]);
+        }
+      }).catch(e=>{
+        if(!content.isConnected)return;
+        fill(completionBox,"执行和完成说明",["读取失败："+e.message]);
+        fill(evidenceBox,"提交及审计证据",["请重新同步后再打开任务详情"]);
+      });
+    };
     if(task._planOrigin==="release-work"){
       section("一项任务 · 一项可验收结果",task.acceptance);
       section("工作项信息",[
-        "状态："+status,"类型："+(task.type||"—"),"负责人："+(task.owner||"待分配"),
+        "状态："+status,"类型："+(task.type||"—"),
         "责任角色："+(task.ownerRole||"尚未分工"),
         "平台："+(task.platform||"—"),"所属阶段："+(task.stageId||"—"),
         "关联功能："+(task.featureName||"版本公共任务"),
         "计划开始："+(task.plannedStartAt||"未排期"),
         "计划完成："+(task.plannedEndAt||"未排期"),
+      ]);
+      const execution=actual?.owner||actual?.ownerAssignment?.device;
+      if(execution)section("实际执行信息",[
+        ...(actual?.owner?["负责人："+actual.owner]:[]),
+        ...(actual?.ownerAssignment?.device?["开发电脑："+actual.ownerAssignment.device]:[]),
+        ...(actual?.verifiedAt?["验证完成："+actual.verifiedAt]:[]),
       ]);
       if(task.checklist?.length)section("完成检查",task.checklist);
       if(task.remark)section("备注",task.remark);
@@ -511,6 +550,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       section("验收要求",task.requiredGates||[]);
       if(task.featureReviewIssues?.length)section("整版评审未通过",task.featureReviewIssues);
       if(row.pending)section("开发限制","当前版本尚未整体审批。此工作项不可领取或执行。");
+      showDelivery();
       return;
     }
     $("release-review-summary").replaceChildren();
@@ -562,22 +602,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       "允许路径："+((task.allowedPaths||actual?.allowedPaths||[]).join("；")||"未明确"),
       "验收 Gate："+((task.requiredGates||actual?.requiredGates||[]).join("、")||"尚未配置"),
     ]);
-    if(actual){
-      const btn=n("button","查看正式任务的 Git、测试和审计证据 →","btn");
-      btn.type="button";content.append(btn);
-      btn.addEventListener("click",async()=>{
-        btn.disabled=true;btn.textContent="读取正式交付证据…";
-        try{
-          const data=await fetchJSON("/api/tasks/"+encodeURIComponent(actual.id));
-          section("执行和完成说明",data.completion?
-            [data.completion.summary,data.completion.implementation,data.completion.verification,
-              "遗留问题："+(data.completion.remaining||"无")]:
-            "尚无经提交的完整交付说明");
-          section("提交及审计证据",(data.evidence||[]).map(v=>v.kind+" · "+v.reference));
-        }catch(e){section("执行证据读取失败",e.message);}
-        btn.remove();
-      });
-    }
+    showDelivery();
     if(row.pending)section("规格缺口与审核提示",[
       ...(!task.scenario?["缺少用户或系统触发条件及成功输出。"]:[]),
       ...((task.workflow||[]).length<3?["缺少端到端步骤与状态转换。"]:[]),

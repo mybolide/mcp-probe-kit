@@ -197,7 +197,8 @@ export function createDevControlBoardServer(
         const events = audit.map((entry: Record<string, unknown>) => ({
           id: entry.id, event: entry.event, actor: entry.actor, created_at: entry.created_at,
         }));
-        respond(res, 200, JSON.stringify({ task, evidence, completion, audit: events }),
+        const decision = ledger.getDecision(id).decision;
+        respond(res, 200, JSON.stringify({ task, evidence, completion, audit: events, decision }),
           nonce, "application/json; charset=utf-8");
       } else {
         respond(res, 404, "Not found");
