@@ -715,6 +715,62 @@ describe("project ledger and legacy migration", () => {
     expect(()=>ledger!.claim("F1","agent")).toThrow();
     const approved=ledger!.approveReleaseWork("V0.1",pending.hash);
     expect(approved.added).toEqual(items.map(item=>item.id));
+    // General frozen-scope amendments preserve completed work and old plan
+    // history. A proposer cannot self-review or self-approve by staging.
+    const amendment={release:"V0.1",baseRevision:1,baseHash:approved.hash,
+      changes:[{taskId:"WORK-102",addAllowedPaths:["services/core/go.mod",
+        "services/core/internal/http_integration_test.go"]}],
+      rationale:"The test task needs an actual Core module and executable HTTP integration tests outside its current frozen file scope.",
+      alternatives:"A separate module bootstrap task would require a new reviewed dependency and makes this atomic test unnecessarily indirect.",
+      verificationPlan:"Keep the original docs Gate and run the real Core HTTP integration Gate when a future approved task requires it.",
+      sourceRefs:["task:WORK-102","docs/roadmap/test-version.md"]};
+    expect(ledger!.reviewReleaseWorkScopeAmendment({...amendment,
+      changes:[{taskId:"WORK-999",addAllowedPaths:["services/core/go.mod"]}]}))
+      .toMatchObject({passed:false});
+    expect(ledger!.reviewReleaseWorkScopeAmendment({...amendment,
+      changes:[{taskId:"WORK-102",addAllowedPaths:["../outside"]}]}))
+      .toMatchObject({passed:false});
+    expect(ledger!.reviewReleaseWorkScopeAmendment(amendment)).toMatchObject({passed:true});
+    const stagedScope=ledger!.stageReleaseWorkScopeAmendment(amendment,"planning-agent");
+    expect(stagedScope).toMatchObject({status:"awaiting_independent_review",
+      executableScopeChanged:false});
+    expect(ledger!.get("WORK-102").allowedPaths).toEqual(["tests/contracts/**"]);
+    expect(ledger!.releaseWorkPlan("V0.1").scopeAmendment?.status)
+      .toBe("awaiting_independent_review");
+    const amendReview={reviewer:"second-agent",method:"independent-agent-pass" as const,
+      subjectHash:stagedScope.proposalHash,affectedTaskIds:["WORK-102"],
+      scopeAssessment:"The extra files are necessary only for creating real Core integration evidence and do not change product acceptance.",
+      dependencyAssessment:"The change adds only file permissions for an unclaimed Ready task and leaves verified tasks and dependencies untouched.",
+      securityAndTestAssessment:"The existing required Gate is preserved and a full integration test must produce actual evidence before verification.",
+      sourceRefs:["task:WORK-102","docs/roadmap/test-version.md"]};
+    expect(()=>ledger!.reviewStagedReleaseWorkScopeAmendment("V0.1",
+      {...amendReview,reviewer:"planning-agent"},stagedScope.proposalHash))
+      .toThrow(/Distinct independent reviewer/);
+    const reviewed=ledger!.reviewStagedReleaseWorkScopeAmendment("V0.1",
+      amendReview,stagedScope.proposalHash);
+    expect(reviewed.status).toBe("reviewed");
+    const ownerArgs={release:"V0.1",expectedProposalHash:stagedScope.proposalHash,
+      expectedReviewHash:reviewed.reviewHash,approvedBy:"test-owner",
+      reason:"I authorize this exact scope addition while retaining the original product acceptance and test Gate.",
+      explicitAuthorization:true};
+    expect(()=>ledger!.approveReleaseWorkScopeAmendment({...ownerArgs,
+      explicitAuthorization:false})).toThrow(/Explicit Owner authorization/);
+    expect(()=>ledger!.approveReleaseWorkScopeAmendment({...ownerArgs,
+      expectedReviewHash:"0".repeat(64)})).toThrow(/Exact staged proposal/);
+    const amended=ledger!.approveReleaseWorkScopeAmendment(ownerArgs);
+    expect(amended).toMatchObject({revision:2,previousHash:approved.hash,
+      scopeOnly:true,affectedTaskIds:["WORK-102"]});
+    expect(ledger!.releaseWorkPlan("V0.1")).toMatchObject({revision:2,
+      frozenHash:amended.hash,scopeAmendment:null});
+    expect(ledger!.get("WORK-102").allowedPaths).toEqual([
+      "tests/contracts/**","services/core/go.mod","services/core/internal/http_integration_test.go"]);
+    expect(ledger!.get("F0").status).toBe("verified");
+    expect(ledger!.get("WORK-101").allowedPaths).toEqual(["services/core/**"]);
+    expect(()=>ledger!.stageReleaseWorkScopeAmendment(amendment,"planning-agent"))
+      .toThrow(/revision or hash changed/);
+    const history=(ledger! as any).db.prepare(
+      "SELECT revision,hash FROM dc_release_work_history WHERE release='V0.1' ORDER BY revision").all();
+    expect(history).toEqual([{revision:1,hash:approved.hash},{revision:2,hash:amended.hash}]);
     const contract=ledger!.executionContract("WORK-101");
     expect(contract).toMatchObject({eligible:true,profile:"atomic-work-item"});
     const audit=ledger!.taskDetailAudit("WORK-101");
@@ -726,6 +782,11 @@ describe("project ledger and legacy migration", () => {
       acceptance:"首次写入返回稳定事件编号"});
     expect(ledger!.get("WORK-101").owner).toBe("Core Agent");
     expect(ledger!.claim("WORK-101","coding-agent").task.id).toBe("WORK-101");
+    const underway={...amendment,baseRevision:2,baseHash:amended.hash,
+      changes:[{taskId:"WORK-101",addAllowedPaths:["services/core/new_handler.go"]}]};
+    expect(ledger!.reviewReleaseWorkScopeAmendment(underway)).toMatchObject({passed:false});
+    expect(()=>ledger!.stageReleaseWorkScopeAmendment(underway,"planner"))
+      .toThrow(/only unclaimed Ready/);
   });
   it("turns a start_feature SQLite specification into a reviewed Feature task plan without release-wide files", async () => {
     ledger!.saveFeature({name:"event-ingest",description:"Persist auditable event messages with idempotency",layout:"flat",

@@ -41,6 +41,14 @@ export function dispatchDevControl(
       input.expectedPreviousHash);
     case "release-work-approve": return ledger.approveReleaseWork(String(input.release),
       String(input.expectedHash));
+    case "release-work-scope-review": return ledger.reviewReleaseWorkScopeAmendment(input.proposal);
+    case "release-work-scope-stage": return ledger.stageReleaseWorkScopeAmendment(
+      input.proposal,String(input.actor??""));
+    case "release-work-scope-get": return {
+      release:String(input.release),proposal:ledger.releaseWorkScopeAmendment(String(input.release))};
+    case "release-work-scope-independent-review": return ledger.reviewStagedReleaseWorkScopeAmendment(
+      String(input.release),input.review,String(input.expectedProposalHash));
+    case "release-work-scope-approve": return ledger.approveReleaseWorkScopeAmendment(input as never);
     case "release-plan": return ledger.releasePlan(String(input.release ?? ledger.primaryRelease()));
     case "plan-review": return { ...reviewReleasePlan(input.plan) };
     case "plan-propose": return ledger.proposeReleasePlan(input.plan, String(input.actor ?? ""));

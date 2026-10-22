@@ -18,6 +18,9 @@ import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
 import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
 import { checkManagedGuidanceCommit } from "./managed-guidance-gate.js";
+import { amendmentSubjectHash, checkAmendmentShape, checkAmendmentReview,
+  type ReleaseWorkScopeAmendment, type ReleaseWorkAmendmentReview,
+} from "./release-work-amendment.js";
 import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, reviewDetailedWorkItems, reviewTaskQualityJudgments, auditAtomicWorkItemDetail, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
 import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
@@ -363,6 +366,12 @@ export class ProjectTaskLedger {
         release TEXT NOT NULL, revision INTEGER NOT NULL, hash TEXT NOT NULL,
         snapshot_json TEXT NOT NULL, approved_by TEXT NOT NULL, approved_at TEXT NOT NULL,
         PRIMARY KEY(release,revision)
+      );
+      CREATE TABLE IF NOT EXISTS dc_release_work_amendments (
+        release TEXT PRIMARY KEY, proposal_hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL, proposed_by TEXT NOT NULL,
+        reviewed_json TEXT, review_hash TEXT, proposed_at TEXT NOT NULL,
+        reviewed_at TEXT
       );
       CREATE TABLE IF NOT EXISTS dc_task_specs (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
@@ -1007,7 +1016,149 @@ export class ProjectTaskLedger {
       proposal, proposalHash:pending?.hash??null, frozen:approved,
       frozenHash:frozen?.hash??null, revision:frozen?.revision??0,
       issues:liveReview?.issues??[], approvedBy:frozen?.approved_by??null,
+      scopeAmendment:this.releaseWorkScopeAmendment(release),
     };
+  }
+
+  releaseWorkScopeAmendment(release:string):Row|null {
+    const row=this.db.prepare("SELECT * FROM dc_release_work_amendments WHERE release=?").get(release);
+    if(!row)return null;
+    return {release,proposalHash:row.proposal_hash,
+      proposal:JSON.parse(row.snapshot_json),proposedBy:row.proposed_by,
+      review:row.reviewed_json?JSON.parse(row.reviewed_json):null,
+      reviewHash:row.review_hash??null,
+      status:row.reviewed_json?"reviewed":"awaiting_independent_review"};
+  }
+
+  /** Evaluate a scope expansion without modifying a frozen task, lease or revision. */
+  reviewReleaseWorkScopeAmendment(input:ReleaseWorkScopeAmendment):Row {
+    const issues=checkAmendmentShape(input);
+    if(issues.length)return {passed:false,issues};
+    const row=this.db.prepare(
+      "SELECT revision,hash,snapshot_json FROM dc_release_work_plans WHERE release=?").get(input.release);
+    if(!row)return {passed:false,issues:["No frozen release with this ID"]};
+    if(row.revision!==input.baseRevision||row.hash!==input.baseHash)
+      issues.push("Frozen release revision or hash changed; re-evaluate the amendment");
+    const snapshot=JSON.parse(row.snapshot_json) as {plan:ReleaseWorkPlan};
+    if(this.db.prepare("SELECT release FROM dc_release_work_proposals WHERE release=?").get(input.release))
+      issues.push("A whole-release proposal is already pending; resolve it before scope amendment");
+    const byId=new Map(snapshot.plan.workItems.map(item=>[item.id,item]));
+    for(const change of input.changes){
+      const item=byId.get(change.taskId);
+      const task=this.db.prepare("SELECT status,plan_id FROM dc_tasks WHERE id=?").get(change.taskId);
+      if(!item||task?.plan_id!=="release-work:"+input.release){
+        issues.push(change.taskId+": not in this frozen release");continue;
+      }
+      if(task.status!=="ready")issues.push(change.taskId+": only unclaimed Ready work items may have scope expanded");
+      for(const file of change.addAllowedPaths){
+        if(item.allowedPaths.some(p=>pathAllowed(file,p)||file===p))
+          issues.push(change.taskId+": "+file+" already covered by the frozen scope");
+      }
+    }
+    return {passed:issues.length===0,issues,subjectHash:amendmentSubjectHash(input),
+      release:input.release,baseRevision:input.baseRevision,
+      affectedTaskIds:input.changes.map(c=>c.taskId)};
+  }
+
+  stageReleaseWorkScopeAmendment(input:ReleaseWorkScopeAmendment,actor:string):Row {
+    if(typeof actor!=="string"||actor.trim().length<3)
+      fail("ACTOR_REQUIRED","A real amendment proposer label is required");
+    return this.inTransaction(()=>{
+      const review=this.reviewReleaseWorkScopeAmendment(input);
+      if(!review.passed)fail("AMENDMENT_INVALID",review.issues.join("; "));
+      if(this.db.prepare("SELECT release FROM dc_release_work_amendments WHERE release=?").get(input.release))
+        fail("AMENDMENT_PENDING","Resolve the existing scope amendment before proposing another");
+      const now=utc();
+      this.db.prepare(`INSERT INTO dc_release_work_amendments
+        (release,proposal_hash,snapshot_json,proposed_by,proposed_at)
+        VALUES(?,?,?,?,?)`).run(input.release,review.subjectHash,JSON.stringify(input),actor.trim(),now);
+      this.audit(null,"release_scope_amendment_proposed",actor.trim(),{
+        release:input.release,proposalHash:review.subjectHash,taskIds:review.affectedTaskIds,
+        baseHash:input.baseHash});
+      return {release:input.release,status:"awaiting_independent_review",
+        proposalHash:review.subjectHash,review,executableScopeChanged:false};
+    });
+  }
+
+  reviewStagedReleaseWorkScopeAmendment(release:string,
+    review:ReleaseWorkAmendmentReview,expectedProposalHash:string):Row {
+    return this.inTransaction(()=>{
+      const row=this.db.prepare("SELECT * FROM dc_release_work_amendments WHERE release=?").get(release);
+      if(!row||row.proposal_hash!==expectedProposalHash)
+        fail("AMENDMENT_NOT_FOUND","No matching staged scope amendment");
+      if(row.reviewed_json)fail("AMENDMENT_REVIEWED","The amendment has already been reviewed");
+      const proposal=JSON.parse(row.snapshot_json) as ReleaseWorkScopeAmendment;
+      const current=this.reviewReleaseWorkScopeAmendment(proposal);
+      if(!current.passed||current.subjectHash!==row.proposal_hash)
+        fail("STALE_AMENDMENT","Frozen plan or task state changed since the proposal");
+      const issues=checkAmendmentReview(review,row.proposed_by,row.proposal_hash,
+        proposal.changes.map(c=>c.taskId));
+      if(!review.sourceRefs?.some(ref=>proposal.sourceRefs.includes(ref)))
+        issues.push("Independent reviewer must cite a source from the staged amendment");
+      if(issues.length)fail("INDEPENDENT_REVIEW_REQUIRED",issues.join("; "));
+      const reviewHash=createHash("sha256").update(JSON.stringify(review)).digest("hex");
+      this.db.prepare(`UPDATE dc_release_work_amendments SET reviewed_json=?,review_hash=?,
+        reviewed_at=? WHERE release=?`).run(JSON.stringify(review),reviewHash,utc(),release);
+      this.audit(null,"release_scope_amendment_reviewed",review.reviewer,{release,
+        proposalHash:row.proposal_hash,reviewHash,taskIds:proposal.changes.map(c=>c.taskId)});
+      return {release,status:"reviewed",proposalHash:row.proposal_hash,
+        reviewHash,executableScopeChanged:false};
+    });
+  }
+
+  approveReleaseWorkScopeAmendment(input:{release:string;expectedProposalHash:string;
+    expectedReviewHash:string;approvedBy:string;reason:string;explicitAuthorization:boolean}):Row {
+    if(input?.explicitAuthorization!==true||typeof input.approvedBy!=="string"||
+      input.approvedBy.trim().length<2||typeof input.reason!=="string"||
+      input.reason.trim().length<20)
+      fail("OWNER_AUTHORIZATION_REQUIRED","Explicit Owner authorization, identity label and reason required");
+    return this.inTransaction(()=>{
+      if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
+        fail("ACTIVE_TASK","An active task lease must finish before scope approval");
+      const row=this.db.prepare("SELECT * FROM dc_release_work_amendments WHERE release=?")
+        .get(input.release);
+      if(!row||row.proposal_hash!==input.expectedProposalHash||!row.reviewed_json||
+        row.review_hash!==input.expectedReviewHash)
+        fail("AMENDMENT_REVIEW_REQUIRED","Exact staged proposal and independent review hashes required");
+      const proposal=JSON.parse(row.snapshot_json) as ReleaseWorkScopeAmendment;
+      const review=this.reviewReleaseWorkScopeAmendment(proposal);
+      if(!review.passed||review.subjectHash!==row.proposal_hash)
+        fail("STALE_AMENDMENT","Frozen release changed or affected tasks are no longer Ready");
+      const frozen=this.db.prepare("SELECT * FROM dc_release_work_plans WHERE release=?").get(input.release)!;
+      const old=JSON.parse(frozen.snapshot_json) as {plan:ReleaseWorkPlan;[key:string]:unknown};
+      const additions=new Map(proposal.changes.map(change=>[change.taskId,change.addAllowedPaths]));
+      const changed=old.plan.workItems.map(item=>({
+        ...item,allowedPaths:additions.has(item.id)?
+          [...item.allowedPaths,...additions.get(item.id)!]:item.allowedPaths,
+      }));
+      const now=utc(),revision=frozen.revision+1;
+      const snapshot=JSON.stringify({...old,plan:{...old.plan,workItems:changed},
+        scopeAmendment:{proposalHash:row.proposal_hash,reviewHash:row.review_hash,
+          previousHash:frozen.hash,affectedTaskIds:[...additions.keys()],
+          approvedBy:input.approvedBy.trim(),reason:input.reason.trim()}});
+      const hash=createHash("sha256").update(snapshot).digest("hex");
+      for(const [id,paths] of additions){
+        const item=changed.find(entry=>entry.id===id)!;
+        this.db.prepare("UPDATE dc_tasks SET allowed_paths=?,updated_at=? WHERE id=?")
+          .run(JSON.stringify(item.allowedPaths),now,id);
+        this.db.prepare("UPDATE dc_task_specs SET plan_revision=? WHERE task_id=?")
+          .run(revision,id);
+      }
+      this.db.prepare(`UPDATE dc_release_work_plans SET revision=?,hash=?,snapshot_json=?,
+        approved_by=?,approved_at=? WHERE release=?`).run(revision,hash,snapshot,
+        input.approvedBy.trim(),now,input.release);
+      this.db.prepare(`INSERT INTO dc_release_work_history
+        (release,revision,hash,snapshot_json,approved_by,approved_at) VALUES(?,?,?,?,?,?)`)
+        .run(input.release,revision,hash,snapshot,input.approvedBy.trim(),now);
+      this.db.prepare("DELETE FROM dc_release_work_amendments WHERE release=?").run(input.release);
+      this.audit(null,"release_scope_amendment_approved",input.approvedBy.trim(),{
+        release:input.release,previousHash:frozen.hash,hash,revision,
+        proposalHash:row.proposal_hash,reviewHash:row.review_hash,
+        affectedTaskIds:[...additions.keys()]});
+      return {release:input.release,status:"frozen",revision,hash,
+        previousHash:frozen.hash,affectedTaskIds:[...additions.keys()],
+        scopeOnly:true,approvedBy:input.approvedBy.trim()};
+    });
   }
 
   reviewReleaseWork(input: ReleaseWorkPlan): Row {
