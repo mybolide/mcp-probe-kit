@@ -39,36 +39,117 @@ export interface AtomicWorkItem {
   estimatedHours?:number;
 }
 
+/** The host reviewer must explain EACH item, not rubber-stamp an 11-field form. */
+export function reviewTaskQualityJudgments(plan:ReleaseWorkPlan):string[] {
+  if(plan.qualityProfile!=="task-detail-v1")return [];
+  const checks=plan.agentReview?.taskChecks;
+  if(!Array.isArray(checks))return ["Independent task-level quality review missing"];
+  const issues:string[]=[];
+  const seen=new Set<string>();
+  const known=new Map(plan.workItems.map(item=>[item.id,item]));
+  const judgments=new Map<string,string>();
+  for(const check of checks){
+    if(!check||!known.has(check.workItemId)||seen.has(check.workItemId)){
+      issues.push("Independent task quality review has unknown or duplicate work item");
+      continue;
+    }
+    seen.add(check.workItemId);
+    const item=known.get(check.workItemId)!;
+    if(check.outcome!=="ready")issues.push(item.id+": independent quality reviewer requested revision");
+    if(typeof check.rationale!=="string"||check.rationale.trim().length<32||
+      placeholder.test(check.rationale.trim())||
+      [item.title,item.acceptance].some(v=>normalizedDetail(v)===normalizedDetail(check.rationale??"")))
+      issues.push(item.id+": independent task review needs a specific reason");
+    const refs=Array.isArray(check.sourceRefs)?check.sourceRefs:[];
+    if(!refs.length||refs.some(ref=>!item.sourceRefs?.includes(ref)))
+      issues.push(item.id+": task review must cite source references from that work item");
+    const normalized=normalizedDetail(check.rationale??"");
+    if(judgments.has(normalized))
+      issues.push(item.id+": independent task review repeats the rationale for "+judgments.get(normalized));
+    else judgments.set(normalized,item.id);
+  }
+  for(const id of known.keys())if(!seen.has(id))
+    issues.push(id+": independent task quality review missing");
+  return issues;
+}
+
 export const TASK_DETAIL_FIELDS=[
   "purpose","scenario","inputs","outputs","workflow","businessRules",
   "negativeCases","testCases","verificationEvidence","outOfScope","sourceRefs",
 ] as const;
 
 export type TaskDetailField=typeof TASK_DETAIL_FIELDS[number];
-/** Read-only depth audit. No invented content, no changes to an approved roster. */
+// Different jobs need different explanations. For example, a decision needs
+// the constraints and proof of its choice, not fictional implementation steps
+// or tests which cannot run until later implementation tasks.
+const BASE_FIELDS:readonly TaskDetailField[]=[
+  "purpose","outputs","verificationEvidence","sourceRefs",
+];
+const TASK_FIELDS_BY_TYPE:Record<WorkType,readonly TaskDetailField[]>={
+  analysis:["scenario","inputs","businessRules","outOfScope"],
+  decision:["scenario","inputs","businessRules","outOfScope"],
+  coordination:["scenario","inputs","workflow","outOfScope"],
+  development:["scenario","inputs","workflow","businessRules","negativeCases","testCases","outOfScope"],
+  testing:["scenario","inputs","negativeCases","testCases","outOfScope"],
+  integration:["scenario","inputs","workflow","businessRules","negativeCases","testCases","outOfScope"],
+  bugfix:["scenario","inputs","workflow","businessRules","negativeCases","testCases","outOfScope"],
+  release:["inputs","workflow","businessRules","negativeCases","testCases","outOfScope"],
+};
+
+export function requiredTaskDetailFields(type:WorkType):readonly TaskDetailField[]{
+  return [...BASE_FIELDS,...(TASK_FIELDS_BY_TYPE[type]??[])];
+}
+
+const placeholder=/^(?:n\/?a|tbd|todo|无|暂无|待定|待补充|不适用|同上|按需求|按需实现|完成即可|做完即可|后续补充|参见上文)[。.!！]*$/i;
+function normalizedDetail(value:string):string {
+  return value.trim().toLowerCase().replace(/[\s，。,.、;；:：!！?？\-]/g,"");
+}
+/** Read-only depth audit. A field is not meaningful just because it is filled. */
 export function auditAtomicWorkItemDetail(item:AtomicWorkItem):{
-  taskId:string;passed:boolean;missing:TaskDetailField[];issues:string[];
+  taskId:string;passed:boolean;missing:TaskDetailField[];
+  suggested:TaskDetailField[];issues:string[];
 } {
   const missing:TaskDetailField[]=[];
+  const suggested:TaskDetailField[]=[];
   const issues:string[]=[];
-  const single=(field:"purpose"|"scenario",min:number)=>{
+  const mandatory=new Set(requiredTaskDetailFields(item.type));
+  const seen=new Map<string,string>();
+  for(const field of TASK_DETAIL_FIELDS){
     const value=item[field];
-    if(typeof value!=="string"||value.trim().length<min)missing.push(field);
-    else if(value.length>1200)issues.push(item.id+": "+field+" too long for one atomic task");
-  };
-  const grouped=(field:Exclude<TaskDetailField,"purpose"|"scenario">,min=1)=>{
-    const values=item[field];
-    if(!Array.isArray(values)||values.length<min||values.some(v=>typeof v!=="string"||v.trim().length<8))
-      missing.push(field);
-    else if(values.length>8||values.some(v=>v.length>500))
-      issues.push(item.id+": "+field+" too broad for one independently verifiable task");
-  };
-  single("purpose",16);
-  single("scenario",16);
-  grouped("inputs");grouped("outputs");grouped("workflow",2);
-  grouped("businessRules");grouped("negativeCases");grouped("testCases");
-  grouped("verificationEvidence");grouped("outOfScope");grouped("sourceRefs");
-  return {taskId:item.id,passed:missing.length===0&&issues.length===0,missing,issues};
+    const values=typeof value==="string"?[value]:Array.isArray(value)?value:null;
+    if(!values?.length||values.some(v=>typeof v!=="string"||!v.trim())){
+      (mandatory.has(field)?missing:suggested).push(field);
+      continue;
+    }
+    if((field==="purpose"||field==="scenario")&&typeof value!=="string"){
+      issues.push(item.id+": "+field+" must be a specific explanation");
+      continue;
+    }
+    if(field!=="purpose"&&field!=="scenario"&&!Array.isArray(value)){
+      issues.push(item.id+": "+field+" must be a list of concrete facts");
+      continue;
+    }
+    if(values.length>8||values.some(v=>v.length>1200)){
+      issues.push(item.id+": "+field+" is too broad for one atomic task");
+    }
+    for(const raw of values){
+      if(placeholder.test(raw.trim())){
+        issues.push(item.id+": "+field+" is a placeholder, omit it if not applicable");
+        continue;
+      }
+      const text=normalizedDetail(raw);
+      if(field!=="sourceRefs"&&text===normalizedDetail(item.title))
+        issues.push(item.id+": "+field+" repeats the title instead of explaining it");
+      if(field!=="sourceRefs"&&text===normalizedDetail(item.acceptance))
+        issues.push(item.id+": "+field+" repeats acceptance instead of explaining it");
+      if(field!=="sourceRefs"&&seen.has(text))
+        issues.push(item.id+": "+field+" duplicates "+seen.get(text));
+      else if(field!=="sourceRefs")seen.set(text,field);
+    }
+    if(field==="workflow"&&mandatory.has(field)&&values.length<2)
+      issues.push(item.id+": workflow must identify implementation and verification actions");
+  }
+  return {taskId:item.id,passed:missing.length===0&&issues.length===0,missing,suggested,issues};
 }
 
 export function reviewDetailedWorkItems(items:AtomicWorkItem[]):string[] {
@@ -101,6 +182,13 @@ export interface ReleaseAgentReview {
     conclusion:string;
     /** Specific work-item examples, not just an unsupported 'passed' flag. */
     workItemIds:string[];
+  }[];
+  /** Required for task-detail-v1. Labels do not authenticate reviewers. */
+  taskChecks?:{
+    workItemId:string;
+    outcome:"ready"|"needs_revision";
+    rationale:string;
+    sourceRefs:string[];
   }[];
 }
 

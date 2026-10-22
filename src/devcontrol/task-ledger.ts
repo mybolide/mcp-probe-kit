@@ -17,7 +17,7 @@ import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } fro
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
 import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
-import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, reviewDetailedWorkItems, auditAtomicWorkItemDetail, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
+import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, reviewDetailedWorkItems, reviewTaskQualityJudgments, auditAtomicWorkItemDetail, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
 import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
 
@@ -1014,7 +1014,7 @@ export class ProjectTaskLedger {
     ).all().map(row=>String(row.id)));
     issues.push(...reviewAtomicWorkItems(workItems,ids,existingIds));
     if(input.qualityProfile==="task-detail-v1")
-      issues.push(...reviewDetailedWorkItems(workItems));
+      issues.push(...reviewDetailedWorkItems(workItems),...reviewTaskQualityJudgments(input));
     else if(input.qualityProfile!==undefined)
       issues.push("Unknown release task detail quality profile");
     // The host Agent is responsible for semantic judgement. DevControl only

@@ -4,7 +4,7 @@ import { VERSION } from "../version.js";
 export const SKILL_VERSION_FRONTMATTER_KEY = "mcp-probe-kit-version";
 
 /** Independently upgrade managed guidance without inventing an npm release. */
-export const SKILL_GUIDANCE_REVISION = "reviewed-task-detail-v1-20261022";
+export const SKILL_GUIDANCE_REVISION = "task-quality-over-completeness-20261022";
 export const SKILL_GUIDANCE_MARKER = "mcp-probe:guidance-revision";
 
 /** @deprecated 旧版 HTML 版本标记，仍用于解析历史文件 */

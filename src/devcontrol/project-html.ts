@@ -568,9 +568,12 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
           const missing=data.detailAudit.missing.map(key=>labels[key]||key);
           section("任务规格完整性检查",data.detailAudit.passed?
             "详细任务说明已覆盖全部检查项。验收仍需真实执行证据。":
-            ["当前冻结任务仍缺少 "+missing.length+" 项详细说明："+missing.join("、"),
+            ["当前任务按所属工作类型缺少 "+missing.length+" 项关键说明："+missing.join("、"),
               "这是原始规划资料的缺口，不改变历史 Verified、已批准范围或任务领取权限；需正式评审后补充。",
               ...(data.detailAudit.issues||[])]);
+          if(data.detailAudit.suggested?.length)section("可按需要补充的内容",
+            data.detailAudit.suggested.map(key=>labels[key]||key)
+              .concat(["不适用于该类任务时可留空，不必为填满字段编造内容。"]));
         }
       }).catch(e=>{
         if(!content.isConnected)return;

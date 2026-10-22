@@ -232,7 +232,7 @@ describe("DevControl documentation Markdown tables", () => {
     expect(rendered).toContain("F2-23:revision-1");
     expect(rendered).toContain("OS Secret Store");
     expect(rendered).toContain("任务规格完整性检查");
-    expect(rendered).toContain("当前冻结任务仍缺少 2 项详细说明");
+    expect(rendered).toContain("当前任务按所属工作类型缺少 2 项关键说明");
     expect(rendered).not.toContain("负责人：待分配");
   });
   it("projects actual SQLite states into exactly three buckets without converting pending drafts into started work", () => {
