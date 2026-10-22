@@ -155,6 +155,39 @@ describe("project ledger and legacy migration", () => {
     expect(()=>ledger!.assessIdea(captured.id,assessment,4)).toThrow(/Only/);
   });
 
+  it("refuses a Go Core task whose real HTTP Gate cannot be satisfied inside its frozen file scope",()=>{
+    create({id:"NEYNA-290",allowedPaths:["services/core/cmd/**"],
+      requiredGates:["go_http_integration"]});
+    ledger!.approve("NEYNA-290","owner");
+    const impossible=ledger!.executionContract("NEYNA-290");
+    expect(impossible.eligible).toBe(false);
+    expect(impossible.issues).toEqual(expect.arrayContaining([
+      expect.stringContaining("services/core/go.mod outside allowedPaths"),
+      expect.stringContaining("services/core/internal/http_integration_test.go outside allowedPaths"),
+    ]));
+    expect(()=>ledger!.claim("NEYNA-290","agent")).toThrow(/outside allowedPaths/);
+    // Pre-existing actual dependencies can legally be consumed by a task
+    // even when creating them was not in that task's approved scope.
+    save("services/core/go.mod","module example.com/core\n\ngo 1.22\n");
+    save("services/core/internal/http_integration_test.go",
+      "package internal\nimport \"testing\"\nfunc TestNotHTTP(t *testing.T) {}\n");
+    expect(ledger!.executionContract("NEYNA-290").issues).toEqual([
+      expect.stringContaining("services/core/internal/http_integration_test.go outside allowedPaths"),
+    ]);
+    save("services/core/internal/http_integration_test.go",
+      "package internal\nimport \"testing\"\nfunc TestHTTPStarts(t *testing.T) {}\n");
+    expect(ledger!.executionContract("NEYNA-290")).toMatchObject({eligible:true,issues:[]});
+    expect(ledger!.claim("NEYNA-290","agent").task.status).toBe("in_progress");
+  });
+
+  it("allows bootstrapping a missing Go HTTP Gate when its real prerequisites are in scope",()=>{
+    create({id:"NEYNA-291",allowedPaths:["services/core/cmd/**",
+      "services/core/go.mod","services/core/internal/http_integration_test.go"],
+      requiredGates:["go_http_integration"]});
+    ledger!.approve("NEYNA-291","owner");
+    expect(ledger!.executionContract("NEYNA-291")).toMatchObject({eligible:true,issues:[]});
+  });
+
   it("allows only generated Skill and AGENTS.md updates without a task lease",()=>{
     save("AGENTS.md","# Custom project security rules\nNever commit secrets.\n");
     commit("own AGENTS.md before kit installation");

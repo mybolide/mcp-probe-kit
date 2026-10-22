@@ -30,6 +30,29 @@ interface SqlStmt {
   run(...args: Value[]): { changes: number };
 }
 
+/** Preflight only: an impossible frozen file scope must not be claimable.
+ * Existing fixtures may satisfy a gate; otherwise this task must be allowed
+ * to create or repair the actual files used by that gate. Do not weaken it.
+ */
+function missingGatePrerequisiteScope(root:string,gates:string[],allowedPaths:string[]):string[] {
+  const requirements:{gate:string;file:string;valid:(absolute:string)=>boolean}[]=[
+    {gate:"go_http_integration",file:"services/core/go.mod",
+      valid:location=>fs.existsSync(location)},
+    {gate:"go_http_integration",file:"services/core/internal/http_integration_test.go",
+      valid:location=>fs.existsSync(location)&&
+        /^func TestHTTP\w*\s*\(/m.test(fs.readFileSync(location,"utf8"))},
+  ];
+  const issues:string[]=[];
+  for(const requirement of requirements){
+    if(!gates.includes(requirement.gate))continue;
+    if(requirement.valid(path.join(root,requirement.file)))continue;
+    if(allowedPaths.some(pattern=>pathAllowed(requirement.file,pattern)))continue;
+    issues.push("Gate "+requirement.gate+" requires missing or invalid "+requirement.file+
+      " outside allowedPaths; request a reviewed frozen-scope amendment before claiming");
+  }
+  return issues;
+}
+
 // Session memory has its own History Session subsystem. This table must not
 // masquerade as the global Qdrant memory asset system or the session archive.
 type WorkItemKind = "bug" | "architecture_change";
@@ -1234,13 +1257,17 @@ export class ProjectTaskLedger {
   /** A reviewable, frozen execution brief, not an invitation to redesign. */
   executionContract(id:string):Row {
     const task=this.get(id);
+    const gateScopeIssues=missingGatePrerequisiteScope(
+      this.root,task.requiredGates,task.allowedPaths);
     if(String(task.planId??"").startsWith("release-work:")) {
       const release=String(task.release);
       const frozen=this.releaseWorkPlan(release);
       const item=frozen.frozen?.plan?.workItems?.find((entry:{id:string})=>entry.id===id);
-      const eligible=!!item&&this.isApprovedForExecution(this.requireTask(id));
+      const frozenEligible=!!item&&this.isApprovedForExecution(this.requireTask(id));
+      const eligible=frozenEligible&&gateScopeIssues.length===0;
       return {taskId:id,eligible,
-        issues:eligible?[]:["Whole-release task roster has not been frozen or source changed"],
+        issues:[...(!frozenEligible?["Whole-release task roster has not been frozen or source changed"]:[]),
+          ...gateScopeIssues],
         profile:"atomic-work-item",release,planHash:frozen.frozenHash,
         spec:item??null,owner:task.owner,dependencies:task.dependsOn,
         deliveryModes:item?.type==="decision"?["sqlite-decision","legacy-git"]:["git"],
@@ -1257,6 +1284,7 @@ export class ProjectTaskLedger {
       if(approved.sourceDrift)issues.push("start_feature source revision changed after Owner approval");
       if(node?.openQuestions?.length)issues.push("Unresolved design choices in Feature task");
       if(task.status==="draft"||task.status==="cancelled")issues.push("Task is not approved for development");
+      issues.push(...gateScopeIssues);
       return {taskId:id,eligible:issues.length===0,issues,
         profile:"spec-depth-v3",planHash:approved.hash,featureName:name,
         featureRevision:snapshot?.sourceFeature?.revision??null,
@@ -1279,6 +1307,7 @@ export class ProjectTaskLedger {
       if(!node?.scenario||!node.workflow?.length||!node.businessRules?.length)
         issues.push("Incomplete frozen trigger, workflow or business invariants");
     }
+    issues.push(...gateScopeIssues);
     return {taskId:id,eligible:issues.length===0,issues,
       profile:plan?.qualityProfile??null,planHash:frozen.frozenHash,
       owner:task.owner??this.localDeveloper().name,
