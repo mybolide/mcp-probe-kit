@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   bootstrapHistorySession,
@@ -14,6 +15,12 @@ import {
 import { resolveToolsetNames } from '../toolset-manager.js';
 
 const tmpRoots: string[] = [];
+const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as {
+  DatabaseSync: new (file: string, options: {readOnly:true}) => {
+    prepare: (sql:string) => { get: () => Record<string,unknown> | undefined };
+    close: () => void;
+  };
+};
 
 function tempProject(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'history-session-'));
@@ -89,6 +96,83 @@ describe('history-session service', () => {
     const second = bootstrapHistorySession(root,{ session_key: 'new-session' });
     expect(second.current_number).toBe(2);
     expect(fs.existsSync(path.join(root,'docs/history-session/2.md'))).toBe(false);
+  });
+
+  it('continues importing numbered files written after the initial migration by an older host', () => {
+    const root=tempProject();
+    execFileSync('git',['init','-q'],{cwd:root});
+    const sourceDir=path.join(root,'legacy-history');
+    const legacy=bootstrapHistorySession(root,{
+      session_key:'old-host-1', initial_user_input:'first session',
+      history_dir:'legacy-history',
+    });
+    const projectDir=path.join(root,'docs/history-session');
+    fs.mkdirSync(projectDir,{recursive:true});
+    fs.copyFileSync(path.join(root,legacy.current_path as string),path.join(projectDir,'1.md'));
+    // Migrates 1.md and permanently sets the legacy_import_done marker.
+    expect(searchHistorySession(root,{}).total).toBe(1);
+    checkpointHistorySession(root,{
+      session_key:'old-host-1', expected_path:legacy.current_path,
+      history_dir:'legacy-history', raw_user_input:'later first session checkpoint',
+    });
+    fs.copyFileSync(path.join(sourceDir,'1.md'),path.join(projectDir,'1.md'));
+    const second=bootstrapHistorySession(root,{
+      session_key:'old-host-2',initial_user_input:'second session',
+      history_dir:'legacy-history',
+    });
+    const third=bootstrapHistorySession(root,{
+      session_key:'old-host-3',initial_user_input:'third session',
+      history_dir:'legacy-history',
+    });
+    fs.copyFileSync(path.join(root,second.current_path as string),path.join(projectDir,'2.md'));
+    fs.copyFileSync(path.join(root,third.current_path as string),path.join(projectDir,'3.md'));
+    // The old host's extra files must become discoverable with no restart.
+    const listing=searchHistorySession(root,{});
+    expect(listing.total).toBe(3);
+    expect((listing.results as Array<{number:number}>).map((x)=>x.number)).toEqual([3,2,1]);
+    expect(readHistorySession(root,{number:1}).content).toContain('later first session checkpoint');
+    const db=new DatabaseSync(path.join(root,'.mcp-probe-kit/state/devcontrol.sqlite3'),{readOnly:true});
+    try {
+      expect(db.prepare('SELECT count(*) AS n FROM hs_archive').get()?.n).toBe(3);
+    }finally{db.close();}
+    // Re-reading does not create duplicate records or alter the original files.
+    expect(searchHistorySession(root,{}).total).toBe(3);
+    expect(fs.existsSync(path.join(projectDir,'3.md'))).toBe(true);
+  });
+
+  it('never replaces a newer SQLite checkpoint with divergent old-host Markdown', () => {
+    const root=tempProject();
+    execFileSync('git',['init','-q'],{cwd:root});
+    const legacy=bootstrapHistorySession(root,{
+      session_key:'split-writer', initial_user_input:'original source',
+      history_dir:'legacy-history',
+    });
+    const historyDir=path.join(root,'docs/history-session');
+    fs.mkdirSync(historyDir,{recursive:true});
+    const file=path.join(historyDir,'1.md');
+    fs.copyFileSync(path.join(root,legacy.current_path as string),file);
+    const current=bootstrapHistorySession(root,{session_key:'split-writer'});
+    checkpointHistorySession(root,{
+      session_key:'split-writer',expected_path:current.current_path,
+      raw_user_input:'SQLite-owned checkpoint',turn_id:'sql-writer',
+    });
+    checkpointHistorySession(root,{
+      session_key:'split-writer',expected_path:legacy.current_path,
+      history_dir:'legacy-history',raw_user_input:'divergent old-file checkpoint',
+      turn_id:'old-writer',
+    });
+    fs.copyFileSync(path.join(root,legacy.current_path as string),file);
+    fs.utimesSync(file,new Date(Date.now()+5_000),new Date(Date.now()+5_000));
+    const currentSqlite=readHistorySession(root,{number:1});
+    expect(currentSqlite.content).toContain('SQLite-owned checkpoint');
+    expect(currentSqlite.content).not.toContain('divergent old-file checkpoint');
+    const db=new DatabaseSync(path.join(root,'.mcp-probe-kit/state/devcontrol.sqlite3'),{readOnly:true});
+    try{
+      const diagnostic=db.prepare("SELECT value FROM hs_meta WHERE key='legacy_conflict_1'").get();
+      expect(diagnostic?.value).toMatch(/"sqlite":"[a-f0-9]{64}"/);
+      expect(String(diagnostic?.value)).not.toContain('checkpoint');
+    }finally{db.close();}
+    expect(fs.readFileSync(file,'utf8')).toContain('divergent old-file checkpoint');
   });
   it('mints a unique handle when no session key is provided and does not merge later omitted-key bootstraps', () => {
     const root = tempProject();

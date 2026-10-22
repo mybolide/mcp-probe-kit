@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import http from "node:http";
 import vm from "node:vm";
 import { ProjectTaskLedger, DevControlError } from "../task-ledger.js";
+import { releaseReviewSubjectHash, REVIEW_DIMENSIONS } from "../release-work.js";
 import { createDevControlBoardServer, WORKSPACE_SCHEMA_VERSION } from "../board-server.js";
 import { projectContext, readProjectDoc, safeProjectDocument } from "../project-catalog.js";
 import { projectHtml } from "../project-html.js";
@@ -82,6 +83,340 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it("records frozen architecture decisions solely in SQLite without ADR Markdown or Git commits",()=>{
+    save("docs/roadmap/decision-version.md",
+      "# Test scope\n\n| 阶段 | 说明 |\n| --- | --- |\n| F0 | 基线 |\n| F2 | 设计与验收 |\n");
+    commit("freeze baseline scope");
+    const rows=[
+      {id:"WORK-DEC1",title:"确定一致性备份语义",stageId:"F2",type:"decision",
+        ownerRole:"Core Architect",platform:"Go",dependsOn:["F0"],
+        acceptance:"记录恢复失败处理及风险权衡",allowedPaths:[],requiredGates:["sqlite_decision"]},
+      {id:"WORK-DEC2",title:"审核设备令牌设计",stageId:"F2",type:"decision",
+        ownerRole:"Security Architect",platform:"Go",dependsOn:["WORK-DEC1"],
+        acceptance:"形成设备鉴权选择及回滚意见",
+        allowedPaths:["docs/architecture/**"],requiredGates:["docs"]},
+      {id:"WORK-DEV1",title:"实现存储服务代码",stageId:"F2",type:"development",
+        ownerRole:"Go Core Agent",platform:"Go",dependsOn:["WORK-DEC2"],
+        acceptance:"真实Go测试展示正确持久写入",
+        allowedPaths:["services/core/**"],requiredGates:["docs"]},
+      {id:"WORK-TEST",title:"测试Core集成结果",stageId:"F2",type:"testing",
+        ownerRole:"QA Agent",platform:"Go",dependsOn:["WORK-DEV1"],
+        acceptance:"真实重启测试及故障注入可复现",
+        allowedPaths:["tests/**"],requiredGates:["docs"]},
+      {id:"WORK-INT1",title:"确认跨端联调结果",stageId:"F2",type:"integration",
+        ownerRole:"Integration Agent",platform:"iOS/Go",dependsOn:["WORK-TEST"],
+        acceptance:"记录完整双端测试与失败回退",
+        allowedPaths:["tests/**"],requiredGates:["docs"]},
+      {id:"WORK-REL1",title:"复核最终版本验收",stageId:"F2",type:"release",
+        ownerRole:"Release Agent",platform:"Release",dependsOn:["WORK-INT1"],
+        acceptance:"发布前实际测试结果全部核实",
+        allowedPaths:["docs/**"],requiredGates:["docs"]},
+    ] as any[];
+    const base={release:"V0.1",scopeSource:"docs/roadmap/decision-version.md",
+      stages:[{id:"F0",verifiedTaskIds:["F0"]},{id:"F2"}],workItems:rows,
+      rationale:"The reviewed full roster preserves verified baseline, independent decisions and all required test/release dependencies."};
+    const plan={...base,agentReview:{
+      reviewer:"independent-reviewer",method:"independent-agent-pass" as const,
+      subjectHash:releaseReviewSubjectHash(base as any),
+      sourceRefs:["docs/roadmap/decision-version.md"],
+      reviewedStageIds:["F0","F2"],
+      checks:REVIEW_DIMENSIONS.map(dimension=>({
+        dimension,conclusion:"Independently inspected original requirements and risks for "+dimension,
+        workItemIds:["WORK-DEC1","WORK-DEC2"]})),
+    }};
+    const wrong={...plan,workItems:rows.map((row,i)=>i===2?
+      {...row,allowedPaths:[],requiredGates:["sqlite_decision"]}:row)};
+    expect(ledger!.reviewReleaseWork(wrong as any).issues.some((s:string)=>
+      s.includes("SQLite-only decision"))).toBe(true);
+    expect(ledger!.reviewReleaseWork(plan as any).passed).toBe(true);
+    const stage=ledger!.stageReleaseWork(plan as any,"planner");
+    expect(stage.status).toBe("review_pending");
+    ledger!.approveReleaseWork("V0.1",stage.hash);
+    const head=git("rev-parse","HEAD");
+    const first=ledger!.claim("WORK-DEC1","decision-agent");
+    expect(ledger!.executionContract("WORK-DEC1").deliveryModes).toEqual(
+      ["sqlite-decision","legacy-git"]);
+    expect(ledger!.checkStaged()).toMatchObject({passed:false});
+    expect(ledger!.getDecision("WORK-DEC1").decision).toBeNull();
+    expect(()=>ledger!.recordDecision("WORK-DEV1",first.leaseToken,{} as never))
+      .toThrow(/lease/i);
+    const fields={
+      status:"proposed" as const,
+      question:"How should Go Core recover from an interrupted SQLite backup?",
+      decision:"Use the online backup API and fail closed before enabling queries.",
+      rationale:"Raw WAL file copying can omit committed transactions and expose stale deletion snapshots.",
+      alternatives:"Raw file copy is rejected; external PostgreSQL is deferred pending real workload tests.",
+      consequences:"Recovery must verify external deletion ledger before exposing any remembered content.",
+      verificationPlan:"Execute online backup, interrupted migration and deleted-history restoration fixtures.",
+    };
+    expect(()=>ledger!.recordDecision("WORK-DEC1",first.leaseToken,{
+      ...fields,decision:"short"})).toThrow(/substantial/);
+    const recorded=ledger!.recordDecision("WORK-DEC1",first.leaseToken,fields);
+    expect(recorded).toMatchObject({revision:1,status:"proposed"});
+    expect(()=>ledger!.recordDecision("WORK-DEC1",first.leaseToken,{
+      ...fields,expectedRevision:0})).toThrow(/current decision revision/);
+    expect(ledger!.recordDecision("WORK-DEC1",first.leaseToken,{
+      ...fields,expectedRevision:1,status:"decided"})).toMatchObject({revision:2});
+    const history=ledger!.getDecision("WORK-DEC1");
+    expect(history.history).toHaveLength(2);
+    expect(history.decision.status).toBe("decided");
+    ledger!.complete("WORK-DEC1",first.leaseToken,{
+      summary:"A standalone SQLite backup decision is recorded for this task.",
+      implementation:"Only DevControl decision-save changed local SQLite with versioned audit.",
+      verification:"The record has complete alternatives and negative recovery tests.",
+      remaining:"Production encryption and real recovery still need G2 and implementation.",
+    });
+    ledger!.report("WORK-DEC1",first.leaseToken,{kind:"sqlite_decision",
+      reference:"decision:WORK-DEC1#revision=2"},true);
+    expect(ledger!.verify("WORK-DEC1",first.leaseToken)).toMatchObject({
+      passed:true,files:[],results:{sqlite_decision:{passed:true}}});
+    expect(git("rev-parse","HEAD")).toBe(head);
+    expect(git("status","--porcelain")).toBe("");
+    expect(fs.existsSync(path.join(root,"docs/architecture/decisions"))).toBe(false);
+    // The already frozen legacy docs-gated decision can *explicitly* opt in;
+    // its frozen plan hash, file scope and gates are not silently rewritten.
+    const second=ledger!.claim("WORK-DEC2","security-agent");
+    expect(second.task.requiredGates).toEqual(["docs"]);
+    ledger!.recordDecision("WORK-DEC2",second.leaseToken,{
+      ...fields,question:"How can the iPhone authenticate against the local Go Core?",
+      decision:"Use per-device revocable bearer credentials and server-verified TLS connections.",
+    });
+    ledger!.complete("WORK-DEC2",second.leaseToken,{
+      summary:"Device authentication choice saved to SQLite, no Markdown was created.",
+      implementation:"Existing frozen docs gate is replaced only for this explicitly recorded decision.",
+      verification:"Reviewed offline and expired-token failure behavior without claiming product tests.",
+    });
+    ledger!.report("WORK-DEC2",second.leaseToken,{kind:"sqlite_decision",
+      reference:"decision:WORK-DEC2#revision=1"},true);
+    expect(ledger!.verify("WORK-DEC2",second.leaseToken)).toMatchObject({
+      passed:true,files:[],results:{sqlite_decision:{passed:true}}});
+    expect(ledger!.get("WORK-DEV1").status).toBe("ready");
+    expect(ledger!.executionContract("WORK-DEC2").requiredGates).toEqual(["docs"]);
+    expect(git("rev-parse","HEAD")).toBe(head);
+  });
+  it("normalizes old SQLite draft file-template hints without rewriting historical rows",()=>{
+    ledger!.saveFeature({name:"old-guidance",description:"Legacy feature stored SQLite with file hints",
+      layout:"flat",plan:{},draft:{specOutputs:["docs/specs/old-guidance/tasks.md"],
+        guidance:"Agent 必须创建三个文件 requirements.md / design.md / tasks.md",
+        structuredContent:{obsolete:true}}});
+    const f=ledger!.getFeature("old-guidance");
+    expect(f.draft.specOutputs).toEqual([]);
+    expect(f.draft.guidance).toContain("不生成");
+    expect(f.draft.structuredContent).toBeNull();
+  });
+  it("plans an entire version as simple single-action rows, blocks early coding, then atomically approves", async () => {
+    save("docs/roadmap/test-version.md",
+      "# Version\n\n| 阶段 | 描述 |\n| --- | --- |\n| F0 | 已验证基线 |\n| F1 | 接口准备 |\n| F2 | 联调发布 |\n");
+    commit("freeze release scope");
+    const items = [
+      {id:"WORK-101",title:"实现本地事件创建接口",stageId:"F1",type:"development",
+        owner:"Core Agent",platform:"Go",requirementIds:["FR-101"],
+        dependsOn:["F0"],acceptance:"首次写入返回稳定事件编号",
+        allowedPaths:["services/core/**"],requiredGates:["docs"]},
+      {id:"WORK-102",title:"验证事件写入接口",stageId:"F1",type:"testing",
+        owner:"QA Agent",platform:"Go",dependsOn:["WORK-101"],acceptance:"测试用例通过且附带执行日志",
+        allowedPaths:["tests/contracts/**"],requiredGates:["docs"]},
+      {id:"WORK-103",title:"执行跨端联调",stageId:"F2",type:"integration",
+        owner:"Integration Agent",platform:"iOS/Go",dependsOn:["WORK-102"],acceptance:"联调请求正确生成持久事件",
+        allowedPaths:["tests/contracts/**"],requiredGates:["docs"]},
+      {id:"WORK-104",title:"验证版本发布清单",stageId:"F2",type:"release",
+        owner:"Release Agent",platform:"Release",dependsOn:["WORK-103"],acceptance:"版本发布检查表逐项通过",
+        allowedPaths:["docs/**"],requiredGates:["docs"]},
+    ] as const;
+    const plan={release:"V0.1",scopeSource:"docs/roadmap/test-version.md",
+      rationale:"All current-version stages, independent development, testing, integration and final release evidence are included.",
+      stages:[{id:"F0",verifiedTaskIds:["F0"]},{id:"F1"},{id:"F2"}],
+      workItems:items.map(x=>({...x,dependsOn:[...x.dependsOn],
+        allowedPaths:[...x.allowedPaths],requiredGates:[...x.requiredGates]}))};
+    const withReview=(roster:any)=>({...roster,agentReview:{
+      reviewer:"independent-quality-review-agent",
+      method:"independent-agent-pass" as const,
+      subjectHash:releaseReviewSubjectHash(roster as any),
+      sourceRefs:["docs/roadmap/test-version.md"],
+      reviewedStageIds:["F0","F1","F2"],
+      checks:REVIEW_DIMENSIONS.map(dimension=>({
+        dimension,conclusion:"Independently checked original scope and task evidence for "+dimension,
+        workItemIds:["WORK-101","WORK-102","WORK-103","WORK-104"],
+      })),
+    }});
+    const largeTitle={...plan,workItems:plan.workItems.map((item,index)=>index===0?
+      {...item,title:"完成接口以及测试以及前后端全部功能"}:item)};
+    const vague={...plan,workItems:plan.workItems.map((item,index)=>index===0?
+      {...item,acceptance:"以真实证据证明：实现本地事件创建接口已按需求完成。"}:item)};
+    expect(ledger!.reviewReleaseWork(vague as any).issues).toContain(
+      "WORK-101: generic self-referential acceptance is not independently verifiable");
+    expect(ledger!.reviewReleaseWork(largeTitle as any).passed).toBe(false);
+    const draft=ledger!.stageReleaseWork(largeTitle as any,"planner");
+    expect(draft.status).toBe("needs_revision");
+    expect(()=>ledger!.approveReleasePlan("V0.1","owner","a".repeat(64)))
+      .toThrow(/Use release-work-review and release-work-approve/);
+    const web=createDevControlBoardServer(ledger!);
+    await new Promise<void>(resolve=>web.listen(0,"127.0.0.1",resolve));
+    try {
+      const addr=web.address();
+      const port=addr&&typeof addr==="object"?addr.port:0;
+      const response=await fetch("http://127.0.0.1:"+port+"/api/release-work-plan");
+      expect(response.status).toBe(200);
+      const version=await response.json();
+      expect(version.status).toBe("needs_revision");
+      expect(version.proposal.plan.workItems[0].acceptance).toBe("首次写入返回稳定事件编号");
+    } finally {await new Promise<void>(resolve=>web.close(()=>resolve()));}
+    expect(ledger!.get("F0").status).toBe("verified");
+    expect(()=>ledger!.approveReleaseWork("V0.1",draft.hash)).toThrow(/title must describe one bounded action/);
+    expect(()=>ledger!.get("WORK-101")).toThrow();
+    expect(ledger!.reviewReleaseWork(plan as any).issues)
+      .toContain("Independent Agent semantic review missing: submit agentReview before version approval");
+    const complete=withReview(plan);
+    const review=ledger!.reviewReleaseWork(complete as any);
+    expect(review).toMatchObject({passed:true,workItemCount:4});
+    expect(review.reviewSubjectHash).toBe(complete.agentReview.subjectHash);
+    const stale={...complete,workItems:complete.workItems.map((item:any,index:number)=>index===0?
+      {...item,acceptance:"首次写入后得到可持久查询的编号"}:item)};
+    expect(ledger!.reviewReleaseWork(stale as any).issues)
+      .toContain("Agent semantic review is stale: task/requirements/stage roster changed");
+    const fakeReview={...complete,agentReview:{...complete.agentReview,
+      checks:complete.agentReview.checks.map((check:any,index:number)=>index===0?{
+        ...check,workItemIds:["MISSING-FAKE-TASK"]}:check)}};
+    expect(ledger!.reviewReleaseWork(fakeReview as any).issues.some((issue:string)=>
+      issue.includes("needs a reasoned conclusion and existing work-item examples"))).toBe(true);
+    const uncovered={...plan,requiredRequirementIds:["FR-101","NFR-006"],
+      requirementsSource:"docs/roadmap/test-version.md"};
+    const missing=ledger!.reviewReleaseWork(uncovered as any);
+    expect(missing.issues).toContain("Whole-version requirement NFR-006 has no independent work item");
+    const manual={...plan,reviewFindings:[{id:"RISK-01",title:"Authorization policy not approved",
+      detail:"Requires Owner architecture review before implementation",severity:"blocker",status:"open"}]};
+    expect(ledger!.reviewReleaseWork(manual as any).issues.some((value:string)=>
+      value.includes("Version review blocker RISK-01"))).toBe(true);
+    const autonomousPlan={...plan,workItems:plan.workItems.map(item=>
+      ({...item,owner:undefined,ownerRole:"Implementation Agent"})),
+      reviewFindings:[{id:"RISK-01",title:"Authorization enforcement pending",
+        detail:"Design decided; implementation and actual tests must follow",
+        decision:"Keep all Core reads and writes behind a server-verified device credential.",
+        nextAction:"Implement Core guard and confirm unauthorized requests cannot read user data.",
+        decisionStatus:"decided",verificationStatus:"pending",status:"open",
+        affectedIds:["WORK-101"],severity:"blocker"}]};
+    const autonomous={...withReview(autonomousPlan),reviewFindings:autonomousPlan.reviewFindings};
+    expect(ledger!.reviewReleaseWork(autonomous as any).passed).toBe(true);
+    const fakePassed={...autonomous,reviewFindings:[{
+      ...autonomous.reviewFindings[0],status:"resolved",verificationStatus:"passed"}]};
+    expect(ledger!.reviewReleaseWork(fakePassed as any).issues).toContain(
+      "Verification cannot pass without evidence and resolution: RISK-01");
+    const fakeClosed={...autonomous,reviewFindings:[{
+      ...autonomous.reviewFindings[0],status:"resolved"}]};
+    expect(ledger!.reviewReleaseWork(fakeClosed as any).issues).toContain(
+      "Unverified product outcome cannot be closed: RISK-01");
+    const bypassed={...plan,workItems:plan.workItems.map(item=>
+      item.id==="WORK-104"?{...item,dependsOn:["WORK-101"]}:item)};
+    expect(ledger!.reviewReleaseWork(bypassed as any).issues.some((value:string)=>
+      value.includes("Final release acceptance has no dependency chain"))).toBe(true);
+    const pending=ledger!.stageReleaseWork(complete as any,"planner",draft.hash);
+    expect(pending.status).toBe("review_pending");
+    expect(()=>ledger!.claim("F1","agent")).toThrow();
+    const approved=ledger!.approveReleaseWork("V0.1",pending.hash);
+    expect(approved.added).toEqual(items.map(item=>item.id));
+    const contract=ledger!.executionContract("WORK-101");
+    expect(contract).toMatchObject({eligible:true,profile:"atomic-work-item"});
+    expect(contract.spec).toMatchObject({title:"实现本地事件创建接口",
+      acceptance:"首次写入返回稳定事件编号"});
+    expect(ledger!.get("WORK-101").owner).toBe("Core Agent");
+    expect(ledger!.claim("WORK-101","coding-agent").task.id).toBe("WORK-101");
+  });
+  it("turns a start_feature SQLite specification into a reviewed Feature task plan without release-wide files", async () => {
+    ledger!.saveFeature({name:"event-ingest",description:"Persist auditable event messages with idempotency",layout:"flat",
+      plan:{steps:[{id:"write-spec"}]},draft:{specLayout:"flat"}});
+    ledger!.reviseFeature("event-ingest",{
+      requirements:"FR-101: Authenticated requests are recorded once and can be replayed safely after restart.",
+      design:"Use an isolated Core event handler backed by durable SQLite transactions and validated input shapes.",
+      tasks:"Implement API ingestion, idempotency conflict handling, restart persistence and integration evidence.",
+    },"planner",false);
+    expect(ledger!.validateFeature("event-ingest").passed).toBe(true);
+    const brief=ledger!.featureTaskBrief("event-ingest");
+    expect(brief.readyForPlanning).toBe(true);
+    expect(brief.requirementIds).toContain("FR-101");
+    const node={
+      id:"INGEST-LEAF",title:"Persist idempotent event payload using approved Core handler",kind:"leaf" as const,
+      parentId:"INGEST-GROUP",dependsOn:["F0"],requirementIds:["FR-101"],
+      scenario:"When a logged-in user retries a valid event, the server responds with one persistent record.",
+      workflow:["Validate the caller's identity and canonicalize the input event body.",
+        "Read the transaction-scoped idempotency key and detect a prior receipt.",
+        "Write the event once and return the persisted identifier with provenance."],
+      businessRules:["Never persist two records for the same caller and canonical request key.",
+        "Conflicting payloads with a reused key must return a stable conflict response."],
+      sourceRefs:["feature:event-ingest#requirements","feature:event-ingest#design"],
+      reviewNotes:["The Core persistence decision must be already approved before coding begins."],
+      verificationEvidence:["Run the real HTTP event ingestion integration test with recorded exit code.",
+        "Run the persistent store restart test and attach the resulting Git HEAD."],
+      inputs:["Authenticated user identity and canonical event payload with request key."],
+      outputs:["A durable event identifier and a stable HTTP result containing provenance."],
+      preconditions:["Storage migration and authentication contract have passed their gates."],
+      stateTransitions:["Unseen request key becomes committed event, while retries return its identifier."],
+      forbiddenChanges:["Do not modify Flutter clients, authentication design, or event protocol contracts."],
+      stopConditions:["Stop and request approval if the storage layout or identity contract is not decided."],
+      allowedChangedFiles:["services/core/ingest.go"],
+      designRef:"feature:event-ingest#design",
+      acceptance:"The initial event is persisted and exact retries cannot create duplicates after restart.",
+      negativeCases:["A reused request key with different content produces conflict without writes.",
+        "Unauthenticated requests must not create any durable event or idempotency entry."],
+      testCases:["POST a valid first event and assert one durable event is created.",
+        "Restart Core and repeat the event with matching identity and key."],
+      outOfScope:["Client-side event rendering"],deliverables:["services/core/ingest.go","Core integration test evidence"],
+      allowedPaths:["services/core/**"],requiredGates:["docs"],estimatedHours:4,
+    };
+    const plan={release:"V0.1",rationale:"Deliver one auditable event ingestion feature with clear restart semantics and no client-facing changes.",
+      nodes:[{id:"INGEST-GROUP",title:"Core event ingestion",kind:"group" as const},node]};
+    const weak={...plan,nodes:[plan.nodes[0],{...node,negativeCases:[]}]};
+    expect(ledger!.reviewFeatureTasks("event-ingest",brief.feature.revision,weak).passed).toBe(false);
+    const savedDraft=ledger!.stageFeatureTasks("event-ingest",brief.feature.revision,weak,"planning-agent");
+    expect(savedDraft).toMatchObject({status:"needs_revision",executableTasksCreated:0});
+    expect(ledger!.featureTaskPlan("event-ingest").review.issues.length).toBeGreaterThan(0);
+    expect(ledger!.list().some(task=>task.id==="INGEST-LEAF")).toBe(false);
+    expect(()=>ledger!.approveFeatureTasks("event-ingest","owner",savedDraft.hash))
+      .toThrow(/INCOMPLETE_FEATURE_TASKS|specific negativeCases/);
+    expect(ledger!.reviewFeatureTasks("event-ingest",brief.feature.revision-1,plan).passed).toBe(false);
+    const reviewed=ledger!.reviewFeatureTasks("event-ingest",brief.feature.revision,plan);
+    expect(reviewed).toMatchObject({passed:true,generatedLeaves:1,coveredFeatureRequirements:["FR-101"]});
+    const before=ledger!.list().length;
+    const pending=ledger!.proposeFeatureTasks("event-ingest",brief.feature.revision,plan,
+      "planning-agent",savedDraft.hash);
+    expect(pending.status).toBe("review_pending");
+    expect(ledger!.list()).toHaveLength(before);
+    expect(ledger!.listFeatureTaskPlans()).toHaveLength(1);
+    expect(ledger!.listFeatureTaskPlans()[0].proposal.plan.nodes[1].scenario).toContain("logged-in user");
+    const web=createDevControlBoardServer(ledger!);
+    await new Promise<void>(resolve=>web.listen(0,"127.0.0.1",resolve));
+    try {
+      const address=web.address();
+      const base="http://127.0.0.1:"+(address&&typeof address==="object"?address.port:0);
+      const plans=await (await fetch(base+"/api/feature-task-plans")).json();
+      expect(plans.plans[0].status).toBe("review_pending");
+      expect(plans.plans[0].proposal.plan.nodes[1].id).toBe("INGEST-LEAF");
+      expect(await (await fetch(base+"/")).text()).toContain("/api/feature-task-plans");
+      expect((await fetch(base+"/api/feature-task-plans",{method:"POST"})).status).toBe(405);
+    } finally { await new Promise<void>(resolve=>web.close(()=>resolve())); }
+    expect(()=>ledger!.proposeFeatureTasks("event-ingest",brief.feature.revision,
+      {...plan,rationale:"A different full proposed scope that was not explicitly revised by the Owner."},
+      "planning-agent")).toThrow(/Pending Feature plan differs/);
+    expect(ledger!.featureTaskPlan("event-ingest").proposalHash).toBe(pending.hash);
+    expect(()=>ledger!.approveFeatureTasks("event-ingest","owner","0".repeat(64))).toThrow(/matching Feature proposal/);
+    const expectedLocalApprover=ledger!.localDeveloper().name||ledger!.localDeveloper().device;
+    const approved=ledger!.approveFeatureTasks("event-ingest","untrusted caller text",pending.hash);
+    expect(approved.added).toEqual(["INGEST-GROUP","INGEST-LEAF"]);
+    expect(ledger!.get("INGEST-LEAF").approvedBy).toBe(expectedLocalApprover);
+    expect(ledger!.get("INGEST-LEAF").status).toBe("ready");
+    expect(ledger!.get("INGEST-LEAF").dependsOn).toEqual(["F0"]);
+    expect(ledger!.executionContract("INGEST-LEAF")).toMatchObject({eligible:true,profile:"spec-depth-v3"});
+    expect(()=>ledger!.claim("INGEST-GROUP","agent")).toThrow(/leaf|group/i);
+    const claimed=ledger!.claim("INGEST-LEAF","agent");
+    expect(claimed.task.id).toBe("INGEST-LEAF");
+    expect(ledger!.featureTaskPlan("event-ingest").status).toBe("frozen");
+    expect(ledger!.release("INGEST-LEAF",claimed.leaseToken).released).toBe(true);
+    ledger!.reviseFeature("event-ingest",{tasks:
+      "Implement updated Core ingest and a new event idempotency conflict branch with additional state coverage."},
+      "planner",false);
+    expect(ledger!.executionContract("INGEST-LEAF").eligible).toBe(false);
+    expect(()=>ledger!.claim("INGEST-LEAF","agent")).toThrow(/frozen plan/i);
+    expect(fs.existsSync(path.join(root,"docs/specs/event-ingest/tasks.md"))).toBe(false);
+  });
   it("imports existing verified task status, preserves legacy schema, and recommends F1", () => {
     expect(ledger!.get("F0").status).toBe("verified");
     expect(ledger!.get("F1").status).toBe("ready");
@@ -91,6 +426,54 @@ describe("project ledger and legacy migration", () => {
     });
     expect(ledger!.trace("F0").audit.some((x: any) => x.event === "legacy_import")).toBe(true);
     expect(() => ledger!.claim("F2", "blocked")).toThrowError(DevControlError);
+  });
+
+  it("stores all eight SRC-8 sections with revisions, evidence, task links and strict completion gates", () => {
+    const bug = ledger!.recordWorkItem({ kind: "bug", title: "API restarts lose events",
+      description: "Restart the service and the event disappears" });
+    const initial = ledger!.bugDetail(bug.id);
+    expect(initial.steps).toHaveLength(8);
+    expect(initial.steps.every((step: any) => step.status === "pending" && step.revision === 0)).toBe(true);
+    const update = (step: number, expectedRevision = 0, status: any = "completed") =>
+      ledger!.updateBugStep({ id: bug.id, step, expectedRevision, status,
+        summary: `Validated SRC-8 step ${step} with a reproducible observation`,
+        evidence: [`tests/bug-regression.test.ts#step-${step}`], actor: "test-agent" });
+    expect(() => update(2)).toThrow(/preceding SRC-8/);
+    expect(() => ledger!.updateBugStep({ id: bug.id, step: 1, expectedRevision: 0,
+      status: "completed", summary: "root cause", evidence: [], actor: "test-agent" }))
+      .toThrow(/evidence/i);
+    expect(update(1).step.revision).toBe(1);
+    expect(() => update(1)).toThrow(/reload/);
+    for (let step = 2; step <= 5; step++) update(step);
+    expect(() => update(6)).toThrow(/repair and regression-test tasks/);
+    expect(ledger!.linkBugTask(bug.id, "F1", "repair", "test-agent").role).toBe("repair");
+    expect(() => update(6)).toThrow(/repair and regression-test tasks/);
+    // The fixture's F0 is an existing, historically verified task.
+    ledger!.linkBugTask(bug.id, "F0", "repair", "test-agent");
+    ledger!.linkBugTask(bug.id, "F0", "test", "test-agent");
+    expect(ledger!.linkBugTask(bug.id, "F0", "test", "test-agent").reused).toBe(true);
+    // A linked, unverified repair task must still block closure.
+    expect(() => update(6)).toThrow(/repair and regression-test tasks/);
+    // A different Bug with only the verified fixture task may finish, after all SRC-8 evidence.
+    const finished = ledger!.recordWorkItem({kind:"bug",title:"Missing warning on retry",description:"Reproduction and evidence"});
+    ledger!.linkBugTask(finished.id,"F0","repair","test-agent");
+    ledger!.linkBugTask(finished.id,"F0","test","test-agent");
+    for (let step=1; step<=8; step++) {
+      ledger!.updateBugStep({id:finished.id,step,status:"completed",expectedRevision:0,
+        summary:`Verified step ${step}`,evidence:[`evidence#${step}`],actor:"test-agent"});
+    }
+    expect(ledger!.bugDetail(finished.id).status).toBe("verified");
+    expect(() => ledger!.updateBugStep({id:finished.id,step:1,status:"blocked",
+      summary:"Need reopening",evidence:[],expectedRevision:1,actor:"test-agent"}))
+      .toThrow(/immutable/);
+    const require = createRequire(import.meta.url);
+    const {DatabaseSync} = require("node:sqlite") as {DatabaseSync:new(file:string)=>any};
+    const db=new DatabaseSync(ledger!.databasePath);
+    try {
+      const revisions=db.prepare("SELECT count(*) AS total FROM dc_bug_step_revisions WHERE item_id=?")
+        .get(finished.id);
+      expect(revisions.total).toBe(8);
+    } finally { db.close(); }
   });
 
   it("creates database-native feature drafts without Markdown and handles stable revisions", () => {
@@ -458,6 +841,15 @@ describe("project ledger and legacy migration", () => {
       expect(historyPage.content).toContain("History Session");
       expect((await fetch(base + "/api/history/99")).status).toBe(404);
       expect((await (await fetch(base + "/api/work-items")).json()).items).toEqual([]);
+      const bug = ledger!.recordWorkItem({kind:"bug",title:"Board fetch fails",description:"Reproduce broken board read"});
+      const bugResponse = await fetch(base + "/api/bugs/" + bug.id);
+      expect(bugResponse.status).toBe(200);
+      const bugDetails = await bugResponse.json();
+      expect(bugDetails.steps).toHaveLength(8);
+      expect(bugDetails.steps[0].title).toContain("现象");
+      expect(bugDetails.steps[0].status).toBe("pending");
+      expect((await fetch(base + "/api/bugs/BUG-AAAAAAAAAAAAAAA")).status).toBe(404);
+      expect((await fetch(base + "/api/bugs/" + bug.id, {method:"POST"})).status).toBe(405);
       expect((await fetch(base + "/api/tasks/not-valid")).status).toBe(404);
       expect((await fetch(base + "/api/board", { method: "POST" })).status).toBe(405);
       const hostileHostStatus = await new Promise<number>((resolve, reject) => {

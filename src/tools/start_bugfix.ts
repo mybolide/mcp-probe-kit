@@ -266,6 +266,55 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         ],
       });
 
+      // A project-native Bug must pass DevControl admission before SRC-8 Step 6.
+      // For non-project diagnostic use, keep the original standalone workflow.
+      if (projectRoot && fs.existsSync(path.join(layout.projectRoot, ".git")) &&
+          Number.parseInt(process.versions.node.split(".")[0] || "0", 10) >= 22) {
+        const implementation = src8Plan.steps.find(step => step.id === 'src8-6');
+        const index = src8Plan.steps.indexOf(implementation!);
+        if (implementation && index >= 0) {
+          const independentReview: DelegatedPlanStep = {
+            id: 'bug-impact-agent-review',
+            type: 'agent_action',
+            action: 'independently_review_bug_root_cause_impact_and_atomic_repair_tasks',
+            dependsOn: ['src8-5'],
+            requiredInputs: [
+              'Re-read original reproduction, code evidence, caller boundaries and the SRC-8 steps 1~5 without assuming the first Agent hypothesis is correct',
+              'Review competing root-cause explanations and negative cases, affected components, regression tests and deployment/migration side effects',
+              'Review whether repair, regression and integration work are ONE independently assignable action each, with traceable task IDs and no redundant broad spec tasks',
+              'Check whether the fix belongs to the current release roster or needs a reviewed release-change proposal',
+            ],
+            expectedOutputs: [
+              'Independent Agent impact review in the Bug SRC-8 evidence and linked DevControl work items',
+              'Explicit blockers or a reasoned plan for root-cause repair, negative test, regression and dependency changes',
+            ],
+            completionEvidence: [
+              'Concrete references to original reproduction/code and the reviewed individual work item IDs',
+              'Independent review recorded before seeking code execution permission',
+            ],
+            outputs: [],
+            note: 'MCP provides this neutral template but does not inspect business semantics, perform an LLM call or decide which fix is correct.',
+          };
+          const gate: DelegatedPlanStep = {
+            id: 'devcontrol-bug-execution-admission',
+            type: 'agent_action',
+            action: 'confirm_approved_bug_repair_task_and_lease',
+            dependsOn: ['bug-impact-agent-review'],
+            requiredInputs: [
+              'DevControl Bug ID；SRC-8 步骤 1~5 已通过 bug-step-save 保存证据',
+              '已冻结的完整版本清单中至少一个独立 bugfix/repair 工作项和回归测试；通过 bug-task-link 关联 Bug；范围变化须版本变更评审',
+              'devcontrol claim 返回的有效租约和 execution-contract eligible=true',
+            ],
+            expectedOutputs: ['仅针对已批准 Bug 修复任务的可执行范围'],
+            completionEvidence: ['已审查的修复方案、任务审批状态、允许文件范围和执行 Gate'],
+            outputs: [],
+            note: '未经真因和对策审查、未领取已批准修复任务，不得执行 SRC-8 第六步的代码修改。',
+          };
+          src8Plan.steps.splice(index, 0, independentReview, gate);
+          implementation.dependsOn = [...new Set([...(implementation.dependsOn ?? []), gate.id])];
+        }
+      }
+
       if (options?.src8When) {
         const firstSrc8 = src8Plan.steps.find((step) => step.id.startsWith('src8-'));
         if (firstSrc8) {
@@ -280,6 +329,9 @@ export async function startBugfix(args: any, context?: ToolExecutionContext) {
         objective: `定位真因并修复 Bug：${errorMessage}`,
         globalRules: [
           '未完成 SRC-8 真因收敛前不得直接实施猜测性修复',
+          '若已在 DevControl 登记 Bug，则 SRC-8 每一步的分析、状态、证据通过 bug-step-save 写入本项目 SQLite；执行修复或回归测试前用 bug-task-link 关联已审批的具体任务。',
+          'SRC-8 步骤是分析记录，不等于八个可领取的开发任务；修改代码前必须领取经 DevControl 审批的叶子任务。',
+          '复审真因与修复影响的是宿主 Agent，MCP 只返回业务无关模板、保存证据和检查真实执行准入，不会自行补全业务任务或判定修复正确。',
           'Agent 必须使用宿主能力完成真实代码修改和测试执行',
           '首次执行前必须用完整 plan 建立 plan_heartbeat 检查点；每完成、跳过或阻断一步立即累计回写',
           '修复完成必须包含回归验证与防复发措施',
@@ -507,7 +559,8 @@ ${renderDelegatedPlanStateProtocol({
         });
         bugfixReport.metadata = {
           ...bugfixReport.metadata,
-          projectBug: { id: bug.id, reused: bug.reused, storage: "project-sqlite" },
+          projectBug: { id: bug.id, reused: bug.reused, storage: "project-sqlite",
+            nextAction: "Use DevControl bug-get and bug-step-save for SRC-8 evidence; link approved repair and regression-test tasks before implementation." },
         };
       } finally { ledger.close(); }
     }

@@ -6,6 +6,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, describe, test, expect } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { startBugfix } from '../start_bugfix.js';
 
 const tempDirs: string[] = [];
@@ -25,6 +26,27 @@ describe('start_bugfix 单元测试', () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/缺少必填参数|错误信息/i);
+  });
+
+  test('Git 项目的 Bug 入库并在 SRC-8 实现前要求 DevControl 执行准入', async () => {
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),'probe-bug-native-'));
+    tempDirs.push(root);
+    execFileSync('git',['init','-q'],{cwd:root});
+    const result=await startBugfix({error_message:'Events disappear after restarting Core',project_root:root});
+    expect(result.isError).toBe(false);
+    const value=(result as any).structuredContent;
+    expect(value.metadata.projectBug.storage).toBe('project-sqlite');
+    const steps=value.metadata.plan.steps;
+    const gate=steps.find((step:any)=>step.id==='devcontrol-bug-execution-admission');
+    const reviewer=steps.find((step:any)=>step.id==='bug-impact-agent-review');
+    expect(reviewer.action).toContain('independently_review_bug_root_cause');
+    expect(reviewer.dependsOn).toContain('src8-5');
+    expect(reviewer.requiredInputs.join(' ')).toContain('competing root-cause explanations');
+    expect(gate.dependsOn).toContain(reviewer.id);
+    expect(gate.requiredInputs.join(' ')).toContain('bug-step-save');
+    expect(gate.requiredInputs.join(' ')).toContain('已冻结的完整版本清单');
+    expect(steps.find((step:any)=>step.id==='src8-6').dependsOn).toContain(gate.id);
+    expect(fs.existsSync(path.join(root,'docs','specs'))).toBe(false);
   });
 
   test('description 可作为 error_message 别名', async () => {

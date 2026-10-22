@@ -6,14 +6,17 @@
  * DevControl reads those archives; this is NOT the cross-project Qdrant Memory
  * service and not a duplicate dc_work_items "memory" table.
  *
- * Previously written numbered Markdown archives are IMPORTED losslessly on
- * first read. They are left untouched for safe rollback; new sessions and
- * checkpoints do not create further numbered .md documents.
+ * Numbered Markdown archives are imported losslessly. While an already
+ * running older MCP process is still writing those files, subsequent reads
+ * reconcile newer append-only archives rather than treating the initial
+ * import as proof that the migration has finished.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { ensureDatabaseIgnored, resolveProjectDatabase } from '../../devcontrol/project-storage.js';
+import { metadata, parseCheckpointRecords, parseInitialInputRecords } from './markdown.js';
 
 interface StoreStatement {
   run(...args: Array<string | number>): unknown;
@@ -79,31 +82,70 @@ function withDatabase<T>(projectRoot: string, read: (db: StoreDatabase) => T): T
 }
 
 function migrateExistingMarkdown(projectRoot: string, db: StoreDatabase): void {
-  if (db.prepare("SELECT value FROM hs_meta WHERE key='legacy_import_done'").get()) return;
   const dir = path.join(projectRoot, 'docs', 'history-session');
-  db.exec("BEGIN IMMEDIATE");
+  if (!fs.existsSync(dir)) return;
+  // Do not trust a one-time 'legacy_import_done' flag. Another older MCP
+  // process may keep writing 2.md/3.md after the initial SQLite import.
+  // Compare content hashes, never overwrite a newer SQLite-only revision.
+  const files = fs.readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^[1-9]\d*\.md$/.test(entry.name));
+  if (!files.length) return;
+  db.exec('BEGIN IMMEDIATE');
   try {
-    if (!db.prepare("SELECT value FROM hs_meta WHERE key='legacy_import_done'").get() &&
-        fs.existsSync(dir)) {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (!entry.isFile() || !/^[1-9]\d*\.md$/.test(entry.name)) continue;
-        const number = Number(entry.name.slice(0, -3));
-        const filePath = path.join(dir, entry.name);
-        const content = fs.readFileSync(filePath, 'utf8');
-        if (content.trim()) {
-          db.prepare(
-            'INSERT OR IGNORE INTO hs_archive(number,content,updated_at) VALUES(?,?,?)',
-          ).run(number, content, fs.statSync(filePath).mtime.toISOString());
-        }
+    for (const entry of files) {
+      const number = Number(entry.name.slice(0, -3));
+      if (!Number.isSafeInteger(number)) continue;
+      const filePath = path.join(dir, entry.name);
+      const content = fs.readFileSync(filePath, 'utf8');
+      if (!content.trim()) continue;
+      const fileModified = fs.statSync(filePath).mtime;
+      const saved = db.prepare('SELECT content,updated_at FROM hs_archive WHERE number=?')
+        .get(number);
+      if (!saved) {
+        db.prepare(
+          'INSERT INTO hs_archive(number,content,updated_at) VALUES(?,?,?)',
+        ).run(number, content, fileModified.toISOString());
+        continue;
       }
+      if (String(saved.content) === content) continue;
+      const savedTimestamp = Date.parse(String(saved.updated_at));
+      if (Number.isFinite(savedTimestamp) && fileModified.getTime() <= savedTimestamp) {
+        continue; // SQLite has a newer, authoritative revision.
+      }
+      if (!preservesPriorHistory(String(saved.content), content)) {
+        // Fail closed on divergent writers. Keep BOTH originals untouched and
+        // save only digests for diagnostics; never overwrite session content.
+        const digest = (text: string) => createHash('sha256').update(text).digest('hex');
+        db.prepare(`INSERT INTO hs_meta(key,value) VALUES(?,?)
+          ON CONFLICT(key) DO UPDATE SET value=excluded.value`)
+          .run(`legacy_conflict_${number}`,
+            JSON.stringify({ sqlite: digest(String(saved.content)), file: digest(content) }));
+        continue;
+      }
+      db.prepare('UPDATE hs_archive SET content=?,updated_at=? WHERE number=?')
+        .run(content, fileModified.toISOString(), number);
+      db.prepare('DELETE FROM hs_meta WHERE key=?').run(`legacy_conflict_${number}`);
     }
     db.prepare("INSERT OR IGNORE INTO hs_meta(key,value) VALUES('legacy_import_done',?)")
       .run(new Date().toISOString());
-    db.exec("COMMIT");
+    db.exec('COMMIT');
   } catch (error) {
-    db.exec("ROLLBACK");
+    db.exec('ROLLBACK');
     throw error;
   }
+}
+
+/** A newer Markdown writer may append checkpoints or revise the first input.
+ * It may NOT silently discard any SQLite checkpoint or original input. */
+function preservesPriorHistory(previous: string, newer: string): boolean {
+  if (metadata(previous, 'Session key') !== metadata(newer, 'Session key') ||
+    metadata(previous, 'Created') !== metadata(newer, 'Created')) return false;
+  const covers = <T>(older: T[], incoming: T[]) => {
+    const signatures = new Set(incoming.map((item) => JSON.stringify(item)));
+    return older.every((item) => signatures.has(JSON.stringify(item)));
+  };
+  return covers(parseCheckpointRecords(previous), parseCheckpointRecords(newer)) &&
+    covers(parseInitialInputRecords(previous), parseInitialInputRecords(newer));
 }
 
 export function readSqliteHistoryDocuments(projectRoot: string): Array<{

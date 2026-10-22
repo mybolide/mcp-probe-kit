@@ -58,6 +58,18 @@ suite("DevControl dedicated MCP stdio", () => {
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_release")).toBe(true);
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_complete")).toBe(true);
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_board-data")).toBe(true);
+      for (const operation of ["feature-task-brief","feature-task-plan","feature-task-plans",
+        "feature-task-review","feature-task-stage","feature-task-propose","feature-task-approve"]) {
+        expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_"+operation)).toBe(true);
+      }
+      for(const operation of ["release-work-plan","release-work-review",
+        "release-work-stage","release-work-approve"]){
+        expect(results[1].result.tools.some((tool:any)=>tool.name==="devcontrol_"+operation)).toBe(true);
+      }
+      const propose = results[1].result.tools.find((tool: any) => tool.name === "devcontrol_feature-task-propose");
+      expect(propose.inputSchema.required).toEqual(["name","expectedFeatureRevision","plan","actor"]);
+      const approve = results[1].result.tools.find((tool: any) => tool.name === "devcontrol_feature-task-approve");
+      expect(approve.inputSchema.required).toEqual(["name","expectedHash"]);
       expect(results[2].result.structuredContent.nextTask.id).toBe("F1");
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

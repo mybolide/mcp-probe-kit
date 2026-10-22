@@ -297,9 +297,24 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
       ...layoutDecision,
       requiresSubspecDefinition: specLayout === 'parent-child' && subspecs.length === 0,
     });
-    const specOutputs = buildSpecOutputs(docsDir, featureName, specLayout, subspecs);
+    const resolvedProjectRoot = resolveWorkspaceRoot(projectRoot);
+    const layout = resolveProjectContextLayout(
+      resolvedProjectRoot,
+      parseLayoutArgsFromRecord({ docs_dir: docsDir })
+    );
+    const projectRootAbs = layout.projectRoot;
+    const hasProjectGit = fs.existsSync(path.join(projectRootAbs, ".git"));
+    const sqliteSupported = Number.parseInt(process.versions.node.split(".")[0] || "0", 10) >= 22;
+    if (storageMode === "sqlite" && (!hasProjectGit || !sqliteSupported)) {
+      throw new Error("SQLite Feature 模式要求一个已初始化 Git 的项目及 Node.js 22+");
+    }
+    // Project-native SQLite is the default. Explicit 'files' remains a
+    // compatibility mode, not a source of file-Spec instructions for SQLite.
+    const useProjectSqlite = storageMode !== "files" && hasProjectGit && sqliteSupported;
+    const specOutputs = useProjectSqlite ? [] :
+      buildSpecOutputs(docsDir, featureName, specLayout, subspecs);
     const canBuildEmbeddedSpecDraft = specLayout === 'flat' || subspecs.length > 0;
-    const embeddedSpecResult = canBuildEmbeddedSpecDraft
+    const embeddedSpecResult = canBuildEmbeddedSpecDraft && !useProjectSqlite
       ? await addFeature({
           feature_name: featureName,
           description,
@@ -309,7 +324,13 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
           ...(specLayout === 'parent-child' ? { subspecs } : {}),
         })
       : null;
-    const embeddedSpecDraft = embeddedSpecResult
+    const embeddedSpecDraft = useProjectSqlite && canBuildEmbeddedSpecDraft
+      ? {
+          templateProfile, specLayout, subspecs, specOutputs:[],
+          guidance:"仅使用 DevControl feature-save/feature-validate 保存和验证 SQLite 中的 requirements/design/tasks 三个章节；不得生成 Feature Spec 或任务 Markdown 文件。",
+          structuredContent:null,
+        }
+      : embeddedSpecResult
       ? {
           templateProfile,
           specLayout,
@@ -325,20 +346,6 @@ export async function startFeature(args: any, context?: ToolExecutionContext) {
 
     throwIfAborted(context?.signal, "start_feature 已取消");
     await reportToolProgress(context, 55, "start_feature: 刷新图谱并收敛需求范围");
-    const resolvedProjectRoot = resolveWorkspaceRoot(projectRoot);
-    const layout = resolveProjectContextLayout(
-      resolvedProjectRoot,
-      parseLayoutArgsFromRecord({ docs_dir: docsDir })
-    );
-    const projectRootAbs = layout.projectRoot;
-    const hasProjectGit = fs.existsSync(path.join(projectRootAbs, ".git"));
-    const sqliteSupported = Number.parseInt(process.versions.node.split(".")[0] || "0", 10) >= 22;
-    if (storageMode === "sqlite" && (!hasProjectGit || !sqliteSupported)) {
-      throw new Error("SQLite Feature 模式要求一个已初始化 Git 的项目及 Node.js 22+");
-    }
-    // Project-native SQLite by default. 'files' is a backward-compatible
-    // explicit escape hatch for older projects/hosts without Node 22.
-    const useProjectSqlite = storageMode !== "files" && hasProjectGit && sqliteSupported;
     const graphDocs = {
       latestMarkdownPath: layout.latestMarkdownPath,
       latestJsonPath: layout.latestJsonPath,
@@ -708,20 +715,118 @@ ${graphGuideSection}`;
           },
         ];
 
+    const taskPlanningSteps: DelegatedPlanStep[] = embeddedSpecDraft && useProjectSqlite
+      ? [
+          {
+            id: 'release-scope-collect', type: 'agent_action',
+            action: 'collect_full_version_scope_and_all_start_feature_specs',
+            dependsOn: ['write-spec'],
+            requiredInputs: ['Current release scope Git document and every Feature in that version',
+              'Existing verified work (retain, never duplicate)'],
+            expectedOutputs: ['Complete scope checklist of current version stages and all required Features'],
+            completionEvidence: ['Each stage has an explicit source and is either verified or awaiting individually tracked work'],
+            outputs: [],
+            note: 'Do not start implementation after planning a single Feature. List EVERY requirement of the current version before coding.',
+          },
+          {
+            id: 'release-work-split', type: 'agent_action',
+            action: 'ai_create_one_action_per_work_item',
+            dependsOn: ['release-scope-collect'],
+            requiredInputs: ['All version Feature requirements and designs, current Git project source and actual dependencies',
+              'Normal use paths, state transitions, failures, retries, permissions, integration boundaries and real acceptance'],
+            expectedOutputs: ['ReleaseWorkPlan {release,scopeSource,stages,workItems,rationale}',
+              'Each WorkItem is ONE independently claimable action with ownerRole, observable acceptance and dependencies; code tasks need bounded file paths; pure decisions use allowedPaths=[] and requiredGates=[sqlite_decision]'],
+            completionEvidence: ['Candidate roster covers every declared release requirement and stage, with separate tests, integration and release checks'],
+            outputs: [],
+            note: 'The host Agent, not MCP, reasons about the product. Decisions/Review and task evidence live in SQLite (decision-save/get), not new ADR/Spec Markdown; code artifacts still require Git commit and tests. Do not invent owners, dates or test results.',
+          },
+          {
+            id: 'release-work-agent-review', type: 'agent_action',
+            action: 'independently_critique_entire_release_roster_against_original_sources',
+            dependsOn: ['release-work-split'],
+            requiredInputs: [
+              'Re-read the ORIGINAL version scope, PRD, approved architecture and current code independently of the generated task list',
+              'Run DevControl release-work-review on the candidate once to obtain reviewSubjectHash; missing Agent review is an expected preflight issue',
+              'Review all six generic dimensions: scope_completeness, happy_path, failure_recovery, cross_component, security_privacy, test_release',
+              'Look for missing user actions, edge/error states, authorization, dependencies, integration tests and release evidence; actively revise the work items',
+            ],
+            expectedOutputs: [
+              'ReleaseWorkPlan.agentReview with method=independent-agent-pass, reviewer audit label, exact subjectHash, sourceRefs, reviewedStageIds and six checks',
+              'Each check contains a concrete reasoned conclusion and IDs of real independently claimable WorkItems',
+              'Outstanding business/design concerns recorded as reviewFindings, not silently called passed',
+            ],
+            completionEvidence: [
+              'A separately performed Agent review with links back to authoritative inputs, specific tasks and remaining blockers',
+              'After ANY edit to requirements/stages/work items, obtain a new reviewSubjectHash and repeat the independent review',
+            ],
+            outputs: [],
+            note: 'MCP is business-agnostic and does NOT conduct, fabricate or approve semantic analysis. Agent must do the independent review, preferably in a separate reviewer context. The checklist is evidence of a review, not proof of business correctness.',
+          },
+          {
+            id: 'release-work-stage', type: 'agent_action',
+            action: 'persist_version_wide_atomic_work_items_as_draft',
+            dependsOn: ['release-work-agent-review'],
+            requiredInputs: ['Whole-version ReleaseWorkPlan WITH current agentReview, planning actor and exact previous hash for revisions'],
+            expectedOutputs: ['DevControl release-work-stage SQLite proposal with every line visible, even if needs_revision'],
+            completionEvidence: ['Draft hash, incomplete stages and zero executable tasks created'],
+            outputs: [],
+            note: 'Stage a complete version, not only this Feature. Planning may be revised without editing local Spec/Task Markdown.',
+          },
+          {
+            id: 'release-work-review', type: 'agent_action',
+            action: 'run_business_neutral_devcontrol_structural_and_evidence_gates',
+            dependsOn: ['release-work-stage'],
+            requiredInputs: ['Complete release roster, every stage, feature and real work item'],
+            expectedOutputs: ['DevControl release-work-review passed=true after checking source/review hash, stages, declared requirement IDs, dependency closure, reviewer artifact and unresolved decisions'],
+            completionEvidence: ['Machine-verifiable checks pass; Agent remains responsible for semantic accuracy and source truthfulness'],
+            outputs: [],
+          },
+          {
+            id: 'release-work-owner-approval', type: 'agent_action',
+            action: 'wait_for_full_version_team_task_review_and_owner_approval',
+            dependsOn: ['release-work-review'],
+            requiredInputs: ['Human review of ALL planned version work items and exact pending plan hash'],
+            expectedOutputs: ['DevControl release-work-approve frozen complete version roster'],
+            completionEvidence: ['Approved release/revision/hash; each executable task is a separate single-action Work Item'],
+            outputs: [],
+            note: 'The planning Agent NEVER approves or runs version code work on its own.',
+          },
+        ] : [];
+
+    const executionAdmissionSteps: DelegatedPlanStep[] = embeddedSpecDraft && useProjectSqlite
+      ? [{
+          id: 'devcontrol-execution-admission',
+          type: 'agent_action',
+          action: 'obtain_approved_leaf_execution_contract',
+          dependsOn: ['release-work-owner-approval'],
+          requiredInputs: [
+            '已由团队和 Owner 一次性审核并冻结的完整版本 WorkItem 清单（release-work-review / release-work-stage / release-work-approve）',
+            'DevControl next/claim 返回的具体叶子任务 ID 与租约令牌',
+            'DevControl execution-contract 返回 eligible=true，文件范围、验收用例和 Gate 均已冻结',
+          ],
+          expectedOutputs: ['单一已批准叶任务的冻结执行契约和有效租约'],
+          completionEvidence: ['release plan revision/hash、任务 ID、契约准入结果；租约令牌不得写入日志或 Spec'],
+          outputs: [],
+          note: '仅校验 Feature Spec 不能授权写代码。纯决策按 decision-save/get → complete/report/verify 落 SQLite，无须写本地 ADR Markdown；代码任务仍需真实测试/DevControl check/正常 Git 提交。整版审批和单项领取必须由 DevControl 执行。',
+        }]
+      : [];
+
     const deliverySteps: DelegatedPlanStep[] = embeddedSpecDraft
       ? [
           {
             id: 'implement',
             type: 'agent_action',
-            action: 'implement_feature_from_tasks',
-            dependsOn: ['check-spec', 'estimate'],
+            action: useProjectSqlite ? 'implement_only_claimed_devcontrol_leaf' : 'implement_feature_from_tasks',
+            dependsOn: useProjectSqlite ? ['devcontrol-execution-admission'] : ['check-spec', 'estimate'],
             requiredInputs: [useProjectSqlite
-              ? `DevControl SQLite 中 ${featureName} 的已校验任务规格`
+              ? `DevControl 当前已批准并领取的单一叶子任务执行契约（关联 ${featureName}）`
               : `${docsDir}/specs/${featureName}/tasks.md`],
-            expectedOutputs: ['完成任务清单对应的生产代码与必要迁移'],
+            expectedOutputs: [useProjectSqlite ? '仅实现当前叶子任务批准的代码与测试' : '完成任务清单对应的生产代码与必要迁移'],
             completionEvidence: ['实际变更文件与完成的任务条目', '关键行为与规格一致'],
             outputs: [],
-            note: 'Agent 使用宿主文件与代码能力实施；不得把规划结果当成已完成实现',
+            note: useProjectSqlite
+              ? '不得直接实现整个 Feature、变更批准的设计或超出 task allowedChangedFiles；需要扩展则提出新规划或阻断。'
+              : 'Agent 使用宿主文件与代码能力实施；不得把规划结果当成已完成实现',
           },
           {
             id: 'test',
@@ -764,7 +869,8 @@ ${graphGuideSection}`;
       globalRules: [
         'Agent 必须按步骤顺序调用 MCP，并使用宿主能力完成真实文件与代码操作',
         '首次执行前必须用完整 plan 建立 plan_heartbeat 检查点；每完成、跳过或阻断一步立即累计回写',
-        useProjectSqlite ? 'DevControl feature-validate 未通过前不得进入实现阶段' : 'check_spec 未通过前不得进入实现阶段',
+        useProjectSqlite ? 'DevControl 所属版本所有 Feature 规格和结构校验通过且整版冻结之前不得进入实现阶段；单项 Feature 规格通过不是授权。' : 'check_spec 未通过前不得进入实现阶段',
+        ...(useProjectSqlite ? ['所有生产代码修改必须先获得 DevControl 已审核冻结的整版工作清单中的单一 WorkItem claim 和 eligible 执行契约；Feature 规格通过不等于开发授权。'] : []),
         '不得把 delegated plan 的输出误认为代码已经实施',
         useProjectSqlite
           ? '项目上下文来自 History Session（非 Qdrant 全局记忆），必须先恢复会话再查历史'
@@ -773,7 +879,7 @@ ${graphGuideSection}`;
       completionCriteria: [
         useProjectSqlite ? '功能规格直接记录在项目 SQLite 并通过 feature-validate' : '规格文档已生成并通过 check_spec',
         '工作量与主要风险已完成评估',
-        useProjectSqlite ? 'Agent 已按 SQLite 已校验的 tasks 完成实现、测试与代码审查' : 'Agent 已按 tasks.md 完成实现、测试与代码审查',
+        useProjectSqlite ? 'Agent 已将整版需求拆成一行一件事的 WorkItem，经团队整版评审与 Owner 批准后才按领取的单任务执行和测试' : 'Agent 已按 tasks.md 完成实现、测试与代码审查',
         '所有步骤状态与证据已通过 plan_heartbeat 写入检查点',
       ],
       declaredScope: {
@@ -819,6 +925,8 @@ ${graphGuideSection}`;
         },
         ...subspecDecompositionSteps,
         ...specPlanSteps,
+        ...taskPlanningSteps,
+        ...executionAdmissionSteps,
         ...deliverySteps,
         ...(!useProjectSqlite ? memoryPreparationSteps : []),
       ] as DelegatedPlanStep[],
@@ -834,7 +942,7 @@ ${graphGuideSection}`;
 
 当前尚未提供子规格定义。先完成 \`decompose-spec\`，再按计划重新调用 \`start_feature\` 并传入 SubspecDefinition[]。`;
     if (useProjectSqlite) {
-      specDraftSection = "本项目 SQLite 已保存功能、计划和规格草稿；调用 DevControl feature-save 完善 requirements/design/tasks，再调用 feature-validate 检查。默认不生成流程 Markdown；可从项目看板导出。";
+      specDraftSection = "MCP 仅提供业务无关的规划流程，绝不自动设计或拆解业务。宿主 Agent 必须自主阅读当前版本全部 Feature/需求/代码，将工作拆为一行一件事的 ReleaseWorkPlan；然后独立复审六类业务场景并提交绑定清单哈希的 agentReview。DevControl release-work-stage 保存草案、release-work-review 只做结构与证据引用检查，整版经显式 release-work-approve 冻结后才能 claim 单条 WorkItem。Agent 不得将机器校验通过等同业务完整。无需任务 Markdown。";
     }
     const guide = `${header}${memoryGuideSection}
 # 新功能开发闭环
@@ -894,7 +1002,7 @@ ${graphGuideSection}`;
         useProjectSqlite ? '执行 DevControl feature-save，完善项目 SQLite 的功能规格' : '使用 structuredContent.metadata.specDraft 写入并补全功能规格文档',
         useProjectSqlite ? '执行 DevControl feature-validate，必须通过才允许实现' : '调用 check_spec 校验规格完整性，未通过先补全再重跑（通过前不要写实现代码）',
         '调用 estimate 工具进行工作量估算',
-        useProjectSqlite ? '按通过校验的 SQLite tasks 开始开发' : '按照 tasks.md 开始开发',
+        useProjectSqlite ? '等待 DevControl 批准完整 release plan，然后领取一个叶任务、核验 execution-contract，再按该任务范围开发' : '按照 tasks.md 开始开发',
         '每完成、跳过或阻断一个 Plan 步骤，立即调用 plan_heartbeat 累计回写状态和证据',
         '实现完成后执行受影响测试、完整回归和 code_review',
         '全部步骤与证据写入检查点后调用 converge',

@@ -15,6 +15,9 @@ import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "./release-plan.js";
 import { localDeveloper } from "./local-developer.js";
+import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
+import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
+import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -52,6 +55,7 @@ function actorInfo(projectRoot: string): { creator: string; device: string } {
     });
     creator = result.status === 0 ? (result.stdout || "").trim() : "";
   }
+
   return { creator: creator.slice(0, 120) || "local-developer",
     device: (process.env.DEVCONTROL_DEVICE_NAME?.trim() || os.hostname()).slice(0, 120) };
 }
@@ -85,7 +89,7 @@ function undocumentedMarkdown(additions: string[], allowedPaths: string[]): stri
 
 const idPattern = /^[A-Z][A-Z0-9-]{1,39}$/;
 const allowedGates = new Set([
-  "docs", "devcontrol_tests", "go_contract", "go_http_integration",
+  "docs", "sqlite_decision", "devcontrol_tests", "go_contract", "go_http_integration",
   "flutter_test", "ios_device_e2e", "v01_release_e2e",
 ]);
 const utc = () => new Date().toISOString();
@@ -132,8 +136,11 @@ function changedFiles(root: string, base: string): string[] {
   return [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
 }
 
-function safePaths(paths: string[]): string[] {
-  if (!Array.isArray(paths) || !paths.length) fail("SCOPE_REQUIRED", "Task must declare at least one allowed path");
+function safePaths(paths: string[], sqliteDecision = false): string[] {
+  if (!Array.isArray(paths) || (!paths.length && !sqliteDecision))
+    fail("SCOPE_REQUIRED", "Only SQLite-only decision tasks may omit Git file scope");
+  if (sqliteDecision && paths.length)
+    fail("INVALID_SCOPE", "SQLite-only decision tasks may not modify Git files");
   for (const item of paths) {
     if (typeof item !== "string" || !item || item.startsWith("/") ||
         item.split("/").includes("..") || item.includes("\\")) {
@@ -185,6 +192,7 @@ export interface FeatureProposal {
 export class ProjectTaskLedger {
   private readonly db: SqlDatabase;
   private transactionDepth = 0;
+  private releaseWorkApprovalInProgress = false;
   readonly root: string;
   readonly databasePath: string;
 
@@ -220,18 +228,19 @@ export class ProjectTaskLedger {
   close(): void { this.db.close(); }
 
   hasReviewedProductPlan(): boolean {
-    const releases = [...new Set(this.db.prepare(
-      "SELECT release FROM dc_tasks WHERE track='product' AND status!='cancelled'",
-    ).all().map(row=>String(row.release)))];
-    return releases.length > 0 && releases.every(release=>{
-      const item = this.releasePlan(release);
-      return item.revision > 0 && item.sourceDrift === false;
-    });
+    const tasks=this.db.prepare(
+      "SELECT * FROM dc_tasks WHERE track='product' AND status!='cancelled'",
+    ).all();
+    const leaves=tasks.filter(task=>!this.db.prepare(
+      "SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1",
+    ).get(task.id));
+    return leaves.length>0 && leaves.every(task=>this.isApprovedForExecution(task));
   }
 
   private planSourceUnchanged(plan: ReleasePlanProposal & { sourceHash?: string }): boolean {
     if (!plan.sourceHash) return false;
     try {
+      if (plan.sourceFeature && !this.featureBindingMatches(plan.sourceFeature)) return false;
       const file = path.resolve(this.root, plan.scopeSource);
       const realRoot = fs.realpathSync(this.root);
       const realFile = fs.realpathSync(file);
@@ -316,6 +325,19 @@ export class ProjectTaskLedger {
         approved_at TEXT NOT NULL,
         PRIMARY KEY(release,revision)
       );
+      CREATE TABLE IF NOT EXISTS dc_release_work_proposals (
+        release TEXT PRIMARY KEY, hash TEXT NOT NULL, snapshot_json TEXT NOT NULL,
+        proposed_by TEXT NOT NULL, proposed_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_release_work_plans (
+        release TEXT PRIMARY KEY, revision INTEGER NOT NULL, hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL, approved_by TEXT NOT NULL, approved_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_release_work_history (
+        release TEXT NOT NULL, revision INTEGER NOT NULL, hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL, approved_by TEXT NOT NULL, approved_at TEXT NOT NULL,
+        PRIMARY KEY(release,revision)
+      );
       CREATE TABLE IF NOT EXISTS dc_task_specs (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
         requirement_ids_json TEXT NOT NULL,
@@ -369,6 +391,21 @@ export class ProjectTaskLedger {
         created_at TEXT NOT NULL,
         PRIMARY KEY(task_id, revision)
       );
+      CREATE TABLE IF NOT EXISTS dc_task_decisions (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        revision INTEGER NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('proposed','decided')),
+        question TEXT NOT NULL, decision TEXT NOT NULL,
+        rationale TEXT NOT NULL, alternatives TEXT NOT NULL,
+        consequences TEXT NOT NULL, verification_plan TEXT NOT NULL,
+        actor TEXT NOT NULL, git_head TEXT NOT NULL,
+        lease_token_hash TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_decision_revisions (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        revision INTEGER NOT NULL, snapshot_json TEXT NOT NULL,
+        created_at TEXT NOT NULL, PRIMARY KEY(task_id,revision)
+      );
       CREATE TABLE IF NOT EXISTS dc_features (
         name TEXT PRIMARY KEY,
         description TEXT NOT NULL,
@@ -388,6 +425,24 @@ export class ProjectTaskLedger {
         snapshot_json TEXT NOT NULL,
         created_at TEXT NOT NULL,
         PRIMARY KEY(name,revision)
+      );
+      CREATE TABLE IF NOT EXISTS dc_feature_task_proposals (
+        feature_name TEXT PRIMARY KEY REFERENCES dc_features(name),
+        revision INTEGER NOT NULL, hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL, proposed_by TEXT NOT NULL,
+        proposed_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_feature_task_plans (
+        feature_name TEXT PRIMARY KEY REFERENCES dc_features(name),
+        revision INTEGER NOT NULL, hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL, approved_by TEXT NOT NULL,
+        approved_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_feature_task_plan_revisions (
+        feature_name TEXT NOT NULL REFERENCES dc_features(name),
+        revision INTEGER NOT NULL, hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL, approved_by TEXT NOT NULL,
+        approved_at TEXT NOT NULL, PRIMARY KEY(feature_name,revision)
       );
       CREATE TABLE IF NOT EXISTS dc_work_items (
         id TEXT PRIMARY KEY,
@@ -411,6 +466,32 @@ export class ProjectTaskLedger {
         event TEXT NOT NULL,
         details_json TEXT NOT NULL,
         created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_bug_steps (
+        item_id TEXT NOT NULL REFERENCES dc_work_items(id),
+        step INTEGER NOT NULL CHECK(step BETWEEN 1 AND 8),
+        status TEXT NOT NULL CHECK(status IN ('pending','in_progress','blocked','completed')),
+        summary TEXT NOT NULL,
+        evidence_json TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        updated_by TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(item_id,step)
+      );
+      CREATE TABLE IF NOT EXISTS dc_bug_step_revisions (
+        item_id TEXT NOT NULL,
+        step INTEGER NOT NULL,
+        revision INTEGER NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(item_id,step,revision),
+        FOREIGN KEY(item_id,step) REFERENCES dc_bug_steps(item_id,step)
+      );
+      CREATE TABLE IF NOT EXISTS dc_bug_task_links (
+        item_id TEXT NOT NULL REFERENCES dc_work_items(id),
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        role TEXT NOT NULL CHECK(role IN ('repair','test')),
+        PRIMARY KEY(item_id,task_id,role)
       );
     `);
     // Keep existing assignment rows intact when upgrading a project database.
@@ -486,12 +567,88 @@ export class ProjectTaskLedger {
     return row!;
   }
 
+  /** Persist an engineering decision without generating any ADR/Spec Markdown.
+   * This is NOT G2 acceptance: proposed and decided remain separate from the
+   * real-world product verification and formal approval process.
+   */
+  recordDecision(id:string,token:string,input:{
+    question:string;decision:string;rationale:string;alternatives:string;
+    consequences:string;verificationPlan:string;status:"proposed"|"decided";
+    expectedRevision?:number;
+  }):Row {
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(id,token);
+      const task=this.requireTask(id);
+      const contract=this.executionContract(id);
+      if(task.status!=="in_progress"||contract.profile!=="atomic-work-item"||
+        (contract.spec as {type?:string}|null)?.type!=="decision"||
+        !contract.eligible)
+        fail("DECISION_TASK_REQUIRED","An approved, claimed frozen decision work item is required");
+      if(git(this.root,["status","--porcelain"])||
+        git(this.root,["rev-parse","HEAD"])!==lease.base_head)
+        fail("GIT_CHANGED","SQLite-only decisions cannot carry uncommitted or committed Git changes");
+      if(!["proposed","decided"].includes(input?.status))
+        fail("INVALID_DECISION","Use proposed or decided; neither implies G2 acceptance");
+      for(const field of ["question","decision","rationale","alternatives",
+        "consequences","verificationPlan"] as const){
+        const value=input?.[field];
+        if(typeof value!=="string"||value.trim().length<12||value.length>12000)
+          fail("INVALID_DECISION",field+" needs a substantial, bounded explanation");
+      }
+      const previous=this.db.prepare("SELECT revision FROM dc_task_decisions WHERE task_id=?").get(id);
+      const revision=Number(previous?.revision??0)+1;
+      if(input.expectedRevision!==undefined&&input.expectedRevision!==revision-1)
+        fail("STALE_DECISION","Use the current decision revision before editing");
+      const tokenHash=createHash("sha256").update(token).digest("hex");
+      const record={taskId:id,revision,status:input.status,
+        question:input.question.trim(),decision:input.decision.trim(),
+        rationale:input.rationale.trim(),alternatives:input.alternatives.trim(),
+        consequences:input.consequences.trim(),verificationPlan:input.verificationPlan.trim(),
+        actor:lease.agent,gitHead:lease.base_head,updatedAt:utc()};
+      this.db.prepare(`INSERT INTO dc_task_decisions
+        (task_id,revision,status,question,decision,rationale,alternatives,consequences,
+          verification_plan,actor,git_head,lease_token_hash,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(task_id) DO UPDATE SET revision=excluded.revision,status=excluded.status,
+          question=excluded.question,decision=excluded.decision,rationale=excluded.rationale,
+          alternatives=excluded.alternatives,consequences=excluded.consequences,
+          verification_plan=excluded.verification_plan,actor=excluded.actor,
+          git_head=excluded.git_head,lease_token_hash=excluded.lease_token_hash,
+          updated_at=excluded.updated_at`).run(
+          id,revision,record.status,record.question,record.decision,record.rationale,
+          record.alternatives,record.consequences,record.verificationPlan,
+          record.actor,record.gitHead,tokenHash,record.updatedAt);
+      this.db.prepare("INSERT INTO dc_task_decision_revisions VALUES(?,?,?,?)")
+        .run(id,revision,JSON.stringify(record),record.updatedAt);
+      this.audit(id,"sqlite_decision_saved",lease.agent,{
+        revision,status:record.status,
+        sha256:createHash("sha256").update(JSON.stringify(record)).digest("hex"),
+      });
+      return record;
+    });
+  }
+
+  getDecision(id:string):Row {
+    this.requireTask(id);
+    const latest=this.db.prepare("SELECT * FROM dc_task_decisions WHERE task_id=?").get(id);
+    return {taskId:id,decision:latest?{
+      revision:latest.revision,status:latest.status,question:latest.question,
+      decision:latest.decision,rationale:latest.rationale,alternatives:latest.alternatives,
+      consequences:latest.consequences,verificationPlan:latest.verification_plan,
+      actor:latest.actor,gitHead:latest.git_head,updatedAt:latest.updated_at,
+    }:null,history:this.db.prepare(
+      "SELECT revision,snapshot_json,created_at FROM dc_task_decision_revisions WHERE task_id=? ORDER BY revision"
+    ).all(id).map(row=>({...row,snapshot:JSON.parse(row.snapshot_json),snapshot_json:undefined}))};
+  }
+
   checkStaged(): Row {
     const lease = this.db.prepare("SELECT * FROM dc_leases WHERE singleton=1").get();
     if (!lease || lease.expires_at <= Date.now()) {
       fail("LEASE_REQUIRED", "No active approved task lease; refusing Git commit");
     }
     const task = this.requireTask(lease.task_id);
+    if((task.required_gates as string).includes('"sqlite_decision"'))
+      return {passed:false,taskId:task.id,reason:
+        "SQLite-only decisions do not create Git commits; use decision-save, complete, report and verify"};
     if (task.status !== "in_progress" && task.status !== "in_review") {
       fail("TASK_NOT_ACTIVE", "Only active work may be committed");
     }
@@ -564,6 +721,9 @@ export class ProjectTaskLedger {
 
   /** Select an actual project release, not a hardcoded name from the pilot project. */
   primaryRelease(): string {
+    const roster=this.db.prepare("SELECT release FROM dc_release_work_proposals ORDER BY proposed_at DESC LIMIT 1").get()
+      ?? this.db.prepare("SELECT release FROM dc_release_work_plans ORDER BY approved_at DESC LIMIT 1").get();
+    if(roster)return String(roster.release);
     const proposal=this.db.prepare(
       "SELECT release FROM dc_release_proposals ORDER BY proposed_at DESC LIMIT 1",
     ).get();
@@ -580,6 +740,226 @@ export class ProjectTaskLedger {
 
   /** The effective Git identity of THIS checkout now, never historical authors. */
   localDeveloper(): Row { return localDeveloper(this.root); }
+
+  releaseWorkPlan(release: string): Row {
+    const pending=this.db.prepare("SELECT * FROM dc_release_work_proposals WHERE release=?").get(release);
+    const frozen=this.db.prepare("SELECT * FROM dc_release_work_plans WHERE release=?").get(release);
+    const proposal=pending?JSON.parse(pending.snapshot_json):null;
+    const approved=frozen?JSON.parse(frozen.snapshot_json):null;
+    // A persisted draft may have been created before the current review
+    // policy existed. Re-check it live rather than trusting stale 'passed'.
+    const liveReview=proposal?.plan?this.reviewReleaseWork(proposal.plan):null;
+    if(proposal&&liveReview)proposal.review=liveReview;
+    return {
+      release, status:pending?(liveReview?.passed?"review_pending":"needs_revision"):
+        frozen?"frozen":"missing",
+      proposal, proposalHash:pending?.hash??null, frozen:approved,
+      frozenHash:frozen?.hash??null, revision:frozen?.revision??0,
+      issues:liveReview?.issues??[], approvedBy:frozen?.approved_by??null,
+    };
+  }
+
+  reviewReleaseWork(input: ReleaseWorkPlan): Row {
+    const issues:string[]=[];
+    if(!input||!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,39}$/.test(input.release??"")) {
+      return {passed:false,issues:["Invalid release version"],stageCount:0,workItemCount:0};
+    }
+    const scope=input.scopeSource;
+    let expected:string[]=[];
+    let sourceHash="";
+    if(typeof scope!=="string"||!/^docs\/[a-zA-Z0-9/._-]+\.md$/.test(scope)||
+      scope.split("/").includes("..")) issues.push("Release needs a safe canonical Git scope document");
+    else try {
+      const real=fs.realpathSync(path.resolve(this.root,scope));
+      if(!real.startsWith(fs.realpathSync(this.root)+path.sep)) throw new Error("outside project");
+      const body=fs.readFileSync(real,"utf8");
+      expected=scopeStages(body);
+      sourceHash=createHash("sha256").update(body).digest("hex");
+      if(!run(this.root,"git",["ls-files","--error-unmatch","--",scope],12_000).passed ||
+        !run(this.root,"git",["diff","--quiet","HEAD","--",scope],12_000).passed)
+        issues.push("Release scope source must be committed and unchanged");
+      if(!expected.length) issues.push("No milestone/stage identifiers found in release scope");
+    } catch { issues.push("Release scope document missing or outside Git project"); }
+    const stages=Array.isArray(input.stages)?input.stages:[];
+    const ids=stages.map(s=>s.id);
+    if(new Set(ids).size!==ids.length) issues.push("Duplicate release stages");
+    for(const id of expected) if(!ids.includes(id)) issues.push("Missing version stage "+id);
+    for(const id of ids) if(!expected.includes(id)) issues.push("Unknown version stage "+id);
+    const usedFeatures=new Set<string>(),completeFeatures:string[]=[];
+    const workItems=Array.isArray(input.workItems)?input.workItems:[];
+    const existingIds=new Set<string>(this.db.prepare(
+      "SELECT id FROM dc_tasks WHERE status='verified'"
+    ).all().map(row=>String(row.id)));
+    issues.push(...reviewAtomicWorkItems(workItems,ids,existingIds));
+    // The host Agent is responsible for semantic judgement. DevControl only
+    // verifies a separate review artifact tied to the exact roster snapshot.
+    issues.push(...reviewAgentReview(input));
+    const declaredRequirements=input.requiredRequirementIds??[];
+    if(stages.some(s=>(s.features??[]).length>0)&&!declaredRequirements.length)
+      issues.push("Whole-version FR/NFR baseline is missing: requiredRequirementIds");
+    if(new Set(declaredRequirements).size!==declaredRequirements.length)
+      issues.push("Duplicate requirement ID in whole-version baseline");
+    const covered=new Set(workItems.flatMap(item=>item.requirementIds??[]));
+    for(const req of declaredRequirements)if(!covered.has(req))
+      issues.push("Whole-version requirement "+req+" has no independent work item");
+    if(declaredRequirements.length) {
+      const source=input.requirementsSource??"";
+      if(!/^docs\/[a-zA-Z0-9/._-]+\.md$/.test(source)||source.includes(".."))
+        issues.push("A safe Git PRD requirementsSource is required");
+      else try {
+        const body=fs.readFileSync(path.resolve(this.root,source),"utf8");
+        for(const req of declaredRequirements)if(!body.includes("| "+req+" |"))
+          issues.push("Requirement "+req+" is not in Git PRD source");
+      }catch{issues.push("Requirements source cannot be read");}
+    }
+    const findings=input.reviewFindings??[];
+    if(!Array.isArray(findings)||new Set(findings.map(f=>f.id)).size!==findings.length)
+      issues.push("Version review findings must have unique IDs");
+    else for(const finding of findings) {
+      if(!finding.id?.trim()||!finding.title?.trim()||!finding.detail?.trim()||
+        !["blocker","warning"].includes(finding.severity)||
+        !["open","resolved"].includes(finding.status))
+        issues.push("Invalid version review finding");
+      else {
+        // Engineering design approval and real-world verification are distinct.
+        // A pending implementation is work *after* plan approval, not a reason
+        // to deadlock the entire version before any task can be claimed.
+        const decided=finding.decisionStatus==="decided"&&
+          typeof finding.decision==="string"&&finding.decision.trim().length>=25&&
+          typeof finding.nextAction==="string"&&finding.nextAction.trim().length>=20;
+        const proof=(finding.verificationEvidenceRefs??[]).filter(
+          ref=>typeof ref==="string"&&ref.trim().length>=8);
+        if(finding.decisionStatus&&
+          !["decided","pending"].includes(finding.decisionStatus))
+          issues.push("Invalid engineering decision state "+finding.id);
+        if(finding.verificationStatus&&
+          !["pending","passed","not_required"].includes(finding.verificationStatus))
+          issues.push("Invalid verification state "+finding.id);
+        if(finding.verificationStatus==="passed"&&
+          (!proof.length||finding.status!=="resolved"))
+          issues.push("Verification cannot pass without evidence and resolution: "+finding.id);
+        if(finding.status==="resolved"&&finding.verificationStatus==="pending")
+          issues.push("Unverified product outcome cannot be closed: "+finding.id);
+        if(finding.severity==="blocker"&&finding.status==="open"&&
+          !(decided&&finding.verificationStatus==="pending"&&
+            Array.isArray(finding.affectedIds)&&finding.affectedIds.length>0&&
+            finding.affectedIds.every((id:string)=>
+              workItems.some(item=>item.id===id))))
+          issues.push("Version review blocker "+finding.id+": "+finding.title);
+      }
+    }
+    for(const stage of stages) {
+      const tasks=workItems.filter(item=>item.stageId===stage.id);
+      const verified=stage.verifiedTaskIds??[];
+      if(!tasks.length&&!verified.length)issues.push(stage.id+": no independent work item or verified deliverable");
+      for(const id of verified) {
+        const record=this.db.prepare("SELECT status,release FROM dc_tasks WHERE id=?").get(id);
+        if(record?.status!=="verified"||record?.release!==input.release)
+          issues.push(stage.id+": "+id+" is not a verified historical task of this version");
+      }
+      for(const name of stage.features??[]) {
+        if(usedFeatures.has(name))issues.push("Feature appears in more than one stage: "+name);
+        usedFeatures.add(name);
+        try{
+          const brief=this.featureTaskBrief(name);
+          if(brief.feature.status!=="specified")
+            issues.push(stage.id+": "+name+" requirements/design are still draft");
+          const linked=tasks.filter(item=>item.featureName===name);
+          if(!linked.length)issues.push(stage.id+": Feature "+name+" has no independent work items");
+          for(const req of brief.requirementIds as string[]) {
+            if(!linked.some(item=>item.requirementIds?.includes(req)))
+              issues.push(stage.id+": "+name+" requirement "+req+" has no task");
+          }
+          completeFeatures.push(name);
+        }catch{issues.push(stage.id+": unknown Feature "+name);}
+      }
+      for(const item of tasks)if(item.featureName&&!(stage.features??[]).includes(item.featureName))
+        issues.push(item.id+": Feature "+item.featureName+" not assigned to stage "+stage.id);
+    }
+    if(typeof input.rationale!=="string"||input.rationale.trim().length<25)
+      issues.push("Summarize complete-version coverage and exclusions");
+    return {passed:issues.length===0,issues,release:input.release,
+      expectedStages:expected,stageCount:stages.length,plannedFeatures:completeFeatures,
+      workItemCount:workItems.length,sourceHash,
+      reviewSubjectHash:releaseReviewSubjectHash(input)};
+  }
+
+  stageReleaseWork(input: ReleaseWorkPlan, actor:string, expectedPreviousHash?:string): Row {
+    if(!actor?.trim())fail("ACTOR_REQUIRED","Planning agent identity required");
+    const review=this.reviewReleaseWork(input);
+    const raw=JSON.stringify({plan:input,review});
+    if(raw.length>3_000_000)fail("PLAN_TOO_LARGE","Release work roster exceeds limit");
+    const hash=createHash("sha256").update(raw).digest("hex");
+    return this.inTransaction(()=>{
+      const pending=this.db.prepare("SELECT hash FROM dc_release_work_proposals WHERE release=?").get(input.release);
+      if(pending?.hash!==hash && pending && pending.hash!==expectedPreviousHash)
+        fail("PROPOSAL_PENDING","Use exact previous hash to revise the version work roster");
+      if(!pending&&expectedPreviousHash)fail("STALE_DRAFT","Previous release proposal not found");
+      this.db.prepare(`INSERT INTO dc_release_work_proposals
+        (release,hash,snapshot_json,proposed_by,proposed_at) VALUES(?,?,?,?,?)
+        ON CONFLICT(release) DO UPDATE SET hash=excluded.hash,snapshot_json=excluded.snapshot_json,
+        proposed_by=excluded.proposed_by,proposed_at=excluded.proposed_at`)
+        .run(input.release,hash,raw,actor.trim(),utc());
+      this.audit(null,"release_work_staged",actor,{release:input.release,hash,
+        plannedFeatures:review.plannedFeatures,issues:review.issues.length});
+      return {release:input.release,hash,status:review.passed?"review_pending":"needs_revision",
+        review,executableTasksCreated:0};
+    });
+  }
+
+  approveReleaseWork(release:string, expectedHash:string):Row {
+    if(!/^[a-f0-9]{64}$/.test(expectedHash))
+      fail("PLAN_APPROVAL_REQUIRED","Exact whole-release proposal hash required");
+    return this.inTransaction(()=>{
+      const row=this.db.prepare("SELECT * FROM dc_release_work_proposals WHERE release=?").get(release);
+      if(!row||row.hash!==expectedHash)fail("PLAN_REVIEW_MISMATCH","Version proposal changed");
+      if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
+        fail("ACTIVE_TASK","Wait until the active task is reviewed");
+      const {plan,review:original}=JSON.parse(row.snapshot_json) as {plan:ReleaseWorkPlan;review:Row};
+      const review=this.reviewReleaseWork(plan);
+      if(!review.passed||review.sourceHash!==original.sourceHash)
+        fail("INCOMPLETE_RELEASE_WORK",review.issues.join("; ")||"Release source changed");
+      if(this.db.prepare("SELECT release FROM dc_release_work_plans WHERE release=?").get(release))
+        fail("RELEASE_CHANGE_REVIEW_REQUIRED","Frozen release amendments need a separate revision review");
+      const approver=String(this.localDeveloper().name||this.localDeveloper().device||"local-computer");
+      // Every record below is one independent task row. Feature Specs are source
+      // references, not another layer of multi-step executable tasks.
+      const added:string[]=[];
+      for(const item of plan.workItems) {
+        this.create({id:item.id,title:item.title,release,track:"product",
+          dependsOn:[],allowedPaths:item.allowedPaths,requiredGates:item.requiredGates,
+          priority:item.priority,planId:"release-work:"+release,
+          specId:item.featureName?"feature:"+item.featureName:"#release-work:"+release},approver);
+        this.db.prepare("UPDATE dc_tasks SET status='ready',approved_by=?,updated_at=? WHERE id=?")
+          .run(approver,utc(),item.id);
+        this.db.prepare("UPDATE dc_task_assignments SET owner=?,assigned_by=?,decision_ref=?,identity_source=? WHERE task_id=?")
+          .run(item.owner??"",approver,"release-work:"+row.hash,"release-planning",item.id);
+        this.db.prepare(`INSERT INTO dc_task_specs
+          (task_id,requirement_ids_json,acceptance,design_ref,positive_tests_json,
+           negative_cases_json,out_of_scope_json,deliverables_json,estimated_hours,plan_revision)
+           VALUES(?,?,?,?,?,?,?,?,?,?)`).run(item.id,
+            JSON.stringify(item.requirementIds??[]),item.acceptance,
+            item.featureName?"feature:"+item.featureName+"#design":"release:"+release,
+            "[]","[]","[]",JSON.stringify([item.title]),item.estimatedHours??null,1);
+        added.push(item.id);
+      }
+      for(const item of plan.workItems)for(const dep of item.dependsOn??[]) {
+        this.db.prepare("INSERT INTO dc_dependencies(task_id,depends_on) VALUES(?,?)").run(item.id,dep);
+      }
+      const snapshot=JSON.stringify({plan,sourceHash:review.sourceHash,
+        features:plan.stages.flatMap(s=>(s.features??[]).map(name=>this.featureBinding(name)))});
+      const now=utc();
+      this.db.prepare(`INSERT INTO dc_release_work_plans
+        (release,revision,hash,snapshot_json,approved_by,approved_at) VALUES(?,?,?,?,?,?)`)
+        .run(release,1,row.hash,snapshot,approver,now);
+      this.db.prepare(`INSERT INTO dc_release_work_history
+        (release,revision,hash,snapshot_json,approved_by,approved_at) VALUES(?,?,?,?,?,?)`)
+        .run(release,1,row.hash,snapshot,approver,now);
+      this.db.prepare("DELETE FROM dc_release_work_proposals WHERE release=?").run(release);
+      this.audit(null,"release_work_approved",approver,{release,hash:row.hash,added});
+      return {release,status:"frozen",hash:row.hash,added,approvedBy:approver};
+    });
+  }
 
   /** Track the machine that created or claimed a task, not a permission role. */
   private recordLocalDeveloper(id:string,event:"created"|"claimed"):void {
@@ -608,6 +988,38 @@ export class ProjectTaskLedger {
   /** A reviewable, frozen execution brief, not an invitation to redesign. */
   executionContract(id:string):Row {
     const task=this.get(id);
+    if(String(task.planId??"").startsWith("release-work:")) {
+      const release=String(task.release);
+      const frozen=this.releaseWorkPlan(release);
+      const item=frozen.frozen?.plan?.workItems?.find((entry:{id:string})=>entry.id===id);
+      const eligible=!!item&&this.isApprovedForExecution(this.requireTask(id));
+      return {taskId:id,eligible,
+        issues:eligible?[]:["Whole-release task roster has not been frozen or source changed"],
+        profile:"atomic-work-item",release,planHash:frozen.frozenHash,
+        spec:item??null,owner:task.owner,dependencies:task.dependsOn,
+        deliveryModes:item?.type==="decision"?["sqlite-decision","legacy-git"]:["git"],
+        allowedPaths:task.allowedPaths,requiredGates:task.requiredGates,
+        limits:"Complete ONE assigned work item and its single acceptance condition; new scope requires release change review."};
+    }
+    if (task.planId?.startsWith("feature:")) {
+      const name=String(task.planId).slice("feature:".length).replace(/:v\d+$/,"");
+      const approved=this.featureTaskPlan(name);
+      const snapshot=approved.frozen as Row|null;
+      const node=(snapshot?.plan?.nodes as ReleasePlanNode[]|undefined)?.find(item=>item.id===id);
+      const issues:string[]=[];
+      if(!snapshot||!node||node.kind!=="leaf")issues.push("No frozen Feature leaf execution contract");
+      if(approved.sourceDrift)issues.push("start_feature source revision changed after Owner approval");
+      if(node?.openQuestions?.length)issues.push("Unresolved design choices in Feature task");
+      if(task.status==="draft"||task.status==="cancelled")issues.push("Task is not approved for development");
+      return {taskId:id,eligible:issues.length===0,issues,
+        profile:"spec-depth-v3",planHash:approved.hash,featureName:name,
+        featureRevision:snapshot?.sourceFeature?.revision??null,
+        owner:task.owner??this.localDeveloper().name,assignment:task.ownerAssignment,
+        spec:node??null,allowedPaths:task.allowedPaths,requiredGates:task.requiredGates,
+        dependencies:task.dependsOn,approvedBy:task.approvedBy,
+        limits:"Only this approved Feature leaf, exact files and tests. New ideas return to planning.",
+      };
+    }
     const frozen=this.releasePlan(task.release);
     const plan=frozen.frozen as ReleasePlanProposal|null;
     const node=plan?.nodes.find((item:ReleasePlanNode)=>item.id===id);
@@ -669,6 +1081,17 @@ export class ProjectTaskLedger {
     if (typeof actor !== "string" || !actor.trim()) fail("ACTOR_REQUIRED", "Actor required");
     const review = reviewReleasePlan(input);
     if (!review.passed) fail("INCOMPLETE_PLAN", review.issues.join("; "));
+    const referencedFeatures = new Set(input.nodes.filter(node => node.kind === "leaf" &&
+      !node.existing && node.designRef?.startsWith("feature:"))
+      .map(node => node.designRef!.slice("feature:".length).replace(/#design$/, "")));
+    if (referencedFeatures.size && (!input.sourceFeature ||
+        referencedFeatures.size !== 1 || !referencedFeatures.has(input.sourceFeature.name))) {
+      fail("FEATURE_BINDING_REQUIRED", "Feature-backed leaves must use one revision-bound feature-task-propose workflow");
+    }
+    if (input.sourceFeature && (!this.featureBindingMatches(input.sourceFeature) ||
+        !this.reviewFeatureTasks(input.sourceFeature.name, input.sourceFeature.revision, input).passed)) {
+      fail("FEATURE_SOURCE_DRIFT", "Feature revision or task coverage is not valid: rerun feature-task-review");
+    }
     const sourcePath = path.resolve(this.root, input.scopeSource);
     const parent = fs.realpathSync(this.root);
     const real = fs.realpathSync(sourcePath);
@@ -811,6 +1234,12 @@ export class ProjectTaskLedger {
       fail("PLAN_APPROVAL_REQUIRED", "Approver and exact reviewed proposal hash required");
     }
     return this.inTransaction(() => {
+      // Legacy spec-heavy ReleasePlan cannot be a second way to approve
+      // executable tasks after an atomic whole-release roster is in use.
+      if(this.db.prepare("SELECT release FROM dc_release_work_proposals WHERE release=?").get(release)||
+        this.db.prepare("SELECT release FROM dc_release_work_plans WHERE release=?").get(release))
+        fail("WHOLE_RELEASE_APPROVAL_REQUIRED",
+          "Use release-work-review and release-work-approve; legacy ReleasePlan cannot bypass the independent Agent review");
       const pending = this.db.prepare("SELECT * FROM dc_release_proposals WHERE release=?").get(release);
       if (!pending || pending.hash !== expectedHash) {
         fail("PLAN_REVIEW_MISMATCH", "No matching proposed version is awaiting review");
@@ -818,6 +1247,10 @@ export class ProjectTaskLedger {
       const active = this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get();
       if (active) fail("ACTIVE_TASK", "Wait for the active lease before freezing the plan");
       const plan = JSON.parse(pending.snapshot_json) as ReleasePlanProposal;
+      if (plan.sourceFeature && (!this.featureBindingMatches(plan.sourceFeature) ||
+          !this.reviewFeatureTasks(plan.sourceFeature.name,plan.sourceFeature.revision,plan).passed)) {
+        fail("FEATURE_SOURCE_DRIFT", "SQLite feature changed or no longer meets task-planning requirements");
+      }
       if (plan.nodes.some(node=>node.kind==="leaf"&&!node.existing) &&
           plan.qualityProfile !== "spec-depth-v2" &&
           plan.qualityProfile !== "spec-depth-v3") {
@@ -934,10 +1367,22 @@ export class ProjectTaskLedger {
   }
 
   private feature(row: Row): Row {
+    const draft=JSON.parse(row.draft_json);
+    // Existing SQLite Features may have been created while start_feature
+    // embedded legacy add_feature file templates. They remain historical
+    // data, not actionable instructions for the current project workflow.
+    // Normalize read projections without rewriting approved source history.
+    const normalizedDraft=draft&&typeof draft==="object"&&
+      Array.isArray(draft.specOutputs)&&draft.specOutputs.some(
+        (file:unknown)=>typeof file==="string"&&file.includes("/specs/"))
+      ? {...draft, specOutputs:[],
+        guidance:"SQLite Feature：使用 DevControl feature-save/feature-validate；不生成需求、设计、任务 Spec Markdown。",
+        structuredContent:null}
+      : draft;
     return {
       name: row.name, description: row.description, layout: row.layout,
       status: row.status, plan: JSON.parse(row.plan_json),
-      draft: JSON.parse(row.draft_json), sections: JSON.parse(row.sections_json),
+      draft: normalizedDraft, sections: JSON.parse(row.sections_json),
       revision: row.revision, createdAt: row.created_at, updatedAt: row.updated_at,
     };
   }
@@ -956,6 +1401,271 @@ export class ProjectTaskLedger {
     return this.feature(found!);
   }
 
+  private featureBinding(name: string): { name: string; revision: number; hash: string } {
+    const feature = this.getFeature(name);
+    // Hash the actual reviewed SQLite content rather than the start_feature
+    // input fingerprint (which does not include revised requirements/design).
+    const content = {
+      name: feature.name, revision: feature.revision, status: feature.status,
+      description: feature.description, layout: feature.layout,
+      draft: feature.draft, sections: feature.sections,
+    };
+    return { name, revision: feature.revision,
+      hash: createHash("sha256").update(JSON.stringify(content)).digest("hex") };
+  }
+
+  private featureBindingMatches(binding: ReleasePlanProposal["sourceFeature"]): boolean {
+    if (!binding || typeof binding.name !== "string" ||
+        !Number.isSafeInteger(binding.revision) ||
+        typeof binding.hash !== "string") return false;
+    try {
+      const feature = this.getFeature(binding.name);
+      const current = this.featureBinding(binding.name);
+      return feature.status === "specified" && current.revision === binding.revision &&
+        current.hash === binding.hash;
+    } catch { return false; }
+  }
+
+  /** The structured handoff to an AI planner: no generated code or Markdown. */
+  featureTaskBrief(name: string): Row {
+    const feature = this.getFeature(name);
+    const requirements = String(feature.sections?.requirements ?? "");
+    const requirementIds = [...new Set(requirements.match(/\b(?:FR|NFR)-\d{3,}\b/g) ?? [])].sort();
+    const subspecs = Array.isArray(feature.draft?.subspecs) ? feature.draft.subspecs : [];
+    const binding = this.featureBinding(name);
+    return {
+      feature: { description: feature.description, layout: feature.layout,
+        sections: feature.sections, draft: feature.draft, plan: feature.plan,
+        ...binding, status: feature.status },
+      readyForPlanning: feature.status === "specified" && requirementIds.length > 0,
+      issues: [...(feature.status !== "specified" ?
+        ["Feature is not validated: call feature-save and feature-validate first"] : []),
+        ...(!requirementIds.length ? ["Feature requirements need canonical FR-001 / NFR-001 IDs"] : [])],
+      requirementIds, subspecs,
+      approvedPlan: this.featureTaskPlan(name),
+      requiredQualityProfile: "feature-task-v1 (spec-depth-v3 leaf requirements)",
+      instructions: [
+        "Research the current Git project and all relevant product/architecture decisions; never invent file paths, tests or verified outcomes.",
+        "Using start_feature requirements, design, tasks and subspecs, propose only this Feature's group/leaf work, not an entire release tree or local Spec files.",
+        "Link every feature FR/NFR and each subspec to at least one concrete leaf; add missing edge cases and dependencies during PLANNING.",
+        "Every leaf supplies a real trigger/outcome, workflow, business rules, inputs/outputs, preconditions/state transitions, exact files, prohibitions/stops, positive/negative tests, evidence, deliverables and <=8h estimate.",
+        "Use feature:"+name+"#design as designRef, feature:"+name+"#requirements in sourceRefs and feature:"+name+"#subspec:<id> for any parent-child coverage.",
+        "All IDs, code paths and tests must be grounded in the Git project. Unresolved decisions are blockers, not work left for the coding Agent.",
+        "Run feature-task-review and feature-task-propose. Only explicit Owner feature-task-approve creates executable SQLite tasks; coding requires claim and eligible execution-contract.",
+      ],
+      outputContract: {
+        operation: "feature-task-review / feature-task-propose",
+        arguments: { name, expectedFeatureRevision: binding.revision, actor: "planning-agent",
+          plan: { release: "<feature delivery release>",
+            rationale: "Detailed functional coverage, design decisions and non-goals",
+            nodes: "Only this Feature's full ReleasePlanNode[] (groups and detailed leaves), no release scopeSource" } },
+      },
+    };
+  }
+
+  /** Native Feature plans are independent of whole-release scope manifests. */
+  featureTaskPlan(name: string): Row {
+    this.getFeature(name);
+    const approved = this.db.prepare("SELECT * FROM dc_feature_task_plans WHERE feature_name=?").get(name);
+    const pending = this.db.prepare("SELECT * FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
+    const frozen = approved ? JSON.parse(approved.snapshot_json) as Row : null;
+    const proposal = pending ? JSON.parse(pending.snapshot_json) as Row : null;
+    const review = proposal?.review ?? null;
+    return { featureName:name, status:pending?(review && !review.passed?"needs_revision":"review_pending"):approved?"frozen":"missing",
+      revision:approved?.revision??0, hash:approved?.hash??null,
+      frozen, proposal, proposalHash:pending?.hash??null, review,
+      sourceDrift: frozen ? !this.featureBindingMatches(frozen.sourceFeature) : false };
+  }
+
+  listFeatureTaskPlans(): Row[] {
+    const names=this.db.prepare(`SELECT feature_name FROM dc_feature_task_proposals
+      UNION SELECT feature_name FROM dc_feature_task_plans ORDER BY feature_name`).all();
+    return names.map(row=>this.featureTaskPlan(String(row.feature_name)));
+  }
+
+  /** Rich, feature-scoped quality check before any task is made executable. */
+  reviewFeatureTasks(name: string, expectedFeatureRevision: number,
+    plan: FeatureTaskPlan): Row {
+    const brief = this.featureTaskBrief(name);
+    const binding = brief.feature as { name:string; revision:number; hash:string;
+      status:string; layout:string };
+    const issues: string[] = [...brief.issues];
+    if (expectedFeatureRevision !== binding.revision) issues.push("Stale Feature revision: reload feature-task-brief");
+    const source = { ...binding, requirements:brief.requirementIds as string[],
+      subspecs:brief.subspecs as {id:string;fr?:string[];dependsOn?:string[]}[] };
+    // A single Feature can depend on previously approved project tasks.
+    // Never force the Agent to copy the entire release just to model F1 -> F2.
+    const approvedExternalDependencies=new Set<string>(this.db.prepare(
+      "SELECT id FROM dc_tasks WHERE status NOT IN ('draft','cancelled') AND approved_by IS NOT NULL",
+    ).all().map(row=>String(row.id)));
+    const inspected = reviewFeatureTaskPlan(source,plan,approvedExternalDependencies);
+    issues.push(...inspected.issues);
+    const previous = this.featureTaskPlan(name).frozen as Row|null;
+    const oldNodes: ReleasePlanNode[] = previous?.plan?.nodes??[];
+    const nodes = Array.isArray(plan?.nodes)?plan.nodes:[];
+    const byId = new Map(nodes.map(node => [node.id,node]));
+    for (const old of oldNodes) {
+      if (JSON.stringify(old) !== JSON.stringify(byId.get(old.id))) {
+        issues.push(`Previously approved Feature task ${old.id} is immutable`);
+      }
+    }
+    const newNodes = nodes.filter(node => !oldNodes.some(old => old.id === node.id));
+    if (!newNodes.some(node=>node.kind==="leaf")) {
+      issues.push("At least one new independently testable leaf task is required");
+    }
+    for (const node of newNodes) {
+      if (this.db.prepare("SELECT id FROM dc_tasks WHERE id=?").get(node.id)) {
+        issues.push(`${node.id}: task ID is already used by another project task`);
+      }
+    }
+    if (previous && plan.release !== previous.plan.release) {
+      issues.push("An approved Feature release cannot be silently reassigned");
+    }
+    return { passed:issues.length===0, issues, featureName:name,
+      featureRevision:binding.revision, sourceHash:binding.hash,
+      total:nodes.length, generatedLeaves:newNodes.filter(n=>n.kind==="leaf").length,
+      coveredFeatureRequirements:inspected.coveredRequirements,
+      uncoveredRequirements:inspected.uncoveredRequirements };
+  }
+
+  /** Agent only proposes. No task rows or implicit Owner authority. */
+  stageFeatureTasks(name: string, expectedFeatureRevision: number,
+    plan: FeatureTaskPlan, actor: string, expectedPreviousHash?: string): Row {
+    if (!actor?.trim()) fail("ACTOR_REQUIRED", "Planning Agent identity required");
+    if (!plan || !Array.isArray(plan.nodes) || plan.nodes.length === 0 || plan.nodes.length > 150 ||
+      !plan.nodes.some(n => n?.kind === "leaf")) {
+      fail("INVALID_FEATURE_TASK_DRAFT", "Feature task draft needs a bounded nonempty leaf tree");
+    }
+    const review = this.reviewFeatureTasks(name, expectedFeatureRevision, plan);
+    if (review.featureRevision !== expectedFeatureRevision) {
+      fail("STALE_FEATURE_DRAFT", "Feature source changed: reload feature-task-brief");
+    }
+    const snapshot = {sourceFeature:{name,revision:review.featureRevision,hash:review.sourceHash},
+      plan, review};
+    const raw = JSON.stringify(snapshot);
+    if (raw.length > 1_500_000) fail("PLAN_TOO_LARGE", "Feature task draft exceeds storage limit");
+    const hash = createHash("sha256").update(raw).digest("hex");
+    return this.inTransaction(() => {
+      const pending = this.db.prepare("SELECT hash FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
+      if (pending && pending.hash !== hash && pending.hash !== expectedPreviousHash) {
+        fail("PROPOSAL_PENDING", "To replace staged planning, supply the exact previous hash");
+      }
+      if (!pending && expectedPreviousHash) fail("STALE_DRAFT", "Previous Feature plan was removed");
+      const revision = this.featureTaskPlan(name).revision + 1;
+      this.db.prepare(`INSERT INTO dc_feature_task_proposals
+        (feature_name,revision,hash,snapshot_json,proposed_by,proposed_at)
+        VALUES(?,?,?,?,?,?) ON CONFLICT(feature_name) DO UPDATE SET
+        revision=excluded.revision,hash=excluded.hash,snapshot_json=excluded.snapshot_json,
+        proposed_by=excluded.proposed_by,proposed_at=excluded.proposed_at`)
+        .run(name,revision,hash,raw,actor.trim(),utc());
+      this.audit(null,"feature_task_plan_staged",actor,{name,revision,hash,
+        reviewPassed:review.passed,issues:review.issues.length});
+      return {featureName:name,revision,hash,
+        status:review.passed?"review_pending":"needs_revision",review,
+        executableTasksCreated:0};
+    });
+  }
+
+  /** Agent only proposes. No task rows or implicit Owner authority. */
+  proposeFeatureTasks(name: string, expectedFeatureRevision: number,
+    plan: FeatureTaskPlan, actor: string, expectedPreviousHash?: string): Row {
+    if (!actor?.trim()) fail("ACTOR_REQUIRED","Planning Agent identity required");
+    const review=this.reviewFeatureTasks(name,expectedFeatureRevision,plan);
+    if (!review.passed) fail("INCOMPLETE_FEATURE_TASKS",review.issues.join("; "));
+    const snapshot={sourceFeature:{name,revision:review.featureRevision,hash:review.sourceHash},plan};
+    const raw=JSON.stringify(snapshot);
+    if (raw.length>1_500_000) fail("PLAN_TOO_LARGE","Feature task plan exceeds storage limit");
+    const hash=createHash("sha256").update(raw).digest("hex");
+    return this.inTransaction(()=>{
+      const pending=this.db.prepare("SELECT hash FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
+      if(pending && pending.hash!==hash && pending.hash!==expectedPreviousHash)
+        fail("PROPOSAL_PENDING","Pending Feature plan differs: provide exact previous hash to revise");
+      if(!pending && expectedPreviousHash) fail("STALE_DRAFT","Previous Feature proposal no longer exists");
+      const revision=this.featureTaskPlan(name).revision+1;
+      this.db.prepare(`INSERT INTO dc_feature_task_proposals
+        (feature_name,revision,hash,snapshot_json,proposed_by,proposed_at)
+        VALUES(?,?,?,?,?,?) ON CONFLICT(feature_name) DO UPDATE SET
+        revision=excluded.revision,hash=excluded.hash,snapshot_json=excluded.snapshot_json,
+        proposed_by=excluded.proposed_by,proposed_at=excluded.proposed_at`)
+        .run(name,revision,hash,raw,actor.trim(),utc());
+      this.audit(null,"feature_task_plan_proposed",actor,{name,revision,hash,leaves:review.generatedLeaves});
+      return { featureName:name,revision,hash,status:"review_pending",review };
+    });
+  }
+
+  /** Explicit approval action; approvedBy is a local Git/device audit label, not authentication. */
+  approveFeatureTasks(name:string, _approvedBy:string, expectedHash:string):Row {
+    if (!/^[a-f0-9]{64}$/.test(expectedHash))
+      fail("PLAN_APPROVAL_REQUIRED","Exact reviewed Feature plan hash required");
+    const developer=this.localDeveloper();
+    const approvedBy=developer.name?.trim()||developer.device.trim()||"local-computer";
+    return this.inTransaction(()=>{
+      const row=this.db.prepare("SELECT * FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
+      if(!row||row.hash!==expectedHash)fail("PLAN_REVIEW_MISMATCH","No matching Feature proposal pending");
+      if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
+        fail("ACTIVE_TASK","Cannot freeze Feature tasks during an active task lease");
+      const snapshot=JSON.parse(row.snapshot_json) as {
+        sourceFeature:{name:string;revision:number;hash:string};plan:FeatureTaskPlan };
+      const release=snapshot.plan.release;
+      if(!this.releaseWorkApprovalInProgress &&
+        (this.db.prepare("SELECT release FROM dc_release_work_proposals WHERE release=?").get(release) ||
+          this.db.prepare("SELECT release FROM dc_release_work_plans WHERE release=?").get(release))) {
+        fail("WHOLE_RELEASE_APPROVAL_REQUIRED","Feature cannot be approved independently once whole-release planning begins");
+      }
+      if (!this.featureBindingMatches(snapshot.sourceFeature))
+        fail("FEATURE_SOURCE_DRIFT","start_feature specifications changed since planning");
+      const review=this.reviewFeatureTasks(name,snapshot.sourceFeature.revision,snapshot.plan);
+      if(!review.passed)fail("INCOMPLETE_FEATURE_TASKS",review.issues.join("; "));
+      const previous=this.featureTaskPlan(name).frozen as Row|null;
+      const oldIds=new Set<string>((previous?.plan?.nodes??[]).map((node:ReleasePlanNode)=>node.id));
+      const remaining=snapshot.plan.nodes.filter(node=>!oldIds.has(node.id));
+      const added:string[]=[];
+      const present=new Set<string>(oldIds);
+      while(remaining.length){
+        let progress=false;
+        for(let i=0;i<remaining.length;i++){
+          const node=remaining[i];
+          if(node.parentId&&!present.has(node.parentId))continue;
+          const created=this.create({id:node.id,title:node.title,
+            parentId:node.parentId,allowedPaths:node.allowedPaths??["docs/**"],
+            requiredGates:node.requiredGates??["docs"],release:snapshot.plan.release,
+            track:"product",specId:`feature:${name}#${node.id}`,
+            planId:`feature:${name}:v${row.revision}`},`feature-plan:${approvedBy}`);
+          if(created.status!=="draft")fail("PLAN_IMPORT_FAILED","Task was not created as draft");
+          this.db.prepare("UPDATE dc_tasks SET status='ready',approved_by=?,updated_at=? WHERE id=?")
+            .run(approvedBy.trim(),utc(),node.id);
+          if(node.kind==="leaf")this.db.prepare(`INSERT INTO dc_task_specs
+            (task_id,requirement_ids_json,acceptance,design_ref,positive_tests_json,
+             negative_cases_json,out_of_scope_json,deliverables_json,estimated_hours,plan_revision)
+             VALUES(?,?,?,?,?,?,?,?,?,?)`).run(node.id,JSON.stringify(node.requirementIds),
+            node.acceptance??"",node.designRef??"",JSON.stringify(node.testCases??[]),
+            JSON.stringify(node.negativeCases??[]),JSON.stringify(node.outOfScope??[]),
+            JSON.stringify(node.deliverables??[]),node.estimatedHours??null,row.revision);
+          this.audit(node.id,"approved_by_feature_plan",approvedBy,{name,hash:row.hash});
+          present.add(node.id);added.push(node.id);remaining.splice(i,1);i--;progress=true;
+        }
+        if(!progress)fail("PARENT_CYCLE","Task group hierarchy cannot be imported");
+      }
+      for(const node of snapshot.plan.nodes.filter(node=>added.includes(node.id))){
+        for(const dep of node.dependsOn??[]){
+          this.db.prepare("INSERT INTO dc_dependencies(task_id,depends_on) VALUES(?,?)").run(node.id,dep);
+        }
+      }
+      this.db.prepare(`INSERT INTO dc_feature_task_plans
+        (feature_name,revision,hash,snapshot_json,approved_by,approved_at)
+        VALUES(?,?,?,?,?,?) ON CONFLICT(feature_name) DO UPDATE SET
+        revision=excluded.revision,hash=excluded.hash,snapshot_json=excluded.snapshot_json,
+        approved_by=excluded.approved_by,approved_at=excluded.approved_at`)
+        .run(name,row.revision,row.hash,row.snapshot_json,approvedBy.trim(),utc());
+      this.db.prepare(`INSERT INTO dc_feature_task_plan_revisions
+        (feature_name,revision,hash,snapshot_json,approved_by,approved_at)
+        VALUES(?,?,?,?,?,?)`).run(name,row.revision,row.hash,row.snapshot_json,approvedBy.trim(),utc());
+      this.db.prepare("DELETE FROM dc_feature_task_proposals WHERE feature_name=?").run(name);
+      this.audit(null,"feature_task_plan_approved",approvedBy,{name,hash:row.hash,added});
+      return {featureName:name,revision:row.revision,hash:row.hash,status:"frozen",added,review};
+    });
+  }
+
   listWorkItems(kind?: WorkItemKind): Row[] {
     const rows = kind
       ? this.db.prepare("SELECT * FROM dc_work_items WHERE kind=? ORDER BY updated_at DESC").all(kind)
@@ -969,6 +1679,108 @@ export class ProjectTaskLedger {
     }));
   }
 
+  /** Structured SRC-8 evidence lives in SQLite; no new per-Bug Spec files. */
+  bugDetail(id: string): Row {
+    const bug = this.db.prepare("SELECT * FROM dc_work_items WHERE id=? AND kind='bug'").get(id);
+    if (!bug) fail("BUG_NOT_FOUND", "Unknown Bug");
+    const steps = this.db.prepare("SELECT * FROM dc_bug_steps WHERE item_id=? ORDER BY step").all(id);
+    const byStep = new Map(steps.map(row => [Number(row.step), row]));
+    const links = this.db.prepare(`SELECT l.task_id,l.role,t.title,t.status
+      FROM dc_bug_task_links l JOIN dc_tasks t ON t.id=l.task_id
+      WHERE l.item_id=? ORDER BY l.role,l.task_id`).all(id);
+    return {
+      id: bug.id, title: bug.title, description: bug.description,
+      status: bug.status, sourceRef: bug.source_ref, featureName: bug.feature_name,
+      createdAt: bug.created_at, updatedAt: bug.updated_at,
+      steps: SRC8_STEPS.map((title, index) => {
+        const step = index + 1, row = byStep.get(step);
+        return { step, title, status: row?.status ?? "pending",
+          summary: row?.summary ?? "", evidence: row ? JSON.parse(row.evidence_json) : [],
+          revision: row?.revision ?? 0, updatedBy: row?.updated_by ?? null,
+          updatedAt: row?.updated_at ?? null };
+      }),
+      links: links.map(row => ({ taskId: row.task_id, role: row.role,
+        title: row.title, status: row.status })),
+    };
+  }
+
+  updateBugStep(input: BugStepUpdate): Row {
+    if (!Number.isInteger(input.step) || input.step < 1 || input.step > 8) {
+      fail("INVALID_BUG_STEP", "SRC-8 step must be 1..8");
+    }
+    if (!["pending", "in_progress", "blocked", "completed"].includes(input.status)) {
+      fail("INVALID_BUG_STATUS", "Unsupported SRC-8 step state");
+    }
+    if (typeof input.summary !== "string" || input.summary.length > 64_000 ||
+      !Array.isArray(input.evidence) || input.evidence.length > 40 ||
+      input.evidence.some(value => typeof value !== "string" || !value.trim() || value.length > 2048) ||
+      typeof input.actor !== "string" || !input.actor.trim() ||
+      !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0) {
+      fail("INVALID_BUG_EVIDENCE", "Provide bounded summary, evidence, actor and exact revision");
+    }
+    if (input.status === "completed" && (!input.summary.trim() || !input.evidence.length)) {
+      fail("BUG_EVIDENCE_REQUIRED", "Completed SRC-8 steps require analysis and evidence");
+    }
+    return this.inTransaction(() => {
+      const detail = this.bugDetail(input.id);
+      const prior = detail.steps[input.step - 1];
+      if (prior.revision !== input.expectedRevision) {
+        fail("STALE_BUG_STEP", "SRC-8 step changed: reload before updating");
+      }
+      if (detail.steps[7].status === "completed") {
+        fail("BUG_FROZEN", "Verified Bug is immutable; reopen through a reviewed workflow");
+      }
+      if (input.status === "completed") {
+        const missing = detail.steps.slice(0,input.step - 1).filter((step: Row) => step.status !== "completed");
+        if (missing.length) fail("SRC8_ORDER_REQUIRED", "Complete preceding SRC-8 evidence first");
+        if (input.step === 6 || input.step === 7 || input.step === 8) {
+          const repair = detail.links.filter((link: Row) => link.role === "repair");
+          const tests = detail.links.filter((link: Row) => link.role === "test");
+          if (!repair.length || repair.some((link: Row) => link.status !== "verified") ||
+            (input.step >= 7 && (!tests.length || tests.some((link: Row) => link.status !== "verified")))) {
+            fail("BUG_TASK_GATE", "Verified repair and regression-test tasks are required");
+          }
+        }
+      }
+      const revision = prior.revision + 1, now = utc();
+      const snapshot = { ...prior, status: input.status, summary: input.summary,
+        evidence: [...input.evidence], revision, updatedBy: input.actor.trim(), updatedAt: now };
+      this.db.prepare(`INSERT INTO dc_bug_steps(item_id,step,status,summary,evidence_json,revision,updated_by,updated_at)
+        VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(item_id,step) DO UPDATE SET
+        status=excluded.status,summary=excluded.summary,evidence_json=excluded.evidence_json,
+        revision=excluded.revision,updated_by=excluded.updated_by,updated_at=excluded.updated_at`
+      ).run(input.id,input.step,input.status,input.summary,JSON.stringify(input.evidence),
+        revision,input.actor.trim(),now);
+      this.db.prepare(`INSERT INTO dc_bug_step_revisions(item_id,step,revision,snapshot_json,created_at)
+        VALUES(?,?,?,?,?)`).run(input.id,input.step,revision,JSON.stringify(snapshot),now);
+      const bugStatus = input.step === 8 && input.status === "completed" ? "verified" :
+        input.step >= 7 ? "testing" : input.step >= 6 ? "fixing" :
+        input.step >= 5 ? "pending_review" : "investigating";
+      this.db.prepare("UPDATE dc_work_items SET status=?,updated_at=? WHERE id=?")
+        .run(bugStatus, now, input.id);
+      this.db.prepare(`INSERT INTO dc_work_item_audit(item_id,event,details_json,created_at) VALUES(?,?,?,?)`)
+        .run(input.id,"src8_step_updated",JSON.stringify({step:input.step,status:input.status,
+          revision,actor:input.actor.trim()}),now);
+      return { id: input.id, step: snapshot, bugStatus };
+    });
+  }
+
+  linkBugTask(id: string, taskId: string, role: "repair" | "test", actor: string): Row {
+    if (!["repair", "test"].includes(role) || !actor?.trim()) {
+      fail("INVALID_BUG_LINK", "Role must be repair/test with an actor");
+    }
+    return this.inTransaction(() => {
+      const detail = this.bugDetail(id);
+      if (detail.status === "verified") fail("BUG_FROZEN", "Cannot change verified Bug links");
+      this.requireTask(taskId);
+      const result = this.db.prepare(`INSERT OR IGNORE INTO dc_bug_task_links(item_id,task_id,role)
+        VALUES(?,?,?)`).run(id,taskId,role);
+      if (result.changes) this.db.prepare(`INSERT INTO dc_work_item_audit
+        (item_id,event,details_json,created_at) VALUES(?,?,?,?)`).run(id,
+          "task_linked",JSON.stringify({taskId,role,actor:actor.trim()}),utc());
+      return { id, taskId, role, reused: result.changes === 0 };
+    });
+  }
   recordWorkItem(input: ProjectWorkItemInput): Row {
     if (!input || !["bug", "architecture_change"].includes(input.kind)) {
       fail("INVALID_WORK_ITEM", "Only bug or architecture_change records are supported; use History Session for project memory");
@@ -1313,6 +2125,39 @@ export class ProjectTaskLedger {
     `).all(taskId).map((r) => r.depends_on);
   }
   private isApprovedForExecution(task: Row): boolean {
+    if(task.track==="product"){
+      const pending=this.db.prepare("SELECT release FROM dc_release_work_proposals WHERE release=?")
+        .get(task.release);
+      const releaseRow=this.db.prepare("SELECT * FROM dc_release_work_plans WHERE release=?")
+        .get(task.release);
+      if(pending&&!releaseRow)return false;
+      if(releaseRow){
+        try{
+          const roster=JSON.parse(releaseRow.snapshot_json) as {
+            plan:ReleaseWorkPlan;sourceHash:string;
+            features:{name:string;revision:number;hash:string}[];
+          };
+          const real=fs.readFileSync(path.resolve(this.root,roster.plan.scopeSource));
+          if(createHash("sha256").update(real).digest("hex")!==roster.sourceHash)return false;
+          for(const f of roster.features)if(!this.featureBindingMatches(f))return false;
+          // A row is executable only if it was independently reviewed in the
+          // entire roster, not because it appeared inside a heavy Feature Spec.
+          return roster.plan.workItems.some(n=>n.id===task.id)&&
+            String(task.plan_id)==="release-work:"+task.release;
+        }catch{return false;}
+      }
+    }
+    if (String(task.plan_id??"").startsWith("feature:")) {
+      const name=String(task.plan_id).slice("feature:".length).replace(/:v\d+$/,"");
+      const approved=this.db.prepare("SELECT snapshot_json FROM dc_feature_task_plans WHERE feature_name=?").get(name);
+      if(!approved)return false;
+      try {
+        const snapshot=JSON.parse(approved.snapshot_json) as {
+          sourceFeature:{name:string;revision:number;hash:string};plan:FeatureTaskPlan };
+        return this.featureBindingMatches(snapshot.sourceFeature)&&
+          snapshot.plan.nodes.some(node=>node.id===task.id && node.kind==="leaf");
+      }catch{return false;}
+    }
     const frozen = this.db.prepare(
       "SELECT snapshot_json FROM dc_release_plans WHERE release=?",
     ).get(task.release);
@@ -1375,12 +2220,17 @@ export class ProjectTaskLedger {
   create(input: CreateWorkItem, actor: string): Row {
     if (!idPattern.test(input.id)) fail("INVALID_ID", "Task ID must be an uppercase stable identifier");
     if (!input.title?.trim()) fail("TITLE_REQUIRED", "Task title is required");
-    const allowedPaths = safePaths(input.allowedPaths);
+    const sqliteDecision=input.requiredGates?.length===1&&input.requiredGates[0]==="sqlite_decision";
+    const allowedPaths = safePaths(input.allowedPaths,sqliteDecision);
     if (!Array.isArray(input.requiredGates) ||
         input.requiredGates.some((gate) => !allowedGates.has(gate))) {
       fail("UNKNOWN_GATE", "Use only approved fixed acceptance gates");
     }
     if (!input.requiredGates.length) fail("GATE_REQUIRED", "A task cannot be verified without gates");
+    if(input.requiredGates.includes("sqlite_decision")&&!sqliteDecision)
+      fail("INVALID_GATE", "SQLite decision cannot mix code/docs gates");
+    if(sqliteDecision && !String(input.planId??"").startsWith("release-work:"))
+      fail("RELEASE_PLAN_REQUIRED", "SQLite-only decisions must belong to a reviewed whole-release work roster");
     const dependsOn = [...new Set(input.dependsOn ?? [])];
     return this.inTransaction(() => {
       // Equality is task semantics, not title alone: distinct dependencies,
@@ -1557,7 +2407,8 @@ export class ProjectTaskLedger {
         fail("TASK_NOT_READY", `Task ${id} is ${task.status}`);
       }
       if (this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(id) &&
-          this.db.prepare("SELECT release FROM dc_release_plans WHERE release=?").get(task.release)) {
+          (String(task.plan_id??"").startsWith("feature:") ||
+            !!this.db.prepare("SELECT release FROM dc_release_plans WHERE release=?").get(task.release))) {
         fail("PARENT_NOT_EXECUTABLE", "Only leaf tasks can be claimed; group progress aggregates verified children");
       }
       if (!this.isApprovedForExecution(task)) {
@@ -1741,13 +2592,34 @@ export class ProjectTaskLedger {
       return { taskId: id, passed: false, reason: "Claim baseline is not an ancestor of HEAD" };
     }
     const files = changedFiles(this.root, lease.base_head);
+    const plannedGates = JSON.parse(task.required_gates) as string[];
+    const recorded=this.db.prepare("SELECT * FROM dc_task_decisions WHERE task_id=?").get(id);
+    const frozenDecision=(contract.profile==="atomic-work-item"&&
+      (contract.spec as {type?:string}|null)?.type==="decision");
+    const sqliteOnly=plannedGates.length===1&&plannedGates[0]==="sqlite_decision";
+    // Frozen pre-migration decision work may still have ['docs'] and
+    // docs/** in its immutable roster. Only a separately submitted,
+    // lease-bound SQLite record explicitly opts into the new workflow.
+    const sqliteDelivery=sqliteOnly||(frozenDecision&&!!recorded);
+    if(sqliteDelivery){
+      if(!frozenDecision)return {taskId:id,passed:false,reason:"Not a frozen decision task"};
+      if(files.length||startHead!==lease.base_head)return {taskId:id,passed:false,
+        reason:"SQLite decision must not contain any Git commits",files};
+      const tokenHash=createHash("sha256").update(token).digest("hex");
+      if(!recorded||recorded.lease_token_hash!==tokenHash||
+        recorded.git_head!==startHead||recorded.actor!==lease.agent)
+        return {taskId:id,passed:false,reason:"No decision saved under current lease"};
+      if(!["proposed","decided"].includes(recorded.status)||
+        !recorded.verification_plan?.trim())
+        return {taskId:id,passed:false,reason:"SQLite decision record invalid"};
+    }
     const allowedPaths = JSON.parse(task.allowed_paths) as string[];
     const exact=(contract.profile==="spec-depth-v3"?
       (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
     const denied = files.filter((f) =>
       !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
     const unapprovedDocs = undocumentedMarkdown(addedFiles(this.root, lease.base_head), allowedPaths);
-    if (!files.length || denied.length || unapprovedDocs.length) {
+    if ((!files.length&&!sqliteDelivery) || denied.length || unapprovedDocs.length) {
       return {
         taskId: id, passed: false,
         reason: !files.length ? "No committed task diff" :
@@ -1755,9 +2627,15 @@ export class ProjectTaskLedger {
         denied, unapprovedDocs, files,
       };
     }
-    const gates = JSON.parse(task.required_gates) as string[];
+    // Legacy docs gates are replaced by a *stronger*, actual SQLite decision
+    // record when an existing frozen decision explicitly opts in. New rosters
+    // must declare sqlite_decision and zero allowedPaths from the start.
+    const gates = sqliteDelivery?["sqlite_decision"]:plannedGates;
     if (!gates.length) return { taskId: id, passed: false, reason: "Missing gate definition" };
-    const results = Object.fromEntries(gates.map((name) => [name, this.gate(name)]));
+    const results = Object.fromEntries(gates.map((name) =>
+      [name,name==="sqlite_decision"?{passed:true,taskId:id,
+        revision:recorded!.revision,status:recorded!.status,
+        productApproval:"not_implied"}:this.gate(name)]));
     const stableHead = git(this.root, ["rev-parse", "HEAD"]);
     const stableTree = git(this.root, ["status", "--porcelain"]);
     const stable = startHead === stableHead && !stableTree;
@@ -1803,6 +2681,8 @@ export class ProjectTaskLedger {
     this.requireTask(id);
     return {
       task: this.get(id),
+      sqliteDecision: this.getDecision(id).decision,
+      sqliteDecisionHistory:this.getDecision(id).history,
       evidence: this.db.prepare("SELECT * FROM dc_evidence WHERE task_id=? ORDER BY id").all(id),
       completion: this.latestCompletion(id),
       completionHistory: this.db.prepare(

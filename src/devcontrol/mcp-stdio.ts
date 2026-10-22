@@ -8,16 +8,24 @@ import { lanAddresses } from "./workspace-access.js";
 import { resolveWorkbenchLocale } from "./i18n.js";
 
 const operations = [
+  "release-work-plan", "release-work-review", "release-work-stage", "release-work-approve",
   "release-plan", "plan-review", "plan-propose", "plan-revise", "plan-approve",
   "onboard", "next", "list", "get", "features", "feature-get", "feature-save", "feature-validate",
+  "feature-task-brief", "feature-task-plan", "feature-task-plans", "feature-task-review", "feature-task-stage", "feature-task-propose", "feature-task-approve",
   "feature-export", "work-items", "work-record", "architecture-sync",
+  "bug-get", "bug-step-save", "bug-task-link",
   "create", "subtask", "dependency", "approve",
   "claim", "renew", "release", "check", "report", "complete", "verify",
   "trace", "board-data", "import-spec",
   "local-developer", "execution-contract", "workspace-link",
+  "decision-save", "decision-get",
   "hook-status", "hook-install",
 ];
 const requiredFields: Record<string, string[]> = {
+  "release-work-plan": ["release"],
+  "release-work-review": ["plan"],
+  "release-work-stage": ["plan","actor"],
+  "release-work-approve": ["release","expectedHash"],
   "release-plan": [], "plan-review": ["plan"],
   "plan-propose": ["plan","actor"],
   "plan-revise": ["plan","actor","expectedPreviousHash"],
@@ -26,10 +34,23 @@ const requiredFields: Record<string, string[]> = {
   "local-developer": [],
   "hook-status": [], "hook-install": [],
   "execution-contract":["id"],
+  "decision-get":["id"],
+  "decision-save":["id","leaseToken","question","decision","rationale",
+    "alternatives","consequences","verificationPlan","status"],
   "workspace-link":[],
   "feature-get": ["name"], "feature-save": ["name", "sections"],
   "feature-validate": ["name"], "feature-export": ["name"],
+  "feature-task-brief": ["name"],
+  "feature-task-plan": ["name"],
+  "feature-task-plans": [],
+  "feature-task-review": ["name", "expectedFeatureRevision", "plan"],
+  "feature-task-stage": ["name", "expectedFeatureRevision", "plan", "actor"],
+  "feature-task-propose": ["name", "expectedFeatureRevision", "plan", "actor"],
+  "feature-task-approve": ["name", "expectedHash"],
   "work-items": [], "work-record": ["kind", "title", "description"],
+  "bug-get": ["id"],
+  "bug-step-save": ["id", "step", "status", "summary", "evidence", "actor", "expectedRevision"],
+  "bug-task-link": ["id", "taskId", "role", "actor"],
   "architecture-sync": ["id", "reviewer"],
   get: ["id"],
   create: ["id", "title", "allowedPaths", "requiredGates"],
@@ -98,10 +119,11 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                     "name", "format", "sections", "featureName", "topLevelDocument",
                     "sourceRef", "description", "reviewer", "architectureImpact",
                     "plan", "expectedHash", "expectedPreviousHash",
+                    "step", "status", "evidence", "expectedRevision", "expectedFeatureRevision", "taskId", "role",
                     "language"])]
-                    .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn"].includes(field)
+                    .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn", "evidence"].includes(field)
                       ? { type: "array", items: { type: "string" } }
-                      : field === "priority" || field === "ttlSeconds" ? { type: "integer" }
+                      : ["priority", "ttlSeconds", "step", "expectedRevision", "expectedFeatureRevision"].includes(field) ? { type: "integer" }
                       : field === "readyForReview" ? { type: "boolean" }
                       : field === "architectureImpact" ? { type: "boolean" }
                       : field === "plan" ? { type: "object" }

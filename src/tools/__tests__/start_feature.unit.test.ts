@@ -21,6 +21,28 @@ function structured(result: Awaited<ReturnType<typeof startFeature>>): any {
 }
 
 describe('start_feature 单元测试', () => {
+  test('Git/Node22 下默认 auto 仅交付 SQLite Feature，不输出文件式 Spec 模板', async () => {
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),'probe-default-sqlite-only-'));
+    execFileSync('git',['init','-q'],{cwd:root});
+    try{
+      const result=await startFeatureTool({
+        feature_name:'sqlite-default-feature',
+        description:'Verify default auto storage does not request Markdown Spec files',
+        project_root:root,
+      });
+      expect(result.isError).not.toBe(true);
+      const data=structured(result);
+      expect(data.metadata.projectFeature.storage).toBe('project-sqlite');
+      expect(data.metadata.specDraft.specOutputs).toEqual([]);
+      expect(data.metadata.specDraft.structuredContent).toBeNull();
+      expect(result.content[0].text).toContain('无需任务 Markdown');
+      const db=new ProjectTaskLedger(root);
+      try{
+        expect(db.getFeature('sqlite-default-feature').draft.specOutputs).toEqual([]);
+      }finally{db.close();}
+      expect(fs.existsSync(path.join(root,'docs/specs'))).toBe(false);
+    }finally{fs.rmSync(root,{recursive:true,force:true});}
+  });
   test('缺少必填参数时返回错误', async () => {
     const result = await startFeature({});
     expect(result.isError).toBe(true);
@@ -38,8 +60,35 @@ describe('start_feature 单元测试', () => {
       expect(result.isError).not.toBe(true);
       const value = structured(result);
       expect(value.metadata.projectFeature.storage).toBe('project-sqlite');
+      expect(value.metadata.specDraft.specOutputs).toEqual([]);
+      expect(value.metadata.specDraft.guidance).toContain('不得生成');
+      expect(value.metadata.specDraft.guidance).not.toContain('创建三个文件');
       expect(value.metadata.plan.steps.find((item: any) => item.id === 'check-spec').action)
         .toBe('validate_project_sqlite_feature');
+      const admission = value.metadata.plan.steps.find((item: any) => item.id === 'devcontrol-execution-admission');
+      expect(admission.type).toBe('agent_action');
+      expect(admission.requiredInputs.join(' ')).toContain('release-work-approve');
+      expect(value.metadata.plan.steps.find((item: any) => item.id === 'implement').dependsOn)
+        .toContain('devcontrol-execution-admission');
+      expect(value.metadata.plan.steps.find((item: any) => item.id === 'implement').action)
+        .toBe('implement_only_claimed_devcontrol_leaf');
+      const ids=value.metadata.plan.steps.map((item: any)=>item.id);
+      expect(ids).toEqual(expect.arrayContaining([
+        'release-scope-collect','release-work-split','release-work-agent-review','release-work-stage',
+        'release-work-review','release-work-owner-approval',
+      ]));
+      const independent=value.metadata.plan.steps.find((item:any)=>
+        item.id==='release-work-agent-review');
+      expect(independent.action).toContain('independently_critique');
+      expect(independent.requiredInputs.join(' ')).toContain('ORIGINAL');
+      expect(independent.requiredInputs.join(' ')).toContain('six generic dimensions');
+      expect(value.metadata.plan.steps.find((item:any)=>item.id==='release-work-stage').dependsOn)
+        .toContain('release-work-agent-review');
+      expect(independent.note).toContain('MCP is business-agnostic');
+      expect(value.metadata.plan.steps.find((item: any)=>item.id==='release-work-review').dependsOn)
+        .toContain('release-work-stage');
+      expect(value.metadata.plan.steps.find((item: any)=>item.id==='devcontrol-execution-admission').dependsOn)
+        .toContain('release-work-owner-approval');
       const db = new ProjectTaskLedger(root);
       try {
         expect(db.databasePath).toBe(path.join(root, '.mcp-probe-kit/state/devcontrol.sqlite3'));
@@ -47,6 +96,8 @@ describe('start_feature 单元测试', () => {
         expect(db.getFeature('native-memory').plan.planId).toBe(value.metadata.plan.planId);
         expect(db.listFeatures()).toHaveLength(1);
         expect(db.getFeature('native-memory').revision).toBe(1);
+        expect(db.getFeature('native-memory').draft.specOutputs).toEqual([]);
+        expect(db.getFeature('native-memory').draft.guidance).not.toContain('requirements.md');
       } finally { db.close(); }
       expect(fs.existsSync(path.join(root,'docs/specs/native-memory/requirements.md'))).toBe(false);
       expect(execFileSync('git', ['status','--porcelain'], {cwd:root,encoding:'utf8'})).toBe('');

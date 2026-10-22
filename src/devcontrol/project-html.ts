@@ -64,6 +64,21 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .simple-task-meta{font-size:11px;color:#8aa8be;margin-top:5px}
 .simple-task-summary{font-size:12px;color:#adc4d8;line-height:1.6;margin-top:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .simple-task .issue-state{flex:none;font-size:11px}
+.task-phase{border:1px solid #2b4057;border-radius:13px;background:#0e1b2b;overflow:hidden;margin:13px 0}
+.task-phase-head{padding:14px 17px;background:#17283e;border-bottom:1px solid #2b4057;display:flex;gap:12px;align-items:center;justify-content:space-between}
+.task-phase-head strong{font-size:13px}.task-phase-head small{color:#90a8c0;font-size:11px}
+.work-grid{width:100%;overflow-x:auto;border:1px solid #30475e;border-radius:10px}
+.work-grid-header,.work-grid-row{display:grid;grid-template-columns:minmax(250px,3fr) minmax(95px,1fr) minmax(110px,1fr) minmax(105px,1fr) minmax(110px,1fr) minmax(115px,1fr) minmax(125px,1.3fr);min-width:1040px;gap:7px;align-items:center;padding:11px 13px}
+.work-grid-header{background:#20364d;font-size:11px;color:#abc3db;font-weight:700}
+.work-grid-row{width:100%;border:0;border-top:1px solid #304056;color:#dbe8f7;background:#112238;text-align:left;font-size:12px;cursor:pointer}
+.work-grid-row:hover{background:#203951}
+.work-grid-row span{overflow-wrap:anywhere}
+.work-grid-row .work-id{display:block;color:#79a9c5;font:10px ui-monospace,monospace;margin-bottom:5px}
+.work-grid-row .issue-state{width:fit-content}
+.issue-controls select{background:#12253c;color:#d7e6f6;border:1px solid #35516c;border-radius:8px;padding:9px;min-width:112px}
+.task-phase-items{padding:10px;display:grid;gap:9px}.task-phase-items .simple-task{background:#132238}
+.feature-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.feature-summary .spec-block{margin:0;text-align:center;padding:12px}
 .issue-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:15px 0}
 .issue-controls input,.issue-controls select{border:1px solid #36516b;background:#102034;color:#deebf7;border-radius:8px;padding:10px 12px;min-height:40px}
 .issue-controls input{min-width:190px;flex:1}
@@ -73,6 +88,27 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .issue-state.done{background:#1d503e;color:#9de9c5}
 .issue-state.blocked{background:#493027;color:#ffbaaa}
 .issue-count{font-size:12px;color:#a7bed6;padding:9px 2px}
+.release-review{margin:8px 0 14px;padding:10px 14px;border:1px solid #405575;border-radius:9px;background:#14263b;font-size:12px;color:#d7e5f2}
+.release-review summary{cursor:pointer;font-weight:700}
+.release-review li{margin:8px 0;line-height:1.55}
+.review-intro{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 10px}
+.review-intro h2{margin:0;font-size:17px}.review-intro p{font-size:12px;color:#96afc6;margin:5px 0 0;line-height:1.6}
+.review-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0 22px}
+.review-card{border:1px solid #304962;background:#12233a;border-radius:10px;padding:14px 16px}
+.review-head{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:8px}
+.review-head strong{font-size:13px;color:#e0f0ff}
+.review-id{color:#7cdce6;font:11px ui-monospace,monospace}
+.review-state{font-size:11px;color:#eacba1;background:#503c26;padding:3px 8px;border-radius:5px}
+.review-state.resolved{color:#9fdcbd;background:#1e473c}
+.review-card p{font-size:12px;line-height:1.65;color:#b2c9df;margin:6px 0}
+.review-card p b{color:#d9f3f4;font-weight:650}
+.review-links{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px}
+.review-links button{font-size:11px;border:1px solid #42627c;color:#aae0ed;background:#192f46;border-radius:6px;padding:5px 8px;cursor:pointer}
+.review-links button:hover{border-color:#88dae7}
+.review-card .review-detail-trigger{border:0;padding:0;background:none;color:#97e1e9;font-size:11px;cursor:pointer;text-align:left}
+.review-card .review-detail-trigger:hover{text-decoration:underline}
+.review-overview{padding:14px 16px;border:1px solid #3b5971;border-radius:11px;background:#14283c;margin:0 0 20px;display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap}
+.review-overview b{font-size:13px}.review-overview p{font-size:12px;color:#a6bfd6;margin:5px 0 0}
 .issue-details{display:grid;gap:10px}
 .issue-details section{padding:14px;border:1px solid #2c4660;border-radius:8px;background:#12233a}
 .issue-details h3{margin:0 0 9px;font-size:13px;color:#84dce5}
@@ -104,8 +140,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .content .md-table tbody tr:nth-child(even){background:#132439}
 .content .md-table tbody tr:hover{background:#1b3249}
 .hide{display:none!important}.error{color:#ffcb99;font-size:12px}.kpirow{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0}.kpi{background:#1b3044;border:1px solid #2e526c;border-radius:10px;padding:15px;min-width:140px}.kpi b{display:block;font-size:25px}.kpi span{font-size:11px;color:#9bb6cf}
-@media(max-width:1050px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.twocol{grid-template-columns:1fr}}
-@media(max-width:760px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:12px;display:block}.brand{padding:5px 8px 10px}.nav{flex-direction:row;overflow-x:auto;padding:0 3px 5px}.navbtn{width:auto;white-space:nowrap;padding:9px 11px}.group-label,.sidefooter{display:none}.main{padding:22px 15px 40px}.bar{flex-wrap:wrap}.hero{min-height:0}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.cards,.doclist{grid-template-columns:1fr}.taskframe{min-height:1000px}.stats{gap:9px}.stat{padding:15px}.stat strong{font-size:23px}}
+@media(max-width:1050px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.twocol{grid-template-columns:1fr}.review-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:12px;display:block}.brand{padding:5px 8px 10px}.nav{flex-direction:row;overflow-x:auto;padding:0 3px 5px}.navbtn{width:auto;white-space:nowrap;padding:9px 11px}.group-label,.sidefooter{display:none}.main{padding:22px 15px 40px}.bar{flex-wrap:wrap}.hero{min-height:0}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.cards,.doclist,.feature-summary,.review-grid{grid-template-columns:1fr}.taskframe{min-height:1000px}.stats{gap:9px}.stat{padding:15px}.stat strong{font-size:23px}}
 </style></head>
 <body><div class="layout">
 <aside class="sidebar">
@@ -134,6 +170,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       <h1>了解项目，更清楚下一步</h1><p id="project-intro">正在读取项目愿景与开发规范…</p>
       <div class="meta-row"><span class="chip" id="projectname">PROJECT</span><span class="chip" id="projectstate">读取源文档</span><span class="chip" id="governance-count">工程治理 · —</span><span class="chip">任务进度来自 SQLite</span></div>
     </div>
+    <div class="review-overview hide" id="overview-release-review"></div>
     <section class="panel hide" id="onboarding-panel" style="margin-top:18px" aria-label="项目接入状态">
       <div class="panelhead"><h2 id="onboarding-title">项目接入</h2><span class="eyebrow">接入检查</span></div>
       <p class="sub" id="onboarding-next"></p>
@@ -193,7 +230,12 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       <button type="button" role="tab" data-tasktab="completed" aria-selected="false" aria-controls="task-list-panel">已完成 <span id="count-completed" class="count">0</span></button>
     </div>
     <div id="task-list-panel" role="tabpanel" aria-label="当前状态的任务">
-      <div class="issue-controls"><input id="task-search" type="search" placeholder="搜索任务…" aria-label="搜索任务"></div>
+      <div class="issue-controls">
+        <input id="task-search" type="search" placeholder="搜索任务或验收结果…" aria-label="搜索任务">
+        <select id="task-stage-filter" aria-label="按版本阶段筛选"><option value="">全部阶段</option></select>
+        <select id="task-type-filter" aria-label="按工作项类型筛选"><option value="">全部类型</option></select>
+      </div>
+      <div id="release-review-summary"></div>
       <p class="issue-count" id="task-list-count">正在读取任务…</p>
       <div id="task-rows" class="simple-task-list" aria-live="polite"></div>
     </div>
@@ -251,7 +293,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     }
     document.title="DevControl · Project workspace";
   }
-  let project=null,board=null,features=[],onboarding=null,releasePlan=null,localGit=null,taskTab="not_started";
+  let project=null,board=null,features=[],featureTaskPlans=[],releaseWorkPlan=null,onboarding=null,releasePlan=null,localGit=null,taskTab="not_started";
   const developerHint=()=>localGit?.name?
     localGit.name+" · "+(localGit.device||"") :
     (locale==="en"?"Git developer unavailable":"未识别本机 Git 开发身份");
@@ -268,9 +310,32 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     if(view==="issues")loadIssues();
   }
   function taskPlanNodes(){
+    const roster=typeof releaseWorkPlan==="undefined"?null:releaseWorkPlan;
+    if(roster && roster.status!=="missing"){
+      const scope=(roster.status==="review_pending"||roster.status==="needs_revision")?
+        roster.proposal?.plan:roster.frozen?.plan;
+      return (scope?.workItems||[]).map(item=>({...item,kind:"leaf",_planOrigin:"release-work",
+        release:roster.release,featurePending:roster.status!=="frozen",
+        featureNeedsRevision:roster.status==="needs_revision",
+        featureReviewIssues:(roster.issues||[]).filter(issue=>
+          issue.startsWith(item.id+":")||issue.includes(" "+item.id+" "))}));
+    }
     const scope=releasePlan?.status==="review_pending"?
       releasePlan?.proposal:releasePlan?.frozen;
-    return Array.isArray(scope?.nodes)?scope.nodes:[];
+    const releaseNodes=Array.isArray(scope?.nodes)?scope.nodes.map(item=>({...item,_planOrigin:"release"})):[];
+    const native=[];
+    for(const record of (typeof featureTaskPlans==="undefined"?[]:featureTaskPlans)){
+      const source=(record.status==="review_pending"||record.status==="needs_revision")?
+        record.proposal:record.frozen;
+      const previous=new Set((record.frozen?.plan?.nodes||[]).map(item=>item.id));
+      if(!Array.isArray(source?.plan?.nodes))continue;
+      for(const item of source.plan.nodes)native.push({...item,
+        _planOrigin:"feature",featureName:record.featureName,release:source.plan.release,
+        featurePending:(record.status==="review_pending"||record.status==="needs_revision")&&!previous.has(item.id),
+        featureNeedsRevision:record.status==="needs_revision",featureReviewIssues:record.review?.issues||[]});
+    }
+    const nativeIds=new Set(native.map(item=>item.id));
+    return [...releaseNodes.filter(item=>!nativeIds.has(item.id)),...native];
   }
   function taskRows(){
     const nodes=taskPlanNodes();
@@ -286,8 +351,10 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     const add=(item,depth=0,stage="")=>{
       if(seen.has(item.id))return;seen.add(item.id);
       const current=byId.get(item.id);
-      const phase=stage||item.id;
-      const pending=releasePlan?.status==="review_pending"&&!item.existing;
+      const phase=item.stageId||stage||item.id;
+      const pending=item._planOrigin==="release-work"?item.featurePending:
+        item._planOrigin==="feature"?item.featurePending:
+        releasePlan?.status==="review_pending"&&!item.existing;
       const status=pending?"pending":current?.status||"unplanned";
       // Planning stages are dependency containers, not user-facing tasks.
       if(item.kind!=="group")result.push({item,current,depth,phase,status,pending});
@@ -305,7 +372,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   }
   function taskStatus(row){
     const s=row.status;
-    if(s==="pending")return ["待审核","pending"];
+    if(s==="pending")return [row.item.featureNeedsRevision?"规划待完善":"待审核","pending"];
     if(s==="verified")return ["已完成","done"];
     if(s==="in_progress")return ["开发中",""];
     if(s==="in_review")return ["等待验收",""];
@@ -324,6 +391,82 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     const historical={"F0":"基础环境与架构","F1":"最小事件与接口契约"};
     return historical[task.id]||task.title;
   }
+  function releaseReviewFindings(){
+    const plan=releaseWorkPlan?.status==="frozen"?
+      releaseWorkPlan.frozen?.plan:releaseWorkPlan?.proposal?.plan;
+    // The product review lists its nine accountable workstreams. Closed
+    // historical audit notes remain in SQLite but are not a tenth blocker.
+    return Array.isArray(plan?.reviewFindings)?
+      plan.reviewFindings.filter(f=>f.severity==="blocker"):[];
+  }
+  function openReviewFinding(issue){
+    $("overlay").classList.add("open");
+    $("doc-title").textContent=issue.id+" · "+issue.title;
+    $("doc-source").textContent="整版评审 · "+
+      (issue.decisionStatus==="decided"?"工程方案已定案":"待工程定案")+" · "+
+      (issue.verificationStatus==="pending"?"产品验收未通过":"规划问题已处理");
+    const content=$("doc-content");content.replaceChildren();
+    const box=n("section",null,"spec-block");
+    box.append(n("h3","工程方案"),n("p",issue.decision||"技术方案尚未登记"),
+      n("h3","下一项具体工作 / 完成标准"),n("p",issue.nextAction||issue.detail),
+      n("h3","评审发现"),n("p",issue.detail));
+    content.append(box);
+    if(issue.affectedIds?.length){
+      const links=n("div",null,"review-links");
+      for(const id of issue.affectedIds){
+        const btn=n("button","查看工作项 "+id);btn.type="button";
+        btn.addEventListener("click",()=>{
+          const row=taskRows().find(r=>r.item.id===id);
+          if(row)openPlanTask(row);
+        });
+        links.append(btn);
+      }
+      content.append(links);
+    }
+  }
+  function renderReleaseReview(){
+    const findings=releaseReviewFindings();
+    const panel=$("release-review-summary"),overview=$("overview-release-review");
+    panel.replaceChildren();overview.replaceChildren();
+    overview.classList.toggle("hide",!findings.length);
+    if(!findings.length)return;
+    const undecided=findings.filter(x=>x.decisionStatus!=="decided");
+    const pending=findings.filter(x=>x.verificationStatus==="pending");
+    const decided=findings.length-undecided.length;
+    const agentReview=releaseWorkPlan?.proposal?.plan?.agentReview||
+      releaseWorkPlan?.frozen?.plan?.agentReview;
+    const reviewState=agentReview?
+      "宿主 Agent 独立复审已提交（MCP仅校验引用和快照）":
+      "宿主 Agent 独立复审尚未提交，整版不能审批";
+    const intro=n("div");
+    intro.append(n("b",releaseWorkPlan.release+" · 版本评审："+
+      decided+"/"+findings.length+" 项工程决策已定案 · "+pending.length+" 项产品验收未完成"),
+      n("p","研发负责人承担技术选型；实际实现与测试仍按原子任务、Git证据和发布Gate独立验收。"+reviewState));
+    const nav=n("button","查看 "+findings.length+" 项评审 →","btn");nav.type="button";
+    nav.addEventListener("click",()=>{
+      go("tasks");$("release-review-summary").scrollIntoView({behavior:"smooth",block:"start"});
+    });
+    overview.append(intro,nav);
+    const head=n("div",null,"review-intro"),left=n("div");
+    left.append(n("h2","整版评审 · "+findings.length+" 项工程决策"),
+      n("p","方案由工程团队确定；可独立核验的代码与真机结果在任务执行后关闭。"+reviewState));
+    head.append(left,n("span",pending.length+" 项待产品验收","issue-state pending"));
+    const grid=n("div",null,"review-grid");
+    for(const issue of findings){
+      const card=n("article",null,"review-card"),header=n("div",null,"review-head");
+      header.append(n("span",issue.id,"review-id"),
+        n("span",issue.decisionStatus==="decided"?"工程已定案":"待工程定案",
+          "review-state resolved"),
+        n("span",issue.verificationStatus==="pending"?"待实测":"规划已处理",
+          "review-state"+(issue.verificationStatus==="pending"?"":" resolved")));
+      const decision=n("p");
+      decision.append(n("b","方案："),document.createTextNode(issue.decision||"评审尚未记录实施方案"));
+      const action=n("button","查看验收与关联任务 →","review-detail-trigger");
+      action.type="button";action.addEventListener("click",()=>openReviewFinding(issue));
+      card.append(header,n("strong",issue.title),decision,action);grid.append(card);
+    }
+    panel.append(head,grid);
+  }
   function setTaskTab(tab){
     if(!["not_started","in_progress","completed"].includes(tab))return;
     taskTab=tab;
@@ -335,11 +478,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     $("overlay").classList.add("open");
     const task=row.item,actual=row.current,status=taskStatus(row)[0];
     $("doc-title").textContent=task.id+" · "+displayTaskTitle(task);
-    const releaseName=String(releasePlan?.release||actual?.release||"");
+    const releaseName=String(task.release||actual?.release||releasePlan?.release||"");
     $("doc-source").textContent=(row.pending?
       (locale==="en"?"SQLite proposal pending approval · cannot execute":"SQLite 待审提案，未批准执行"):
       (locale==="en"?"Approved task ledger":"已存在任务台账"));
-    $("doc-source").textContent=releaseName+" · "+$("doc-source").textContent+" · "+translate(status);
+    $("doc-source").textContent=releaseName+(task.featureName?" · Feature "+task.featureName:"")+" · "+$("doc-source").textContent+" · "+translate(status);
     const body=$("doc-content");body.replaceChildren();
     const content=n("div",null,"issue-details");body.append(content);
     const section=(heading,value)=>{
@@ -351,9 +494,30 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       }else box.append(n("p",value===null||value===undefined||value===""?"未明确":String(value)));
       content.append(box);return box;
     };
+    if(task._planOrigin==="release-work"){
+      section("一项任务 · 一项可验收结果",task.acceptance);
+      section("工作项信息",[
+        "状态："+status,"类型："+(task.type||"—"),"负责人："+(task.owner||"待分配"),
+        "责任角色："+(task.ownerRole||"尚未分工"),
+        "平台："+(task.platform||"—"),"所属阶段："+(task.stageId||"—"),
+        "关联功能："+(task.featureName||"版本公共任务"),
+        "计划开始："+(task.plannedStartAt||"未排期"),
+        "计划完成："+(task.plannedEndAt||"未排期"),
+      ]);
+      if(task.checklist?.length)section("完成检查",task.checklist);
+      if(task.remark)section("备注",task.remark);
+      if(task.blockingReason)section("阻塞原因",task.blockingReason);
+      section("依赖",task.dependsOn||[]);
+      section("验收要求",task.requiredGates||[]);
+      if(task.featureReviewIssues?.length)section("整版评审未通过",task.featureReviewIssues);
+      if(row.pending)section("开发限制","当前版本尚未整体审批。此工作项不可领取或执行。");
+      return;
+    }
+    $("release-review-summary").replaceChildren();
     section("当前状态与执行边界",row.pending?
-      "规划待审核 · 不可领取、执行或计入版本完成率。":
+      (task.featureNeedsRevision?"规划仍有阻塞，须补全再审核 · ":"规划待审核 · ")+"不可领取、执行或计入版本完成率。":
       "状态："+status+"。执行以真实 SQLite 状态、依赖和 Gate 为准。");
+    if(task.featureReviewIssues?.length)section("DevControl 规划检查：待修正问题",task.featureReviewIssues);
     const displayOwner=actual?.owner||(row.pending?localGit?.name:null);
     section("负责人 / 计划完成",[
       translate("负责人")+": "+(displayOwner||
@@ -424,6 +588,18 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   }
   function renderTaskList(){
     const rows=taskRows().filter(row=>taskBucket(row)!==null);
+    for(const [name,key,choices] of [
+      ["task-stage-filter","stageId",[...new Set(rows.map(r=>r.item.stageId||r.phase).filter(Boolean))].sort()],
+      ["task-type-filter","type",[...new Set(rows.map(r=>r.item.type).filter(Boolean))].sort()],
+    ]){
+      const select=$(name),selected=select.value;
+      select.replaceChildren(n("option",key==="stageId"?"全部阶段":"全部类型"));
+      select.firstChild.value="";
+      for(const choice of choices){
+        const option=n("option",choice);option.value=choice;select.append(option);
+      }
+      if(choices.includes(selected))select.value=selected;
+    }
     for(const bucket of ["not_started","in_progress","completed"]){
       $("count-"+bucket).textContent=String(rows.filter(row=>taskBucket(row)===bucket).length);
     }
@@ -431,28 +607,73 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     const filtered=rows.filter(row=>{
       if(taskBucket(row)!==taskTab)return false;
       const data=row.item;
+      if($("task-stage-filter").value&&(data.stageId||row.phase)!==$(
+        "task-stage-filter").value)return false;
+      if($("task-type-filter").value&&data.type!==$("task-type-filter").value)return false;
       return !search||[data.id,displayTaskTitle(data),data.scenario,data.acceptance,(data.requirementIds||[]).join(" "),
+        data.platform,data.owner,data.remark,data.blockingReason,
         (data.negativeCases||[]).join(" "),(data.deliverables||[]).join(" ")].join(" ").toLowerCase().includes(search);
     });
-    $("task-rows").replaceChildren(...(filtered.length?filtered.map(row=>{
-      const task=row.item;
-      const button=n("button",null,"simple-task");button.type="button";
-      const head=n("div",null,"simple-task-head");
-      head.append(n("span",displayTaskTitle(task),"simple-task-title"));
-      const [label,cls]=taskStatus(row);
-      if(row.pending||row.status==="in_review"){
-        head.append(n("span",label,"issue-state "+cls));
+    if((typeof releaseWorkPlan!=="undefined")&&releaseWorkPlan&&
+      releaseWorkPlan.status!=="missing"){
+      const cols=["工作项","状态","负责人","类型 / 平台","计划开始","计划完成","备注 / 阻塞"];
+      const shell=n("div",null,"work-grid");
+      const headings=n("div",null,"work-grid-header");
+      cols.forEach(name=>headings.append(n("span",name)));
+      shell.append(headings);
+      for(const row of filtered){
+        const item=row.item,button=n("button",null,"work-grid-row");button.type="button";
+        const title=n("span");title.append(n("small",item.id+" · "+(item.stageId||""),"work-id"),
+          n("strong",displayTaskTitle(item)));
+        const [status,state]=taskStatus(row);
+        button.append(title,n("span",status,"issue-state "+state),
+          n("span",item.owner||("待分配 · "+(item.ownerRole||"研发角色待定"))),
+          n("span",(item.type||"—")+" / "+(item.platform||"—")),
+          n("span",item.plannedStartAt||"未排期"),
+          n("span",item.plannedEndAt||"未排期"),
+          n("span",item.blockingReason||item.remark||"—"));
+        button.addEventListener("click",()=>openPlanTask(row));shell.append(button);
       }
-      const owner=row.current?.owner||(row.pending?localGit?.name:null);
-      const device=row.current?.ownerAssignment?.device||localGit?.device;
-      button.append(head,n("div",task.id+" · "+row.phase+" · "+
-        translate("负责人")+": "+(owner||(locale==="en"?"Not recorded":"历史未记录"))+
-        (device?" · "+(locale==="en"?"Device":"设备")+": "+device:""),
-        "simple-task-meta"));
-      const scenario=task.scenario||task.acceptance||row.current?.spec?.acceptance||"尚无任务说明";
-      button.append(n("div",scenario,"simple-task-summary"));
-      button.addEventListener("click",()=>openPlanTask(row));
-      return button;
+      $("task-rows").replaceChildren(filtered.length?shell:n("div","当前筛选无工作项。","docs-empty"));
+      $("task-list-count").textContent="当前版本 "+releaseWorkPlan.release+" · "+
+        filtered.length+" 项独立工作 · "+(releaseWorkPlan.status==="needs_revision"?
+        "整版规划待完善":releaseWorkPlan.status==="review_pending"?
+        "整版待审批":releaseWorkPlan.status==="frozen"?"整版已冻结":"尚未规划");
+      return;
+    }
+    const phases=new Map(),groups=new Map(taskPlanNodes().filter(x=>x.kind==="group").map(x=>[x.id,x]));
+    for(const row of filtered){
+      const phase=row.phase||"其它任务";
+      if(!phases.has(phase))phases.set(phase,[]);
+      phases.get(phase).push(row);
+    }
+    $("task-rows").replaceChildren(...(filtered.length?[...phases].map(([phase,items])=>{
+      const container=n("section",null,"task-phase");
+      const head=n("div",null,"task-phase-head");
+      head.append(n("strong",phase+" · "+(groups.get(phase)?.title||"独立任务")),
+        n("small",items.length+" 项 · "+items.filter(x=>x.pending).length+" 项待审批"));
+      const list=n("div",null,"task-phase-items");
+      for(const row of items){
+        const task=row.item;
+        const button=n("button",null,"simple-task");button.type="button";
+        const top=n("div",null,"simple-task-head");
+        top.append(n("span",displayTaskTitle(task),"simple-task-title"));
+        const [label,cls]=taskStatus(row);
+        top.append(n("span",label,"issue-state "+cls));
+        const owner=row.current?.owner||(row.pending?localGit?.name:null);
+        const device=row.current?.ownerAssignment?.device||localGit?.device;
+        button.append(top,n("div",task.id+" · "+translate("负责人")+": "+
+          (owner||(locale==="en"?"Not recorded":"历史未记录"))+
+          (device?" · "+(locale==="en"?"Device":"设备")+": "+device:""),"simple-task-meta"));
+        button.append(n("div",task.scenario||task.acceptance||row.current?.spec?.acceptance||
+          "尚无独立执行规格，不得凭标题直接开始开发。","simple-task-summary"));
+        if(row.pending||row.current?.blockedBy?.length||row.current?.unverifiedChildren?.length){
+          button.append(n("small",row.pending?"任务提案尚未审批，不能领取":
+            "前置依赖尚未验收，不能领取","sub"));
+        }
+        button.addEventListener("click",()=>openPlanTask(row));list.append(button);
+      }
+      container.append(head,list);return container;
     }):[n("div",search?"没有匹配的任务。":"当前没有任务。","docs-empty")]));
     const pending=rows.filter(row=>row.pending&&taskBucket(row)===taskTab).length;
     $("task-list-count").textContent=locale==="en"?
@@ -487,9 +708,10 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       const data=await fetchJSON("/api/work-items");
       container.replaceChildren(...(data.items.length?data.items.map(item=>{
         const b=n("button",null,"docitem");b.type="button";
-        b.append(n("span",item.kind==="bug"?"BUG":item.status==="synced"?"已同步顶层设计":"待同步顶层设计","taskid"),
+        b.append(n("span",item.kind==="bug"?"BUG · "+item.status:item.status==="synced"?"已同步顶层设计":"待同步顶层设计","taskid"),
           n("b",item.title),n("small",item.creator+" · "+item.device+" · "+(item.topLevelDocument||item.id)));
         b.addEventListener("click",()=>{
+          if(item.kind==="bug"){openBug(item.id);return;}
           $("overlay").classList.add("open");
           $("doc-title").textContent=item.title;
           $("doc-source").textContent=item.id+" · "+item.status;
@@ -503,6 +725,47 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         });return b;
       }):[n("div","当前项目尚无 Bug 或待审架构变更。","docs-empty")]));
     }catch(e){container.replaceChildren(n("div","读取失败："+e.message,"error"));}
+  }
+  async function openBug(id){
+    $("overlay").classList.add("open");
+    $("doc-title").textContent="正在加载 Bug…";
+    $("doc-source").textContent=id+" · DevControl SRC-8";
+    const root=$("doc-content");root.replaceChildren(n("p","读取 SRC-8 分析记录…","sub"));
+    try{
+      const data=await fetchJSON("/api/bugs/"+encodeURIComponent(id));
+      $("doc-title").textContent=data.title;
+      $("doc-source").textContent=id+" · "+data.status+" · "+(data.featureName||"未关联功能");
+      root.replaceChildren();
+      const completed=data.steps.filter(step=>step.status==="completed").length;
+      const intro=n("div",null,"spec-block");
+      intro.append(n("h3","SRC-8 分析进度 · "+completed+" / 8 步已完成"),
+        n("p",data.description||"尚无问题描述"));root.append(intro);
+      for(const step of data.steps){
+        const panel=n("section",null,"spec-block");
+        const header=n("h3",step.step+". "+step.title);
+        const label=step.status==="completed"?"已完成":step.status==="in_progress"?
+          "进行中":step.status==="blocked"?"已阻塞":"未开始";
+        const meta=n("p",label+" · 修订 "+step.revision+
+          (step.updatedBy?" · "+step.updatedBy:"")+
+          (step.updatedAt?" · "+step.updatedAt:""),"sub");
+        panel.append(header,meta);
+        const details=n("details");
+        if(step.status==="in_progress"||step.status==="blocked")details.open=true;
+        details.append(n("summary","查看分析内容与证据"),
+          n("p",step.summary||"尚未填写此步骤；待 Agent 按 start_bugfix 更新。"));
+        const refs=n("ul");
+        (step.evidence||[]).forEach(ref=>refs.append(n("li",ref)));
+        if(refs.childNodes.length)details.append(n("h3","关联证据"),refs);
+        panel.append(details);root.append(panel);
+      }
+      const related=n("section",null,"spec-block");
+      related.append(n("h3","关联的修复与回归测试任务"));
+      if(data.links.length)for(const link of data.links){
+        related.append(n("p",(link.role==="test"?"测试 · ":"修复 · ")+
+          link.taskId+" · "+link.title+" · "+link.status));
+      }else related.append(n("p","尚无关联的执行任务。SRC-8 取证记录不代表已批准开发。"));
+      root.append(related);
+    }catch(e){root.replaceChildren(n("p","Bug 详情读取失败："+e.message,"error"));}
   }
   async function loadHistory(){
     const container=$("history-list");
@@ -545,11 +808,31 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       $("doc-title").textContent=f.name;
       $("doc-source").textContent="版本 "+f.revision+" · "+f.layout+" · "+f.status+" · "+f.updatedAt;
       const root=$("doc-content");
-      const text=["# 功能目标",f.description,
-        "# 需求",f.sections.requirements||"尚未完善（草稿）",
-        "# 技术设计",f.sections.design||"尚未完善（草稿）",
-        "# 研发任务",f.sections.tasks||"尚未完善（草稿）"].join("\n\n");
-      markdown(root,text);
+      root.replaceChildren();
+      const sections=[
+        ["产品需求",f.sections.requirements],
+        ["技术设计",f.sections.design],
+        ["任务拆解",f.sections.tasks],
+      ];
+      const overview=n("section",null,"spec-block");
+      overview.append(n("h3","功能目标"),n("p",f.description),
+        n("p","规格版本 "+f.revision+" · "+(f.status==="specified"?
+          "规格已校验，但开发仍须完成任务审批":"草案待补全或校验"),"sub"));
+      root.append(overview);
+      const stats=n("div",null,"feature-summary");
+      for(const [title,value] of sections){
+        const panel=n("section",null,"spec-block");
+        panel.append(n("h3",title),n("p",String(value||"").trim()?"已填写":"待完善","sub"));
+        stats.append(panel);
+      }
+      root.append(stats);
+      for(const [title,value] of sections){
+        const panel=n("section",null,"spec-block");
+        panel.append(n("h3",title));
+        const content=n("div",null,"content");
+        markdown(content,String(value||"").trim()||"此部分尚未填写。请按 start_feature 的规格要求完善并验证。");
+        panel.append(content);root.append(panel);
+      }
       // A plan and an unfilled template are not completed specifications.
       // Expose the complete original SQLite data, without summarizing away
       // dependencies, inputs, outputs, evidence or the template deficiencies.
@@ -567,13 +850,13 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       const planBox=box("完整执行 Plan（项目 SQLite 原始数据）");
       if(steps.length){
         for(const step of steps){
-          const row=n("div",null,"spec-step");
-          row.append(n("strong",String(step.id||"未命名步骤")+" · "+
+          const row=n("details",null,"spec-step");
+          row.append(n("summary",String(step.id||"未命名步骤")+" · "+
             String(step.action||step.tool||step.type||"执行步骤")));
           for(const [key,label] of [["dependsOn","前置依赖"],["requiredInputs","所需输入"],
             ["expectedOutputs","预期交付"],["completionEvidence","验收证据"],["note","执行限制"]]){
             const value=step[key];if(value===undefined||value===null)continue;
-            row.append(n("span",label+": "+(Array.isArray(value)?value.join("；"):String(value)),"spec-key"));
+            row.append(n("p",label+" · "+(Array.isArray(value)?value.join("；"):String(value)),"sub"));
           }
           planBox.append(row);
         }
@@ -587,8 +870,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         "尚未建立父子子规格。当前模板不等于真实需求或设计。","sub"));
       for(const sub of subs){
         const row=n("div",null,"spec-step");
-        row.append(n("strong",String(sub.id||"未命名子规格")+" · "+String(sub.title||"")),
-          n("pre",JSON.stringify(sub,null,2),"spec-raw"));
+        const details=n("details");
+        details.append(n("summary",String(sub.id||"未命名子规格")+" · "+String(sub.title||"")),
+          n("pre",JSON.stringify(sub,null,2),"spec-raw"));row.append(details);
         templateBox.append(row);
       }
       if(draft){
@@ -609,7 +893,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     const rows=features||[];
     $("db-features").replaceChildren(...(rows.length?rows.map(f=>{
       const b=n("button",null,"docitem");b.type="button";
-      b.append(n("span",f.status==="specified"?"规格已校验":"草稿待完善","taskid"),
+      const linked=featureTaskPlans.find(p=>p.featureName===f.name);
+      const planning=linked?.status==="needs_revision"?" · 任务规划待完善":
+        linked?.status==="review_pending"?" · 任务待审批":
+          linked?.status==="frozen"?" · 任务已冻结":"";
+      b.append(n("span",(f.status==="specified"?"规格已校验":"草稿待完善")+planning,"taskid"),
         n("b",f.name),n("small","SQLite · "+f.layout+" · 版本 "+f.revision));
       b.addEventListener("click",()=>openFeature(f.name));return b;
     }):[n("div","暂无 SQLite 功能提案；首次调用 start_feature 后自动显示。","docs-empty")]));
@@ -795,15 +1083,20 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       "当前无符合依赖条件的任务；可在任务列表查看工作进度。";
     setupDocs();
     renderOnboarding();
+    renderReleaseReview();
     renderTaskList();
     renderFeatures();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
   async function reload(){
-    try{const [nextProject,nextBoard,nextFeatures,nextOnboarding,nextReleasePlan,nextDeveloper]=await Promise.all([
-      fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),fetchJSON("/api/onboarding"),
+    try{const [nextProject,nextBoard,nextFeatures,nextFeatureTaskPlans,nextReleaseWorkPlan,nextOnboarding,nextReleasePlan,nextDeveloper]=await Promise.all([
+      fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),
+      fetchJSON("/api/feature-task-plans"),fetchJSON("/api/release-work-plan"),
+      fetchJSON("/api/onboarding"),
       fetchJSON("/api/release-plan"),fetchJSON("/api/local-developer")]);
       project=nextProject;board=nextBoard;features=nextFeatures.features||[];
+      featureTaskPlans=nextFeatureTaskPlans.plans||[];
+      releaseWorkPlan=nextReleaseWorkPlan;
       onboarding=nextOnboarding;releasePlan=nextReleasePlan;localGit=nextDeveloper;render();}
     catch(e){$("project-intro").textContent="无法读取项目资料："+e.message;}
   }
@@ -813,6 +1106,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   for(const b of document.querySelectorAll("[data-tasktab]"))
     b.addEventListener("click",()=>setTaskTab(b.dataset.tasktab));
   $("task-search").addEventListener("input",renderTaskList);
+  $("task-stage-filter").addEventListener("change",renderTaskList);
+  $("task-type-filter").addEventListener("change",renderTaskList);
   $("open-vision").addEventListener("click",()=>openDoc("docs/product/vision.md"));
   $("open-roadmap").addEventListener("click",()=>openDoc("docs/roadmap/releases.md"));
   $("open-okr").addEventListener("click",()=>openDoc(project?.okr.source||"docs/okr/README.md"));

@@ -99,7 +99,7 @@ export function generateAgentsMdInner(input: AgentsMdTemplateInput): string {
 - 缺上下文 → \`init_project_context\`
 - 提交 → \`gencommit\`
 
-**Git + Node22 DevControl 工作流（仅在项目实际启用时）**：start_feature/start_bugfix 只提供委托计划，业务方案和完整版本的原子 WorkItem 由 Agent 阅读 PRD、ADR、代码后自主规划并独立复审；Feature 使用 SQLite feature-save/validate，不默认生成 docs/specs 或任务 Markdown。整版先 release-work-review/stage，明确批准后才 release-work-approve；每次 devcontrol next/execution-contract、claim 一项，真实测试、check、Git Hook 提交、complete/report/verify 后继续。History 要真正持久化；共享完整 SQLite 仅限项目所有者明确授权的一致性快照，不得提交正在写的 WAL 或活跃租约。具体步骤见 Skill 的 DevControl 章节。
+**Git + Node22 DevControl 工作流（仅在项目实际启用时）**：start_feature/start_bugfix 只提供委托计划，业务方案和整版原子 WorkItem 由 Agent 阅读原始需求、SQLite Feature/决策、代码后自主规划并独立复审；不默认生成 docs/specs 或 ADR/任务 Markdown。整版 review/stage，经明确批准才 approve；每次 next/execution-contract/claim 一项。**纯决策**：新任务 type=decision、allowedPaths=[]、requiredGates=[sqlite_decision]，claim 后 decision-save/get → complete/report/verify，不写 Markdown/不为验收强制 Git 提交；已冻结旧决策可显式 decision-save 兼容迁移。**代码任务**：实际测试、check、正常 Git Hook 提交、complete/report/verify。SQLite 决策验证不等于 G2 方案批准/产品发布。History 真正落库，完整 SQLite 只按 Owner 授权的一致性 Git 快照共享，不能提交运行中的 WAL/租约。详见 Skill。
 
 ${contextLineZh}
 ${graphLineZh}${historySection(locale)}${memorySection(locale)}`;
@@ -125,7 +125,7 @@ Requires mcp-probe-kit. ${formatAgentsSkillReferenceEn(skillLink)} (Skill file a
 - Missing context → \`init_project_context\`
 - Commit → \`gencommit\`
 
-**Git + Node22 DevControl (only when enabled in this project)**: start_feature/start_bugfix only delegate a workflow; the Agent owns business decisions and complete-release atomic WorkItem planning and independent review. Use SQLite feature-save/validate (no docs/specs task Markdown by default), release-work-review/stage, and explicit release-work-approve. Then devcontrol next/execution-contract, claim ONE item, implement and run real tests, check, normal Git commit, complete/report/verify. History must persist; share full SQLite only via Owner-approved consistent project snapshots, never raw live WAL or active leases. See the Skill DevControl section.
+**Git + Node22 DevControl (only when enabled)**: Agent owns decisions, whole-release one-action WorkItem planning and independent review; start_feature/start_bugfix only return workflows. Store Feature and review in SQLite, review/stage then explicitly approve the release. Claim ONE task. For **decision** tasks use type=decision, allowedPaths=[], requiredGates=[sqlite_decision], then decision-save/get → complete/report/verify in SQLite, NO mandatory ADR Markdown/Git commit; previously frozen docs-gated decisions can explicitly opt in. For **code** tasks use real tests, check, normal Git commit, complete/report/verify. A recorded decision is not G2 product approval. Share full SQLite only by Owner-approved consistent snapshots, never the live WAL/leases. See Skill.
 
 ${contextLineEn}
 ${graphLineEn}${historySection(locale)}${memorySection(locale)}`;

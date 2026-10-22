@@ -37,6 +37,15 @@ export interface ReleasePlanNode {
   outOfScope?: string[];
   deliverables?: string[];
   estimatedHours?: number;
+  /** Visible one-row work item metadata; detailed workflow stays in its drawer. */
+  workType?: "analysis" | "decision" | "coordination" | "development" | "testing" | "integration" | "bugfix" | "release";
+  platform?: string;
+  owner?: string;
+  plannedStartAt?: string;
+  plannedEndAt?: string;
+  priority?: number;
+  checklist?: string[];
+  remark?: string;
   allowedPaths?: string[];
   requiredGates?: string[];
   /** Existing approved or verified tasks are referenced, NEVER rewritten. */
@@ -52,6 +61,8 @@ export interface ReleasePlanProposal {
   /** The frozen plan revision this change is based on; 0 for a new release. */
   baseRevision: number;
   qualityProfile?: "spec-depth-v2" | "spec-depth-v3";
+  /** Revision-locked SQLite source from start_feature, not another Spec file. */
+  sourceFeature?: { name: string; revision: number; hash: string };
 }
 
 export interface PlanReview {
@@ -72,7 +83,8 @@ const allowedGates = new Set([
 ]);
 const unfilled = /\[(?:填写|待补)|\b(?:TODO|TBD)\b/i;
 
-export function reviewReleasePlan(plan: ReleasePlanProposal): PlanReview {
+export function reviewReleasePlan(plan: ReleasePlanProposal,
+  options: { approvedExternalDependencies?: ReadonlySet<string> } = {}): PlanReview {
   const issues: string[] = [];
   const nodes = Array.isArray(plan?.nodes) ? plan.nodes : [];
   const requirements = Array.isArray(plan?.requirementIds) ? plan.requirementIds : [];
@@ -208,7 +220,8 @@ export function reviewReleasePlan(plan: ReleasePlanProposal): PlanReview {
       ...(Array.isArray(node.dependsOn) ? node.dependsOn : []),
       ...(node.parentId ? [node.parentId] : []),
     ];
-    for (const dep of edges) if (dep === node.id || !byId.has(dep)) {
+    for (const dep of edges) if (dep === node.id ||
+      (!byId.has(dep) && !(dep !== node.parentId && options.approvedExternalDependencies?.has(dep)))) {
       issues.push(node.id + ": missing or self-referential dependency/parent " + dep);
     }
     graph.set(node.id, edges.filter(dep => byId.has(dep)));

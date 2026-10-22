@@ -14,7 +14,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.9.3";
+export const WORKSPACE_SCHEMA_VERSION = "0.9.10";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
@@ -122,11 +122,25 @@ export function createDevControlBoardServer(
           respond(res, 400, '{"error":"Invalid release"}', nonce, "application/json");return;
         }
         respond(res, 200, JSON.stringify(ledger.releasePlan(release)), nonce, "application/json; charset=utf-8");
+      } else if (route === "/api/release-work-plan") {
+        const release = new URL(req.url ?? "/", "http://localhost").searchParams.get("release") ??
+          ledger.primaryRelease();
+        if(release && !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,39}$/.test(release)){
+          respond(res,400,'{"error":"Invalid release"}',nonce,"application/json");return;
+        }
+        respond(res,200,JSON.stringify(ledger.releaseWorkPlan(release)),nonce,"application/json; charset=utf-8");
       } else if (route === "/api/features") {
         respond(res, 200, JSON.stringify({ features: ledger.listFeatures() }),
           nonce, "application/json; charset=utf-8");
+      } else if (route === "/api/feature-task-plans") {
+        respond(res, 200, JSON.stringify({ plans: ledger.listFeatureTaskPlans() }),
+          nonce, "application/json; charset=utf-8");
       } else if (route === "/api/work-items") {
         respond(res, 200, JSON.stringify({ items: ledger.listWorkItems() }),
+          nonce, "application/json; charset=utf-8");
+      } else if (/^\/api\/bugs\/BUG-[A-F0-9]{15}$/.test(route)) {
+        const id = route.slice("/api/bugs/".length);
+        respond(res, 200, JSON.stringify(ledger.bugDetail(id)),
           nonce, "application/json; charset=utf-8");
       } else if (route === "/api/history") {
         const params = new URL(req.url ?? "/", "http://localhost").searchParams;
@@ -164,6 +178,10 @@ export function createDevControlBoardServer(
           "Content-Security-Policy": "default-src 'none'",
         });
         res.end(content);
+      } else if (/^\/api\/features\/[a-z0-9]+(?:-[a-z0-9]+)*\/task-brief$/.test(route)) {
+        const name = route.slice("/api/features/".length).replace(/\/task-brief$/, "");
+        respond(res, 200, JSON.stringify(ledger.featureTaskBrief(name)), nonce,
+          "application/json; charset=utf-8");
       } else if (/^\/api\/features\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(route)) {
         const name = route.slice("/api/features/".length);
         respond(res, 200, JSON.stringify(ledger.getFeature(name)),
@@ -186,7 +204,7 @@ export function createDevControlBoardServer(
       }
     } catch (error) {
       const notFound = error instanceof DevControlError &&
-        ["TASK_NOT_FOUND", "FEATURE_NOT_FOUND"].includes(error.code) ||
+        ["TASK_NOT_FOUND", "FEATURE_NOT_FOUND", "BUG_NOT_FOUND"].includes(error.code) ||
         (error instanceof Error &&
           (error as Error & { code?: string }).code === "HISTORY_READ_NOT_FOUND");
       respond(res, notFound ? 404 : 500, JSON.stringify({ error: notFound ? "Unknown task" : "Server error" }),

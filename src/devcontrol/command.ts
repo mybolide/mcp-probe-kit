@@ -35,6 +35,12 @@ export function dispatchDevControl(
   ledger: ProjectTaskLedger, operation: string, input: Record<string, any> = {},
 ): Record<string, unknown> {
   switch (operation) {
+    case "release-work-plan": return ledger.releaseWorkPlan(String(input.release ?? ledger.primaryRelease()));
+    case "release-work-review": return ledger.reviewReleaseWork(input.plan);
+    case "release-work-stage": return ledger.stageReleaseWork(input.plan,String(input.actor??""),
+      input.expectedPreviousHash);
+    case "release-work-approve": return ledger.approveReleaseWork(String(input.release),
+      String(input.expectedHash));
     case "release-plan": return ledger.releasePlan(String(input.release ?? ledger.primaryRelease()));
     case "plan-review": return { ...reviewReleasePlan(input.plan) };
     case "plan-propose": return ledger.proposeReleasePlan(input.plan, String(input.actor ?? ""));
@@ -54,11 +60,37 @@ export function dispatchDevControl(
       input.architectureImpact, input.topLevelDocument,
     );
     case "feature-validate": return ledger.validateFeature(String(input.name));
+    case "feature-task-brief": return ledger.featureTaskBrief(String(input.name));
+    case "feature-task-plan": return ledger.featureTaskPlan(String(input.name));
+    case "feature-task-plans": return {plans:ledger.listFeatureTaskPlans()};
+    case "feature-task-review": return ledger.reviewFeatureTasks(
+      String(input.name), input.expectedFeatureRevision, input.plan,
+    );
+    case "feature-task-stage": return ledger.stageFeatureTasks(
+      String(input.name), input.expectedFeatureRevision, input.plan,
+      String(input.actor ?? ""), input.expectedPreviousHash,
+    );
+    case "feature-task-propose": return ledger.proposeFeatureTasks(
+      String(input.name), input.expectedFeatureRevision, input.plan,
+      String(input.actor ?? ""), input.expectedPreviousHash,
+    );
+    case "feature-task-approve": return ledger.approveFeatureTasks(
+      String(input.name), String(input.approvedBy ?? ""), String(input.expectedHash ?? ""),
+    );
     case "feature-export": return {
       name: String(input.name), format: input.format ?? "markdown",
       content: ledger.exportFeature(String(input.name), input.format ?? "markdown"),
     };
     case "work-items": return { items: ledger.listWorkItems(input.kind) };
+    case "bug-get": return ledger.bugDetail(String(input.id));
+    case "bug-step-save": return ledger.updateBugStep({
+      id: String(input.id), step: input.step, status: input.status,
+      summary: input.summary, evidence: input.evidence,
+      actor: input.actor, expectedRevision: input.expectedRevision,
+    });
+    case "bug-task-link": return ledger.linkBugTask(
+      String(input.id), String(input.taskId), input.role, String(input.actor ?? ""),
+    );
     case "work-record": return ledger.recordWorkItem({
       kind: input.kind, title: input.title, description: input.description,
       featureName: input.featureName, topLevelDocument: input.topLevelDocument,
@@ -73,6 +105,14 @@ export function dispatchDevControl(
     case "get": return ledger.get(String(input.id));
     case "local-developer": return ledger.localDeveloper();
     case "execution-contract": return ledger.executionContract(String(input.id));
+    case "decision-get": return ledger.getDecision(String(input.id));
+    case "decision-save": return ledger.recordDecision(
+      String(input.id),String(input.leaseToken),{
+        question:input.question,decision:input.decision,
+        rationale:input.rationale,alternatives:input.alternatives,
+        consequences:input.consequences,verificationPlan:input.verificationPlan,
+        status:input.status,expectedRevision:input.expectedRevision,
+      });
     case "hook-status": return { ...hookStatus(ledger.root) };
     case "hook-install": return { ...installHook(ledger.root, path.resolve(process.argv[1]??"")) };
     case "create": return ledger.create(input as CreateWorkItem, String(input.actor ?? "agent-proposal"));

@@ -58,6 +58,16 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('fetchJSON("/api/release-plan")');
     expect(html).toContain('id="task-rows"');
     expect(html).toContain('id="task-search"');
+    expect(html).toContain('id="overview-release-review"');
+    expect(html).toContain('id="release-review-summary"');
+    expect(html).toContain('function renderReleaseReview()');
+    expect(html).toContain('function openReviewFinding(issue)');
+    expect(html).toContain('plan.reviewFindings.filter(f=>f.severity==="blocker")');
+    expect(html).toContain('renderReleaseReview();');
+    expect(html).toContain('"查看验收与关联任务 →"');
+    expect(html).toContain('decisionStatus==="decided"');
+    expect(html).toContain('verificationStatus==="pending"');
+    expect(html).toContain('项工程决策已定案');
     for (const [id,label] of [["not_started","未开始"],["in_progress","开发中"],["completed","已完成"]]){
       expect(html).toContain('data-tasktab="'+id+'"');
       expect(html).toContain(label);

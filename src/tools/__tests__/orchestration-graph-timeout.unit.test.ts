@@ -3,6 +3,10 @@
  * timeout instead of failing tools/call with "node.exe 超过 8000ms 未完成".
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const buildBugfixGraphContextMock = vi.fn();
 const buildFeatureGraphContextMock = vi.fn();
@@ -75,17 +79,25 @@ describe('编排入口 GitNexus 超时降级', () => {
 
   test('start_feature 超时仍 degraded 继续（防止修 bugfix 时拆掉 feature 路径）', async () => {
     buildFeatureGraphContextMock.mockResolvedValue(degradedFeature);
+    // Never write this synthetic Feature to whichever real Git project runs Vitest.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'probe-graph-timeout-'));
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root });
+      const result = await startFeature({
+        description: 'slim npm pack regression control',
+        feature_name: 'graph-timeout-control',
+        project_root: root,
+        storage_mode: 'sqlite',
+      });
 
-    const result = await startFeature({
-      description: 'slim npm pack regression control',
-      feature_name: 'graph-timeout-control',
-    });
-
-    expect(result.isError).not.toBe(true);
-    const structured = (result as { structuredContent?: Record<string, any> }).structuredContent;
-    expect(structured?.metadata?.graphContext?.degraded).toBe(true);
-    expect(structured?.metadata?.graphContext?.warnings).toContain('feature_graph_timeout');
-    expect(result.content[0].text).toMatch(/已降级|超过 8000ms/);
-    expect(structured?.metadata?.plan?.workflow).toBe('feature');
+      expect(result.isError).not.toBe(true);
+      const structured = (result as { structuredContent?: Record<string, any> }).structuredContent;
+      expect(structured?.metadata?.graphContext?.degraded).toBe(true);
+      expect(structured?.metadata?.graphContext?.warnings).toContain('feature_graph_timeout');
+      expect(result.content[0].text).toMatch(/已降级|超过 8000ms/);
+      expect(structured?.metadata?.plan?.workflow).toBe('feature');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });
