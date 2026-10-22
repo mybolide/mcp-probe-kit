@@ -88,6 +88,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .issue-state.done{background:#1d503e;color:#9de9c5}
 .issue-state.blocked{background:#493027;color:#ffbaaa}
 .issue-count{font-size:12px;color:#a7bed6;padding:9px 2px}
+.task-progress{margin:0 0 17px;padding:14px 17px;background:#12243a;border:1px solid #304861;border-radius:10px}
+.task-progress span{display:block;font-size:12px;color:#b7d3e7;margin-bottom:9px}
+.task-progress progress{display:block;width:100%;height:10px;accent-color:#72e4ba}
 .release-review{margin:8px 0 14px;padding:10px 14px;border:1px solid #405575;border-radius:9px;background:#14263b;font-size:12px;color:#d7e5f2}
 .release-review summary{cursor:pointer;font-weight:700}
 .release-review li{margin:8px 0;line-height:1.55}
@@ -224,6 +227,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   <section id="view-tasks" class="view">
     <div class="sectionhead"><div class="eyebrow">任务管理</div><h1>任务列表</h1>
       <p class="sub">按实际任务状态查看进度；待审核任务归入未开始，不等于获准开发。</p></div>
+    <div class="task-progress"><span id="task-progress-label">正在读取已验证的工作项进度…</span>
+      <progress id="task-progress-bar" value="0" max="1" aria-label="正式版本已验证工作项进度"></progress></div>
     <div class="task-tabs" role="tablist" aria-label="任务状态">
       <button type="button" role="tab" data-tasktab="not_started" aria-selected="true" aria-controls="task-list-panel">未开始 <span id="count-not_started" class="count">0</span></button>
       <button type="button" role="tab" data-tasktab="in_progress" aria-selected="false" aria-controls="task-list-panel">开发中 <span id="count-in_progress" class="count">0</span></button>
@@ -651,8 +656,11 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         const title=n("span");title.append(n("small",item.id+" · "+(item.stageId||""),"work-id"),
           n("strong",displayTaskTitle(item)));
         const [status,state]=taskStatus(row);
+        const actualOwner=row.current?.owner||item.owner;
+        const actualDevice=row.current?.ownerAssignment?.device;
         button.append(title,n("span",status,"issue-state "+state),
-          n("span",item.owner||("待分配 · "+(item.ownerRole||"研发角色待定"))),
+          n("span",actualOwner?(actualOwner+(actualDevice?" · "+actualDevice:"")):
+            ("未领取 · "+(item.ownerRole||"研发角色待定"))),
           n("span",(item.type||"—")+" / "+(item.platform||"—")),
           n("span",item.plannedStartAt||"未排期"),
           n("span",item.plannedEndAt||"未排期"),
@@ -1090,11 +1098,17 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     // Governance tasks must not inflate the perceived product delivery rate.
     const all=Object.values(board.columns).flat();
     const productTasks=taskRows().filter(row=>taskBucket(row)!==null);
+    const verifiedTasks=productTasks.filter(row=>taskBucket(row)==="completed").length;
     const governance=all.filter(t=>t.track==="governance");
     $("s-total").textContent=String(productTasks.length);
-    $("s-done").textContent=String(productTasks.filter(t=>taskBucket(t)==="completed").length);
+    $("s-done").textContent=String(verifiedTasks);
     $("s-active").textContent=String(productTasks.filter(t=>taskBucket(t)==="in_progress").length);
     $("s-pending").textContent=String(productTasks.filter(t=>taskBucket(t)==="not_started").length);
+    $("task-progress-bar").max=Math.max(1,productTasks.length);
+    $("task-progress-bar").value=verifiedTasks;
+    $("task-progress-label").textContent="正式工作项已验证 "+verifiedTasks+" / "+productTasks.length+
+      "（"+(productTasks.length?(100*verifiedTasks/productTasks.length).toFixed(1):"0.0")+
+      "%）。仅表示工作项 Verified，不代表产品发布 Gate 已通过。";
     $("governance-count").textContent="工程治理 · "+governance.filter(t=>t.status==="verified").length+"/"+governance.length+" 完成";
     $("next-id").textContent=board.current||"暂无可领取任务";
     const candidate=all.find(t=>t.id===board.current);
@@ -1113,7 +1127,10 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     renderFeatures();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
+  let reloadInProgress=false;
   async function reload(){
+    if(reloadInProgress)return;
+    reloadInProgress=true;
     try{const [nextProject,nextBoard,nextFeatures,nextFeatureTaskPlans,nextReleaseWorkPlan,nextOnboarding,nextReleasePlan,nextDeveloper]=await Promise.all([
       fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),
       fetchJSON("/api/feature-task-plans"),fetchJSON("/api/release-work-plan"),
@@ -1123,7 +1140,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       featureTaskPlans=nextFeatureTaskPlans.plans||[];
       releaseWorkPlan=nextReleaseWorkPlan;
       onboarding=nextOnboarding;releasePlan=nextReleasePlan;localGit=nextDeveloper;render();}
-    catch(e){$("project-intro").textContent="无法读取项目资料："+e.message;}
+    catch(e){$("synced").textContent="同步失败："+e.message+"；保留上一次结果";}
+    finally{reloadInProgress=false;}
   }
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));
   for(const b of document.querySelectorAll("[data-go]"))b.addEventListener("click",()=>go(b.dataset.go));
@@ -1149,6 +1167,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   localizeChrome();
   const requested=location.hash.slice(1);if(titles[requested])go(requested);
   reload();setInterval(()=>{if(document.visibilityState==="visible")reload();},30000);
+  window.addEventListener("focus",()=>{if(document.visibilityState==="visible")reload();});
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")reload();});
 })();
 </script></body></html>`;
 }

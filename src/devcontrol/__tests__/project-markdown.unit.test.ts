@@ -59,6 +59,11 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('fetchJSON("/api/release-plan")');
     expect(html).toContain('id="task-rows"');
     expect(html).toContain('id="task-search"');
+    expect(html).toContain('id="task-progress-bar"');
+    expect(html).toContain('"正式工作项已验证 "+verifiedTasks');
+    expect(html).toContain('const actualOwner=row.current?.owner||item.owner;');
+    expect(html).toContain('window.addEventListener("focus"');
+    expect(html).toContain('document.addEventListener("visibilitychange"');
     expect(html).toContain('id="overview-release-review"');
     expect(html).toContain('id="release-review-summary"');
     expect(html).toContain('function renderReleaseReview()');
