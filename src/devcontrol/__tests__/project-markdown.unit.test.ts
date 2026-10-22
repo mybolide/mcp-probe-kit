@@ -59,6 +59,8 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('fetchJSON("/api/release-plan")');
     expect(html).toContain('id="task-rows"');
     expect(html).toContain('id="task-search"');
+    expect(html).toContain("linkedByRequirement.get(req.id)||[]");
+    expect(html).toContain('function openRequirement(req,linked,progress)');
     expect(html).toContain('id="task-progress-bar"');
     expect(html).toContain('"正式工作项已验证 "+verifiedTasks');
     expect(html).toContain('const actualOwner=row.current?.owner||item.owner;');
@@ -99,6 +101,19 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('row.status==="verified"');
     expect(html).toContain('if(item.kind!=="group")result.push');
     expect(html).not.toContain("innerHTML");
+  });
+  it("marks requirement-linked task verification without pretending that the product gate passed", () => {
+    const html=projectHtml("nonce");
+    const start=html.indexOf("  function requirementWorkState(rows){");
+    const end=html.indexOf("  function openRequirement(req,linked,progress){",start);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    const state=vm.runInNewContext(html.slice(start,end)+"\nrequirementWorkState;") as
+      (rows: Array<{status:string}>)=>{verified:number;label:string};
+    expect(state([])).toMatchObject({verified:0,label:"当前版本未拆分工作项"});
+    expect(state([{status:"ready"},{status:"in_review"}])).toMatchObject({verified:0,label:"已拆分 · 尚无 Verified 工作项"});
+    expect(state([{status:"verified"},{status:"ready"}])).toMatchObject({verified:1,label:"部分工作项已验证"});
+    expect(state([{status:"verified"},{status:"verified"}])).toMatchObject({verified:2,label:"关联工作项全部 Verified · 产品验收另行确认"});
   });
   it("renders verified frozen work item completion, decision and real owner without another click", async () => {
     const html = projectHtml("nonce");
