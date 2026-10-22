@@ -17,6 +17,7 @@ import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } fro
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
 import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
+import { checkManagedGuidanceCommit } from "./managed-guidance-gate.js";
 import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, reviewDetailedWorkItems, reviewTaskQualityJudgments, auditAtomicWorkItemDetail, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
 import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
@@ -863,9 +864,22 @@ export class ProjectTaskLedger {
   }
 
   checkStaged(): Row {
+    const staged=spawnSync(
+      "git",["diff","--cached","--no-renames","--name-only","-z","--diff-filter=ACMRTD"],
+      {cwd:this.root,encoding:"buffer",timeout:12_000},
+    );
+    if(staged.status!==0||!Buffer.isBuffer(staged.stdout))fail("GIT_ERROR","Cannot inspect staged files");
+    const files=[...new Set(staged.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
+    const guidance=checkManagedGuidanceCommit(this.root,files);
+    // No implicit approval for arbitrary edits to AGENTS.md or the Skill.
+    // This exception requires only canonical generator output and no other files.
+    if(files.length&&guidance.passed)
+      return {passed:true,taskId:null,scope:"managed-guidance-sync",
+        stagedFiles:files,deniedFiles:[],unapprovedDocs:[],managedFiles:guidance.managedFiles};
     const lease = this.db.prepare("SELECT * FROM dc_leases WHERE singleton=1").get();
     if (!lease || lease.expires_at <= Date.now()) {
-      fail("LEASE_REQUIRED", "No active approved task lease; refusing Git commit");
+      fail("LEASE_REQUIRED", "No active approved task lease; refusing Git commit"+
+        (guidance.issues.length?"; managed guidance validation: "+guidance.issues.join("; "):""));
     }
     const task = this.requireTask(lease.task_id);
     if((task.required_gates as string).includes('"sqlite_decision"'))
@@ -875,14 +889,6 @@ export class ProjectTaskLedger {
       fail("TASK_NOT_ACTIVE", "Only active work may be committed");
     }
     if (this.blockers(task.id).length) fail("TASK_BLOCKED", "A prerequisite is no longer verified");
-    const result = spawnSync(
-      "git", ["diff", "--cached", "--no-renames", "--name-only", "-z", "--diff-filter=ACMRTD"],
-      { cwd: this.root, encoding: "buffer", timeout: 12_000 },
-    );
-    if (result.status !== 0 || !Buffer.isBuffer(result.stdout)) {
-      fail("GIT_ERROR", "Cannot inspect staged files");
-    }
-    const files = [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
     const patterns = JSON.parse(task.allowed_paths) as string[];
     const contract=this.executionContract(task.id);
     const spec=contract.profile==="spec-depth-v3"?

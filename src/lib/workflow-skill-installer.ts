@@ -50,6 +50,19 @@ export interface SkillEnsureResult {
   previousVersion: string | null;
 }
 
+/** Pure preview for the Git gate: it never writes or changes project files. */
+export function previewManagedGuidanceSync(projectRoot:string, headAgents:string|null):{
+  skill:string;agents:string;
+} {
+  const root=path.resolve(projectRoot);
+  const version=getMcpProbeSkillVersion();
+  return {
+    skill:generateWorkflowSkillContent(version),
+    agents:mergeAgentsMdBlock(headAgents,
+      buildAgentsMdInner(root,headAgents??undefined),version).content,
+  };
+}
+
 const PROJECT_CREATION_TOOLS = new Set(["init_project"]);
 
 function extractExplicitProjectRoot(args: unknown): string {

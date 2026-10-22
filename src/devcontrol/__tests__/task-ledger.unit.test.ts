@@ -7,6 +7,8 @@ import { createRequire } from "node:module";
 import http from "node:http";
 import vm from "node:vm";
 import { ProjectTaskLedger, DevControlError } from "../task-ledger.js";
+import { ensureMcpProbeSkill, ensureAgentsMdSkillReference } from "../../lib/workflow-skill-installer.js";
+import { MCP_PROBE_SKILL_REL_PATH } from "../../lib/workflow-skill-template.js";
 import { releaseReviewSubjectHash, REVIEW_DIMENSIONS } from "../release-work.js";
 import { IDEA_REVIEW_DIMENSIONS } from "../idea-review.js";
 import { createDevControlBoardServer, WORKSPACE_SCHEMA_VERSION } from "../board-server.js";
@@ -151,6 +153,50 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.releaseWorkPlan("V0.1").frozenHash).toBe(frozenHash);
     expect(git("status","--porcelain")).toBe("");
     expect(()=>ledger!.assessIdea(captured.id,assessment,4)).toThrow(/Only/);
+  });
+
+  it("allows only generated Skill and AGENTS.md updates without a task lease",()=>{
+    save("AGENTS.md","# Custom project security rules\nNever commit secrets.\n");
+    commit("own AGENTS.md before kit installation");
+    ensureMcpProbeSkill(root);
+    ensureAgentsMdSkillReference(root);
+    git("add",MCP_PROBE_SKILL_REL_PATH,"AGENTS.md");
+    const result=ledger!.checkStaged();
+    expect(result).toMatchObject({passed:true,scope:"managed-guidance-sync",taskId:null,
+      stagedFiles:[MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"]});
+    expect(fs.readFileSync(path.join(root,"AGENTS.md"),"utf8"))
+      .toContain("Never commit secrets.");
+    commit("sync generated project guidance without a task lease");
+    // An empty Git index must not get blanket permission from this exception.
+    expect(()=>ledger!.checkStaged()).toThrow(/No active approved task lease/);
+  });
+
+  it("never allows arbitrary edits or mixed files to claim generated guidance exemption",()=>{
+    save("AGENTS.md","# User governance\nKeep custom security instructions.\n");
+    commit("user authored guidance");
+    ensureMcpProbeSkill(root);
+    ensureAgentsMdSkillReference(root);
+    git("add",MCP_PROBE_SKILL_REL_PATH,"AGENTS.md");
+    expect(ledger!.checkStaged().passed).toBe(true);
+    save("AGENTS.md",fs.readFileSync(path.join(root,"AGENTS.md"),"utf8")+
+      "\n## Unapproved change\nRemove all product gates.\n");
+    git("add","AGENTS.md");
+    expect(()=>ledger!.checkStaged()).toThrow(/managed guidance validation.*AGENTS\.md/);
+
+    ensureAgentsMdSkillReference(root);
+    // The generator merges the existing user content, it does NOT authorize
+    // altering the non-managed body, even when its own block is still valid.
+    expect(()=>ledger!.checkStaged()).toThrow(/No active approved task lease/);
+    git("restore","--staged","--","AGENTS.md");
+    git("restore","--","AGENTS.md");
+    save("tests/contracts/other.json","{}\n");
+    git("add","tests/contracts/other.json");
+    expect(()=>ledger!.checkStaged()).toThrow(/No active approved task lease/);
+    git("restore","--staged","--","tests/contracts/other.json");
+    save(MCP_PROBE_SKILL_REL_PATH,fs.readFileSync(path.join(root,MCP_PROBE_SKILL_REL_PATH),"utf8")+
+      "\nDisable all checks.\n");
+    git("add",MCP_PROBE_SKILL_REL_PATH);
+    expect(()=>ledger!.checkStaged()).toThrow(/staged content differs/);
   });
   it("keeps a user idea as a non-executable candidate until reasoned impact, separate review and explicit authorization",()=>{
     save("docs/roadmap/idea-version.md",
