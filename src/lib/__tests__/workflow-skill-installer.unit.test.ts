@@ -194,12 +194,14 @@ describe("workflow-skill-installer", () => {
     expect(skill).toContain("idea-assess");
     expect(skill).toContain("idea-review");
     expect(skill).toContain("idea-decide");
-    expect(skill).toContain("用户的新想法不是立即改任务的指令");
+    expect(skill).toContain("用户的新想法需要评估，不是一律阻止、更不是一律立即开发");
+    expect(skill).toContain("within_task 可以继续既有合法领取任务");
+    expect(skill).toContain("不得扩大原任务合同");
     expect(skill).toContain("已冻结计划的自动修订与审批仍受RELEASE_CHANGE_REVIEW_REQUIRED限制");
     expect(agents).toContain("complete/report/verify");
-    expect(agents).toMatch(/新想法不是立即修改指令|New user ideas are candidates/);
+    expect(agents).toMatch(/新想法先充分评估|Evaluate new ideas instead of automatically blocking/);
     expect(agents).toContain("idea-capture");
-    expect(agents).toMatch(/不偷偷插入|frozen task scope\/order cannot be modified/);
+    expect(agents).toMatch(/现有已批准任务目标\/文件范围|currently claimed task/);
     expect(agents).toContain("Keep this rule.");
     const second = ensureMcpProbeKitBootstrap(root);
     expect(second.skill.updated).toBe(false);

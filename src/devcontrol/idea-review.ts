@@ -1,4 +1,8 @@
-/** New ideas are planning candidates, NEVER executable work orders. */
+/** A new idea is evaluated before placement, not automatically deferred.
+ *  A decision may be implemented NOW inside an already authorized task when
+ *  its original acceptance/scope covers it; anything changing frozen work
+ *  still needs a separate reviewed release amendment.
+ */
 import { createHash } from "node:crypto";
 
 export type IdeaRecommendation = "adopt"|"defer"|"reject";
@@ -60,8 +64,8 @@ export function assessIdeaShape(
     issues.push("affectedTaskIds must only reference actual frozen tasks");
   if(assessment.recommendation==="reject"&&assessment.placement!=="none")
     issues.push("rejected idea cannot be scheduled");
-  if(assessment.recommendation!=="reject"&&assessment.placement==="none")
-    issues.push("adopted/deferred ideas need a concrete timing recommendation");
+  if(assessment.recommendation==="adopt"&&assessment.placement==="none")
+    issues.push("adopted ideas need a proposed execution path");
   if(["within_task","after_task"].includes(assessment.placement)){
     if(!assessment.targetTaskId||!knownTasks.has(assessment.targetTaskId))
       issues.push("insertion targetTaskId must exist in frozen release");

@@ -258,6 +258,52 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.get("IDEA-QA").dependsOn).toEqual(["IDEA-CORE"]);
     expect(git("rev-parse","HEAD")).toBe(baseline);
     expect(git("status","--porcelain")).toBe("");
+    // A justified new idea CAN be admitted into the currently claimed task
+    // when that task's original contract already covers it. The idea alone
+    // creates no lease, new scope, dependency or executable work item.
+    const claim=ledger!.claim("IDEA-CORE","core-implementation-agent");
+    const inside=ledger!.captureIdea({release:"V0.1",
+      title:"Strengthen the already approved Core startup health behavior",
+      description:"The existing entrypoint should correctly reject unhealthy startup without changing its acceptance or file scope.",
+      sourceRef:"owner-feedback:current-task",submittedBy:"current-conversation-agent"});
+    const insideAssessment=ledger!.assessIdea(inside.id,{
+      ...impact,recommendation:"adopt",placement:"within_task",
+      rationale:"The claimed Core entrypoint can enforce its original startup health acceptance inside the unchanged allowed paths.",
+      alternatives:"Add a later separate task, but it would repeat the same approved scope and acceptance.",
+      versionImpact:"No change to the frozen workload, dependencies or acceptance is needed; execute during the claimed work.",
+    },inside.revision);
+    const insideReview=ledger!.reviewIdea(inside.id,{
+      ...review,subjectHash:insideAssessment.assessmentHash,
+    } as any,insideAssessment.revision);
+    const insideDecision=ledger!.decideIdea(inside.id,{
+      disposition:"adopt",approvedBy:"owner-explicit-current-task",
+      expectedRevision:insideReview.revision,
+      expectedReviewHash:insideReview.reviewHash,
+      reason:"This evaluated improvement fits the existing approved task and should be included now.",
+      explicitAuthorization:true,
+    });
+    expect(insideDecision).toMatchObject({
+      status:"approved_for_planning",canProceedWithinExistingTask:true,
+      releaseAmendmentRequired:false,executableTaskCreated:false,
+      frozenPlanChanged:false,
+    });
+    expect(insideDecision.nextGate).toMatch(/Existing task contract/);
+    expect(ledger!.get("IDEA-CORE").status).toBe("in_progress");
+    expect(ledger!.releaseWorkPlan("V0.1").frozenHash).toBe(frozenHash);
+    ledger!.release("IDEA-CORE",claim.leaseToken);
+    // Deferral without a known insertion stage is a valid assessment result,
+    // not a reason to invent a task or force an artificial future date.
+    const uncertain=ledger!.captureIdea({release:"V0.1",
+      title:"Explore optional future telemetry export",
+      description:"No committed customer or runtime need; feasibility and risk remain uncertain.",
+      sourceRef:"owner-feedback:optional-research",submittedBy:"analysis-agent"});
+    const deferred=ledger!.assessIdea(uncertain.id,{
+      ...impact,recommendation:"defer",placement:"none",
+      targetStageId:"",targetTaskId:undefined,affectedTaskIds:[],
+      rationale:"No direct requirement justifies insertion in this release yet; revisit once usage is observed.",
+      versionImpact:"No target version is chosen until measurable demand supports a planning slot.",
+    },uncertain.revision);
+    expect(deferred).toMatchObject({status:"assessed"});
   });
   it("does not turn a new idea into executable work or change the frozen release without reviewed planning",()=>{
     save("docs/roadmap/idea-release.md",

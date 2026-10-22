@@ -779,10 +779,13 @@ export class ProjectTaskLedger {
         fail("STALE_IDEA","Stored assessment was changed");
       const issues=reviewIdeaShape(review,assessment.assessedBy,expected,context.tasks);
       if(assessment.targetTaskId){
-        const task=this.db.prepare("SELECT status FROM dc_tasks WHERE id=?")
+        const task=this.db.prepare("SELECT status,plan_id FROM dc_tasks WHERE id=?")
           .get(assessment.targetTaskId);
-        if(task?.status!=="ready")
-          issues.push("Insertion anchor is no longer ready; re-assess placement");
+        const inScopeCurrentTask=assessment.placement==="within_task"&&
+          task?.status==="in_progress"&&
+          task?.plan_id==="release-work:"+row.release;
+        if(task?.status!=="ready"&&!inScopeCurrentTask)
+          issues.push("Insertion anchor changed; re-assess placement or use an authorized current task");
         if(review.checks?.some(check=>!check.taskIds?.includes(assessment.targetTaskId!)))
           issues.push("Every independent dimension must consider the insertion anchor");
       }
@@ -824,10 +827,14 @@ export class ProjectTaskLedger {
       if(input.disposition==="adopt"&&assessment.recommendation!=="adopt")
         fail("ASSESSMENT_MISMATCH","Reassess and re-review before overriding to adopt");
       if(assessment.targetTaskId){
-        const target=this.db.prepare("SELECT status FROM dc_tasks WHERE id=?")
+        const target=this.db.prepare("SELECT status,plan_id FROM dc_tasks WHERE id=?")
           .get(assessment.targetTaskId);
-        if(target?.status!=="ready")
-          fail("STALE_PLACEMENT","The chosen task already started; reassess placement");
+        const canUseClaimedTask=assessment.placement==="within_task"&&
+          target?.status==="in_progress"&&
+          target?.plan_id==="release-work:"+row.release;
+        if(target?.status!=="ready"&&!canUseClaimedTask)
+          fail("STALE_PLACEMENT",
+            "Target is no longer schedulable; reassess placement instead of forcing deferral");
       }
       const status=input.disposition==="adopt"?"approved_for_planning":
         input.disposition==="defer"?"deferred":"rejected";
@@ -840,10 +847,18 @@ export class ProjectTaskLedger {
         .run(status,revision,JSON.stringify(disposition),utc(),id);
       this.appendIdeaRevision(id,revision,"decided",
         {disposition,actor:input.approvedBy});
+      const nextGate=status!=="approved_for_planning"?"none":
+        assessment.placement==="within_task"?
+          "Existing task contract: only implement if original acceptance, file scope, gates and a valid claim already authorize it; otherwise request a reviewed release amendment":
+        assessment.placement==="after_task"?
+          "Reviewed whole-release amendment and explicit approval required before inserting work":
+          "Future release planning and separate approval required";
       return {...this.getIdea(id),executableTaskCreated:false,
-        frozenPlanChanged:false,
-        nextGate:status==="approved_for_planning"?
-          "Release-change review and explicit whole-version approval required":"none"};
+        frozenPlanChanged:false,nextGate,
+        canProceedWithinExistingTask:status==="approved_for_planning"&&
+          assessment.placement==="within_task",
+        releaseAmendmentRequired:status==="approved_for_planning"&&
+          assessment.placement!=="within_task"};
     });
   }
 
