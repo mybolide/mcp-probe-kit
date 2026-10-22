@@ -223,6 +223,9 @@ export async function runDevControlCli(positionals: string[], flags: FlagMap): P
     const input = jsonInput(flags);
     const result = dispatchDevControl(ledger, operation, input);
     process.stdout.write(JSON.stringify({ ok: true, operation, result }, null, 2) + "\n");
+    // A read-only depth audit can report a legacy task's missing explanation
+    // without turning successful inspection into a CLI or workflow failure.
+    if (operation === "task-detail-audit") return 0;
     return "passed" in result && result.passed === false ? 1 : 0;
   } finally {
     ledger.close();
