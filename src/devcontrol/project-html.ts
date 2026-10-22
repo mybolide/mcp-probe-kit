@@ -394,6 +394,14 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     // Not-yet-approved plans must not be counted as in development.
     return "not_started";
   }
+  function currentReleaseRows(){
+    const rows=taskRows().filter(row=>taskBucket(row)!==null);
+    if(releaseWorkPlan?.status!=="frozen")return rows;
+    // F0/F1 historical records are still available in SQLite, but a frozen
+    // release's progress and task tabs must count only its 403 approved items.
+    const frozenIds=new Set((releaseWorkPlan.frozen?.plan?.workItems||[]).map(item=>item.id));
+    return rows.filter(row=>frozenIds.has(row.item.id));
+  }
   function displayTaskTitle(task){
     // Historical task IDs/titles in SQLite must remain unchanged.
     const historical={"F0":"基础环境与架构","F1":"最小事件与接口契约"};
@@ -625,7 +633,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     ]);
   }
   function renderTaskList(){
-    const rows=taskRows().filter(row=>taskBucket(row)!==null);
+    const rows=currentReleaseRows();
     for(const [name,key,choices] of [
       ["task-stage-filter","stageId",[...new Set(rows.map(r=>r.item.stageId||r.phase).filter(Boolean))].sort()],
       ["task-type-filter","type",[...new Set(rows.map(r=>r.item.type).filter(Boolean))].sort()],
@@ -1073,7 +1081,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     const specs=docs.filter(d=>d.path.startsWith("docs/specs/"));
     $("specdocs").replaceChildren(...(specs.length?specs.map(docButton):[n("div","暂无已发布功能规格","docs-empty")]));
     const linkedByRequirement=new Map();
-    for(const row of taskRows())for(const id of (row.item.requirementIds||row.current?.spec?.requirementIds||[])){
+    for(const row of currentReleaseRows())for(const id of (row.item.requirementIds||row.current?.spec?.requirementIds||[])){
       if(!linkedByRequirement.has(id))linkedByRequirement.set(id,[]);
       linkedByRequirement.get(id).push(row);
     }
@@ -1142,7 +1150,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     $("architecture-diagram").classList.toggle("hide",!project.architecture.diagram);
     // Governance tasks must not inflate the perceived product delivery rate.
     const all=Object.values(board.columns).flat();
-    const productTasks=taskRows().filter(row=>taskBucket(row)!==null);
+    const productTasks=currentReleaseRows();
     const verifiedTasks=productTasks.filter(row=>taskBucket(row)==="completed").length;
     const governance=all.filter(t=>t.track==="governance");
     $("s-total").textContent=String(productTasks.length);

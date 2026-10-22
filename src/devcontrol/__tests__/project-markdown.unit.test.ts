@@ -63,6 +63,7 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('function openRequirement(req,linked,progress)');
     expect(html).toContain('id="task-progress-bar"');
     expect(html).toContain('"正式工作项已验证 "+verifiedTasks');
+    expect(html).toContain('const productTasks=currentReleaseRows();');
     expect(html).toContain('const actualOwner=row.current?.owner||item.owner;');
     expect(html).toContain('window.addEventListener("focus"');
     expect(html).toContain('document.addEventListener("visibilitychange"');
@@ -101,6 +102,28 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('row.status==="verified"');
     expect(html).toContain('if(item.kind!=="group")result.push');
     expect(html).not.toContain("innerHTML");
+  });
+  it("excludes old verified F0/F1 tasks from a frozen V0.1 progress denominator", () => {
+    const html=projectHtml("nonce");
+    const start=html.indexOf("  function currentReleaseRows(){");
+    const end=html.indexOf("  function displayTaskTitle(task){",start);
+    expect(start).toBeGreaterThan(0);
+    const rows=[
+      {item:{id:"F0"},status:"verified"},
+      {item:{id:"F1"},status:"verified"},
+      {item:{id:"F2-21"},status:"verified"},
+      {item:{id:"F2-24"},status:"ready"},
+    ];
+    const script=html.slice(start,end)+"\ncurrentReleaseRows();";
+    const result=vm.runInNewContext(script,{
+      taskRows:()=>rows,
+      taskBucket:()=>"completed",
+      releaseWorkPlan:{status:"frozen",frozen:{plan:{workItems:[
+        {id:"F2-21"},{id:"F2-24"},
+      ]}}},
+    }) as Array<{item:{id:string};status:string}>;
+    expect(Array.from(result, row=>row.item.id)).toEqual(["F2-21","F2-24"]);
+    expect(result.filter(row=>row.status==="verified")).toHaveLength(1);
   });
   it("marks requirement-linked task verification without pretending that the product gate passed", () => {
     const html=projectHtml("nonce");
