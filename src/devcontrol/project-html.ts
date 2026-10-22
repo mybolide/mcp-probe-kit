@@ -95,6 +95,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .release-review summary{cursor:pointer;font-weight:700}
 .release-review li{margin:8px 0;line-height:1.55}
 .review-intro{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 10px}
+.review-disclosure{border:1px solid #304962;background:#12233a;border-radius:10px;padding:12px 16px;margin:12px 0}
+.review-disclosure>summary{cursor:pointer;font-weight:700;font-size:13px;color:#e0f0ff;line-height:1.65}
+.review-disclosure[open]>summary{margin-bottom:15px}
 .review-intro h2{margin:0;font-size:17px}.review-intro p{font-size:12px;color:#96afc6;margin:5px 0 0;line-height:1.6}
 .review-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0 22px}
 .review-card{border:1px solid #304962;background:#12233a;border-radius:10px;padding:14px 16px}
@@ -298,7 +301,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     }
     document.title="DevControl · Project workspace";
   }
-  let project=null,board=null,features=[],featureTaskPlans=[],releaseWorkPlan=null,onboarding=null,releasePlan=null,localGit=null,taskTab="not_started";
+  let project=null,board=null,features=[],featureTaskPlans=[],releaseWorkPlan=null,onboarding=null,releasePlan=null,localGit=null,taskTab="not_started",reviewExpanded=false;
   const developerHint=()=>localGit?.name?
     localGit.name+" · "+(localGit.device||"") :
     (locale==="en"?"Git developer unavailable":"未识别本机 Git 开发身份");
@@ -452,6 +455,10 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       go("tasks");$("release-review-summary").scrollIntoView({behavior:"smooth",block:"start"});
     });
     overview.append(intro,nav);
+    const disclosure=n("details",null,"review-disclosure");
+    disclosure.open=reviewExpanded;
+    disclosure.addEventListener("toggle",()=>{reviewExpanded=disclosure.open;});
+    disclosure.append(n("summary","整版评审 · "+findings.length+" 项工程决策 · "+pending.length+" 项待产品验收（点击展开）"));
     const head=n("div",null,"review-intro"),left=n("div");
     left.append(n("h2","整版评审 · "+findings.length+" 项工程决策"),
       n("p","方案由工程团队确定；可独立核验的代码与真机结果在任务执行后关闭。"+reviewState));
@@ -470,7 +477,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       action.type="button";action.addEventListener("click",()=>openReviewFinding(issue));
       card.append(header,n("strong",issue.title),decision,action);grid.append(card);
     }
-    panel.append(head,grid);
+    disclosure.append(head,grid);
+    panel.append(disclosure);
   }
   function setTaskTab(tab){
     if(!["not_started","in_progress","completed"].includes(tab))return;

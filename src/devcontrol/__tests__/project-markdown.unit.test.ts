@@ -67,6 +67,10 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('id="overview-release-review"');
     expect(html).toContain('id="release-review-summary"');
     expect(html).toContain('function renderReleaseReview()');
+    expect(html).toContain('reviewExpanded=false;');
+    expect(html).toContain('disclosure.open=reviewExpanded;');
+    expect(html).toContain('reviewExpanded=disclosure.open;');
+    expect(html).toContain('n("summary","整版评审');
     expect(html).toContain('function openReviewFinding(issue)');
     expect(html).toContain('plan.reviewFindings.filter(f=>f.severity==="blocker")');
     expect(html).toContain('renderReleaseReview();');
