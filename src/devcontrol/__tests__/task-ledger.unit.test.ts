@@ -86,6 +86,83 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it("enforces a reviewed, Owner-approved generic artifact baseline across staged files",()=>{
+    const source="protocols/v1/schema.sql",baselineSQL="CREATE TABLE sample(id bigint);\n";
+    save(source,baselineSQL);
+    commit("approved schema design source");
+    const hashText=(value:string)=>createRequire(import.meta.url)("node:crypto")
+      .createHash("sha256").update(value).digest("hex") as string;
+    const baseline={id:"business-contract",guardRoots:["protocols/v1"],
+      files:[{path:source,sha256:hashText(baselineSQL)}],
+      rationale:"Use the reviewed data contract to prevent uncontrolled schema updates after release approval.",
+      sourceRefs:["protocols/v1/schema.sql","task:ARCH-201"]};
+    const proposal=ledger!.stageGovernedArtifact(baseline,0,"","planning-agent");
+    expect(proposal.baselineChanged).toBe(false);
+    expect(ledger!.checkGovernedArtifacts()).toMatchObject({passed:true,
+      protectedBaselines:[]});
+    const review={reviewer:"independent-reviewer",method:"independent-agent-pass" as const,
+      subjectHash:proposal.proposalHash,
+      scopeAssessment:"Only the versioned SQL contract directory is guarded; all paths are exact and checked.",
+      dependencyAssessment:"Dependent application changes require an approved migration release task before this changes.",
+      securityAndTestAssessment:"Must demonstrate migration atomicity, replay, least privilege and rollback before release.",
+      sourceRefs:["protocols/v1/schema.sql"]};
+    expect(()=>ledger!.independentlyReviewGovernedArtifact(baseline.id,
+      {...review,reviewer:"planning-agent"},proposal.proposalHash))
+      .toThrow(/different independent reviewer/);
+    const accepted=ledger!.independentlyReviewGovernedArtifact(baseline.id,review,proposal.proposalHash);
+    const owner={id:baseline.id,expectedProposalHash:proposal.proposalHash,
+      expectedReviewHash:accepted.reviewHash,approvedBy:"test-owner",
+      reason:"Freeze the exact independently reviewed schema and protect future modifications.",
+      explicitAuthorization:true};
+    expect(()=>ledger!.approveGovernedArtifact({...owner,explicitAuthorization:false}))
+      .toThrow(/Explicit Owner authorization/);
+    expect(()=>ledger!.approveGovernedArtifact({...owner,expectedReviewHash:"f".repeat(64)}))
+      .toThrow(/review hashes/);
+    const approved=ledger!.approveGovernedArtifact(owner);
+    expect(approved).toMatchObject({revision:1,status:"frozen",fileCount:1});
+    expect(ledger!.checkGovernedArtifacts()).toMatchObject({passed:true});
+
+    create({id:"NEYNA-901",allowedPaths:["protocols/v1/**"],requiredGates:["docs"]});
+    ledger!.approve("NEYNA-901","test-owner");
+    const lease=ledger!.claim("NEYNA-901","implementer");
+    const changedSQL="CREATE TABLE sample(id bigint PRIMARY KEY);\n";
+    save(source,changedSQL);
+    git("add","--",source);
+    const denied=ledger!.checkStaged();
+    expect(denied).toMatchObject({passed:false,reason:
+      "Frozen governed artifact changed without reviewed approval"});
+    expect(denied.issues[0]).toContain("SHA-256 differs");
+    git("restore","--staged","--",source);
+    git("restore","--",source);
+    ledger!.release("NEYNA-901",lease.leaseToken);
+
+    const replacement={...baseline,files:[{path:source,sha256:hashText(changedSQL)}],
+      rationale:"Change the sample primary key after detailed impact assessment and independent migration verification."};
+    expect(()=>ledger!.stageGovernedArtifact(replacement,1,"f".repeat(64),"planning-agent"))
+      .toThrow(/baseline revision\/hash changed/);
+    const staged=ledger!.stageGovernedArtifact(replacement,1,approved.hash,"planning-agent");
+    const reviewed=ledger!.independentlyReviewGovernedArtifact(replacement.id,
+      {...review,subjectHash:staged.proposalHash},staged.proposalHash);
+    expect(ledger!.checkGovernedArtifacts()).toMatchObject({passed:true});
+    const revised=ledger!.approveGovernedArtifact({...owner,expectedProposalHash:staged.proposalHash,
+      expectedReviewHash:reviewed.reviewHash});
+    expect(revised).toMatchObject({revision:2,previousHash:approved.hash});
+    expect(ledger!.checkGovernedArtifacts()).toMatchObject({passed:false});
+
+    const approvedClaim=ledger!.claim("NEYNA-901","implementer");
+    save(source,changedSQL);
+    git("add","--",source);
+    expect(ledger!.checkStaged()).toMatchObject({passed:true,taskId:"NEYNA-901"});
+    git("commit","-qm","approved governed schema update");
+    expect(ledger!.checkGovernedArtifacts()).toMatchObject({passed:true,
+      protectedBaselines:[{id:"business-contract",revision:2,hash:revised.hash}]});
+    save("protocols/v1/unapproved.sql","CREATE TABLE surprise(x integer);\n");
+    expect(ledger!.checkGovernedArtifacts()).toMatchObject({passed:false});
+    fs.unlinkSync(path.join(root,"protocols/v1/unapproved.sql"));
+    expect(ledger!.checkGovernedArtifacts().passed).toBe(true);
+    expect(ledger!.governedArtifact(baseline.id).baseline.revision).toBe(2);
+    expect(approvedClaim.leaseToken).toBeTruthy();
+  });
   it("holds chat ideas in SQLite until impact assessment, separate review and explicit planning disposition",()=>{
     const dbPath=path.join(root,".neyna/state/devcontrol.sqlite3");
     const sqlite=createRequire(import.meta.url)("node:sqlite") as {

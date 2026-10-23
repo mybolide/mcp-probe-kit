@@ -21,6 +21,9 @@ import { checkManagedGuidanceCommit } from "./managed-guidance-gate.js";
 import { amendmentSubjectHash, checkAmendmentShape, checkAmendmentReview,
   type ReleaseWorkScopeAmendment, type ReleaseWorkAmendmentReview,
 } from "./release-work-amendment.js";
+import { artifactIsCovered, manifestSubjectHash, reviewArtifactChange, reviewManifest,
+  type GovernedArtifactManifest, type GovernedArtifactReview,
+} from "./governed-artifacts.js";
 import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, reviewDetailedWorkItems, reviewTaskQualityJudgments, auditAtomicWorkItemDetail, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
 import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
@@ -53,6 +56,7 @@ function missingGatePrerequisiteScope(root:string,gates:string[],allowedPaths:st
     issues.push("Gate "+requirement.gate+" requires missing or invalid "+requirement.file+
       " outside allowedPaths; request a reviewed frozen-scope amendment before claiming");
   }
+
   return issues;
 }
 
@@ -372,6 +376,21 @@ export class ProjectTaskLedger {
         snapshot_json TEXT NOT NULL, proposed_by TEXT NOT NULL,
         reviewed_json TEXT, review_hash TEXT, proposed_at TEXT NOT NULL,
         reviewed_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS dc_governed_artifacts (
+        id TEXT PRIMARY KEY, revision INTEGER NOT NULL, hash TEXT NOT NULL,
+        manifest_json TEXT NOT NULL, approved_by TEXT NOT NULL, approved_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_governed_artifact_history (
+        id TEXT NOT NULL, revision INTEGER NOT NULL, hash TEXT NOT NULL,
+        manifest_json TEXT NOT NULL, approved_by TEXT NOT NULL, approved_at TEXT NOT NULL,
+        PRIMARY KEY(id,revision)
+      );
+      CREATE TABLE IF NOT EXISTS dc_governed_artifact_proposals (
+        id TEXT PRIMARY KEY, base_revision INTEGER NOT NULL, base_hash TEXT NOT NULL,
+        proposal_hash TEXT NOT NULL, manifest_json TEXT NOT NULL,
+        proposed_by TEXT NOT NULL, proposed_at TEXT NOT NULL,
+        review_json TEXT, review_hash TEXT
       );
       CREATE TABLE IF NOT EXISTS dc_task_specs (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
@@ -895,6 +914,210 @@ export class ProjectTaskLedger {
     });
   }
 
+  /** Read-only integrity preflight for all formally frozen architecture artifacts. */
+  checkGovernedArtifacts(changedPaths?:string[],staged=false):Row {
+    const frozen=this.db.prepare("SELECT * FROM dc_governed_artifacts ORDER BY id").all();
+    const issues:string[]=[];
+    const governed:string[]=[];
+    for(const row of frozen){
+      const manifest=JSON.parse(row.manifest_json) as GovernedArtifactManifest;
+      const roots=manifest.guardRoots;
+      const expected=new Map(manifest.files.map(file=>[file.path,file.sha256]));
+      let observed:string[];
+      if(changedPaths){
+        observed=changedPaths.filter(file=>artifactIsCovered(file,roots));
+      }else{
+        const result=spawnSync("git",
+          ["ls-files","--cached","--others","--exclude-standard","-z","--",...roots],
+          {cwd:this.root,encoding:"buffer",timeout:12_000});
+        if(result.status!==0||!Buffer.isBuffer(result.stdout))
+          fail("GIT_ERROR","Unable to inspect frozen architecture artifact paths");
+        observed=[...new Set([
+          ...manifest.files.map(file=>file.path),
+          ...result.stdout.toString("utf8").split("\0").filter(Boolean),
+        ])];
+      }
+      for(const file of observed){
+        governed.push(file);
+        const expectedHash=expected.get(file);
+        if(!expectedHash){
+          issues.push(row.id+": "+file+" is not present in the approved artifact manifest");
+          continue;
+        }
+        const absolute=path.resolve(this.root,file);
+        try {
+          if(!fs.lstatSync(absolute).isFile()) {
+            issues.push(row.id+": "+file+" is not an ordinary file");continue;
+          }
+          const bytes=staged?
+            spawnSync("git",["show",":"+file],{cwd:this.root,encoding:"buffer",
+              timeout:12_000,maxBuffer:4_000_000}):null;
+          if(bytes&&(bytes.status!==0||!Buffer.isBuffer(bytes.stdout))){
+            issues.push(row.id+": "+file+" cannot read staged contents");continue;
+          }
+          const actual=createHash("sha256")
+            .update(bytes?bytes.stdout:fs.readFileSync(absolute)).digest("hex");
+          if(actual!==expectedHash)
+            issues.push(row.id+": "+file+" SHA-256 differs from approved revision "+
+              row.revision+" (submit reviewed amendment)");
+        }catch{
+          issues.push(row.id+": "+file+" is missing or inaccessible");
+        }
+      }
+    }
+    return {passed:issues.length===0,issues,protectedFiles:[...new Set(governed)].sort(),
+      protectedBaselines:frozen.map(row=>({id:row.id,revision:row.revision,hash:row.hash}))};
+  }
+
+  governedArtifact(id:string):Row {
+    const current=this.db.prepare("SELECT * FROM dc_governed_artifacts WHERE id=?").get(id);
+    const proposal=this.db.prepare("SELECT * FROM dc_governed_artifact_proposals WHERE id=?").get(id);
+    return {id,baseline:current?{revision:current.revision,hash:current.hash,
+      manifest:JSON.parse(current.manifest_json),approvedBy:current.approved_by}:null,
+      pending:proposal?{baseRevision:proposal.base_revision,baseHash:proposal.base_hash,
+        proposalHash:proposal.proposal_hash,manifest:JSON.parse(proposal.manifest_json),
+        proposedBy:proposal.proposed_by,review:proposal.review_json?
+          JSON.parse(proposal.review_json):null,reviewHash:proposal.review_hash??null}:null};
+  }
+
+  stageGovernedArtifact(manifest:GovernedArtifactManifest,
+    baseRevision:number,baseHash:string,actor:string):Row {
+    if(typeof actor!=="string"||actor.trim().length<3)
+      fail("ACTOR_REQUIRED","Artifact proposer label is required");
+    const issues=reviewManifest(manifest);
+    if(issues.length)fail("ARTIFACT_INVALID",issues.join("; "));
+    return this.inTransaction(()=>{
+      const existing=this.db.prepare("SELECT * FROM dc_governed_artifacts WHERE id=?")
+        .get(manifest.id);
+      const actualRevision=existing?.revision??0;
+      const actualHash=existing?.hash??"";
+      if(actualRevision!==baseRevision||actualHash!==baseHash)
+        fail("STALE_ARTIFACT","Approved artifact baseline revision/hash changed");
+      if(this.db.prepare("SELECT id FROM dc_governed_artifact_proposals WHERE id=?")
+        .get(manifest.id))fail("ARTIFACT_PENDING","Resolve pending artifact proposal");
+      if(existing) {
+        const old=JSON.parse(existing.manifest_json) as GovernedArtifactManifest;
+        if(JSON.stringify(old.guardRoots)!==JSON.stringify(manifest.guardRoots))
+          fail("ARTIFACT_ROOT_CHANGE","Guarded directory roots cannot be silently removed or changed");
+        if(JSON.stringify(old.files)===JSON.stringify(manifest.files))
+          fail("ARTIFACT_NO_CHANGE","Revising an artifact requires a genuine file manifest change");
+      }
+      const others=this.db.prepare("SELECT id,manifest_json FROM dc_governed_artifacts")
+        .all().filter(row=>row.id!==manifest.id);
+      for(const other of others){
+        const roots=(JSON.parse(other.manifest_json) as GovernedArtifactManifest).guardRoots;
+        if(roots.some(existingRoot=>manifest.guardRoots.some(root=>
+          root===existingRoot||root.startsWith(existingRoot+"/")||
+          existingRoot.startsWith(root+"/"))))
+          fail("ARTIFACT_OVERLAP","Guarded directory already governed by "+other.id);
+      }
+      const hash=manifestSubjectHash(manifest,baseRevision,baseHash);
+      this.db.prepare(`INSERT INTO dc_governed_artifact_proposals
+        (id,base_revision,base_hash,proposal_hash,manifest_json,proposed_by,proposed_at)
+        VALUES(?,?,?,?,?,?,?)`).run(manifest.id,baseRevision,baseHash,hash,
+        JSON.stringify(manifest),actor.trim(),utc());
+      this.audit(null,"governed_artifact_staged",actor,{id:manifest.id,
+        baseRevision,baseHash,hash,files:manifest.files.map(file=>file.path)});
+      return {id:manifest.id,status:"awaiting_independent_review",proposalHash:hash,
+        baselineChanged:false};
+    });
+  }
+
+  independentlyReviewGovernedArtifact(id:string,review:GovernedArtifactReview,
+    expectedProposalHash:string):Row {
+    return this.inTransaction(()=>{
+      const row=this.db.prepare("SELECT * FROM dc_governed_artifact_proposals WHERE id=?").get(id);
+      if(!row||row.proposal_hash!==expectedProposalHash)
+        fail("ARTIFACT_PROPOSAL_REQUIRED","Exact staged artifact proposal required");
+      if(row.review_json)fail("ARTIFACT_ALREADY_REVIEWED","Review is already recorded");
+      const current=this.db.prepare("SELECT * FROM dc_governed_artifacts WHERE id=?").get(id);
+      if((current?.revision??0)!==row.base_revision||(current?.hash??"")!==row.base_hash)
+        fail("STALE_ARTIFACT","Frozen artifact changed during review");
+      const manifest=JSON.parse(row.manifest_json) as GovernedArtifactManifest;
+      const issues=reviewArtifactChange(review,row.proposed_by,row.proposal_hash,
+        manifest.sourceRefs);
+      if(issues.length)fail("ARTIFACT_INDEPENDENT_REVIEW_REQUIRED",issues.join("; "));
+      const hash=createHash("sha256").update(JSON.stringify(review)).digest("hex");
+      this.db.prepare(`UPDATE dc_governed_artifact_proposals
+        SET review_json=?,review_hash=? WHERE id=?`).run(JSON.stringify(review),hash,id);
+      this.audit(null,"governed_artifact_reviewed",review.reviewer,
+        {id,proposalHash:expectedProposalHash,reviewHash:hash});
+      return {id,status:"reviewed",proposalHash:expectedProposalHash,reviewHash:hash,
+        baselineChanged:false};
+    });
+  }
+
+  approveGovernedArtifact(input:{id:string;expectedProposalHash:string;
+    expectedReviewHash:string;approvedBy:string;reason:string;
+    explicitAuthorization:boolean}):Row {
+    if(input?.explicitAuthorization!==true||typeof input.approvedBy!=="string"||
+      input.approvedBy.trim().length<2||typeof input.reason!=="string"||
+      input.reason.trim().length<25)
+      fail("OWNER_AUTHORIZATION_REQUIRED","Explicit Owner authorization and concrete reason required");
+    return this.inTransaction(()=>{
+      if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
+        fail("ACTIVE_TASK","Cannot rebase governed architecture during active work");
+      const row=this.db.prepare("SELECT * FROM dc_governed_artifact_proposals WHERE id=?")
+        .get(input.id);
+      if(!row||!row.review_json||row.proposal_hash!==input.expectedProposalHash||
+        row.review_hash!==input.expectedReviewHash)
+        fail("ARTIFACT_REVIEW_REQUIRED","Exact reviewed proposal and review hashes required");
+      const old=this.db.prepare("SELECT * FROM dc_governed_artifacts WHERE id=?")
+        .get(input.id);
+      if((old?.revision??0)!==row.base_revision||(old?.hash??"")!==row.base_hash)
+        fail("STALE_ARTIFACT","Frozen architecture baseline changed");
+      const revision=(old?.revision??0)+1,now=utc();
+      const manifest=JSON.parse(row.manifest_json) as GovernedArtifactManifest;
+      // First freeze anchors files that already exist on disk; a later
+      // revision can approve the exact future file hashes before the commit.
+      if(!old){
+        for(const file of manifest.files){
+          const abs=path.resolve(this.root,file.path);
+          if(!fs.existsSync(abs)||!fs.lstatSync(abs).isFile()||
+            createHash("sha256").update(fs.readFileSync(abs)).digest("hex")!==file.sha256)
+            fail("INITIAL_ARTIFACT_MISMATCH",
+              "Initial frozen baseline needs existing matching project file "+file.path);
+          const tracked=spawnSync("git",["ls-files","--error-unmatch","--",file.path],
+            {cwd:this.root,encoding:"utf8",timeout:5_000});
+          if(tracked.status!==0)
+            fail("INITIAL_ARTIFACT_UNTRACKED",
+              "Initial frozen baseline requires committed/otherwise Git-tracked file "+file.path);
+          const dirty=spawnSync("git",["status","--porcelain","--",file.path],
+            {cwd:this.root,encoding:"utf8",timeout:5_000});
+          if(dirty.status!==0||dirty.stdout?.trim())
+            fail("INITIAL_ARTIFACT_DIRTY",
+              "First architecture freeze requires a clean committed project file "+file.path);
+        }
+      }
+      const otherBaselines=this.db.prepare(
+        "SELECT id,manifest_json FROM dc_governed_artifacts WHERE id<>?").all(input.id);
+      for(const other of otherBaselines){
+        const otherRoots=(JSON.parse(other.manifest_json) as GovernedArtifactManifest).guardRoots;
+        if(otherRoots.some(existingRoot=>manifest.guardRoots.some(root=>
+          root===existingRoot||root.startsWith(existingRoot+"/")||
+          existingRoot.startsWith(root+"/"))))
+          fail("ARTIFACT_OVERLAP","Artifact guard roots overlap an existing frozen baseline");
+      }
+      this.db.prepare(`INSERT INTO dc_governed_artifacts
+        (id,revision,hash,manifest_json,approved_by,approved_at)
+        VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
+          revision=excluded.revision,hash=excluded.hash,
+          manifest_json=excluded.manifest_json,
+          approved_by=excluded.approved_by,approved_at=excluded.approved_at`)
+        .run(input.id,revision,row.proposal_hash,row.manifest_json,input.approvedBy.trim(),now);
+      this.db.prepare(`INSERT INTO dc_governed_artifact_history
+        (id,revision,hash,manifest_json,approved_by,approved_at)
+        VALUES(?,?,?,?,?,?)`).run(input.id,revision,row.proposal_hash,
+          row.manifest_json,input.approvedBy.trim(),now);
+      this.db.prepare("DELETE FROM dc_governed_artifact_proposals WHERE id=?")
+        .run(input.id);
+      this.audit(null,"governed_artifact_approved",input.approvedBy,{
+        id:input.id,revision,hash:row.proposal_hash,previousHash:old?.hash??"",
+        reviewHash:row.review_hash,reason:input.reason});
+      return {id:input.id,status:"frozen",revision,hash:row.proposal_hash,
+        previousHash:old?.hash??"",fileCount:manifest.files.length};
+    });
+  }
   checkStaged(): Row {
     const staged=spawnSync(
       "git",["diff","--cached","--no-renames","--name-only","-z","--diff-filter=ACMRTD"],
@@ -902,6 +1125,10 @@ export class ProjectTaskLedger {
     );
     if(staged.status!==0||!Buffer.isBuffer(staged.stdout))fail("GIT_ERROR","Cannot inspect staged files");
     const files=[...new Set(staged.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
+    const artifactGate=this.checkGovernedArtifacts(files,true);
+    if(!artifactGate.passed)
+      return {passed:false,reason:"Frozen governed artifact changed without reviewed approval",
+        ...artifactGate,stagedFiles:files};
     const guidance=checkManagedGuidanceCommit(this.root,files);
     // No implicit approval for arbitrary edits to AGENTS.md or the Skill.
     // This exception requires only canonical generator output and no other files.
@@ -3018,6 +3245,10 @@ export class ProjectTaskLedger {
       return { taskId: id, passed: false, reason: "Claim baseline is not an ancestor of HEAD" };
     }
     const files = changedFiles(this.root, lease.base_head);
+    const governed=this.checkGovernedArtifacts();
+    if(!governed.passed)return {taskId:id,passed:false,
+      reason:"Governed architecture artifacts differ from approved revision",
+      governedArtifactIssues:governed.issues};
     const plannedGates = JSON.parse(task.required_gates) as string[];
     const recorded=this.db.prepare("SELECT * FROM dc_task_decisions WHERE task_id=?").get(id);
     const frozenDecision=(contract.profile==="atomic-work-item"&&

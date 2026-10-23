@@ -49,6 +49,13 @@ export function dispatchDevControl(
     case "release-work-scope-independent-review": return ledger.reviewStagedReleaseWorkScopeAmendment(
       String(input.release),input.review,String(input.expectedProposalHash));
     case "release-work-scope-approve": return ledger.approveReleaseWorkScopeAmendment(input as never);
+    case "artifact-get": return ledger.governedArtifact(String(input.id));
+    case "artifact-check": return ledger.checkGovernedArtifacts();
+    case "artifact-stage": return ledger.stageGovernedArtifact(input.manifest,
+      Number(input.baseRevision),String(input.baseHash??""),String(input.actor??""));
+    case "artifact-independent-review": return ledger.independentlyReviewGovernedArtifact(
+      String(input.id),input.review,String(input.expectedProposalHash));
+    case "artifact-approve": return ledger.approveGovernedArtifact(input as never);
     case "release-plan": return ledger.releasePlan(String(input.release ?? ledger.primaryRelease()));
     case "plan-review": return { ...reviewReleasePlan(input.plan) };
     case "plan-propose": return ledger.proposeReleasePlan(input.plan, String(input.actor ?? ""));
