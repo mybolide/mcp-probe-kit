@@ -16,7 +16,7 @@ describe('release readiness', () => {
   it('完整的 4.0.0-rc.1 发布候选通过静态闸门', () => {
     const root = createFixture({
       version: '4.0.0-rc.1',
-      serverVersion: '2.0.0',
+      serverVersion: '2.4.0',
       includeMigration: true,
     });
     const report = verifyReleaseReadiness(root, new Date('2026-07-30T12:00:00.000Z'));
@@ -31,7 +31,7 @@ describe('release readiness', () => {
   it('5.0.0 开发版本能通过静态兼容检查，但不代表获准发布', () => {
     const root = createFixture({
       version: '5.0.0',
-      serverVersion: '2.0.0',
+      serverVersion: '2.4.0',
       includeMigration: true,
     });
     const report = verifyReleaseReadiness(root);
@@ -43,7 +43,7 @@ describe('release readiness', () => {
   it('未经支持的主版本不能悄悄通过版本闸门', () => {
     const root = createFixture({
       version: '6.0.0',
-      serverVersion: '2.0.0',
+      serverVersion: '2.4.0',
       includeMigration: true,
     });
     const report = verifyReleaseReadiness(root);
@@ -55,7 +55,7 @@ describe('release readiness', () => {
   it('发布工作流重新引用长期 npm token 时阻断发布', () => {
     const root = createFixture({
       version: '4.0.0-rc.1',
-      serverVersion: '2.0.0',
+      serverVersion: '2.4.0',
       includeMigration: true,
       legacyNpmToken: true,
     });
@@ -68,7 +68,7 @@ describe('release readiness', () => {
   it('构建前未清理 build 时阻断发布', () => {
     const root = createFixture({
       version: '4.0.0-rc.1',
-      serverVersion: '2.0.0',
+      serverVersion: '2.4.0',
       includeMigration: true,
       omitBuildClean: true,
     });
@@ -81,7 +81,7 @@ describe('release readiness', () => {
   it('README 工具数量落后于 Manifest 时阻断发布', () => {
     const root = createFixture({
       version: '4.0.0-rc.1',
-      serverVersion: '2.0.0',
+      serverVersion: '2.4.0',
       includeMigration: true,
     });
     fs.writeFileSync(
@@ -109,6 +109,42 @@ describe('release readiness', () => {
     expect(report.checks.find((item) => item.id === 'sdk-server')?.passed).toBe(false);
     expect(report.checks.find((item) => item.id === 'file-docs/migration-v3-to-v4.md')?.passed).toBe(false);
   });
+
+  it('所有修复后的生产依赖与 lockfile 必须精确匹配', () => {
+    const root = createFixture({
+      version: '5.0.0',
+      serverVersion: '2.4.0',
+      includeMigration: true,
+    });
+    const report = verifyReleaseReadiness(root);
+    expect(report.passed).toBe(true);
+    for (const name of ['@modelcontextprotocol/server', '@modelcontextprotocol/client',
+      '@modelcontextprotocol/core', 'csv-parse', 'zod']) {
+      expect(report.checks.find((item) =>
+        item.id === 'security-lock-' + name.replaceAll('/', '-'))?.passed).toBe(true);
+    }
+  });
+
+  it('生产包与 lockfile 中的旧安全漏洞版本必须阻断静态闸门', () => {
+    const root = createFixture({
+      version: '5.0.0',
+      serverVersion: '2.4.0',
+      includeMigration: true,
+    });
+    const packageFile = path.join(root, 'package.json');
+    const manifest = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
+    manifest.dependencies.zod = '4.2.0';
+    fs.writeFileSync(packageFile, JSON.stringify(manifest));
+    const lockFile = path.join(root, 'package-lock.json');
+    const lock = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
+    lock.packages['node_modules/csv-parse'].version = '6.1.0';
+    fs.writeFileSync(lockFile, JSON.stringify(lock));
+
+    const report = verifyReleaseReadiness(root);
+    expect(report.passed).toBe(false);
+    expect(report.checks.find((item) => item.id === 'security-zod')?.passed).toBe(false);
+    expect(report.checks.find((item) => item.id === 'security-lock-csv-parse')?.passed).toBe(false);
+  });
 });
 
 function createFixture(options: {
@@ -125,14 +161,17 @@ function createFixture(options: {
   fs.mkdirSync(path.join(root, 'src/lib'), { recursive: true });
   fs.mkdirSync(path.join(root, 'src/protocol/__tests__'), { recursive: true });
   fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
+  const dependencies = {
+    '@modelcontextprotocol/server': options.serverVersion,
+    '@modelcontextprotocol/client': '2.4.0',
+    '@modelcontextprotocol/core': '2.4.0',
+    'csv-parse': '7.0.3',
+    zod: '4.6.7',
+  };
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
     version: options.version,
     engines: { node: '>=20.0.0' },
-    dependencies: {
-      '@modelcontextprotocol/server': options.serverVersion,
-      '@modelcontextprotocol/client': '2.0.0',
-      '@modelcontextprotocol/core': '2.0.0',
-    },
+    dependencies,
     devDependencies: {
       '@modelcontextprotocol/ext-apps': '1.7.2',
     },
@@ -159,7 +198,13 @@ function createFixture(options: {
   );
   fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
     version: options.version,
-    packages: { '': { version: options.version } },
+    packages: {
+      '': { version: options.version, dependencies },
+      ...Object.fromEntries(
+        Object.entries(dependencies).map(([name, version]) =>
+          ['node_modules/' + name, { version }]),
+      ),
+    },
   }));
   fs.writeFileSync(path.join(root, 'server.json'), JSON.stringify({
     version: options.version,

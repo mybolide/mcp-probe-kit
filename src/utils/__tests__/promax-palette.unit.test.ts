@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { parse as parseCsv } from 'csv-parse/sync';
 import {
   loadPromaxColorCatalog,
   parsePromaxColorCsv,
@@ -50,6 +51,23 @@ const PRESET = {
 };
 
 describe('promax-palette', () => {
+  it('csv-parse 7 safely handles prototype-like column names from untrusted CSV', () => {
+    const input = '__proto__,constructor,Product Type,Primary,Background,Foreground\n' +
+      'attack,attack,Healthcare App,#0891B2,#ECFEFF,#164E63\n';
+    const raw = parseCsv(input, { columns: true }) as Array<Record<string, string>>;
+    expect(raw).toHaveLength(1);
+    expect(Object.getPrototypeOf(raw[0])).toBe(Object.prototype);
+    expect(Object.hasOwn(raw[0], '__proto__')).toBe(true);
+    expect(raw[0]['__proto__']).toBe('attack');
+    expect(raw[0].constructor).toBe('attack');
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+
+    const palette = parsePromaxColorCsv(input);
+    expect(palette).toHaveLength(1);
+    expect(palette[0]?.productType).toBe('Healthcare App');
+    expect(palette[0]?.background).toBe('#ECFEFF');
+  });
+
   it('解析 skill CSV 列并匹配 Healthcare', () => {
     const rows = parsePromaxColorCsv(`No,Product Type,Primary,On Primary,Secondary,On Secondary,Accent,On Accent,Background,Foreground,Card,Card Foreground,Muted,Muted Foreground,Border,Destructive,On Destructive,Ring,Notes
 8,Healthcare App,#0891B2,#FFFFFF,#22D3EE,#0F172A,#059669,#FFFFFF,#ECFEFF,#164E63,#FFFFFF,#164E63,#E8F1F6,#64748B,#A5F3FC,#DC2626,#FFFFFF,#0891B2,Calm cyan

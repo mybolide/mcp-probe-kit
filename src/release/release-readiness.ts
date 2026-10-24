@@ -41,7 +41,10 @@ interface ToolManifest {
 
 interface PackageLockManifest {
   version?: string;
-  packages?: Record<string, { version?: string }>;
+  packages?: Record<string, {
+    version?: string;
+    dependencies?: Record<string, string>;
+  }>;
 }
 
 interface ServerManifest {
@@ -54,6 +57,13 @@ const SDK_PACKAGES = [
   '@modelcontextprotocol/client',
   '@modelcontextprotocol/core',
 ] as const;
+const SECURITY_PINS: Readonly<Record<string, string>> = {
+  '@modelcontextprotocol/server': '2.4.0',
+  '@modelcontextprotocol/client': '2.4.0',
+  '@modelcontextprotocol/core': '2.4.0',
+  'zod': '4.6.7',
+  'csv-parse': '7.0.3',
+};
 
 export function verifyReleaseReadiness(
   workspaceRoot: string = process.cwd(),
@@ -119,11 +129,35 @@ export function verifyReleaseReadiness(
   for (const packageName of SDK_PACKAGES) {
     checks.push(check(
       `sdk-${packageName.split('/').at(-1)}`,
-      dependencies[packageName] === '2.0.0',
+      dependencies[packageName] === SECURITY_PINS[packageName],
       'error',
-      '2.0.0',
+      SECURITY_PINS[packageName],
       dependencies[packageName],
-      `${packageName} 必须锁定经过验证的精确版本`
+      `${packageName} 必须锁定已修复漏洞且经过验证的精确版本`
+    ));
+  }
+  for (const packageName of ['zod', 'csv-parse']) {
+    checks.push(check(
+      `security-${packageName}`,
+      dependencies[packageName] === SECURITY_PINS[packageName],
+      'error',
+      SECURITY_PINS[packageName],
+      dependencies[packageName] ?? 'missing',
+      `${packageName} 不得回退到已知有安全漏洞的旧版本`
+    ));
+  }
+  for (const [packageName, pinnedVersion] of Object.entries(SECURITY_PINS)) {
+    checks.push(check(
+      `security-lock-${packageName.replaceAll('/', '-')}`,
+      packageLock.packages?.['']?.dependencies?.[packageName] === pinnedVersion &&
+        packageLock.packages?.[`node_modules/${packageName}`]?.version === pinnedVersion,
+      'error',
+      { declared: pinnedVersion, installed: pinnedVersion },
+      {
+        declared: packageLock.packages?.['']?.dependencies?.[packageName] ?? 'missing',
+        installed: packageLock.packages?.[`node_modules/${packageName}`]?.version ?? 'missing',
+      },
+      `${packageName} 的 package-lock 根依赖与解析版本必须一致，禁止过期依赖混入发布包`
     ));
   }
   checks.push(check(

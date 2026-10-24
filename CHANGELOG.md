@@ -22,6 +22,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.0] - Development milestone (not published)
 
+### Security
+
+- Update `@modelcontextprotocol/client`, `@modelcontextprotocol/core`, and
+  `@modelcontextprotocol/server` together to `2.4.0`, addressing SDK
+  authentication, cross-origin redirect, HTTP isolation and validation advisories.
+- Update `zod` to `4.6.7` to address oversized collection validation DoS,
+  and `csv-parse` to `7.0.3` to address prototype replacement via CSV columns.
+- Pin repaired production dependencies in the npm lockfile; verify the
+  locked dependency baseline alongside the online npm security audit gate.
+
 ### Changed
 
 - DevControl work-item scope changes require independent review and exact

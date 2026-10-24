@@ -36,7 +36,7 @@
     "smoke:inspector": "node scripts/inspector-smoke.mjs",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "build-mcp-apps": "node scripts/build-mcp-apps.mjs",
-    "audit:tools": "node --test scripts/lib/__tests__/tool-surface-baseline.test.mjs && node scripts/tool-contract-audit.mjs",
+    "audit:tools": "node --test scripts/lib/__tests__/*.test.mjs && node scripts/tool-contract-audit.mjs",
     "audit:tools:agent": "node scripts/claude-tool-contract-audit.mjs",
     "clean:build": "node scripts/clean-build.mjs",
     "smoke:gitnexus-sidecar": "node scripts/gitnexus-sidecar-smoke.mjs",
@@ -88,13 +88,13 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@modelcontextprotocol/client": "2.0.0",
-    "@modelcontextprotocol/core": "2.0.0",
-    "@modelcontextprotocol/server": "2.0.0",
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/core": "2.4.0",
+    "@modelcontextprotocol/server": "2.4.0",
     "cross-spawn": "^7.0.6",
-    "csv-parse": "^6.1.0",
+    "csv-parse": "7.0.3",
     "tar": "^7.5.6",
-    "zod": "4.2.0"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@modelcontextprotocol/ext-apps": "1.7.2",
