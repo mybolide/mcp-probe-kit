@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pin repaired production dependencies in the npm lockfile; verify the
   locked dependency baseline alongside the online npm security audit gate.
 
+### Fixed
+
+- DevControl `flutter_test` now locates the *actual Flutter package in the
+  frozen task's allowed paths* rather than incorrectly hardcoding
+  `apps/mobile`. Empty suites, ambiguous package roots and out-of-project
+  symlinks fail closed. The gate still runs real `flutter test` with a bounded
+  300-second deadline; hosts with SDKs outside PATH may set `FLUTTER_ROOT`
+  or an absolute `FLUTTER_BIN` instead of substituting a mock runner.
+
 ### Changed
 
 - DevControl work-item scope changes require independent review and exact

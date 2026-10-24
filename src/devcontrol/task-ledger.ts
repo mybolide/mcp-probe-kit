@@ -13,6 +13,7 @@ import { ensureDatabaseIgnored, resolveProjectDatabase } from "./project-storage
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
+import { resolveFlutterTestTarget } from "./flutter-gate.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "./release-plan.js";
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
@@ -141,6 +142,7 @@ function fail(code: string, message: string): never {
 function run(root: string, command: string, args: string[], timeout = 90_000) {
   const result = spawnSync(command, args, {
     cwd: root, encoding: "utf8", timeout, maxBuffer: 4_000_000,
+    killSignal: "SIGKILL",
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
   });
   return {
@@ -3304,7 +3306,7 @@ export class ProjectTaskLedger {
     });
   }
 
-  private gate(name: string): Row {
+  private gate(name: string, allowedPaths: string[] = []): Row {
     if (name === "docs") return run(this.root, "python3", ["scripts/validate_docs.py"]);
     if (name === "devcontrol_tests") return run(
       this.root, "python3", ["-m", "unittest", "discover", "-s", "tests/devcontrol", "-p", "test_*.py", "-q"],
@@ -3334,12 +3336,21 @@ export class ProjectTaskLedger {
       return run(core, "go", ["test", "-tags=integration", "./..."]);
     }
     if (name === "flutter_test") {
-      const mobile = path.join(this.root, "apps/mobile");
-      if (!fs.existsSync(path.join(mobile, "pubspec.yaml")) ||
-          !fs.existsSync(path.join(mobile, "test"))) {
-        return { passed: false, error: "Real Flutter app and test suite missing" };
+      const target = resolveFlutterTestTarget(this.root, allowedPaths);
+      if (!target.passed) return target;
+      // The host may keep its SDK outside PATH; never fall back to a mocked
+      // Flutter runner. Explicit configuration must be an existing executable.
+      const sdkRoot = process.env.FLUTTER_ROOT?.trim();
+      const configured = process.env.FLUTTER_BIN?.trim() ||
+        (sdkRoot ? path.join(sdkRoot, "bin", "flutter") : "");
+      if (configured && (!path.isAbsolute(configured) || !fs.existsSync(configured))) {
+        return { passed: false, error: "FLUTTER_BIN/FLUTTER_ROOT must resolve to a real absolute Flutter launcher" };
       }
-      return run(mobile, "flutter", ["test"]);
+      return {
+        ...run(target.appRoot, configured || "flutter", ["test"], 300_000),
+        appRoot: target.relativeRoot,
+        testFiles: target.testFiles,
+      };
     }
     if (name === "ios_device_e2e") {
       return { passed: false, error: "Physical iPhone/VAD evidence runner not configured; simulator screenshots cannot pass" };
@@ -3424,7 +3435,7 @@ export class ProjectTaskLedger {
     const results = Object.fromEntries(gates.map((name) =>
       [name,name==="sqlite_decision"?{passed:true,taskId:id,
         revision:recorded!.revision,status:recorded!.status,
-        productApproval:"not_implied"}:this.gate(name)]));
+        productApproval:"not_implied"}:this.gate(name, allowedPaths)]));
     const stableHead = git(this.root, ["rev-parse", "HEAD"]);
     const stableTree = git(this.root, ["status", "--porcelain"]);
     const stable = startHead === stableHead && !stableTree;
