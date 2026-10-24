@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import {
-  COMPACT_TOOL_COUNT,
+  COMPACT_WITH_HISTORY_TOOL_COUNT,
   FULL_TOOL_COUNT,
   PACKAGE_VERSION,
 } from './release-surface.mjs';
@@ -9,7 +9,7 @@ import {
 const inspectorVersion = '2.0.0';
 const toolManifest = JSON.parse(readFileSync('tools-manifest.json', 'utf8'));
 const registeredAppOnly = toolManifest.toolsets?.appOnly?.tools ?? [];
-const compact = runInspector('compact', COMPACT_TOOL_COUNT);
+const compact = runInspector('compact', COMPACT_WITH_HISTORY_TOOL_COUNT);
 const full = runInspector('full', FULL_TOOL_COUNT);
 
 for (const required of [
@@ -90,6 +90,8 @@ function runInspector(toolset, expectedModelCount) {
     'MCP_ENABLE_GITNEXUS_BRIDGE=0',
     '-e',
     `MCP_TOOLSET=${toolset}`,
+    '-e',
+    'MCP_HISTORY_SESSION=1',
   ];
   const args = npmExecPath
     ? [
@@ -113,6 +115,8 @@ function runInspector(toolset, expectedModelCount) {
     encoding: 'utf8',
     windowsHide: true,
     env: process.env,
+    input: '',
+    timeout: 90_000,
     maxBuffer: 20 * 1024 * 1024,
   });
 

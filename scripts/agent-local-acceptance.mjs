@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { COMPACT_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
+import { COMPACT_WITH_HISTORY_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
 
 const projectRoot = await mkdtemp(join(tmpdir(), 'mcp-agent-acceptance-'));
 const transport = new StdioClientTransport({
@@ -15,6 +15,7 @@ const transport = new StdioClientTransport({
     MCP_PROTOCOL_MODE: 'auto',
     MCP_ENABLE_GITNEXUS_BRIDGE: '0',
     MCP_TOOLSET: 'compact',
+    MCP_HISTORY_SESSION: '1',
     MEMORY_QDRANT_URL: '',
     MEMORY_EMBEDDING_URL: '',
     MEMORY_EMBEDDING_MODEL: '',
@@ -37,8 +38,8 @@ try {
   await client.connect(transport);
   const tools = await client.listTools();
   assert(
-    tools.tools.length === COMPACT_TOOL_COUNT,
-    `expected ${COMPACT_TOOL_COUNT} compact tools, got ${tools.tools.length}`
+    tools.tools.length === COMPACT_WITH_HISTORY_TOOL_COUNT,
+    `expected ${COMPACT_WITH_HISTORY_TOOL_COUNT} compact tools with History, got ${tools.tools.length}`
   );
 
   const fullIntent = [

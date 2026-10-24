@@ -8,7 +8,7 @@ import {
   GetTaskResultSchema,
 } from "@modelcontextprotocol/core";
 import {
-  COMPACT_TOOL_COUNT,
+  COMPACT_WITH_HISTORY_TOOL_COUNT,
   FULL_TOOL_COUNT,
   PACKAGE_VERSION,
 } from "./release-surface.mjs";
@@ -90,8 +90,12 @@ async function runLegacySmoke() {
     assert(client.getProtocolEra() === "legacy", "Legacy era negotiation failed");
     const tools = await client.listTools();
     assert(
-      tools.tools.length === COMPACT_TOOL_COUNT,
+      tools.tools.length === COMPACT_WITH_HISTORY_TOOL_COUNT,
       `Legacy compact tools/list returned ${tools.tools.length}`
+    );
+    assert(
+      tools.tools.some((tool) => tool.name === "history_session_bootstrap"),
+      "Legacy compact tools/list missing default History Session tools"
     );
 
     const created = CallToolResultSchema.parse(
@@ -153,10 +157,10 @@ async function runModernSmoke() {
     assert(client.getProtocolEra() === "modern", "Modern era negotiation failed");
     const tools = await client.listTools();
     assert(
-      tools.tools.length === COMPACT_TOOL_COUNT,
+      tools.tools.length === COMPACT_WITH_HISTORY_TOOL_COUNT,
       `Modern compact tools/list returned ${tools.tools.length}`
     );
-    for (const toolName of ["plan_heartbeat", "resume_plan", "converge"]) {
+    for (const toolName of ["plan_heartbeat", "resume_plan", "converge", "history_session_bootstrap"]) {
       assert(
         tools.tools.some((tool) => tool.name === toolName),
         `Modern tools/list missing ${toolName}`
@@ -265,6 +269,7 @@ async function connect(mode, elicitationEnabled, toolset = "compact") {
       MCP_PROTOCOL_MODE: "auto",
       MCP_ENABLE_GITNEXUS_BRIDGE: "0",
       MCP_TOOLSET: toolset,
+      MCP_HISTORY_SESSION: "1",
       MEMORY_QDRANT_URL: "",
       MEMORY_EMBEDDING_URL: "",
       MEMORY_EMBEDDING_MODEL: "",

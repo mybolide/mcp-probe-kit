@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { COMPACT_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
+import { COMPACT_WITH_HISTORY_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
 
 const coldRounds = positiveInt(process.env.MCP_STABILITY_COLD_ROUNDS, 4);
 const hotCalls = positiveInt(process.env.MCP_STABILITY_HOT_CALLS, 40);
@@ -65,7 +65,7 @@ async function runSession({ era, calls, extraEnv = {} }) {
   try {
     const tools = await session.client.listTools();
     assert(
-      tools.tools.length === COMPACT_TOOL_COUNT,
+      tools.tools.length === COMPACT_WITH_HISTORY_TOOL_COUNT,
       `${era} compact tools/list returned ${tools.tools.length}`
     );
     const status = await session.client.readResource({ uri: 'probe://status' });
@@ -143,6 +143,7 @@ async function connect({ era, serverMode, projectRoot, extraEnv = {} }) {
     env: {
       ...process.env,
       MCP_TOOLSET: 'compact',
+      MCP_HISTORY_SESSION: '1',
       MEMORY_QDRANT_URL: '',
       MEMORY_EMBEDDING_URL: '',
       MEMORY_EMBEDDING_MODEL: '',
