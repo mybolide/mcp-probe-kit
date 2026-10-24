@@ -423,6 +423,18 @@ export class ProjectTaskLedger {
         task_id TEXT NOT NULL REFERENCES dc_tasks(id), agent TEXT NOT NULL,
         token TEXT NOT NULL, base_head TEXT NOT NULL, expires_at INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS dc_scope_pauses (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        release TEXT NOT NULL,
+        proposal_hash TEXT NOT NULL,
+        base_head TEXT NOT NULL,
+        paused_head TEXT NOT NULL,
+        changed_files_json TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        paused_by TEXT NOT NULL,
+        paused_at TEXT NOT NULL,
+        resumed_at TEXT
+      );
       CREATE TABLE IF NOT EXISTS dc_evidence (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         task_id TEXT NOT NULL REFERENCES dc_tasks(id), kind TEXT NOT NULL,
@@ -1255,6 +1267,15 @@ export class ProjectTaskLedger {
       review:row.reviewed_json?JSON.parse(row.reviewed_json):null,
       reviewHash:row.review_hash??null,
       status:row.reviewed_json?"reviewed":"awaiting_independent_review"};
+  }
+
+  private taskAwaitsScopeReview(id:string,release:string):boolean {
+    const pending=this.db.prepare(
+      "SELECT snapshot_json FROM dc_release_work_amendments WHERE release=?",
+    ).get(release);
+    if(!pending)return false;
+    const proposal=JSON.parse(pending.snapshot_json) as ReleaseWorkScopeAmendment;
+    return proposal.changes.some(change=>change.taskId===id);
   }
 
   /** Evaluate a scope expansion without modifying a frozen task, lease or revision. */
@@ -2849,6 +2870,7 @@ export class ProjectTaskLedger {
       ? { taskId: active.task_id, agent: active.agent, expiresAt: active.expires_at } : null;
     const ready = tasks.filter((t) =>
       (t.status === "ready" || t.status === "in_progress" || t.status === "in_review") &&
+      !(t.status === "ready" && this.taskAwaitsScopeReview(t.id,t.release)) &&
       this.executable(this.requireTask(t.id)) &&
       this.blockers(t.id).length === 0 &&
       !t.childIds.some((id: string) => this.requireTask(id).status !== "verified"),
@@ -2862,10 +2884,13 @@ export class ProjectTaskLedger {
       activeLease,
       blocked: tasks.filter((t) => t.status !== "verified" && (
         this.blockers(t.id).length ||
-        t.childIds.some((id: string) => this.requireTask(id).status !== "verified")
+        t.childIds.some((id: string) => this.requireTask(id).status !== "verified") ||
+        (t.status === "ready" && this.taskAwaitsScopeReview(t.id,t.release))
       )).map((t) => ({
         id: t.id, blockedBy: this.blockers(t.id),
         unverifiedChildren: t.childIds.filter((id: string) => this.requireTask(id).status !== "verified"),
+        ...(t.status==="ready"&&this.taskAwaitsScopeReview(t.id,t.release)?
+          {pendingScopeReview:true}:{}),
       })),
     };
   }
@@ -3059,6 +3084,10 @@ export class ProjectTaskLedger {
       if (task.status !== "ready" && task.status !== "in_progress" && task.status !== "in_review") {
         fail("TASK_NOT_READY", `Task ${id} is ${task.status}`);
       }
+      const pending=this.taskAwaitsScopeReview(id,task.release);
+      if(task.status==="ready"&&pending)
+        fail("SCOPE_AMENDMENT_PENDING",
+          "Scope amendment for this task awaits independent review and exact Owner approval; do not claim it");
       if (this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(id) &&
           (String(task.plan_id??"").startsWith("feature:") ||
             !!this.db.prepare("SELECT release FROM dc_release_plans WHERE release=?").get(task.release))) {
@@ -3084,26 +3113,56 @@ export class ProjectTaskLedger {
         fail("ABANDONED_TASK", `Expired task ${lease.task_id} must be resumed or reviewed before switching tasks`);
       }
       const originalBase = lease?.task_id === id ? String(lease.base_head) : base;
+      const paused=this.db.prepare(
+        "SELECT * FROM dc_scope_pauses WHERE task_id=? AND resumed_at IS NULL",
+      ).get(id);
+      let claimBase=originalBase;
+      if(paused){
+        if(task.status!=="ready"||pending)
+          fail("SCOPE_PAUSE_PENDING","A paused task requires a reviewed scope amendment before resuming");
+        const current=this.db.prepare(
+          "SELECT snapshot_json FROM dc_release_work_plans WHERE release=?",
+        ).get(task.release);
+        const approved=current?JSON.parse(current.snapshot_json) as {
+          scopeAmendment?:{proposalHash?:string}
+        }:null;
+        if(approved?.scopeAmendment?.proposalHash!==paused.proposal_hash)
+          fail("SCOPE_AMENDMENT_NOT_APPROVED",
+            "Only the exact independently reviewed scope amendment may resume this task");
+        if(base!==paused.paused_head)
+          fail("SCOPE_PAUSE_HEAD_CHANGED",
+            "Git HEAD changed since the task was safely paused; reconcile the original commits first");
+        claimBase=String(paused.base_head);
+      }
       if (lease?.task_id === id) {
-        const ancestor = run(this.root, "git", ["merge-base", "--is-ancestor", originalBase, base]);
+        const ancestor = run(this.root, "git", ["merge-base", "--is-ancestor", claimBase, base]);
         if (!ancestor.passed) fail("GIT_HISTORY_CHANGED", "Cannot resume: prior task baseline is not an ancestor of HEAD");
       }
+      if(paused && !run(this.root,"git",["merge-base","--is-ancestor",claimBase,base]).passed)
+        fail("GIT_HISTORY_CHANGED","Paused task baseline is not an ancestor of HEAD");
       const token = randomUUID();
       this.recordLocalDeveloper(id,"claimed");
       this.db.prepare(`
         INSERT OR REPLACE INTO dc_leases(singleton,task_id,agent,token,base_head,expires_at)
         VALUES(1,?,?,?,?,?)
-      `).run(id, agent.trim(), token, originalBase, Date.now() + ttlSeconds * 1000);
+      `).run(id, agent.trim(), token, claimBase, Date.now() + ttlSeconds * 1000);
+      if(paused){
+        this.db.prepare("UPDATE dc_scope_pauses SET resumed_at=? WHERE task_id=?")
+          .run(utc(),id);
+        this.audit(id,"scope_pause_resumed",agent.trim(),{
+          baseHead:claimBase,pausedHead:paused.paused_head,proposalHash:paused.proposal_hash,
+        });
+      }
       if (task.status !== "in_review") {
         this.db.prepare(
           "UPDATE dc_tasks SET status='in_progress',updated_at=? WHERE id=?",
         ).run(utc(), id);
       }
       this.audit(id, lease?.task_id === id ? "reclaimed" : "claimed", agent, {
-        base: originalBase, ttlSeconds,
+        base: claimBase, ttlSeconds,
       });
       return { task: this.get(id), executionContract:this.executionContract(id),
-        leaseToken: token, baseHead: originalBase };
+        leaseToken: token, baseHead: claimBase };
     });
   }
 
@@ -3140,6 +3199,76 @@ export class ProjectTaskLedger {
     });
   }
 
+  /**
+   * Repair a mistaken claim of a task whose frozen scope expansion was
+   * already staged. Preserve the complete original Git baseline and commits:
+   * no cherry-pick, reset, deleted lease history or silent verification.
+   * This only restores the task to Ready so genuine independent review and
+   * exact Owner approval can proceed. It grants ZERO extra file permissions.
+   */
+  pauseForScopeAmendment(id:string,token:string,reason:string):Row {
+    if(typeof reason!=="string"||reason.trim().length<20)
+      fail("PAUSE_REASON_REQUIRED","Document why the claimed task must pause for a scoped amendment");
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(id,token);
+      const task=this.requireTask(id);
+      if(task.status!=="in_progress")
+        fail("TASK_NOT_IN_PROGRESS","Only an actively claimed, unreviewed task may pause for scope");
+      const pending=this.db.prepare(
+        "SELECT * FROM dc_release_work_amendments WHERE release=?",
+      ).get(task.release);
+      if(!pending)fail("SCOPE_AMENDMENT_NOT_FOUND","No staged amendment affects this release");
+      const proposal=JSON.parse(pending.snapshot_json) as ReleaseWorkScopeAmendment;
+      if(!proposal.changes.some(change=>change.taskId===id))
+        fail("SCOPE_AMENDMENT_NOT_FOUND","The staged amendment does not include this task");
+      const frozen=this.db.prepare(
+        "SELECT revision,hash FROM dc_release_work_plans WHERE release=?",
+      ).get(task.release);
+      if(!frozen||frozen.revision!==proposal.baseRevision||frozen.hash!==proposal.baseHash)
+        fail("STALE_AMENDMENT","Frozen release changed; cannot pause against an old scope");
+      if(this.db.prepare("SELECT task_id FROM dc_scope_pauses WHERE task_id=? AND resumed_at IS NULL")
+        .get(id))
+        fail("SCOPE_ALREADY_PAUSED","Task is already paused awaiting a reviewed amendment");
+      if(this.latestCompletion(id)||
+        this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1").get(id)||
+        this.db.prepare("SELECT task_id FROM dc_task_decisions WHERE task_id=?").get(id))
+        fail("TASK_EVIDENCE_EXISTS",
+          "Resolve recorded completion/evidence/decisions before pausing; do not discard verified provenance");
+      const head=git(this.root,["rev-parse","HEAD"]);
+      if(git(this.root,["status","--porcelain"]))
+        fail("DIRTY_WORKTREE","Commit or revert local changes before pausing");
+      if(!run(this.root,"git",["merge-base","--is-ancestor",lease.base_head,head]).passed)
+        fail("GIT_HISTORY_CHANGED","Original claimed base is not an ancestor of current HEAD");
+      const files=changedFiles(this.root,lease.base_head);
+      const allowed=JSON.parse(task.allowed_paths) as string[];
+      const denied=files.filter(file=>!allowed.some(pattern=>pathAllowed(file,pattern)));
+      if(denied.length)fail("PAUSE_SCOPE_VIOLATION",
+        "Already committed files exceed frozen scope: "+denied.join(", "));
+      const governed=this.checkGovernedArtifacts();
+      if(!governed.passed)
+        fail("GOVERNED_ARTIFACT_CHANGED",
+          "Original governed architecture artifact baseline must remain intact");
+      const now=utc();
+      this.db.prepare(`INSERT INTO dc_scope_pauses
+        (task_id,release,proposal_hash,base_head,paused_head,
+         changed_files_json,reason,paused_by,paused_at)
+         VALUES(?,?,?,?,?,?,?,?,?)`).run(id,task.release,pending.proposal_hash,
+        lease.base_head,head,JSON.stringify(files),reason.trim(),lease.agent,now);
+      this.db.prepare("DELETE FROM dc_leases WHERE singleton=1").run();
+      this.db.prepare("UPDATE dc_tasks SET status='ready',updated_at=? WHERE id=?")
+        .run(now,id);
+      this.audit(id,"scope_paused_for_review",lease.agent,{
+        release:task.release,proposalHash:pending.proposal_hash,
+        originalBaseHead:lease.base_head,pausedHead:head,
+        changedFiles:files,reason:reason.trim(),
+        originalLeaseAgent:lease.agent,
+      });
+      return {taskId:id,status:"ready",paused:true,reviewRequired:true,
+        release:task.release,proposalHash:pending.proposal_hash,
+        originalBaseHead:lease.base_head,pausedHead:head,changedFiles:files};
+    });
+  }
+
   private requireLease(id: string, token: string): Row {
     const row = this.db.prepare("SELECT * FROM dc_leases WHERE singleton=1").get();
     if (!row || row.task_id !== id || row.token !== token || row.expires_at <= Date.now()) {
@@ -3153,7 +3282,10 @@ export class ProjectTaskLedger {
       const lease = this.requireLease(id, token);
       const current = this.requireTask(id);
       if (current.status !== "in_progress") fail("INVALID_STATE", "Only an in-progress task can report");
-      if (!evidence.kind?.trim() || !evidence.reference?.trim()) {
+      if (typeof evidence?.kind!=="string"||typeof evidence?.reference!=="string"||
+        !evidence.kind.trim()||!evidence.reference.trim()||
+        ["undefined","null"].includes(evidence.kind.trim().toLowerCase())||
+        ["undefined","null"].includes(evidence.reference.trim().toLowerCase())) {
         fail("EVIDENCE_REQUIRED", "Evidence kind and reference required");
       }
       const head = git(this.root, ["rev-parse", "HEAD"]);

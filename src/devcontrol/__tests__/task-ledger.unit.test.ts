@@ -811,6 +811,44 @@ describe("project ledger and legacy migration", () => {
     const stagedScope=ledger!.stageReleaseWorkScopeAmendment(amendment,"planning-agent");
     expect(stagedScope).toMatchObject({status:"awaiting_independent_review",
       executableScopeChanged:false});
+    expect(()=>ledger!.claim("WORK-102","coding-agent"))
+      .toThrow(/Scope amendment.*awaits independent review/);
+    expect(ledger!.next().blocked).toContainEqual(expect.objectContaining({
+      id:"WORK-102",pendingScopeReview:true,
+    }));
+    // Reproduce a claim made by the OLD binary after an amendment was staged,
+    // before v5 introduced the claim guard. The partial commit is inside the
+    // ORIGINAL approved path and must remain in Git during recovery.
+    const beforePartial=git("rev-parse","HEAD");
+    const brokenToken="old-lease-for-scope-recovery";
+    const oldDb=(ledger! as any).db;
+    oldDb.prepare("UPDATE dc_tasks SET status='in_progress' WHERE id='WORK-102'").run();
+    oldDb.prepare(`INSERT INTO dc_leases
+      (singleton,task_id,agent,token,base_head,expires_at)
+      VALUES(1,?,?,?,?,?)`).run("WORK-102","previous-agent",brokenToken,
+      beforePartial,Date.now()+600_000);
+    save("tests/contracts/partial-replay.json",'{"old_scope":true}\n');
+    commit("already scoped partial Flutter-style task work");
+    expect(()=>ledger!.report("WORK-102",brokenToken,{
+      kind:"undefined",reference:"undefined"},true)).toThrow(/Evidence kind and reference required/);
+    save("tests/contracts/uncommitted.json",'{"unsafe":true}\n');
+    expect(()=>ledger!.pauseForScopeAmendment("WORK-102",brokenToken,
+      "A prior Agent started implementation before scope review completed."))
+      .toThrow(/Commit or revert local changes/);
+    fs.rmSync(path.join(root,"tests/contracts/uncommitted.json"));
+    expect(()=>ledger!.release("WORK-102",brokenToken))
+      .toThrow(/renew or reclaim/);
+    const paused=ledger!.pauseForScopeAmendment("WORK-102",brokenToken,
+      "A necessary real integration file was excluded from the frozen task's scope.");
+    expect(paused).toMatchObject({status:"ready",paused:true,reviewRequired:true,
+      originalBaseHead:beforePartial,changedFiles:["tests/contracts/partial-replay.json"]});
+    expect(ledger!.get("WORK-102").status).toBe("ready");
+    expect(()=>ledger!.claim("WORK-102","coding-agent"))
+      .toThrow(/Scope amendment.*awaits independent review/);
+    expect(()=>ledger!.pauseForScopeAmendment("WORK-102",brokenToken,
+      "Attempt to replay an already exhausted original task lease"))
+      .toThrow(/Active task lease token required/);
+    expect(git("rev-parse","HEAD")).not.toBe(beforePartial);
     expect(ledger!.get("WORK-102").allowedPaths).toEqual(["tests/contracts/**"]);
     expect(ledger!.releaseWorkPlan("V0.1").scopeAmendment?.status)
       .toBe("awaiting_independent_review");
@@ -841,6 +879,14 @@ describe("project ledger and legacy migration", () => {
       frozenHash:amended.hash,scopeAmendment:null});
     expect(ledger!.get("WORK-102").allowedPaths).toEqual([
       "tests/contracts/**","services/core/go.mod","services/core/internal/http_integration_test.go"]);
+    const pausedAudit=oldDb.prepare(
+      "SELECT details_json FROM dc_audit WHERE task_id='WORK-102' AND event='scope_paused_for_review'"
+    ).get();
+    expect(JSON.parse(pausedAudit.details_json).originalBaseHead).toBe(beforePartial);
+    // The actual prior work cannot be silently discarded. Resuming before
+    // its frozen dependency is verified is still forbidden.
+    expect(()=>ledger!.claim("WORK-102","coding-agent"))
+      .toThrow(/depends on WORK-101/);
     expect(ledger!.get("F0").status).toBe("verified");
     expect(ledger!.get("WORK-101").allowedPaths).toEqual(["services/core/**"]);
     expect(()=>ledger!.stageReleaseWorkScopeAmendment(amendment,"planning-agent"))
@@ -858,12 +904,31 @@ describe("project ledger and legacy migration", () => {
     expect(contract.spec).toMatchObject({title:"实现本地事件创建接口",
       acceptance:"首次写入返回稳定事件编号"});
     expect(ledger!.get("WORK-101").owner).toBe("Core Agent");
-    expect(ledger!.claim("WORK-101","coding-agent").task.id).toBe("WORK-101");
+    const prerequisite=ledger!.claim("WORK-101","coding-agent");
+    expect(prerequisite.task.id).toBe("WORK-101");
     const underway={...amendment,baseRevision:2,baseHash:amended.hash,
       changes:[{taskId:"WORK-101",addAllowedPaths:["services/core/new_handler.go"]}]};
     expect(ledger!.reviewReleaseWorkScopeAmendment(underway)).toMatchObject({passed:false});
     expect(()=>ledger!.stageReleaseWorkScopeAmendment(underway,"planner"))
       .toThrow(/only unclaimed Ready/);
+    ledger!.release("WORK-101",prerequisite.leaseToken);
+    // In the isolated test database the predecessor becomes Verified without
+    // unrelated Git files, so the paused task's HEAD can be exactly restored.
+    oldDb.prepare("UPDATE dc_tasks SET status='verified' WHERE id='WORK-101'").run();
+    const resumed=ledger!.claim("WORK-102","coding-agent");
+    expect(resumed.baseHead).toBe(beforePartial);
+    expect(ledger!.get("WORK-102").status).toBe("in_progress");
+    expect(oldDb.prepare("SELECT resumed_at FROM dc_scope_pauses WHERE task_id='WORK-102'")
+      .get().resumed_at).toBeTruthy();
+    ledger!.complete("WORK-102",resumed.leaseToken,{
+      summary:"Recovered the original in-scope partial work from the old Agent's committed revision.",
+      implementation:"Kept the original immutable Git base without discarding the code or broadening old scopes.",
+      verification:"Validated the scoped existing file and old revision through the original docs gate.",
+    });
+    ledger!.report("WORK-102",resumed.leaseToken,{
+      kind:"test",reference:"real previously committed in-scope fixture file"},true);
+    expect(ledger!.verify("WORK-102",resumed.leaseToken)).toMatchObject({
+      passed:true,files:["tests/contracts/partial-replay.json"]});
   });
   it("turns a start_feature SQLite specification into a reviewed Feature task plan without release-wide files", async () => {
     ledger!.saveFeature({name:"event-ingest",description:"Persist auditable event messages with idempotency",layout:"flat",

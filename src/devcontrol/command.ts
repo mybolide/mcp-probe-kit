@@ -167,6 +167,8 @@ export function dispatchDevControl(
       String(input.id), String(input.leaseToken), Number(input.ttlSeconds ?? 1800),
     );
     case "release": return ledger.release(String(input.id), String(input.leaseToken));
+    case "pause-for-scope": return ledger.pauseForScopeAmendment(
+      String(input.id),String(input.leaseToken),String(input.reason??""));
     case "check": return ledger.checkStaged();
     case "report": return ledger.report(
       String(input.id), String(input.leaseToken),
