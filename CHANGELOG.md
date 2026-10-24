@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Begin the **5.0.0** development line on the Neyna DevControl feature branch.
+  Package, npm lockfile, MCP Registry descriptor and tool manifest now use
+  `5.0.0`; public npm `latest` and v4 migration instructions remain
+  unchanged until a separately verified release is published.
+- The new major version is a **source milestone, not publication or approval**
+  of pending architecture, security or scoped-release amendments.
+
 ---
 
 ## [4.1.1] - 2026-10-13
