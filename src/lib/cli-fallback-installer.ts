@@ -22,11 +22,29 @@ export interface CliFallbackFileResult {
   skipped: boolean;
 }
 
+function hasPinnedLocalVerify(projectRoot: string, version: string): boolean {
+  const installedRoot = path.join(
+    projectRoot, ".mcp-probe-kit", "local-verify", "node_modules", "mcp-probe-kit",
+  );
+  if (!fs.existsSync(path.join(installedRoot, "build", "index.js"))) return false;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(installedRoot, "package.json"), "utf8")) as {
+      name?: string;
+      version?: string;
+    };
+    return pkg.name === "mcp-probe-kit" && pkg.version === version;
+  } catch {
+    return false;
+  }
+}
+
 export interface CliRuntimeManifest {
   schemaVersion: 1;
   package: "mcp-probe-kit";
   version: string;
   packageSpec: string;
+  /** Local development installs must not query npm for an unpublished build. */
+  localOnly?: boolean;
   source: "mcp-bootstrap";
   generatedByVersion: string;
   installedAt: string;
@@ -77,6 +95,8 @@ export function ensureCliFallback(
       : requestedVersion;
   const packageSpec = `mcp-probe-kit@${version}`;
   const localSourceCheckout = isLocalSourceCheckout(root, version);
+  const localOnly =
+    existingManifest?.localOnly === true || hasPinnedLocalVerify(root, version);
   const installedAt =
     existingManifest?.version === version && existingManifest.installedAt
       ? existingManifest.installedAt
@@ -84,9 +104,9 @@ export function ensureCliFallback(
 
   const files: CliFallbackFileResult[] = [];
   files.push(
-    ensureTextFile(root, CLI_POWERSHELL_REL_PATH, renderPowerShellWrapper(version, localSourceCheckout)),
-    ensureTextFile(root, CLI_CMD_REL_PATH, renderCmdWrapper(version, localSourceCheckout)),
-    ensureTextFile(root, CLI_SHELL_REL_PATH, renderShellWrapper(version, localSourceCheckout), true)
+    ensureTextFile(root, CLI_POWERSHELL_REL_PATH, renderPowerShellWrapper(version, localSourceCheckout, localOnly)),
+    ensureTextFile(root, CLI_CMD_REL_PATH, renderCmdWrapper(version, localSourceCheckout, localOnly)),
+    ensureTextFile(root, CLI_SHELL_REL_PATH, renderShellWrapper(version, localSourceCheckout, localOnly), true)
   );
 
   const manifest: CliRuntimeManifest = {
@@ -94,6 +114,7 @@ export function ensureCliFallback(
     package: "mcp-probe-kit",
     version,
     packageSpec,
+    localOnly,
     source: "mcp-bootstrap",
     generatedByVersion: VERSION,
     installedAt,
@@ -235,7 +256,7 @@ export function unpublishedPinHint(version: string): string {
   );
 }
 
-function renderPowerShellWrapper(version: string, localSourceCheckout: boolean): string {
+function renderPowerShellWrapper(version: string, localSourceCheckout: boolean, localOnly: boolean): string {
   const checkoutBranch = localSourceCheckout
     ? String.raw`} elseif (Test-Path -LiteralPath $LocalCheckoutEntry) {
   & node $LocalCheckoutEntry @ProbeArguments
@@ -254,6 +275,7 @@ $WrapperRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $LocalCheckoutEntry = Join-Path $WrapperRoot "build\index.js"
 $LocalVerifyEntry = Join-Path $WrapperRoot ".mcp-probe-kit\local-verify\node_modules\mcp-probe-kit\build\index.js"
 $NodeModulesEntry = Join-Path $WrapperRoot "node_modules\mcp-probe-kit\build\index.js"
+$LocalOnly = ${localOnly ? "$true" : "$false"}
 $CacheRoot = if ($env:MCP_PROBE_NPX_CACHE) {
   $env:MCP_PROBE_NPX_CACHE
 } elseif ($env:LOCALAPPDATA) {
@@ -266,12 +288,26 @@ if ($env:MCP_PROBE_LOCAL_ENTRY) {
   & node $env:MCP_PROBE_LOCAL_ENTRY @ProbeArguments
   exit $LASTEXITCODE
 ${checkoutBranch}} elseif (Test-Path -LiteralPath $LocalVerifyEntry) {
+  & node -e 'try { process.exit(require(process.argv[1]).version === process.argv[2] ? 0 : 1) } catch { process.exit(1) }' (Join-Path $WrapperRoot ".mcp-probe-kit\local-verify\node_modules\mcp-probe-kit\package.json") "${version}"
+  if ($LASTEXITCODE -ne 0) {
+    [Console]::Error.WriteLine("Local MCP build version mismatch. Restore the pinned local-verify package.")
+    exit 1
+  }
   & node $LocalVerifyEntry @ProbeArguments
   exit $LASTEXITCODE
 } elseif (Test-Path -LiteralPath $NodeModulesEntry) {
+  & node -e 'try { process.exit(require(process.argv[1]).version === process.argv[2] ? 0 : 1) } catch { process.exit(1) }' (Join-Path $WrapperRoot "node_modules\mcp-probe-kit\package.json") "${version}"
+  if ($LASTEXITCODE -ne 0) {
+    [Console]::Error.WriteLine("Local MCP build version mismatch. Restore the pinned node_modules package.")
+    exit 1
+  }
   & node $NodeModulesEntry @ProbeArguments
   exit $LASTEXITCODE
 } else {
+  if ($LocalOnly -or $env:MCP_PROBE_LOCAL_ONLY -eq "1") {
+    [Console]::Error.WriteLine("Local MCP build is missing; npm fallback disabled. Restore local-verify for the pinned version.")
+    exit 1
+  }
   $env:NPM_CONFIG_FETCH_RETRIES = "0"
   & npx.cmd --yes --cache $CacheRoot $PackageSpec @ProbeArguments
   $ProbeExit = $LASTEXITCODE
@@ -283,7 +319,7 @@ ${checkoutBranch}} elseif (Test-Path -LiteralPath $LocalVerifyEntry) {
 `;
 }
 
-function renderCmdWrapper(version: string, localSourceCheckout: boolean): string {
+function renderCmdWrapper(version: string, localSourceCheckout: boolean, localOnly: boolean): string {
   const checkoutBranch = localSourceCheckout
     ? `) else if exist "%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js" (\r\n` +
       `  call node "%MCP_PROBE_WRAPPER_ROOT%\\build\\index.js" %*\r\n` +
@@ -304,12 +340,30 @@ function renderCmdWrapper(version: string, localSourceCheckout: boolean): string
     `  exit /b !ERRORLEVEL!\r\n` +
     checkoutBranch +
     `) else if exist "%MCP_PROBE_WRAPPER_ROOT%\\.mcp-probe-kit\\local-verify\\node_modules\\mcp-probe-kit\\build\\index.js" (\r\n` +
+    `  node -e "try{process.exit(require(process.argv[1]).version===process.argv[2]?0:1)}catch(e){process.exit(1)}" "%MCP_PROBE_WRAPPER_ROOT%\\.mcp-probe-kit\\local-verify\\node_modules\\mcp-probe-kit\\package.json" "${version}"\r\n` +
+    `  if errorlevel 1 (\r\n` +
+    `    echo Local MCP build version mismatch. Restore pinned local-verify. 1>&2\r\n` +
+    `    exit /b 1\r\n` +
+    `  )\r\n` +
     `  call node "%MCP_PROBE_WRAPPER_ROOT%\\.mcp-probe-kit\\local-verify\\node_modules\\mcp-probe-kit\\build\\index.js" %*\r\n` +
     `  exit /b !ERRORLEVEL!\r\n` +
     `) else if exist "%MCP_PROBE_WRAPPER_ROOT%\\node_modules\\mcp-probe-kit\\build\\index.js" (\r\n` +
+    `  node -e "try{process.exit(require(process.argv[1]).version===process.argv[2]?0:1)}catch(e){process.exit(1)}" "%MCP_PROBE_WRAPPER_ROOT%\\node_modules\\mcp-probe-kit\\package.json" "${version}"\r\n` +
+    `  if errorlevel 1 (\r\n` +
+    `    echo Local MCP build version mismatch. Restore pinned node_modules package. 1>&2\r\n` +
+    `    exit /b 1\r\n` +
+    `  )\r\n` +
     `  call node "%MCP_PROBE_WRAPPER_ROOT%\\node_modules\\mcp-probe-kit\\build\\index.js" %*\r\n` +
     `  exit /b !ERRORLEVEL!\r\n` +
     `) else (\r\n` +
+    `  if "${localOnly ? "1" : "0"}"=="1" (\r\n` +
+    `    echo Local MCP build is missing; npm fallback disabled. Restore local-verify. 1>&2\r\n` +
+    `    exit /b 1\r\n` +
+    `  )\r\n` +
+    `  if /I "%MCP_PROBE_LOCAL_ONLY%"=="1" (\r\n` +
+    `    echo MCP_PROBE_LOCAL_ONLY prohibits npm fallback. 1>&2\r\n` +
+    `    exit /b 1\r\n` +
+    `  )\r\n` +
     `  set "NPM_CONFIG_FETCH_RETRIES=0"\r\n` +
     `  call npx.cmd --yes --cache "%MCP_PROBE_CACHE%" mcp-probe-kit@${version} %*\r\n` +
     `  set "MCP_PROBE_NPX_EXIT=!ERRORLEVEL!"\r\n` +
@@ -320,7 +374,7 @@ function renderCmdWrapper(version: string, localSourceCheckout: boolean): string
     `)\r\n`;
 }
 
-function renderShellWrapper(version: string, localSourceCheckout: boolean): string {
+function renderShellWrapper(version: string, localSourceCheckout: boolean, localOnly: boolean): string {
   const checkoutBranch = localSourceCheckout
     ? `if [ -f "$WRAPPER_ROOT/build/index.js" ]; then\n` +
       `  exec node "$WRAPPER_ROOT/build/index.js" "$@"\n` +
@@ -337,10 +391,22 @@ function renderShellWrapper(version: string, localSourceCheckout: boolean): stri
     `fi\n` +
     checkoutBranch +
     `if [ -f "$WRAPPER_ROOT/.mcp-probe-kit/local-verify/node_modules/mcp-probe-kit/build/index.js" ]; then\n` +
+    `  if ! node -e 'try{process.exit(require(process.argv[1]).version===process.argv[2]?0:1)}catch{process.exit(1)}' "$WRAPPER_ROOT/.mcp-probe-kit/local-verify/node_modules/mcp-probe-kit/package.json" "${version}"; then\n` +
+    `    echo "Local MCP build version mismatch. Restore pinned local-verify." >&2\n` +
+    `    exit 1\n` +
+    `  fi\n` +
     `  exec node "$WRAPPER_ROOT/.mcp-probe-kit/local-verify/node_modules/mcp-probe-kit/build/index.js" "$@"\n` +
     `fi\n` +
     `if [ -f "$WRAPPER_ROOT/node_modules/mcp-probe-kit/build/index.js" ]; then\n` +
+    `  if ! node -e 'try{process.exit(require(process.argv[1]).version===process.argv[2]?0:1)}catch{process.exit(1)}' "$WRAPPER_ROOT/node_modules/mcp-probe-kit/package.json" "${version}"; then\n` +
+    `    echo "Local MCP build version mismatch. Restore pinned node_modules package." >&2\n` +
+    `    exit 1\n` +
+    `  fi\n` +
     `  exec node "$WRAPPER_ROOT/node_modules/mcp-probe-kit/build/index.js" "$@"\n` +
+    `fi\n` +
+    `if [ "\${MCP_PROBE_LOCAL_ONLY:-0}" = "1" ] || [ "${localOnly ? "1" : "0"}" = "1" ]; then\n` +
+    `  echo "Local MCP build missing: npm fallback disabled. Restore pinned local-verify." >&2\n` +
+    `  exit 1\n` +
     `fi\n` +
     `NPM_CONFIG_FETCH_RETRIES=0 npx --yes --cache "$CACHE_ROOT" "mcp-probe-kit@${version}" "$@" || {\n` +
     `  echo "${hint}" >&2\n` +

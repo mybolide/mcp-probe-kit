@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { chmod, cp, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,6 +6,7 @@ import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { create as createTar } from 'tar';
 import { COMPACT_WITH_HISTORY_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
+import { runBoundedCommand } from './lib/bounded-command.mjs';
 
 const npmExecPath = process.env.npm_execpath;
 const root = process.cwd();
@@ -117,7 +117,7 @@ try {
     JSON.stringify({ name: 'mcp-probe-cli-smoke', private: true }, null, 2) + '\n',
     'utf8'
   );
-  const cliResult = spawnSync(
+  const cliResult = runBoundedCommand(
     process.execPath,
     [serverPath, 'exec', 'workflow', '--stdin'],
     {
@@ -129,6 +129,7 @@ try {
       }),
       encoding: 'utf8',
       windowsHide: true,
+      timeout: 30_000,
       env: {
         ...process.env,
         MCP_ENABLE_GITNEXUS_BRIDGE: '0',
@@ -177,10 +178,11 @@ try {
   if (process.platform !== 'win32') {
     const shellStat = await stat(cliShellWrapperPath);
     assert((shellStat.mode & 0o111) !== 0, 'packed Unix CLI wrapper is not executable');
-    const syntaxResult = spawnSync('sh', ['-n', cliShellWrapperPath], {
+    const syntaxResult = runBoundedCommand('sh', ['-n', cliShellWrapperPath], {
       cwd: cliProjectDir,
       encoding: 'utf8',
       windowsHide: true,
+      timeout: 10_000,
     });
     assert(
       syntaxResult.status === 0,
@@ -197,13 +199,14 @@ try {
       'utf8'
     );
     await chmod(fakeNpx, 0o755);
-    const wrapperResult = spawnSync(
+    const wrapperResult = runBoundedCommand(
       cliShellWrapperPath,
       ['status', '--project-root', '.'],
       {
         cwd: cliProjectDir,
         encoding: 'utf8',
         windowsHide: true,
+        timeout: 10_000,
         env: {
           ...process.env,
           PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ''}`,
@@ -362,7 +365,7 @@ try {
 
 
 function runPackedCli(serverPath, cwd, tool, input) {
-  const result = spawnSync(
+  const result = runBoundedCommand(
     process.execPath,
     [serverPath, 'exec', tool, '--stdin'],
     {
@@ -370,6 +373,7 @@ function runPackedCli(serverPath, cwd, tool, input) {
       input: JSON.stringify(input),
       encoding: 'utf8',
       windowsHide: true,
+      timeout: 30_000,
       env: {
         ...process.env,
         MCP_ENABLE_GITNEXUS_BRIDGE: '0',
@@ -391,10 +395,11 @@ function runPackedCli(serverPath, cwd, tool, input) {
 function runNpm(args, cwd) {
   const command = npmExecPath ? process.execPath : 'npm';
   const commandArgs = npmExecPath ? [npmExecPath, ...args] : args;
-  const result = spawnSync(command, commandArgs, {
+  const result = runBoundedCommand(command, commandArgs, {
     cwd,
     encoding: 'utf8',
     windowsHide: true,
+    timeout: 90_000,
     env: process.env,
   });
   if (result.status !== 0) {

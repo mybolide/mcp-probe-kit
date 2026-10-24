@@ -69,12 +69,12 @@ export function verifyReleaseReadiness(
   const releaseChannel = safeReleaseChannel(packageVersion);
 
   checks.push(check(
-    'v4-release-version',
-    Boolean(releaseChannel && /^4\./.test(packageVersion)),
+    'supported-release-version',
+    Boolean(releaseChannel && /^(4|5)\./.test(packageVersion)),
     'error',
-    'valid 4.x SemVer release or prerelease',
+    'valid 4.x or 5.x SemVer release or prerelease',
     packageVersion || 'missing',
-    'RC 或稳定版提交必须使用有效的 4.x SemVer 版本'
+    '候选版本必须使用有效的 4.x 或 5.x SemVer；通过静态检查不等于获得发布授权'
   ));
   checks.push(check(
     'version-parity',

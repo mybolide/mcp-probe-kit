@@ -35,6 +35,8 @@ describe('generateAgentsMdInner', () => {
     expect(md).toContain('检查点最低清单');
     expect(md).toContain('resume_plan');
     expect(md).toContain('.mcp-probe-kit/bin/probe.*');
+    expect(md).toContain('runtime.json.localOnly=true');
+    expect(md).toContain('MCP_PROBE_LOCAL_ONLY=1');
     expect(md).toContain('自动注入');
     expect(md).toContain('先调用 `resume_plan`');
     expect(md).toContain('只传 `project_root`');

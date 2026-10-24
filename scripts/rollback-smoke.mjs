@@ -1,9 +1,9 @@
-import { spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { runBoundedCommand } from './lib/bounded-command.mjs';
 
 const rollbackVersion = process.env.MCP_ROLLBACK_VERSION || '3.7.0';
 const npmExecPath = process.env.npm_execpath;
@@ -77,11 +77,16 @@ try {
 function runNpm(args, cwd) {
   const command = npmExecPath ? process.execPath : 'npm';
   const commandArgs = npmExecPath ? [npmExecPath, ...args] : args;
-  const result = spawnSync(command, commandArgs, {
+  const result = runBoundedCommand(command, commandArgs, {
     cwd,
     encoding: 'utf8',
     windowsHide: true,
-    env: process.env,
+    timeout: 90_000,
+    env: {
+      ...process.env,
+      npm_config_fetch_retries: '0',
+      npm_config_fetch_timeout: '30000',
+    },
   });
   if (result.status !== 0) {
     throw new Error([

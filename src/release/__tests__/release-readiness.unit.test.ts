@@ -28,6 +28,30 @@ describe('release readiness', () => {
     expect(report.checks.find((item) => item.id === 'release-npm-trusted-publishing')?.passed).toBe(true);
   });
 
+  it('5.0.0 开发版本能通过静态兼容检查，但不代表获准发布', () => {
+    const root = createFixture({
+      version: '5.0.0',
+      serverVersion: '2.0.0',
+      includeMigration: true,
+    });
+    const report = verifyReleaseReadiness(root);
+
+    expect(report.checks.find((item) => item.id === 'supported-release-version')?.passed).toBe(true);
+    expect(report.passed).toBe(true);
+  });
+
+  it('未经支持的主版本不能悄悄通过版本闸门', () => {
+    const root = createFixture({
+      version: '6.0.0',
+      serverVersion: '2.0.0',
+      includeMigration: true,
+    });
+    const report = verifyReleaseReadiness(root);
+
+    expect(report.passed).toBe(false);
+    expect(report.checks.find((item) => item.id === 'supported-release-version')?.passed).toBe(false);
+  });
+
   it('发布工作流重新引用长期 npm token 时阻断发布', () => {
     const root = createFixture({
       version: '4.0.0-rc.1',

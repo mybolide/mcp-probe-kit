@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import vm from 'node:vm';
+import { resolveDocsInstallVersion } from './lib/docs-install-version.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const failures = [];
@@ -178,9 +179,8 @@ for (const file of documentationPages) {
 
 const packageJson = readJson('package.json');
 const isPrerelease = packageJson.version.includes('-');
-const expectedV4Specifier = isPrerelease
-  ? 'mcp-probe-kit@next'
-  : `mcp-probe-kit@${packageJson.version}`;
+const docsInstallVersion = resolveDocsInstallVersion(packageJson.version, read('CHANGELOG.md'));
+const expectedV4Specifier = docsInstallVersion.specifier;
 check(packageJson.scripts?.['docs:sync-shell'] === 'tsx scripts/sync-doc-shell.ts', 'package exposes docs:sync-shell');
 check(packageJson.scripts?.['docs:build']?.startsWith('npm run docs:sync-shell'), 'docs:build synchronizes the canonical shell first');
 check(existsSync(resolve(root, 'scripts/sync-doc-shell.ts')), 'canonical docs shell generator exists');
@@ -207,8 +207,14 @@ const gettingStarted = read('docs/pages/getting-started.html');
 check(gettingStarted.includes('w-full max-w-none'), 'getting-started fills the available documentation viewport');
 check(
   gettingStarted.includes(expectedV4Specifier),
-  `getting-started includes ${isPrerelease ? 'npm next' : packageJson.version}`,
+  `getting-started includes ${docsInstallVersion.label}`,
 );
+if (docsInstallVersion.development) {
+  check(
+    !gettingStarted.includes(`mcp-probe-kit@${packageJson.version}`),
+    'getting-started does not advertise an unpublished development version',
+  );
+}
 check(
   isPrerelease
     ? !gettingStarted.includes('mcp-probe-kit@latest')

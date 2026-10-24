@@ -154,8 +154,14 @@ describe("cli-fallback-installer", () => {
       'console.log(`LOCAL_VERIFY_OK ${process.argv.slice(2).join(" ")}`);\n',
       "utf8",
     );
+    fs.writeFileSync(
+      path.join(path.dirname(entryDir), "package.json"),
+      JSON.stringify({ name: "mcp-probe-kit", version: VERSION }),
+      "utf8",
+    );
 
     ensureCliFallback(root);
+    expect(readCliRuntimeManifest(root)?.localOnly).toBe(true);
 
     const env = { ...process.env };
     delete env.MCP_PROBE_LOCAL_ENTRY;
@@ -172,6 +178,43 @@ describe("cli-fallback-installer", () => {
         });
     expect(execution.status).toBe(0);
     expect(execution.stdout).toContain("LOCAL_VERIFY_OK --version");
+  });
+
+  test("local-only 项目即使安装目录消失也绝不回退 npm", () => {
+    const root = tempRoot();
+    const packageDir = path.join(root, ".mcp-probe-kit", "local-verify", "node_modules", "mcp-probe-kit");
+    fs.mkdirSync(path.join(packageDir, "build"), { recursive: true });
+    fs.writeFileSync(path.join(packageDir, "package.json"), JSON.stringify({ name: "mcp-probe-kit", version: VERSION }));
+    fs.writeFileSync(path.join(packageDir, "build", "index.js"), 'console.log("LOCAL")\n');
+    ensureCliFallback(root);
+    expect(readCliRuntimeManifest(root)?.localOnly).toBe(true);
+    fs.rmSync(packageDir, { recursive: true, force: true });
+
+    const env = { ...process.env };
+    delete env.MCP_PROBE_LOCAL_ENTRY;
+    const result = process.platform === "win32"
+      ? spawnSync("cmd.exe", ["/d", "/c", path.join(root, CLI_CMD_REL_PATH), "--version"], { cwd: root, env, encoding: "utf8", timeout: 5000 })
+      : spawnSync(path.join(root, CLI_SHELL_REL_PATH), ["--version"], { cwd: root, env, encoding: "utf8", timeout: 5000 });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("npm fallback disabled");
+  });
+
+  test("拒绝版本伪装：5.0.0 启动器不能执行旧 4.1.0 本地安装包", () => {
+    const root = tempRoot();
+    const packageDir = path.join(root, ".mcp-probe-kit", "local-verify", "node_modules", "mcp-probe-kit");
+    fs.mkdirSync(path.join(packageDir, "build"), { recursive: true });
+    fs.writeFileSync(path.join(packageDir, "package.json"), JSON.stringify({ name: "mcp-probe-kit", version: "4.1.0" }));
+    fs.writeFileSync(path.join(packageDir, "build", "index.js"), 'console.log("WRONG_VERSION_EXECUTED")\n');
+    ensureCliFallback(root);
+
+    const env = { ...process.env };
+    delete env.MCP_PROBE_LOCAL_ENTRY;
+    const result = process.platform === "win32"
+      ? spawnSync("cmd.exe", ["/d", "/c", path.join(root, CLI_CMD_REL_PATH), "--version"], { cwd: root, env, encoding: "utf8", timeout: 5000 })
+      : spawnSync(path.join(root, CLI_SHELL_REL_PATH), ["--version"], { cwd: root, env, encoding: "utf8", timeout: 5000 });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("version mismatch");
+    expect(result.stdout).not.toContain("WRONG_VERSION_EXECUTED");
   });
 
   test("npx 解析失败时打印未发布版本提示并以非零退出", () => {

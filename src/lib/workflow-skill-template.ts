@@ -77,6 +77,8 @@ CLI 降级通道不会继承 IDE \`mcp.json\` 里的 \`env\`。若需 Memory 等
 
 ### 启动器缺失时自修复
 
+**未发布的本地开发版本不能从 npm 自修复**：先查找项目 local-verify 或本地源码里的同版本 build/index.js，用 node <实际本地入口> install-agent --project-root . 重建启动器。只有版本确已发布且无本地候选时才允许执行下面的 npx 安装，并给网络操作设置整体超时。
+
 如果 \`.mcp-probe-kit/bin/probe.*\` 不存在，由 Agent 自行执行：
 
 Windows：
@@ -94,6 +96,8 @@ npx --yes mcp-probe-kit@${skillVersion} install-agent --project-root .
 安装后立即改用项目内启动器。不得使用 \`@latest\` 或 \`@next\`，不得全局安装，也不得修改用户项目的 \`package.json\`。Skill、CLI 启动器和 MCP 必须保持同一精确版本 \`${skillVersion}\`。
 
 ### 未发布精确版本与本地入口
+
+**本地版本一致性**：同版本 local-verify 存在时会自动写 runtime.json.localOnly=true；本地候选缺失或包版本不符时，启动器应立即拒绝，不得下载 npm 或偷偷回退旧 4.x。可用 MCP_PROBE_LOCAL_ONLY=1 显式禁用 npm 回退。实际运行 probe --version 验证版本，不可只检查 Skill/AGENTS.md 的文本。重新本地安装前保留备份并比对 build/index.js 的 SHA256。
 
 \`runtime.json\` 的 \`packageSpec\` 即使尚未出现在 npm registry，也必须与 MCP / Skill / AGENTS.md 保持同一精确版本 \`${skillVersion}\`。禁止把启动器改成 \`@latest\` 或 \`@next\`，也禁止为了“能 npx 成功”而改钉已发布的旧版本。
 

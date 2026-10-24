@@ -20,6 +20,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.0.0] - Development milestone (not published)
+
+### Changed
+
+- DevControl work-item scope changes require independent review and exact
+  Owner approval before a pending task can be claimed; frozen task provenance
+  survives a safe pause pending authorization.
+- Release smoke and Agent acceptance validate the default 29-tool
+  History Session surface alongside the 39-tool compatibility surface.
+
+### Validation
+
+- 5.0.0 remains a **local development candidate**. This entry is not an npm
+  publication, a Git tag, a GitHub Release, or Owner release authorization.
+
+---
+
 ## [4.1.1] - 2026-10-13
 
 ### Fixed

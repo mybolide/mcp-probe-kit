@@ -70,10 +70,11 @@ export async function historySessionBootstrap(args: unknown) {
     });
     const root = resolveRoot(parsed);
     const result = bootstrapHistorySession(root, asRecord(parsed));
+    const summary = result.created
+      ? `已创建历史会话 #${result.current_number}（${result.session_key_source}）`
+      : `已恢复历史会话 #${result.current_number}（${result.session_key_source}）`;
     return okStructured(
-      result.created
-        ? `已创建历史会话 #${result.current_number}（${result.session_key_source}）`
-        : `已恢复历史会话 #${result.current_number}（${result.session_key_source}）`,
+      `${summary}。本轮完成前使用 history_session_checkpoint（回传 session_key、expected_path 和原始输入）；查找旧记录使用 history_session_search，再用 history_session_read 精确读取。`,
       result,
     );
   } catch (error) {
