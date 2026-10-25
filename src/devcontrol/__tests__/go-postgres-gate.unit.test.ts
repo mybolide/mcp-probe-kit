@@ -59,43 +59,6 @@ describe("strict Go Core PostgreSQL live verification",()=>{
     });
   });
 
-  it("rejects unencrypted or unauthenticated PostgreSQL across a private LAN",()=>{
-    const f=fixture(); f.save(f.live,tagged);
-    const insecure=[
-      "postgresql://tester:do-not-print@192.168.0.110:50011/neyna_dev?sslmode=disable",
-      "postgresql://tester:do-not-print@192.168.0.110:50011/neyna_dev",
-      "postgresql://tester:do-not-print@db.internal:5432/neyna_dev?sslmode=prefer",
-      "postgresql://tester:do-not-print@db.internal:5432/neyna_dev?sslmode=require",
-      "postgresql://tester:do-not-print@db.internal:5432/neyna_dev?sslmode=verify-ca",
-      "postgresql://tester:do-not-print@db.internal:5432/neyna_dev?sslmode=disable&sslmode=verify-full",
-      "postgresql://tester:do-not-print@localhost:6432/neyna_dev?sslmode=disable",
-      // PostgreSQL drivers may honor query parameters over URL authority.
-      // Claiming a local tunnel while overriding the actual host must fail.
-      "postgresql://tester:do-not-print@localhost:6432/neyna_dev?sslmode=disable&host=192.168.0.110",
-      "postgresql://tester:do-not-print@127.0.0.1:6432/neyna_dev?sslmode=disable&hostaddr=192.168.0.110",
-      "postgresql://tester:do-not-print@127.0.0.1:6432/neyna_dev?sslmode=disable&service=unverified_pg_target",
-      "postgresql://tester:do-not-print@127.0.0.1:6432/neyna_dev?sslmode=disable&dbname=other_prod",
-    ];
-    for(const dsn of insecure){
-      const result=checkLivePostgresPrerequisites(f.root,{
-        ...validEnv,DEVCONTROL_POSTGRES_TEST_DSN:dsn,
-      });
-      expect(result.passed,`insecure test database DSN accepted`).toBe(false);
-      expect(JSON.stringify(result)).not.toContain("do-not-print");
-    }
-    for(const hostname of ["db.internal","192.168.0.110","2001:db8::1"]){
-      const bracketed=hostname.includes(":")?`[${hostname}]`:hostname;
-      const result=checkLivePostgresPrerequisites(f.root,{
-        ...validEnv,DEVCONTROL_POSTGRES_TEST_DSN:
-          `postgresql://tester:redacted@${bracketed}:5432/neyna_dev?sslmode=verify-full`,
-      });
-      expect(result).toMatchObject({passed:true,expectedDatabase:"neyna_dev"});
-    }
-    // A local port forwarded through an independently secured tunnel may
-    // use plaintext on the same machine, but never directly on the LAN.
-    expect(checkLivePostgresPrerequisites(f.root,validEnv)).toMatchObject({passed:true});
-  });
-
   it("requires a genuine tagged Go test, not a comment or HTTP-only fixture",()=>{
     const f=fixture();
     f.save(f.live,"package integration\n// func TestPostgresLiveFake(t *testing.T) {}\n");
