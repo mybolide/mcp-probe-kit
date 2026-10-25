@@ -14,6 +14,7 @@ import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
 import { resolveFlutterTestTarget } from "./flutter-gate.js";
+import { runLivePostgresGate, livePostgresTestFile } from "./go-postgres-gate.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "./release-plan.js";
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
@@ -51,6 +52,12 @@ function missingGatePrerequisiteScope(root:string,gates:string[],allowedPaths:st
     {gate:"go_http_integration",file:"services/core/internal/http_integration_test.go",
       valid:location=>fs.existsSync(location)&&
         /^func TestHTTP\w*\s*\(/m.test(fs.readFileSync(location,"utf8"))},
+    {gate:"go_postgres_live",file:"services/core/go.mod",
+      valid:location=>fs.existsSync(location)},
+    {gate:"go_postgres_live",file:livePostgresTestFile,
+      valid:location=>fs.existsSync(location)&&
+        /^func TestPostgresLive\w*\s*\(\s*t\s+\*testing\.T\s*\)/m.test(
+          fs.readFileSync(location,"utf8"))},
   ];
   const issues:string[]=[];
   for(const requirement of requirements){
@@ -126,7 +133,7 @@ function undocumentedMarkdown(additions: string[], allowedPaths: string[]): stri
 
 const idPattern = /^[A-Z][A-Z0-9-]{1,39}$/;
 const allowedGates = new Set([
-  "docs", "sqlite_decision", "devcontrol_tests", "go_contract", "go_http_integration",
+  "docs", "sqlite_decision", "devcontrol_tests", "go_contract", "go_http_integration", "go_postgres_live",
   "flutter_test", "ios_device_e2e", "v01_release_e2e",
 ]);
 const utc = () => new Date().toISOString();
@@ -1279,6 +1286,34 @@ export class ProjectTaskLedger {
       review:row.reviewed_json?JSON.parse(row.reviewed_json):null,
       reviewHash:row.review_hash??null,
       status:row.reviewed_json?"reviewed":"awaiting_independent_review"};
+  }
+
+  /** When independent review discovers an insufficient acceptance Gate, the
+   * Owner may retire only that exact UNREVIEWED candidate and restage a fixed
+   * proposal. No task is created; original frozen revision remains intact.
+   * Reviewed/approved amendments require their separate governing process.
+   */
+  withdrawReleaseWorkIncremental(input:{release:string;expectedProposalHash:string;
+    approvedBy:string;reason:string;explicitAuthorization:boolean}):Row {
+    if(input?.explicitAuthorization!==true||!input.approvedBy?.trim()||
+      typeof input.reason!=="string"||input.reason.trim().length<25)
+      fail("OWNER_AUTHORIZATION_REQUIRED","Owner authorization and specific rejected Gate reason required");
+    return this.inTransaction(()=>{
+      const row=this.db.prepare("SELECT * FROM dc_release_work_incrementals WHERE release=?")
+        .get(input.release);
+      if(!row||row.proposal_hash!==input.expectedProposalHash||row.reviewed_json)
+        fail("INCREMENTAL_WITHDRAWAL_REVIEW_REQUIRED",
+          "Only the exact unreviewed frozen work candidate may be retired");
+      if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
+        fail("ACTIVE_TASK","Do not withdraw pending prerequisites during an active task lease");
+      this.db.prepare("DELETE FROM dc_release_work_incrementals WHERE release=?")
+        .run(input.release);
+      this.audit(null,"release_incremental_withdrawn",input.approvedBy.trim(),{
+        release:input.release,proposalHash:row.proposal_hash,reason:input.reason.trim(),
+        executableTasksChanged:false});
+      return {release:input.release,withdrawn:true,proposalHash:row.proposal_hash,
+        executableTasksChanged:false,frozenRevisionUnchanged:true};
+    });
   }
 
   private taskAwaitsScopeReview(id:string,release:string):boolean {
@@ -3630,6 +3665,7 @@ export class ProjectTaskLedger {
       }
       return run(core, "go", ["test", "-tags=integration", "./..."]);
     }
+    if (name === "go_postgres_live")return runLivePostgresGate(this.root);
     if (name === "flutter_test") {
       const target = resolveFlutterTestTarget(this.root, allowedPaths);
       if (!target.passed) return target;

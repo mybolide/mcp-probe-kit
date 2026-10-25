@@ -265,6 +265,30 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.executionContract("NEYNA-291")).toMatchObject({eligible:true,issues:[]});
   });
 
+  it("will not claim a PostgreSQL acceptance task whose real DB test is outside frozen scope",()=>{
+    create({id:"NEYNA-292",allowedPaths:["services/core/cmd/**"],
+      requiredGates:["go_http_integration","go_postgres_live"]});
+    ledger!.approve("NEYNA-292","test-owner");
+    const contract=ledger!.executionContract("NEYNA-292");
+    expect(contract.eligible).toBe(false);
+    expect(contract.issues).toEqual(expect.arrayContaining([
+      expect.stringContaining("services/core/integration/postgres_live_test.go outside allowedPaths"),
+    ]));
+    expect(()=>ledger!.claim("NEYNA-292","agent"))
+      .toThrow(/postgres_live_test.go outside allowedPaths/);
+    save("services/core/go.mod","module example.com/core\n\ngo 1.22\n");
+    save("services/core/internal/http_integration_test.go",
+      "package internal\nimport \"testing\"\nfunc TestHTTPBoot(t *testing.T) {}\n");
+    save("services/core/integration/postgres_live_test.go",
+      "//go:build integration && postgres_live\n\npackage integration\n"+
+      "import \"testing\"\nfunc TestPostgresLiveConnection(t *testing.T) {}\n");
+    expect(ledger!.executionContract("NEYNA-292")).toMatchObject({eligible:true,issues:[]});
+    const preflight=(ledger! as any).gate("go_postgres_live") as {passed:boolean};
+    // The pre-existing test code is only a fixture. A missing test database
+    // is a hard failure even when a Go test name and HTTP bootstrap exist.
+    expect(preflight.passed).toBe(false);
+  });
+
   it("allows only generated Skill and AGENTS.md updates without a task lease",()=>{
     save("AGENTS.md","# Custom project security rules\nNever commit secrets.\n");
     commit("own AGENTS.md before kit installation");
@@ -954,7 +978,7 @@ describe("project ledger and legacy migration", () => {
       baseHash:"0".repeat(64)})).toMatchObject({passed:false});
     expect(ledger!.reviewReleaseWorkIncremental(increment)).toMatchObject({passed:true,
       affectedTaskIds:["WORK-CORE-NEW","WORK-103"]});
-    const stagedIncrement=ledger!.stageReleaseWorkIncremental(increment,"incremental-planner");
+    let stagedIncrement=ledger!.stageReleaseWorkIncremental(increment,"incremental-planner");
     expect(stagedIncrement).toMatchObject({status:"awaiting_independent_review",
       executableTasksChanged:false});
     expect(()=>ledger!.get("WORK-CORE-NEW")).toThrow();
@@ -962,6 +986,23 @@ describe("project ledger and legacy migration", () => {
       .toThrow(/awaits independent review and Owner hash approval/);
     expect(ledger!.next().blocked).toContainEqual(expect.objectContaining({
       id:"WORK-103",pendingIncrementalReview:true}));
+    const withdrawnArgs={release:"V0.1",expectedProposalHash:stagedIncrement.proposalHash,
+      approvedBy:"test-owner",explicitAuthorization:true,
+      reason:"The staged work uses an insufficient Go HTTP gate to demonstrate a live PostgreSQL transaction; correct it before review."};
+    expect(()=>ledger!.withdrawReleaseWorkIncremental({...withdrawnArgs,
+      explicitAuthorization:false})).toThrow(/Owner authorization/);
+    expect(()=>ledger!.withdrawReleaseWorkIncremental({...withdrawnArgs,
+      expectedProposalHash:"0".repeat(64)})).toThrow(/exact unreviewed/);
+    expect(ledger!.withdrawReleaseWorkIncremental(withdrawnArgs))
+      .toMatchObject({withdrawn:true,executableTasksChanged:false,
+        frozenRevisionUnchanged:true});
+    expect(ledger!.releaseWorkPlan("V0.1")).toMatchObject({revision:2,
+      frozenHash:amended.hash,incrementalAmendment:null});
+    expect(()=>ledger!.get("WORK-CORE-NEW")).toThrow();
+    const reviewedIncrement={...increment,
+      verificationPlan:increment.verificationPlan+" Require independently reviewed live PostgreSQL integration evidence for durable data."};
+    stagedIncrement=ledger!.stageReleaseWorkIncremental(reviewedIncrement,"incremental-planner");
+    expect(stagedIncrement.proposalHash).not.toBe(withdrawnArgs.expectedProposalHash);
     const incrementalReview={reviewer:"second-independent-agent",
       method:"independent-agent-pass" as const,
       subjectHash:stagedIncrement.proposalHash,

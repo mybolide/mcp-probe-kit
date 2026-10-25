@@ -59,6 +59,7 @@ export function dispatchDevControl(
     case "release-work-incremental-independent-review": return ledger.reviewStagedReleaseWorkIncremental(
       String(input.release),input.review,String(input.expectedProposalHash));
     case "release-work-incremental-approve": return ledger.approveReleaseWorkIncremental(input as never);
+    case "release-work-incremental-withdraw": return ledger.withdrawReleaseWorkIncremental(input as never);
     case "artifact-get": return ledger.governedArtifact(String(input.id));
     case "artifact-check": return ledger.checkGovernedArtifacts();
     case "artifact-stage": return ledger.stageGovernedArtifact(input.manifest,

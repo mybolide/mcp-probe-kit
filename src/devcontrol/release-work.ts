@@ -279,7 +279,7 @@ export function scopeStages(source:string):string[] {
 const idPattern=/^[A-Z][A-Z0-9-]{1,39}$/;
 const types=new Set<WorkType>(["analysis","decision","coordination","development","testing",
   "integration","bugfix","release"]);
-const knownGates=new Set(["docs","sqlite_decision","go_contract","devcontrol_tests","go_http_integration",
+const knownGates=new Set(["docs","sqlite_decision","go_contract","devcontrol_tests","go_http_integration","go_postgres_live",
   "flutter_test","ios_device_e2e","v01_release_e2e"]);
 
 export function reviewAtomicWorkItems(items:AtomicWorkItem[],stages:string[],
