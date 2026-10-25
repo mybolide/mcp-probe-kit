@@ -7,12 +7,22 @@
  * DevControl audit trail.
  */
 import fs from "node:fs";
+import { isIP } from "node:net";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 export const livePostgresTestFile = "services/core/integration/postgres_live_test.go";
 export const livePostgresDSNEnv = "DEVCONTROL_POSTGRES_TEST_DSN";
 export const livePostgresDatabaseEnv = "DEVCONTROL_POSTGRES_TEST_DB";
+
+// Loopback-only transports may be protected by an OS-local socket or a
+// separately authenticated tunnel. Private RFC1918 addresses are NOT local:
+// plaintext traffic over Wi-Fi still exposes original user content and SQL.
+function isLoopbackHost(hostname:string):boolean {
+  const host=hostname.replace(/^\[|\]$/g,"").toLowerCase();
+  if(host==="::1")return true;
+  return isIP(host)===4&&host.startsWith("127.");
+}
 
 export interface LivePostgresGateCheck {
   passed:boolean;
@@ -51,6 +61,25 @@ export function checkLivePostgresPrerequisites(root:string,
         !parsed.hostname||!parsed.username||name!==expectedDatabase||
         parsed.hash||parsed.pathname.indexOf("/",1)>=0)
       return {passed:false,error:"PostgreSQL test DSN must reference the explicitly selected non-production database"};
+    // Database drivers commonly accept URI query parameters that override
+    // the authority's host, user, port or database (or resolve a libpq
+    // service). A "localhost" URL could otherwise connect to a remote LAN
+    // server with sslmode=disable. Prefer one unambiguous source of truth.
+    const authorityOverrides=new Set([
+      "host","hostaddr","port","dbname","database","user","password",
+      "service","servicefile",
+    ]);
+    if([...parsed.searchParams.keys()].some(key=>authorityOverrides.has(key.toLowerCase())))
+      return {passed:false,error:"PostgreSQL test DSN must not override connection authority through query parameters"};
+    // libpq/pgx sslmode=require protects from passive sniffing but cannot
+    // establish the server's identity. Off-loopback PostgreSQL must verify
+    // the TLS peer hostname; prefer/allow/verify-ca are insufficient.
+    const modes=parsed.searchParams.getAll("sslmode");
+    if(modes.length>1)
+      return {passed:false,error:"PostgreSQL test DSN must not contain ambiguous TLS modes"};
+    if(!isLoopbackHost(parsed.hostname)&&
+        (modes.length!==1||modes[0]!=="verify-full"))
+      return {passed:false,error:"Remote PostgreSQL test connections require authenticated TLS (sslmode=verify-full); use a trusted loopback tunnel if the server has no TLS"};
   }catch{
     return {passed:false,error:"PostgreSQL test DSN has an invalid URL shape"};
   }
