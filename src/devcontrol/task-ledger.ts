@@ -22,6 +22,9 @@ import { checkManagedGuidanceCommit } from "./managed-guidance-gate.js";
 import { amendmentSubjectHash, checkAmendmentShape, checkAmendmentReview,
   type ReleaseWorkScopeAmendment, type ReleaseWorkAmendmentReview,
 } from "./release-work-amendment.js";
+import { incrementalSubjectHash, checkIncrementalShape, checkIncrementalIndependentReview,
+  type ReleaseWorkIncrementalAmendment, type ReleaseWorkIncrementalReview,
+} from "./release-work-incremental.js";
 import { artifactIsCovered, manifestSubjectHash, reviewArtifactChange, reviewManifest,
   type GovernedArtifactManifest, type GovernedArtifactReview,
 } from "./governed-artifacts.js";
@@ -374,6 +377,12 @@ export class ProjectTaskLedger {
         PRIMARY KEY(release,revision)
       );
       CREATE TABLE IF NOT EXISTS dc_release_work_amendments (
+        release TEXT PRIMARY KEY, proposal_hash TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL, proposed_by TEXT NOT NULL,
+        reviewed_json TEXT, review_hash TEXT, proposed_at TEXT NOT NULL,
+        reviewed_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS dc_release_work_incrementals (
         release TEXT PRIMARY KEY, proposal_hash TEXT NOT NULL,
         snapshot_json TEXT NOT NULL, proposed_by TEXT NOT NULL,
         reviewed_json TEXT, review_hash TEXT, proposed_at TEXT NOT NULL,
@@ -1258,6 +1267,7 @@ export class ProjectTaskLedger {
       frozenHash:frozen?.hash??null, revision:frozen?.revision??0,
       issues:liveReview?.issues??[], approvedBy:frozen?.approved_by??null,
       scopeAmendment:this.releaseWorkScopeAmendment(release),
+      incrementalAmendment:this.releaseWorkIncrementalAmendment(release),
     };
   }
 
@@ -1292,6 +1302,8 @@ export class ProjectTaskLedger {
     const snapshot=JSON.parse(row.snapshot_json) as {plan:ReleaseWorkPlan};
     if(this.db.prepare("SELECT release FROM dc_release_work_proposals WHERE release=?").get(input.release))
       issues.push("A whole-release proposal is already pending; resolve it before scope amendment");
+    if(this.db.prepare("SELECT release FROM dc_release_work_incrementals WHERE release=?")
+      .get(input.release))issues.push("A separate work-item incremental amendment is pending");
     const byId=new Map(snapshot.plan.workItems.map(item=>[item.id,item]));
     for(const change of input.changes){
       const item=byId.get(change.taskId);
@@ -1408,6 +1420,282 @@ export class ProjectTaskLedger {
       return {release:input.release,status:"frozen",revision,hash,
         previousHash:frozen.hash,affectedTaskIds:[...additions.keys()],
         scopeOnly:true,approvedBy:input.approvedBy.trim()};
+    });
+  }
+
+  releaseWorkIncrementalAmendment(release:string):Row|null {
+    const row=this.db.prepare("SELECT * FROM dc_release_work_incrementals WHERE release=?")
+      .get(release);
+    if(!row)return null;
+    return {release,proposalHash:row.proposal_hash,proposal:JSON.parse(row.snapshot_json),
+      proposedBy:row.proposed_by,review:row.reviewed_json?JSON.parse(row.reviewed_json):null,
+      reviewHash:row.review_hash??null,
+      status:row.reviewed_json?"reviewed":"awaiting_independent_review"};
+  }
+
+  private taskAwaitsIncrementalReview(id:string,release:string):boolean {
+    const pending=this.db.prepare(
+      "SELECT snapshot_json FROM dc_release_work_incrementals WHERE release=?").get(release);
+    if(!pending)return false;
+    const proposal=JSON.parse(pending.snapshot_json) as ReleaseWorkIncrementalAmendment;
+    return proposal.addDependencies.some(change=>change.taskId===id);
+  }
+
+  /** Read-only review: exact frozen baseline, no edits to accepted tasks, and
+   * no dependent QA may be completed before the newly inserted prerequisite. */
+  reviewReleaseWorkIncremental(input:ReleaseWorkIncrementalAmendment):Row {
+    const issues=checkIncrementalShape(input);
+    if(issues.length)return {passed:false,issues};
+    const frozen=this.db.prepare("SELECT * FROM dc_release_work_plans WHERE release=?")
+      .get(input.release);
+    if(!frozen)return {passed:false,issues:["No frozen release to extend"]};
+    if(input.baseHash!==frozen.hash||input.baseRevision!==frozen.revision)
+      issues.push("Frozen release revision/hash drift: refresh the entire amendment");
+    if(this.db.prepare("SELECT release FROM dc_release_work_proposals WHERE release=?")
+      .get(input.release))issues.push("Whole-release planning proposal is pending");
+    if(this.db.prepare("SELECT release FROM dc_release_work_amendments WHERE release=?")
+      .get(input.release))issues.push("Alternative frozen-scope proposal is still pending");
+    const approved=JSON.parse(frozen.snapshot_json) as {plan:ReleaseWorkPlan;
+      sourceHash:string;features:{name:string;revision:number;hash:string}[]};
+    // A frozen Git scope source and Feature specifications must still match
+    // their reviewed baseline, rather than silently inheriting a drift.
+    try {
+      const source=fs.readFileSync(path.resolve(this.root,approved.plan.scopeSource));
+      if(createHash("sha256").update(source).digest("hex")!==approved.sourceHash)
+        issues.push("Frozen version scope source changed since approval");
+    } catch {issues.push("Frozen version scope source is not readable");}
+    for(const binding of approved.features??[])
+      if(!this.featureBindingMatches(binding))
+        issues.push("Frozen Feature binding changed: "+binding.name);
+    const oldItems=approved.plan.workItems;
+    const existing=new Map(oldItems.map(item=>[item.id,item]));
+    const added=new Map<string,(typeof input.addWorkItems)[number]>();
+    const ids=new Set<string>(existing.keys());
+    const knownGates=allowedGates;
+    const stages=new Set(approved.plan.stages.map(stage=>stage.id));
+    for(const item of input.addWorkItems){
+      if(!item||!idPattern.test(item.id??"")||ids.has(item.id)||
+        this.db.prepare("SELECT id FROM dc_tasks WHERE id=?").get(item.id)){
+        issues.push("New task ID must be unique and unused: "+String(item?.id));continue;
+      }
+      ids.add(item.id);added.set(item.id,item);
+      if(!stages.has(item.stageId))issues.push(item.id+": not in this frozen release stage");
+      if(typeof item.title!=="string"||item.title.trim().length<4||item.title.length>65||
+        /[；;\n]|(?:以及|同时完成|全部功能|整个版本)/.test(item.title))
+        issues.push(item.id+": title must express one atomic action");
+      if(oldItems.some(old=>old.stageId===item.stageId&&old.title===item.title))
+        issues.push(item.id+": duplicates an existing task objective");
+      if(!item.platform?.trim()||(!item.owner?.trim()&&!item.ownerRole?.trim()))
+        issues.push(item.id+": platform and accountable role required");
+      if(!item.acceptance?.trim()||item.acceptance.trim().length<12)
+        issues.push(item.id+": precise testable acceptance required");
+      if(!["analysis","decision","coordination","development","testing","integration","bugfix","release"].includes(item.type))
+        issues.push(item.id+": invalid work type");
+      try {safePaths(item.allowedPaths,
+        item.type==="decision"&&item.requiredGates?.length===1&&item.requiredGates[0]==="sqlite_decision");}
+      catch {issues.push(item.id+": unsafe file permissions");}
+      if(!Array.isArray(item.requiredGates)||!item.requiredGates.length||
+        item.requiredGates.some(gate=>!knownGates.has(gate)))
+        issues.push(item.id+": approved real verification gate required");
+      if(item.requiredGates?.includes("sqlite_decision")&&
+        (item.type!=="decision"||item.requiredGates.length!==1||item.allowedPaths.length))
+        issues.push(item.id+": cannot mix SQLite-only decision with code gates");
+      if(item.estimatedHours!==undefined&&
+        (!Number.isFinite(item.estimatedHours)||item.estimatedHours<=0||item.estimatedHours>8))
+        issues.push(item.id+": split work greater than eight hours");
+      if(approved.plan.qualityProfile==="task-detail-v1")
+        issues.push(...reviewDetailedWorkItems([item]));
+    }
+    const additions=new Set(input.addDependencies.map(change=>change.taskId));
+    if(additions.size!==input.addDependencies.length)
+      issues.push("Dependency amendments may affect a Ready task only once");
+    const graph=new Map<string,string[]>(oldItems.map(item=>[item.id,[...(item.dependsOn??[])]]));
+    for(const item of added.values())graph.set(item.id,[...(item.dependsOn??[])]);
+    for(const change of input.addDependencies){
+      const old=existing.get(change.taskId);
+      const task=this.db.prepare("SELECT status,plan_id FROM dc_tasks WHERE id=?")
+        .get(change.taskId);
+      if(!old||task?.plan_id!=="release-work:"+input.release||task.status!=="ready"){
+        issues.push(change.taskId+": may append prerequisites only to unclaimed Ready frozen tasks");
+        continue;
+      }
+      if(!Array.isArray(change.dependsOn)||!change.dependsOn.length||
+        change.dependsOn.some(id=>!added.has(id))||
+        new Set(change.dependsOn).size!==change.dependsOn.length)
+        issues.push(change.taskId+": added prerequisites must be new unique task IDs");
+      graph.set(change.taskId,[...(graph.get(change.taskId)??[]),...change.dependsOn]);
+    }
+    for(const id of added.keys()) {
+      const dependents=[...input.addDependencies,...[...added.values()].map(item=>({
+        taskId:item.id,dependsOn:item.dependsOn??[],
+      }))].filter(item=>item.dependsOn.includes(id));
+      if(!dependents.length)issues.push(id+": new task is orphaned from the release dependency chain");
+    }
+    const visited=new Set<string>(),active=new Set<string>();
+    const walk=(id:string):void=>{
+      if(active.has(id)){issues.push(id+": cyclic release dependency");return;}
+      if(visited.has(id))return;
+      active.add(id);
+      for(const dep of graph.get(id)??[]){
+        if(graph.has(dep))walk(dep);
+        else {
+          const external=this.db.prepare("SELECT status FROM dc_tasks WHERE id=?").get(dep);
+          // Legacy frozen work rosters may depend on a separately verified
+          // stage gate. Such an unchanged historical prerequisite is valid.
+          if(external?.status!=="verified")issues.push(id+": unknown or unverified external dependency "+dep);
+        }
+      }
+      active.delete(id);visited.add(id);
+    };
+    for(const id of graph.keys())walk(id);
+    return {passed:issues.length===0,issues,
+      subjectHash:incrementalSubjectHash(input),release:input.release,
+      baseRevision:input.baseRevision,
+      affectedTaskIds:[...added.keys(),...additions]};
+  }
+
+  stageReleaseWorkIncremental(input:ReleaseWorkIncrementalAmendment,actor:string):Row {
+    if(typeof actor!=="string"||actor.trim().length<3)
+      fail("ACTOR_REQUIRED","Specific proposal agent label required");
+    return this.inTransaction(()=>{
+      const review=this.reviewReleaseWorkIncremental(input);
+      if(!review.passed)fail("INCREMENTAL_INVALID",review.issues.join("; "));
+      if(this.db.prepare("SELECT release FROM dc_release_work_incrementals WHERE release=?")
+        .get(input.release))fail("INCREMENTAL_PENDING","Resolve previous incremental first");
+      this.db.prepare(`INSERT INTO dc_release_work_incrementals
+        (release,proposal_hash,snapshot_json,proposed_by,proposed_at)
+        VALUES(?,?,?,?,?)`).run(input.release,review.subjectHash,JSON.stringify(input),actor.trim(),utc());
+      this.audit(null,"release_incremental_proposed",actor.trim(),{
+        release:input.release,proposalHash:review.subjectHash,affectedTaskIds:review.affectedTaskIds});
+      return {release:input.release,status:"awaiting_independent_review",
+        proposalHash:review.subjectHash,review,executableTasksChanged:false};
+    });
+  }
+
+  reviewStagedReleaseWorkIncremental(release:string,review:ReleaseWorkIncrementalReview,
+    expectedProposalHash:string):Row {
+    return this.inTransaction(()=>{
+      const row=this.db.prepare("SELECT * FROM dc_release_work_incrementals WHERE release=?")
+        .get(release);
+      if(!row||row.proposal_hash!==expectedProposalHash||row.reviewed_json)
+        fail("INCREMENTAL_REVIEW_REQUIRED","Exact new, unreviewed proposal required");
+      const input=JSON.parse(row.snapshot_json) as ReleaseWorkIncrementalAmendment;
+      const checked=this.reviewReleaseWorkIncremental(input);
+      if(!checked.passed||checked.subjectHash!==row.proposal_hash)
+        fail("STALE_INCREMENTAL","Frozen release changed during independent review");
+      const issues=checkIncrementalIndependentReview(review,row.proposed_by,row.proposal_hash,
+        checked.affectedTaskIds,input.sourceRefs);
+      if(issues.length)fail("INDEPENDENT_REVIEW_REQUIRED",issues.join("; "));
+      const reviewHash=createHash("sha256").update(JSON.stringify(review)).digest("hex");
+      this.db.prepare(`UPDATE dc_release_work_incrementals SET reviewed_json=?,review_hash=?,
+        reviewed_at=? WHERE release=?`).run(JSON.stringify(review),reviewHash,utc(),release);
+      this.audit(null,"release_incremental_reviewed",review.reviewer,{release,
+        proposalHash:row.proposal_hash,reviewHash});
+      return {release,status:"reviewed",proposalHash:row.proposal_hash,
+        reviewHash,executableTasksChanged:false};
+    });
+  }
+
+  approveReleaseWorkIncremental(input:{release:string;expectedProposalHash:string;
+    expectedReviewHash:string;approvedBy:string;reason:string;explicitAuthorization:boolean}):Row {
+    if(input?.explicitAuthorization!==true||!input.approvedBy?.trim()||
+      typeof input.reason!=="string"||input.reason.trim().length<25)
+      fail("OWNER_AUTHORIZATION_REQUIRED","Owner must explicitly approve both exact hashes");
+    return this.inTransaction(()=>{
+      if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
+        fail("ACTIVE_TASK","Complete or release the current lease before changing frozen work");
+      const pending=this.db.prepare("SELECT * FROM dc_release_work_incrementals WHERE release=?")
+        .get(input.release);
+      if(!pending||pending.proposal_hash!==input.expectedProposalHash||
+        !pending.reviewed_json||pending.review_hash!==input.expectedReviewHash)
+        fail("INCREMENTAL_REVIEW_REQUIRED","Exact independently reviewed amendment hashes required");
+      const proposal=JSON.parse(pending.snapshot_json) as ReleaseWorkIncrementalAmendment;
+      const checked=this.reviewReleaseWorkIncremental(proposal);
+      if(!checked.passed||checked.subjectHash!==pending.proposal_hash)
+        fail("STALE_INCREMENTAL","The frozen baseline or Ready dependencies changed");
+      const frozen=this.db.prepare("SELECT * FROM dc_release_work_plans WHERE release=?")
+        .get(input.release)!;
+      const original=JSON.parse(frozen.snapshot_json) as {plan:ReleaseWorkPlan;[key:string]:unknown};
+      const revision=frozen.revision+1,now=utc();
+      const extras=new Map(proposal.addDependencies.map(d=>[d.taskId,d.dependsOn]));
+      const oldItems=original.plan.workItems.map(item=>({...item,
+        dependsOn:extras.has(item.id)?[...(item.dependsOn??[]),...extras.get(item.id)!]:item.dependsOn,
+      }));
+      const nextPlan={...original.plan,workItems:[...oldItems,...proposal.addWorkItems]};
+      // Nothing in the previously approved tasks except explicit new
+      // prerequisites changes. Freeze both the provenance and new roster.
+      const snapshot=JSON.stringify({...original,plan:nextPlan,
+        incrementalWorkAmendment:{proposalHash:pending.proposal_hash,
+          reviewHash:pending.review_hash,previousHash:frozen.hash,
+          affectedTaskIds:checked.affectedTaskIds,approvedBy:input.approvedBy.trim(),
+          reason:input.reason.trim()}});
+      const hash=createHash("sha256").update(snapshot).digest("hex");
+      for(const item of proposal.addWorkItems){
+        this.create({id:item.id,title:item.title,release:input.release,track:"product",
+          dependsOn:[],allowedPaths:item.allowedPaths,requiredGates:item.requiredGates,
+          priority:item.priority,planId:"release-work:"+input.release,
+          specId:item.featureName?"feature:"+item.featureName:"#release-work:"+input.release},
+        input.approvedBy.trim());
+        this.db.prepare("UPDATE dc_tasks SET status='ready',approved_by=?,updated_at=? WHERE id=?")
+          .run(input.approvedBy.trim(),now,item.id);
+        this.db.prepare(`UPDATE dc_task_assignments SET owner=?,assigned_by=?,
+          decision_ref=?,identity_source=? WHERE task_id=?`).run(item.owner??"",
+          input.approvedBy.trim(),"release-work:"+hash,"release-planning",item.id);
+        this.db.prepare(`INSERT INTO dc_task_specs
+          (task_id,requirement_ids_json,acceptance,design_ref,positive_tests_json,
+           negative_cases_json,out_of_scope_json,deliverables_json,estimated_hours,plan_revision)
+          VALUES(?,?,?,?,?,?,?,?,?,?)`).run(item.id,JSON.stringify(item.requirementIds??[]),
+          item.acceptance,item.featureName?"feature:"+item.featureName+"#design":"release:"+input.release,
+          JSON.stringify(item.testCases??[]),JSON.stringify(item.negativeCases??[]),
+          JSON.stringify(item.outOfScope??[]),JSON.stringify([item.title]),item.estimatedHours??null,
+          revision);
+        for(const dep of item.dependsOn??[])
+          this.db.prepare("INSERT INTO dc_dependencies(task_id,depends_on) VALUES(?,?)")
+            .run(item.id,dep);
+      }
+      for(const change of proposal.addDependencies){
+        for(const dep of change.dependsOn)
+          this.db.prepare("INSERT INTO dc_dependencies(task_id,depends_on) VALUES(?,?)")
+            .run(change.taskId,dep);
+        this.db.prepare("UPDATE dc_tasks SET updated_at=? WHERE id=?")
+          .run(now,change.taskId);
+      }
+      this.db.prepare(`UPDATE dc_release_work_plans SET revision=?,hash=?,snapshot_json=?,
+        approved_by=?,approved_at=? WHERE release=?`).run(revision,hash,snapshot,
+        input.approvedBy.trim(),now,input.release);
+      this.db.prepare(`INSERT INTO dc_release_work_history
+        (release,revision,hash,snapshot_json,approved_by,approved_at) VALUES(?,?,?,?,?,?)`)
+        .run(input.release,revision,hash,snapshot,input.approvedBy.trim(),now);
+      this.db.prepare("DELETE FROM dc_release_work_incrementals WHERE release=?").run(input.release);
+      this.audit(null,"release_incremental_approved",input.approvedBy.trim(),{
+        release:input.release,previousHash:frozen.hash,hash,revision,
+        proposalHash:pending.proposal_hash,reviewHash:pending.review_hash,
+        affectedTaskIds:checked.affectedTaskIds,reason:input.reason.trim()});
+      return {release:input.release,revision,hash,previousHash:frozen.hash,
+        added:proposal.addWorkItems.map(item=>item.id),
+        blockedByNewPrerequisite:proposal.addDependencies.map(d=>d.taskId),
+        status:"frozen",approvedBy:input.approvedBy.trim()};
+    });
+  }
+
+  /** Retire an unreviewed alternative after Owner chooses a different path.
+   * This never changes the frozen task's permissions, gates or status. */
+  withdrawReleaseWorkScopeAmendment(input:{release:string;expectedProposalHash:string;
+    approvedBy:string;reason:string;explicitAuthorization:boolean}):Row {
+    if(input?.explicitAuthorization!==true||!input.approvedBy?.trim()||
+      typeof input.reason!=="string"||input.reason.trim().length<25)
+      fail("OWNER_AUTHORIZATION_REQUIRED","Owner authorization and a concrete withdrawal reason required");
+    return this.inTransaction(()=>{
+      const row=this.db.prepare("SELECT * FROM dc_release_work_amendments WHERE release=?")
+        .get(input.release);
+      if(!row||row.proposal_hash!==input.expectedProposalHash||row.reviewed_json)
+        fail("AMENDMENT_WITHDRAWAL_REVIEW_REQUIRED",
+          "Only the exact unreviewed proposal may be retired; reviewed plans need separate governance");
+      this.db.prepare("DELETE FROM dc_release_work_amendments WHERE release=?").run(input.release);
+      this.audit(null,"release_scope_amendment_withdrawn",input.approvedBy.trim(),{
+        release:input.release,proposalHash:row.proposal_hash,reason:input.reason.trim()});
+      return {release:input.release,withdrawn:true,proposalHash:row.proposal_hash,
+        executableScopeChanged:false};
     });
   }
 
@@ -2872,7 +3160,8 @@ export class ProjectTaskLedger {
       ? { taskId: active.task_id, agent: active.agent, expiresAt: active.expires_at } : null;
     const ready = tasks.filter((t) =>
       (t.status === "ready" || t.status === "in_progress" || t.status === "in_review") &&
-      !(t.status === "ready" && this.taskAwaitsScopeReview(t.id,t.release)) &&
+      !(t.status === "ready" && (this.taskAwaitsScopeReview(t.id,t.release)||
+        this.taskAwaitsIncrementalReview(t.id,t.release))) &&
       this.executable(this.requireTask(t.id)) &&
       this.blockers(t.id).length === 0 &&
       !t.childIds.some((id: string) => this.requireTask(id).status !== "verified"),
@@ -2887,12 +3176,15 @@ export class ProjectTaskLedger {
       blocked: tasks.filter((t) => t.status !== "verified" && (
         this.blockers(t.id).length ||
         t.childIds.some((id: string) => this.requireTask(id).status !== "verified") ||
-        (t.status === "ready" && this.taskAwaitsScopeReview(t.id,t.release))
+        (t.status === "ready" && (this.taskAwaitsScopeReview(t.id,t.release)||
+          this.taskAwaitsIncrementalReview(t.id,t.release)))
       )).map((t) => ({
         id: t.id, blockedBy: this.blockers(t.id),
         unverifiedChildren: t.childIds.filter((id: string) => this.requireTask(id).status !== "verified"),
         ...(t.status==="ready"&&this.taskAwaitsScopeReview(t.id,t.release)?
           {pendingScopeReview:true}:{}),
+        ...(t.status==="ready"&&this.taskAwaitsIncrementalReview(t.id,t.release)?
+          {pendingIncrementalReview:true}:{}),
       })),
     };
   }
@@ -3090,6 +3382,9 @@ export class ProjectTaskLedger {
       if(task.status==="ready"&&pending)
         fail("SCOPE_AMENDMENT_PENDING",
           "Scope amendment for this task awaits independent review and exact Owner approval; do not claim it");
+      if(task.status==="ready"&&this.taskAwaitsIncrementalReview(id,task.release))
+        fail("INCREMENTAL_REVIEW_PENDING",
+          "New prerequisite for this task awaits independent review and Owner hash approval");
       if (this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(id) &&
           (String(task.plan_id??"").startsWith("feature:") ||
             !!this.db.prepare("SELECT release FROM dc_release_plans WHERE release=?").get(task.release))) {

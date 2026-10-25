@@ -929,6 +929,99 @@ describe("project ledger and legacy migration", () => {
       kind:"test",reference:"real previously committed in-scope fixture file"},true);
     expect(ledger!.verify("WORK-102",resumed.leaseToken)).toMatchObject({
       passed:true,files:["tests/contracts/partial-replay.json"]});
+    // Owner-approved new work MUST be its own frozen task, never masquerade
+    // as expanded QA scope. Hash-bound review and approval are separate.
+    const newCoreItem={id:"WORK-CORE-NEW",title:"装配真实持久化服务端路由",
+      stageId:"F2",type:"development" as const,platform:"Go",
+      ownerRole:"Go Core Engineer",dependsOn:["WORK-102"],
+      requirementIds:["FR-101"],
+      acceptance:"真实 Go HTTP 服务在鉴权和数据库提交之后返回可重新查询的同源事件编号",
+      allowedPaths:["services/core/cmd/**"],requiredGates:["go_contract"],estimatedHours:4};
+    const increment={release:"V0.1",baseRevision:2,baseHash:amended.hash,
+      addWorkItems:[newCoreItem],
+      addDependencies:[{taskId:"WORK-103",dependsOn:["WORK-CORE-NEW"]}],
+      rationale:"The existing QA task cannot bring up a real authenticated Core process or PostgreSQL connection inside its frozen test-only scope.",
+      alternatives:"Expanding a client test to implement the Go server breaks the single-action contract; mock HTTP cannot demonstrate durable PostgreSQL writes.",
+      verificationPlan:"Execute the Go persistence and auth contract tests, then run the simulator-to-Core test only after the new service task is Verified.",
+      sourceRefs:["task:WORK-103","docs/roadmap/test-version.md"]};
+    expect(ledger!.reviewReleaseWorkIncremental({...increment,
+      addDependencies:[{taskId:"WORK-102",dependsOn:["WORK-CORE-NEW"]}]}))
+      .toMatchObject({passed:false});
+    expect(ledger!.reviewReleaseWorkIncremental({...increment,
+      addWorkItems:[{...newCoreItem,dependsOn:["WORK-103"]}]}).issues)
+      .toContain("WORK-103: cyclic release dependency");
+    expect(ledger!.reviewReleaseWorkIncremental({...increment,
+      baseHash:"0".repeat(64)})).toMatchObject({passed:false});
+    expect(ledger!.reviewReleaseWorkIncremental(increment)).toMatchObject({passed:true,
+      affectedTaskIds:["WORK-CORE-NEW","WORK-103"]});
+    const stagedIncrement=ledger!.stageReleaseWorkIncremental(increment,"incremental-planner");
+    expect(stagedIncrement).toMatchObject({status:"awaiting_independent_review",
+      executableTasksChanged:false});
+    expect(()=>ledger!.get("WORK-CORE-NEW")).toThrow();
+    expect(()=>ledger!.claim("WORK-103","premature-qa"))
+      .toThrow(/awaits independent review and Owner hash approval/);
+    expect(ledger!.next().blocked).toContainEqual(expect.objectContaining({
+      id:"WORK-103",pendingIncrementalReview:true}));
+    const incrementalReview={reviewer:"second-independent-agent",
+      method:"independent-agent-pass" as const,
+      subjectHash:stagedIncrement.proposalHash,
+      affectedTaskIds:["WORK-CORE-NEW","WORK-103"],
+      scopeAssessment:"The Go runtime item changes only the server startup tree while retaining QA outcome and existing file permissions.",
+      dependencyAssessment:"The new server runtime must finish before the Ready simulator test; already verified source tasks remain untouched.",
+      securityAndTestAssessment:"No authentication bypass is introduced and the unchanged Go and QA Gates still require executable evidence.",
+      sourceRefs:["task:WORK-103"]};
+    expect(()=>ledger!.reviewStagedReleaseWorkIncremental("V0.1",
+      {...incrementalReview,reviewer:"incremental-planner"},
+      stagedIncrement.proposalHash)).toThrow(/distinct independent reviewer/i);
+    const checkedIncrement=ledger!.reviewStagedReleaseWorkIncremental("V0.1",
+      incrementalReview,stagedIncrement.proposalHash);
+    expect(checkedIncrement.status).toBe("reviewed");
+    const approveArgs={release:"V0.1",expectedProposalHash:stagedIncrement.proposalHash,
+      expectedReviewHash:checkedIncrement.reviewHash,approvedBy:"test-owner",
+      reason:"I explicitly approve this independent Core runtime prerequisite without relaxing original QA acceptance or historical gates.",
+      explicitAuthorization:true};
+    expect(()=>ledger!.approveReleaseWorkIncremental({...approveArgs,
+      explicitAuthorization:false})).toThrow(/Owner must explicitly approve/);
+    expect(()=>ledger!.approveReleaseWorkIncremental({...approveArgs,
+      expectedReviewHash:"a".repeat(64)})).toThrow(/Exact independently reviewed/);
+    const approvedIncrement=ledger!.approveReleaseWorkIncremental(approveArgs);
+    expect(approvedIncrement).toMatchObject({revision:3,previousHash:amended.hash,
+      added:["WORK-CORE-NEW"],blockedByNewPrerequisite:["WORK-103"]});
+    expect(ledger!.get("WORK-CORE-NEW")).toMatchObject({status:"ready",
+      allowedPaths:["services/core/cmd/**"],requiredGates:["go_contract"]});
+    expect(ledger!.get("WORK-103").dependsOn).toEqual(["WORK-102","WORK-CORE-NEW"]);
+    expect(ledger!.get("WORK-102").status).toBe("verified");
+    expect(ledger!.get("WORK-103").allowedPaths).toEqual(["tests/contracts/**"]);
+    expect(ledger!.executionContract("WORK-CORE-NEW")).toMatchObject({eligible:true});
+    expect(ledger!.releaseWorkPlan("V0.1")).toMatchObject({revision:3,
+      incrementalAmendment:null});
+    const frozenHistory=(ledger! as any).db.prepare(
+      "SELECT revision,hash FROM dc_release_work_history WHERE release='V0.1' ORDER BY revision"
+    ).all();
+    expect(frozenHistory).toEqual([{revision:1,hash:approved.hash},
+      {revision:2,hash:amended.hash},{revision:3,hash:approvedIncrement.hash}]);
+    expect(()=>ledger!.stageReleaseWorkIncremental(increment,"incremental-planner"))
+      .toThrow(/Frozen release revision\/hash drift/);
+    const abandonedScope={...amendment,baseRevision:3,baseHash:approvedIncrement.hash,
+      changes:[{taskId:"WORK-104",addAllowedPaths:["services/core/cmd/release.go"]}]};
+    const stagedAlternative=ledger!.stageReleaseWorkScopeAmendment(
+      abandonedScope,"superseded-scope-proposer");
+    expect(()=>ledger!.withdrawReleaseWorkScopeAmendment({release:"V0.1",
+      expectedProposalHash:stagedAlternative.proposalHash,
+      approvedBy:"test-owner",reason:"The Owner selected the atomic prerequisite alternative for the frozen release.",
+      explicitAuthorization:false})).toThrow(/Owner authorization/);
+    expect(()=>ledger!.withdrawReleaseWorkScopeAmendment({release:"V0.1",
+      expectedProposalHash:"f".repeat(64),approvedBy:"test-owner",
+      reason:"The Owner selected the separate atomic runtime task rather than expanding scope.",
+      explicitAuthorization:true})).toThrow(/Only the exact unreviewed proposal/);
+    const withdrawn=ledger!.withdrawReleaseWorkScopeAmendment({release:"V0.1",
+      expectedProposalHash:stagedAlternative.proposalHash,approvedBy:"test-owner",
+      reason:"The approved separate runtime prerequisite replaces this unnecessary QA scope expansion.",
+      explicitAuthorization:true});
+    expect(withdrawn).toMatchObject({withdrawn:true,executableScopeChanged:false});
+    expect(ledger!.releaseWorkPlan("V0.1")).toMatchObject({revision:3,
+      scopeAmendment:null});
+    expect(ledger!.get("WORK-104").allowedPaths).toEqual(["docs/**"]);
   });
   it("turns a start_feature SQLite specification into a reviewed Feature task plan without release-wide files", async () => {
     ledger!.saveFeature({name:"event-ingest",description:"Persist auditable event messages with idempotency",layout:"flat",
