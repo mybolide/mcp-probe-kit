@@ -15,6 +15,7 @@ import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
 import { resolveFlutterTestTarget } from "./flutter-gate.js";
 import { runLivePostgresGate, livePostgresTestFile } from "./go-postgres-gate.js";
+import { makeReviewAgentAction, type ReviewAgentAction } from "./review-actions.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "./release-plan.js";
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
@@ -1281,11 +1282,15 @@ export class ProjectTaskLedger {
   releaseWorkScopeAmendment(release:string):Row|null {
     const row=this.db.prepare("SELECT * FROM dc_release_work_amendments WHERE release=?").get(release);
     if(!row)return null;
+    const proposal=JSON.parse(row.snapshot_json) as ReleaseWorkScopeAmendment;
     return {release,proposalHash:row.proposal_hash,
-      proposal:JSON.parse(row.snapshot_json),proposedBy:row.proposed_by,
+      proposal,proposedBy:row.proposed_by,
       review:row.reviewed_json?JSON.parse(row.reviewed_json):null,
       reviewHash:row.review_hash??null,
-      status:row.reviewed_json?"reviewed":"awaiting_independent_review"};
+      status:row.reviewed_json?"reviewed":"awaiting_independent_review",
+      requiredAgentAction:makeReviewAgentAction({kind:"scope_amendment",release,
+        proposalHash:row.proposal_hash,reviewHash:row.review_hash??null,
+        affectedTaskIds:proposal.changes.map(change=>change.taskId)})};
   }
 
   /** When independent review discovers an insufficient acceptance Gate, the
@@ -1373,7 +1378,10 @@ export class ProjectTaskLedger {
         release:input.release,proposalHash:review.subjectHash,taskIds:review.affectedTaskIds,
         baseHash:input.baseHash});
       return {release:input.release,status:"awaiting_independent_review",
-        proposalHash:review.subjectHash,review,executableScopeChanged:false};
+        proposalHash:review.subjectHash,review,executableScopeChanged:false,
+        requiredAgentAction:makeReviewAgentAction({kind:"scope_amendment",
+          release:input.release,proposalHash:review.subjectHash,reviewHash:null,
+          affectedTaskIds:review.affectedTaskIds})};
     });
   }
 
@@ -1399,7 +1407,10 @@ export class ProjectTaskLedger {
       this.audit(null,"release_scope_amendment_reviewed",review.reviewer,{release,
         proposalHash:row.proposal_hash,reviewHash,taskIds:proposal.changes.map(c=>c.taskId)});
       return {release,status:"reviewed",proposalHash:row.proposal_hash,
-        reviewHash,executableScopeChanged:false};
+        reviewHash,executableScopeChanged:false,
+        requiredAgentAction:makeReviewAgentAction({kind:"scope_amendment",release,
+          proposalHash:row.proposal_hash,reviewHash,
+          affectedTaskIds:proposal.changes.map(change=>change.taskId)})};
     });
   }
 
@@ -1462,10 +1473,16 @@ export class ProjectTaskLedger {
     const row=this.db.prepare("SELECT * FROM dc_release_work_incrementals WHERE release=?")
       .get(release);
     if(!row)return null;
-    return {release,proposalHash:row.proposal_hash,proposal:JSON.parse(row.snapshot_json),
+    const proposal=JSON.parse(row.snapshot_json) as ReleaseWorkIncrementalAmendment;
+    const affected=[...new Set([...proposal.addWorkItems.map(item=>item.id),
+      ...proposal.addDependencies.map(change=>change.taskId)])];
+    return {release,proposalHash:row.proposal_hash,proposal,
       proposedBy:row.proposed_by,review:row.reviewed_json?JSON.parse(row.reviewed_json):null,
       reviewHash:row.review_hash??null,
-      status:row.reviewed_json?"reviewed":"awaiting_independent_review"};
+      status:row.reviewed_json?"reviewed":"awaiting_independent_review",
+      requiredAgentAction:makeReviewAgentAction({kind:"incremental_work",release,
+        proposalHash:row.proposal_hash,reviewHash:row.review_hash??null,
+        affectedTaskIds:affected})};
   }
 
   private taskAwaitsIncrementalReview(id:string,release:string):boolean {
@@ -1603,7 +1620,10 @@ export class ProjectTaskLedger {
       this.audit(null,"release_incremental_proposed",actor.trim(),{
         release:input.release,proposalHash:review.subjectHash,affectedTaskIds:review.affectedTaskIds});
       return {release:input.release,status:"awaiting_independent_review",
-        proposalHash:review.subjectHash,review,executableTasksChanged:false};
+        proposalHash:review.subjectHash,review,executableTasksChanged:false,
+        requiredAgentAction:makeReviewAgentAction({kind:"incremental_work",
+          release:input.release,proposalHash:review.subjectHash,reviewHash:null,
+          affectedTaskIds:review.affectedTaskIds})};
     });
   }
 
@@ -1627,7 +1647,10 @@ export class ProjectTaskLedger {
       this.audit(null,"release_incremental_reviewed",review.reviewer,{release,
         proposalHash:row.proposal_hash,reviewHash});
       return {release,status:"reviewed",proposalHash:row.proposal_hash,
-        reviewHash,executableTasksChanged:false};
+        reviewHash,executableTasksChanged:false,
+        requiredAgentAction:makeReviewAgentAction({kind:"incremental_work",release,
+          proposalHash:row.proposal_hash,reviewHash,
+          affectedTaskIds:checked.affectedTaskIds})};
     });
   }
 
@@ -3193,6 +3216,24 @@ export class ProjectTaskLedger {
     const active = this.db.prepare("SELECT task_id,agent,expires_at FROM dc_leases WHERE singleton=1").get();
     const activeLease = active && active.expires_at > Date.now()
       ? { taskId: active.task_id, agent: active.agent, expiresAt: active.expires_at } : null;
+    // A review requirement is ACTIONABLE agent work, not a background MCP
+    // operation. Surface it even if unrelated already-approved tasks remain
+    // Ready: otherwise a lone agent sees only an apparently passive wait.
+    const pendingAgentActions:ReviewAgentAction[]=[];
+    for(const row of this.db.prepare(
+      "SELECT release FROM dc_release_work_incrementals ORDER BY release").all()){
+      const action=this.releaseWorkIncrementalAmendment(String(row.release))
+        ?.requiredAgentAction as ReviewAgentAction|undefined;
+      if(action)pendingAgentActions.push(action);
+    }
+    for(const row of this.db.prepare(
+      "SELECT release FROM dc_release_work_amendments ORDER BY release").all()){
+      const action=this.releaseWorkScopeAmendment(String(row.release))
+        ?.requiredAgentAction as ReviewAgentAction|undefined;
+      if(action)pendingAgentActions.push(action);
+    }
+    pendingAgentActions.sort((a,b)=>Number(a.status!=="agent_review_required")-
+      Number(b.status!=="agent_review_required"));
     const ready = tasks.filter((t) =>
       (t.status === "ready" || t.status === "in_progress" || t.status === "in_review") &&
       !(t.status === "ready" && (this.taskAwaitsScopeReview(t.id,t.release)||
@@ -3208,6 +3249,9 @@ export class ProjectTaskLedger {
     return {
       projectRoot: this.root, nextTask: selected,
       activeLease,
+      pendingAgentActions,
+      // A claimed task is finished first; pending reviews never steal leases.
+      nextAgentAction:activeLease?null:pendingAgentActions[0]??null,
       blocked: tasks.filter((t) => t.status !== "verified" && (
         this.blockers(t.id).length ||
         t.childIds.some((id: string) => this.requireTask(id).status !== "verified") ||
@@ -3220,6 +3264,9 @@ export class ProjectTaskLedger {
           {pendingScopeReview:true}:{}),
         ...(t.status==="ready"&&this.taskAwaitsIncrementalReview(t.id,t.release)?
           {pendingIncrementalReview:true}:{}),
+        ...(t.status==="ready"&&this.taskAwaitsIncrementalReview(t.id,t.release)?
+          {requiredAgentAction:pendingAgentActions.find(action=>
+            action.kind==="incremental_work"&&action.release===t.release)}:{}),
       })),
     };
   }
@@ -3419,7 +3466,7 @@ export class ProjectTaskLedger {
           "Scope amendment for this task awaits independent review and exact Owner approval; do not claim it");
       if(task.status==="ready"&&this.taskAwaitsIncrementalReview(id,task.release))
         fail("INCREMENTAL_REVIEW_PENDING",
-          "New prerequisite for this task awaits independent review and Owner hash approval");
+          "New prerequisite for this task awaits independent review and Owner hash approval; host development Agent must actively inspect the original code, arrange an actual independent reviewer, submit evidence through release-work-incremental-independent-review, then obtain Owner authorization. Do not wait for MCP to review.");
       if (this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(id) &&
           (String(task.plan_id??"").startsWith("feature:") ||
             !!this.db.prepare("SELECT release FROM dc_release_plans WHERE release=?").get(task.release))) {

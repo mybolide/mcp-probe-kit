@@ -834,7 +834,20 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.reviewReleaseWorkScopeAmendment(amendment)).toMatchObject({passed:true});
     const stagedScope=ledger!.stageReleaseWorkScopeAmendment(amendment,"planning-agent");
     expect(stagedScope).toMatchObject({status:"awaiting_independent_review",
-      executableScopeChanged:false});
+      executableScopeChanged:false,
+      requiredAgentAction:{
+        responsible:"host_development_agent",kind:"scope_amendment",
+        status:"agent_review_required",
+        nextTool:"release-work-scope-independent-review",
+        proposalHash:stagedScope.proposalHash,
+        reviewHash:null,affectedTaskIds:["WORK-102"],
+      }});
+    expect(ledger!.releaseWorkScopeAmendment("V0.1")).toMatchObject({
+      requiredAgentAction:{kind:"scope_amendment",
+        nextTool:"release-work-scope-independent-review"},
+    });
+    expect(ledger!.next().pendingAgentActions).toContainEqual(
+      expect.objectContaining({kind:"scope_amendment",status:"agent_review_required"}));
     expect(()=>ledger!.claim("WORK-102","coding-agent"))
       .toThrow(/Scope amendment.*awaits independent review/);
     expect(ledger!.next().blocked).toContainEqual(expect.objectContaining({
@@ -888,6 +901,11 @@ describe("project ledger and legacy migration", () => {
     const reviewed=ledger!.reviewStagedReleaseWorkScopeAmendment("V0.1",
       amendReview,stagedScope.proposalHash);
     expect(reviewed.status).toBe("reviewed");
+    expect(reviewed.requiredAgentAction).toMatchObject({
+      kind:"scope_amendment",status:"owner_authorization_required",
+      nextTool:"release-work-scope-approve",proposalHash:stagedScope.proposalHash,
+      reviewHash:reviewed.reviewHash,
+    });
     const ownerArgs={release:"V0.1",expectedProposalHash:stagedScope.proposalHash,
       expectedReviewHash:reviewed.reviewHash,approvedBy:"test-owner",
       reason:"I authorize this exact scope addition while retaining the original product acceptance and test Gate.",
@@ -980,12 +998,34 @@ describe("project ledger and legacy migration", () => {
       affectedTaskIds:["WORK-CORE-NEW","WORK-103"]});
     let stagedIncrement=ledger!.stageReleaseWorkIncremental(increment,"incremental-planner");
     expect(stagedIncrement).toMatchObject({status:"awaiting_independent_review",
-      executableTasksChanged:false});
+      executableTasksChanged:false,
+      requiredAgentAction:{
+        responsible:"host_development_agent",status:"agent_review_required",
+        nextTool:"release-work-incremental-independent-review",
+        kind:"incremental_work",reviewHash:null,
+        affectedTaskIds:["WORK-CORE-NEW","WORK-103"],
+        ownerAuthorizationRequired:true,executableTasksChanged:false,
+      }});
+    expect(stagedIncrement.requiredAgentAction.action).toContain("不要等待 DevControl 自己进行审查");
+    expect(ledger!.releaseWorkIncrementalAmendment("V0.1")).toMatchObject({
+      status:"awaiting_independent_review",
+      requiredAgentAction:{responsible:"host_development_agent",
+        nextTool:"release-work-incremental-independent-review",
+        proposalHash:stagedIncrement.proposalHash},
+    });
     expect(()=>ledger!.get("WORK-CORE-NEW")).toThrow();
     expect(()=>ledger!.claim("WORK-103","premature-qa"))
       .toThrow(/awaits independent review and Owner hash approval/);
+    expect(ledger!.next()).toMatchObject({
+      nextAgentAction:{responsible:"host_development_agent",
+        kind:"incremental_work",proposalHash:stagedIncrement.proposalHash,
+        status:"agent_review_required"},
+      pendingAgentActions:[{kind:"incremental_work",
+        nextTool:"release-work-incremental-independent-review"}],
+    });
     expect(ledger!.next().blocked).toContainEqual(expect.objectContaining({
-      id:"WORK-103",pendingIncrementalReview:true}));
+      id:"WORK-103",pendingIncrementalReview:true,
+      requiredAgentAction:expect.objectContaining({status:"agent_review_required"})}));
     const withdrawnArgs={release:"V0.1",expectedProposalHash:stagedIncrement.proposalHash,
       approvedBy:"test-owner",explicitAuthorization:true,
       reason:"The staged work uses an insufficient Go HTTP gate to demonstrate a live PostgreSQL transaction; correct it before review."};
@@ -1017,6 +1057,16 @@ describe("project ledger and legacy migration", () => {
     const checkedIncrement=ledger!.reviewStagedReleaseWorkIncremental("V0.1",
       incrementalReview,stagedIncrement.proposalHash);
     expect(checkedIncrement.status).toBe("reviewed");
+    expect(checkedIncrement.requiredAgentAction).toMatchObject({
+      status:"owner_authorization_required",
+      nextTool:"release-work-incremental-approve",
+      proposalHash:stagedIncrement.proposalHash,
+      reviewHash:checkedIncrement.reviewHash,
+    });
+    expect(ledger!.next()).toMatchObject({
+      nextAgentAction:{status:"owner_authorization_required",
+        nextTool:"release-work-incremental-approve"},
+    });
     const approveArgs={release:"V0.1",expectedProposalHash:stagedIncrement.proposalHash,
       expectedReviewHash:checkedIncrement.reviewHash,approvedBy:"test-owner",
       reason:"I explicitly approve this independent Core runtime prerequisite without relaxing original QA acceptance or historical gates.",
