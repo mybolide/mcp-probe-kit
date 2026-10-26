@@ -949,10 +949,29 @@ describe("project ledger and legacy migration", () => {
     const prerequisite=ledger!.claim("WORK-101","coding-agent");
     expect(prerequisite.task.id).toBe("WORK-101");
     const underway={...amendment,baseRevision:2,baseHash:amended.hash,
-      changes:[{taskId:"WORK-101",addAllowedPaths:["services/core/new_handler.go"]}]};
-    expect(ledger!.reviewReleaseWorkScopeAmendment(underway)).toMatchObject({passed:false});
-    expect(()=>ledger!.stageReleaseWorkScopeAmendment(underway,"planner"))
-      .toThrow(/only unclaimed Ready/);
+      changes:[{taskId:"WORK-101",addAllowedPaths:["apps/client/ios/Runner/AppDelegate.swift"]}]};
+    // Regression: a leased task with no recorded completion/evidence must be
+    // able to STAGE a missing-file amendment before calling pause-for-scope.
+    // Previously stage required Ready and pause required staged, creating an
+    // impossible ordering for legitimate in-scope partial commits.
+    expect(ledger!.reviewReleaseWorkScopeAmendment(underway)).toMatchObject({passed:true});
+    const ongoingScope=ledger!.stageReleaseWorkScopeAmendment(underway,"planner");
+    expect(ongoingScope).toMatchObject({status:"awaiting_independent_review",
+      executableScopeChanged:false});
+    expect(ledger!.get("WORK-101").allowedPaths).toEqual(["services/core/**"]);
+    expect(()=>ledger!.approveReleaseWorkScopeAmendment({
+      release:"V0.1",expectedProposalHash:ongoingScope.proposalHash,
+      expectedReviewHash:"0".repeat(64),approvedBy:"test-owner",
+      reason:"Approval before true independent review and pause cannot grant file permissions.",
+      explicitAuthorization:true,
+    })).toThrow(/active task lease/i);
+    // This isolated test Owner deliberately retires the unreviewed fixture.
+    // A real user request must never be inferred from the test label.
+    expect(ledger!.withdrawReleaseWorkScopeAmendment({
+      release:"V0.1",expectedProposalHash:ongoingScope.proposalHash,
+      approvedBy:"test-owner",explicitAuthorization:true,
+      reason:"Test-only fixture has confirmed that staging preserves the original file scope.",
+    })).toMatchObject({withdrawn:true,executableScopeChanged:false});
     ledger!.release("WORK-101",prerequisite.leaseToken);
     // In the isolated test database the predecessor becomes Verified without
     // unrelated Git files, so the paused task's HEAD can be exactly restored.

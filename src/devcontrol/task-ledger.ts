@@ -1351,7 +1351,23 @@ export class ProjectTaskLedger {
       if(!item||task?.plan_id!=="release-work:"+input.release){
         issues.push(change.taskId+": not in this frozen release");continue;
       }
-      if(task.status!=="ready")issues.push(change.taskId+": only unclaimed Ready work items may have scope expanded");
+      // A developer may discover a missing native/bootstrap file only AFTER
+      // safely committing the already-authorized partial implementation.
+      // Allow a proposal to be *staged* against the active, leased task so it
+      // can then use pause-for-scope. This is NOT executable approval: the
+      // original changed-file boundary remains enforced by pause, and the
+      // task must become Ready before the independent-review/Owner approval.
+      const lease=this.db.prepare(
+        "SELECT * FROM dc_leases WHERE task_id=? AND expires_at>?",
+      ).get(change.taskId,Date.now());
+      const mayPause=task.status==="in_progress"&&!!lease&&
+        !this.latestCompletion(change.taskId)&&
+        !this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1")
+          .get(change.taskId)&&
+        !this.db.prepare("SELECT task_id FROM dc_task_decisions WHERE task_id=?")
+          .get(change.taskId);
+      if(task.status!=="ready"&&!mayPause)
+        issues.push(change.taskId+": only Ready or safely leased in-progress work awaiting pause may expand scope");
       for(const file of change.addAllowedPaths){
         if(item.allowedPaths.some(p=>pathAllowed(file,p)||file===p))
           issues.push(change.taskId+": "+file+" already covered by the frozen scope");
