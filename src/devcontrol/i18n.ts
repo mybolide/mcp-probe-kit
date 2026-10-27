@@ -77,7 +77,7 @@ export const enUi: Record<string,string> = {
   "任务详情 / 原始依据":"Task details / source evidence","关闭 ×":"Close ×",
   "文档":"Document","待审核":"Pending review","等待验收":"Awaiting review",
   "未分配":"Unassigned","未排期":"Unscheduled","负责人":"Owner",
-  "负责人 / 计划完成":"Owner / target date","需求来源":"Requirements",
+  "负责人 / 开发电脑":"Owner / development device","需求来源":"Requirements",
   "使用场景 / 触发条件 / 用户期望":"Trigger / scenario / expected outcome",
   "按顺序执行的业务与系统流程":"Ordered workflow",
   "业务规则与不可变约束":"Business invariants and rules",

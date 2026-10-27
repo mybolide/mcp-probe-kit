@@ -68,7 +68,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .task-phase-head{padding:14px 17px;background:#17283e;border-bottom:1px solid #2b4057;display:flex;gap:12px;align-items:center;justify-content:space-between}
 .task-phase-head strong{font-size:13px}.task-phase-head small{color:#90a8c0;font-size:11px}
 .work-grid{width:100%;overflow-x:auto;border:1px solid #30475e;border-radius:10px}
-.work-grid-header,.work-grid-row{display:grid;grid-template-columns:minmax(250px,3fr) minmax(95px,1fr) minmax(110px,1fr) minmax(105px,1fr) minmax(110px,1fr) minmax(115px,1fr) minmax(125px,1.3fr);min-width:1040px;gap:7px;align-items:center;padding:11px 13px}
+.work-grid-header,.work-grid-row{display:grid;grid-template-columns:minmax(250px,3fr) minmax(95px,1fr) minmax(130px,1.2fr) minmax(105px,1fr) minmax(145px,1.4fr);min-width:780px;gap:7px;align-items:center;padding:11px 13px}
 .work-grid-header{background:#20364d;font-size:11px;color:#abc3db;font-weight:700}
 .work-grid-row{width:100%;border:0;border-top:1px solid #304056;color:#dbe8f7;background:#112238;text-align:left;font-size:12px;cursor:pointer}
 .work-grid-row:hover{background:#203951}
@@ -609,8 +609,6 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         "责任角色："+(task.ownerRole||"尚未分工"),
         "平台："+(task.platform||"—"),"所属阶段："+(task.stageId||"—"),
         "关联功能："+(task.featureName||"版本公共任务"),
-        "计划开始："+(task.plannedStartAt||"未排期"),
-        "计划完成："+(task.plannedEndAt||"未排期"),
       ]);
       const execution=actual?.owner||actual?.ownerAssignment?.device;
       if(execution)section("实际执行信息",[
@@ -633,7 +631,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       "状态："+status+"。执行以真实 SQLite 状态、依赖和 Gate 为准。");
     if(task.featureReviewIssues?.length)section("DevControl 规划检查：待修正问题",task.featureReviewIssues);
     const displayOwner=actual?.owner||(row.pending?localGit?.name:null);
-    section("负责人 / 计划完成",[
+    section("负责人 / 开发电脑",[
       translate("负责人")+": "+(displayOwner||
         (locale==="en"?"Not recorded on historical task":"历史任务未记录")),
       (locale==="en"?"Development machine: ":"开发电脑：")+
@@ -644,7 +642,6 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
           (locale==="en"?"Planning preview; recorded on task creation/claim":
             "规划预览；创建或领取任务时自动写入本机负责人") :
           (locale==="en"?"Historical attribution unavailable":"历史开发归属未记录")),
-      locale==="en"?"Target date: Unscheduled":"计划完成时间：未排期",
     ]);
     section("需求来源",task.requirementIds||actual?.spec?.requirementIds||[]);
     section("使用场景 / 触发条件 / 用户期望",task.scenario||"尚无独立业务场景说明");
@@ -715,7 +712,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     });
     if((typeof releaseWorkPlan!=="undefined")&&releaseWorkPlan&&
       releaseWorkPlan.status!=="missing"){
-      const cols=["工作项","状态","负责人","类型 / 平台","计划开始","计划完成","备注 / 阻塞"];
+      const cols=["工作项","状态","负责人","类型 / 平台","备注 / 阻塞"];
       const shell=n("div",null,"work-grid");
       const headings=n("div",null,"work-grid-header");
       cols.forEach(name=>headings.append(n("span",name)));
@@ -737,8 +734,6 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
           n("span",actualOwner?(actualOwner+(actualDevice?" · "+actualDevice:"")):
             ("未领取 · "+(item.ownerRole||"研发角色待定"))),
           n("span",(item.type||"—")+" / "+(item.platform||"—")),
-          n("span",item.plannedStartAt||"未排期"),
-          n("span",item.plannedEndAt||"未排期"),
           n("span",item.blockingReason||item.remark||"—"));
         button.addEventListener("click",()=>openPlanTask(row));shell.append(button);
       }
