@@ -213,6 +213,99 @@ describe("project ledger and legacy migration", () => {
     expect(fs.readFileSync(path.join(root,"README.md"),"utf8"))
       .toContain("owner's longstanding dirty edits remain untouched");
   });
+
+  it("preserves exact unrelated Owner edits while completing and verifying a committed task", () => {
+    create();
+    ledger!.approve("NEYNA-200","owner");
+    const claim=ledger!.claim("NEYNA-200","agent");
+    save("tests/contracts/delivered.json","{}\n");
+    commit("deliver only the approved contract");
+    save("README.md","pre-existing owner local settings\n");
+    const sha=createRequire(import.meta.url)("node:crypto").createHash("sha256")
+      .update(fs.readFileSync(path.join(root,"README.md"))).digest("hex") as string;
+    const manifest=[{path:"README.md",sha256:sha}];
+    const report={summary:"Delivered scoped source",implementation:"Authorized contract",
+      verification:"Fixture gate and protected SHA match",existingDirtyFiles:manifest};
+    expect(()=>ledger!.complete("NEYNA-200",claim.leaseToken,{
+      ...report,existingDirtyFiles:undefined,
+    })).toThrow(/manifest/i);
+    expect(()=>ledger!.complete("NEYNA-200",claim.leaseToken,{
+      ...report,existingDirtyFiles:[{path:"README.md",sha256:"0".repeat(64)}],
+    })).toThrow(/expected bytes|manifest/i);
+    const completion=ledger!.complete("NEYNA-200",claim.leaseToken,report);
+    expect(completion.preservedDirtyFiles).toEqual(manifest);
+    expect(JSON.parse(ledger!.trace("NEYNA-200").completion.preserved_dirty_json))
+      .toEqual(manifest);
+    ledger!.report("NEYNA-200",claim.leaseToken,
+      {kind:"real_gate",reference:"independent approved task gate passed"},true);
+    expect(ledger!.verify("NEYNA-200",claim.leaseToken)).toMatchObject({
+      passed:true,taskId:"NEYNA-200",
+    });
+    expect(fs.readFileSync(path.join(root,"README.md"),"utf8"))
+      .toBe("pre-existing owner local settings\n");
+  });
+
+  it("rejects changed, newly staged or in-scope dirty files despite a preserved manifest", () => {
+    create();
+    ledger!.approve("NEYNA-200","owner");
+    const claim=ledger!.claim("NEYNA-200","agent");
+    save("tests/contracts/source.json","{}\n");
+    commit("approved source");
+    save("README.md","unchanged Owner edits\n");
+    const sha=createRequire(import.meta.url)("node:crypto").createHash("sha256")
+      .update(fs.readFileSync(path.join(root,"README.md"))).digest("hex") as string;
+    const manifest=[{path:"README.md",sha256:sha}];
+    const report={summary:"Scoped delivery",implementation:"One contract",
+      verification:"Approved test evidence",existingDirtyFiles:manifest};
+    expect(()=>ledger!.complete("NEYNA-200",claim.leaseToken,{
+      ...report,existingDirtyFiles:[{path:"tests/contracts/source.json",sha256:sha}],
+    })).toThrow(/manifest/i);
+    save("tests/contracts/source.json","changed uncommitted task code\n");
+    expect(()=>ledger!.complete("NEYNA-200",claim.leaseToken,report)).toThrow(/manifest/i);
+    save("tests/contracts/source.json","{}\n");
+    save("tests/contracts/staged.json","{}\n");
+    git("add","tests/contracts/staged.json");
+    expect(()=>ledger!.complete("NEYNA-200",claim.leaseToken,report)).toThrow(/Staged and untracked/i);
+    git("reset","-q","HEAD","--","tests/contracts/staged.json");
+    fs.rmSync(path.join(root,"tests/contracts/staged.json"));
+    ledger!.complete("NEYNA-200",claim.leaseToken,report);
+    ledger!.report("NEYNA-200",claim.leaseToken,
+      {kind:"gate",reference:"fixture verified"},true);
+    save("README.md","Owner edit silently changed after completion\n");
+    expect(ledger!.verify("NEYNA-200",claim.leaseToken)).toMatchObject({
+      passed:false,reason:expect.stringMatching(/protected Owner/i),
+    });
+  });
+
+  it("cannot declare task-scoped or committed files as protected Owner edits", () => {
+    create();
+    ledger!.approve("NEYNA-200","owner");
+    const claim=ledger!.claim("NEYNA-200","agent");
+    save("tests/contracts/code.json","{}\n");
+    commit("approved task code");
+    save("tests/contracts/code.json","uncommitted modifications\n");
+    const sha=createRequire(import.meta.url)("node:crypto").createHash("sha256")
+      .update(fs.readFileSync(path.join(root,"tests/contracts/code.json"))).digest("hex") as string;
+    expect(()=>ledger!.complete("NEYNA-200",claim.leaseToken,{
+      summary:"Task",implementation:"Code",verification:"Test",
+      existingDirtyFiles:[{path:"tests/contracts/code.json",sha256:sha}],
+    })).toThrow(/Current task/i);
+  });
+
+  it("never exempts a deleted tracked Owner file from clean-worktree review", () => {
+    create();
+    ledger!.approve("NEYNA-200","owner");
+    const claim=ledger!.claim("NEYNA-200","agent");
+    save("tests/contracts/code.json","{}\n");
+    commit("approved code");
+    const sha=createRequire(import.meta.url)("node:crypto").createHash("sha256")
+      .update(fs.readFileSync(path.join(root,"README.md"))).digest("hex") as string;
+    fs.rmSync(path.join(root,"README.md"));
+    expect(()=>ledger!.complete("NEYNA-200",claim.leaseToken,{
+      summary:"Task",implementation:"Code",verification:"Test",
+      existingDirtyFiles:[{path:"README.md",sha256:sha}],
+    })).toThrow(/tracked file edits|manifest|Owner edits/i);
+  });
   it("stages leased partial code then pauses, reviews, approves and reclaims original Git baseline", () => {
     save("docs/roadmap/recovery-version.md",
       "# Scoped recovery\n\n| 阶段 | 描述 |\n| --- | --- |\n| F0 | 已验证基线 |\n| F1 | 授权接口实现 |\n| F2 | 联调与发布 |\n");

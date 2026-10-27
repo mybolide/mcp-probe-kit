@@ -223,6 +223,8 @@ export interface CompletionReport {
   implementation: string;
   verification: string;
   remaining?: string;
+  /** Explicit Owner-preserved tracked edits outside this task's frozen scope. */
+  existingDirtyFiles?: Array<{path:string;sha256:string}>;
 }
 
 export interface FeatureProposal {
@@ -479,6 +481,7 @@ export class ProjectTaskLedger {
         implementation TEXT NOT NULL,
         verification TEXT NOT NULL,
         remaining TEXT NOT NULL DEFAULT '',
+        preserved_dirty_json TEXT NOT NULL DEFAULT '[]',
         git_head TEXT NOT NULL,
         agent TEXT NOT NULL,
         created_at TEXT NOT NULL,
@@ -608,6 +611,11 @@ export class ProjectTaskLedger {
       this.db.exec("ALTER TABLE dc_task_assignments ADD COLUMN device TEXT NOT NULL DEFAULT ''");
     if(!assignmentColumns.has("identity_source"))
       this.db.exec("ALTER TABLE dc_task_assignments ADD COLUMN identity_source TEXT NOT NULL DEFAULT ''");
+    const completionColumns = new Set(
+      this.db.prepare("PRAGMA table_info(dc_completion_notes)").all().map(row=>row.name),
+    );
+    if(!completionColumns.has("preserved_dirty_json"))
+      this.db.exec("ALTER TABLE dc_completion_notes ADD COLUMN preserved_dirty_json TEXT NOT NULL DEFAULT '[]'");
     const alreadyImported = this.db.prepare("SELECT value FROM dc_meta WHERE key='bootstrap'").get();
     if (alreadyImported) return;
     // Import from the previous Neyna Python experiment without deleting or
@@ -3118,6 +3126,54 @@ export class ProjectTaskLedger {
    * Completion reports are append-only revisions, tied to the committed Git
    * HEAD. An Agent may revise a report before verification, never afterward.
    */
+  private checkPreservedOwnerEdits(
+    task: Row, declarations: Array<{path:string;sha256:string}>|undefined,
+    baseHead: string,
+  ): Array<{path:string;sha256:string}> {
+    const manifest=declarations??[];
+    if(!Array.isArray(manifest)||manifest.length>128||manifest.some(item=>
+      !item||typeof item.path!=="string"||typeof item.sha256!=="string"||
+      !/^[0-9a-f]{64}$/.test(item.sha256)||
+      !item.path||path.isAbsolute(item.path)||
+      item.path.split("/").includes("..")||item.path.includes("\\")||
+      item.path.includes("\0")))
+      fail("DIRTY_MANIFEST_INVALID","Exact relative tracked paths and SHA-256 are required");
+    // Staged or untracked files are NEVER exempted. The only exception is a
+    // fully declared, byte-identical set of pre-existing unstaged tracked edits.
+    if(git(this.root,["diff","--cached","--name-only"])||
+      git(this.root,["ls-files","--others","--exclude-standard"]))
+      fail("DIRTY_WORKTREE","Staged and untracked files must be committed before completion");
+    const actual=git(this.root,["diff","--name-only","-z"]).split("\0").filter(Boolean).sort();
+    const names=manifest.map(entry=>entry.path).sort();
+    if(JSON.stringify(actual)!==JSON.stringify(names))
+      fail("DIRTY_MANIFEST_MISMATCH","Unstaged edits differ from the explicitly protected Owner manifest");
+    // Reject deletions, type changes, unmerged entries, and dirty submodules.
+    // Only ordinary unstaged tracked file modifications are exemptible.
+    // The generic git() wrapper trims output, which would remove the first
+    // porcelain entry's leading index-space. Read the raw NUL stream instead.
+    const status=spawnSync("git",["status","--porcelain=v1","-z"],{
+      cwd:this.root,encoding:"utf8",timeout:12_000,
+    });
+    if(status.status!==0||typeof status.stdout!=="string")
+      fail("GIT_ERROR","Cannot read Git index and worktree status");
+    const porcelain=status.stdout.split("\0").filter(Boolean);
+    if(porcelain.length!==actual.length||porcelain.some(line=>
+      !line.startsWith(" M ")||!actual.includes(line.slice(3))))
+      fail("DIRTY_WORKTREE","Only unchanged-index tracked file edits may be preserved");
+    const allowed=JSON.parse(task.allowed_paths) as string[];
+    const taskCommits=changedFiles(this.root,baseHead);
+    for(const item of manifest){
+      if(allowed.some(p=>pathAllowed(item.path,p))||taskCommits.includes(item.path))
+        fail("DIRTY_SCOPE_VIOLATION","Current task and previously committed task files cannot be exempted");
+      const file=path.resolve(this.root,item.path);
+      if(!file.startsWith(this.root+path.sep)||!fs.existsSync(file)||
+        !fs.statSync(file).isFile()||
+        createHash("sha256").update(fs.readFileSync(file)).digest("hex")!==item.sha256)
+        fail("DIRTY_MANIFEST_MISMATCH","Protected Owner edits differ from the exact expected bytes");
+    }
+    return manifest.slice().sort((a,b)=>a.path.localeCompare(b.path));
+  }
+
   complete(id: string, token: string, input: CompletionReport): Row {
     const mandatory = ["summary", "implementation", "verification"] as const;
     for (const field of mandatory) {
@@ -3131,15 +3187,15 @@ export class ProjectTaskLedger {
       fail("INVALID_REMAINING", "Remaining work must be text of at most 12000 characters");
     }
     const head = git(this.root, ["rev-parse", "HEAD"]);
-    if (git(this.root, ["status", "--porcelain"])) {
-      fail("DIRTY_WORKTREE", "Commit all scoped code before recording completion");
-    }
     return this.inTransaction(() => {
       const lease = this.requireLease(id, token);
       const task = this.requireTask(id);
       if (!["in_progress", "in_review"].includes(task.status)) {
         fail("INVALID_STATE", "Only a claimed task can record completion before verification");
       }
+      const preserved=this.checkPreservedOwnerEdits(task,input.existingDirtyFiles,lease.base_head);
+      if(!this.checkGovernedArtifacts().passed)
+        fail("GOVERNED_ARTIFACT_CHANGED","Frozen architecture artifacts cannot be exempted");
       const previous = this.latestCompletion(id);
       const revision = (previous?.revision ?? 0) + 1;
       const record = {
@@ -3148,14 +3204,16 @@ export class ProjectTaskLedger {
         implementation: input.implementation.trim(),
         verification: input.verification.trim(),
         remaining: (input.remaining ?? "").trim(),
+        preservedDirtyFiles: preserved,
         gitHead: head, agent: lease.agent, createdAt: utc(),
       };
       this.db.prepare(`
         INSERT INTO dc_completion_notes
-        (task_id,revision,summary,implementation,verification,remaining,git_head,agent,created_at)
-        VALUES (?,?,?,?,?,?,?,?,?)
+        (task_id,revision,summary,implementation,verification,remaining,preserved_dirty_json,git_head,agent,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
       `).run(id, revision, record.summary, record.implementation,
-        record.verification, record.remaining, head, lease.agent, record.createdAt);
+        record.verification, record.remaining, JSON.stringify(preserved),
+        head, lease.agent, record.createdAt);
       this.audit(id, "completion_recorded", lease.agent, {
         revision, gitHead: head,
         checksum: createHash("sha256").update(JSON.stringify(record)).digest("hex"),
@@ -3916,8 +3974,15 @@ export class ProjectTaskLedger {
     if (note.git_head !== startHead) {
       return { taskId: id, passed: false, reason: "Completion report refers to an older Git commit; record a new revision" };
     }
-    const dirty = git(this.root, ["status", "--porcelain"]);
-    if (dirty) return { taskId: id, passed: false, reason: "Git working tree must be clean" };
+    // Completion freezes the exact Owner edit manifest. Never accept a fresh
+    // manifest at verify time, and never exempt dirty files inside this task.
+    const preserved=JSON.parse(note.preserved_dirty_json??"[]") as Array<{path:string;sha256:string}>;
+    try{
+      this.checkPreservedOwnerEdits(task,preserved,lease.base_head);
+    }catch(error){
+      return {taskId:id,passed:false,reason:
+        "Uncommitted files differ from the recorded protected Owner edits",error:String(error)};
+    }
     if (!run(this.root, "git", ["merge-base", "--is-ancestor", lease.base_head, startHead]).passed) {
       return { taskId: id, passed: false, reason: "Claim baseline is not an ancestor of HEAD" };
     }
@@ -3971,14 +4036,19 @@ export class ProjectTaskLedger {
         revision:recorded!.revision,status:recorded!.status,
         productApproval:"not_implied"}:this.gate(name, allowedPaths)]));
     const stableHead = git(this.root, ["rev-parse", "HEAD"]);
-    const stableTree = git(this.root, ["status", "--porcelain"]);
-    const stable = startHead === stableHead && !stableTree;
+    let protectedEditsStable=true;
+    try{this.checkPreservedOwnerEdits(task,preserved,lease.base_head);}
+    catch{protectedEditsStable=false;}
+    const stable = startHead === stableHead && protectedEditsStable;
     const passed = stable && Object.values(results).every((r) => r.passed);
     this.inTransaction(() => {
       const current = this.requireLease(id, token);
       if (current.base_head !== lease.base_head) fail("LEASE_CHANGED", "Lease changed during validation");
+      let editsStillMatch=true;
+      try{this.checkPreservedOwnerEdits(task,preserved,lease.base_head);}
+      catch{editsStillMatch=false;}
       if (git(this.root, ["rev-parse", "HEAD"]) !== startHead ||
-          git(this.root, ["status", "--porcelain"])) {
+          !editsStillMatch) {
         fail("GIT_CHANGED_DURING_VERIFY", "Git changed after gates; re-run verification");
       }
       this.audit(id, passed ? "verified" : "verify_failed", "devcontrol", {
