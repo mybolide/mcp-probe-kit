@@ -86,6 +86,86 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it("stages leased partial code then pauses, reviews, approves and reclaims original Git baseline", () => {
+    save("docs/roadmap/recovery-version.md",
+      "# Scoped recovery\n\n| 阶段 | 描述 |\n| --- | --- |\n| F0 | 已验证基线 |\n| F1 | 授权接口实现 |\n| F2 | 联调与发布 |\n");
+    commit("scope recovery baseline");
+    const entries=[
+      {id:"WORK-PERM",title:"实现授权的原生权限适配",stageId:"F1",type:"development",
+        ownerRole:"iOS Engineer",platform:"iPhone",dependsOn:["F0"],
+        allowedPaths:["services/core/**"],requiredGates:["docs"],
+        acceptance:"系统仅在用户主动确认授权后才读取并返回麦克风权限状态"},
+      {id:"WORK-PERM-QA",title:"核验拒绝授权的行为",stageId:"F1",type:"testing",
+        ownerRole:"QA Engineer",platform:"iPhone",dependsOn:["WORK-PERM"],
+        allowedPaths:["tests/contracts/**"],requiredGates:["docs"],
+        acceptance:"拒权后设备不产生录音帧且始终可进入系统权限设置"},
+      {id:"WORK-PERM-E2E",title:"进行客户端音频授权集成",stageId:"F2",type:"integration",
+        ownerRole:"Integration QA",platform:"iPhone",dependsOn:["WORK-PERM-QA"],
+        allowedPaths:["tests/contracts/**"],requiredGates:["docs"],
+        acceptance:"设备授权状态在断开和重新连接后保持与系统权限一致"},
+      {id:"WORK-PERM-REL",title:"核验录音授权交付清单",stageId:"F2",type:"release",
+        ownerRole:"Release Engineer",platform:"Release",dependsOn:["WORK-PERM-E2E"],
+        allowedPaths:["docs/**"],requiredGates:["docs"],
+        acceptance:"交付清单全部提供已执行的授权拒绝和权限恢复证据"},
+    ] as any[];
+    const proposal={release:"V0.1",scopeSource:"docs/roadmap/recovery-version.md",
+      rationale:"Four bounded development, testing, integration and release steps preserve distinct evidentiary gates.",
+      stages:[{id:"F0",verifiedTaskIds:["F0"]},{id:"F1"},{id:"F2"}],workItems:entries};
+    const plan={...proposal,agentReview:{reviewer:"quality-review-agent",
+      method:"independent-agent-pass" as const,
+      subjectHash:releaseReviewSubjectHash(proposal as any),
+      sourceRefs:["docs/roadmap/recovery-version.md"],reviewedStageIds:["F0","F1","F2"],
+      checks:REVIEW_DIMENSIONS.map(dimension=>({dimension,
+        conclusion:"Independently assessed the authorization lifecycle and auditable evidence for "+dimension,
+        workItemIds:entries.map(item=>item.id)}))}};
+    expect(ledger!.reviewReleaseWork(plan as any).issues).toEqual([]);
+    const staged=ledger!.stageReleaseWork(plan as any,"planning-agent");
+    const frozen=ledger!.approveReleaseWork("V0.1",staged.hash);
+    const claim=ledger!.claim("WORK-PERM","implementer-agent");
+    const originalBase=claim.baseHead;
+    save("services/core/internal/permission-bridge.txt", "already approved original scope\n");
+    commit("in-scope partial authorization adapter");
+    const originalPartialHead=git("rev-parse","HEAD");
+    const scope={release:"V0.1",baseRevision:1,baseHash:frozen.hash,
+      changes:[{taskId:"WORK-PERM",addAllowedPaths:["apps/client/ios/Runner/AppDelegate.swift"]}],
+      rationale:"The iPhone native permission component requires application bootstrap registration to become executable by the original authorized client.",
+      alternatives:"Leaving Swift authorization in a source-only directory would not verify permission handling in the actual Runner application.",
+      verificationPlan:"Retain every preexisting source commit and original file permission, verify independent scope evidence, then test a true iPhone signed build after explicit Owner approval.",
+      sourceRefs:["task:WORK-PERM","docs/roadmap/recovery-version.md"]};
+    expect(ledger!.reviewReleaseWorkScopeAmendment(scope)).toMatchObject({passed:true});
+    const pending=ledger!.stageReleaseWorkScopeAmendment(scope,"scope-planner");
+    expect(ledger!.get("WORK-PERM").allowedPaths).toEqual(["services/core/**"]);
+    const paused=ledger!.pauseForScopeAmendment("WORK-PERM",claim.leaseToken,
+      "This previously committed in-scope Swift adapter cannot be registered without separately approved Runner bootstrap scope.");
+    expect(paused).toMatchObject({paused:true,status:"ready",
+      originalBaseHead:originalBase,pausedHead:originalPartialHead,
+      changedFiles:["services/core/internal/permission-bridge.txt"]});
+    expect(()=>ledger!.claim("WORK-PERM","premature-agent"))
+      .toThrow(/Scope amendment.*awaits independent review/);
+    const review={reviewer:"independent-quality-agent",method:"independent-agent-pass" as const,
+      subjectHash:pending.proposalHash,affectedTaskIds:["WORK-PERM"],
+      scopeAssessment:"Only the specific AppDelegate Swift registration file is newly allowed and the original implementation file remains within the frozen scope.",
+      dependencyAssessment:"The original verified environment prerequisite remains satisfied and all dependent QA, integration and release tasks retain their own gates.",
+      securityAndTestAssessment:"No permissions change until Owner approval; user-initiated microphone prompt and denied/no-audio cases remain mandatory actual device evidence.",
+      sourceRefs:["task:WORK-PERM","docs/roadmap/recovery-version.md"]};
+    const reviewed=ledger!.reviewStagedReleaseWorkScopeAmendment("V0.1",review,
+      pending.proposalHash);
+    expect(reviewed).toMatchObject({status:"reviewed",executableScopeChanged:false});
+    const approved=ledger!.approveReleaseWorkScopeAmendment({release:"V0.1",
+      expectedProposalHash:pending.proposalHash,expectedReviewHash:reviewed.reviewHash,
+      approvedBy:"test-owner",explicitAuthorization:true,
+      reason:"This isolated test Owner authorizes exactly one extra native registration file after the true review and preserved Git history."});
+    expect(approved).toMatchObject({revision:2,scopeOnly:true});
+    expect(ledger!.get("WORK-PERM").allowedPaths).toEqual([
+      "services/core/**","apps/client/ios/Runner/AppDelegate.swift"]);
+    const reclaimed=ledger!.claim("WORK-PERM","implementer-agent");
+    expect(reclaimed.baseHead).toBe(originalBase);
+    expect(git("rev-parse","HEAD")).toBe(originalPartialHead);
+    expect(ledger!.get("WORK-PERM").status).toBe("in_progress");
+    expect((ledger! as any).db.prepare(
+      "SELECT resumed_at FROM dc_scope_pauses WHERE task_id='WORK-PERM'").get().resumed_at)
+      .toBeTruthy();
+  });
   it("enforces a reviewed, Owner-approved generic artifact baseline across staged files",()=>{
     const source="protocols/v1/schema.sql",baselineSQL="CREATE TABLE sample(id bigint);\n";
     save(source,baselineSQL);
