@@ -3519,11 +3519,13 @@ export class ProjectTaskLedger {
           "SELECT snapshot_json FROM dc_release_work_plans WHERE release=?",
         ).get(task.release);
         const approved=current?JSON.parse(current.snapshot_json) as {
-          scopeAmendment?:{proposalHash?:string}
+          scopeAmendment?:{proposalHash?:string},
+          incrementalWorkAmendment?:{proposalHash?:string}
         }:null;
-        if(approved?.scopeAmendment?.proposalHash!==paused.proposal_hash)
+        if(approved?.scopeAmendment?.proposalHash!==paused.proposal_hash&&
+          approved?.incrementalWorkAmendment?.proposalHash!==paused.proposal_hash)
           fail("SCOPE_AMENDMENT_NOT_APPROVED",
-            "Only the exact independently reviewed scope amendment may resume this task");
+            "Only the exact approved scope or incremental amendment may resume this task");
         if(base!==paused.paused_head)
           fail("SCOPE_PAUSE_HEAD_CHANGED",
             "Git HEAD changed since the task was safely paused; reconcile the original commits first");
@@ -3591,6 +3593,86 @@ export class ProjectTaskLedger {
       this.db.prepare("UPDATE dc_tasks SET status='ready',updated_at=? WHERE id=?").run(utc(), id);
       this.audit(id, "lease_released", current.agent, { baseHead: current.base_head });
       return { taskId: id, status: "ready", released: true };
+    });
+  }
+
+  /**
+   * Preserve a previously committed task before approving a different,
+   * already reviewed release-work incremental. This only pauses the task;
+   * it neither approves new tasks nor widens its frozen file permissions.
+   * All pre-existing tracked owner edits must be reported by exact path and
+   * SHA-256; no staged/untracked files may be present. Git is not modified.
+   */
+  pauseForReviewedIncremental(input:{id:string;leaseToken:string;reason:string;
+    expectedProposalHash:string;expectedReviewHash:string;
+    existingDirtyFiles:{path:string;sha256:string}[]}):Row {
+    if(typeof input.reason!=="string"||input.reason.trim().length<30)
+      fail("PAUSE_REASON_REQUIRED","A substantial reason for preserving the partial work is required");
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(input.id,input.leaseToken);
+      const task=this.requireTask(input.id);
+      if(task.status!=="in_progress")
+        fail("TASK_NOT_IN_PROGRESS","Only an active unfinished task can pause");
+      const pending=this.db.prepare(
+        "SELECT * FROM dc_release_work_incrementals WHERE release=?",
+      ).get(task.release);
+      if(!pending||!pending.reviewed_json||
+        pending.proposal_hash!==input.expectedProposalHash||
+        pending.review_hash!==input.expectedReviewHash)
+        fail("INCREMENTAL_REVIEW_REQUIRED","Exact reviewed incremental hashes required before pause");
+      if(this.db.prepare("SELECT task_id FROM dc_scope_pauses WHERE task_id=? AND resumed_at IS NULL")
+        .get(input.id))fail("SCOPE_ALREADY_PAUSED","Task already has a preserved Git base");
+      if(this.latestCompletion(input.id)||
+        this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1").get(input.id)||
+        this.db.prepare("SELECT task_id FROM dc_task_decisions WHERE task_id=?").get(input.id))
+        fail("TASK_EVIDENCE_EXISTS","Resolve recorded completion/evidence before pause");
+      const head=git(this.root,["rev-parse","HEAD"]);
+      if(!run(this.root,"git",["merge-base","--is-ancestor",lease.base_head,head]).passed)
+        fail("GIT_HISTORY_CHANGED","Original claimed base is not an ancestor of HEAD");
+      const files=changedFiles(this.root,lease.base_head);
+      const allowed=JSON.parse(task.allowed_paths) as string[];
+      const denied=files.filter(file=>!allowed.some(pattern=>pathAllowed(file,pattern)));
+      if(denied.length)fail("PAUSE_SCOPE_VIOLATION","Committed changes exceed original scope: "+denied.join(", "));
+      if(git(this.root,["diff","--cached","--name-only"])||
+        git(this.root,["ls-files","--others","--exclude-standard"]))
+        fail("DIRTY_WORKTREE","No staged or untracked files may exist during an audited pause");
+      const dirty=git(this.root,["diff","--name-only"]).split("\n").filter(Boolean).sort();
+      const declarations=input.existingDirtyFiles;
+      if(!Array.isArray(declarations)||declarations.some(item=>
+        !item||typeof item.path!=="string"||typeof item.sha256!=="string"||
+        !/^[0-9a-f]{64}$/.test(item.sha256)||path.isAbsolute(item.path)||
+        item.path.split("/").includes("..")))
+        fail("DIRTY_MANIFEST_REQUIRED","Complete safe relative paths and SHA-256 required");
+      const declared=declarations.map(item=>item.path).sort();
+      if(JSON.stringify(dirty)!==JSON.stringify(declared))
+        fail("DIRTY_MANIFEST_MISMATCH","Exact dirty-file list differs from supplied owner-edit manifest");
+      for(const item of declarations){
+        const absolute=path.resolve(this.root,item.path);
+        if(!absolute.startsWith(this.root+path.sep)||!fs.existsSync(absolute)||
+          !fs.statSync(absolute).isFile()||
+          createHash("sha256").update(fs.readFileSync(absolute)).digest("hex")!==item.sha256)
+          fail("DIRTY_MANIFEST_MISMATCH","An existing uncommitted file changed since manifest capture");
+      }
+      if(!this.checkGovernedArtifacts().passed)
+        fail("GOVERNED_ARTIFACT_CHANGED","An immutable architecture artifact changed");
+      const now=utc();
+      this.db.prepare(`INSERT INTO dc_scope_pauses
+        (task_id,release,proposal_hash,base_head,paused_head,
+         changed_files_json,reason,paused_by,paused_at)
+         VALUES(?,?,?,?,?,?,?,?,?)`).run(input.id,task.release,pending.proposal_hash,
+        lease.base_head,head,JSON.stringify(files),input.reason.trim(),lease.agent,now);
+      this.db.prepare("DELETE FROM dc_leases WHERE singleton=1").run();
+      this.db.prepare("UPDATE dc_tasks SET status='ready',updated_at=? WHERE id=?")
+        .run(now,input.id);
+      this.audit(input.id,"incremental_review_pause",lease.agent,{
+        proposalHash:pending.proposal_hash,reviewHash:pending.review_hash,
+        originalBaseHead:lease.base_head,pausedHead:head,changedFiles:files,
+        preservedDirtyFiles:declarations,reason:input.reason.trim(),
+      });
+      return {taskId:input.id,status:"ready",paused:true,reviewRequired:false,
+        originalBaseHead:lease.base_head,pausedHead:head,
+        proposalHash:pending.proposal_hash,changedFiles:files,
+        untouchedExistingDirtyFiles:declarations.map(item=>item.path)};
     });
   }
 

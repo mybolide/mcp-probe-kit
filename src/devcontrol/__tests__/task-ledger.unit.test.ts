@@ -86,6 +86,90 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it("preserves leased WIP and exact owner-dirty bytes through reviewed incremental approval", () => {
+    save("docs/roadmap/recovery-version.md",
+      "# Scope\n\n| 阶段 | 描述 |\n| --- | --- |\n| F0 | Baseline |\n| F1 | Build |\n| F2 | Integration |\n");
+    commit("recovery scope baseline");
+    const items=[
+      {id:"WORK-A",title:"实现安全授权适配",stageId:"F1",type:"development",
+        ownerRole:"iOS Engineer",platform:"iPhone",dependsOn:["F0"],
+        allowedPaths:["services/core/**"],requiredGates:["docs"],
+        acceptance:"授权只有主动触发系统请求才会进入可录音状态"},
+      {id:"WORK-Q",title:"验证授权拒绝场景",stageId:"F1",type:"testing",
+        ownerRole:"QA Engineer",platform:"iPhone",dependsOn:["WORK-A"],
+        allowedPaths:["tests/contracts/**"],requiredGates:["docs"],
+        acceptance:"拒权后无音频帧并可找到设备设置入口"},
+      {id:"WORK-I",title:"校验跨端授权集成",stageId:"F2",type:"integration",
+        ownerRole:"Integration Engineer",platform:"iPhone",dependsOn:["WORK-Q"],
+        allowedPaths:["tests/contracts/**"],requiredGates:["docs"],
+        acceptance:"实际应用验证授权状态与设备权限一致"},
+      {id:"WORK-R",title:"验证授权发布清单",stageId:"F2",type:"release",
+        ownerRole:"Release Engineer",platform:"Release",dependsOn:["WORK-I"],
+        allowedPaths:["docs/**"],requiredGates:["docs"],
+        acceptance:"批准的授权功能均有可追溯真实设备证据"},
+    ] as any[];
+    const base={release:"V0.1",scopeSource:"docs/roadmap/recovery-version.md",
+      rationale:"This release separates source implementation from device integration and independent verification.",
+      stages:[{id:"F0",verifiedTaskIds:["F0"]},{id:"F1"},{id:"F2"}],workItems:items};
+    const plan={...base,agentReview:{reviewer:"quality-agent",method:"independent-agent-pass" as const,
+      subjectHash:releaseReviewSubjectHash(base as any),sourceRefs:[base.scopeSource],
+      reviewedStageIds:["F0","F1","F2"],checks:REVIEW_DIMENSIONS.map(dimension=>({
+        dimension,conclusion:"Independently checked source boundaries and required device evidence for "+dimension,
+        workItemIds:items.map(item=>item.id)}))}};
+    expect(ledger!.reviewReleaseWork(plan as any).issues).toEqual([]);
+    const staged=ledger!.stageReleaseWork(plan as any,"planner");
+    const frozen=ledger!.approveReleaseWork("V0.1",staged.hash);
+    const claim=ledger!.claim("WORK-A","developer");
+    save("services/core/work-in-scope.txt","legitimate partial code\n");
+    commit("partially implemented authorized code");
+    const pausedHead=git("rev-parse","HEAD");
+    save("README.md","owner's longstanding dirty edits remain untouched\n");
+    const expectedDirty=createRequire(import.meta.url)("node:crypto")
+      .createHash("sha256").update(fs.readFileSync(path.join(root,"README.md"))).digest("hex") as string;
+    const reviewedItem={id:"WORK-NEW",title:"完善实际Core数据库连接验证",
+      stageId:"F2",type:"development" as const,platform:"Go",ownerRole:"Core Engineer",
+      dependsOn:["F0"],allowedPaths:["services/core/cmd/**"],requiredGates:["docs"],
+      acceptance:"真实Go服务对非法请求拒绝且能验证Core启动链路"};
+    const inc={release:"V0.1",baseRevision:1,baseHash:frozen.hash,
+      addWorkItems:[reviewedItem],addDependencies:[{taskId:"WORK-I",dependsOn:["WORK-NEW"]}],
+      rationale:"The device integration previously lacked the required server runtime prerequisite; keep its QA contract unchanged.",
+      alternatives:"A fake Core in device tests would not validate a real server; the task stays atomic and versioned.",
+      verificationPlan:"Use the original mandatory testing evidence and reject any invented device or Core completion.",
+      sourceRefs:["task:WORK-I",base.scopeSource]};
+    const incStaged=ledger!.stageReleaseWorkIncremental(inc,"incremental-author");
+    const incReview={reviewer:"different-reviewer",method:"independent-agent-pass" as const,
+      subjectHash:incStaged.proposalHash,affectedTaskIds:["WORK-NEW","WORK-I"],
+      scopeAssessment:"Adds a separate Core runtime task without changing original authorized Flutter code paths.",
+      dependencyAssessment:"Core must finish before the previously Ready device QA task, while verified historical tasks remain frozen.",
+      securityAndTestAssessment:"Original gates remain mandatory and owner edits are protected by recorded SHA-256 during pause.",
+      sourceRefs:["task:WORK-I"]};
+    const reviewed=ledger!.reviewStagedReleaseWorkIncremental("V0.1",incReview,incStaged.proposalHash);
+    const input={id:"WORK-A",leaseToken:claim.leaseToken,
+      expectedProposalHash:incStaged.proposalHash,expectedReviewHash:reviewed.reviewHash,
+      reason:"Preserve the legitimate earlier Git changes and owner edits before the unrelated reviewed incremental receives exact Owner authorization.",
+      existingDirtyFiles:[{path:"README.md",sha256:expectedDirty}]};
+    expect(()=>ledger!.pauseForReviewedIncremental({...input,
+      expectedReviewHash:"0".repeat(64)})).toThrow(/Exact reviewed incremental hashes/);
+    expect(()=>ledger!.pauseForReviewedIncremental({...input,
+      existingDirtyFiles:[{path:"README.md",sha256:"0".repeat(64)}]}))
+      .toThrow(/existing uncommitted file changed/);
+    expect(ledger!.pauseForReviewedIncremental(input)).toMatchObject({
+      status:"ready",paused:true,originalBaseHead:claim.baseHead,
+      pausedHead,untouchedExistingDirtyFiles:["README.md"]});
+    expect(fs.readFileSync(path.join(root,"README.md"),"utf8"))
+      .toContain("owner's longstanding dirty edits remain untouched");
+    expect(ledger!.get("WORK-A").allowedPaths).toEqual(["services/core/**"]);
+    const approved=ledger!.approveReleaseWorkIncremental({release:"V0.1",
+      expectedProposalHash:incStaged.proposalHash,expectedReviewHash:reviewed.reviewHash,
+      approvedBy:"test-owner",explicitAuthorization:true,
+      reason:"I explicitly authorize this reviewed Core prerequisite without touching the user's preexisting uncommitted changes."});
+    expect(approved.added).toEqual(["WORK-NEW"]);
+    const reclaimed=ledger!.claim("WORK-A","developer");
+    expect(reclaimed.baseHead).toBe(claim.baseHead);
+    expect(git("rev-parse","HEAD")).toBe(pausedHead);
+    expect(fs.readFileSync(path.join(root,"README.md"),"utf8"))
+      .toContain("owner's longstanding dirty edits remain untouched");
+  });
   it("stages leased partial code then pauses, reviews, approves and reclaims original Git baseline", () => {
     save("docs/roadmap/recovery-version.md",
       "# Scoped recovery\n\n| 阶段 | 描述 |\n| --- | --- |\n| F0 | 已验证基线 |\n| F1 | 授权接口实现 |\n| F2 | 联调与发布 |\n");
