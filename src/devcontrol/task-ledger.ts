@@ -454,6 +454,14 @@ export class ProjectTaskLedger {
         paused_at TEXT NOT NULL,
         resumed_at TEXT
       );
+      -- Preserve each prior completed pause before the same task enters a
+      -- later independently reviewed amendment. Never discard Git provenance.
+      CREATE TABLE IF NOT EXISTS dc_scope_pause_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        prior_record_json TEXT NOT NULL,
+        archived_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS dc_evidence (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         task_id TEXT NOT NULL REFERENCES dc_tasks(id), kind TEXT NOT NULL,
@@ -3656,6 +3664,7 @@ export class ProjectTaskLedger {
       if(!this.checkGovernedArtifacts().passed)
         fail("GOVERNED_ARTIFACT_CHANGED","An immutable architecture artifact changed");
       const now=utc();
+      this.archiveResumedScopePause(input.id,lease.agent);
       this.db.prepare(`INSERT INTO dc_scope_pauses
         (task_id,release,proposal_hash,base_head,paused_head,
          changed_files_json,reason,paused_by,paused_at)
@@ -3683,6 +3692,26 @@ export class ProjectTaskLedger {
    * This only restores the task to Ready so genuine independent review and
    * exact Owner approval can proceed. It grants ZERO extra file permissions.
    */
+  /** Archive the prior *resumed* row before another legitimate pause. */
+  private archiveResumedScopePause(id:string,actor:string):void {
+    const prior=this.db.prepare("SELECT * FROM dc_scope_pauses WHERE task_id=?")
+      .get(id);
+    if(!prior)return;
+    if(!prior.resumed_at)
+      fail("SCOPE_ALREADY_PAUSED","Cannot overwrite an unfinished scope pause");
+    this.db.prepare(`INSERT INTO dc_scope_pause_history
+      (task_id,prior_record_json,archived_at) VALUES(?,?,?)`)
+      .run(id,JSON.stringify(prior),utc());
+    this.db.prepare("DELETE FROM dc_scope_pauses WHERE task_id=? AND resumed_at IS NOT NULL")
+      .run(id);
+    this.audit(id,"previous_scope_pause_archived",actor,{
+      priorProposalHash:prior.proposal_hash,
+      priorBaseHead:prior.base_head,
+      priorPausedHead:prior.paused_head,
+      priorResumedAt:prior.resumed_at,
+    });
+  }
+
   pauseForScopeAmendment(id:string,token:string,reason:string,
     existingDirtyFiles?:{path:string;sha256:string}[]):Row {
     if(typeof reason!=="string"||reason.trim().length<20)
@@ -3753,6 +3782,7 @@ export class ProjectTaskLedger {
         fail("GOVERNED_ARTIFACT_CHANGED",
           "Original governed architecture artifact baseline must remain intact");
       const now=utc();
+      this.archiveResumedScopePause(id,lease.agent);
       this.db.prepare(`INSERT INTO dc_scope_pauses
         (task_id,release,proposal_hash,base_head,paused_head,
          changed_files_json,reason,paused_by,paused_at)

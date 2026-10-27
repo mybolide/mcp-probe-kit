@@ -169,6 +169,49 @@ describe("project ledger and legacy migration", () => {
     expect(git("rev-parse","HEAD")).toBe(pausedHead);
     expect(fs.readFileSync(path.join(root,"README.md"),"utf8"))
       .toContain("owner's longstanding dirty edits remain untouched");
+    // Regression for a REAL project that has already paused once for an
+    // incremental change and now must pause a SECOND time for native scope.
+    // The original pause is immutable in the history table and its audit.
+    const nextScope={release:"V0.1",baseRevision:2,baseHash:approved.hash,
+      changes:[{taskId:"WORK-A",addAllowedPaths:["apps/client/lib/features/shell/neyna_app.dart"]}],
+      rationale:"The earlier approved Flutter microphone authorization bridge must be reachable in the existing app's settings screen without expanding capture scope.",
+      alternatives:"A stand-alone developer-only test app cannot satisfy the production navigation acceptance; leave mic capture unstarted.",
+      verificationPlan:"Test real shell navigation, OS permission denial and settings recovery on an actual signed iPhone without starting microphone capture.",
+      sourceRefs:["task:WORK-A","docs/roadmap/recovery-version.md"]};
+    expect(ledger!.reviewReleaseWorkScopeAmendment(nextScope)).toMatchObject({passed:true});
+    const nextStaged=ledger!.stageReleaseWorkScopeAmendment(nextScope,"different-planner");
+    const nextReview={reviewer:"real-other-reviewer",method:"independent-agent-pass" as const,
+      subjectHash:nextStaged.proposalHash,affectedTaskIds:["WORK-A"],
+      scopeAssessment:"Exactly one additional existing shell source file is needed to expose the prior approved authorization bridge.",
+      dependencyAssessment:"All source authorization and QA dependencies remain intact, and no record of verified work is modified.",
+      securityAndTestAssessment:"Only explicit owner interaction may request system microphone permission; no AVAudioEngine or capture is started.",
+      sourceRefs:["task:WORK-A","docs/roadmap/recovery-version.md"]};
+    const nextReviewed=ledger!.reviewStagedReleaseWorkScopeAmendment(
+      "V0.1",nextReview,nextStaged.proposalHash);
+    const secondPause=ledger!.pauseForScopeAmendment("WORK-A",reclaimed.leaseToken,
+      "The production Settings authorization entrypoint requires the single approved shell source path, while preserving the original WIP and local owner files.",
+      [{path:"README.md",sha256:expectedDirty}]);
+    expect(secondPause).toMatchObject({paused:true,status:"ready",
+      originalBaseHead:claim.baseHead,pausedHead});
+    const archived=(ledger! as any).db.prepare(
+      "SELECT prior_record_json FROM dc_scope_pause_history WHERE task_id=?")
+      .all("WORK-A") as Array<{prior_record_json:string}>;
+    expect(archived).toHaveLength(1);
+    expect(JSON.parse(archived[0].prior_record_json)).toMatchObject({
+      proposal_hash:incStaged.proposalHash,
+      base_head:claim.baseHead,
+      paused_head:pausedHead,
+    });
+    expect(ledger!.get("WORK-A").allowedPaths).toEqual(["services/core/**"]);
+    expect(ledger!.approveReleaseWorkScopeAmendment({release:"V0.1",
+      expectedProposalHash:nextStaged.proposalHash,
+      expectedReviewHash:nextReviewed.reviewHash,approvedBy:"test-owner",
+      explicitAuthorization:true,
+      reason:"The isolated fixture Owner expressly approves the single reviewed production Settings source file while preserving both previous task pauses."}))
+      .toMatchObject({scopeOnly:true});
+    expect(ledger!.claim("WORK-A","developer").baseHead).toBe(claim.baseHead);
+    expect(fs.readFileSync(path.join(root,"README.md"),"utf8"))
+      .toContain("owner's longstanding dirty edits remain untouched");
   });
   it("stages leased partial code then pauses, reviews, approves and reclaims original Git baseline", () => {
     save("docs/roadmap/recovery-version.md",
