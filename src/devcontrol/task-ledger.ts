@@ -15,6 +15,7 @@ import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
 import { resolveFlutterTestTarget } from "./flutter-gate.js";
 import { runLivePostgresGate, livePostgresTestFile } from "./go-postgres-gate.js";
+import { runIosDeviceGate } from "./ios-device-gate.js";
 import { makeReviewAgentAction, type ReviewAgentAction } from "./review-actions.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "./release-plan.js";
 import { localDeveloper } from "./local-developer.js";
@@ -3897,7 +3898,7 @@ export class ProjectTaskLedger {
     });
   }
 
-  private gate(name: string, allowedPaths: string[] = []): Row {
+  private gate(name: string, allowedPaths: string[] = [], taskId = ""): Row {
     if (name === "docs") return run(this.root, "python3", ["scripts/validate_docs.py"]);
     if (name === "devcontrol_tests") return run(
       this.root, "python3", ["-m", "unittest", "discover", "-s", "tests/devcontrol", "-p", "test_*.py", "-q"],
@@ -3945,7 +3946,10 @@ export class ProjectTaskLedger {
       };
     }
     if (name === "ios_device_e2e") {
-      return { passed: false, error: "Physical iPhone/VAD evidence runner not configured; simulator screenshots cannot pass" };
+      const kinds=this.db.prepare(
+        "SELECT kind FROM dc_evidence WHERE task_id=?",
+      ).all(taskId).map(row=>String(row.kind));
+      return runIosDeviceGate(this.root,taskId,kinds);
     }
     if (name === "v01_release_e2e") {
       return { passed: false, error: "Real multi-input iPhone→Core→memory acceptance gate not configured" };
@@ -4034,7 +4038,7 @@ export class ProjectTaskLedger {
     const results = Object.fromEntries(gates.map((name) =>
       [name,name==="sqlite_decision"?{passed:true,taskId:id,
         revision:recorded!.revision,status:recorded!.status,
-        productApproval:"not_implied"}:this.gate(name, allowedPaths)]));
+        productApproval:"not_implied"}:this.gate(name, allowedPaths, id)]));
     const stableHead = git(this.root, ["rev-parse", "HEAD"]);
     let protectedEditsStable=true;
     try{this.checkPreservedOwnerEdits(task,preserved,lease.base_head);}
