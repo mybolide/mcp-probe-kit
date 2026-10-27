@@ -1037,12 +1037,32 @@ describe("project ledger and legacy migration", () => {
       "A prior Agent started implementation before scope review completed."))
       .toThrow(/Commit or revert local changes/);
     fs.rmSync(path.join(root,"tests/contracts/uncommitted.json"));
+    // Longstanding Owner edits can coexist with committed, in-scope work.
+    // They must not be stashed, reset, staged or silently dropped to obtain
+    // a scope review. A complete tracked SHA-256 manifest preserves them.
+    save("README.md","fixture\nowner pre-existing changes stay byte-identical\n");
+    const ownedBytes=fs.readFileSync(path.join(root,"README.md"));
+    const ownedHash=createRequire(import.meta.url)("node:crypto")
+      .createHash("sha256").update(ownedBytes).digest("hex") as string;
+    expect(()=>ledger!.pauseForScopeAmendment("WORK-102",brokenToken,
+      "Preserve the older authorized commit and the Owner's unrelated dirty file."))
+      .toThrow(/Commit or revert local changes/);
+    expect(()=>ledger!.pauseForScopeAmendment("WORK-102",brokenToken,
+      "Preserve the older authorized commit and the Owner's unrelated dirty file.",
+      [{path:"README.md",sha256:"0".repeat(64)}]))
+      .toThrow(/Preserved owner file changed/);
+    expect(()=>ledger!.pauseForScopeAmendment("WORK-102",brokenToken,
+      "Preserve the older authorized commit and the Owner's unrelated dirty file.",
+      []))
+      .toThrow(/Actual dirty files differ/);
     expect(()=>ledger!.release("WORK-102",brokenToken))
       .toThrow(/renew or reclaim/);
     const paused=ledger!.pauseForScopeAmendment("WORK-102",brokenToken,
-      "A necessary real integration file was excluded from the frozen task's scope.");
+      "A necessary real integration file was excluded from the frozen task's scope.",
+      [{path:"README.md",sha256:ownedHash}]);
     expect(paused).toMatchObject({status:"ready",paused:true,reviewRequired:true,
       originalBaseHead:beforePartial,changedFiles:["tests/contracts/partial-replay.json"]});
+    expect(fs.readFileSync(path.join(root,"README.md"))).toEqual(ownedBytes);
     expect(ledger!.get("WORK-102").status).toBe("ready");
     expect(()=>ledger!.claim("WORK-102","coding-agent"))
       .toThrow(/Scope amendment.*awaits independent review/);
@@ -1136,6 +1156,10 @@ describe("project ledger and legacy migration", () => {
       approvedBy:"test-owner",explicitAuthorization:true,
       reason:"Test-only fixture has confirmed that staging preserves the original file scope.",
     })).toMatchObject({withdrawn:true,executableScopeChanged:false});
+    // Restore a synthetic fixture edit before testing *unrelated* strict
+    // release; the pause above was already proven to preserve its bytes.
+    // This restoration happens in a disposable test repository only.
+    save("README.md","fixture\n");
     ledger!.release("WORK-101",prerequisite.leaseToken);
     // In the isolated test database the predecessor becomes Verified without
     // unrelated Git files, so the paused task's HEAD can be exactly restored.

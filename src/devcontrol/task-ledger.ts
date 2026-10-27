@@ -3683,7 +3683,8 @@ export class ProjectTaskLedger {
    * This only restores the task to Ready so genuine independent review and
    * exact Owner approval can proceed. It grants ZERO extra file permissions.
    */
-  pauseForScopeAmendment(id:string,token:string,reason:string):Row {
+  pauseForScopeAmendment(id:string,token:string,reason:string,
+    existingDirtyFiles?:{path:string;sha256:string}[]):Row {
     if(typeof reason!=="string"||reason.trim().length<20)
       fail("PAUSE_REASON_REQUIRED","Document why the claimed task must pause for a scoped amendment");
     return this.inTransaction(()=>{
@@ -3712,8 +3713,34 @@ export class ProjectTaskLedger {
         fail("TASK_EVIDENCE_EXISTS",
           "Resolve recorded completion/evidence/decisions before pausing; do not discard verified provenance");
       const head=git(this.root,["rev-parse","HEAD"]);
-      if(git(this.root,["status","--porcelain"]))
+      const dirtyStatus=git(this.root,["status","--porcelain"]);
+      if(dirtyStatus&&existingDirtyFiles===undefined)
         fail("DIRTY_WORKTREE","Commit or revert local changes before pausing");
+      if(existingDirtyFiles!==undefined){
+        // Reviewed scope alone grants ZERO authority to touch pre-existing
+        // Owner edits. An exact, immutable tracked-file manifest may preserve
+        // them without staging, stashing, resetting or changing the Git base.
+        if(git(this.root,["diff","--cached","--name-only"])||
+          git(this.root,["ls-files","--others","--exclude-standard"]))
+          fail("DIRTY_WORKTREE","No staged/untracked files allowed with owner-edit manifest");
+        if(!Array.isArray(existingDirtyFiles)||existingDirtyFiles.some(item=>
+          !item||typeof item.path!=="string"||typeof item.sha256!=="string"||
+          !/^[0-9a-f]{64}$/.test(item.sha256)||path.isAbsolute(item.path)||
+          item.path.split("/").includes("..")))
+          fail("DIRTY_MANIFEST_REQUIRED","Exact relative paths and SHA-256 hashes are required");
+        const actual=git(this.root,["diff","--name-only"]).split("\n")
+          .filter(Boolean).sort();
+        const declared=existingDirtyFiles.map(item=>item.path).sort();
+        if(JSON.stringify(actual)!==JSON.stringify(declared))
+          fail("DIRTY_MANIFEST_MISMATCH","Actual dirty files differ from preserved owner manifest");
+        for(const item of existingDirtyFiles){
+          const target=path.resolve(this.root,item.path);
+          if(!target.startsWith(this.root+path.sep)||!fs.existsSync(target)||
+            !fs.lstatSync(target).isFile()||
+            createHash("sha256").update(fs.readFileSync(target)).digest("hex")!==item.sha256)
+            fail("DIRTY_MANIFEST_MISMATCH","Preserved owner file changed since manifest capture");
+        }
+      }
       if(!run(this.root,"git",["merge-base","--is-ancestor",lease.base_head,head]).passed)
         fail("GIT_HISTORY_CHANGED","Original claimed base is not an ancestor of current HEAD");
       const files=changedFiles(this.root,lease.base_head);
@@ -3739,6 +3766,7 @@ export class ProjectTaskLedger {
         originalBaseHead:lease.base_head,pausedHead:head,
         changedFiles:files,reason:reason.trim(),
         originalLeaseAgent:lease.agent,
+        preservedDirtyFiles:existingDirtyFiles??[],
       });
       return {taskId:id,status:"ready",paused:true,reviewRequired:true,
         release:task.release,proposalHash:pending.proposal_hash,

@@ -180,7 +180,8 @@ export function dispatchDevControl(
     );
     case "release": return ledger.release(String(input.id), String(input.leaseToken));
     case "pause-for-scope": return ledger.pauseForScopeAmendment(
-      String(input.id),String(input.leaseToken),String(input.reason??""));
+      String(input.id),String(input.leaseToken),String(input.reason??""),
+      input.existingDirtyFiles);
     case "check": return ledger.checkStaged();
     case "report": return ledger.report(
       String(input.id), String(input.leaseToken),
