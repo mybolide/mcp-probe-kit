@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   CallToolResultSchema,
@@ -16,10 +17,11 @@ afterEach(async () => {
   await Promise.all(cleanup.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 
-describe("Legacy Task protocol integration", () => {
-  it("通过 tools/call 创建任务并从 tasks/result 取得等价工具结果", async () => {
+describe("v5 SQLite DevControl over Legacy Task transport", () => {
+  it("通过 tools/call 执行真实 Git 项目的 SQLite next 并从 tasks/result 读取一致结果", async () => {
     const projectRoot = await mkdtemp(join(tmpdir(), "mcp-probe-task-"));
     cleanup.push(projectRoot);
+    execFileSync("git", ["init", "-q", projectRoot], { timeout: 3000, windowsHide: true });
 
     const { server } = createProbeServer();
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -40,11 +42,11 @@ describe("Legacy Task protocol integration", () => {
         await client.request({
           method: "tools/call",
           params: {
-            name: "workflow",
+            name: "devcontrol",
             arguments: {
-              intent: "实现订单导出功能",
-              scenario: "feature",
+              action: "next",
               project_root: projectRoot,
+              input: {},
             },
             task: { ttl: 60_000 },
           },
@@ -63,11 +65,9 @@ describe("Legacy Task protocol integration", () => {
         } as never, CallToolResultSchema)
       );
       expect(result.isError ?? false).toBe(false);
-      expect(result.structuredContent).toMatchObject({
-        scenario: "feature",
-        firstTool: "start_feature",
-        firstToolArgsHint: { spec_layout: "auto" },
-      });
+      expect(result.structuredContent).toBeTruthy();
+      expect(JSON.stringify(result.structuredContent)).not.toContain("start_feature");
+      expect(JSON.stringify(result.structuredContent)).not.toContain("resume_plan");
     } finally {
       await client.close();
       await server.close();

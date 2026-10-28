@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { CallToolResultSchema } from "@modelcontextprotocol/core";
@@ -11,13 +12,19 @@ import { isMemoryEnabled } from "../../lib/memory-config.js";
 import { isHistorySessionEnabled } from "../../lib/history-session-config.js";
 
 function expectedCompactToolCount(): number {
-  let count = 24;
+  let count = 10;
   if (isHistorySessionEnabled()) count += 5;
   if (isMemoryEnabled()) count += 6;
   return count;
 }
 
 const cleanup: string[] = [];
+async function createGitProject(prefix: string): Promise<string> {
+  const project = await mkdtemp(join(tmpdir(), prefix));
+  cleanup.push(project);
+  execFileSync('git', ['init', '-q', project], { windowsHide: true, timeout: 3000 });
+  return project;
+}
 
 beforeEach(() => {
   vi.stubEnv('MCP_TOOLSET', 'compact');
@@ -39,8 +46,11 @@ describe("SDK v2 dual-era stdio", () => {
       const tools = await session.client.listTools();
       expect(tools.tools).toHaveLength(expectedCompactToolCount());
       expect(tools.tools.map((tool) => tool.name)).toEqual(
-        expect.arrayContaining(['plan_heartbeat', 'resume_plan', 'converge'])
+        expect.arrayContaining(['devcontrol', 'history_session_bootstrap', 'history_session_checkpoint'])
       );
+      for (const retired of ['start_feature', 'workflow', 'plan_heartbeat', 'resume_plan', 'converge']) {
+        expect(tools.tools.map((tool) => tool.name)).not.toContain(retired);
+      }
 
       const resources = await session.client.listResources();
       expect(resources.resources.map((resource) => resource.uri)).toContain(
@@ -68,12 +78,11 @@ describe("SDK v2 dual-era stdio", () => {
     }
   });
 
-  it("Modern 客户端通过 input_required 一次性补全需求并取得 steady plan", async () => {
+  it("Modern 客户端直接创建 v5 SQLite 需求草稿，不再生成旧 delegated plan", async () => {
     const session = await connectClient("auto", "modern", {
       elicitationAction: "accept",
     });
-    const projectRoot = await mkdtemp(join(tmpdir(), "mcp-input-modern-"));
-    cleanup.push(projectRoot);
+    const projectRoot = await createGitProject("mcp-input-modern-");
 
     try {
       const status = await session.client.readResource({ uri: "probe://status" });
@@ -86,115 +95,105 @@ describe("SDK v2 dual-era stdio", () => {
       );
 
       const result = await session.client.callTool({
-        name: "start_feature",
+        name: "devcontrol",
         arguments: {
-          feature_name: "user-auth",
-          description: "用户认证功能",
-          requirements_mode: "loop",
-          loop_question_budget: 2,
+          action: "feature-create",
           project_root: projectRoot,
+          input: { name: "user-auth", description: "用户认证功能" },
         },
       });
 
-      expect(session.elicitationCalls()).toBe(1);
+      expect(session.elicitationCalls()).toBe(0);
       expect(result.isError ?? false).toBe(false);
-      expect(result.structuredContent).not.toMatchObject({ mode: "loop" });
       expect(result.structuredContent).toMatchObject({
-        metadata: {
-          plan: {
-            workflow: "feature",
-            contractVersion: "2.0.0",
-          },
-        },
+        name: "user-auth", status: "draft", revision: 1,
       });
+      const stored = await session.client.callTool({ name: "devcontrol",
+        arguments: {action: "feature-get", project_root: projectRoot, input: {name: "user-auth"}} });
+      expect(stored.isError ?? false).toBe(false);
+      expect(stored.structuredContent).toMatchObject({name:"user-auth",revision:1});
     } finally {
       await session.close();
     }
   });
 
-  it("Legacy 客户端通过 SDK shim 完成同一 requirements loop", async () => {
+  it("Legacy 客户端通过兼容 SDK 创建相同的 v5 SQLite Feature", async () => {
     const session = await connectClient("auto", "legacy", {
       elicitationAction: "accept",
     });
-    const projectRoot = await mkdtemp(join(tmpdir(), "mcp-input-legacy-"));
-    cleanup.push(projectRoot);
+    const projectRoot = await createGitProject("mcp-input-legacy-");
 
     try {
       const result = await session.client.callTool({
-        name: "start_feature",
+        name: "devcontrol",
         arguments: {
-          feature_name: "user-auth",
-          description: "用户认证功能",
-          requirements_mode: "loop",
-          loop_question_budget: 2,
+          action: "feature-create",
           project_root: projectRoot,
+          input: {name:"user-auth",description:"用户认证功能"},
         },
       });
 
-      expect(session.elicitationCalls()).toBe(1);
+      expect(session.elicitationCalls()).toBe(0);
       expect(result.isError ?? false).toBe(false);
-      expect(result.structuredContent).not.toMatchObject({ mode: "loop" });
-      expect(result.structuredContent).toMatchObject({
-        metadata: { plan: { workflow: "feature" } },
-      });
+      expect(result.structuredContent).toMatchObject({name:"user-auth",revision:1,status:"draft"});
     } finally {
       await session.close();
     }
   });
 
-  it("未声明 elicitation 能力时保留结构化 loop 降级", async () => {
+  it("未声明 elicitation 能力时 v5 仍接受结构化 SQLite 需求及设计", async () => {
     const session = await connectClient("auto", "modern");
-    const projectRoot = await mkdtemp(join(tmpdir(), "mcp-input-fallback-"));
-    cleanup.push(projectRoot);
+    const projectRoot = await createGitProject("mcp-input-fallback-");
 
     try {
       const result = await session.client.callTool({
-        name: "start_feature",
+        name: "devcontrol",
         arguments: {
-          feature_name: "user-auth",
-          description: "用户认证功能",
-          requirements_mode: "loop",
-          loop_question_budget: 2,
+          action: "feature-create",
           project_root: projectRoot,
+          input: {name:"user-auth",description:"User sign-in with explicit credential validation"},
         },
       });
-
       expect(result.isError ?? false).toBe(false);
-      expect(result.structuredContent).toMatchObject({
-        mode: "loop",
-        stopConditions: { ready: false },
-      });
-      expect(
-        Array.isArray(
-          (result.structuredContent as Record<string, unknown>)?.openQuestions
-        )
-      ).toBe(true);
+      const save = await session.client.callTool({name:"devcontrol",arguments:{
+        action:"feature-save",project_root:projectRoot,input:{
+          name:"user-auth",architectureImpact:false,sections:{
+            requirements:"FR-1: Users can sign in with a validated credential.",
+            design:"Authentication handler returns explicit authorization errors and a session token.",
+            tasks:"Implement the single credential-validation outcome and verify rejected credentials.",
+          },
+        },
+      }});
+      expect(save.isError ?? false).toBe(false);
+      expect(save.structuredContent).toMatchObject({name:"user-auth",revision:2});
     } finally {
       await session.close();
     }
   });
 
-  it("用户拒绝需求澄清时返回明确错误，不继续生成计划", async () => {
+  it("即使 Host 拒绝 elicitation，v5 仍只接受显式输入，不会自动伪造需求", async () => {
     const session = await connectClient("auto", "modern", {
       elicitationAction: "decline",
     });
-    const projectRoot = await mkdtemp(join(tmpdir(), "mcp-input-decline-"));
-    cleanup.push(projectRoot);
+    const projectRoot = await createGitProject("mcp-input-decline-");
 
     try {
       const result = await session.client.callTool({
-        name: "start_feature",
+        name: "devcontrol",
         arguments: {
-          feature_name: "user-auth",
-          description: "用户认证功能",
-          requirements_mode: "loop",
+          action:"feature-create",
           project_root: projectRoot,
+          input:{name:"user-auth",description:"User sign-in draft awaiting full requirements"},
         },
       });
 
-      expect(session.elicitationCalls()).toBe(1);
-      expect(result.isError).toBe(true);
-      expect(JSON.stringify(result.content)).toContain("拒绝提供需求澄清信息");
+      expect(session.elicitationCalls()).toBe(0);
+      expect(result.isError ?? false).toBe(false);
+      expect(result.structuredContent).toMatchObject({status:"draft"});
+      const validate = await session.client.callTool({name:"devcontrol",arguments:{
+        action:"feature-validate",project_root:projectRoot,input:{name:"user-auth"},
+      }});
+      expect(validate.structuredContent).not.toMatchObject({passed:true});
     } finally {
       await session.close();
     }
@@ -202,8 +201,7 @@ describe("SDK v2 dual-era stdio", () => {
 
   it("auto 服务端接受 Legacy 客户端并保留 Task 兼容路径", async () => {
     const session = await connectClient("auto", "legacy");
-    const projectRoot = await mkdtemp(join(tmpdir(), "mcp-dual-legacy-"));
-    cleanup.push(projectRoot);
+    const projectRoot = await createGitProject("mcp-dual-legacy-");
 
     try {
       expect(session.client.getProtocolEra()).toBe("legacy");
@@ -215,11 +213,11 @@ describe("SDK v2 dual-era stdio", () => {
           {
             method: "tools/call",
             params: {
-              name: "workflow",
+              name: "devcontrol",
               arguments: {
-                intent: "实现订单导出功能",
-                scenario: "feature",
+                action:"next",
                 project_root: projectRoot,
+                input:{},
               },
               task: { ttl: 60_000 },
             },
@@ -235,8 +233,7 @@ describe("SDK v2 dual-era stdio", () => {
 
   it("Modern 客户端请求 Task 时同步降级并返回正常工具结果", async () => {
     const session = await connectClient("auto", "modern");
-    const projectRoot = await mkdtemp(join(tmpdir(), "mcp-dual-modern-"));
-    cleanup.push(projectRoot);
+    const projectRoot = await createGitProject("mcp-dual-modern-");
 
     try {
       const result = CallToolResultSchema.parse(
@@ -244,11 +241,11 @@ describe("SDK v2 dual-era stdio", () => {
           {
             method: "tools/call",
             params: {
-              name: "workflow",
+              name: "devcontrol",
               arguments: {
-                intent: "实现订单导出功能",
-                scenario: "feature",
+                action:"next",
                 project_root: projectRoot,
+                input:{},
               },
               task: { ttl: 60_000 },
             },
@@ -259,10 +256,8 @@ describe("SDK v2 dual-era stdio", () => {
 
       expect(result).not.toHaveProperty("task");
       expect(result.isError ?? false).toBe(false);
-      expect(result.structuredContent).toMatchObject({
-        firstTool: "start_feature",
-        firstToolArgsHint: { spec_layout: "auto" },
-      });
+      expect(result.structuredContent).toBeTruthy();
+      expect(JSON.stringify(result.structuredContent)).not.toContain("start_feature");
     } finally {
       await session.close();
     }

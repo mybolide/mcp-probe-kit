@@ -44,9 +44,41 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 
 - **History**：已具备把旧 `docs/history-session/N.md` 读入 `hs_*` 的逻辑，原文件保留；新的 History 只写 SQLite。`MCP_HISTORY_STORAGE=files|markdown`、自定义实时 History 目录均被拒绝。
 - **旧 Plan、Spec、Feature、Bug**：目前尚无经过验收的自动任务迁移器。不能把旧 Markdown 的“完成”直接改为新 SQLite 的 Verified 或 Owner 批准；后续迁移必须记录原始文件哈希、来源、风险、未运行 Gate 和待审状态。
-- **旧 MCP Apps**：v4 Delegated Plan/Feature/Bug/Converge 的界面尚未全部迁移到新 SQLite；不能把旧 UI 当成已适配 v5 的工作台。SQLite DevControl 项目工作台是权威状态视图。
+- **MCP Apps**：原 v4 Feature/Bug/Plan/Product/Convergence 文件工作台已从运行时移除。v5 仅暴露直接读取 SQLite DevControl 的只读项目工作台和独立 Memory Center；草稿不得被 UI 自动提升成已批准或可领取任务。
 - **备份和并发**：迁移/跨电脑恢复应使用一致性的 SQLite 备份，验证锁、租约及中断恢复，不能复制正在写入的 WAL/SHM 后声称备份完整。
 
 ## 当前研发阶段验收
 
-已落地：主 MCP `devcontrol` 查询真实项目 SQLite、对外禁用旧研发流程、History SQLite-only、Node22 门禁、生成的 Skill/AGENTS.md 采用 v5 唯一研发流程。**全量旧契约测试、跨机器迁移和旧 Apps 改造仍需完成**，不能称为已发布或生产可用。没有 Owner 独立发布批准，不创建 npm 5.0.0、Git Tag、Registry 版本或线上部署。
+已落地：主 MCP `devcontrol` 查询真实项目 SQLite、对外禁用旧研发流程、History SQLite-only、Node22 门禁、生成的 Skill/AGENTS.md 采用 v5 唯一研发流程；旧 App 资源已被两个 v5 App 取代。**2026-10-28 开发分支回归：622 项、618 通过、0 失败、4 跳过**，覆盖历史 Markdown 只读安全导入/冲突、SQLite 多会话、Modern/Legacy Host 与 v5 Task 协议。尚未完成旧 Plan/Spec/Feature/Bug 的完整安全迁移器、跨机器数据库备份/恢复及真实 Windows 主机验收，不能将它当作已发布版本。没有 Owner 独立发布批准，不创建 npm 5.0.0、Git Tag、Registry 版本或线上部署。
+
+## v5 对外能力清单（按源码工具 Registry 维护）
+
+**主 MCP：24 个活跃模型工具**；默认 compact 使用其中 15 个（10 基础 + 5 History），按配置附加 Memory 后 21 个，full 24 个。另有 **1 个 MCP App-only 工具** `list_memory_assets`，不会以模型工具身份暴露。对外工具的数量不等于 DevControl 的业务操作数量。
+
+| 领域 | MCP 工具 |
+|---|---|
+| 研发管理（唯一正式状态） | `devcontrol` |
+| Git、代码和审核辅助 | `gencommit`、`git_work_report`、`code_review`、`code_insight`、`architecture`、`gentest`、`refactor`、`fix_bug` |
+| 人机交互与 UI 辅助 | `ask_user`、`ui_design_system`、`ui_search`、`sync_ui_data` |
+| SQLite History | `history_session_bootstrap`、`history_session_checkpoint`、`history_session_validate`、`history_session_search`、`history_session_read` |
+| 可选跨项目 Memory | `search_memory`、`read_memory_asset`、`memorize_asset`、`update_memory_asset`、`delete_memory_asset`、`scan_and_extract_patterns` |
+
+**`devcontrol` 统一入口：73 个受控 `action`。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
+
+| 流程领域 | 可用 `action` |
+|---|---|
+| 项目/任务读取（6） | `onboard`、`next`、`list`、`get`、`execution-contract`、`task-detail-audit` |
+| 版本计划与审批（5） | `release-plan`、`plan-review`、`plan-propose`、`plan-revise`、`plan-approve` |
+| 正式工作树（4） | `release-work-plan`、`release-work-review`、`release-work-stage`、`release-work-approve` |
+| 范围变更（7） | `release-work-scope-review`、`release-work-scope-stage`、`release-work-scope-get`、`release-work-scope-independent-review`、`release-work-scope-approve`、`release-work-scope-withdraw`、`pause-for-scope` |
+| 冻结后增量任务（7） | `release-work-incremental-review`、`release-work-incremental-stage`、`release-work-incremental-get`、`release-work-incremental-independent-review`、`release-work-incremental-approve`、`release-work-incremental-withdraw`、`pause-for-reviewed-incremental` |
+| Feature：需求→设计→任务（13） | `features`、`feature-get`、`feature-create`、`feature-save`、`feature-validate`、`feature-export`、`feature-task-brief`、`feature-task-plan`、`feature-task-plans`、`feature-task-review`、`feature-task-stage`、`feature-task-propose`、`feature-task-approve` |
+| 正式工作项与架构（3） | `work-items`、`work-record`、`architecture-sync` |
+| Bug（3） | `bug-get`、`bug-step-save`、`bug-task-link` |
+| Idea（6） | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-review`、`idea-decide` |
+| 架构工件治理（5） | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-independent-review`、`artifact-approve` |
+| 领取、执行、证据与验收（9） | `claim`、`renew`、`release`、`check`、`report`、`gate-review`、`complete`、`verify`、`trace` |
+| 决策记录（2） | `decision-save`、`decision-get` |
+| 本地开发与钩子（3） | `local-developer`、`hook-status`、`hook-install` |
+
+以上分组中的数字仅用于阅读，不影响正式任务批准。DevControl 管理过程和证据，不运行 Python/Go/gRPC/Flutter 等项目业务测试；外部测试结论必须由 Agent 真实执行并独立复审记录。**原子任务只允许一个可独立验收结果**，宽泛目标必须先拆解。

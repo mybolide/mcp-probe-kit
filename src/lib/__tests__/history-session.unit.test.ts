@@ -13,6 +13,8 @@ import {
   validateHistorySession,
 } from '../history-session/index.js';
 import { resolveToolsetNames } from '../toolset-manager.js';
+import { readSqliteHistoryDocuments, writeSqliteHistoryDocument } from '../history-session/sqlite-store.js';
+import { appendCheckpointRecord, checkpointFromArgs, initialInputFingerprint, renderDocument } from '../history-session/markdown.js';
 
 const tmpRoots: string[] = [];
 const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as {
@@ -25,7 +27,34 @@ const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as {
 function tempProject(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'history-session-'));
   tmpRoots.push(root);
+  execFileSync('git', ['init', '-q'], { cwd: root, timeout: 3000, windowsHide: true });
   return root;
+}
+
+const legacyTimestamp = '2025-01-01T00:00:00.000Z';
+function legacyDocument(number: number, key: string, input: string): string {
+  return renderDocument(number, '历史导入来源', key, legacyTimestamp, {
+    raw_user_input: input, captured_at: legacyTimestamp,
+    revision: 1, content_hash: initialInputFingerprint(input),
+  });
+}
+function legacyFile(root: string, number: number, content: string): string {
+  const file = path.join(root, 'docs', 'history-session', number + '.md');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, content, 'utf8');
+  return file;
+}
+function legacyAppend(content: string, input: string, turnId: string): string {
+  const record = checkpointFromArgs({
+    turn_id: turnId, raw_user_input: input,
+  }, '2025-01-02T00:00:00.000Z');
+  record.revision = 1;
+  return appendCheckpointRecord(content, record);
+}
+function sqliteContent(root: string, number: number): string {
+  const found = readSqliteHistoryDocuments(root).find((doc) => doc.number === number);
+  if (!found) throw new Error('Missing SQLite archive ' + number);
+  return found.content;
 }
 
 afterEach(() => {
@@ -72,14 +101,7 @@ describe('history-session service', () => {
 
   it('imports historical numbered Markdown into SQLite without deleting originals or duplicating archives', () => {
     const root = tempProject();
-    execFileSync('git', ['init','-q'], { cwd: root });
-    const original = bootstrapHistorySession(root, {
-      session_key: 'old-session', title: 'Old archive', initial_user_input: 'legacy text',
-      history_dir: 'legacy-history', // old file-based archive for controlled import
-    });
-    const legacyFile = path.join(root, 'docs/history-session/1.md');
-    fs.mkdirSync(path.dirname(legacyFile),{recursive:true});
-    fs.copyFileSync(path.join(root,String(original.current_path)),legacyFile);
+    const sourceFile = legacyFile(root, 1, legacyDocument(1, 'old-session', 'legacy text'));
     const boot = bootstrapHistorySession(root, {
       session_key: 'old-session',
     });
@@ -90,7 +112,7 @@ describe('history-session service', () => {
       turn_id: 'later', raw_user_input: 'now stored inside SQLite',
     });
     expect(change.ok).toBe(true);
-    expect(fs.readFileSync(legacyFile,'utf8')).not.toContain('now stored inside SQLite');
+    expect(fs.readFileSync(sourceFile,'utf8')).not.toContain('now stored inside SQLite');
     const current = readHistorySession(root,{number:1});
     expect(current.content).toContain('now stored inside SQLite');
     const second = bootstrapHistorySession(root,{ session_key: 'new-session' });
@@ -100,33 +122,15 @@ describe('history-session service', () => {
 
   it('continues importing numbered files written after the initial migration by an older host', () => {
     const root=tempProject();
-    execFileSync('git',['init','-q'],{cwd:root});
-    const sourceDir=path.join(root,'legacy-history');
-    const legacy=bootstrapHistorySession(root,{
-      session_key:'old-host-1', initial_user_input:'first session',
-      history_dir:'legacy-history',
-    });
-    const projectDir=path.join(root,'docs/history-session');
-    fs.mkdirSync(projectDir,{recursive:true});
-    fs.copyFileSync(path.join(root,legacy.current_path as string),path.join(projectDir,'1.md'));
-    // Migrates 1.md and permanently sets the legacy_import_done marker.
+    const original = legacyDocument(1, 'old-host-1', 'first session');
+    const file1 = legacyFile(root, 1, original);
+    // The first read imports only 1.md, without replacing the source.
     expect(searchHistorySession(root,{}).total).toBe(1);
-    checkpointHistorySession(root,{
-      session_key:'old-host-1', expected_path:legacy.current_path,
-      history_dir:'legacy-history', raw_user_input:'later first session checkpoint',
-    });
-    fs.copyFileSync(path.join(sourceDir,'1.md'),path.join(projectDir,'1.md'));
-    const second=bootstrapHistorySession(root,{
-      session_key:'old-host-2',initial_user_input:'second session',
-      history_dir:'legacy-history',
-    });
-    const third=bootstrapHistorySession(root,{
-      session_key:'old-host-3',initial_user_input:'third session',
-      history_dir:'legacy-history',
-    });
-    fs.copyFileSync(path.join(root,second.current_path as string),path.join(projectDir,'2.md'));
-    fs.copyFileSync(path.join(root,third.current_path as string),path.join(projectDir,'3.md'));
-    // The old host's extra files must become discoverable with no restart.
+    legacyFile(root, 1, legacyAppend(original, 'later first session checkpoint', 'old-1'));
+    legacyFile(root, 2, legacyDocument(2, 'old-host-2', 'second session'));
+    legacyFile(root, 3, legacyDocument(3, 'old-host-3', 'third session'));
+    // A still-running older host can append archived Markdown; v5 imports it
+    // as READ-ONLY source without reenabling the forbidden file workflow.
     const listing=searchHistorySession(root,{});
     expect(listing.total).toBe(3);
     expect((listing.results as Array<{number:number}>).map((x)=>x.number)).toEqual([3,2,1]);
@@ -137,31 +141,20 @@ describe('history-session service', () => {
     }finally{db.close();}
     // Re-reading does not create duplicate records or alter the original files.
     expect(searchHistorySession(root,{}).total).toBe(3);
-    expect(fs.existsSync(path.join(projectDir,'3.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root,'docs/history-session/3.md'))).toBe(true);
+    expect(fs.readFileSync(file1,'utf8')).toContain('later first session checkpoint');
   });
 
   it('never replaces a newer SQLite checkpoint with divergent old-host Markdown', () => {
     const root=tempProject();
-    execFileSync('git',['init','-q'],{cwd:root});
-    const legacy=bootstrapHistorySession(root,{
-      session_key:'split-writer', initial_user_input:'original source',
-      history_dir:'legacy-history',
-    });
-    const historyDir=path.join(root,'docs/history-session');
-    fs.mkdirSync(historyDir,{recursive:true});
-    const file=path.join(historyDir,'1.md');
-    fs.copyFileSync(path.join(root,legacy.current_path as string),file);
+    const original = legacyDocument(1, 'split-writer', 'original source');
+    const file = legacyFile(root, 1, original);
     const current=bootstrapHistorySession(root,{session_key:'split-writer'});
     checkpointHistorySession(root,{
       session_key:'split-writer',expected_path:current.current_path,
       raw_user_input:'SQLite-owned checkpoint',turn_id:'sql-writer',
     });
-    checkpointHistorySession(root,{
-      session_key:'split-writer',expected_path:legacy.current_path,
-      history_dir:'legacy-history',raw_user_input:'divergent old-file checkpoint',
-      turn_id:'old-writer',
-    });
-    fs.copyFileSync(path.join(root,legacy.current_path as string),file);
+    fs.writeFileSync(file, legacyAppend(original, 'divergent old-file checkpoint', 'old-writer'));
     fs.utimesSync(file,new Date(Date.now()+5_000),new Date(Date.now()+5_000));
     const currentSqlite=readHistorySession(root,{number:1});
     expect(currentSqlite.content).toContain('SQLite-owned checkpoint');
@@ -233,8 +226,8 @@ describe('history-session service', () => {
       findings: ['发布流程'],
     });
 
-    const bugText = fs.readFileSync(path.join(root, String(bug.current_path)), 'utf8');
-    const releaseText = fs.readFileSync(path.join(root, String(release.current_path)), 'utf8');
+    const bugText = sqliteContent(root, Number(bug.current_number));
+    const releaseText = sqliteContent(root, Number(release.current_number));
     expect(bugText).toContain('修串台');
     expect(bugText).not.toContain('发 4.1.0');
     expect(releaseText).toContain('发 4.1.0');
@@ -261,9 +254,8 @@ describe('history-session service', () => {
       session_key: 'rotate-me',
       initial_user_input: 'seed',
     });
-    const archivePath = path.join(root, String(boot.current_path));
-    const padded = `${fs.readFileSync(archivePath, 'utf8')}${'\nline\n'.repeat(50)}`;
-    fs.writeFileSync(archivePath, padded, 'utf8');
+    const padded = `${sqliteContent(root, Number(boot.current_number))}${'\nline\n'.repeat(50)}`;
+    writeSqliteHistoryDocument(root, Number(boot.current_number), padded);
 
     const result = checkpointHistorySession(
       root,
@@ -282,19 +274,17 @@ describe('history-session service', () => {
     expect(result.expected_path).not.toBe(boot.current_path);
     expect(result.ok).toBe(true);
 
-    const sealed = fs.readFileSync(archivePath, 'utf8');
+    const sealed = sqliteContent(root, Number(boot.current_number));
     expect(sealed).toContain('**Status:** sealed');
 
-    const rotatedPath = path.join(root, String(result.current_path));
-    const rotated = fs.readFileSync(rotatedPath, 'utf8');
+    const rotated = sqliteContent(root, Number(result.current_number));
     expect(rotated).toContain('**Status:** active');
     expect(rotated).toContain('"raw_user_input": "seed"');
     expect(rotated).not.toContain('未提供首次用户输入');
 
-    const state = JSON.parse(
-      fs.readFileSync(path.join(root, 'docs/history-session/memory/state.json'), 'utf8'),
-    );
-    expect(state.current_session.number).toBe(result.current_number);
+    const resumed = bootstrapHistorySession(root, { session_key: 'rotate-me' });
+    expect((resumed.state as { current_session: { number: number } }).current_session.number)
+      .toBe(result.current_number);
   });
 
   it('ignores duplicate checkpoints with the same fingerprint', () => {
