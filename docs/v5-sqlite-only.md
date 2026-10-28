@@ -14,6 +14,22 @@
 
 **Node.js 22+ 与 Git 项目根目录是 v5 的强制前提。** 新项目数据库位于 `.mcp-probe-kit/state/devcontrol.sqlite3`；已有 Neyna 项目保留 `.neyna/state/devcontrol.sqlite3`。数据库、WAL、SHM、活跃租约与机密不能提交 Git。
 
+## 启动检查与 Agent 指引自动同步
+
+MCP 每次启动时，若能识别真实 Git 业务项目，就检查
+`.agents/skills/mcp-probe-kit/SKILL.md` 和 `AGENTS.md` 中的 MCP
+托管区；内容缺失、版本过旧，或者**同为 v5.0.0 但指导修订号过期**
+都会自动同步。启动无法定位项目时，不向 MCP 安装目录写入文件；
+首次 `devcontrol` 调用传入明确的 `project_root` 后补做检查。
+
+Skill 自动生成源码定义的 73 个 DevControl 操作索引，以及需求→设计→
+原子任务、独立审批、外部 Gate 证据、SQLite History 的执行规范。
+AGENTS.md 提供简短入口，**只更新受管理的 MCP 区块**，保留项目其他
+自定义规则。同版本、同修订内容重复启动不改写文件；旧 MCP 不降级
+覆盖更高版本指导。可通过本地 `probe status` 与
+`probe install-agent --project-root /ABSOLUTE/GIT/PROJECT` 诊断、
+修复，不需要自动从公网下载未发布的 v5。
+
 ## 主 MCP 唯一任务入口
 
 主 MCP 提供 `devcontrol`，入参为 `{action, project_root, input}`。`project_root` 是要开发的**业务 Git 项目**，并非 MCP 自己的源码仓库：

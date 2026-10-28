@@ -2,12 +2,29 @@
  * Canonical agent-facing guidance for the breaking v5 SQLite-only workflow.
  * Keep the full DevControl task schema in SQLite; no parallel Markdown Plans.
  */
+import { V5_DEVC_ACTIONS } from '../devcontrol/action-catalog.js';
+import { renderV5DevControlActionReference } from './v5-agent-action-reference.js';
+import { SKILL_GUIDANCE_MARKER, SKILL_GUIDANCE_REVISION } from './workflow-skill-version.js';
+
 export function renderV5Skill(version: string): string {
   return `# MCP Probe Kit v5 — SQLite + DevControl
 
 > Version ${version}, source development. **Breaking change:** v4 file-backed Spec,
 > Delegated Plan, Heartbeat, Resume, Converge and start_* workflows are **not
 > supported**. Never suggest a hidden v4 operation or a Markdown state fallback.
+
+## On every MCP startup and new Agent conversation
+
+- v5 checks the target Git project for its managed Skill and AGENTS.md
+  section at startup and before each project tool call. It refreshes stale
+  guidance **even when the installed package is still version 5.0.0**.
+  If the project was unknown at startup, pass the correct explicit
+  project_root on the first tool call, never the MCP installation path.
+- Read the synchronized Skill and user-written AGENTS.md rules before work.
+  For mismatches run local probe status and probe install-agent
+  --project-root /ABSOLUTE/GIT/PROJECT; do not fetch unpublished v5 from
+  npm or silently downgrade to v4.
+- Resume SQLite History and frozen DevControl task state BEFORE planning.
 
 ## The only project-development workflow
 
@@ -57,6 +74,8 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    decisions, paths, tests, Git/lease state, blockers and next actions using
    \`history_session_checkpoint\`. Search/read earlier History on demand.
 
+${renderV5DevControlActionReference()}
+
 ## Storage, migration and security
 
 - SQLite \`dc_*\` is the **only** authority for project process state.
@@ -90,6 +109,7 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
 }
 
 export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): string {
+  const managedRevision = `<!-- ${SKILL_GUIDANCE_MARKER}: ${SKILL_GUIDANCE_REVISION} -->`;
   if (locale === 'zh-CN') {
     return `## MCP（必须先调）
 
@@ -97,11 +117,16 @@ export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): st
 
 ${skillRef}
 
+${managedRevision}
+
+- **启动文档自检**：MCP 每次启动检查目标 Git 项目的 Skill、AGENTS.md 托管区；即使版本仍是 5.0.0，指导修订过期也必须同步。若启动时无法找到项目，首次调用显式传入正确的 \`project_root\`；不得写入 MCP 安装目录。Agent 每轮先阅读最新 Skill 与项目自定义规则，可用本地 \`probe status\` / \`probe install-agent --project-root /ABSOLUTE/GIT/PROJECT\` 核对。
+- **管理操作**：当前 24 个模型工具，唯一正式研发入口 \`devcontrol\` 提供 ${V5_DEVC_ACTIONS.length} 个 SQLite action，完整分组见 Skill 的 DevControl operation reference；不要将 action 当作独立 MCP 工具。
 - **必须先恢复**：新对话先 \`history_session_bootstrap\`（Git/Node22+ 项目唯一实时 History = SQLite \`hs_*\`），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
 - **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码/正式 PRD/ADR/API/Schema 仍归 Git，业务数据库独立。
 - **逐任务闭环**：Agent 独立审查需求，\`plan-review\` → \`plan-propose\` → 精确 Hash 的 Owner 批准 \`plan-approve\`；然后 \`claim\` → 真正编码、审查、测试与合法 Git 提交 → \`complete\` / \`report\` / \`verify\`。DevControl 只是管控与证据门禁，不替 Agent 编码/跑 SQL/独立审核。
 - **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；再 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\`，最终由独立复审及精确 Hash 的 Owner \`feature-task-approve\`。草稿父子任务应可见但不能执行；FR-1 与 FR-001 统一关联并保留原文。
 - **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新增 Feature 叶子不超过 4 小时，过大必须拆分。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
+- **外部真实测试**：Python/Go/Flutter/gRPC 业务测试由 Agent 实际运行，DevControl 只记录计划要求、证据和独立 Reviewer 的结果。外部 Gate 用 gate-review 留痕，证据存在不代表测试通过，也不能自动 verify。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
 - **会话结束**：\`history_session_checkpoint\` 记录用户原话、发现、决策、改动、真实测试、分支/租约、阻碍及下一步。保留用户未提交修改，真机/真实数据库 Gate 缺失就报告未通过。
@@ -115,8 +140,26 @@ ${skillRef}
 
 ${skillRef}
 
+${managedRevision}
+
 - Bootstrap project SQLite History (\`hs_*\`) and inspect Git/DevControl
   \`onboard\`, \`next\`, \`execution-contract\` before work.
+- On every MCP startup, check the target Git project's managed Skill and
+  AGENTS.md block for package version AND guidance revision; auto-sync
+  stale guidance even when the installed version is still 5.0.0.
+  When project root is unknown, pass explicit project_root on the first
+  call; never update the MCP installation folder. Read the synced Skill
+  and user rules; use local probe status / probe install-agent to inspect.
+- The sole official management tool is devcontrol, with
+  ${V5_DEVC_ACTIONS.length} source-derived SQLite actions. Read the full
+  DevControl operation reference in the Skill; never use retired v4 names.
+- Requirements → design → atomic tasks: feature-create, feature-save,
+  feature-validate, feature-task-brief/review/stage/propose, independent
+  review and exact Owner feature-task-approve. Unapproved children remain
+  visible but are not executable. Each leaf has a single verifiable goal,
+  exact files, dependencies, positive/negative tests and stop conditions.
+- Agents run real Python/Go/Flutter/gRPC project tests; DevControl records
+  reported evidence and independently reviewed gate-review results only.
 - Plan/review/propose, obtain exact hash-bound Owner approval; claim an
   approved task, independently implement/review/run genuine tests, commit
   approved paths, complete/report/verify via the main MCP \`devcontrol\`.
