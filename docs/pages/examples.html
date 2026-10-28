@@ -122,6 +122,20 @@
                 </div>
             </div>
 
+            <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+                <p class="text-xs font-semibold text-primary">5.0.0 · Unpublished source development</p>
+                <h2 class="mt-2 text-lg sm:text-xl font-semibold">v5 开发流程以 DevControl 正式任务合同为准</h2>
+                <p class="mt-3 text-sm leading-7 text-text-secondary">下面原有的 v4 工具编排示例仍用于了解 start_product、start_feature、start_bugfix 和 MCP Apps。v5 开发分支新增项目级任务生命周期，不会因为调用了工作流工具就自动获得修改项目的权限。</p>
+                <ol class="mt-3 list-decimal pl-5 space-y-2 text-sm leading-6 text-text-secondary">
+                    <li>读取原始需求和架构，运行 <code>devcontrol onboard</code> / <code>next</code>，先检查已有任务与依赖。</li>
+                    <li>新计划依次进行 <code>plan-review</code>、<code>plan-propose</code> 和 Owner 明确批准的 <code>plan-approve</code>。未经批准的草稿不可执行。</li>
+                    <li>对获准任务查询 <code>execution-contract</code>，使用 <code>claim</code> 领取租约；Agent 在允许文件范围内自行开发、独立复核和真实测试。</li>
+                    <li>合法 Git 提交后，用 <code>complete</code> / <code>report</code> 保存证据，再由 <code>verify</code> 执行规定的真实 Gate。不能以模拟测试或一次提交代替 Verified。</li>
+                    <li>新的 Idea、Bug 或冻结范围变更先评估和独立审查；跨会话恢复使用项目 SQLite History Session，而不是可选的 Qdrant Memory。</li>
+                </ol>
+                <p class="mt-3 text-sm leading-7 text-text-secondary">5.0.0 仅限从当前开发分支构建，npm 稳定安装版本仍为 4.1.1。<a href="./v5-development.html" class="font-semibold text-primary underline">v5 使用入口</a> · <a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-development-guide.md" class="font-semibold text-primary underline">完整命令与新特性参考</a></p>
+            </section>
+
             <!-- 研发流程概览 -->
             <section class="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
                 <h2 class="text-lg sm:text-xl font-semibold text-text-primary mb-4" data-i18n="examples.overview.title">完整研发流程</h2>
@@ -174,16 +188,16 @@ product_type: "Education"
                         <span>📄</span>
                         <span data-i18n="examples.stage0.prd.title">0.2 单独生成 PRD 文档</span>
                     </h3>
-                    <p class="text-text-secondary text-sm pl-7 mb-3"><span data-i18n="examples.stage0.prd.description">使用</span> <code class="bg-gray-200 px-1 rounded text-xs">gen_prd</code> <span data-i18n="examples.stage0.prd.description2">工具单独生成产品需求文档。</span></p>
+                    <p class="text-text-secondary text-sm pl-7 mb-3">当前工具面不提供独立 <code class="bg-gray-200 px-1 rounded text-xs">gen_prd</code> MCP 工具。可由 Agent 基于已审核的需求直接维护 PRD，或通过 <code>start_product</code> 编排完整产品设计工作流；在 v5 冻结任务内修改仍须遵守文件范围与实际验收。</p>
                     <div class="bg-slate-900 rounded-lg overflow-hidden ml-7">
                         <div class="flex items-center justify-between px-3 py-2 bg-slate-800">
                             <span class="text-xs text-slate-300 font-medium" data-i18n="examples.common.bestPractice">最佳实践</span>
                         </div>
                         <pre class="code-block p-4 text-sm text-slate-200 overflow-x-auto"><code><span data-i18n="examples.stage0.prd.example1">你: 生成一个在线教育平台的 PRD</span>
 
-AI: 使用 gen_prd 工具
-description: "<span data-i18n="examples.stage0.prd.description3">在线教育平台，支持课程管理、视频播放、作业提交</span>"
-product_name: "EduPlatform"
+AI: 审核现有需求后维护 PRD 文档，或调用 start_product 编排完整产品设计
+产品目标: "<span data-i18n="examples.stage0.prd.description3">在线教育平台，支持课程管理、视频播放、作业提交</span>"
+产品名称: "EduPlatform"
 
 <span data-i18n="examples.stage0.prd.aiCreate">→ AI 根据指导创建 docs/prd/product-requirements.md</span>
 

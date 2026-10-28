@@ -111,8 +111,8 @@
   <main>
     <section class="border-b border-line bg-white">
       <div class="mx-auto grid max-w-[1200px] grid-cols-2 px-4 py-7 sm:px-6 md:grid-cols-4">
-        <div class="border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">24</strong><span class="text-xs text-subtle" data-i18n="stats.tools">默认模型工具</span></div>
-        <div class="md:border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">30</strong><span class="text-xs text-subtle" data-i18n="stats.memory">配置 Memory 后</span></div>
+        <div class="border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">29</strong><span class="text-xs text-subtle" data-i18n="stats.tools">默认模型工具（含 History）</span></div>
+        <div class="md:border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">35</strong><span class="text-xs text-subtle" data-i18n="stats.memory">配置 Memory 后</span></div>
         <div class="border-r border-line px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">5</strong><span class="text-xs text-subtle" data-i18n="stats.apps">原生 MCP Apps</span></div>
         <div class="px-4 py-2 text-center"><strong class="block text-3xl tracking-tight">3</strong><span class="text-xs text-subtle" data-i18n="stats.platforms">Sidecar 平台</span></div>
       </div>
@@ -149,6 +149,20 @@
           </picture>
           <div class="p-5"><h3 class="text-lg font-semibold" data-i18n="showcase.gateTitle">Convergence Gate</h3><p class="mt-1 text-sm leading-6 text-muted" data-i18n="showcase.gateDesc">缺步骤、缺测试或缺审查证据时拒绝收尾，通过后才允许长期记忆写入。</p></div>
         </article>
+      </div>
+    </section>
+
+    <section class="border-y border-line bg-white">
+      <div class="mx-auto max-w-[1200px] px-4 py-14 sm:px-6">
+        <p class="text-xs font-semibold uppercase tracking-[.16em] text-accent">5.0.0 · Unpublished source milestone</p>
+        <h2 class="mt-3 text-2xl font-semibold tracking-[-.03em] sm:text-3xl">v5 新能力：从 Agent 工作流到完整项目研发管理</h2>
+        <p class="mt-3 max-w-4xl text-sm leading-7 text-muted">v4.1.1 仍是 npm 稳定版。当前开发分支新增 DevControl 项目 SQLite 账本、整版计划评审与 Owner 批准、冻结任务执行合同、真实测试 Gate、Idea/Bug/Feature 管理、架构工件审批和跨会话 SQLite History。Agent 仍负责独立审查、编码与测试，DevControl 负责状态和范围约束。</p>
+        <div class="mt-7 grid gap-4 md:grid-cols-3">
+          <article class="rounded-xl border border-line p-5"><h3 class="font-semibold">审批后的任务才能执行</h3><p class="mt-2 text-sm leading-6 text-muted">plan-review、plan-propose 和 plan-approve 区分草稿与批准计划；claim、complete、report 和 verify 记录实际交付证据。</p></article>
+          <article class="rounded-xl border border-line p-5"><h3 class="font-semibold">变更必须复审</h3><p class="mt-2 text-sm leading-6 text-muted">新想法先评估，再安排；范围增量、架构工件和冻结任务变更需对应的独立审查与 Owner 授权。</p></article>
+          <article class="rounded-xl border border-line p-5"><h3 class="font-semibold">项目本地持久化</h3><p class="mt-2 text-sm leading-6 text-muted">任务状态使用 dc_* SQLite 表，History Session 在 Node.js 22+ Git 项目使用 hs_* 表；可选 Qdrant Memory 不代替两者。</p></article>
+        </div>
+        <a href="./pages/v5-development.html" class="mt-6 inline-flex font-semibold text-accent underline">查看当前分支 v5 功能与源码安装指南</a>
       </div>
     </section>
 

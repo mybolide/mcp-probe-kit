@@ -1,5 +1,7 @@
 # MCP Probe Kit Delivery System V1 — Implementation Progress
 
+> **Historical v4/V1 progress record.** The completed phases and old baseline counts below describe the earlier delivery-system implementation, not a v5 project-level DevControl release sign-off. Current unpublished v5 behavior, including project-local SQLite History and approved-task governance, is documented in [the v5 guide](../v5-development-guide.md) and [DevControl reference](../devcontrol.md). Do not use this historical progress table to claim that v5 device, platform or release gates passed.
+
 This file tracks implementation status separately from the frozen requirements document.
 
 > **Current surface (post History Session):** Compact+History 29, Compact+History+Memory 35, Full 39, Apps model-visible 35, App-only 1, unique callable names 40. Base compact without History remains 24. Phase 0 counts below are the historical pre-`architecture` compatibility baseline, not the current tool surface.

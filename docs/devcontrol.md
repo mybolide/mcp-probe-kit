@@ -1,5 +1,7 @@
 # DevControl — MCP Probe Kit 5.0.0 source-development reference
 
+> **Current branch contract:** This document describes implemented project governance in the unpublished 5.0.0 feature branch. Dated Neyna V0.1 observations and original migration decisions below are historical examples, not default plans for another project or evidence of release acceptance. For a complete source install, read the [v5 guide](v5-development-guide.md); v4/V1 frozen specs remain historical baselines.
+
 > **Availability:** This page documents the **unpublished 5.0.0 development
 > branch**, not the npm `latest` / published 4.1.1 installation. Follow the
 > [5.0.0 source installation and migration guide](v5-development-guide.md).

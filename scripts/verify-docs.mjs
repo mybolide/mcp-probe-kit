@@ -185,7 +185,12 @@ for (const phrase of [
 }
 check(v5Guide.includes('not published') || v5Guide.includes('unpublished'), 'v5 guide does not claim publication');
 check(v5Page.includes('5.0.0') && v5Page.includes('v5-development-guide.md'), 'v5 website landing links complete source guide');
+for (const phrase of ['plan-review', 'plan-propose', 'plan-approve', 'execution-contract', 'claim', 'complete', 'report', 'verify', 'SQLite', 'Idea', 'Bug']) {
+  check(v5Page.includes(phrase), `v5 landing explains source capability ${phrase}`);
+}
 check(v5Devcontrol.includes('v5-development-guide.md'), 'DevControl reference points to current source guide');
+check(read('docs/mcp-probe-kit-delivery-system-v1.md').includes('v5-development-guide.md'), 'frozen v4/V1 baseline distinguishes later v5 source behavior');
+check(read('docs/implementation/delivery-system-v1-progress.md').includes('../v5-development-guide.md'), 'historical V1 implementation progress does not claim v5 release acceptance');
 for (const page of ['docs/index.html', 'docs/pages/getting-started.html', 'docs/pages/all-tools.html', 'docs/pages/migration-v4.html']) {
   check(read(page).includes('v5-development.html'), `${page} links to the 5.0.0 source guide`);
 }
@@ -276,11 +281,17 @@ check(legacyMigration.includes('url=./migration-v4.html'), 'legacy migration URL
 check(!legacyMigration.includes('30 个工具'), 'legacy migration URL no longer serves obsolete tool counts');
 
 const homepage = read('docs/index.html');
+check(/tracking-tight">29<\/strong>/.test(homepage) && /tracking-tight">35<\/strong>/.test(homepage), 'homepage displays actual 29 default / 35 Memory model tools');
+check(homepage.includes('v5 新能力') && homepage.includes('plan-approve'), 'homepage includes concrete new v5 project-governance capabilities');
 check(homepage.includes('.demo-frame { display: block; width: 100%; height: auto; object-fit: contain;'), 'homepage preserves GIF natural proportions');
 check(!homepage.includes('aspect-ratio: 1180 /'), 'homepage does not force legacy GIF aspect ratios');
 check(homepage.includes('class="mt-10 grid items-start gap-6"'), 'homepage presents each readable demo at full width');
 check((homepage.match(/-mobile\.gif/g) ?? []).length >= 4, 'homepage serves responsive mobile GIF variants');
 const appsPage = read('docs/pages/apps.html');
+check(appsPage.includes('v5 源码开发版说明') && appsPage.includes('v5-development.html'), 'MCP Apps documentation distinguishes retained v4 Apps from v5 DevControl');
+const examplesPage = read('docs/pages/examples.html');
+check(examplesPage.includes('v5 开发流程以 DevControl') && examplesPage.includes('v5-development.html'), 'best practices distinguish v5 governance from v4 workflow examples');
+check(!examplesPage.includes('AI: 使用 gen_prd 工具'), 'best practices do not instruct calling an unavailable gen_prd tool');
 check(appsPage.includes('new ResizeObserver'), 'apps page observes demo content height');
 check(appsPage.includes("frame.dataset.heightReady = 'true'"), 'apps page marks auto-sized demo frames');
 check(!appsPage.includes('ratio-wide') && !appsPage.includes('ratio-gate'), 'apps page has no fixed iframe aspect ratios');

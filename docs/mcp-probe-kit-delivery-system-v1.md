@@ -1,5 +1,7 @@
 # MCP Probe Kit 软件交付系统 V1 最终需求与验收基线
 
+> **适用范围说明（5.0.0 开发分支）：** 本文是 v4/V1 的历史冻结设计与验收基线，原有阶段、工具数量和落盘方式按当时版本保留，不代表 v5 的当前默认行为。v5 新增项目级 DevControl、冻结任务、Idea/Feature/Bug 审批与 Node.js 22+ Git 项目的 SQLite `hs_*` History。请以 [v5 开发使用指南](v5-development-guide.md)、[DevControl 参考](devcontrol.md) 和当前源码为准。公开稳定安装仍为 4.1.1，5.0.0 未发布。
+
 > **History Session amendment (post-freeze):** model surfaces are now Compact+History **29**, +Memory **35**, Full **39** (+1 App-only). Local archives live under `docs/history-session/` and should be gitignored. Historical Phase checklists below that cite 24/30/34 remain as frozen acceptance baselines from earlier phases.
 
 
