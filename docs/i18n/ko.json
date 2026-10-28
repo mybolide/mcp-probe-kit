@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit 문서 - v4.1.1 안정 버전 및 v5.0.0 소스 개발 버전",
-    "description": "MCP Probe Kit v4는 기본 29개 모델 도구(기반 24 + History 5), Memory 구성 시 35개, full 호환 39개, 5개 MCP Apps, 재개 가능한 계획, 증거 수렴, GitNexus Sidecar, 버전 고정 CLI fallback을 제공합니다.",
+    "description": "MCP Probe Kit 공개 안정 버전 4.1.1 및 미출시 소스 개발 버전 5.0.0: DevControl 작업 승인, 실제 검증 게이트, Node.js 22 SQLite History 및 안전한 마이그레이션 안내.",
     "keywords": "MCP Probe Kit, AI 개발 도구, 코드 생성, 코드 리뷰, Git 도구, UI 개발, 개발 효율성, Cursor, Cline, Claude, MCP 서버"
   },
   "nav": {

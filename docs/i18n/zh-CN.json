@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit 文档 - v4.1.1 稳定版与 v5.0.0 源码开发版",
-    "description": "MCP Probe Kit v4 提供 29 个默认模型工具（24 基础 + 5 History Session）、35 个 Memory 工具面、39 个 full 兼容模型工具、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。",
+    "description": "MCP Probe Kit 4.1.1 已发布稳定版与尚未发布的 5.0.0 源码开发版：DevControl 项目任务审批、真实验收 Gate、Node.js 22 SQLite History 和安全升级指南。",
     "keywords": "MCP Probe Kit, AI开发工具, 代码生成, 代码审查, Git工具, UI开发, 研发效率, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {

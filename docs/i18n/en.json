@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "MCP Probe Kit Docs - v4.1.1 stable and v5.0.0 source development",
-    "description": "MCP Probe Kit v4 ships 29 default model tools (24 base + 5 History Session), 35 with Memory, a 39-tool full compatibility surface, five native MCP Apps, resumable plans, evidence convergence, GitNexus Sidecar, and a version-locked CLI fallback.",
+    "description": "MCP Probe Kit published 4.1.1 stable and unpublished 5.0.0 source development documentation: DevControl task approval, real verification gates, SQLite History on Node.js 22 and safe migration.",
     "keywords": "MCP Probe Kit, AI development tools, code generation, code review, Git tools, UI development, development efficiency, Cursor, Cline, Claude, MCP Server"
   },
   "nav": {
