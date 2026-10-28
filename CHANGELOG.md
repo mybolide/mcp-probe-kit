@@ -30,6 +30,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.0] - Development milestone (not published)
 
+### Added
+
+- **Project-level DevControl ledger:** a Git-project-scoped SQLite `dc_*` task registry with dependency-aware `next`, task contracts, claim/renew/reclaim leases, commit-bound completion notes, independent reports, real gate verification, audit history and approved-work status.
+- **Reviewed version and task planning:** full-release plan review, pending proposals, hash-bound Owner approvals, frozen detailed task Specs, additive reviewed amendments, deep task-quality audits and source requirement traceability. Proposed plans cannot execute until approved.
+- **Feature/Bug and design workflow in project SQLite:** versioned Feature requirement/design sections, detailed child plans and export on demand, Bug investigations linked to tasks, architecture reconciliation requests and SQLite-only decision records. Agent-managed Spec and delegated plans remain distinct from DevControl tasks.
+- **Safe change evaluation:** `idea-capture`, `idea-assess`, `idea-review`, `idea-decide` for deciding when a new idea belongs in a current approved task, a future dependency point or a rejected proposal. Frozen scope uses `release-work-scope-*`, and incremental changes use `release-work-incremental-*`, each with review, stage, independent-review and Owner-approve operations.
+- **Frozen architecture artifact governance:** proposed versioned schemas, API contracts and security design artifacts have independent review, explicit Owner approval and file-hash drift detection.
+- **Read-only project workbench:** Git/SQLite-backed browser view for project overview, product goals, requirements, architecture, work items, Bugs, project History and document search; automatic local startup, safe port reuse and opt-in trusted-LAN access.
+- **History Session SQLite default:** on supported Git/Node.js 22+ projects, five existing history tools use project-local `hs_*` SQLite tables with transactional migration from numbered Markdown archives, preserving original files and file-mode compatibility.
+- **Managed Agent setup:** project-specific `AGENTS.md` and Skill guidance for review, scoped execution, real testing and handoff; local-only 5.0.0 runtime/version guards and safe CLI fallback for development checkouts.
+
+### Compatibility and limitations
+
+- Existing v4 MCP Apps, delegated plans, compact/full tool surfaces, protocol compatibility and optional Qdrant Memory remain separate from the DevControl project ledger. The dedicated DevControl MCP service is opt-in, not added silently to the 29 default model-visible tools.
+- DevControl and the default project SQLite History require Node.js 22+; older non-DevControl tools retain Node.js 20+ support. Local owner labels and Git Hooks are audit/safety aids, not remote identity verification. LAN view is read-only but unauthenticated and must not be Internet-exposed.
+- Missing physical-device or full release end-to-end runners **fail closed**; passing unrelated unit or contract tests does not mark such tasks Verified. No Windows CI, production release or npm publication is implied by this development milestone.
+
 ### Security
 
 - Update `@modelcontextprotocol/client`, `@modelcontextprotocol/core`, and

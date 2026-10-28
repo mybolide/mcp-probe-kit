@@ -1,5 +1,27 @@
 > **5.0.0 開発版（未公開）**：DevControl の承認済みタスク、実際のテストゲート、Node.js 22+ SQLite History の利用方法は **[5.0.0 開発版ガイド](../docs/v5-development-guide.md)** を参照してください。npm の公開安定版は **4.1.1** です。DevControl は Agent に代わってコードや SQL を実行したり、独立レビューを行ったりしません。
 
+## v5.0.0 の新機能（ソース開発版・未公開）
+
+**v4 の Agent ワークフローから、プロジェクト単位の開発管理へ拡張しました。** 以下は `feature/devcontrol-project-task-ledger` ブランチの実装で、公開 npm 版 `4.1.1` には含まれません。v4 の MCP Apps、Memory、Plan、コードツールは維持されています。
+
+| 分野 | v5 の機能 |
+|---|---|
+| DevControl | Git プロジェクト別 SQLite `dc_*` タスク台帳、初期調査、リリース計画、依存関係、進捗 |
+| 詳細な実行契約 | 要件・設計の追跡、タスク Spec、変更可能ファイル、テスト Gate、期限付きリース |
+| 審査と変更 | 計画ハッシュの承認・凍結、独立レビュー、Owner 承認、スコープ修正、設計成果物のハッシュ保護、Idea 評価 |
+| 検証 | Git の変更範囲確認、コミットに紐づく完了記録、実際のテストと `verify` |
+| ワークスペース | 目標、要件、アーキテクチャ、タスク、Bug、History、文書を閲覧する読み取り専用 Web UI |
+| History | Node.js 22+ の Git プロジェクトでは SQLite `hs_*` が既定。Markdown は移行・ファイルモード用 |
+| 再開 | リース更新、作業履歴の保持、自動起動のローカル UI、任意の信頼 LAN アクセス |
+
+**開発手順**：Agent が要件を確認して `plan-review` / `plan-propose` → 独立レビューと明示的な Owner 承認を経て `plan-approve` → `next` / `claim` → Agent 自身が実装・独立検証・実テスト → 承認済みファイルのみコミット → `complete` / `report` → 実 Gate による `verify`。提案は承認されたタスクではありません。新しいアイデアや凍結済み範囲の変更は、評価と再承認が必要です。DevControl はコード、SQL、レビューを Agent の代わりに実行しません。
+
+**利用方法**：Node.js 22+ で開発ブランチをソースからビルドします。[v5 導入・CLI・移行ガイド](../docs/v5-development-guide.md) と [DevControl 詳細](../docs/devcontrol.md) を参照してください。公開版のインストールは引き続き `mcp-probe-kit@4.1.1` です。LAN 表示は認証なしの読み取り専用なのでインターネットには公開しないでください。デバイス Gate は実際の証拠がない限り成功扱いにしません。
+
+---
+
+## v4 安定版の機能（v5 でも維持）
+
 <div align="center">
 <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
 <h1>知时MCP | mcp-probe-kit</h1>
@@ -56,7 +78,7 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 <strong>Convergence Gate</strong>：ステップまたは要件/仕様/実装/テスト/レビュー証拠が不足すると完了を拒否。
 
 - **5つのネイティブ MCP Apps**：Memory、Feature、Bug、Product、Convergence。
-- **History Session（既定 ON）**：`docs/history-session/` のロスレス引き継ぎ（bootstrap → checkpoint → search/read、ベクトルDB不要）。
+- **History Session（既定 ON）**：v5 の Git/Node.js 22+ ではプロジェクト SQLite `hs_*` が既定。`docs/history-session/` は旧版・明示的ファイルモード用（ベクトルDB不要）。
 - **再開可能な委任計画**：`plan_heartbeat` が実進捗を保存し、`resume_plan` が次の実行ステップを復元。
 - **証拠ベースの収束**：`converge` が納品と長期 Memory 書き込みを制御。
 - **管理型 GitNexus Sidecar**：バージョン、OS、CPU、Node 主版ごとに分離し、整合性と実 FTS を検証。
@@ -109,7 +131,7 @@ v4 は Agent の委任実行を、観測可能・再開可能・検証可能な�
 
 ### 📜 History Session（既定 ON）— ロスレスなプロジェクト引き継ぎ
 
-ホストのチャットは忘れます。History Session は `docs/history-session/` に**ロスレスなローカル履歴**を残し、次の会話でもユーザー原話・決定・未決事項を復元できます（ベクトル DB 不要）。
+ホストのチャット履歴が失われても、v5 の Git/Node.js 22+ では History Session が **SQLite `hs_*`** に原文・決定・未決事項を保持します。以前の `docs/history-session/` Markdown は移行・ファイルモード時のみ使用します（ベクトル DB 不要）。
 
 - **なぜ必要か**: コンテキスト切れや新規チャットでも事実を失わない。既定 ON。Memory/Plan とは別レイヤ。
 - **使い方**: 会話開始で `history_session_bootstrap`（`initial_user_input`；ホスト session が無ければ初回のみ `session_key` 省略 → サーバが `hs_<uuid>` を発行して新規アーカイブ）→ 以降はその handle を返す → 最終応答前に `history_session_checkpoint` → 旧事実は `search` → `read`。

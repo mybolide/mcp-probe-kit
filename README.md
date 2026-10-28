@@ -27,6 +27,62 @@
 > review, or override a Git Hook**. Agents must follow an approved file scope
 > and execute the actual acceptance gates.
 
+## What's new in 5.0.0 (source development, not an npm release)
+
+Version 5 moves beyond the v4 **Agent workflow toolkit** into **project-level development governance**. The v4 MCP Apps, delegated plans, Memory, code-review tools, and protocol compatibility remain available. The following capabilities are implemented on this branch and are being validated with a real project; they are **not** features of the published `4.1.1` npm package.
+
+| Area | v5 capability | Practical benefit |
+|---|---|---|
+| Project DevControl | Per-Git-project SQLite task ledger (`dc_*`), onboarding, reviewed release plans and dependencies | Work survives chat resets without duplicating project task Markdown |
+| Frozen delivery contract | Requirement/design traceability, full leaf-task Specs, approved paths, gates, plan hashes and execution leases | Agents work from an explicit contract rather than a vague task title |
+| Review and change control | Proposal versus approved work, independent Agent review, explicit Owner decisions, reviewed amendments and protected architecture artifact hashes | New ideas and scope changes cannot silently rewrite approved work |
+| Real acceptance | Scoped Git checks, commit-bound completion notes, test evidence and `complete` / `report` / `verify` | A commit or simulated test alone never means Verified |
+| Unified workbench | Project overview, goals, requirements, architecture, task progress, Bugs, History and document reader | One read-only project view built from Git documents and SQLite records |
+| Project History | Five `history_session_*` tools using project-local `hs_*` SQLite tables on supported Git/Node 22+ setups | Lossless chat continuity without confusing it with optional vector Memory |
+| Recovery and portability | Lease renewal/reclaim, interrupted-work provenance, safe migration, autostarted local workbench, optional trusted-LAN read access | Continue the same task across reconnects without re-approving it accidentally |
+| Managed Agent guidance | Generated Skill/`AGENTS.md` development rules, version-locked local runtime and CLI fallback | Consistent usage instructions for the actual installed development build |
+
+### The v5 workflow
+
+1. **Inspect and plan.** `devcontrol onboard` inspects an existing Git project without inventing requirements. The Agent studies source requirements and architecture, writes a complete release plan, then runs `plan-review` and `plan-propose`. A proposed plan creates **no executable tasks**.
+2. **Review and freeze.** A reviewer checks the substance and dependencies. An explicit Owner decision approves the exact plan hash with `plan-approve`. New-project execution contracts specify inputs, outputs, preconditions, state changes, forbidden changes, stop conditions and allowed files. Approval labels are audit metadata, not cryptographically authenticated identities.
+3. **Choose and claim.** `next` respects dependencies and unfinished leased work; `claim` returns a bounded task lease and frozen scope. `renew` extends the lease. A missing test prerequisite, unreviewed change or invalid dependency blocks execution.
+4. **Implement and independently assess.** The **Agent**, not DevControl, writes software, investigates evidence, reviews solutions and runs actual SQL, Flutter, Go or device tests where required. `check` and the optional Git Hook check paths. The Agent commits only authorized files and preserves existing user changes.
+5. **Report and verify.** `complete` saves the real implementation, tests and remaining issues against the committed revision; `report` records evidence; `verify` runs the configured real acceptance gates. The task is Verified only on successful verification. Parent progress comes from verified children, not estimates.
+6. **Handle change deliberately.** New ideas use `idea-capture` / `idea-assess` / `idea-review` / `idea-decide` to determine the current task, a future dependency point, or rejection. Frozen scope changes use the reviewed `release-work-scope-*` operations, additional approved work uses `release-work-incremental-*`, and governed architecture documents use `artifact-*`. None of these changes automatically interrupts active work or bypasses Owner authorization.
+
+### Try the 5.0.0 source branch
+
+**Requirements:** Node.js 22+ for DevControl and the default SQLite History backend; Node.js 20+ remains supported for older non-DevControl tools. Git, npm and an actual project are required for the project-governance examples.
+
+```bash
+git clone --branch feature/devcontrol-project-task-ledger https://github.com/mybolide/mcp-probe-kit.git
+cd mcp-probe-kit
+npm ci
+npm run build
+node build/index.js --version
+```
+
+Use **the absolute path to this checkout's `build/index.js`** as the `node` MCP-server argument in your host. For CLI commands, point `--project-root` at **your application Git repository**, not at the MCP source checkout:
+
+```bash
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol onboard --project-root /PATH/TO/YOUR/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --project-root /PATH/TO/YOUR/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol next --project-root /PATH/TO/YOUR/PROJECT
+```
+
+The workbench is a **read-only browser view**, normally served locally from port `38180`; the project keeps its own SQLite data. Trusted LAN viewing is optional, unauthenticated and **must not be exposed to the public Internet**. The MCP server can start the workbench automatically, unless `MCP_DEVCONTROL_AUTOSTART=0`. The optional separate DevControl MCP server is not automatically registered by installing the main server.
+
+**Data is intentionally separate:** `dc_*` holds development tasks and approvals; `hs_*` holds project chat History; optional Qdrant Memory stores reusable cross-project knowledge. Older `docs/history-session/N.md` files are retained for migration or explicit file mode (`MCP_HISTORY_STORAGE=files`). A History `expected_path` can be a virtual locator, not a file you should create.
+
+**Important limits:** Some platform/device and end-to-end acceptance gates fail closed until a genuine runner/evidence exists. Git hooks can be bypassed locally, so protected branches and trusted CI are still necessary for stronger enforcement. Local workstation/Owner labels are not authentication. Do not claim Windows CI, production deployment or independent release certification without running them.
+
+For complete task commands, plan reviews, scope amendments, Idea assessment, architecture artifacts, History, migration and rollback, see **[the v5 development guide](docs/v5-development-guide.md)** and **[DevControl reference](docs/devcontrol.md)**. For npm users, continue with **`mcp-probe-kit@4.1.1`**. **No 5.0.0 npm package, Tag or GitHub Release has been authorized.**
+
+---
+
+## v4 stable capabilities retained in v5
+
 > **Talk is cheap, show me the Context.**
 > 
 > mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to understand project intent, choose a precise workflow, and retain validated experience without flooding the model with internal actions.

@@ -1,5 +1,54 @@
 > **5.0.0 开发版（尚未发布）**：当前开发分支已增加 DevControl 项目任务审批、范围冻结、真实验收 Gate 与 Node.js 22+ 的 SQLite History Session。请先阅读 **[5.0.0 安装、升级和完整使用指南](../docs/v5-development-guide.md)**。npm 公开稳定版仍为 **4.1.1**；不要把源码 5.0.0 当成已发布的 npm 版本。DevControl 不替 Agent 编码、执行 SQL 或独立复审。
 
+## v5.0.0 新增能力（源码开发版，尚未发布）
+
+**从 v4 的 Agent 工作流工具扩展为项目级研发管理。** 下述能力仅适用于当前 `feature/devcontrol-project-task-ledger` 源码分支，**不包含在 npm 正式版 4.1.1 中**。v4 的 MCP Apps、Memory、Plan、代码工具和协议兼容功能仍然保留。
+
+| 新能力 | v5 实际提供的功能 |
+|---|---|
+| DevControl 项目管理 | 每个 Git 项目独立 SQLite `dc_*` 任务账本，已有项目检查、完整版本计划、依赖管理和真实进度 |
+| 需求与任务规范 | 需求/设计来源、完整任务 Spec、执行条件、文件范围、任务租约与独立验收依据 |
+| 审批与变更 | 计划审查和哈希冻结、Owner 明确授权、范围修订复审、架构工件哈希审批、Idea 评估与安排 |
+| 真实交付 | Git 范围检查、保留用户已有修改、真实测试 Gate、绑定 commit 的完成报告和独立验收 |
+| 项目工作台 | 项目总览、产品目标、需求、架构、任务、Bug、历史会话、文档中心，浏览端只读 |
+| History Session | Node.js 22+ Git 项目默认在项目 SQLite 的 `hs_*` 表保存会话，旧 Markdown 可兼容导入 |
+| 断点恢复与部署约束 | 任务续租/恢复、自动启动本地工作台、可选可信局域网查看、本地版本锁定的 Skill 和启动器 |
+
+**推荐的 v5 研发流程**
+
+1. Agent 查看真实需求和架构，通过 `devcontrol plan-review`、`plan-propose` 提出完整计划；提案不会自动成为可执行任务。
+2. 由独立复审和 Owner 确认准确范围、依赖及 Gate，`plan-approve` 按精确哈希冻结计划。
+3. `devcontrol next` 选取合规任务，`claim` 领取租约，只修改批准的文件；必要时用 `renew` 续租。
+4. Agent 自行开发、复审并运行真实测试。DevControl **不代替 Agent 编码、业务 SQL 或独立审查**。
+5. 仅提交获准的 Git 文件，用 `complete`、`report` 留下实际证据，再由 `verify` 执行真实验收 Gate；未通过不算 Verified。
+6. 开发中的新想法先评估是否应纳入当前任务、后续计划或拒绝。冻结范围和架构改变需再次审批，不能擅自改计划。
+
+**从源码安装 v5**：Node.js 22+ 用于 DevControl 与默认 SQLite History。进入 [v5 完整使用指南](../docs/v5-development-guide.md) 获取 Git 分支、构建、MCP 宿主配置、CLI 用法、历史迁移及回滚步骤；[DevControl 参考文档](../docs/devcontrol.md) 提供任务命令和受控变更细则。公开安装仍请使用 `npx -y mcp-probe-kit@4.1.1 install-agent`。局域网 Web 查看不带身份验证，不要把端口暴露到公网。部分真机/完整产品 Gate 尚需真实运行器，不能以模拟测试代替。
+
+**v5 源码开发版安装示例**
+
+```bash
+git clone --branch feature/devcontrol-project-task-ledger https://github.com/mybolide/mcp-probe-kit.git
+cd mcp-probe-kit
+npm ci
+npm run build
+node build/index.js --version
+```
+
+将 MCP 宿主的启动命令设置为 `node`，启动参数填写上面源码目录中 **`build/index.js` 的绝对路径**。以下命令的 `--project-root` 必须指向**使用本 MCP 的 Git 业务项目**，不是 MCP 自身源码仓库。
+
+```bash
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol onboard --project-root /PATH/TO/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol next --project-root /PATH/TO/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --project-root /PATH/TO/PROJECT
+```
+
+接下来先审查现有任务和冻结执行合同，再领取已批准的任务。不能因为能打开工作台就绕过审批。完整的任务审批、`claim`、`renew`、`complete`、`report`、`verify` 命令示例见 [v5 使用指南](../docs/v5-development-guide.md)。**v5 尚未在 npm 发布，也没有版本 Tag 或 Release。**
+
+---
+
+## v4 稳定版功能（v5 继续保留）
+
 <div align="center">
 <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
 <h1>知时MCP | mcp-probe-kit</h1>
@@ -56,7 +105,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 <strong>Convergence Gate</strong>：步骤或需求/规格/实现/测试/审查证据不完整时拒绝收尾。
 
 - **5 个原生 MCP Apps**：Memory、Feature、Bug、Product 和 Convergence。
-- **History Session（默认开启）**：`docs/history-session/` 下的无损本地会话交接——bootstrap → checkpoint → search/read，无需向量库。
+- **History Session（默认开启）**：v5 Git/Node.js 22+ 项目默认使用本地 SQLite `hs_*` 保存会话；`docs/history-session/` 是旧版或文件模式兼容目录，无需向量库。
 - **可恢复委托计划**：`plan_heartbeat` 保存真实进度，`resume_plan` 恢复下一可执行步骤。
 - **证据收敛闸门**：`converge` 决定是否允许交付和正式写入长期记忆。
 - **GitNexus 托管 Sidecar**：按版本、平台、架构和 Node 主版本隔离，校验完整性与真实 FTS 能力，失败自动降级。
@@ -99,7 +148,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 
 **为什么重要**
 
-- 上下文窗口与「新开对话」会丢掉已确认事实；History 以 Markdown 落在 `docs/history-session/`。
+- 上下文窗口与新对话可能丢失已确认事实；**v5 Git/Node.js 22+ 默认把 History 写入项目 SQLite `hs_*`**，旧版本或显式 `MCP_HISTORY_STORAGE=files` 使用 `docs/history-session/` Markdown。
 - **默认开启**，**不依赖 Qdrant / Embedding**——装好 MCP 即可用，与 24 个基础 compact 工具合计 **29** 个模型可见工具。
 - 与其它层分工清晰，互不替代：
 
@@ -121,7 +170,7 @@ v4 将 Agent 的委托执行升级为可观察、可恢复、可验证的交付�
 - 超 `MCP_HISTORY_MAX_LINES` / `MCP_HISTORY_MAX_BYTES`（默认 `800` / `131072`）会软轮转；以返回的新 `expected_path` 为准；轮转会**继承**上一档最新 `initial_user_input`。
 - 归档前脱敏常见密钥；检查点按内容指纹幂等。
 - 关闭：`MCP_HISTORY_SESSION=0|false|off`（隐藏五个 History 工具）。
-- **不要提交** `docs/history-session/` — 写入 `.gitignore`（仅本地交接，不属于发布物）。
+- **不要提交** 本地 History SQLite 数据库或文件模式的 `docs/history-session/` 会话档案；旧档案应保持 Git 忽略。
 
 Skill 与 `AGENTS.md` 写明读写时机；[所有工具](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) 提供每个 `history_session_*` 的一句话调用。
 

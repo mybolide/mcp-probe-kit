@@ -79,6 +79,122 @@ The required Gate depends on the task: for example `flutter_test` runs the **rea
 
 More details: [DevControl reference](devcontrol.md), [v3 → v4 published-stable migration](migration-v3-to-v4.md), [Changelog](../CHANGELOG.md), and [source branch](https://github.com/mybolide/mcp-probe-kit/tree/feature/devcontrol-project-task-ledger).
 
+## 5. v4 与 v5 到底有什么不同 / What actually changed
+
+v4's published toolkit focuses on selecting and executing **Agent-level development workflows**: `start_feature`, `start_bugfix`, `plan_heartbeat`, `resume_plan`, `converge`, MCP Apps, source inspection, tests, Git helpers and optional Qdrant Memory. **v5 retains those tools.** The new project-governance layer makes the entire **release, project, task and approval lifecycle** persistent and auditable between Agent sessions.
+
+| Feature / 新能力 | How it works / 实现与使用 |
+|---|---|
+| Project-local task registry | Each Git project's SQLite `dc_*` tables own approved tasks, dependencies, current leases, completion reports, reviews and audit history |
+| Release-wide planning | `plan-review` / `plan-propose` / `plan-revise` validate and version drafts; `plan-approve` freezes reviewed content by hash before creating executable tasks |
+| Detailed task contracts | Spec-depth task leaves record source requirements, design, success/failure scenarios, permitted paths, real gates; new-project v3 contracts add explicit inputs, outputs, preconditions, transitions and stop conditions |
+| Feature and Bug management | `start_feature` can persist proposal sections, related plans and revisions in project SQLite; `feature-save`, `feature-validate`, `feature-export`, Bug records and task links retain context |
+| Ideas and decisions | `idea-capture` / `idea-assess` / `idea-review` / `idea-decide` separate a new thought from permission to change the plan; leased decision tasks use `decision-save` / `decision-get` |
+| Controlled amendments | `release-work-scope-*` and `release-work-incremental-*` require proposal review, independent review and exact Owner-approved hashes; don't overwrite frozen work |
+| Frozen architecture assets | `artifact-stage` / `artifact-independent-review` / `artifact-approve` / `artifact-check` protect approved versioned schemas, API contracts and security designs |
+| Real acceptance and Git safety | `check`, `complete`, `report`, `verify` validate scoped, committed work with required real runners; existing dirty files and interrupted leases are preserved |
+| Eight-area project workbench | Read-only project overview, product & goals, requirements, architecture, task progress, Bugs/change requests, History Session and document index; the workbench reads Git documents, not invented project metadata |
+| SQLite History Session | Git/Node22+ defaults to separate `hs_*` records in the same project-local DB, including bounded `bootstrap`, idempotent `checkpoint`, `search`, `read`, `validate` |
+| Recovery and setup | Automatic local workbench startup, persisted port ownership, optional trusted-LAN read access, stable task-lease recovery, generated Skill/`AGENTS.md` and local-only runtime/version checks |
+
+**Only capabilities proven by this source branch are listed.** Windows/platform CI, protected remote identity, full device E2E, production deployment and a published npm v5 release are not implied.
+
+## 6. 任务的实际使用步骤 / A usable project-task walkthrough
+
+The project-root parameter below is your **application repository**, never a replacement for the MCP server checkout. Run from that project's directory and use the built absolute path when `probe` is not installed. The CLI supports both `--json` for small inputs and `--input path/to/reviewed-payload.json` for complex approved plans. The examples show the operation shape, **not a pre-approved task or plan**.
+
+```bash
+# Read the existing project without creating a fake task plan.
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol onboard --project-root /PATH/TO/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol next --project-root /PATH/TO/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol list --project-root /PATH/TO/PROJECT
+
+# After a real review, prepare a complete release plan as JSON and check it first.
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol plan-review --project-root /PATH/TO/PROJECT --input /PATH/TO/REVIEWED_PLAN_INPUT.json
+# Then plan-propose (draft only). plan-approve additionally needs the exact
+# reviewed proposal hash and explicit Owner authorization, never a guessed hash.
+
+# For an already eligible, approved task:
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol execution-contract --project-root /PATH/TO/PROJECT --json '{"id":"APPROVED-TASK-ID"}'
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol claim --project-root /PATH/TO/PROJECT --json '{"id":"APPROVED-TASK-ID","agent":"developer-id","ttlSeconds":3600}'
+
+# Keep the returned leaseToken private. Run actual tests and a legitimate Git commit.
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol renew --project-root /PATH/TO/PROJECT --json '{"id":"APPROVED-TASK-ID","leaseToken":"RETURNED-TOKEN","ttlSeconds":3600}'
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol check --project-root /PATH/TO/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol complete --project-root /PATH/TO/PROJECT --json '{"id":"APPROVED-TASK-ID","leaseToken":"RETURNED-TOKEN","summary":"Observed result","implementation":"Committed changes","verification":"Tests actually executed and results","remaining":"Known limitations"}'
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol verify --project-root /PATH/TO/PROJECT --json '{"id":"APPROVED-TASK-ID","leaseToken":"RETURNED-TOKEN"}'
+```
+
+`report` stores additional independent review and evidence details as defined in the project task contract. Review their actual schema before submitting; **do not invent evidence**. `verify` may fail because a required runner is unavailable, the Git revision drifted, an approved path was exceeded, or a dependent task is incomplete. Investigate the real cause instead of relaxing the gate.
+
+### Planning, Feature, Bug, Idea and architecture records
+
+- **Plan and task status are separate.** `plan-review` checks a candidate; `plan-propose` stores a pending versioned draft; `plan-approve` creates eligible tasks only after a reviewed hash and Owner decision. A proposed item must not be shown as Verified. `plan-revise` takes the previous draft's exact hash and retains its revision history. Existing frozen releases also support the specifically reviewed `release-work-*` workflows.
+- **Features live in SQLite when supported.** `feature-save`, `feature-validate`, `feature-task-review` / `feature-task-propose` / `feature-task-approve` maintain substantive requirements, design sections, child work and revisions. `feature-export` generates Markdown/JSON only when requested. `storage_mode=files` opts into legacy feature documentation. Do not confuse a delegated Plan step with an approved DevControl work item.
+- **Bugs and architecture changes are visible work items.** `bug-get`, `bug-step-save`, `bug-task-link`, `work-record`, and `architecture-sync` relate investigations to existing project requirements without silently granting scope.
+- **Ideas need a decision, not immediate implementation.** `idea-capture` stores the actual source request; `idea-assess` considers impact, alternatives and a suitable phase; `idea-review` records independent scrutiny; `idea-decide` requires explicit authorization and the reviewed revision. A useful idea may fit an already approved task, require a later incremental plan, or be rejected.
+- **Frozen changes require review.** `release-work-scope-review` / `release-work-scope-stage` / `release-work-scope-independent-review` / `release-work-scope-approve` enforce scoped changes with both proposal and review hashes. The incremental equivalents `release-work-incremental-review` / `release-work-incremental-stage` / `release-work-incremental-independent-review` / `release-work-incremental-approve` control new work after freeze. Pausing an active task preserves its lease provenance and existing user modifications; no direct SQLite status edits or Hook bypass.
+- **Architecture contracts use their own gate.** `artifact-stage` proposes the exact versioned file contents, `artifact-independent-review` checks the proposal, `artifact-approve` requires an explicit Owner decision, and `artifact-check` catches unauthorized hash drift. A newly drafted architecture document is not already an approved baseline.
+- **Pure decision tasks may have no source commit.** A specially approved `sqlite_decision` task writes a versioned `decision-save` record and goes through `complete`, `report`, `verify`. Do not create unnecessary decision Markdown solely for task-progress reporting.
+
+### Project workbench, safety and platform limits
+
+The Web workbench reads actual Git/SQLite project data. On Node22+ Git projects it normally starts with the main MCP server on local port `38180`, reuses the same project's persisted port when safe, and avoids terminating unknown listeners. `devcontrol workspace-status` reports its address. `devcontrol lan-enable` and `lan-disable` control optional trusted-LAN viewing. The LAN mode is **unauthenticated HTTP** and should never be port-forwarded to the public Internet. Browser pages are read-only; approvals and writes run through the validated CLI/MCP operations.
+
+The optional separate `devcontrol serve` MCP stdio interface is **not silently added to the main compact toolset**. The normal MCP model-visible surface remains 29 tools by default (24 base plus 5 History), 35 with Memory, and 39 in full compatibility mode. These counts do not include the dedicated DevControl operations as default model tools.
+
+Node.js 20+ remains sufficient for the legacy/non-DevControl tools; DevControl and the SQLite History default need Node.js 22+ with the built-in SQLite module. Local Git Hook checks and owner labels are not a security boundary stronger than the current machine. Physical-device, real HTTP integration and complete release E2E gates must use genuine test runners; unavailable gates must remain Not Run or failed, not silently passed.
+
+### Safe upgrade and verification checklist
+
+1. Record the target project's current Git status, installed package version, active leases and existing history; back up ignored project-local SQLite and any legacy Markdown archives without copying secrets into Git.
+2. Compile the **unpublished** v5 source in an isolated checkout and point the MCP host to its own `build/index.js`. Ensure the managed Skill, `AGENTS.md`, local launcher and package version are consistent.
+3. Confirm `onboard`, `workspace-status`, `next`, an existing task's `execution-contract`, and `history_session_bootstrap` / `search` / `read` / `checkpoint` / `validate` in the **intended application project**. Old file history may be imported while the original files remain untouched.
+4. Independently review a real plan or work-item amendment. Inspect the actual frozen paths, dependency states, approved hashes and required tests before claiming anything.
+5. Run the applicable source tests, documentation checks and real project acceptance gates. `npm run docs:verify` checks documentation consistency; `npm run build` produces the local runtime. Neither is proof of full product E2E or a publication.
+6. If migration fails, restore the previous MCP host command and local backup without deleting the user's files or rewriting verified task history. **No npm publishing, Registry registration, Git Tag or Release** is permitted just because the checkout says 5.0.0.
+
+## 7. 中文实践说明：怎样真正使用 v5
+
+**v5 的核心变化是把单次 Agent 开发，扩展为跨会话、跨任务的项目研发管理。** v4 已有的 `start_feature`、`resume_plan`、MCP Apps、Memory 和测试/代码工具仍保留；v5 新增的 DevControl 不替代这些工具，也不替代编程 Agent。
+
+### 新项目或旧项目如何开始
+
+项目是 Git 仓库并且运行 Node.js 22+ 时，首先用 `devcontrol onboard` 和 `workspace-status` 检查真实文件及现有 SQLite 任务。已有需求和任务不会因为重新运行 onboard 而复制。空白项目不会被自动编出需求、设计或计划。
+
+Agent 需要阅读真实需求、架构及现有验证结果，自主制定整版任务计划。完整计划应包含需求来源、业务触发条件、成功与失败场景、依赖、交付文件和真实验收门禁。使用 `plan-review` 做结构检查，再以 `plan-propose` 留下待审草稿。**草稿不会产生可执行任务。** 独立审查之后，必须由 Owner 根据精确计划哈希批准 `plan-approve` 才能冻结。新项目的详细执行合同还规定输入、输出、前置条件、状态变更、禁止修改的内容和停止条件。
+
+### 从任务领取到通过验收
+
+1. 先用 `next` 查看有依赖约束的可执行任务，或恢复仍在租约中的任务；用 `execution-contract` 阅读实际冻结的文件范围、要求与 Gate。
+2. 用 `claim` 领取一项已批准任务，持有返回的 `leaseToken`；任务过长时用 `renew`，不要丢弃正在进行的 Git 改动另起任务。
+3. Agent 负责真正写代码、修改架构内允许的文件、独立复核风险并运行真实测试。必要时先运行 `check`，正常 Git Hook 不能通过时，应解决原因，而不是跳过。
+4. 只提交本任务获准的文件。`complete` 保存实际的实现与测试结果，`report` 记录额外审核证据，然后用 `verify` 再运行规定的 Gate。即使 Git 已提交，只要 Gate 未通过或证据不足，任务仍不是 Verified。
+5. 如果需要修改冻结范围，应先提出并独立复审 `release-work-scope-*` 变更。新增整版工作通过 `release-work-incremental-*` 评审。Owner 的授权必须与具体提案及审核哈希对应。
+
+### 需求想法、Bug 和架构不是随意插队
+
+- **新想法**：`idea-capture` 记录原始来源，`idea-assess` 判断价值、风险与合适开发阶段，`idea-review` 独立复审，`idea-decide` 记录明确决定。如果与当前已领取任务合同一致，可以纳入该任务；涉及新增任务或范围变化的，需要走正式审批；不合理则拒绝。
+- **Feature**：在支持的项目中，`feature-save`、`feature-validate` 保存版本化需求和设计，再通过 `feature-task-review`、`feature-task-propose`、`feature-task-approve` 审核子任务。`feature-export` 可按需导出 Markdown/JSON，不再要求为每个中间状态创建过程文件。
+- **Bug**：`bug-get` 读取问题记录，`bug-step-save` 保存排查步骤与证据，`bug-task-link` 将已确认问题关联正式任务，避免把未审批 Bug 误当成允许修改的范围。
+- **架构设计**：已经正式批准的 Schema、API 契约和安全设计用 `artifact-stage`、`artifact-independent-review`、`artifact-approve` 管理版本和哈希，`artifact-check` 检查是否偏离受控文件。不能为了临时通过测试擅自改掉正式架构。
+- **纯决策工作**：正式批准的 `sqlite_decision` 任务可以用 `decision-save` 留下有版本的决策与理由，并继续走 `complete/report/verify`。这类任务不必为了形式生成 Git 提交或新的 Markdown。
+
+### 哪些数据存在哪里
+
+| 数据 | 权威位置 | 不应混用 |
+|---|---|---|
+| 任务、整版规划、审批、租约、测试证据 | 当前 Git 项目的 SQLite `dc_*` | 不是业务应用数据库，也不是随手创建的每日进度 Markdown |
+| 原始会话、历史检查点、跨窗口恢复 | Node.js 22+ Git 项目默认 SQLite `hs_*` | 旧 `docs/history-session/N.md` 留作迁移或显式文件模式 |
+| 可跨项目复用的经验 Memory | 可选 Qdrant 服务 | 不能代替当前项目 History 或 DevControl 的任务状态 |
+| 正式需求、产品架构、API 与版本文档 | Git 中经过批准的规范文档 | 不能因为 SQLite 有任务就省略必要的架构文档 |
+
+### 版本、安全和验收边界
+
+v5 的 DevControl 是本地项目管理机制，不是强身份认证系统。其 Web 页面只读，可信局域网模式没有密码，不能向公网开放。Git Hook 可以在本机被绕过，真正需要独立信任保证时仍应依赖受保护的远端分支和 CI。Node.js 20 可继续运行不依赖 DevControl 的老功能，但不能当作 Node.js 22 的项目 SQLite 特性已经具备。
+
+真实 Flutter、Go HTTP、iPhone 真机和整版端到端验证不可互相替代。尚无真实运行器的 Gate 应保持失败或未运行状态。5.0.0 只能通过当前开发分支本地构建使用，**不能声称已有公开 npm 5.0.0，更不能自行创建 Tag、发布包或生产部署**。
+
 ---
 
 ## English quick reference

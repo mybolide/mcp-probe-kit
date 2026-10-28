@@ -140,6 +140,12 @@ const readmes = ['README.md', ...['zh-CN','ja-JP','ko-KR','es-ES','fr-FR','de-DE
 for (const file of readmes) {
   const text = read(file);
   check(text.includes('docs/v5-development-guide.md'), `${file} links to the unpublished 5.0.0 source-development guide`);
+  check(text.includes('4.1.1') && text.includes('5.0.0'), `${file} separates published 4.1.1 from v5 source development`);
+  check(text.includes('DevControl') && text.includes('SQLite'), `${file} explains the new project governance and storage`);
+  for (const operation of ['plan-review', 'plan-propose', 'plan-approve', 'claim', 'complete', 'report', 'verify']) {
+    check(text.includes(operation), `${file} documents v5 task lifecycle operation ${operation}`);
+  }
+  check(text.includes('hs_*'), `${file} explains v5 History SQLite hs_* storage`);
   check(text.includes('<!-- v4-showcase:start -->'), `${file} contains v4 showcase`);
   check(text.includes('feature-workbench.gif'), `${file} embeds Feature Workbench animation`);
   check(text.includes('memory-center.gif'), `${file} embeds Memory Center animation`);
@@ -165,6 +171,15 @@ for (const phrase of [
   'devcontrol verify',
   'History Session',
   '4.1.1',
+  'idea-capture',
+  'idea-assess',
+  'idea-review',
+  'idea-decide',
+  'release-work-scope-independent-review',
+  'artifact-independent-review',
+  'feature-task-approve',
+  'history_session_bootstrap',
+  'SQLite',
 ]) {
   check(v5Guide.includes(phrase), `v5 development guide documents ${phrase}`);
 }

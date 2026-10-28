@@ -2,6 +2,28 @@
 
 # mcp-probe-kit — Connaître le Contexte, Nourrir le Moment
 
+## Nouveautés de la version 5.0.0 (code source en développement, non publié)
+
+**La v5 ajoute une gouvernance de projet au kit de workflows Agent de la v4.** Ces fonctions sont présentes sur la branche `feature/devcontrol-project-task-ledger`, mais **pas** dans le paquet npm stable `4.1.1`. MCP Apps, Memory, Plans et outils de code de la v4 restent disponibles.
+
+| Domaine | Capacités de la v5 |
+|---|---|
+| DevControl | Registre SQLite `dc_*` propre à chaque projet Git, inspection initiale, plan de version, dépendances |
+| Contrats de tâches | Traçabilité des exigences, Spec détaillée, fichiers autorisés, tests obligatoires, bail d'exécution |
+| Approbation | Revue indépendante, approbation explicite du propriétaire, gel par empreinte, amendements et décisions d'architecture contrôlés, évaluation des idées |
+| Livraison vérifiable | Contrôle des chemins Git, rapports liés aux commits, vrais tests et commande `verify` |
+| Espace projet | Vue Web en lecture seule des objectifs, exigences, architecture, tâches, Bugs, History et documents |
+| History Session | SQLite `hs_*` par défaut sur Git/Node.js 22+ ; fichiers Markdown conservés pour la migration |
+| Reprise | Renouvellement du bail, conservation du travail, démarrage automatique du tableau local et lecture LAN facultative |
+
+**Cycle de travail** : l'Agent inspecte les sources, exécute `plan-review` / `plan-propose` ; une revue indépendante et l'approbation explicite du propriétaire précèdent `plan-approve`. Puis `next` / `claim` délimitent la tâche ; **l'Agent** implémente, révise et effectue les tests réels. Après un commit limité aux fichiers approuvés, `complete` / `report` enregistrent les preuves et `verify` exécute les contrôles. Un brouillon ou un commit ne signifie pas « Verified ». Les nouvelles idées et modifications du périmètre gelé doivent être évaluées et approuvées. DevControl n'écrit pas le code et n'exécute pas les SQL ni la revue à la place de l'Agent.
+
+**Installation** : utiliser Node.js 22+ et compiler la branche source, voir le [guide v5 complet](../docs/v5-development-guide.md) et la [référence DevControl](../docs/devcontrol.md). La version npm publique reste `mcp-probe-kit@4.1.1`. La consultation LAN, sans authentification, ne doit pas être exposée à Internet. Les tests d'appareil non exécutés ne sont pas considérés comme validés.
+
+---
+
+## Fonctionnalités stables v4 conservées dans v5
+
 <div align="center">
   <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
   <h1>知时MCP | mcp-probe-kit</h1>
@@ -62,7 +84,7 @@ v4 transforme l’exécution déléguée de l’Agent en une boucle de livraison
 <strong>Convergence Gate</strong> : bloque la clôture si des étapes ou des preuves exigences/spec/implémentation/tests/revue manquent.
 
 - **Cinq MCP Apps natives** : Memory, Feature, Bug, Product et Convergence.
-- **History Session (activé par défaut)** : passation locale sans perte sous `docs/history-session/` (bootstrap → checkpoint → search/read, sans base vectorielle).
+- **History Session (activé par défaut)** : v5 utilise SQLite `hs_*` sur les projets Git/Node.js 22+ ; `docs/history-session/` concerne la compatibilité ancienne ou le mode fichier, sans base vectorielle.
 - **Plans délégués reprenables** : `plan_heartbeat` conserve le progrès réel et `resume_plan` restaure l’étape suivante.
 - **Convergence fondée sur les preuves** : `converge` contrôle la livraison et l’écriture dans la Memory longue durée.
 - **GitNexus Sidecar géré** : isolation par version, plateforme, architecture et Node ; intégrité et FTS réel vérifiés.
@@ -121,7 +143,7 @@ v4 transforme l’exécution déléguée de l’Agent en une boucle de livraison
 
 ### 📜 History Session (activé par défaut) — passation locale sans perte
 
-Les hôtes de chat oublient. History Session conserve une **archive locale sans perte** sous `docs/history-session/` pour retrouver les propos utilisateur, décisions et points ouverts au tour suivant — sans base vectorielle.
+Les hôtes de chat oublient. Avec v5 sur Git/Node.js 22+, History Session conserve les propos utilisateur, décisions et points ouverts dans **SQLite `hs_*`**. Le Markdown `docs/history-session/` reste disponible pour migration et mode fichier, sans base vectorielle.
 
 - **Pourquoi c’est utile**: les faits survivent aux fenêtres de contexte et aux nouveaux chats. Activé par défaut. Couche distincte de Memory/Plan.
 - **Usage**: début de conversation `history_session_bootstrap` (`initial_user_input` ; sans session hôte, omettre `session_key` **une fois** → le serveur émet `hs_<uuid>` et ouvre une nouvelle archive) → renvoyer le handle → avant chaque réponse finale `history_session_checkpoint` (checklist minimale) → faits anciens via `search` → `read`.

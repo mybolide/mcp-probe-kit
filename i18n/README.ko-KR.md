@@ -1,5 +1,27 @@
 > **5.0.0 개발 버전(미출시)**: DevControl 승인 작업, 실제 검증 게이트, Node.js 22+ SQLite History 사용법은 **[5.0.0 개발 가이드](../docs/v5-development-guide.md)** 를 참고하세요. npm에 공개된 안정 버전은 **4.1.1**입니다. DevControl은 Agent 대신 코드를 작성하거나 SQL을 실행하거나 독립 검토를 수행하지 않습니다.
 
+## v5.0.0 새 기능 (미출시 소스 개발판)
+
+**v4 Agent 워크플로 도구에 프로젝트 전체 개발 관리가 추가되었습니다.** 아래 기능은 `feature/devcontrol-project-task-ledger` 소스 브랜치에 있으며, 공개 npm 안정판 `4.1.1`에는 포함되지 않습니다. 기존 MCP Apps, Memory, Plan, 코드 도구는 유지됩니다.
+
+| 영역 | v5에 추가된 기능 |
+|---|---|
+| DevControl | Git 프로젝트별 SQLite `dc_*` 작업 기록, 초기 점검, 전체 릴리스 계획과 의존성 |
+| 실행 계약 | 요구사항과 설계 추적, 상세 작업 Spec, 허용 파일, 필수 테스트 Gate, 작업 임대 |
+| 승인과 변경 | 계획 해시 검토 및 동결, 독립 검토, Owner 승인, 범위 변경, 아키텍처 산출물 보호, 아이디어 평가 |
+| 실제 검증 | Git 변경 범위 검사, 커밋별 완료 보고, 실제 테스트와 `verify` |
+| 통합 작업 공간 | 목표, 요구사항, 설계, 작업, Bug, History, 문서의 읽기 전용 웹 화면 |
+| History | Node.js 22+ Git 프로젝트에서는 SQLite `hs_*`가 기본이며 Markdown은 이전/파일 모드용 |
+| 작업 재개 | 임대 갱신 및 복구, 로컬 웹 화면 자동 시작, 선택적 신뢰 LAN 열람 |
+
+**기본 절차**: Agent가 요구사항을 분석하고 `plan-review` / `plan-propose` → 독립 검토와 Owner의 명시적 `plan-approve` → `next` / `claim` → Agent 직접 구현·독립 검토·실제 테스트 → 승인된 파일만 Git 커밋 → `complete` / `report` → 실제 Gate를 통한 `verify`. 초안은 실행 허가가 아닙니다. 새 아이디어와 동결 범위 변경에는 별도 평가와 승인이 필요합니다. DevControl은 코딩, SQL 실행 또는 독립 검토를 대신하지 않습니다.
+
+**설치와 업그레이드**: DevControl 및 기본 SQLite History에는 Node.js 22+가 필요합니다. [v5 소스 설치·CLI·마이그레이션 안내](../docs/v5-development-guide.md)와 [DevControl 참고](../docs/devcontrol.md)를 확인하세요. 공개 안정판은 `mcp-probe-kit@4.1.1`입니다. 인증 없는 LAN 조회 화면은 인터넷에 공개하지 마세요. 실제 기기 검증이 없는 테스트는 통과로 표시하지 않습니다.
+
+---
+
+## v4 안정판 기능 (v5에서도 유지)
+
 <div align="center">
 <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
 <h1>知时MCP | mcp-probe-kit</h1>
@@ -56,7 +78,7 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 <strong>Convergence Gate</strong>: 단계 또는 요구사항/명세/구현/테스트/리뷰 증거가 부족하면 종료를 거부합니다.
 
 - **네이티브 MCP Apps 5개**: Memory, Feature, Bug, Product, Convergence.
-- **History Session(기본 ON)**: `docs/history-session/` 무손실 인수인계(bootstrap → checkpoint → search/read, 벡터 DB 불필요).
+- **History Session(기본 ON)**: v5 Git/Node.js 22+ 프로젝트에서는 SQLite `hs_*`가 기본입니다. `docs/history-session/`는 이전/파일 모드이며 벡터 DB는 필요하지 않습니다.
 - **재개 가능한 위임 계획**: `plan_heartbeat`가 실제 진행을 저장하고 `resume_plan`이 다음 실행 단계를 복원합니다.
 - **증거 기반 수렴**: `converge`가 전달과 장기 Memory 쓰기를 제한합니다.
 - **관리형 GitNexus Sidecar**: 버전, OS, 아키텍처, Node 메이저별 격리, 무결성 및 실제 FTS 검증, 안전한 축소 동작.
@@ -109,7 +131,7 @@ v4는 Agent 위임 실행을 관찰 가능하고 재개 가능하며 검증 가�
 
 ### 📜 History Session(기본 ON) — 무손실 프로젝트 인수인계
 
-호스트 채팅은 잊습니다. History Session은 `docs/history-session/`에 **무손실 로컬 아카이브**를 남겨 다음 대화에서도 사용자 원문·결정·미결 항목을 복원합니다(벡터 DB 불필요).
+호스트 채팅 기록이 사라져도 v5 Git/Node.js 22+에서는 History Session이 프로젝트 SQLite `hs_*`에 **원문, 결정, 미결 사항**을 보존합니다. Markdown `docs/history-session/`는 이전 버전 또는 명시적 파일 모드용입니다(벡터 DB 불필요).
 
 - **왜 필요한가**: 컨텍스트/새 채팅으로 사실이 사라지지 않음. 기본 ON. Memory/Plan과 다른 계층.
 - **사용법**: 대화 시작 `history_session_bootstrap`(`initial_user_input`; 호스트 session 없으면 첫 호출만 `session_key` 생략 → 서버가 `hs_<uuid>` 발급 후 새 아카이브) → handle 을 이후 호출에 그대로 전달 → 최종 응답 전 `history_session_checkpoint` → 과거 사실은 `search` → `read`.

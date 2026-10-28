@@ -2,6 +2,28 @@
 
 # mcp-probe-kit — Conoce el Contexto, Alimenta el Momento
 
+## Novedades de 5.0.0 (versión de desarrollo desde el código, no publicada)
+
+**v5 amplía las herramientas de flujo de trabajo de v4 con gestión de desarrollo por proyecto.** Estas funciones existen en `feature/devcontrol-project-task-ledger`, **no** en la versión estable npm `4.1.1`. Las MCP Apps, Memory, Plans y herramientas de código de v4 siguen disponibles.
+
+| Área | Nuevas capacidades de v5 |
+|---|---|
+| DevControl | Registro SQLite `dc_*` por proyecto Git, inspección inicial, plan completo y dependencias |
+| Contratos | Requisitos y diseño trazables, Spec detallada, archivos permitidos, pruebas obligatorias y alquiler temporal de tareas |
+| Aprobaciones | Revisión independiente, autorización explícita del propietario, congelación por hash, enmiendas, protección de arquitectura y evaluación de ideas |
+| Pruebas reales | Control del alcance Git, informes vinculados a commits, evidencia real y `verify` |
+| Espacio de proyecto | Vista Web de solo lectura con objetivos, requisitos, arquitectura, tareas, Bugs, History y documentos |
+| History Session | SQLite `hs_*` por defecto en Git/Node.js 22+; Markdown solo para migración o modo archivo |
+| Recuperación | Renovación de tareas, preservación del progreso, panel local automático y acceso LAN opcional |
+
+**Flujo de trabajo**: el Agente investiga requisitos y propone con `plan-review` / `plan-propose`; la revisión independiente y la aprobación explícita preceden a `plan-approve`. Luego `next` / `claim` asignan una tarea concreta. **El Agente** implementa, revisa y realiza pruebas reales. Tras confirmar solo archivos permitidos, `complete` / `report` guardan evidencia y `verify` ejecuta las pruebas exigidas. Un borrador o commit no equivale a Verified. Las ideas y cambios en el alcance aprobado requieren evaluación y autorización. DevControl no sustituye al Agente en código, SQL ni revisión.
+
+**Instalación**: compila la rama fuente con Node.js 22+ para DevControl y SQLite History. Consulta la [guía completa de v5](../docs/v5-development-guide.md) y la [referencia DevControl](../docs/devcontrol.md). La versión estable publicada sigue siendo `mcp-probe-kit@4.1.1`. No expongas la vista LAN sin autenticación a Internet ni afirmes pruebas de dispositivos no ejecutadas.
+
+---
+
+## Funciones estables de v4 conservadas en v5
+
 <div align="center">
   <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
   <h1>知时MCP | mcp-probe-kit</h1>
@@ -62,7 +84,7 @@ v4 convierte la ejecución delegada del Agent en un ciclo de entrega observable,
 <strong>Convergence Gate</strong>: bloquea el cierre cuando faltan pasos o evidencias de requisitos, especificación, implementación, pruebas o revisión.
 
 - **Cinco MCP Apps nativas**: Memory, Feature, Bug, Product y Convergence.
-- **History Session (activado por defecto)**: traspaso local sin pérdida en `docs/history-session/` (bootstrap → checkpoint → search/read, sin vector DB).
+- **History Session (activado por defecto)**: v5 usa SQLite `hs_*` por defecto en Git/Node.js 22+; `docs/history-session/` queda para versiones anteriores o modo archivo, sin base vectorial.
 - **Planes delegados reanudables**: `plan_heartbeat` guarda el progreso real y `resume_plan` recupera el siguiente paso.
 - **Convergencia basada en evidencias**: `converge` controla la entrega y la escritura en Memory a largo plazo.
 - **GitNexus Sidecar administrado**: aislamiento por versión, plataforma, arquitectura y Node; integridad y FTS real verificados.
@@ -116,7 +138,7 @@ v4 convierte la ejecución delegada del Agent en un ciclo de entrega observable,
 
 ### 📜 History Session (activado por defecto) — traspaso local sin pérdida
 
-Los hosts de chat olvidan. History Session guarda un **archivo local sin pérdida** en `docs/history-session/` para recuperar palabras del usuario, decisiones y pendientes en la siguiente conversación — sin base vectorial.
+Los hosts de chat olvidan. History Session en v5 con Git/Node.js 22+ guarda **SQLite `hs_*`** con palabras del usuario, decisiones y pendientes. El Markdown `docs/history-session/` permanece para migración o modo archivo, sin base vectorial.
 
 - **Por qué importa**: no pierdes hechos al cortar contexto o abrir un chat nuevo. Activado por defecto. Capa distinta de Memory/Plan.
 - **Uso**: al inicio `history_session_bootstrap` (`initial_user_input`; sin session del host, omite `session_key` **una vez** → el servidor emite `hs_<uuid>` y abre un archivo nuevo) → devolver el handle → antes de cada respuesta final `history_session_checkpoint` (checklist mínima) → hechos antiguos con `search` → `read`.
