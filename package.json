@@ -63,7 +63,11 @@
     "vue",
     "typescript",
     "git-tools",
-    "ai-assistant"
+    "ai-assistant",
+    "mcp-server",
+    "claude-code",
+    "coding-agents",
+    "spec-driven-development"
   ],
   "author": {
     "name": "小墨 (Kyle)",
