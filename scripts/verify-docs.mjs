@@ -140,6 +140,7 @@ const readmes = ['README.md', ...['zh-CN','ja-JP','ko-KR','es-ES','fr-FR','de-DE
 for (const file of readmes) {
   const text = read(file);
   check(text.includes('docs/v5-development-guide.md'), `${file} links to the unpublished 5.0.0 source-development guide`);
+  check(text.includes('docs/v5-best-practices.md'), `${file} links to the v5 field-tested best-practices guide`);
   check(text.includes('4.1.1') && text.includes('5.0.0'), `${file} separates published 4.1.1 from v5 source development`);
   check(text.includes('DevControl') && text.includes('SQLite'), `${file} explains the new project governance and storage`);
   for (const operation of ['plan-review', 'plan-propose', 'plan-approve', 'claim', 'complete', 'report', 'verify']) {
@@ -160,8 +161,24 @@ for (const file of readmes) {
 }
 
 const v5Guide = read('docs/v5-development-guide.md');
+const v5Practices = read('docs/v5-best-practices.md');
 const v5Page = read('docs/pages/v5-development.html');
 const v5Devcontrol = read('docs/devcontrol.md');
+check(v5Guide.includes('v5-best-practices.md'), 'v5 source-development guide links its best-practices companion');
+check(v5Devcontrol.includes('v5-best-practices.md'), 'DevControl reference links the end-to-end best-practices playbook');
+for (const phrase of [
+  '5.0.0', '4.1.1', 'plan-review', 'plan-propose', 'plan-approve',
+  'execution-contract', 'claim', 'renew', 'check', 'complete', 'report', 'verify',
+  'idea-capture', 'idea-assess', 'idea-review', 'idea-decide',
+  'release-work-scope-independent-review', 'artifact-independent-review',
+  'start_feature', 'start_bugfix', 'go_http_integration', 'flutter_test',
+  'ios_device_e2e', 'history_session_bootstrap', 'history_session_checkpoint',
+  'hs_*', 'dc_*', 'MCP_TOOLSET=full', 'npm run docs:verify',
+]) {
+  check(v5Practices.includes(phrase), `v5 best practices cover ${phrase}`);
+}
+check(v5Practices.includes('不代替 Agent') && v5Practices.includes('真实测试'), 'v5 practices distinguish tool governance and genuine Agent testing');
+check(v5Practices.includes('未发布') && !v5Practices.includes('npx -y mcp-probe-kit@5.0.0'), 'v5 practices do not misrepresent npm 5.0.0 publication');
 for (const phrase of [
   'feature/devcontrol-project-task-ledger',
   'npm ci',

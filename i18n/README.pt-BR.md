@@ -22,6 +22,8 @@
 
 ---
 
+**Boas práticas v5:** [tarefas aprovadas, revisão independente, testes reais, controle de mudanças e continuidade History](../docs/v5-best-practices.md) (guia detalhado em chinês, resumo em inglês).
+
 ## Recursos estáveis do v4 preservados no v5
 
 <div align="center">

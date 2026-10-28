@@ -22,6 +22,8 @@
 
 ---
 
+**v5 Best Practices:** [genehmigte Aufgaben, unabhängige Prüfung, reale Tests, kontrollierte Änderungen und History-Wiederaufnahme](../docs/v5-best-practices.md) (ausführlich auf Chinesisch, englische Zusammenfassung).
+
 ## Weiterhin verfügbare stabile Funktionen aus v4
 
 <div align="center">

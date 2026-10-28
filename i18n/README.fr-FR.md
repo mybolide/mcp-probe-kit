@@ -22,6 +22,8 @@
 
 ---
 
+**Bonnes pratiques v5 :** [tâches approuvées, revue indépendante, tests réels, gestion du périmètre et continuité History](../docs/v5-best-practices.md) (guide détaillé en chinois, résumé en anglais).
+
 ## Fonctionnalités stables v4 conservées dans v5
 
 <div align="center">

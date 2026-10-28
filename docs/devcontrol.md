@@ -10,6 +10,11 @@
 > work only under its approved scope, and provides evidence. DevControl itself
 > does not take over SQL execution or act as the independent reviewer.
 
+For an end-to-end, field-tested way to apply this interface to a real project,
+see **[v5 Best Practices / v5 最佳实践](v5-best-practices.md)**: frozen plans,
+independent Agent review, task leases, real gates, scope changes, batch delivery,
+and History handoff. This reference remains the detailed command/contract source.
+
 DevControl is a Jira-style **project task registry**, distinct from MCP protocol
 Tasks (short-lived tool executions) and Delegated Plans (feature workflow steps).
 It is developed as an opt-in experiment and does not alter the main MCP toolset.

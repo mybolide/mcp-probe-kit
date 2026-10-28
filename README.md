@@ -77,7 +77,7 @@ The workbench is a **read-only browser view**, normally served locally from port
 
 **Important limits:** Some platform/device and end-to-end acceptance gates fail closed until a genuine runner/evidence exists. Git hooks can be bypassed locally, so protected branches and trusted CI are still necessary for stronger enforcement. Local workstation/Owner labels are not authentication. Do not claim Windows CI, production deployment or independent release certification without running them.
 
-For complete task commands, plan reviews, scope amendments, Idea assessment, architecture artifacts, History, migration and rollback, see **[the v5 development guide](docs/v5-development-guide.md)** and **[DevControl reference](docs/devcontrol.md)**. For npm users, continue with **`mcp-probe-kit@4.1.1`**. **No 5.0.0 npm package, Tag or GitHub Release has been authorized.**
+For a field-tested way to run a multi-task project without skipping reviews, task scopes or real gates, read **[v5 Best Practices / v5 最佳实践](docs/v5-best-practices.md)**. For complete task commands, plan reviews, scope amendments, Idea assessment, architecture artifacts, History, migration and rollback, see **[the v5 development guide](docs/v5-development-guide.md)** and **[DevControl reference](docs/devcontrol.md)**. For npm users, continue with **`mcp-probe-kit@4.1.1`**. **No 5.0.0 npm package, Tag or GitHub Release has been authorized.**
 
 ---
 
@@ -157,6 +157,7 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3 → v4 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - Tool surfaces, protocol, Apps, plan state, Memory, and compatibility
 - **[5.0.0 Development Guide](docs/v5-development-guide.md)** — source-only installation, DevControl approval/claim/verify lifecycle, Node22 SQLite History, upgrade and rollback; **not** the published stable version
+- **[5.0.0 Best Practices](docs/v5-best-practices.md)** — end-to-end field-tested workflow for frozen plans, independently reviewed tasks, real gates, safe scope changes, multi-task batches and History handoff
 - [DevControl Task & Project Workspace Reference](docs/devcontrol.md) — project-scoped approval, real gates and task-state governance (not an autonomous code executor)
 - [MCP Apps Live Demos](https://mcp-probe-kit.bytezonex.com/pages/apps.html) - Five real read-only workbenches generated from the shipped App source
 

@@ -22,6 +22,8 @@
 
 ---
 
+**Buenas prácticas v5:** [tareas aprobadas, revisión independiente, pruebas reales, control de cambios y recuperación de History](../docs/v5-best-practices.md) (guía detallada en chino, resumen en inglés).
+
 ## Funciones estables de v4 conservadas en v5
 
 <div align="center">

@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Add a dedicated **5.0.0 Best Practices** guide based on long-running Neyna
+  development: substantive task/plan review, frozen approvals, bounded leases,
+  commit-bound real gates, safe scope amendments, Idea triage, multi-task batches,
+  History handoffs, and the difference between DevControl and Agent responsibility.
+  Link it from the source-development guide and all eight repository READMEs.
 - Synchronize **unpublished 5.0.0 user documentation** with the actual
   DevControl source workflow: branch-based installation instead of a nonexistent
   npm 5.0.0 command, Node22 / project-local SQLite History behavior, plan

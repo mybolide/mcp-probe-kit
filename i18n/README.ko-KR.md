@@ -20,6 +20,8 @@
 
 ---
 
+**v5 개발 모범 사례:** [승인된 작업, 독립 검토, 실제 테스트, 변경 통제 및 History 인수인계](../docs/v5-best-practices.md).
+
 ## v4 안정판 기능 (v5에서도 유지)
 
 <div align="center">

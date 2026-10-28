@@ -4,6 +4,8 @@
 >
 > **English:** This branch contains the unpublished **5.0.0 source milestone**. npm `latest` still refers to the separately released stable line. Build and use this branch locally; do not assume `mcp-probe-kit@5.0.0` is available on npm.
 
+> **从长期项目研发中整理的落地流程：** [《MCP Probe Kit v5 最佳实践》](v5-best-practices.md)——从跨会话恢复、完整 Spec、独立复审和冻结审批，到单任务真实 Gate、范围变更、批量开发及安全交接。本文侧重版本安装和 CLI 接口；最佳实践侧重日常如何正确使用。
+
 ## 1. 安装：先区分两条渠道 / Pick the right channel
 
 **稳定版 / Published stable (4.1.1):**

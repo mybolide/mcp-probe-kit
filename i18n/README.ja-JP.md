@@ -20,6 +20,8 @@
 
 ---
 
+**v5 開発ベストプラクティス:** [承認済みタスク、独立レビュー、実テスト、変更管理と History の運用ガイド](../docs/v5-best-practices.md)。
+
 ## v4 安定版の機能（v5 でも維持）
 
 <div align="center">
