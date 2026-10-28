@@ -77,7 +77,7 @@ export function runLivePostgresGate(root:string,
     "test","-json","-tags=integration,postgres_live", "-run","^TestPostgresLive",
     "-count=1","./...",
   ],{
-    cwd:path.join(root,"services/core"),encoding:"utf8",timeout:120_000,
+    windowsHide: true, cwd:path.join(root,"services/core"),encoding:"utf8",timeout:120_000,
     maxBuffer:4_000_000,killSignal:"SIGKILL",
     env:{...process.env,...env,GIT_TERMINAL_PROMPT:"0"},
   });

@@ -84,7 +84,7 @@ export function checkIosDevicePrerequisites(root:string,taskId:string,
 
 function command(commandName:string,args:string[],cwd:string,timeout:number) {
   return spawnSync(commandName,args,{
-    cwd,encoding:"utf8",timeout,maxBuffer:4_000_000,killSignal:"SIGKILL",
+    windowsHide:true,cwd,encoding:"utf8",timeout,maxBuffer:4_000_000,killSignal:"SIGKILL",
     env:{...process.env,GIT_TERMINAL_PROMPT:"0"},
   });
 }

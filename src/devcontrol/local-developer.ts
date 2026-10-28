@@ -18,7 +18,7 @@ export interface LocalDeveloper {
 
 function git(root:string,args:string[]):string|null {
   const result=spawnSync("git",args,{
-    cwd:root,encoding:"utf8",timeout:5_000,maxBuffer:64_000,
+    windowsHide: true, cwd:root,encoding:"utf8",timeout:5_000,maxBuffer:64_000,
     env:{...process.env,GIT_TERMINAL_PROMPT:"0"},
   });
   return result.status===0 && !result.error ? result.stdout.trim()||null : null;

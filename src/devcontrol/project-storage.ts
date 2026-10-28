@@ -22,7 +22,7 @@ export function ensureDatabaseIgnored(root: string, database: string): void {
   }
   try {
     const gitPath = execFileSync("git", ["rev-parse", "--git-path", "info/exclude"], {
-      cwd: project, encoding: "utf8", timeout: 2_000,
+      windowsHide: true, cwd: project, encoding: "utf8", timeout: 2_000,
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
     const exclude = path.isAbsolute(gitPath) ? gitPath : path.resolve(project, gitPath);

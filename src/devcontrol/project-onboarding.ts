@@ -77,7 +77,7 @@ function validSource(root: string, relative: string): boolean {
 function hasExistingWork(root: string): boolean {
   try {
     const tracked = execFileSync("git", ["ls-files", "-z"], {
-      cwd: root, timeout: 2_000, maxBuffer: 1_000_000,
+      windowsHide: true, cwd: root, timeout: 2_000, maxBuffer: 1_000_000,
     }).toString("utf8").split("\0");
     return tracked.some(file => /^(?:src|app|apps|lib|services|tests|packages|cmd)\//.test(file));
   } catch {

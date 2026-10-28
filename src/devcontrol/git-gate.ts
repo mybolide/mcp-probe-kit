@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { DevControlError } from "./task-ledger.js";
 
 function git(root:string,args:string[]):string {
-  const result=spawnSync("git",args,{cwd:root,encoding:"utf8",timeout:6_000});
+  const result=spawnSync("git",args,{windowsHide: true, cwd:root,encoding:"utf8",timeout:6_000});
   if(result.status!==0||result.error)throw new DevControlError(
     "GIT_ERROR",result.stderr?.trim()||"Git inspection failed");
   return result.stdout.trim();
@@ -25,7 +25,7 @@ export interface HookStatus {
 const signature="# Managed by mcp-probe-kit DevControl commit gate v1";
 export function hookStatus(root:string):HookStatus {
   const config=spawnSync("git",["config","--get","core.hooksPath"],
-    {cwd:root,encoding:"utf8",timeout:6_000});
+    {windowsHide: true, cwd:root,encoding:"utf8",timeout:6_000});
   if(config.status===0&&config.stdout.trim()){
     const custom=config.stdout.trim();
     const file=path.join(path.isAbsolute(custom)?custom:path.resolve(root,custom),"pre-commit");
