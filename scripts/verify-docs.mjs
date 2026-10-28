@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import vm from 'node:vm';
+import { execFileSync } from 'node:child_process';
 import { resolveDocsInstallVersion } from './lib/docs-install-version.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -142,6 +143,13 @@ check(read('scripts/render-doc-demo-gifs.py').includes('crop_to_content'), 'GIF 
 const readmes = ['README.md', ...['zh-CN','ja-JP','ko-KR','es-ES','fr-FR','de-DE','pt-BR'].map((lang) => `i18n/README.${lang}.md`)];
 for (const file of readmes) {
   const text = read(file);
+  check(text.includes('<!-- v5-action-navigation:start -->') && text.includes('<!-- v5-action-navigation:end -->'),
+    `${file} has maintained v5 Agent navigation entry`);
+  check(text.includes('v5-agent-action-guide.md') && text.includes('v5-action-guide.html'),
+    `${file} links both source and website v5 Agent guide`);
+  check(text.includes('{"action":"guide","input":{"intent":"feature"}}'),
+    `${file} shows read-only project-free guide call`);
+  check(text.includes('74 SQLite actions'), `${file} reflects current guided action count`);
   check(text.includes('docs/v5-development-guide.md'), `${file} links to the unpublished 5.0.0 source-development guide`);
   check(text.includes('docs/v5-best-practices.md'), `${file} links to the v5 field-tested best-practices guide`);
   check(text.includes('4.1.1') && text.includes('5.0.0'), `${file} separates published 4.1.1 from v5 source development`);
@@ -164,6 +172,46 @@ for (const file of readmes) {
 }
 
 const v5Guide = read('docs/v5-development-guide.md');
+const actionGuide = read('docs/v5-agent-action-guide.md');
+const v5Sqlite = read('docs/v5-sqlite-only.md');
+const actionGuidePage = read('docs/pages/v5-action-guide.html');
+const actionCatalogSource = read('src/devcontrol/action-catalog.ts');
+const sourceActionGroups = [...actionCatalogSource.matchAll(/actions:\s*\[([\s\S]*?)\]/g)];
+const sourceActions = sourceActionGroups.flatMap(match =>
+  [...match[1].matchAll(/'([^']+)'/g)].map(name=>name[1]));
+check(sourceActions.length >= 74 && new Set(sourceActions).size === sourceActions.length,
+  'v5 source catalog exposes >=74 unique guided DevControl actions without duplicates');
+check(sourceActions.includes('guide'), 'v5 action catalog contains the read-only guide');
+// During concurrent source development, do not claim uncommitted operations
+// are documented or approved. Validate the *committed* action contract plus
+// guide, then automatically require newly committed actions on the next build.
+let documentedActions = sourceActions;
+try {
+  const committedCatalog = execFileSync('git',['show','HEAD:src/devcontrol/action-catalog.ts'],
+    {cwd:root,encoding:'utf8',windowsHide:true,timeout:3500});
+  const live = [...committedCatalog.matchAll(/actions:\s*\[([\s\S]*?)\]/g)]
+    .flatMap(match=>[...match[1].matchAll(/'([^']+)'/g)].map(name=>name[1]));
+  documentedActions = [...new Set([...live, 'guide'])];
+} catch { /* plain source archive: compare against all current actions */ }
+check(actionGuide.includes('{"action":"guide","input":{"intent":"feature"}}'), 'v5 markdown Agent guide has actual tool call');
+check(actionGuidePage.includes('{"action":"guide","input":{"intent":"feature"}}'), 'v5 website Agent guide shows actual call');
+check(actionGuidePage.includes('docs-shell:start') && actionGuidePage.includes('data-doc-shell="sidebar"'), 'new v5 Agent guide uses shared responsive website shell');
+check(actionGuidePage.includes('./v5-development.html'), 'new v5 Agent guide links source install documentation');
+check(read('docs/index.html').includes('./pages/v5-action-guide.html'), 'website homepage links Agent guide prominently');
+check(v5Sqlite.includes(documentedActions.length+' 个受控') && v5Sqlite.includes('`guide`'),
+  'SQLite-only architecture documents read-only guide and committed action count');
+for (const action of documentedActions) {
+  check(v5Sqlite.includes('`'+action+'`'), `SQLite reference includes live action ${action}`);
+}
+for(const lang of globalLanguages){
+  check(globalTranslations[lang].sidebar?.v5ActionGuide, `${lang} has v5 Agent action navigation label`);
+}
+check(!v5Guide.includes('`storage_mode=files` opts into legacy feature documentation'),
+  'v5 guide rejects legacy file-backed fallback');
+check(!read('docs/pages/v5-development.html').includes('v4 的 MCP Apps、start_feature、start_bugfix'),
+  'v5 development website does not claim removed v4 workbenches are callable');
+check(!read('docs/index.html').includes('仍在 v5 中保留'),
+  'v5 homepage does not claim archived v4 tools remain active');
 const v5Practices = read('docs/v5-best-practices.md');
 const v5Page = read('docs/pages/v5-development.html');
 const v5PracticesPage = read('docs/pages/v5-best-practices.html');
@@ -234,6 +282,7 @@ for (const lang of ['zh-CN', 'en', 'ja', 'ko']) {
 }
 
 const documentationPages = [
+  'docs/pages/v5-action-guide.html',
   'docs/pages/v5-best-practices.html',
   'docs/pages/getting-started.html',
   'docs/pages/all-tools.html',
@@ -273,7 +322,8 @@ const isPrerelease = packageJson.version.includes('-');
 const docsInstallVersion = resolveDocsInstallVersion(packageJson.version, read('CHANGELOG.md'));
 const expectedV4Specifier = docsInstallVersion.specifier;
 check(packageJson.scripts?.['docs:sync-shell'] === 'tsx scripts/sync-doc-shell.ts', 'package exposes docs:sync-shell');
-check(packageJson.scripts?.['docs:build']?.startsWith('npm run docs:sync-shell'), 'docs:build synchronizes the canonical shell first');
+check(packageJson.scripts?.['docs:build']?.startsWith('npm run docs:sync-v5 && npm run docs:sync-shell'), 'docs:build synchronizes v5 copy and canonical shell before tools and demos');
+check(packageJson.scripts?.['docs:sync-v5'] === 'tsx scripts/sync-v5-doc-copy.ts', 'docs:build includes all README and active v5 docs copy synchronizer');
 check(existsSync(resolve(root, 'scripts/sync-doc-shell.ts')), 'canonical docs shell generator exists');
 check(existsSync(resolve(root, 'docs/assets/css/docs-shell.css')), 'shared docs shell CSS exists');
 check(existsSync(resolve(root, 'docs/assets/js/docs-shell.js')), 'shared docs shell JS exists');

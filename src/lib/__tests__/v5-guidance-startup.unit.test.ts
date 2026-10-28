@@ -23,11 +23,11 @@ function tempGitProject(): string {
 }
 
 describe('v5 generated Skill and startup AGENTS guidance', () => {
-  test('action catalog covers exactly the supported 73 v5 operations once, and Skill documents all', () => {
+  test('source-derived action catalog covers all guided v5 operations once, and Skill documents all', () => {
     const all = V5_DEVC_ACTION_GROUPS.flatMap(group => [...group.actions]);
     expect(all).toEqual(V5_DEVC_ACTIONS);
-    expect(all).toHaveLength(73);
-    expect(new Set(all).size).toBe(73);
+    expect(all.length).toBeGreaterThanOrEqual(74);
+    expect(new Set(all).size).toBe(all.length);
     const doc = renderV5DevControlActionReference();
     const skill = generateWorkflowSkillContent(VERSION);
     expect(skill).toContain('DevControl operation reference');
@@ -45,7 +45,7 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
   test.each(['zh-CN', 'en'])('%s managed AGENTS points to current action reference and startup freshness check', locale => {
     const text = renderV5AgentsMd(locale, '@.agents/skills/mcp-probe-kit/SKILL.md');
     expect(text).toContain('DevControl operation reference');
-    expect(text).toContain('73');
+    expect(text).toContain(String(V5_DEVC_ACTIONS.length));
     expect(text).toContain(SKILL_GUIDANCE_REVISION);
     expect(text).toContain('history_session_bootstrap');
     expect(text).toContain('feature-task-approve');

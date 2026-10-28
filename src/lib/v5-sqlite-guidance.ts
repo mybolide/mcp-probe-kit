@@ -29,6 +29,9 @@ export function renderV5Skill(version: string): string {
 ## The only project-development workflow
 
 Use the main MCP tool \`devcontrol\` with \`{action,project_root,input}\`.
+If uncertain, call \`devcontrol\` action=\`guide\` with
+\`input={intent:"feature"}\` first; this is a read-only orientation call
+which needs no project_root and never authorizes work.
 \`project_root\` is the **target application Git repository**, not the MCP
 installation. Node.js 22+ is required. The project database is at
 \`.mcp-probe-kit/state/devcontrol.sqlite3\` (existing Neyna projects retain
@@ -65,6 +68,11 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    separate reviewer records outcome through gate-review. DevControl
    never runs arbitrary business-specific Python/gRPC/etc executors.
    Missing actual test evidence or independent review fails closed.
+   When a required physical/external Gate is unavailable after a committed
+   completion, use \`defer-verification\` with the current lease token, exact
+   Gate and reason. This frees the task lease but NEVER passes the Gate.
+   After the device returns use \`resume-verification\`, then actual \`verify\`.
+   Never rewrite SQLite task states or silently discard user files.
 6. New ideas enter \`idea-capture\` → Agent \`idea-assess\` → independent
    \`idea-review\` → explicit Owner \`idea-decide\`. Scope or dependency
    changes need separately reviewed \`release-work-scope-*\` or
@@ -127,6 +135,7 @@ ${managedRevision}
 - **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；再 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\`，最终由独立复审及精确 Hash 的 Owner \`feature-task-approve\`。草稿父子任务应可见但不能执行；FR-1 与 FR-001 统一关联并保留原文。
 - **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新增 Feature 叶子不超过 4 小时，过大必须拆分。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
 - **外部真实测试**：Python/Go/Flutter/gRPC 业务测试由 Agent 实际运行，DevControl 只记录计划要求、证据和独立 Reviewer 的结果。外部 Gate 用 gate-review 留痕，证据存在不代表测试通过，也不能自动 verify。
+- **缺少真机或外部验收环境**：代码已提交、完成说明和证据入账的 \`in_review\` 任务可使用 \`defer-verification\`（当前租约、精确Gate、真实原因）登记待验证并释放任务租约。它不减少或放宽原 Gate，不增加 Verified。必须维护 Git/Owner 未提交文件完整性；不能为了延期直接改 SQLite 或 stash/reset。真机回来后使用 \`resume-verification\` 并运行真实 \`verify\`；其间其它任务只能按正常独立冻结范围开发。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
 - **会话结束**：\`history_session_checkpoint\` 记录用户原话、发现、决策、改动、真实测试、分支/租约、阻碍及下一步。保留用户未提交修改，真机/真实数据库 Gate 缺失就报告未通过。

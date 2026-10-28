@@ -1,3 +1,9 @@
+<!-- v5-agent-action-guide:start -->
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **74 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
+> [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
+<!-- v5-agent-action-guide:end -->
+
 # MCP Probe Kit 5.0.0 开发版使用指南 / Development guide
 
 > **2026-10-28 重大变更**：v5 的研发管理唯一机制是 **SQLite + DevControl**，
@@ -30,7 +36,7 @@ npm run build
 node build/index.js --version
 ```
 
-Use **Node.js 22+ for DevControl and the SQLite-backed default History Session**. The older non-DevControl MCP tools still support Node.js 20+. Build in the source checkout; do not redirect `npm` to an unpublished version or install the source globally. `npm run build` also invokes the project's prebuild checks.
+Use **Node.js 22+ for all v5 runtime entrypoints and SQLite History**. Node.js 20 users should use the separately published v4.1.1 line. Build in the source checkout; do not redirect `npm` to an unpublished version or install the source globally. `npm run build` also invokes the project's prebuild checks.
 
 To launch this source build as an MCP server, configure your host's MCP server entry with `command: "node"` and `args: ["/ABSOLUTE/PATH/mcp-probe-kit/build/index.js"]`, and restart the host. **Replace the absolute path**; relative paths depend on the host's current working directory. For a normal published stable installation, continue using `npx -y mcp-probe-kit@4.1.1`.
 
@@ -67,11 +73,11 @@ The exact JSON schemas and the full planner/migration rules are in [DevControl r
 
 ### Real acceptance / 门禁真实性
 
-The required Gate depends on the task: for example `flutter_test` runs the **real Flutter SDK**, `go_http_integration` runs **real Core HTTP integration tests**, and a platform/device Gate needs its own actual runner. A mock command or an unrelated unit test is not interchangeable with the required Gate. For Flutter installed outside `PATH`, set `FLUTTER_ROOT` or an absolute `FLUTTER_BIN`; never substitute a fake Flutter executable.
+The required Gate depends on the task: for example `flutter_test` runs the **real Flutter SDK**, `go_http_integration` runs **real Core HTTP integration tests**, and a platform/device Gate needs its own actual runner. A mock command or an unrelated unit test is not interchangeable with the required Gate. Project-specific test commands are run by the Agent, with reported evidence and independent gate-review; MCP does not need a language-specific test runner. For Flutter installed outside `PATH`, set `FLUTTER_ROOT` or an absolute `FLUTTER_BIN`; never substitute a fake Flutter executable.
 
 ## 3. History Session、项目文档和 Memory 不是同一个存储
 
-- **History Session** (`history_session_bootstrap`, `checkpoint`, `search`, `read`, `validate`) tracks exact user inputs and project-chat continuity. With the supported Node.js 22+ Git-project default, the project-local **SQLite `hs_*` tables** are authoritative. Historical `docs/history-session/N.md` files can be imported without deletion. With Node.js 20, a nonstandard history directory, or `MCP_HISTORY_STORAGE=files`, it uses the earlier Markdown backend. A returned archive path may be a **virtual locator**.
+- **History Session** (`history_session_bootstrap`, `checkpoint`, `search`, `read`, `validate`) tracks exact user inputs and project-chat continuity. With the supported Node.js 22+ Git-project default, the project-local **SQLite `hs_*` tables** are authoritative. Historical `docs/history-session/N.md` files can be imported without deletion. v5 rejects Node.js 20, custom live History directories and `MCP_HISTORY_STORAGE=files`; Markdown archives are read-only import sources, not a live fallback. A returned archive path may be a **virtual locator**.
 - **DevControl task ledger** is separate project-local SQLite data for planned, approved, in-progress, reviewed, and verified work, plus completion notes. Do not manufacture task-progress Markdown reports.
 - **Memory tools** (`search_memory`, `memorize_asset` etc.) are **optional cross-project Qdrant/vector-memory functionality**. Neither History nor DevControl requires configuring Qdrant. Don't expose passwords or sensitive records in history, Git, output or logs.
 
@@ -138,7 +144,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol verify --project-roo
 ### Planning, Feature, Bug, Idea and architecture records
 
 - **Plan and task status are separate.** `plan-review` checks a candidate; `plan-propose` stores a pending versioned draft; `plan-approve` creates eligible tasks only after a reviewed hash and Owner decision. A proposed item must not be shown as Verified. `plan-revise` takes the previous draft's exact hash and retains its revision history. Existing frozen releases also support the specifically reviewed `release-work-*` workflows.
-- **Features live in SQLite when supported.** `feature-save`, `feature-validate`, `feature-task-review` / `feature-task-propose` / `feature-task-approve` maintain substantive requirements, design sections, child work and revisions. `feature-export` generates Markdown/JSON only when requested. `storage_mode=files` opts into legacy feature documentation. Do not confuse a delegated Plan step with an approved DevControl work item.
+- **Features live in SQLite when supported.** `feature-save`, `feature-validate`, `feature-task-review` / `feature-task-propose` / `feature-task-approve` maintain substantive requirements, design sections, child work and revisions. `feature-export` generates Markdown/JSON only when requested. File-backed v4 task state is not supported. Exported feature Markdown is documentation only; a proposed Feature tree is not an approved DevControl work item.
 - **Bugs and architecture changes are visible work items.** `bug-get`, `bug-step-save`, `bug-task-link`, `work-record`, and `architecture-sync` relate investigations to existing project requirements without silently granting scope.
 - **Ideas need a decision, not immediate implementation.** `idea-capture` stores the actual source request; `idea-assess` considers impact, alternatives and a suitable phase; `idea-review` records independent scrutiny; `idea-decide` requires explicit authorization and the reviewed revision. A useful idea may fit an already approved task, require a later incremental plan, or be rejected.
 - **Frozen changes require review.** `release-work-scope-review` / `release-work-scope-stage` / `release-work-scope-independent-review` / `release-work-scope-approve` enforce scoped changes with both proposal and review hashes. The incremental equivalents `release-work-incremental-review` / `release-work-incremental-stage` / `release-work-incremental-independent-review` / `release-work-incremental-approve` control new work after freeze. Pausing an active task preserves its lease provenance and existing user modifications; no direct SQLite status edits or Hook bypass.
@@ -149,7 +155,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol verify --project-roo
 
 The Web workbench reads actual Git/SQLite project data. On Node22+ Git projects it normally starts with the main MCP server on local port `38180`, reuses the same project's persisted port when safe, and avoids terminating unknown listeners. `devcontrol workspace-status` reports its address. `devcontrol lan-enable` and `lan-disable` control optional trusted-LAN viewing. The LAN mode is **unauthenticated HTTP** and should never be port-forwarded to the public Internet. Browser pages are read-only; approvals and writes run through the validated CLI/MCP operations.
 
-The optional separate `devcontrol serve` MCP stdio interface is **not silently added to the main compact toolset**. The normal MCP model-visible surface remains 29 tools by default (24 base plus 5 History), 35 with Memory, and 39 in full compatibility mode. These counts do not include the dedicated DevControl operations as default model tools.
+The optional separate `devcontrol serve` MCP stdio interface is **not silently added to the main compact toolset**. The main v5 MCP exposes 15 model tools by default (including SQLite History), 21 with Memory, and 24 in full mode, plus one App-only tool. DevControl is one of those model tools; its 74 action values are not separate MCP tool registrations.
 
 Node.js 20+ remains sufficient for the legacy/non-DevControl tools; DevControl and the SQLite History default need Node.js 22+ with the built-in SQLite module. Local Git Hook checks and owner labels are not a security boundary stronger than the current machine. Physical-device, real HTTP integration and complete release E2E gates must use genuine test runners; unavailable gates must remain Not Run or failed, not silently passed.
 

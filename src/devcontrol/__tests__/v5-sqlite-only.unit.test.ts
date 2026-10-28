@@ -28,9 +28,8 @@ describe('v5 SQLite-only lifecycle', () => {
   test('main MCP exposes DevControl with scoped target root and rejects legacy import operations', async () => {
     const root = newProject();
     const listed = getToolDefinition('devcontrol');
-    expect(listed?.schema.inputSchema).toMatchObject({
-      required: ['action', 'project_root'],
-    });
+    expect(listed?.schema.inputSchema).toMatchObject({required:['action']});
+    expect((await runV5DevControlTool({action:'guide',input:{intent:'start'}})).isError).toBe(false);
     const onboard = await runV5DevControlTool({ action: 'onboard', project_root: root });
     expect(onboard.isError).toBeFalsy();
     const next = await runV5DevControlTool({ action: 'next', project_root: root });

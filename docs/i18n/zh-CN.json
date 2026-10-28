@@ -67,7 +67,8 @@
     "v5BestPractices": "v5 最佳实践",
     "followUs": "关注公众号",
     "getTechSharing": "获取更多技术分享",
-    "apps": "MCP Apps 演示"
+    "apps": "MCP Apps 演示",
+    "v5ActionGuide": "v5 Agent 调用导航"
   },
   "gettingStarted": {
     "title": "安装配置",

@@ -1,3 +1,13 @@
+<!-- v5-action-navigation:start -->
+> **v5 Agent action navigation / v5 Agent 操作导航（source only, unpublished）**
+> Main model tool: **devcontrol**. It exposes **74 SQLite actions, including a read-only guide**; these are *not* 74 different MCP tools.
+> When unsure call {"action":"guide","input":{"intent":"feature"}} (no project_root, no changes), then follow the returned next action using the real business Git project_root.
+> Requirements → Design → single-outcome atomic Tasks → independent review → explicit Owner hash approval → Agent-run genuine tests → evidence + review → Verified.
+> The v5 MCP checks and refreshes managed Skill/AGENTS.md at startup and again on the first explicit project tool call, preserving user rules and recognizing guidance revisions even with the same 5.0.0 package version.
+> [Agent action guide](../docs/v5-agent-action-guide.md) · [v5 web page](../docs/pages/v5-action-guide.html) · [SQLite-only contract](../docs/v5-sqlite-only.md).
+> **v4.1.1 stays the separate published npm release.** v4 start_*/file Plans/MCP Apps examples farther below are historical, not v5 callable workflows. Never install unpublished npm 5.0.0.
+<!-- v5-action-navigation:end -->
+
 > **Desarrollo 5.0.0 (sin publicar):** Consulte la **[guía de instalación, migración y DevControl 5.0.0](../docs/v5-development-guide.md)** para el flujo de tareas aprobadas, pruebas reales y History en SQLite con Node.js 22+. La versión estable pública en npm sigue siendo **4.1.1**. DevControl no programa, ejecuta SQL ni sustituye la revisión independiente del agente.
 
 > **Cambio incompatible de v5:** toda la gestión de desarrollo usa SQLite + DevControl. Los Spec/Plan en archivos y History Markdown de v4 ya no se admiten. [Arquitectura y migración v5](../docs/v5-sqlite-only.md). Las secciones v4 siguientes son históricas.

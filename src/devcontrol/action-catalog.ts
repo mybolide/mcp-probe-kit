@@ -7,6 +7,10 @@
  */
 export const V5_DEVC_ACTION_GROUPS = [
   {
+    title: '操作导航 / Read-only agent navigation',
+    actions: ['guide'],
+  },
+  {
     title: '项目与当前任务 / Project and task discovery',
     actions: ['onboard', 'next', 'list', 'get', 'execution-contract', 'task-detail-audit'],
   },

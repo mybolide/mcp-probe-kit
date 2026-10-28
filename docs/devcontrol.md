@@ -1,3 +1,9 @@
+<!-- v5-agent-action-guide:start -->
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **74 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
+> [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
+<!-- v5-agent-action-guide:end -->
+
 # DevControl — MCP Probe Kit 5.0.0 source-development reference
 
 > **Current branch contract:** This document describes implemented project governance in the unpublished 5.0.0 feature branch. Dated Neyna V0.1 observations and original migration decisions below are historical examples, not default plans for another project or evidence of release acceptance. For a complete source install, read the [v5 guide](v5-development-guide.md); v4/V1 frozen specs remain historical baselines.
@@ -17,7 +23,7 @@ and History handoff. This reference remains the detailed command/contract source
 
 DevControl is a Jira-style **project task registry**, distinct from MCP protocol
 Tasks (short-lived tool executions) and Delegated Plans (feature workflow steps).
-It is developed as an opt-in experiment and does not alter the main MCP toolset.
+The main v5 MCP exposes a single `devcontrol` tool for all supported SQLite operations. The separate local DevControl server remains optional.
 
 ## Project memory ownership (never confuse the two memory systems)
 
@@ -32,8 +38,7 @@ no longer creates numbered `docs/history-session/N.md` files. Existing
 numbered archives are imported once transactionally, left on disk untouched for
 rollback, and subsequent updates go to SQLite only. Returned archive paths are
 virtual locators for the History Session read API, not instructions to create
-Markdown. If Node22 is unavailable, the directory is customized, or
-`MCP_HISTORY_STORAGE=files`, the old Markdown backend remains available.
+Markdown. Node.js 22+ and standard project SQLite History are required for v5. Custom live History directories and `MCP_HISTORY_STORAGE=files` are rejected; Markdown numbered archives may only be read-imported.
 
 The `memorize_asset`/`search_memory` tools are a **different**, optional,
 cross-project Qdrant vector-memory service. They are not modified, migrated,
@@ -42,17 +47,16 @@ feature workflow.
 
 ## Native Feature, Bug and design records
 
-On Node22+ Git projects, `start_feature` now defaults to storing the full
-feature proposal, parent-child draft, delegated Plan and revision history in
+On Node22+ Git projects, `devcontrol` `feature-create`/`feature-save` store the full
+feature proposal, parent-child task draft, approved plan and revision history in
 the local `dc_features` tables, **without generating requirements.md,
-design.md or tasks.md**. The plan first reviews History Session and existing
-normative documents, then uses `devcontrol feature-save` and
+design.md or tasks.md**. The Agent first reviews SQLite History and existing normative documents, then calls `devcontrol feature-save` and
 `devcontrol feature-validate`. A proposal does not bypass task approval.
-`storage_mode=files` explicitly opts into the original document workflow.
+There is no `storage_mode=files` bypass in v5; exported Markdown is a human-readable artifact only.
 `feature-export` exposes Markdown or JSON on demand; the workspace includes
 download actions for individual feature records.
 
-`start_bugfix` can register a deduplicated project-local issue, preserving
+`devcontrol` `work-record` and `bug-step-save` register and update a project-local issue, preserving
 its SRC-8 analysis workflow. `dc_work_items` contains Bugs and proposed
 architecture changes **only**, not History Session memory. Items and tasks
 capture creator and local device labels. Task deduplication evaluates
@@ -508,6 +512,21 @@ for **another unfinished task** block task switching. `release` only succeeds
 before any Git changes have occurred; release never abandons committed evidence.
 An expired `in_review` task can be reclaimed and re-verified without reopening
 the task or losing the review evidence.
+
+**External device unavailable (not a successful verification):** After a
+real scoped Git commit, structured completion and reported test evidence,
+an active `in_review` lease may use `defer-verification` with its lease token,
+the exact required physical/external Gate and a concrete reason. The task
+remains `in_review` and appears as **待设备/外部验收** on the workbench.
+DevControl records an immutable Git submission, retains the original Gate,
+and releases **only the singleton task lease** so independent work can move
+forward. It never marks the Gate passed or increases Verified. Staged,
+untracked, or changed Owner files are not silently discarded; resolve
+uncommitted code provenance before deferring.
+Once the real device/runner is available, use `resume-verification` to
+explicitly claim the old task and run its full real `verify`. Later commits
+cannot be counted in the frozen original task diff; later modifications to
+the original delivered files block direct resumption for fresh review.
 
 The `import-spec` operation uses stable manifest subspec IDs rather than array
 positions, and its full task/dependency import is **transactional**. Reordering

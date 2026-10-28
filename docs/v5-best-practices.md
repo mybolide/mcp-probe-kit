@@ -1,3 +1,9 @@
+<!-- v5-agent-action-guide:start -->
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **74 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
+> [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
+<!-- v5-agent-action-guide:end -->
+
 # MCP Probe Kit v5 最佳实践：让 Agent 持续、受控地交付真实项目
 
 > **2026-10-28 破坏性变更**：v5 已取消 v4 的文件式研发流程入口。
@@ -182,7 +188,7 @@ History Checkpoint 最少记录：**原始用户输入、实际目的、关键�
 
 ## 十、版本与环境：正确构建，正确验证，不误发布
 
-本分支 v5 **仅作为源码开发候选**。需要 Node.js 22+ 才能运行 DevControl 和 Git 项目默认的 SQLite History；Node.js 20+ 仍可支持旧的非 DevControl 工具。默认模型工具面为 **29**（24 基础 + 5 History）、配置 Memory 后 **35**；兼容模式 `MCP_TOOLSET=full` 为 **39**。专用 DevControl MCP 入口需显式注册，不能把它当成 29 个默认工具之一。
+本分支 v5 **仅作为源码开发候选**。需要 Node.js 22+ 才能运行 DevControl 和 Git 项目默认的 SQLite History；Node.js 20+ 仍可支持旧的非 DevControl 工具。默认模型工具面为 **15**（含 5 个 History）、配置 Memory 后为 **21**；完整模型工具面 `MCP_TOOLSET=full` 为 **24**（另有一个 App-only 入口）。主 MCP 自带 `devcontrol`，其 `guide` 可以提供当前阶段调用示例；独立 DevControl 专用服务只在另外显式配置时使用。
 
 ```bash
 git clone --branch feature/devcontrol-project-task-ledger https://github.com/mybolide/mcp-probe-kit.git

@@ -31,7 +31,7 @@
   <main>
     <p class="lang">Source milestone · Chinese / English quick reference</p>
     <h1>MCP Probe Kit 5.0.0 开发版指南</h1>
-    <section><strong>2026-10-28 v5 架构变更：</strong>本分支研发过程已改为 <strong>SQLite + DevControl 唯一状态源</strong>。旧 start_*、Delegated Plan、Markdown 规格工作流不再可用；本文后续的“v4 保留能力”内容是旧开发阶段资料。请先查看 <a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-sqlite-only.md">v5 SQLite-only 实现及迁移现状</a>。5.0.0 尚未发布。</section>
+    <section><strong>2026-10-28 v5 架构变更：</strong>本分支研发过程已改为 <strong>SQLite + DevControl 唯一状态源</strong>。旧 start_*、Delegated Plan、Markdown 规格工作流不再可用；本文后续的“v4 保留能力”内容是旧开发阶段资料。请先查看 <a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-sqlite-only.md">v5 SQLite-only 实现及迁移现状</a>。5.0.0 尚未发布。<a href="./v5-action-guide.html">Agent 如何选择 action？</a></section>
     <p><a href="./v5-best-practices.html"><strong>推荐先读：v5 最佳实践 · 来自真实项目的冻结计划、独立复审、真实验收与跨会话恢复</strong></a></p>
     <div class="intro">
       <p class="status">5.0.0 已在开发分支，但尚未发布至 npm / MCP Registry，也没有正式发布 Tag。</p>
@@ -65,7 +65,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --p
     </section>
     <section>
       <h2>3. History Session、Memory 与迁移</h2>
-      <p>Node.js 22+ 的 Git 项目默认将 History Session 保存于项目本地 SQLite <code>hs_*</code> 表；旧历史 Markdown 可以安全导入，在不支持的环境下可回退文件后端。DevControl 任务账本使用独立数据表；可选的 Qdrant Memory 是另一项跨项目服务，不能混同。</p>
+      <p>Node.js 22+ 的 Git 项目默认将 History Session 保存于项目本地 SQLite <code>hs_*</code> 表；旧历史 Markdown 可以安全导入，不支持文件式实时 History 回退。DevControl 任务账本使用独立数据表；可选的 Qdrant Memory 是另一项跨项目服务，不能混同。</p>
       <p>升级旧项目时先备份忽略状态和未提交的 Owner 工作，建立独立源码构建；确认正确项目根目录、历史恢复和已批准的任务门禁，绝不把迁移操作视为生产发布许可。</p>
       <p>详细中英文参考：</p>
       <ul>
@@ -77,7 +77,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --p
     </section>
     <section>
       <h2>4. v5 相比 v4 增加了哪些能力 / Feature inventory</h2>
-      <p>v4 的 MCP Apps、start_feature、start_bugfix、委托计划、代码检查和可选 Memory 仍然保留。v5 的核心新增内容是项目级研发管理，而不是更换 Agent 或让 MCP 自己编程。</p>
+      <p>v5 不再支持 v4 文件式 start_feature/start_bugfix、Delegated Plan 和旧 MCP Apps。无状态代码检查与可选 Memory 保留；正式研发状态唯一通过 SQLite DevControl 管理。</p>
       <ul>
         <li><strong>项目任务账本</strong>：每个 Git 项目独立 SQLite <code>dc_*</code>，保存任务、依赖、计划草稿、租约、审核和验收证据。</li>
         <li><strong>整版冻结计划</strong>：<code>plan-review</code>、<code>plan-propose</code>、<code>plan-approve</code>，按真实需求、设计、范围和 Gate 审核；未经批准的提案不能开发。</li>
@@ -85,7 +85,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --p
         <li><strong>需求与变更管理</strong>：Feature 设计和子任务、Bug 分析、Idea 评估与复审、范围增量审批、架构工件的版本哈希检查。</li>
         <li><strong>真实验收与恢复</strong>：领取和续租、Git 路径检查、基于真实 Commit 的完成报告、独立测试 Gate，以及中断后继续同一任务。</li>
         <li><strong>项目工作台</strong>：项目总览、目标、需求、架构、任务、Bug、历史会话和文档。浏览器只读，修改仍走受控 CLI/MCP。</li>
-        <li><strong>项目历史</strong>：Node.js 22+ Git 项目默认将会话保存于 SQLite <code>hs_*</code>；旧 Markdown 可迁移或采用文件兼容模式。Qdrant Memory 不是任务账本。</li>
+        <li><strong>项目历史</strong>：Node.js 22+ Git 项目默认将会话保存于 SQLite <code>hs_*</code>；旧 Markdown 仅允许只读导入，不再双写或回退。Qdrant Memory 不是任务账本。</li>
       </ul>
     </section>
     <section>

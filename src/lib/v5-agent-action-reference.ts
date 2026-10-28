@@ -8,7 +8,13 @@ export function renderV5DevControlActionReference(): string {
   }).join('\n');
   return `## DevControl operation reference — ${V5_DEVC_ACTIONS.length} SQLite actions
 
-Call the **single** MCP tool \`devcontrol\` with
+First discover the correct flow with the **read-only, project-free** call
+\`{"action":"guide","input":{"intent":"feature"}}\`. Other supported intents:
+\`start\`, \`planning\`, \`task\`, \`verification\`, \`bug\`,
+\`idea\`, \`scope\`, \`architecture\`.
+The response gives a short list of relevant actions, copyable input example,
+and approval caution, without modifying SQLite. Then call the **single**
+MCP tool \`devcontrol\` with
 \`{"action":"next","project_root":"/ABSOLUTE/GIT/PROJECT","input":{}}\`.
 Each action has different input fields; do not invent parameters, approvals,
 test results or task state. Actions are not separate MCP tools.

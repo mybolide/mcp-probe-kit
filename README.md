@@ -1,3 +1,13 @@
+<!-- v5-action-navigation:start -->
+> **v5 Agent action navigation / v5 Agent 操作导航（source only, unpublished）**
+> Main model tool: **devcontrol**. It exposes **74 SQLite actions, including a read-only guide**; these are *not* 74 different MCP tools.
+> When unsure call {"action":"guide","input":{"intent":"feature"}} (no project_root, no changes), then follow the returned next action using the real business Git project_root.
+> Requirements → Design → single-outcome atomic Tasks → independent review → explicit Owner hash approval → Agent-run genuine tests → evidence + review → Verified.
+> The v5 MCP checks and refreshes managed Skill/AGENTS.md at startup and again on the first explicit project tool call, preserving user rules and recognizing guidance revisions even with the same 5.0.0 package version.
+> [Agent action guide](docs/v5-agent-action-guide.md) · [v5 web page](docs/pages/v5-action-guide.html) · [SQLite-only contract](docs/v5-sqlite-only.md).
+> **v4.1.1 stays the separate published npm release.** v4 start_*/file Plans/MCP Apps examples farther below are historical, not v5 callable workflows. Never install unpublished npm 5.0.0.
+<!-- v5-action-navigation:end -->
+
 # mcp-probe-kit — Know the Context, Feed the Moment
 
 <div align="center">
@@ -40,7 +50,7 @@
 
 ## What's new in 5.0.0 (source development, not an npm release)
 
-Version 5 replaces v4 **file-backed development management** with **SQLite + DevControl as the only project workflow**. The v4 Delegated Plan, start_* management and file-based History are deliberately removed from the active v5 interface; independent code-review, Git, UI helper and optional Memory capabilities remain. v4 MCP Apps built around retired Plan state are historical demos pending a SQLite project-workbench replacement. The following capabilities are under source-development validation, **not** features of published `4.1.1`.
+Version 5 replaces v4 **file-backed development management** with **SQLite + DevControl as the only project workflow**. The v4 Delegated Plan, start_* management and file-based History are deliberately removed from the active v5 interface; independent code-review, Git, UI helper and optional Memory capabilities remain. v4 MCP Apps are retained only as historical demonstrations; v5 ships a SQLite DevControl Workbench and a separate Memory Center. The following capabilities are under source-development validation, **not** features of published `4.1.1`.
 
 | Area | v5 capability | Practical benefit |
 |---|---|---|

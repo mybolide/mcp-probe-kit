@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MCP Probe Kit v5 SQLite DevControl Agent 导航：一个管理工具、74 个 action、只读 guide 引导，需求→设计→原子任务→独立审核→真实验收。">
+  <title>v5 Agent 调用指南 · DevControl action 导航 | MCP Probe Kit</title>
+  <link rel="icon" href="../assets/logo.png" type="image/png">
+  <link rel="stylesheet" href="../assets/css/docs-shell.css">
+  <script src="../assets/js/tailwind.js"></script>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;color:#0f172a;background:#f8fafc}
+    *{box-sizing:border-box}body{margin:0}main{line-height:1.7}
+    .panel{background:white;border:1px solid #e2e8f0;border-radius:14px;padding:1.3rem;margin-top:1.1rem}
+    h1{line-height:1.3}h2{font-size:1.2rem;font-weight:700;margin:.4rem 0 1rem}
+    code{background:#eff6ff;color:#1d4ed8;padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}
+    pre{background:#0f172a;color:#e2e8f0;padding:1rem;border-radius:10px;overflow:auto}pre code{background:transparent;color:inherit}
+    a{color:#2563eb;text-decoration:underline}table{border-collapse:collapse;width:100%}th,td{padding:.65rem;text-align:left;border-bottom:1px solid #e2e8f0;vertical-align:top}
+    th{background:#f1f5f9}.sidebar-drawer{transition:transform .2s}@media(max-width:767px){.sidebar-drawer{transform:translateX(-100%)}.sidebar-drawer.open{transform:translateX(0)}}
+  </style>
+</head>
+<body class="font-sans bg-bg-page text-text-primary min-h-screen flex flex-col">
+  <!-- docs-shell:start -->
+  <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50" data-doc-shell="topbar">
+    <div class="h-full px-4 flex items-center justify-between">
+      <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
+        <span aria-hidden="true">🚀</span><span class="sm:inline hidden">MCP Probe Kit</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <div id="lang-switcher-container"></div>
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors" aria-label="Toggle documentation navigation" aria-controls="sidebar">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+  <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+  <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar" data-doc-shell="sidebar">
+    <div class="p-4">
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">快速开始</div>
+        <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🏠</span><span data-i18n="sidebar.home">文档首页</span></a>
+        <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📖</span><span data-i18n="sidebar.installation">安装配置</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
+        <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">24+1</span></a>
+        <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">2</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
+        <a href="./v5-best-practices.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>✦</span><span data-i18n="sidebar.v5BestPractices">v5 最佳实践</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">v5</span></a>
+        <a href="./v5-action-guide.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary" aria-current="page"><span>⌘</span><span data-i18n="sidebar.v5ActionGuide">v5 Agent 导航</span><span class="ml-auto bg-white text-xs px-2 py-0.5 rounded-full">guide</span></a>
+        <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💡</span><span data-i18n="sidebar.examples">v4 工作流示例</span></a>
+        <a href="./migration-v4.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🚀</span><span data-i18n="sidebar.migration">v4 迁移指南</span></a>
+      </div>
+      <div class="pt-4 border-t border-border">
+        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💻</span><span>GitHub</span><span class="ml-auto text-xs">↗</span></a>
+        <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📦</span><span>npm</span><span class="ml-auto text-xs">↗</span></a>
+      </div>
+      <div class="mt-4 pt-4 border-t border-border">
+        <div class="text-center">
+          <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">关注公众号</div>
+          <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border">
+          <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">获取更多技术分享</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <!-- docs-shell:end -->
+  <main class="flex-1 mt-14 min-h-screen md:ml-64">
+    <div class="w-full max-w-none p-4 sm:p-6 lg:p-8 xl:p-10">
+      <p class="text-xs font-semibold text-blue-700">v5.0.0 SOURCE · 未发布 / Unpublished</p>
+      <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mt-4">Agent 怎样正确调用 74 个 DevControl action？</h1>
+      <p class="mt-4 text-text-secondary">答案是：<strong>不需要记住 74 个动作。</strong> 一个 <code>devcontrol</code> MCP 工具，先通过只读 <code>action=guide</code> 找到当前阶段的操作，再用 SQLite 中实际冻结的任务合同执行。v4 文件式 start_* / Plan / Markdown History 不再支持。</p>
+      <section class="panel" id="quickstart">
+        <h2>1. 先导航，再执行 / Guide → Action</h2>
+        <p>不知道下一步？用下面的 MCP 工具入参。<strong>guide 不要求项目路径，不访问任务数据库，不创建任务或审批。</strong> 通用 MCP 启动流程可能另外同步已识别项目的托管 Skill/AGENTS.md。</p>
+        <pre><code>{"action":"guide","input":{"intent":"feature"}}</code></pre>
+        <p>接下来按返回的阶段示例操作，只有真正写入项目时才提供目标 Git 目录：</p>
+        <pre><code>{"action":"feature-create","project_root":"/ABSOLUTE/GIT/PROJECT","input":{"name":"login","description":"用户登录","layout":"flat"}}</code></pre>
+        <p>错误 action 会提示调用 <code>guide</code>。Agent 不得猜测 Task ID、修订号、哈希、租约或 Owner 授权。</p>
+      </section>
+      <section class="panel" id="intents">
+        <h2>2. 九种常见意图 / Nine intents</h2>
+        <div style="overflow:auto">
+          <table>
+            <thead><tr><th>intent</th><th>你要做的事</th><th>常用动作</th></tr></thead>
+            <tbody>
+              <tr><td><code>start</code></td><td>恢复项目、继续</td><td>History bootstrap → onboard → next</td></tr>
+              <tr><td><code>feature</code></td><td>需求→设计→任务</td><td>feature-create / feature-save / feature-task-brief</td></tr>
+              <tr><td><code>planning</code></td><td>版本计划审批</td><td>plan-review / plan-propose / plan-approve</td></tr>
+              <tr><td><code>task</code></td><td>领取一个叶子任务</td><td>next / execution-contract / claim</td></tr>
+              <tr><td><code>verification</code></td><td>真实测试与验收</td><td>complete / report / gate-review / verify</td></tr>
+              <tr><td><code>bug</code></td><td>缺陷管理</td><td>work-items / bug-step-save / bug-task-link</td></tr>
+              <tr><td><code>idea</code></td><td>新想法评审</td><td>idea-capture / idea-assess / idea-review / idea-decide</td></tr>
+              <tr><td><code>scope</code></td><td>冻结范围变更</td><td>release-work-scope-* / release-work-incremental-*</td></tr>
+              <tr><td><code>architecture</code></td><td>架构工件审批</td><td>artifact-check / artifact-stage / artifact-approve</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel" id="lifecycle">
+        <h2>3. v5 完整执行链</h2>
+        <ol class="list-decimal pl-6">
+          <li><strong>恢复</strong> SQLite History 与冻结任务，不重建已有任务。</li>
+          <li><strong>需求</strong>：真实 FR/NFR、场景、验收条件，原文和版本留在 SQLite。</li>
+          <li><strong>设计</strong>：接口/数据/异常/安全约束，作为开发和测试用例来源。</li>
+          <li><strong>最小任务</strong>：父子阶段清楚，每个叶子只有一个独立验收目标，包含精确文件、依赖、正反测试、停止条件（新 Feature 叶子不超过 4 小时）。</li>
+          <li><strong>独立复审、Owner 精确 Hash 审批</strong>：草稿显示“待审核”，但不可领取。</li>
+          <li><strong>开发</strong>：claim 后 Agent 只改批准路径，自己编译和执行真实测试。</li>
+          <li><strong>证据</strong>：完成报告、证据、外部 Gate 的独立 reviewer 结论，verify 不接受凭空通过。</li>
+          <li><strong>会话交接</strong>：history_session_checkpoint 留下实际 Commit 和下一步。</li>
+        </ol>
+      </section>
+      <section class="panel" id="startup">
+        <h2>4. 启动时自动检查 Skill 与 AGENTS.md</h2>
+        <p>MCP 启动后先核对目标项目的 Skill、AGENTS.md 托管区及指导修订号，同为 5.0.0 但指导过期也会同步。无法定位项目时不写入 MCP 安装目录；首次显式 project_root 调用再检查。保留用户自己写的规则，重复启动不反复改写。</p>
+        <p>源码开发版并未发布 npm / MCP Registry；当前公开稳定版仍为 v4.1.1。更新源代码不等于已替换客户端运行包，更不代表正式对外发布。</p>
+      </section>
+      <section class="panel">
+        <h2>5. 深入参考</h2>
+        <p><a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-agent-action-guide.md">完整 Agent 调用手册（74 action）</a> · <a href="./v5-best-practices.html">最佳实践</a> · <a href="./v5-development.html">源码安装与开发</a> · <a href="./all-tools.html">全部 MCP 工具</a> · <a href="./apps.html">v5 Apps</a></p>
+      </section>
+    </div>
+  </main>
+  <script src="../assets/js/i18n.js"></script>
+  <script src="../assets/js/docs-shell.js"></script>
+</body>
+</html>

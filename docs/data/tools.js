@@ -44,26 +44,26 @@ const toolsData = {
   "devcontrol": [
     {
       "name": "devcontrol",
-      "description": "MCP Probe Kit v5 ONLY project-development entry. Manage requirements, Features, Bugs, Ideas, release plans, scope approvals, task leases, real gates and audit evidence in the target Git project SQLite ledger. The Agent reviews, writes code and runs actual tests; DevControl never substitutes for independent review or Owner authorization. All work uses approved frozen task contracts; old Markdown/Delegated Plan workflows are not accepted.",
+      "description": "MCP Probe Kit v5 SQLite project governance with approved frozen task contracts. Unsure what to call? FIRST use action=guide with input={intent:\"feature\"|\"task\"|\"verification\"|\"bug\"|\"idea\"|\"scope\"}. Guide is read-only and needs no project_root. All other actions use project_root of the target Git project. Agent reviews changes, executes business tests, and performs independent review; Owner explicitly approves frozen plans. No retired v4 file workflows.",
       "schema": "text",
       "params": [
         {
           "name": "action",
-          "type": "onboard | next | list | get | execution-contract | task-detail-audit | release-plan | plan-review | plan-propose | plan-revise | plan-approve | release-work-plan | release-work-review | release-work-stage | release-work-approve | release-work-scope-review | release-work-scope-stage | release-work-scope-get | release-work-scope-independent-review | release-work-scope-approve | release-work-scope-withdraw | release-work-incremental-review | release-work-incremental-stage | release-work-incremental-get | release-work-incremental-independent-review | release-work-incremental-approve | release-work-incremental-withdraw | pause-for-scope | pause-for-reviewed-incremental | features | feature-get | feature-create | feature-save | feature-validate | feature-export | feature-task-brief | feature-task-plan | feature-task-plans | feature-task-review | feature-task-stage | feature-task-propose | feature-task-approve | work-items | work-record | architecture-sync | bug-get | bug-step-save | bug-task-link | idea-capture | idea-list | idea-get | idea-assess | idea-review | idea-decide | artifact-get | artifact-check | artifact-stage | artifact-independent-review | artifact-approve | claim | renew | release | check | report | gate-review | complete | verify | trace | decision-save | decision-get | local-developer | hook-status | hook-install",
+          "type": "guide | onboard | next | list | get | execution-contract | task-detail-audit | release-plan | plan-review | plan-propose | plan-revise | plan-approve | release-work-plan | release-work-review | release-work-stage | release-work-approve | release-work-scope-review | release-work-scope-stage | release-work-scope-get | release-work-scope-independent-review | release-work-scope-approve | release-work-scope-withdraw | pause-for-scope | release-work-incremental-review | release-work-incremental-stage | release-work-incremental-get | release-work-incremental-independent-review | release-work-incremental-approve | release-work-incremental-withdraw | pause-for-reviewed-incremental | features | feature-get | feature-create | feature-save | feature-validate | feature-export | feature-task-brief | feature-task-plan | feature-task-plans | feature-task-review | feature-task-stage | feature-task-propose | feature-task-approve | work-items | work-record | architecture-sync | bug-get | bug-step-save | bug-task-link | idea-capture | idea-list | idea-get | idea-assess | idea-review | idea-decide | artifact-get | artifact-check | artifact-stage | artifact-independent-review | artifact-approve | claim | renew | release | check | report | gate-review | complete | verify | trace | decision-save | decision-get | local-developer | hook-status | hook-install",
           "required": true,
-          "desc": "Exact DevControl operation from the v5 SQLite project lifecycle."
+          "desc": "Start with guide (read-only) when unsure, then use the recommended exact SQLite action."
         },
         {
           "name": "project_root",
           "type": "string",
-          "required": true,
-          "desc": "Git root of the TARGET application project (not MCP source). Required for safe project isolation."
+          "required": false,
+          "desc": "Required for all actions except guide. Absolute Git root of TARGET application (not MCP source)."
         },
         {
           "name": "input",
           "type": "object",
           "required": false,
-          "desc": "Operation-specific reviewed payload. Include exact IDs, lease tokens, revision/hash and explicit Owner authorization when required."
+          "desc": "For guide, {intent:\"start|feature|planning|task|verification|bug|idea|scope|architecture\"}; other actions need operation-specific IDs, hashes, leases and reviewed parameters."
         }
       ],
       "usage": "v5 唯一需求/Feature/Bug/Idea/计划/任务审批/claim/complete/report/verify 入口。先恢复 History 和项目账本；仅在任务已获 Owner 冻结批准、Agent 独立复核后编码并执行真实 Gate。",

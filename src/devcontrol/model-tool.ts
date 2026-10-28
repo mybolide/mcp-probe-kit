@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { dispatchDevControl } from './command.js';
 import { DevControlError, ProjectTaskLedger } from './task-ledger.js';
 import { V5_DEVC_ACTIONS } from './action-catalog.js';
+import { devControlGuide } from './action-guide.js';
 import type { RegisteredToolResult } from '../server/tool-definition.js';
 
 export { V5_DEVC_ACTIONS } from './action-catalog.js';
@@ -20,7 +21,12 @@ export async function runV5DevControlTool(args: unknown): Promise<RegisteredTool
   const projectRoot = value.project_root;
   const input = value.input ?? {};
   if (typeof action !== 'string' || !actionSet.has(action)) {
-    return failure('UNSUPPORTED_V5_ACTION', 'Use an action from the v5 SQLite DevControl operation list');
+    return failure('UNSUPPORTED_V5_ACTION', 'Unknown v5 operation. Call devcontrol action=guide with input={intent:"feature|task|verification|bug|idea|scope"} for supported actions and examples.');
+  }
+  if (action === 'guide') {
+    const result = devControlGuide(input && typeof input==='object' && !Array.isArray(input)
+      ? input as Record<string,unknown> : {});
+    return {content:[{type:'text',text:JSON.stringify(result)}],structuredContent:result,isError:false};
   }
   if (typeof projectRoot !== 'string' || !projectRoot.trim()) {
     return failure('PROJECT_ROOT_REQUIRED', 'Provide the target Git project_root; never infer the MCP source checkout');

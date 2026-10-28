@@ -1,10 +1,20 @@
+<!-- v5-action-navigation:start -->
+> **v5 Agent action navigation / v5 Agent 操作导航（source only, unpublished）**
+> Main model tool: **devcontrol**. It exposes **74 SQLite actions, including a read-only guide**; these are *not* 74 different MCP tools.
+> When unsure call {"action":"guide","input":{"intent":"feature"}} (no project_root, no changes), then follow the returned next action using the real business Git project_root.
+> Requirements → Design → single-outcome atomic Tasks → independent review → explicit Owner hash approval → Agent-run genuine tests → evidence + review → Verified.
+> The v5 MCP checks and refreshes managed Skill/AGENTS.md at startup and again on the first explicit project tool call, preserving user rules and recognizing guidance revisions even with the same 5.0.0 package version.
+> [Agent action guide](../docs/v5-agent-action-guide.md) · [v5 web page](../docs/pages/v5-action-guide.html) · [SQLite-only contract](../docs/v5-sqlite-only.md).
+> **v4.1.1 stays the separate published npm release.** v4 start_*/file Plans/MCP Apps examples farther below are historical, not v5 callable workflows. Never install unpublished npm 5.0.0.
+<!-- v5-action-navigation:end -->
+
 > **5.0.0 开发版（尚未发布）**：当前开发分支已增加 DevControl 项目任务审批、范围冻结、真实验收 Gate 与 Node.js 22+ 的 SQLite History Session。请先阅读 **[5.0.0 安装、升级和完整使用指南](../docs/v5-development-guide.md)**。npm 公开稳定版仍为 **4.1.1**；不要把源码 5.0.0 当成已发布的 npm 版本。DevControl 不替 Agent 编码、执行 SQL 或独立复审。
 
 > **v5 破坏性变更：研发管理只用 SQLite + DevControl。** v4 文件式 Spec/Plan、Heartbeat/Resume/Converge、Markdown History 不再支持；旧档案仅做安全导入，不再双写。请以 [v5 唯一研发管理架构及迁移状态](../docs/v5-sqlite-only.md) 为准。下文 v4 内容是历史说明，不是 v5 可调用工作流。
 
 ## v5.0.0 新增能力（源码开发版，尚未发布）
 
-**从 v4 的 Agent 工作流工具扩展为项目级研发管理。** 下述能力仅适用于当前 `feature/devcontrol-project-task-ledger` 源码分支，**不包含在 npm 正式版 4.1.1 中**。v4 的 MCP Apps、Memory、Plan、代码工具和协议兼容功能仍然保留。
+**从 v4 的 Agent 工作流工具扩展为项目级研发管理。** 下述能力仅适用于当前 `feature/devcontrol-project-task-ledger` 源码分支，**不包含在 npm 正式版 4.1.1 中**。v4 的文件式 Plan 和旧 MCP Apps 不在 v5 的对外运行接口内；无状态代码工具、协议兼容能力与可选 Memory 保留。
 
 | 新能力 | v5 实际提供的功能 |
 |---|---|
