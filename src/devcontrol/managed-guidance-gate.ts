@@ -12,7 +12,7 @@ const managedPaths=new Set([MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"]);
 
 function gitRead(root:string,args:string[]):{ok:boolean;text:string} {
   const result=spawnSync("git",args,{
-    cwd:root,encoding:"utf8",timeout:10_000,maxBuffer:2_000_000,
+    windowsHide: true, cwd:root,encoding:"utf8",timeout:10_000,maxBuffer:2_000_000,
   });
   return {ok:result.status===0&&!result.error,text:result.stdout??""};
 }

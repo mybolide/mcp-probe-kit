@@ -160,7 +160,7 @@ function indexDocuments(root: string): string[] {
 function gitValue(root: string, args: string[]): string | null {
   try {
     return execFileSync("git", args, {
-      cwd: root, encoding: "utf8", timeout: 2_000, stdio: ["ignore", "pipe", "ignore"],
+      windowsHide: true, cwd: root, encoding: "utf8", timeout: 2_000, stdio: ["ignore", "pipe", "ignore"],
     }).trim() || null;
   } catch {
     return null;

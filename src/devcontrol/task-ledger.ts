@@ -97,7 +97,7 @@ function actorInfo(projectRoot: string): { creator: string; device: string } {
   let creator = process.env.DEVCONTROL_ACTOR?.trim() || "";
   if (!creator) {
     const result = spawnSync("git", ["config", "user.name"], {
-      cwd: projectRoot, encoding: "utf8", timeout: 2_000,
+      windowsHide: true, cwd: projectRoot, encoding: "utf8", timeout: 2_000,
     });
     creator = result.status === 0 ? (result.stdout || "").trim() : "";
   }
@@ -114,7 +114,7 @@ interface SqlDatabase {
 function addedFiles(root: string, base: string): string[] {
   const result = spawnSync(
     "git", ["diff", "--no-renames", "--name-only", "-z", "--diff-filter=A", base, "HEAD"],
-    { cwd: root, encoding: "buffer", timeout: 12_000 },
+    { windowsHide: true, cwd: root, encoding: "buffer", timeout: 12_000 },
   );
   if (result.status !== 0 || !Buffer.isBuffer(result.stdout)) {
     fail("GIT_ERROR", "Cannot determine newly added files");
@@ -153,7 +153,7 @@ function fail(code: string, message: string): never {
 
 function run(root: string, command: string, args: string[], timeout = 90_000) {
   const result = spawnSync(command, args, {
-    cwd: root, encoding: "utf8", timeout, maxBuffer: 4_000_000,
+    windowsHide: true, cwd: root, encoding: "utf8", timeout, maxBuffer: 4_000_000,
     killSignal: "SIGKILL",
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
   });
@@ -175,7 +175,7 @@ function git(root: string, args: string[]): string {
 function changedFiles(root: string, base: string): string[] {
   const result = spawnSync(
     "git", ["diff", "--no-renames", "--name-only", "-z", "--diff-filter=ACMRTD", base, "HEAD"],
-    { cwd: root, encoding: "buffer", timeout: 12_000 },
+    { windowsHide: true, cwd: root, encoding: "buffer", timeout: 12_000 },
   );
   if (result.status !== 0 || !Buffer.isBuffer(result.stdout)) {
     fail("GIT_ERROR", "Cannot determine actual committed changes");
@@ -977,7 +977,7 @@ export class ProjectTaskLedger {
       }else{
         const result=spawnSync("git",
           ["ls-files","--cached","--others","--exclude-standard","-z","--",...roots],
-          {cwd:this.root,encoding:"buffer",timeout:12_000});
+          {windowsHide: true, cwd:this.root,encoding:"buffer",timeout:12_000});
         if(result.status!==0||!Buffer.isBuffer(result.stdout))
           fail("GIT_ERROR","Unable to inspect frozen architecture artifact paths");
         observed=[...new Set([
@@ -998,7 +998,7 @@ export class ProjectTaskLedger {
             issues.push(row.id+": "+file+" is not an ordinary file");continue;
           }
           const bytes=staged?
-            spawnSync("git",["show",":"+file],{cwd:this.root,encoding:"buffer",
+            spawnSync("git",["show",":"+file],{windowsHide: true, cwd:this.root,encoding:"buffer",
               timeout:12_000,maxBuffer:4_000_000}):null;
           if(bytes&&(bytes.status!==0||!Buffer.isBuffer(bytes.stdout))){
             issues.push(row.id+": "+file+" cannot read staged contents");continue;
@@ -1126,12 +1126,12 @@ export class ProjectTaskLedger {
             fail("INITIAL_ARTIFACT_MISMATCH",
               "Initial frozen baseline needs existing matching project file "+file.path);
           const tracked=spawnSync("git",["ls-files","--error-unmatch","--",file.path],
-            {cwd:this.root,encoding:"utf8",timeout:5_000});
+            {windowsHide: true, cwd:this.root,encoding:"utf8",timeout:5_000});
           if(tracked.status!==0)
             fail("INITIAL_ARTIFACT_UNTRACKED",
               "Initial frozen baseline requires committed/otherwise Git-tracked file "+file.path);
           const dirty=spawnSync("git",["status","--porcelain","--",file.path],
-            {cwd:this.root,encoding:"utf8",timeout:5_000});
+            {windowsHide: true, cwd:this.root,encoding:"utf8",timeout:5_000});
           if(dirty.status!==0||dirty.stdout?.trim())
             fail("INITIAL_ARTIFACT_DIRTY",
               "First architecture freeze requires a clean committed project file "+file.path);
@@ -1169,7 +1169,7 @@ export class ProjectTaskLedger {
   checkStaged(): Row {
     const staged=spawnSync(
       "git",["diff","--cached","--no-renames","--name-only","-z","--diff-filter=ACMRTD"],
-      {cwd:this.root,encoding:"buffer",timeout:12_000},
+      {windowsHide: true, cwd:this.root,encoding:"buffer",timeout:12_000},
     );
     if(staged.status!==0||!Buffer.isBuffer(staged.stdout))fail("GIT_ERROR","Cannot inspect staged files");
     const files=[...new Set(staged.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
@@ -1206,7 +1206,7 @@ export class ProjectTaskLedger {
       (exact && !exact.includes(file)));
     const created = spawnSync(
       "git", ["diff", "--cached", "--no-renames", "--name-only", "-z", "--diff-filter=A"],
-      { cwd: this.root, encoding: "buffer", timeout: 12_000 },
+      { windowsHide: true, cwd: this.root, encoding: "buffer", timeout: 12_000 },
     );
     if (created.status !== 0 || !Buffer.isBuffer(created.stdout)) {
       fail("GIT_ERROR", "Cannot inspect new Markdown documents");
@@ -3153,7 +3153,7 @@ export class ProjectTaskLedger {
     // The generic git() wrapper trims output, which would remove the first
     // porcelain entry's leading index-space. Read the raw NUL stream instead.
     const status=spawnSync("git",["status","--porcelain=v1","-z"],{
-      cwd:this.root,encoding:"utf8",timeout:12_000,
+      windowsHide: true, cwd:this.root,encoding:"utf8",timeout:12_000,
     });
     if(status.status!==0||typeof status.stdout!=="string")
       fail("GIT_ERROR","Cannot read Git index and worktree status");
