@@ -139,6 +139,7 @@ check(read('scripts/render-doc-demo-gifs.py').includes('crop_to_content'), 'GIF 
 const readmes = ['README.md', ...['zh-CN','ja-JP','ko-KR','es-ES','fr-FR','de-DE','pt-BR'].map((lang) => `i18n/README.${lang}.md`)];
 for (const file of readmes) {
   const text = read(file);
+  check(text.includes('docs/v5-development-guide.md'), `${file} links to the unpublished 5.0.0 source-development guide`);
   check(text.includes('<!-- v4-showcase:start -->'), `${file} contains v4 showcase`);
   check(text.includes('feature-workbench.gif'), `${file} embeds Feature Workbench animation`);
   check(text.includes('memory-center.gif'), `${file} embeds Memory Center animation`);
@@ -150,6 +151,34 @@ for (const file of readmes) {
   check(!text.includes('v4.0.0-rc.3'), `${file} has no stale rc.3 reference`);
   check(!text.includes('/pages/migration.html'), `${file} uses the v4 migration guide`);
   check(!text.includes('gitnexus@latest mcp'), `${file} has no obsolete GitNexus @latest launcher`);
+}
+
+const v5Guide = read('docs/v5-development-guide.md');
+const v5Page = read('docs/pages/v5-development.html');
+const v5Devcontrol = read('docs/devcontrol.md');
+for (const phrase of [
+  'feature/devcontrol-project-task-ledger',
+  'npm ci',
+  'npm run build',
+  'Node.js 22+',
+  'devcontrol claim',
+  'devcontrol verify',
+  'History Session',
+  '4.1.1',
+]) {
+  check(v5Guide.includes(phrase), `v5 development guide documents ${phrase}`);
+}
+check(v5Guide.includes('not published') || v5Guide.includes('unpublished'), 'v5 guide does not claim publication');
+check(v5Page.includes('5.0.0') && v5Page.includes('v5-development-guide.md'), 'v5 website landing links complete source guide');
+check(v5Devcontrol.includes('v5-development-guide.md'), 'DevControl reference points to current source guide');
+for (const page of ['docs/index.html', 'docs/pages/getting-started.html', 'docs/pages/all-tools.html', 'docs/pages/migration-v4.html']) {
+  check(read(page).includes('v5-development.html'), `${page} links to the 5.0.0 source guide`);
+}
+for (const lang of ['zh-CN', 'en', 'ja', 'ko']) {
+  check(
+    globalTranslations[lang].v5Notice?.title && globalTranslations[lang].v5Notice?.link,
+    `${lang} has the 5.0.0 source-development notice translations`,
+  );
 }
 
 const documentationPages = [

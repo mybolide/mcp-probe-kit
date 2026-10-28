@@ -1,3 +1,5 @@
+> **5.0.0 開発版（未公開）**：DevControl の承認済みタスク、実際のテストゲート、Node.js 22+ SQLite History の利用方法は **[5.0.0 開発版ガイド](../docs/v5-development-guide.md)** を参照してください。npm の公開安定版は **4.1.1** です。DevControl は Agent に代わってコードや SQL を実行したり、独立レビューを行ったりしません。
+
 <div align="center">
 <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
 <h1>知时MCP | mcp-probe-kit</h1>

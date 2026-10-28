@@ -13,6 +13,20 @@
 
 <!-- mcp-name: io.github.mybolide/mcp-probe-kit -->
 
+> **5.0.0 development branch (not released):** The source on
+> [`feature/devcontrol-project-task-ledger`](https://github.com/mybolide/mcp-probe-kit/tree/feature/devcontrol-project-task-ledger)
+> now includes the project-local **DevControl task ledger/workbench, frozen
+> approval and real-test gates, and Node.js 22+ SQLite-backed History Session**.
+> Read the **[5.0.0 development installation, migration and CLI guide](docs/v5-development-guide.md)**
+> before using this branch. The public **npm stable release remains `4.1.1`**;
+> `npm latest` does **not** install this source milestone. **No 5.0.0
+> publication, Git Tag or Registry release has been authorized.**
+>
+> **Important:** DevControl governs project tasks and evidence; it **does
+> not write business code, execute SQL on an Agent's behalf, replace independent
+> review, or override a Git Hook**. Agents must follow an approved file scope
+> and execute the actual acceptance gates.
+
 > **Talk is cheap, show me the Context.**
 > 
 > mcp-probe-kit is a protocol-level toolkit designed for developers who want AI to understand project intent, choose a precise workflow, and retain validated experience without flooding the model with internal actions.
@@ -63,7 +77,7 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 <strong>Convergence Gate</strong> — blocks closure when steps or requirements/spec/implementation/test/review evidence are incomplete.
 
 - **Five native MCP Apps**: Memory Center, Feature Workbench, Bug Workbench, Product Workbench, and Convergence Gate.
-- **History Session (default ON)**: lossless local chat handoff under `docs/history-session/` — bootstrap → checkpoint → search/read, no vector DB required.
+- **History Session (default ON)**: lossless local chat handoff via bootstrap → checkpoint → search/read. In the 5.0.0 Node22+ Git-project default it persists in project-local **SQLite `hs_*` tables**; `docs/history-session/` is the legacy/file-backend fallback. No vector DB required.
 - **Resumable delegated plans**: `plan_heartbeat` persists real progress; `resume_plan` restores the next executable step.
 - **Evidence-based convergence**: `converge` gates delivery and long-term Memory writes.
 - **Managed GitNexus Sidecar**: version/platform/architecture/Node isolation, integrity verification, real FTS probe, and safe degradation.
@@ -86,6 +100,8 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 - [All Tools](https://mcp-probe-kit.bytezonex.com/pages/all-tools.html) - Default (+ History), conditional Memory, App-only, and full compatibility surfaces
 - [Best Practices](https://mcp-probe-kit.bytezonex.com/pages/examples.html) - Full development workflow guide
 - [v3 → v4 Migration Guide](https://mcp-probe-kit.bytezonex.com/pages/migration-v4.html) - Tool surfaces, protocol, Apps, plan state, Memory, and compatibility
+- **[5.0.0 Development Guide](docs/v5-development-guide.md)** — source-only installation, DevControl approval/claim/verify lifecycle, Node22 SQLite History, upgrade and rollback; **not** the published stable version
+- [DevControl Task & Project Workspace Reference](docs/devcontrol.md) — project-scoped approval, real gates and task-state governance (not an autonomous code executor)
 - [MCP Apps Live Demos](https://mcp-probe-kit.bytezonex.com/pages/apps.html) - Five real read-only workbenches generated from the shipped App source
 
 ---
@@ -119,7 +135,7 @@ Chat hosts forget. History Session keeps a **lossless, project-local archive** s
 
 **Why it matters**
 
-- Host context windows and “new chat” resets drop prior findings; History persists them as Markdown under `docs/history-session/`.
+- Host context windows and “new chat” resets drop prior findings; 5.0.0 History persists them in **project-local SQLite by default on Node22+ Git projects**. Markdown under `docs/history-session/` is preserved for earlier installations and fallback mode (`MCP_HISTORY_STORAGE=files`).
 - **Default ON** and **no Qdrant / embedding stack** — works out of the box alongside the 24 base compact tools (29 model-visible tools total).
 - Complements, does not replace, the other layers:
 
@@ -131,17 +147,17 @@ Chat hosts forget. History Session keeps a **lossless, project-local archive** s
 
 **How Agents use it**
 
-1. **Start of a conversation** — `history_session_bootstrap` with `initial_user_input=<user’s first message>`. On hosts without a platform session, omit `session_key` **once**; the server mints `hs_<uuid>` and opens a **new** archive (it does not share `project-active`). Echo that handle on later calls. Do not invent keys.
+1. **Start of a conversation** — `history_session_bootstrap` with `initial_user_input=<user’s first message>`. On hosts without a platform session, omit `session_key` **once**; the server mints `hs_<uuid>` and opens a **new** session record (it does not share `project-active`). Echo that handle and the returned `expected_path` on later calls. A returned archive path may be a **virtual SQLite locator**, not an on-disk Markdown file. Do not invent keys.
 2. **Before each final reply** — `history_session_checkpoint` with the bootstrap `session_key` + `expected_path`, plus this turn’s `raw_user_input` / `user_intent`. Fill the Skill **minimum checklist** (`findings`, `decisions`, `files_changed`, `tests`, `runtime_state`, `next_actions`) — no empty-array padding.
 3. **Need an older fact** — `history_session_search` → `history_session_read` (follow `next_cursor`). Prefer bounded bootstrap `state` first; do not load full history by default.
 4. **Numbering / index damage** — `history_session_validate` (`repair=true` when needed).
 
 **Operational details**
 
-- Soft-rotate when an archive exceeds `MCP_HISTORY_MAX_LINES` / `MCP_HISTORY_MAX_BYTES` (defaults `800` / `131072`); checkpoint returns the new `expected_path`. Rotated archives **carry forward** the latest `initial_user_input`.
+- The legacy/file-backed History backend soft-rotates when an archive exceeds `MCP_HISTORY_MAX_LINES` / `MCP_HISTORY_MAX_BYTES` (defaults `800` / `131072`); checkpoint returns the new `expected_path`. Rotated archives **carry forward** the latest `initial_user_input`. The Node22+ Git-project default instead uses the shared project SQLite database with separate `hs_*` tables.
 - Redacts common secrets in archived text; checkpoints are idempotent by content fingerprint.
 - Disable with `MCP_HISTORY_SESSION=0|false|off` (hides the five tools).
-- **Do not commit** `docs/history-session/` — add it to `.gitignore` (local handoff only; not part of the npm package story).
+- **Do not commit** old/file-backed `docs/history-session/` archives — add that directory to `.gitignore` (local handoff only; not part of the npm package story). Do not commit project-local SQLite task/history databases either.
 
 Skill and `AGENTS.md` spell out the read/write timing rules; the All Tools catalog lists one-line call prompts for each `history_session_*` tool.
 

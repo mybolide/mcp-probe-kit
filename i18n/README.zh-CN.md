@@ -1,3 +1,5 @@
+> **5.0.0 开发版（尚未发布）**：当前开发分支已增加 DevControl 项目任务审批、范围冻结、真实验收 Gate 与 Node.js 22+ 的 SQLite History Session。请先阅读 **[5.0.0 安装、升级和完整使用指南](../docs/v5-development-guide.md)**。npm 公开稳定版仍为 **4.1.1**；不要把源码 5.0.0 当成已发布的 npm 版本。DevControl 不替 Agent 编码、执行 SQL 或独立复审。
+
 <div align="center">
 <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
 <h1>知时MCP | mcp-probe-kit</h1>

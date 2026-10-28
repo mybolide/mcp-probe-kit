@@ -1,3 +1,5 @@
+> **Desarrollo 5.0.0 (sin publicar):** Consulte la **[guía de instalación, migración y DevControl 5.0.0](../docs/v5-development-guide.md)** para el flujo de tareas aprobadas, pruebas reales y History en SQLite con Node.js 22+. La versión estable pública en npm sigue siendo **4.1.1**. DevControl no programa, ejecuta SQL ni sustituye la revisión independiente del agente.
+
 # mcp-probe-kit — Conoce el Contexto, Alimenta el Momento
 
 <div align="center">

@@ -37,6 +37,7 @@ npm-debug.log*
 docs/specs/
 docs/verification/
 docs/*.md
+!docs/v5-development-guide.md
 !docs/memory-local-setup.md
 !docs/memory-local-setup.zh-CN.md
 !docs/src8-methodology.md

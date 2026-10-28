@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Synchronize **unpublished 5.0.0 user documentation** with the actual
+  DevControl source workflow: branch-based installation instead of a nonexistent
+  npm 5.0.0 command, Node22 / project-local SQLite History behavior, plan
+  review and Owner approval, frozen task scopes, real Gate verification,
+  repeatable agent handoff, and rollback.
+- Link the development guide from the repository README, translated READMEs,
+  documentation home and stable Quick Start while **preserving** the correctly
+  published `mcp-probe-kit@4.1.1` installation instructions.
 - Begin the **5.0.0** development line on the Neyna DevControl feature branch.
   Package, npm lockfile, MCP Registry descriptor and tool manifest now use
   `5.0.0`; public npm `latest` and v4 migration instructions remain

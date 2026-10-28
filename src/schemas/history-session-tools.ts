@@ -2,7 +2,7 @@ export const historySessionToolSchemas = [
   {
     name: 'history_session_bootstrap',
     description:
-      'Initialize or resume a lossless project history archive (docs/history-session/). Call once near the start of a conversation with the user\'s verbatim first request as initial_user_input. Echo the returned session_key on later calls in this chat. Without host/explicit session_key, the server mints a new hs_<uuid> handle and opens a new archive (does not merge into a shared project-active file). Never invent a key. Returns bounded state (≤64 KiB). Disable with MCP_HISTORY_SESSION=0|false|off.',
+      'Initialize or resume lossless project History Session. Git projects on Node 22+ default to project-local SQLite hs_* records; legacy/nonstandard/file-mode projects use docs/history-session/ Markdown. Call once near conversation start with verbatim initial_user_input, then echo the returned session_key on later calls. Without a host/explicit session_key, the server mints a new hs_<uuid> handle (never a shared project-active record). expected_path may be a virtual read locator, not a physical file. Never invent keys. Returns bounded state (≤64 KiB). Disable with MCP_HISTORY_SESSION=0|false|off.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -25,7 +25,7 @@ export const historySessionToolSchemas = [
   {
     name: 'history_session_checkpoint',
     description:
-      'Append an idempotent, redacted development checkpoint. Pass session_key and expected_path exactly as returned by history_session_bootstrap, plus the user\'s verbatim raw_user_input. Archives that exceed MCP_HISTORY_MAX_LINES/BYTES soft-rotate to the next N.md before append.',
+      'Append an idempotent, redacted development checkpoint to the active project History backend (SQLite by default on Git/Node22+, otherwise Markdown). Pass session_key and expected_path exactly as returned by history_session_bootstrap, plus the user\'s verbatim raw_user_input. File-backed archives soft-rotate when MCP_HISTORY_MAX_LINES/BYTES is exceeded; SQLite archive paths may be virtual locators.',
     inputSchema: {
       type: 'object',
       required: ['session_key', 'expected_path'],
@@ -54,7 +54,7 @@ export const historySessionToolSchemas = [
   {
     name: 'history_session_validate',
     description:
-      'Validate history-session numbering, duplicates, and derived state/manifest. Optional repair rebuilds state and manifest from Markdown archives.',
+      'Validate History Session records, numbering and derived state for the active project storage backend. File-backed legacy archives support optional state/manifest repair; do not create Markdown files to simulate SQLite records.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -409,7 +409,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     toolsets: ["workflow"],
     groupId: "history-session",
     groupTitle: HISTORY,
-    whenToCall: "新对话开始时**先 bootstrap**（可传 initial_user_input；无宿主 session 可不传 session_key，落到项目当前档）；返回有界状态与 checkpoint_policy；档案在 docs/history-session/（应 gitignore，勿提交）",
+    whenToCall: "新对话开始时**先 bootstrap**（传真实 initial_user_input；无宿主 session 第一次省略 session_key 后保存返回值）；Git/Node22 项目默认使用本地 SQLite hs_*，旧版 docs/history-session/ 文件模式仍支持，返回路径可能是虚拟读取定位符；不要提交活跃历史数据库",
   }),
   tool({
     name: "history_session_checkpoint",
@@ -421,7 +421,7 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "history-session",
     groupTitle: HISTORY,
     whenToCall:
-      "每轮最终回复前写入检查点；必须回传 session_key/expected_path + raw_user_input/user_intent；按 Skill 最低清单填 findings/decisions/files_changed/tests/runtime_state/next_actions，禁止空数组交差；超行数/字节会软轮转",
+      "每轮最终回复前写入检查点；必须回传 session_key/expected_path + raw_user_input/user_intent；按 Skill 最低清单填 findings/decisions/files_changed/tests/runtime_state/next_actions，禁止空数组交差；旧版文件后端支持软轮转，Node22 SQLite 不需要生成 Markdown 档案",
   }),
   tool({
     name: "history_session_validate",

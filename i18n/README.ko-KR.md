@@ -1,3 +1,5 @@
+> **5.0.0 개발 버전(미출시)**: DevControl 승인 작업, 실제 검증 게이트, Node.js 22+ SQLite History 사용법은 **[5.0.0 개발 가이드](../docs/v5-development-guide.md)** 를 참고하세요. npm에 공개된 안정 버전은 **4.1.1**입니다. DevControl은 Agent 대신 코드를 작성하거나 SQL을 실행하거나 독립 검토를 수행하지 않습니다.
+
 <div align="center">
 <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
 <h1>知时MCP | mcp-probe-kit</h1>

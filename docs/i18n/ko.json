@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 - 관찰 가능한 Agent 워크플로와 MCP Apps",
+    "title": "MCP Probe Kit 문서 - v4.1.1 안정 버전 및 v5.0.0 소스 개발 버전",
     "description": "MCP Probe Kit v4는 기본 29개 모델 도구(기반 24 + History 5), Memory 구성 시 35개, full 호환 39개, 5개 MCP Apps, 재개 가능한 계획, 증거 수렴, GitNexus Sidecar, 버전 고정 CLI fallback을 제공합니다.",
     "keywords": "MCP Probe Kit, AI 개발 도구, 코드 생성, 코드 리뷰, Git 도구, UI 개발, 개발 효율성, Cursor, Cline, Claude, MCP 서버"
   },
@@ -15,9 +15,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "Agent가 프로젝트를 이해하고 실제 계획을 실행하며 네이티브 워크벤치에서 진행 상황을 표시합니다",
-    "version": "v4.1.1",
+    "version": "v4.1.1 안정 / v5.0.0 소스",
     "quickStart": "빠른 시작",
     "visitMainSite": "ByteZoneX 방문"
+  },
+  "v5Notice": {
+    "title": "5.0.0 소스 개발 버전(미출시)",
+    "description": "DevControl 승인, 실제 테스트 게이트 및 Node.js 22+ SQLite History 사용 가이드입니다. npm 안정 버전은 여전히 4.1.1입니다.",
+    "link": "5.0.0 개발 버전 설치 및 사용법"
   },
   "sections": {
     "quickStart": {
@@ -33,7 +38,7 @@
     "guides": {
       "title": "가이드",
       "description": "마이그레이션 가이드 및 모범 사례",
-      "migration": "v2.x → v3.0 마이그레이션 가이드",
+      "migration": "v3 → v4 안정 버전 마이그레이션 가이드",
       "bestPractices": "모범 사례"
     },
     "resources": {

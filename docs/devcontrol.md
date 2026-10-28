@@ -1,4 +1,12 @@
-# DevControl V0.7 candidate — MCP-managed project Web workspace
+# DevControl — MCP Probe Kit 5.0.0 source-development reference
+
+> **Availability:** This page documents the **unpublished 5.0.0 development
+> branch**, not the npm `latest` / published 4.1.1 installation. Follow the
+> [5.0.0 source installation and migration guide](v5-development-guide.md).
+> DevControl is a task/project management and verification system. The **Agent**
+> independently implements and reviews changes, runs actual application/SQL
+> work only under its approved scope, and provides evidence. DevControl itself
+> does not take over SQL execution or act as the independent reviewer.
 
 DevControl is a Jira-style **project task registry**, distinct from MCP protocol
 Tasks (short-lived tool executions) and Delegated Plans (feature workflow steps).

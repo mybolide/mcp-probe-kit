@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 - 可観測な Agent ワークフローと MCP Apps",
+    "title": "MCP Probe Kit ドキュメント - v4.1.1 安定版と v5.0.0 開発版",
     "description": "MCP Probe Kit v4 は標準29ツール（基盤24 + History 5）、Memory構成時35ツール、full互換39ツール、5つのMCP Apps、再開可能な計画、収束ゲート、GitNexus Sidecar、固定バージョンCLI fallbackを提供します。",
     "keywords": "MCP Probe Kit, AI開発ツール, コード生成, コードレビュー, Gitツール, UI開発, 開発効率, Cursor, Cline, Claude, MCPサーバー"
   },
@@ -15,9 +15,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "Agent がプロジェクトを理解し、実行計画を進め、ネイティブUIで進捗を可視化",
-    "version": "v4.1.1",
+    "version": "v4.1.1 安定版 / v5.0.0 開発版",
     "quickStart": "クイックスタート",
     "visitMainSite": "ByteZoneXを訪問"
+  },
+  "v5Notice": {
+    "title": "5.0.0 ソース開発版（未公開）",
+    "description": "DevControl の承認・実テストゲート・Node.js 22+ SQLite History の新ガイドです。npm の公開安定版は引き続き 4.1.1 です。",
+    "link": "5.0.0 開発版のインストールと使い方"
   },
   "sections": {
     "quickStart": {
@@ -33,7 +38,7 @@
     "guides": {
       "title": "ガイド",
       "description": "移行ガイドとベストプラクティス",
-      "migration": "v2.x → v3.0 移行ガイド",
+      "migration": "v3 → v4 安定版移行ガイド",
       "bestPractices": "ベストプラクティス"
     },
     "resources": {

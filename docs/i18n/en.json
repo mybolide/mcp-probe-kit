@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 - Observable Agent Workflows and Native MCP Apps",
+    "title": "MCP Probe Kit Docs - v4.1.1 stable and v5.0.0 source development",
     "description": "MCP Probe Kit v4 ships 29 default model tools (24 base + 5 History Session), 35 with Memory, a 39-tool full compatibility surface, five native MCP Apps, resumable plans, evidence convergence, GitNexus Sidecar, and a version-locked CLI fallback.",
     "keywords": "MCP Probe Kit, AI development tools, code generation, code review, Git tools, UI development, development efficiency, Cursor, Cline, Claude, MCP Server"
   },
@@ -15,9 +15,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "Help agents understand the project, execute a real plan, and expose progress in native workbenches",
-    "version": "v4.1.1",
+    "version": "v4.1.1 stable / v5.0.0 source",
     "quickStart": "Quick Start",
     "visitMainSite": "Visit ByteZoneX"
+  },
+  "v5Notice": {
+    "title": "5.0.0 source development (not published)",
+    "description": "New guidance covers DevControl approvals, real gates and SQLite History on Node.js 22+. Public npm stable is still 4.1.1.",
+    "link": "Read the 5.0.0 source installation and usage guide"
   },
   "sections": {
     "quickStart": {
@@ -33,7 +38,7 @@
     "guides": {
       "title": "Guides",
       "description": "Migration guides and best practices",
-      "migration": "v2.x → v3.0 Migration Guide",
+      "migration": "v3 → v4 Stable Migration Guide",
       "bestPractices": "Best Practices"
     },
     "resources": {

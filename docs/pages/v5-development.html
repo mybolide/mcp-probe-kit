@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MCP Probe Kit 5.0.0 尚未发布开发版安装、DevControl 项目治理、Node22 SQLite History 和安全迁移使用指南。">
+  <title>MCP Probe Kit 5.0.0 开发版 · 安装与 DevControl 使用指南</title>
+  <link rel="icon" href="../assets/logo.png" type="image/png">
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; color: #12213b; background: #f7f9fd; }
+    * { box-sizing: border-box; }
+    body { margin: 0; line-height: 1.7; }
+    header { background: #fff; border-bottom: 1px solid #e0e6f0; padding: 14px max(20px, calc((100vw - 940px) / 2)); }
+    header a { color: #1755b8; text-decoration: none; font-weight: 600; }
+    main { max-width: 940px; margin: 0 auto; padding: 28px 20px 72px; }
+    h1 { font-size: clamp(1.8rem, 3.5vw, 2.6rem); letter-spacing: -.035em; line-height: 1.25; }
+    h2 { margin-top: 36px; font-size: 1.4rem; }
+    .intro, section { background: white; border: 1px solid #e0e6f0; border-radius: 14px; padding: 22px; margin-top: 18px; }
+    .status { font-weight: 700; }
+    code { background: #eaf0f9; padding: 2px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+    pre { background: #132139; color: #f3f6ff; border-radius: 10px; padding: 17px; overflow-x: auto; line-height: 1.55; }
+    pre code { background: none; padding: 0; color: inherit; }
+    a { color: #1755b8; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 8px 0; }
+    .lang { color: #53627a; font-size: .93rem; }
+  </style>
+</head>
+<body>
+  <header><a href="../index.html">MCP Probe Kit · 文档首页</a>　|　<a href="./getting-started.html">4.1.1 稳定版安装</a></header>
+  <main>
+    <p class="lang">Source milestone · Chinese / English quick reference</p>
+    <h1>MCP Probe Kit 5.0.0 开发版指南</h1>
+    <div class="intro">
+      <p class="status">5.0.0 已在开发分支，但尚未发布至 npm / MCP Registry，也没有正式发布 Tag。</p>
+      <p>当前可公开安装的稳定版仍是 <strong>4.1.1</strong>。不要把 <code>npm latest</code>、<code>npx mcp-probe-kit@5.0.0</code> 或旧版迁移指南当作开发版的安装方式。</p>
+      <p><strong>English:</strong> Version 5.0.0 is an <strong>unpublished source milestone</strong>. Public npm stable remains 4.1.1. Build the feature branch locally; do not assume a published 5.0.0 package exists.</p>
+    </div>
+    <section>
+      <h2>1. 安装渠道 / Install the correct version</h2>
+      <p>公开稳定版（旧版功能，仍可用）：</p>
+      <pre><code>npx -y mcp-probe-kit@4.1.1 install-agent</code></pre>
+      <p>5.0.0 源码开发版（需要 Node.js 22+ 才能启用 DevControl）：</p>
+      <pre><code>git clone --branch feature/devcontrol-project-task-ledger https://github.com/mybolide/mcp-probe-kit.git
+cd mcp-probe-kit
+npm ci
+npm run build</code></pre>
+      <p>在 MCP 宿主配置中将服务器命令设为 <code>node</code>，参数设为实际绝对路径 <code>/ABSOLUTE/PATH/mcp-probe-kit/build/index.js</code>，然后重启宿主。不要把开发版源码误写成 npm 的已发布版本。</p>
+    </section>
+    <section>
+      <h2>2. DevControl：管理任务，不代替 Agent / Governance, not execution</h2>
+      <p>DevControl 提供项目本地 SQLite 任务账本、Web 工作台、依赖与文件范围约束、租约和真实测试门禁。<strong>Agent 负责实现、独立审查、执行业务 SQL 和真实测试</strong>；DevControl 不会代替 Agent 编码或独立审查，也不应绕过 Git Hook。</p>
+      <p>使用构建后的可执行脚本运行项目任务命令（请替换路径）：</p>
+      <pre><code>node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol onboard --project-root /PATH/TO/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol next --project-root /PATH/TO/PROJECT
+node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --project-root /PATH/TO/PROJECT</code></pre>
+      <ol>
+        <li>先审核需求/设计，提出任务计划并由 Owner 明确批准。草稿不等于已获执行授权。</li>
+        <li><code>devcontrol claim</code> 领取有效租约，在冻结的 <code>allowedPaths</code> 内修改。</li>
+        <li>Agent 自行实现、测试、复审，只提交获准文件；以 <code>devcontrol complete</code>、<code>report</code> 提供真实证据。</li>
+        <li><code>devcontrol verify</code> 真正运行规定的 Gate；只有通过才能算 Verified。范围变更须重新评审。</li>
+      </ol>
+    </section>
+    <section>
+      <h2>3. History Session、Memory 与迁移</h2>
+      <p>Node.js 22+ 的 Git 项目默认将 History Session 保存于项目本地 SQLite <code>hs_*</code> 表；旧历史 Markdown 可以安全导入，在不支持的环境下可回退文件后端。DevControl 任务账本使用独立数据表；可选的 Qdrant Memory 是另一项跨项目服务，不能混同。</p>
+      <p>升级旧项目时先备份忽略状态和未提交的 Owner 工作，建立独立源码构建；确认正确项目根目录、历史恢复和已批准的任务门禁，绝不把迁移操作视为生产发布许可。</p>
+      <p>详细中英文参考：</p>
+      <ul>
+        <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-development-guide.md">5.0.0 完整使用与升级指南 / Full source-development guide</a></li>
+        <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/devcontrol.md">DevControl 命令、计划审核、任务生命周期与安全范围 / Reference</a></li>
+        <li><a href="./migration-v4.html">v3 → v4 已发布稳定版迁移说明 / Published-stable migration</a></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

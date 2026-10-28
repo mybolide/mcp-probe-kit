@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 - 可视化 Agent 研发工作流与 MCP Apps",
+    "title": "MCP Probe Kit 文档 - v4.1.1 稳定版与 v5.0.0 源码开发版",
     "description": "MCP Probe Kit v4 提供 29 个默认模型工具（24 基础 + 5 History Session）、35 个 Memory 工具面、39 个 full 兼容模型工具、5 个 MCP Apps，并支持计划恢复、证据收敛、GitNexus Sidecar 与版本锁定 CLI fallback。",
     "keywords": "MCP Probe Kit, AI开发工具, 代码生成, 代码审查, Git工具, UI开发, 研发效率, Cursor, Cline, Claude, MCP Server"
   },
@@ -15,9 +15,14 @@
   "hero": {
     "title": "🚀 MCP Probe Kit",
     "subtitle": "让 Agent 看懂项目、按计划执行，并用可视化工作台追踪真实进度",
-    "version": "v4.1.1",
+    "version": "v4.1.1 稳定版 / v5.0.0 开发版",
     "quickStart": "快速开始",
     "visitMainSite": "访问主站 ByteZoneX"
+  },
+  "v5Notice": {
+    "title": "5.0.0 源码开发版（尚未发布）",
+    "description": "DevControl 项目审批、真实验收和 Node.js 22+ SQLite History 已有新指南。公开 npm 稳定版仍为 4.1.1。",
+    "link": "查看 5.0.0 安装与新用法"
   },
   "sections": {
     "quickStart": {
@@ -33,7 +38,7 @@
     "guides": {
       "title": "指南",
       "description": "迁移指南和最佳实践",
-      "migration": "v2.x → v3.0 迁移指南",
+      "migration": "v3 → v4 稳定版迁移指南",
       "bestPractices": "最佳实践"
     },
     "resources": {
