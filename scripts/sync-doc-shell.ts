@@ -60,7 +60,7 @@ function shell(current: ActivePage): string {
       <div class="mb-4">
         <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
         ${allToolsMenu(current)}
-        ${item('apps', current, './apps.html', '◫', 'sidebar.apps', 'MCP Apps', '5')}
+        ${item('apps', current, './apps.html', '◫', 'sidebar.apps', 'MCP Apps', '2')}
       </div>
       <div class="mb-4">
         <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>

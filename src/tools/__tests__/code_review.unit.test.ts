@@ -4,9 +4,6 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { codeReview } from "../code_review.js";
-import { buildDelegatedPlanContract } from "../../lib/delegated-plan-contract.js";
-import { JsonPlanStore } from "../../plans/plan-store.js";
-import type { PlanHeartbeatRecord } from "../../plans/plan-types.js";
 
 function git(root: string, args: string[]): string {
   return execFileSync("git", args, {
@@ -122,64 +119,28 @@ describe("code_review 单元测试", () => {
         path: "src/app.ts",
         status: "M",
       }));
-      expect(text).toContain("Git / Plan Evidence");
+      expect(text).toContain("Git / SQLite DevControl Evidence");
       expect(text).toContain("真实 Git diff");
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
 
-  test("plan_id 对照真实 diff 并报告越界、测试和 revision 缺口", async () => {
+  test("v5 绝不从旧文件 Plan 伪造审查结果；未知任务应返回真实 SQLite 提示", async () => {
     const root = makeGitRepo();
-    const plan = buildDelegatedPlanContract({
-      planId: "feature-code-review-plan",
-      workflow: "feature",
-      workflowVersion: "4.0.0",
-      objective: "only change src/allowed",
-      declaredScope: { paths: ["src/allowed"] },
-      steps: [{ id: "implementation", type: "agent_action", action: "implement" }],
-    });
-    const now = new Date().toISOString();
-    const record: PlanHeartbeatRecord = {
-      schemaVersion: "1.0.0",
-      planId: plan.planId,
-      plan,
-      status: "active",
-      completedStepIds: ["implementation"],
-      skippedSteps: [],
-      unresolvedItems: [],
-      evidence: [],
-      declaredScope: { paths: ["src/allowed"] },
-      artifacts: [],
-      memoryCandidates: [],
-      architectureCandidates: [],
-      acceptanceResults: [],
-      runtimeEvidence: [],
-      lastVerifiedRevision: "stale-revision",
-      createdAt: now,
-      updatedAt: now,
-    };
-    await new JsonPlanStore(root).write(record);
     fs.writeFileSync(path.join(root, "src", "app.ts"), "export const value = 3;\n", "utf8");
 
     try {
       const result = await codeReview({
         project_root: root,
-        plan_id: plan.planId,
+        plan_id: 'removed-v4-checkpoint',
       });
       const structured = (result as any).structuredContent;
 
-      expect(structured.planContext).toMatchObject({
-        planId: plan.planId,
-        workflow: "feature",
-      });
-      expect(structured.consistency.outOfScopeFiles).toEqual(["src/app.ts"]);
-      expect(structured.consistency.findings).toEqual(expect.arrayContaining([
-        expect.objectContaining({ severity: "high", category: "scope" }),
-        expect.objectContaining({ severity: "high", category: "test" }),
-        expect.objectContaining({ severity: "high", category: "revision" }),
-      ]));
-      expect(String(result.content[0].text)).toContain("Deterministic Consistency Findings");
+      expect(structured.planContext).toBeUndefined();
+      expect(structured.consistency).toBeUndefined();
+      expect(structured.evidenceWarnings.join(' ')).toContain('DevControl SQLite');
+      expect(String(result.content[0].text)).not.toContain("Deterministic Consistency Findings");
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

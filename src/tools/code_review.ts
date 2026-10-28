@@ -303,7 +303,7 @@ ${renderBannedPatterns()}
         strengths: ["string"],
       },
       boundaries: [
-        "该工具确定性收集 Git/Plan 证据并比较范围、产物、测试、契约、架构和 revision，但不声称已运行静态代码扫描器",
+        "该工具收集真实 Git diff 与 DevControl SQLite 任务执行合同，但不伪称已运行静态代码扫描或独立复审",
         "最终 issues 必须由 Agent 基于实际代码分析生成",
       ],
       nextSteps: ["Agent 按 instructions 审查代码并输出符合 outputContract 的报告"],
@@ -311,15 +311,12 @@ ${renderBannedPatterns()}
         ? { diffEvidence: evidenceBundle.diffEvidence as unknown as Record<string, unknown> }
         : {}),
       ...(evidenceBundle.planContext ? { planContext: evidenceBundle.planContext } : {}),
-      ...(evidenceBundle.consistency
-        ? { consistency: evidenceBundle.consistency as unknown as Record<string, unknown> }
-        : {}),
       ...(evidenceBundle.warnings.length > 0 ? { evidenceWarnings: evidenceBundle.warnings } : {}),
     };
 
     return okStructured(message, structured, {
       schema: (await import("../schemas/output/guidance-tools.js")).GuidanceResultSchema,
-      note: "证据增强的指导型工具：MCP 收集真实 Git/Plan 一致性证据；代码语义 issues 仍由 Agent 基于实际代码生成",
+      note: "证据增强的指导型工具：MCP 收集真实 Git diff / DevControl SQLite 合同；代码语义 issues 仍由 Agent 基于实际代码生成",
     });
   } catch (error) {
     return handleToolError(error, "code_review");

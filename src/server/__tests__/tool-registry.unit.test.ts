@@ -173,9 +173,10 @@ describe("Tool Registry", () => {
       clientCapabilities: capabilities,
       uiAppsEnabled: true,
     });
-    // The old Feature workbench cannot be attached to the new SQLite-only
-    // DevControl action without binding it to project-ledger state.
-    expect(listed._meta?.ui).toBeUndefined();
+    expect(listed._meta?.ui).toMatchObject({
+      resourceUri: 'ui://mcp-probe-kit/devcontrol-workbench',
+      visibility: ['model', 'app'],
+    });
     expect(
       prepareRegisteredToolForList(definition!, {
         clientCapabilities: {},

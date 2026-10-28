@@ -6,7 +6,7 @@ import pkg from '../package.json' with { type: 'json' };
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const result = await build({
-  entryPoints: [resolve(root, 'apps/mcp-probe-app.ts')],
+  entryPoints: [resolve(root, 'apps/v5-sqlite-app.ts')],
   bundle: true,
   format: 'iife',
   platform: 'browser',

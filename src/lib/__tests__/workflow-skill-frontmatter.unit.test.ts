@@ -17,18 +17,15 @@ describe("workflow-skill frontmatter", () => {
     expect(content.startsWith("---\n")).toBe(true);
     expect(content).toContain(`name: ${MCP_PROBE_SKILL_NAME}`);
     expect(content).toContain("description: >-");
-    expect(content).toContain("构造完整参数");
-    expect(content).toContain("parent-child Spec");
-    expect(content).toContain("执行通道与自动降级");
-    expect(content).toContain("install-agent --project-root .");
-    expect(content).toContain("未发布精确版本与本地入口");
-    expect(content).toContain("MCP_PROBE_LOCAL_ENTRY");
-    expect(content).toContain("runtime.json.localOnly=true");
-    expect(content).toContain("MCP_PROBE_LOCAL_ONLY=1");
-    expect(content).toContain("版本不符");
-    expect(content).toContain("mcp-probe-kit@3.6.6");
+    expect(content).toContain("SQLite + DevControl");
+    expect(content).toContain("v4 file-backed");
+    expect(content).toContain("not");
+    expect(content).toContain("devcontrol");
+    expect(content).toContain("Node.js 22+");
+    expect(content).toContain("project_root");
+    expect(content).toContain("unpublished 5.0.0 builds");
     expect(content).toContain('mcp-probe-kit-version: "3.6.6"');
-    expect(content).toContain("# MCP 调用时机");
+    expect(content).toContain("# MCP Probe Kit v5");
     expect(content).not.toContain(formatSkillVersionMarker("3.6.6"));
   });
 

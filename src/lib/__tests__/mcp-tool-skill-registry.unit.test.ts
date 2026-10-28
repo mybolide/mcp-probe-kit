@@ -27,7 +27,7 @@ describe("mcp-tool-skill-registry", () => {
     expect(content).toContain("Owner");
     expect(content).toContain("Plan");
     expect(content).toContain("real tests");
-    expect(content).toContain("not accepted");
+    expect(content).toContain("v4 file-backed");
     expect(content).not.toContain("先调用 `resume_plan`");
   });
 

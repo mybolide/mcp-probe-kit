@@ -25,6 +25,17 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    project SQLite \`dc_*\` tables via the appropriate \`devcontrol\` actions.
    Real PRD, ADR, API/Schema contracts and software source remain in Git; the
    application database is separate and must never be confused with DevControl.
+   For Feature planning, use feature-create then feature-save for three
+   versioned SQLite chapters (**requirements → design → tasks**) followed by
+   feature-validate, feature-task-brief, feature-task-review,
+   feature-task-propose and exact-hash Owner feature-task-approve.
+   Unapproved proposals remain visible in planning, never executable.
+   Canonical FR-001 links to legacy FR-1 but original text remains intact.
+   ONE independently testable outcome per leaf: source requirement, reviewed
+   design, parent and dependencies, one responsible role, exact file scope,
+   inputs/outputs, positive/negative tests, evidence, exclusions and stop
+   conditions. Split tasks over four hours instead of broadening scope.
+   Prefer hundreds of well-defined tasks to a handful of vague objectives.
 3. Agent reads real requirements and code, reviews complete plan/Spec and risks.
    Use \`plan-review\` → \`plan-propose\` → independent review → explicit
    Owner hash-bound \`plan-approve\`. Proposed work is NOT executable.
@@ -33,7 +44,10 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    independently reviews software, runs real tests and commits approved files.
 5. Use \`check\` → real Git commit → \`complete\` → \`report\` →
    \`verify\`. A commit, progress claim or simulated test is never Verified.
-   Missing device, SQL/HTTP, Flutter or other required runner fails closed.
+   For custom project tests, Agent runs tests and reports evidence, and a
+   separate reviewer records outcome through gate-review. DevControl
+   never runs arbitrary business-specific Python/gRPC/etc executors.
+   Missing actual test evidence or independent review fails closed.
 6. New ideas enter \`idea-capture\` → Agent \`idea-assess\` → independent
    \`idea-review\` → explicit Owner \`idea-decide\`. Scope or dependency
    changes need separately reviewed \`release-work-scope-*\` or
@@ -86,6 +100,8 @@ ${skillRef}
 - **必须先恢复**：新对话先 \`history_session_bootstrap\`（Git/Node22+ 项目唯一实时 History = SQLite \`hs_*\`），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
 - **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码/正式 PRD/ADR/API/Schema 仍归 Git，业务数据库独立。
 - **逐任务闭环**：Agent 独立审查需求，\`plan-review\` → \`plan-propose\` → 精确 Hash 的 Owner 批准 \`plan-approve\`；然后 \`claim\` → 真正编码、审查、测试与合法 Git 提交 → \`complete\` / \`report\` / \`verify\`。DevControl 只是管控与证据门禁，不替 Agent 编码/跑 SQL/独立审核。
+- **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；再 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\`，最终由独立复审及精确 Hash 的 Owner \`feature-task-approve\`。草稿父子任务应可见但不能执行；FR-1 与 FR-001 统一关联并保留原文。
+- **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新增 Feature 叶子不超过 4 小时，过大必须拆分。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
 - **会话结束**：\`history_session_checkpoint\` 记录用户原话、发现、决策、改动、真实测试、分支/租约、阻碍及下一步。保留用户未提交修改，真机/真实数据库 Gate 缺失就报告未通过。
@@ -109,8 +125,12 @@ ${skillRef}
   specs; application data remains separate.
 - Evaluate ideas before modifying frozen scope; require reviewed amendments
   and explicit Owner authorization. Keep user dirty files and never fake gates.
+- New ideas use idea-capture, idea-assess, independent idea-review and
+  exact Owner idea-decide; never expand a frozen scope without review.
 - No v4 file-backed Specs, start_* workflows, plan_heartbeat, resume_plan,
   converge or Markdown History. Old archives are read-imported only.
+- On every new session call history_session_bootstrap and before handoff call
+  history_session_checkpoint; only SQLite is live project History.
 - Checkpoint the original user input, real changes/tests, decisions, blockers,
   lease/Git state and next actions before ending each session. Node.js 22+;
   unpublished v5 runs locally (\`MCP_PROBE_LOCAL_ONLY=1\`), never silently

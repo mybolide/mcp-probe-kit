@@ -1,5 +1,7 @@
 /** A real team task is ONE independently assignable and verifiable row. */
 import { createHash } from "node:crypto";
+import { validGateRequirements } from './gate-policy.js';
+import { reviewAtomicOutcome } from './task-atomicity.js';
 export type WorkType =
   "analysis"|"decision"|"coordination"|"development"|"testing"|"integration"|"bugfix"|"release";
 export interface AtomicWorkItem {
@@ -311,6 +313,9 @@ export function reviewAtomicWorkItems(items:AtomicWorkItem[],stages:string[],
     else if(/^(?:以真实证据证明[:：]|(?:完成|通过|符合)需求(?:即可|就算)?$)/.test(item.acceptance.trim())||
       /已按需求完成[。.]?$/.test(item.acceptance.trim()))
       issues.push(item.id+": generic self-referential acceptance is not independently verifiable");
+    issues.push(...reviewAtomicOutcome({id:item.id,title:item.title,
+      acceptance:item.acceptance,estimatedHours:item.estimatedHours,
+      ...(item.estimatedHours!==undefined?{maxHours:4}:{})}));
     if(item.checklist&&(!Array.isArray(item.checklist)||item.checklist.length>3))
       issues.push(item.id+": keep checklist small; split independent steps into their own rows");
     if(item.plannedStartAt&&!/^\d{4}-\d\d-\d\d$/.test(item.plannedStartAt))
@@ -324,9 +329,8 @@ export function reviewAtomicWorkItems(items:AtomicWorkItem[],stages:string[],
     if(!Array.isArray(item.allowedPaths)||(!item.allowedPaths.length&&!sqliteDecision)||
       item.allowedPaths.some(p=>typeof p!=="string"||p.startsWith("/")||p.split("/").includes("..")))
       issues.push(item.id+": safe bounded file scope required");
-    if(!Array.isArray(item.requiredGates)||!item.requiredGates.length||
-      item.requiredGates.some(g=>!knownGates.has(g)))
-      issues.push(item.id+": real acceptance gate required");
+    if(!validGateRequirements(item.requiredGates))
+      issues.push(item.id+": declare project-specific test/evidence requirements, not MCP-executable Gate names");
     if(item.requiredGates?.includes("sqlite_decision")&&
       (!sqliteDecision||item.allowedPaths?.length))
       issues.push(item.id+": SQLite-only decision must have no Git file scope and only sqlite_decision gate");

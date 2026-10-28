@@ -96,11 +96,8 @@ for (const lang of globalLanguages) {
 }
 
 const demoFiles = [
-  'docs/demos/feature-workbench.html',
-  'docs/demos/bug-workbench.html',
+  'docs/demos/devcontrol.html',
   'docs/demos/memory-center.html',
-  'docs/demos/product-workbench.html',
-  'docs/demos/convergence-gate.html',
 ];
 for (const file of demoFiles) {
   check(existsSync(resolve(root, file)), `${file} exists`);
@@ -108,7 +105,12 @@ for (const file of demoFiles) {
     const html = read(file);
     check(html.includes('window.__MCP_PROBE_DEMO__='), `${file} embeds demo configuration`);
     check(html.includes('data-app-kind='), `${file} reuses MCP App shell`);
+    check(!html.includes('resume_plan') && !html.includes('plan_heartbeat') && !html.includes('start_feature'),
+      `${file} contains no retired v4 Plan workflow JavaScript`);
   }
+}
+for (const legacy of ['feature-workbench', 'bug-workbench', 'product-workbench', 'convergence-gate']) {
+  check(!existsSync(resolve(root, `docs/demos/${legacy}.html`)), `v5 does not ship obsolete ${legacy} live demo`);
 }
 
 const gifExpectations = {
@@ -329,7 +331,11 @@ check(!homepage.includes('aspect-ratio: 1180 /'), 'homepage does not force legac
 check(homepage.includes('class="mt-10 grid items-start gap-6"'), 'homepage presents each readable demo at full width');
 check((homepage.match(/-mobile\.gif/g) ?? []).length >= 4, 'homepage serves responsive mobile GIF variants');
 const appsPage = read('docs/pages/apps.html');
-check(appsPage.includes('v5 源码开发版说明') && appsPage.includes('v5-development.html'), 'MCP Apps documentation distinguishes retained v4 Apps from v5 DevControl');
+check(appsPage.includes('v5 源码开发版说明') && appsPage.includes('v5-development.html'), 'MCP Apps documentation points to v5 DevControl source guide');
+check(appsPage.includes('ui://mcp-probe-kit/devcontrol-workbench') && appsPage.includes('demos/devcontrol.html'),
+  'MCP Apps page shows real v5 DevControl SQLite workbench');
+check(!appsPage.includes('ui://mcp-probe-kit/feature-workbench') && !appsPage.includes('demos/convergence-gate.html'),
+  'MCP Apps page does not advertise removed v4 workflows');
 const examplesPage = read('docs/pages/examples.html');
 check(examplesPage.includes('./v5-best-practices.html'), 'legacy v4 examples guide links readers to v5 best practices');
 check(examplesPage.includes('v5 开发流程以 DevControl') && examplesPage.includes('v5-development.html'), 'best practices distinguish v5 governance from v4 workflow examples');

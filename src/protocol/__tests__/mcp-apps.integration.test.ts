@@ -50,17 +50,18 @@ describe('official MCP Apps integration', () => {
         : false).toBe(true);
 
       const tools = await client.listTools();
-      expect(tools.tools).toHaveLength(29);
+      expect(tools.tools).toHaveLength(15);
       expect(tools.tools.some((tool) => tool.name === 'list_memory_assets')).toBe(false);
       expect(tools.tools.some((tool) => tool.name === 'architecture')).toBe(true);
       expect(tools.tools.some((tool) => tool.name === 'history_session_bootstrap')).toBe(true);
-      const feature = tools.tools.find((tool) => tool.name === 'start_feature');
-      expect(feature?._meta).toMatchObject({
+      const devcontrol = tools.tools.find((tool) => tool.name === 'devcontrol');
+      expect(devcontrol?._meta).toMatchObject({
         ui: {
-          resourceUri: 'ui://mcp-probe-kit/feature-workbench',
+          resourceUri: 'ui://mcp-probe-kit/devcontrol-workbench',
           visibility: ['model', 'app'],
         },
       });
+      expect(tools.tools.some((tool) => tool.name === 'start_feature')).toBe(false);
       expect(tools.tools.find((tool) => tool.name === 'gencommit')?._meta?.ui).toBeUndefined();
 
       const resources = await client.listResources();
@@ -68,6 +69,16 @@ describe('official MCP Apps integration', () => {
         (resource) => resource.uri === 'ui://mcp-probe-kit/memory-center',
       );
       expect(memoryResource?.mimeType).toBe(MCP_APP_MIME_TYPE);
+      expect(resources.resources.filter((r) => r.uri.startsWith('ui://mcp-probe-kit/'))).toHaveLength(2);
+      const sqliteResource = resources.resources.find((r) => r.uri === 'ui://mcp-probe-kit/devcontrol-workbench');
+      expect(sqliteResource?.mimeType).toBe(MCP_APP_MIME_TYPE);
+      expect(resources.resources.some((r) => r.uri === 'ui://mcp-probe-kit/plan-workbench')).toBe(false);
+      const sqliteDocument = await client.readResource({ uri: 'ui://mcp-probe-kit/devcontrol-workbench' });
+      const sqliteHtml = sqliteDocument.contents[0];
+      expect(sqliteHtml && 'text' in sqliteHtml ? sqliteHtml.text : '').toContain('data-app-kind="devcontrol-workbench"');
+      expect(sqliteHtml && 'text' in sqliteHtml ? sqliteHtml.text : '').toContain('devcontrol');
+      expect(sqliteHtml && 'text' in sqliteHtml ? sqliteHtml.text : '').not.toContain('resume_plan');
+      await expect(client.readResource({ uri: 'ui://mcp-probe-kit/feature-workbench' })).rejects.toThrow();
 
       const document = await client.readResource({
         uri: 'ui://mcp-probe-kit/memory-center',
@@ -93,7 +104,7 @@ describe('official MCP Apps integration', () => {
     }
   });
 
-  test('keeps the Memory-enabled compact surface at 35 tools for MCP Apps clients', async () => {
+  test('keeps the Memory-enabled v5 SQLite compact surface at 21 tools', async () => {
     vi.stubEnv('MCP_TOOLSET', 'compact');
     vi.stubEnv('MCP_ENABLE_UI_APPS', 'true');
     vi.stubEnv('MEMORY_QDRANT_URL', 'http://127.0.0.1:6333');
@@ -119,7 +130,7 @@ describe('official MCP Apps integration', () => {
     await client.connect(clientTransport);
     try {
       const tools = await client.listTools();
-      expect(tools.tools).toHaveLength(35);
+      expect(tools.tools).toHaveLength(21);
       expect(tools.tools.some((tool) => tool.name === 'list_memory_assets')).toBe(false);
       expect(tools.tools.map((tool) => tool.name)).toEqual(
         expect.arrayContaining([
@@ -153,8 +164,8 @@ describe('official MCP Apps integration', () => {
     await client.connect(clientTransport);
     try {
       const tools = await client.listTools();
-      expect(tools.tools).toHaveLength(29);
-      expect(tools.tools.find((tool) => tool.name === 'start_feature')?._meta?.ui).toBeUndefined();
+      expect(tools.tools).toHaveLength(15);
+      expect(tools.tools.find((tool) => tool.name === 'devcontrol')?._meta?.ui).toBeUndefined();
       expect(tools.tools.some((tool) => tool.name === 'list_memory_assets')).toBe(false);
       const resources = await client.listResources();
       expect(resources.resources.some((resource) => resource.uri.startsWith('ui://'))).toBe(false);

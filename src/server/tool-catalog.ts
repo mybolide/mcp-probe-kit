@@ -58,16 +58,12 @@ function tool(options: CatalogOptions): ToolCatalogEntry {
   };
 }
 
-const ORCHESTRATION = "完整交付编排 `start_*`（按需使用）";
-const ROUTING = "可选首工具路由";
-const PROJECT_SPEC = "项目与规格";
-const CODE_ANALYSIS = "代码分析（可直接调，不必等 start_*）";
+const CODE_ANALYSIS = "代码分析（独立能力，不管理 DevControl 任务状态）";
 const GIT = "Git";
-const UI = "UI 独立能力（可直接调用，也可由 `start_ui` 组合）";
+const UI = "UI 独立能力（正式研发流程由 SQLite DevControl 管理）";
 const MEMORY = "记忆（需 MEMORY 已配置）";
-const HISTORY = "会话历史档案（默认开启；MCP_HISTORY_SESSION=0|false|off 关闭）";
+const HISTORY = "项目 SQLite History（强制开启）";
 const INTERACTIVE = "交互";
-const PLAN = "长任务状态、恢复与正式收敛（按需）";
 
 export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
   tool({
@@ -80,143 +76,6 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: 'devcontrol',
     groupTitle: 'SQLite DevControl 项目治理',
     whenToCall: 'v5 唯一需求/Feature/Bug/Idea/计划/任务审批/claim/complete/report/verify 入口。先恢复 History 和项目账本；仅在任务已获 Owner 冻结批准、Agent 独立复核后编码并执行真实 Gate。',
-  }),
-  tool({
-    name: "start_feature",
-    title: "新功能开发编排",
-    readOnly: true,
-    idempotent: false,
-    openWorld: true,
-    toolsets: ["workflow"],
-    groupId: "orchestration",
-    groupTitle: ORCHESTRATION,
-    whenToCall:
-      "需要新功能完整交付时使用，向 Agent 返回委托流程模板；业务需求、技术决策、工作项规划和测试由 Agent 自主负责。Git/Node22 DevControl 项目使用 SQLite Feature/整版原子 WorkItem，不默认生成 Spec 文件；显式 legacy files 模式才使用 spec_layout 和 parent-child。",
-  }),
-  tool({
-    name: "start_bugfix",
-    title: "Bug 修复编排",
-    readOnly: true,
-    idempotent: false,
-    openWorld: true,
-    toolsets: ["workflow"],
-    groupId: "orchestration",
-    groupTitle: ORCHESTRATION,
-    whenToCall:
-      "需要从现象、SRC-8 真因、修复、回归、审查到收敛完成**完整 Bug 交付**时使用；只做根因分析时直接调用 `fix_bug`",
-  }),
-  tool({
-    name: "start_ui",
-    title: "UI 开发编排",
-    readOnly: true,
-    idempotent: false,
-    openWorld: true,
-    toolsets: ["ui", "workflow"],
-    groupId: "orchestration",
-    groupTitle: ORCHESTRATION,
-    whenToCall:
-      "需要从视觉方向、页面结构、实现、桌面/移动验收到正式收敛完成**完整 UI 交付**时使用；只查模式或生成设计系统时直接调用 UI 能力",
-  }),
-  tool({
-    name: "start_onboard",
-    title: "项目上手编排",
-    readOnly: true,
-    idempotent: false,
-    openWorld: true,
-    toolsets: ["workflow"],
-    groupId: "orchestration",
-    groupTitle: ORCHESTRATION,
-    whenToCall: "**新成员 / 新仓库**快速建立心智模型",
-  }),
-  tool({
-    name: "start_product",
-    title: "产品设计编排",
-    readOnly: true,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["workflow"],
-    groupId: "orchestration",
-    groupTitle: ORCHESTRATION,
-    whenToCall: "从 0 做**产品方案**（PRD、原型思路）",
-  }),
-  tool({
-    name: "start_ralph",
-    title: "Ralph 循环开发编排",
-    readOnly: true,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["workflow"],
-    groupId: "orchestration",
-    groupTitle: ORCHESTRATION,
-    whenToCall: "需要**有界多轮迭代**、每轮 Heartbeat/测试/Diff 证据和最终 Converge 的完整长任务时；不用于后台无人值守循环",
-  }),
-  tool({
-    name: "workflow",
-    title: "开发工作流路由",
-    readOnly: true,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["core", "workflow"],
-    groupId: "routing",
-    groupTitle: ROUTING,
-    whenToCall:
-      "Agent 阅读 Skill 和工具 description 后仍**不确定该调用哪个工具**时使用；`auto` 只返回选择指南，不做自然语言意图识别、不替 Agent 猜 firstTool。Agent 已明确场景时可显式传 scenario 获取该场景的确定性流程说明",
-  }),
-  tool({
-    name: "init_project_context",
-    title: "生成项目上下文",
-    readOnly: false,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["core", "workflow"],
-    groupId: "project-spec",
-    groupTitle: PROJECT_SPEC,
-    whenToCall: "没有 **AGENTS.md**、`docs/project-context/`、图谱索引；大改前缺上下文",
-  }),
-  tool({
-    name: "init_project",
-    title: "初始化项目",
-    readOnly: false,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["core", "workflow"],
-    groupId: "project-spec",
-    groupTitle: PROJECT_SPEC,
-    whenToCall: "**空目录**需要初始化项目结构",
-  }),
-  tool({
-    name: "add_feature",
-    title: "生成功能规格模板",
-    readOnly: true,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["core", "workflow"],
-    groupId: "project-spec",
-    groupTitle: PROJECT_SPEC,
-    whenToCall:
-      "仅供显式 legacy files 模式生成 `docs/specs/<feature>/` 文件模板；Git/Node22 DevControl 项目应使用 SQLite feature-save/validate，不把 add_feature 当业务拆分入口。",
-  }),
-  tool({
-    name: "check_spec",
-    title: "规格完整性校验",
-    readOnly: true,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["core", "workflow"],
-    groupId: "project-spec",
-    groupTitle: PROJECT_SPEC,
-    whenToCall: "规格写完后、**写实现代码前**；或 Bug 修完要过规格闸门",
-  }),
-  tool({
-    name: "estimate",
-    title: "工作量估算",
-    readOnly: true,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["core", "workflow"],
-    groupId: "project-spec",
-    groupTitle: PROJECT_SPEC,
-    whenToCall: "需要**故事点 / 工时 / 风险**评估（通常在 `add_feature` 之后）",
   }),
   tool({
     name: "code_insight",
@@ -468,41 +327,6 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     whenToCall: "`history_session_search` 命中后按 number/path **分页读取**无损 Markdown 原文",
   }),
   tool({
-    name: "plan_heartbeat",
-    title: "记录计划检查点",
-    readOnly: false,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["workflow"],
-    groupId: "plan-control",
-    groupTitle: PLAN,
-    whenToCall:
-      "执行需要持续状态、跨会话恢复或正式交付的 Delegated Plan 时记录步骤、证据、作用域、产物、候选、验收结果、运行证据和 revision；首次调用附完整 plan，单次只读能力不强制使用",
-  }),
-  tool({
-    name: "resume_plan",
-    title: "恢复计划",
-    readOnly: true,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["workflow"],
-    groupId: "plan-control",
-    groupTitle: PLAN,
-    whenToCall: "会话中断、重启、切换 Agent 或用户只说继续时恢复下一可执行步骤；已知 plan_id 时精确恢复，未知时省略 plan_id 自动选择最近 active/blocked Plan；found=true 且 mustContinue=true 后必须立即执行 nextStep，禁止只汇报恢复结果后停止",
-  }),
-  tool({
-    name: "converge",
-    title: "计划收敛闸门",
-    readOnly: false,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["workflow"],
-    groupId: "plan-control",
-    groupTitle: PLAN,
-    whenToCall:
-      "托管交付实现与验证完成后，按 Plan 自己声明的 requiredEvidenceKinds（例如需求、测试、审查）、qualityGates、步骤和未决项进行收敛；通过后才允许该流程正式沉淀记忆。单次只读分析和独立记忆管理不强制进入收敛",
-  }),
-  tool({
     name: "ask_user",
     title: "向用户提问",
     readOnly: true,
@@ -512,17 +336,6 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     groupId: "interactive",
     groupTitle: INTERACTIVE,
     whenToCall: "目标模糊、缺关键信息，需要**向用户提问**",
-  }),
-  tool({
-    name: "interview",
-    title: "需求访谈",
-    readOnly: true,
-    idempotent: true,
-    openWorld: false,
-    toolsets: ["workflow"],
-    groupId: "interactive",
-    groupTitle: INTERACTIVE,
-    whenToCall: "需要结构化**需求访谈**",
   }),
 ] as const;
 

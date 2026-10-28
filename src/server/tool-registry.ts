@@ -1,28 +1,15 @@
 import {
-  initProject,
   gencommit,
   codeReview,
   codeInsight,
   architecture,
   gentest,
   refactor,
-  initProjectContext,
-  workflow,
-  addFeature,
-  checkSpec,
   fixBug,
-  estimate,
-  startFeature,
-  startBugfix,
-  startOnboard,
-  startRalph,
-  interview,
   askUser,
   uiDesignSystem,
   uiSearch,
   syncUiData,
-  startUi,
-  startProduct,
   gitWorkReport,
   searchMemory,
   readMemoryAsset,
@@ -35,9 +22,6 @@ import {
   historySessionValidate,
   historySessionSearch,
   historySessionRead,
-  planHeartbeat,
-  resumePlanTool,
-  converge,
 } from "../tools/index.js";
 import { ToolSchema } from "@modelcontextprotocol/core";
 import { listMemoryAssets } from "../tools/list_memory_assets.js";
@@ -88,30 +72,17 @@ const appOnlySchemas: Record<string, RegisteredToolSchema> = {
 
 const handlers: Record<string, RegisteredToolHandler> = {
   devcontrol: runV5DevControlTool,
-  init_project: async (args, context) => initProject(args as never, context),
   gencommit: async (args) => gencommit(args as never),
   code_review: async (args) => codeReview(args as never),
   code_insight: async (args, context) => codeInsight(args as never, context),
   architecture: async (args, context) => architecture(args as never, context),
   gentest: async (args) => gentest(args as never),
   refactor: async (args) => refactor(args as never),
-  init_project_context: async (args, context) => initProjectContext(args as never, context),
-  workflow: async (args, context) => workflow(args as never, context),
-  add_feature: async (args) => addFeature(args as never),
-  check_spec: async (args) => checkSpec(args as never),
   fix_bug: async (args) => fixBug(args as never),
-  estimate: async (args) => estimate(args as never),
-  start_feature: async (args, context) => startFeature(args as never, context),
-  start_bugfix: async (args, context) => startBugfix(args as never, context),
-  start_onboard: async (args, context) => startOnboard(args as never, context),
-  start_ralph: async (args, context) => startRalph(args as never, context),
-  interview: async (args) => interview(args as never),
   ask_user: async (args) => askUser(args as never),
   ui_design_system: async (args) => uiDesignSystem(args as never),
   ui_search: async (args) => uiSearch(args as never),
   sync_ui_data: async (args, context) => syncUiData(args as never, context),
-  start_ui: async (args, context) => startUi(args as never, context),
-  start_product: async (args, context) => startProduct((args ?? {}) as never, context),
   git_work_report: async (args) => gitWorkReport(args as never),
   search_memory: async (args) => searchMemory(args as never),
   read_memory_asset: async (args) => readMemoryAsset(args as never),
@@ -124,16 +95,13 @@ const handlers: Record<string, RegisteredToolHandler> = {
   history_session_validate: async (args) => historySessionValidate(args),
   history_session_search: async (args) => historySessionSearch(args),
   history_session_read: async (args) => historySessionRead(args),
-  plan_heartbeat: async (args) => planHeartbeat(args),
-  resume_plan: async (args) => resumePlanTool(args),
-  converge: async (args) => converge(args),
 };
 
 function buildRegistry(): ToolDefinition[] {
   const seen = new Set<string>();
-  const catalogByName = new Map(TOOL_CATALOG.map((entry) => [entry.name, entry]));
+  const catalogByName = new Map(TOOL_CATALOG.filter((entry) => isV5Tool(entry.name)).map((entry) => [entry.name, entry]));
 
-  const definitions = allToolSchemas.map((rawSchema) => {
+  const definitions = allToolSchemas.filter((schema) => isV5Tool(schema.name)).map((rawSchema) => {
     const schema = rawSchema as RegisteredToolSchema;
     if (seen.has(schema.name)) {
       throw new Error(`Tool Schema 存在重复工具: ${schema.name}`);

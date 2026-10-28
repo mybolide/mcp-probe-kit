@@ -139,7 +139,7 @@ describe("workflow-skill-installer", () => {
     const text = fs.readFileSync(path.join(root, MCP_PROBE_SKILL_REL_PATH), "utf8");
     expect(text).toContain('name: mcp-probe-kit');
     expect(text).toContain('mcp-probe-kit-version:');
-    expect(text).toContain("MCP 调用时机");
+    expect(text).toContain("MCP Probe Kit v5");
   });
 
   test("仅 HTML 注释同版本会升级为 frontmatter", () => {
@@ -187,21 +187,21 @@ describe("workflow-skill-installer", () => {
     const skill = fs.readFileSync(skillPath, "utf8");
     const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
     expect(skill).toContain("mcp-probe:guidance-revision");
-    expect(skill).toContain("Agent 主导业务");
-    expect(skill).toContain("release-work-approve");
-    expect(skill).toContain("默认不生成 docs/specs");
+    expect(skill).toContain("The only project-development workflow");
+    expect(skill).toContain("plan-approve");
+    expect(skill).toContain("SQLite");
     expect(skill).toContain("idea-capture");
     expect(skill).toContain("idea-assess");
     expect(skill).toContain("idea-review");
     expect(skill).toContain("idea-decide");
-    expect(skill).toContain("用户的新想法需要评估，不是一律阻止、更不是一律立即开发");
-    expect(skill).toContain("within_task 可以继续既有合法领取任务");
-    expect(skill).toContain("不得扩大原任务合同");
-    expect(skill).toContain("已冻结计划的自动修订与审批仍受RELEASE_CHANGE_REVIEW_REQUIRED限制");
-    expect(agents).toContain("complete/report/verify");
-    expect(agents).toMatch(/新想法先充分评估|Evaluate new ideas instead of automatically blocking/);
+    expect(skill).toContain("Scope or dependency");
+    expect(skill).toContain("Owner");
+    expect(skill).not.toContain("先调用 `resume_plan`");
+    expect(agents).toContain("complete");
+    expect(agents).toContain("verify");
+    expect(agents).toContain("SQLite + DevControl");
     expect(agents).toContain("idea-capture");
-    expect(agents).toMatch(/现有已批准任务目标\/文件范围|currently claimed task/);
+    expect(agents).toContain("frozen scope");
     expect(agents).toContain("Keep this rule.");
     const second = ensureMcpProbeKitBootstrap(root);
     expect(second.skill.updated).toBe(false);
@@ -259,7 +259,7 @@ describe("workflow-skill-installer", () => {
     expect(result.previousVersion).toBe("0.1.0");
     const text = fs.readFileSync(skillPath, "utf8");
     expect(text).toContain('name: mcp-probe-kit');
-    expect(text).toContain("何时调用");
+    expect(text).toContain("SQLite + DevControl");
     expect(text).not.toContain("stale tools list");
   });
 
@@ -327,9 +327,9 @@ describe("workflow-skill-installer", () => {
     const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
 
     expect(result.updated).toBe(true);
-    expect(agents).toContain("call `resume_plan` first");
-    expect(agents).toContain("pass only `project_root`");
-    expect(agents).toContain("Do not explore with Bash");
+    expect(agents).toContain("SQLite + DevControl");
+    expect(agents).toContain("history_session_bootstrap");
+    expect(agents).not.toContain("call `resume_plan` first");
     expect(agents).toContain("# User rules");
     expect(agents).toContain("keep-this-line");
 

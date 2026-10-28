@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="i18n-title" content="apps.title">
   <title>MCP Apps 可视化工作台 - MCP Probe Kit</title>
-  <meta name="description" content="体验 MCP Probe Kit v4 的 Feature、Bug、Memory、Product 和 Convergence 五个原生 MCP Apps。">
+  <meta name="description" content="体验 MCP Probe Kit v5 的 SQLite DevControl 工作台与独立 Memory Center；旧文件式 Plan Apps 已废弃。">
   <link rel="canonical" href="https://mcp-probe-kit.bytezonex.com/pages/apps.html">
   <script src="../assets/js/tailwind.js" data-cfasync="false"></script>
   <script>
@@ -55,7 +55,7 @@
       <div class="mb-4">
         <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
         <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">24+1</span></a>
-        <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary" aria-current="page"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-white text-xs px-2 py-0.5 rounded-full">5</span></a>
+        <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary" aria-current="page"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-white text-xs px-2 py-0.5 rounded-full">2</span></a>
       </div>
       <div class="mb-4">
         <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
@@ -90,20 +90,17 @@
         <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <h1 class="text-2xl sm:text-3xl font-bold text-text-primary" data-i18n="apps.title">MCP Apps 可视化工作台</h1>
-            <p class="mt-2 max-w-4xl text-sm sm:text-base text-text-secondary" data-i18n="apps.subtitle">五个原生 App 把计划、记忆、产品交付和证据闸门带进支持 MCP Apps 的客户端。</p>
-            <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary"><span class="inline-flex rounded border border-blue-200 bg-blue-50 px-2 py-0.5 font-semibold text-primary" data-i18n="apps.badge">v4.1.1 · 真实 App 源码演示</span><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">5 Apps</span><span>Modern MCP UI extension</span><span>Read-only demos</span></div>
+            <p class="mt-2 max-w-4xl text-sm sm:text-base text-text-secondary">v5 只保留 SQLite DevControl 项目工作台与独立 Memory Center。所有研发状态来自同一个 SQLite 项目账本。</p>
+            <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-text-tertiary"><span class="inline-flex rounded border border-blue-200 bg-blue-50 px-2 py-0.5 font-semibold text-primary">v5.0.0 · 未发布源码版</span><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">2 Apps</span><span>Official MCP UI extension</span><span>Read-only demos</span></div>
           </div>
           <div class="flex flex-wrap gap-2">
-            <a href="#feature" class="app-tab rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-blue-300 hover:text-primary">Feature</a>
-            <a href="#bug" class="app-tab rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-blue-300 hover:text-primary">Bug</a>
+            <a href="#devcontrol" class="app-tab rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-blue-300 hover:text-primary">SQLite DevControl</a>
             <a href="#memory" class="app-tab rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-blue-300 hover:text-primary">Memory</a>
-            <a href="#product" class="app-tab rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-blue-300 hover:text-primary">Product</a>
-            <a href="#convergence" class="app-tab rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-blue-300 hover:text-primary">Convergence</a>
           </div>
         </div>
       </header>
     <aside class="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-7 text-text-primary">
-      <strong>v5 源码开发版说明</strong>　这些五个 MCP Apps 是从 v4 稳定版延续的 Agent 工作流界面，不是 v5 新增的 DevControl 项目工作台。v5 在 Git/Node.js 22+ 项目中额外提供独立的 SQLite 任务账本、审批冻结、真实验收 Gate、八个区域的只读项目工作台和 SQLite History；任务仍需由 Agent 领取、开发与独立测试。
+      <strong>v5 源码开发版说明</strong>　旧 Feature、Bug、Plan、Product、Convergence 的文件式工作流界面已从 v5 MCP 资源中移除。新 DevControl App 直接调用主 MCP 的 SQLite 只读查询，查看任务、Feature、Bug、Idea；Owner 审批、Agent 实施和真实 Gate 仍由正式工具执行。
       <a href="./v5-development.html" class="font-semibold text-primary underline">查看 v5 项目管理功能及源码使用方法</a>。npm 稳定版本仍为 4.1.1。
     </aside>
     <section class="grid gap-6 rounded-xl border border-border bg-white p-6 shadow-sm md:grid-cols-[.72fr_1.28fr] md:p-8">
@@ -113,54 +110,30 @@
         <p class="mt-4 text-sm leading-6 text-text-secondary" data-i18n="apps.tryDesc">演示页为只读模式，不连接后端，不会修改任何项目或记忆数据。</p>
       </div>
       <ol class="grid gap-3 sm:grid-cols-3">
-        <li class="rounded-xl bg-bg-page p-4"><span class="font-mono text-xs text-primary">01</span><p class="mt-3 text-sm leading-6 text-text-secondary" data-i18n="apps.how1">在支持 io.modelcontextprotocol/ui 的客户端中配置 mcp-probe-kit@4.1.1。</p></li>
-        <li class="rounded-xl bg-bg-page p-4"><span class="font-mono text-xs text-primary">02</span><p class="mt-3 text-sm leading-6 text-text-secondary" data-i18n="apps.how2">正常调用 start_feature、start_bugfix、start_product、converge 或 Memory 工具。</p></li>
-        <li class="rounded-xl bg-bg-page p-4"><span class="font-mono text-xs text-primary">03</span><p class="mt-3 text-sm leading-6 text-text-secondary" data-i18n="apps.how3">Host 协商成功后自动打开对应工作台；不支持 Apps 的客户端仍收到文本和 structuredContent。</p></li>
+        <li class="rounded-xl bg-bg-page p-4"><span class="font-mono text-xs text-primary">01</span><p class="mt-3 text-sm leading-6 text-text-secondary">从 v5 开发源码构建并配置主 MCP；需要 Node.js 22+ 和一个 Git 项目。</p></li>
+        <li class="rounded-xl bg-bg-page p-4"><span class="font-mono text-xs text-primary">02</span><p class="mt-3 text-sm leading-6 text-text-secondary">调用 devcontrol 的 SQLite 只读动作（list / features / work-items / idea-list）。</p></li>
+        <li class="rounded-xl bg-bg-page p-4"><span class="font-mono text-xs text-primary">03</span><p class="mt-3 text-sm leading-6 text-text-secondary">Host 协商 UI 扩展后展示新的项目工作台；没有 UI 支持的客户端仍使用结构化 MCP 结果。</p></li>
       </ol>
     </section>
 
-    <section id="feature" class="scroll-mt-24 mt-12 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+    <section id="devcontrol" class="scroll-mt-24 mt-12 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
       <div class="grid gap-4 border-b border-line p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
-        <div><p class="font-mono text-xs text-primary">start_feature</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.featureTitle">Feature Workbench</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.featureDesc">计划步骤、当前任务、产出、证据和恢复状态。</p></div>
-        <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/feature-workbench</code>
+        <div><p class="font-mono text-xs text-primary">devcontrol</p><h2 class="mt-2 text-2xl font-semibold">SQLite DevControl Workbench</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary">只读查看正式 SQLite 的任务、Feature、Bug、Idea。不允许伪造批准或写入 Plan。</p></div>
+        <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/devcontrol-workbench</code>
       </div>
-      <iframe class="app-iframe" src="../demos/feature-workbench.html" title="Feature Workbench demo" loading="eager"></iframe>
-    </section>
-
-    <section id="bug" class="scroll-mt-24 mt-8 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-      <div class="grid gap-4 border-b border-line p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
-        <div><p class="font-mono text-xs text-primary">start_bugfix</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.bugTitle">Bug Workbench</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.bugDesc">沿 SRC-8 真因流程展示边界、阻断、验证和回归。</p></div>
-        <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/bug-workbench</code>
-      </div>
-      <iframe class="app-iframe" src="../demos/bug-workbench.html" title="Bug Workbench demo" loading="lazy"></iframe>
+      <iframe class="app-iframe" src="../demos/devcontrol.html" title="SQLite DevControl demo" loading="eager"></iframe>
     </section>
 
     <section id="memory" class="scroll-mt-24 mt-8 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
       <div class="grid gap-4 border-b border-line p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
-        <div><p class="font-mono text-xs text-primary">search_memory · list_memory_assets</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.memoryTitle">Memory Center</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.memoryDesc">语义检索、全文查看、生命周期、证据、过期标记和确认删除。</p></div>
+        <div><p class="font-mono text-xs text-primary">search_memory</p><h2 class="mt-2 text-2xl font-semibold">Memory Center</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary">独立跨项目经验检索，不存储正式开发任务状态。</p></div>
         <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/memory-center</code>
       </div>
       <iframe class="app-iframe" src="../demos/memory-center.html" title="Memory Center demo" loading="lazy"></iframe>
     </section>
 
-    <section id="product" class="scroll-mt-24 mt-8 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-      <div class="grid gap-4 border-b border-line p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
-        <div><p class="font-mono text-xs text-primary">start_product</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.productTitle">Product Workbench</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.productDesc">从产品定义、PRD、原型和设计系统交接到 start_feature。</p></div>
-        <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/product-workbench</code>
-      </div>
-      <iframe class="app-iframe" src="../demos/product-workbench.html" title="Product Workbench demo" loading="lazy"></iframe>
-    </section>
-
-    <section id="convergence" class="scroll-mt-24 mt-8 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-      <div class="grid gap-4 border-b border-line p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
-        <div><p class="font-mono text-xs text-primary">converge</p><h2 class="mt-2 text-2xl font-semibold" data-i18n="apps.gateTitle">Convergence Gate</h2><p class="mt-2 max-w-[760px] text-sm leading-6 text-text-secondary" data-i18n="apps.gateDesc">严格检查需求、规格、实现、测试和审查证据，决定是否允许交付与记忆写入。</p></div>
-        <code class="rounded-md bg-bg-page px-3 py-2 text-xs text-text-tertiary">ui://mcp-probe-kit/convergence</code>
-      </div>
-      <iframe class="app-iframe" src="../demos/convergence-gate.html" title="Convergence Gate demo" loading="lazy"></iframe>
-    </section>
-
     <section class="mt-12 grid gap-5 md:grid-cols-2">
-      <article class="rounded-xl border border-border bg-white p-6 shadow-sm"><h2 class="text-xl font-semibold" data-i18n="apps.compatTitle">兼容与降级</h2><p class="mt-3 text-sm leading-6 text-text-secondary" data-i18n="apps.compatDesc">MCP Apps 不是使用前提。未协商 UI 扩展时，工具数量和原有文本工作流保持不变；App-only 动作不会暴露给模型。</p></article>
+      <article class="rounded-xl border border-border bg-white p-6 shadow-sm"><h2 class="text-xl font-semibold">协议与项目状态</h2><p class="mt-3 text-sm leading-6 text-text-secondary">MCP Apps 不是必需能力；没有 UI 扩展仍可使用 devcontrol 结构化结果。旧 v4 文件 Plan/Spec/Convergence 不再支持；不会因为 UI 切换而改变 SQLite 任务审批。</p></article>
       <article class="rounded-2xl border border-[#B2CCFF] bg-[#EFF4FF] p-6"><h2 class="text-xl font-semibold text-primary" data-i18n="apps.tryTitle">直接体验</h2><p class="mt-3 text-sm leading-6 text-text-secondary" data-i18n="apps.tryDesc">演示页为只读模式，不连接后端，不会修改任何项目或记忆数据。</p><a href="./getting-started.html" class="mt-5 inline-flex rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover" data-i18n="hero.quickStart">快速开始</a></article>
     </section>
 

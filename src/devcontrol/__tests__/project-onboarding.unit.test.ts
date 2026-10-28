@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { initProject } from "../../tools/init_project.js";
+import { runV5DevControlTool } from "../model-tool.js";
 import { ProjectTaskLedger } from "../task-ledger.js";
 import { projectOnboarding } from "../project-onboarding.js";
 import { dispatchDevControl } from "../command.js";
@@ -33,10 +33,9 @@ afterEach(() => roots.splice(0).forEach(root =>
 describe("DevControl project-first onboarding", () => {
   it("initializes a fresh Git project once without inventing plans or Markdown", async () => {
     const root = fixture();
-    const first = await initProject({ project_root: root, project_name: "Unbuilt App",
-      input: "An app idea not yet signed off" });
+    const first = await runV5DevControlTool({ action: 'onboard', project_root: root, input: {} });
     expect(first.isError).toBeFalsy();
-    expect(first.structuredContent?.summary).toContain("DevControl");
+    expect(first.structuredContent).toMatchObject({ kind: 'new', readiness: 'needs_baseline' });
     const db = path.join(root, ".mcp-probe-kit/state/devcontrol.sqlite3");
     expect(fs.existsSync(db)).toBe(true);
     expect(fs.existsSync(path.join(root, "docs"))).toBe(false);
@@ -48,9 +47,8 @@ describe("DevControl project-first onboarding", () => {
     expect(dispatchDevControl(ledger, "onboard")).toEqual(state);
     expect(ledger.list()).toHaveLength(0);
     ledger.close();
-    const again = await initProject({ project_root: root, project_name: "Unbuilt App",
-      input: "An app idea not yet signed off" });
-    expect(again.structuredContent?.summary).toContain("DevControl");
+    const again = await runV5DevControlTool({ action: 'onboard', project_root: root, input: {} });
+    expect(again.structuredContent).toMatchObject({ kind: 'new', readiness: 'needs_baseline' });
     ledger = new ProjectTaskLedger(root);
     expect(ledger.list()).toHaveLength(0);
     expect(projectOnboarding(root, ledger.list())).toEqual(state);
@@ -101,9 +99,9 @@ describe("DevControl project-first onboarding", () => {
     });
     ledger.close();
     for (let i = 0; i < 2; i++) {
-      const initialized = await initProject({ project_root: root, project_name: "Already Built" });
+      const initialized = await runV5DevControlTool({ action: 'onboard', project_root: root, input: {} });
       expect(initialized.isError).toBeFalsy();
-      expect(initialized.structuredContent?.pendingFiles).toEqual([]);
+      expect(initialized.structuredContent).toMatchObject({ kind: 'existing' });
     }
     ledger = new ProjectTaskLedger(root);
     expect(ledger.list().map(t => [t.id, t.status])).toEqual([["APP-01", "draft"]]);

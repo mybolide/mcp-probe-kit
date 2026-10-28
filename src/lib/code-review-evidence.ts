@@ -1,8 +1,6 @@
 import { collectGitDiffEvidence, type GitDiffEvidence, type GitDiffMode } from './git-diff-evidence.js';
-import { compareReviewConsistency, type ReviewConsistencyResult } from './review-consistency.js';
 import { resolveWorkspaceRoot } from './workspace-root.js';
-import { JsonPlanStore } from '../plans/plan-store.js';
-import type { PlanHeartbeatRecord } from '../plans/plan-types.js';
+import { ProjectTaskLedger } from '../devcontrol/task-ledger.js';
 
 export interface UnavailableGitDiffEvidence {
   available: false;
@@ -22,9 +20,8 @@ export type CodeReviewDiffEvidence = GitDiffEvidence | UnavailableGitDiffEvidenc
 export interface CodeReviewEvidenceBundle {
   projectRoot?: string;
   diffEvidence?: CodeReviewDiffEvidence;
-  planState?: PlanHeartbeatRecord | null;
+  planState?: null;
   planContext?: Record<string, unknown>;
-  consistency?: ReviewConsistencyResult;
   warnings: string[];
 }
 
@@ -46,41 +43,6 @@ export function normalizeGitDiffMode(value: string): GitDiffMode {
   throw new Error(`diff_mode 不支持: ${value}。可选值: auto, working, staged, range`);
 }
 
-function summarizePlan(record: PlanHeartbeatRecord): Record<string, unknown> {
-  return {
-    planId: record.planId,
-    workflow: record.plan.workflow,
-    objective: record.plan.objective,
-    status: record.status,
-    currentStepId: record.currentStepId ?? null,
-    declaredScope: record.declaredScope ?? record.plan.declaredScope ?? null,
-    requiredEvidenceKinds: record.plan.requiredEvidenceKinds,
-    qualityGates: record.plan.qualityGates,
-    completionCriteria: record.plan.completionCriteria,
-    steps: record.plan.steps.map((step) => ({
-      id: step.id,
-      type: step.type,
-      tool: step.tool,
-      action: step.action,
-      when: step.when,
-      outputs: step.outputs ?? [],
-      expectedOutputs: step.expectedOutputs ?? [],
-      completionEvidence: step.completionEvidence ?? [],
-      qualityGates: step.qualityGates ?? [],
-    })),
-    completedStepIds: record.completedStepIds,
-    skippedSteps: record.skippedSteps,
-    unresolvedItems: record.unresolvedItems,
-    evidence: record.evidence,
-    artifacts: record.artifacts,
-    architectureCandidates: record.architectureCandidates,
-    acceptanceResults: record.acceptanceResults,
-    runtimeEvidence: record.runtimeEvidence,
-    lastVerifiedRevision: record.lastVerifiedRevision ?? null,
-    lastConvergence: record.lastConvergence ?? null,
-  };
-}
-
 export async function collectCodeReviewEvidence(
   input: CollectCodeReviewEvidenceInput,
 ): Promise<CodeReviewEvidenceBundle> {
@@ -88,13 +50,16 @@ export async function collectCodeReviewEvidence(
   if (!input.projectRoot && !input.planId && !input.collectDiff) return { warnings };
   const projectRoot = resolveWorkspaceRoot(input.projectRoot ?? '').replace(/\\/g, '/');
   const mode = input.diffMode ?? 'auto';
-  let planState: PlanHeartbeatRecord | null | undefined;
+  let planContext: Record<string, unknown> | undefined;
   if (input.planId) {
+    let ledger: ProjectTaskLedger | undefined;
     try {
-      planState = await new JsonPlanStore(projectRoot).read(input.planId);
+      ledger = new ProjectTaskLedger(projectRoot);
+      planContext = { taskId: input.planId, executionContract: ledger.executionContract(input.planId) };
     } catch (error) {
-      warnings.push(`读取 Plan 状态失败: ${error instanceof Error ? error.message : String(error)}`);
-      planState = null;
+      warnings.push(`读取 DevControl SQLite 任务合同失败: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      ledger?.close();
     }
   }
 
@@ -127,21 +92,10 @@ export async function collectCodeReviewEvidence(
     }
   }
 
-  const consistency = diffEvidence?.available
-    ? compareReviewConsistency({
-        repositoryRoot: diffEvidence.repositoryRoot,
-        diff: diffEvidence,
-        plan: planState,
-        requestedPlanId: input.planId,
-      })
-    : undefined;
-
   return {
     projectRoot,
     ...(diffEvidence ? { diffEvidence } : {}),
-    ...(planState !== undefined ? { planState } : {}),
-    ...(planState ? { planContext: summarizePlan(planState) } : {}),
-    ...(consistency ? { consistency } : {}),
+    ...(planContext ? { planContext } : {}),
     warnings,
   };
 }
@@ -164,22 +118,12 @@ export function renderConsistencyEvidence(bundle: CodeReviewEvidenceBundle): str
     }
   }
   if (bundle.planContext) {
-    sections.push(`- Plan loaded: ${String(bundle.planContext.planId)} (${String(bundle.planContext.workflow)})`);
-  }
-  if (bundle.consistency) {
-    const findings = bundle.consistency.findings.length > 0
-      ? bundle.consistency.findings.map((item, index) => [
-          `${index + 1}. [${item.severity}/${item.category}] ${item.message}`,
-          `   Evidence: ${item.evidence.join('；') || 'none'}`,
-          `   Action: ${item.suggestion}`,
-        ].join('\n')).join('\n')
-      : '- No deterministic consistency gaps detected.';
-    sections.push(`### Deterministic Consistency Findings\n${findings}`);
+    sections.push(`- DevControl SQLite task loaded: ${String(bundle.planContext.taskId)} (execution contract)`);
   }
   if (bundle.warnings.length > 0) {
     sections.push(`### Evidence Warnings\n${bundle.warnings.map((item) => `- ${item}`).join('\n')}`);
   }
   return sections.length > 0
-    ? `## Git / Plan Evidence\n\n${sections.join('\n\n')}`
+    ? `## Git / SQLite DevControl Evidence\n\n${sections.join('\n\n')}`
     : '';
 }

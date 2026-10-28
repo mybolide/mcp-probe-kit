@@ -34,6 +34,8 @@ import { artifactIsCovered, manifestSubjectHash, reviewArtifactChange, reviewMan
 import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, reviewDetailedWorkItems, reviewTaskQualityJudgments, auditAtomicWorkItemDetail, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
 import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
+import { extractRequirementRefs } from './requirement-ids.js';
+import { validGateRequirements, isExternalGate } from './gate-policy.js';
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -469,6 +471,21 @@ export class ProjectTaskLedger {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         task_id TEXT NOT NULL REFERENCES dc_tasks(id), kind TEXT NOT NULL,
         reference TEXT NOT NULL, git_head TEXT, created_at TEXT NOT NULL
+      );
+      -- External project tests are run by the Agent, not by MCP. Evidence
+      -- alone never passes a Gate: an independent outcome review is required.
+      CREATE TABLE IF NOT EXISTS dc_external_gate_reviews (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        gate_name TEXT NOT NULL,
+        lease_token_hash TEXT NOT NULL,
+        git_head TEXT NOT NULL,
+        evidence_reference TEXT NOT NULL,
+        runner TEXT NOT NULL,
+        reviewer TEXT NOT NULL,
+        outcome TEXT NOT NULL CHECK(outcome IN ('passed','failed')),
+        review_notes TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(task_id,gate_name)
       );
       CREATE TABLE IF NOT EXISTS dc_audit (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1579,9 +1596,8 @@ export class ProjectTaskLedger {
       try {safePaths(item.allowedPaths,
         item.type==="decision"&&item.requiredGates?.length===1&&item.requiredGates[0]==="sqlite_decision");}
       catch {issues.push(item.id+": unsafe file permissions");}
-      if(!Array.isArray(item.requiredGates)||!item.requiredGates.length||
-        item.requiredGates.some(gate=>!knownGates.has(gate)))
-        issues.push(item.id+": approved real verification gate required");
+      if(!validGateRequirements(item.requiredGates))
+        issues.push(item.id+": project-specific test/evidence requirements required");
       if(item.requiredGates?.includes("sqlite_decision")&&
         (item.type!=="decision"||item.requiredGates.length!==1||item.allowedPaths.length))
         issues.push(item.id+": cannot mix SQLite-only decision with code gates");
@@ -2485,7 +2501,8 @@ export class ProjectTaskLedger {
   featureTaskBrief(name: string): Row {
     const feature = this.getFeature(name);
     const requirements = String(feature.sections?.requirements ?? "");
-    const requirementIds = [...new Set(requirements.match(/\b(?:FR|NFR)-\d{3,}\b/g) ?? [])].sort();
+    const requirementRefs = extractRequirementRefs(requirements);
+    const requirementIds = requirementRefs.map((ref) => ref.id);
     const subspecs = Array.isArray(feature.draft?.subspecs) ? feature.draft.subspecs : [];
     const binding = this.featureBinding(name);
     return {
@@ -2496,12 +2513,12 @@ export class ProjectTaskLedger {
       issues: [...(feature.status !== "specified" ?
         ["Feature is not validated: call feature-save and feature-validate first"] : []),
         ...(!requirementIds.length ? ["Feature requirements need canonical FR-001 / NFR-001 IDs"] : [])],
-      requirementIds, subspecs,
+      requirementIds, requirementRefs, subspecs,
       approvedPlan: this.featureTaskPlan(name),
       requiredQualityProfile: "feature-task-v1 (spec-depth-v3 leaf requirements)",
       instructions: [
         "Research the current Git project and all relevant product/architecture decisions; never invent file paths, tests or verified outcomes.",
-        "Using start_feature requirements, design, tasks and subspecs, propose only this Feature's group/leaf work, not an entire release tree or local Spec files.",
+        "Using the SQLite Feature requirements, design, tasks and subspecs, propose this Feature's group/leaf work, not separate local Spec files.",
         "Link every feature FR/NFR and each subspec to at least one concrete leaf; add missing edge cases and dependencies during PLANNING.",
         "Every leaf supplies a real trigger/outcome, workflow, business rules, inputs/outputs, preconditions/state transitions, exact files, prohibitions/stops, positive/negative tests, evidence, deliverables and <=8h estimate.",
         "Use feature:"+name+"#design as designRef, feature:"+name+"#requirements in sourceRefs and feature:"+name+"#subspec:<id> for any parent-child coverage.",
@@ -2587,7 +2604,7 @@ export class ProjectTaskLedger {
   stageFeatureTasks(name: string, expectedFeatureRevision: number,
     plan: FeatureTaskPlan, actor: string, expectedPreviousHash?: string): Row {
     if (!actor?.trim()) fail("ACTOR_REQUIRED", "Planning Agent identity required");
-    if (!plan || !Array.isArray(plan.nodes) || plan.nodes.length === 0 || plan.nodes.length > 150 ||
+    if (!plan || !Array.isArray(plan.nodes) || plan.nodes.length === 0 || plan.nodes.length > 1000 ||
       !plan.nodes.some(n => n?.kind === "leaf")) {
       fail("INVALID_FEATURE_TASK_DRAFT", "Feature task draft needs a bounded nonempty leaf tree");
     }
@@ -2598,7 +2615,7 @@ export class ProjectTaskLedger {
     const snapshot = {sourceFeature:{name,revision:review.featureRevision,hash:review.sourceHash},
       plan, review};
     const raw = JSON.stringify(snapshot);
-    if (raw.length > 1_500_000) fail("PLAN_TOO_LARGE", "Feature task draft exceeds storage limit");
+    if (raw.length > 8_000_000) fail("PLAN_TOO_LARGE", "Feature task draft exceeds 8 MB safety limit");
     const hash = createHash("sha256").update(raw).digest("hex");
     return this.inTransaction(() => {
       const pending = this.db.prepare("SELECT hash FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
@@ -2629,7 +2646,7 @@ export class ProjectTaskLedger {
     if (!review.passed) fail("INCOMPLETE_FEATURE_TASKS",review.issues.join("; "));
     const snapshot={sourceFeature:{name,revision:review.featureRevision,hash:review.sourceHash},plan};
     const raw=JSON.stringify(snapshot);
-    if (raw.length>1_500_000) fail("PLAN_TOO_LARGE","Feature task plan exceeds storage limit");
+    if (raw.length>8_000_000) fail("PLAN_TOO_LARGE","Feature task plan exceeds 8 MB safety limit");
     const hash=createHash("sha256").update(raw).digest("hex");
     return this.inTransaction(()=>{
       const pending=this.db.prepare("SELECT hash FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
@@ -3359,11 +3376,8 @@ export class ProjectTaskLedger {
     if (!input.title?.trim()) fail("TITLE_REQUIRED", "Task title is required");
     const sqliteDecision=input.requiredGates?.length===1&&input.requiredGates[0]==="sqlite_decision";
     const allowedPaths = safePaths(input.allowedPaths,sqliteDecision);
-    if (!Array.isArray(input.requiredGates) ||
-        input.requiredGates.some((gate) => !allowedGates.has(gate))) {
-      fail("UNKNOWN_GATE", "Use only approved fixed acceptance gates");
-    }
-    if (!input.requiredGates.length) fail("GATE_REQUIRED", "A task cannot be verified without gates");
+    if (!validGateRequirements(input.requiredGates))
+      fail("GATE_REQUIRED", "Declare nonempty named project-specific acceptance requirements; MCP does not execute them");
     if(input.requiredGates.includes("sqlite_decision")&&!sqliteDecision)
       fail("INVALID_GATE", "SQLite decision cannot mix code/docs gates");
     if(sqliteDecision && !String(input.planId??"").startsWith("release-work:"))
@@ -3449,9 +3463,8 @@ export class ProjectTaskLedger {
       if (!idPattern.test(id)) fail("INVALID_ID", `Imported task ID exceeds size limit: ${id}`);
     }
     safePaths(input.allowedPaths);
-    if (!input.requiredGates?.length || input.requiredGates.some((gate) => !allowedGates.has(gate))) {
-      fail("GATE_REQUIRED", "Provide preapproved nonempty gate list for imported subtasks");
-    }
+    if (!validGateRequirements(input.requiredGates))
+      fail("GATE_REQUIRED", "Declare test/evidence requirements for imported drafts");
     return this.inTransaction(() => {
       const results: Row[] = [];
       for (const spec of manifest.subspecs) {
@@ -3898,6 +3911,61 @@ export class ProjectTaskLedger {
     });
   }
 
+  /**
+   * Agent executes business tests; MCP records the declared result and an
+   * independent review tied to a reported artifact and exact Git revision.
+   * An evidence reference without a reviewer conclusion is never a pass.
+   */
+  reviewExternalGate(id: string, token: string, input: {
+    gate: string; evidenceReference: string; runner: string;
+    reviewer: string; outcome: "passed" | "failed"; reviewNotes: string;
+  }): Row {
+    const lease = this.requireLease(id, token);
+    const task = this.requireTask(id);
+    if (task.status !== "in_review") fail("NOT_IN_REVIEW", "Complete and report evidence before external review");
+    const planned = JSON.parse(task.required_gates) as string[];
+    if (!isExternalGate(input?.gate) || !planned.includes(input.gate)) {
+      fail("GATE_NOT_DECLARED", "External review must match a frozen project-specific acceptance requirement");
+    }
+    if (!["passed", "failed"].includes(input.outcome) ||
+        !input.evidenceReference?.trim() ||
+        !input.runner?.trim() || input.runner !== lease.agent ||
+        !input.reviewer?.trim() || input.reviewer === input.runner ||
+        !input.reviewNotes?.trim() || input.reviewNotes.trim().length < 25) {
+      fail("INDEPENDENT_GATE_REVIEW_REQUIRED",
+        "Require explicit pass/fail, reporter matching lease, a different reviewer and substantive review findings");
+    }
+    const head = git(this.root, ["rev-parse", "HEAD"]);
+    const completion = this.latestCompletion(id);
+    if (!completion || completion.git_head !== head)
+      fail("COMPLETION_REVISION_REQUIRED", "Review the current committed task revision after completion");
+    const evidence = this.db.prepare(
+      "SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=? LIMIT 1",
+    ).get(id, input.evidenceReference.trim(), head);
+    if (!evidence) fail("EVIDENCE_NOT_REPORTED", "Review must cite separately reported evidence for this exact Git revision");
+    return this.inTransaction(() => {
+      this.db.prepare(`INSERT INTO dc_external_gate_reviews
+        (task_id,gate_name,lease_token_hash,git_head,evidence_reference,
+         runner,reviewer,outcome,review_notes,created_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(task_id,gate_name) DO UPDATE SET
+          lease_token_hash=excluded.lease_token_hash,git_head=excluded.git_head,
+          evidence_reference=excluded.evidence_reference,runner=excluded.runner,
+          reviewer=excluded.reviewer,outcome=excluded.outcome,
+          review_notes=excluded.review_notes,created_at=excluded.created_at`
+      ).run(id,input.gate,createHash("sha256").update(token).digest("hex"),head,
+        input.evidenceReference.trim(),input.runner,input.reviewer,input.outcome,
+        input.reviewNotes.trim(),utc());
+      this.audit(id,"external_gate_reviewed",input.reviewer,{
+        gate:input.gate,outcome:input.outcome,gitHead:head,
+        evidenceReference:input.evidenceReference,runner:input.runner,
+      });
+      return {taskId:id,gate:input.gate,outcome:input.outcome,gitHead:head,
+        reviewer:input.reviewer,evidenceReference:input.evidenceReference,
+        note:"Recorded independent declaration, not a test executed by MCP"};
+    });
+  }
+
   private gate(name: string, allowedPaths: string[] = [], taskId = ""): Row {
     if (name === "docs") return run(this.root, "python3", ["scripts/validate_docs.py"]);
     if (name === "devcontrol_tests") return run(
@@ -4035,10 +4103,27 @@ export class ProjectTaskLedger {
     // must declare sqlite_decision and zero allowedPaths from the start.
     const gates = sqliteDelivery?["sqlite_decision"]:plannedGates;
     if (!gates.length) return { taskId: id, passed: false, reason: "Missing gate definition" };
-    const results = Object.fromEntries(gates.map((name) =>
-      [name,name==="sqlite_decision"?{passed:true,taskId:id,
-        revision:recorded!.revision,status:recorded!.status,
-        productApproval:"not_implied"}:this.gate(name, allowedPaths, id)]));
+    const tokenHash=createHash("sha256").update(token).digest("hex");
+    const results = Object.fromEntries(gates.map((name) => {
+      if (name === "sqlite_decision") return [name,{passed:true,taskId:id,
+        revision:recorded!.revision,status:recorded!.status,productApproval:"not_implied"}];
+      if (isExternalGate(name)) {
+        const result = this.db.prepare(
+          "SELECT * FROM dc_external_gate_reviews WHERE task_id=? AND gate_name=?",
+        ).get(id,name);
+        const reviewed=!!result && result.outcome==="passed" &&
+          result.git_head===startHead && result.lease_token_hash===tokenHash &&
+          result.reviewer!==result.runner &&
+          !!this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=?")
+            .get(id,result?.evidence_reference??"",startHead);
+        return [name,{passed:reviewed,external:true,
+          reason:reviewed?"Agent test result and independent review recorded":
+            "Missing passing Agent test evidence and independent revision-bound review",
+          ...(result?{reviewer:result.reviewer,outcome:result.outcome,
+            evidenceReference:result.evidence_reference}:{})}];
+      }
+      return [name,this.gate(name, allowedPaths, id)];
+    }));
     const stableHead = git(this.root, ["rev-parse", "HEAD"]);
     let protectedEditsStable=true;
     try{this.checkPreservedOwnerEdits(task,preserved,lease.base_head);}
@@ -4092,6 +4177,9 @@ export class ProjectTaskLedger {
       sqliteDecision: this.getDecision(id).decision,
       sqliteDecisionHistory:this.getDecision(id).history,
       evidence: this.db.prepare("SELECT * FROM dc_evidence WHERE task_id=? ORDER BY id").all(id),
+      externalGateReviews: this.db.prepare(
+        "SELECT gate_name,evidence_reference,runner,reviewer,outcome,review_notes,git_head,created_at FROM dc_external_gate_reviews WHERE task_id=? ORDER BY gate_name",
+      ).all(id),
       completion: this.latestCompletion(id),
       completionHistory: this.db.prepare(
         "SELECT * FROM dc_completion_notes WHERE task_id=? ORDER BY revision",

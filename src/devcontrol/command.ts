@@ -83,6 +83,10 @@ export function dispatchDevControl(
     case "next": return ledger.next();
     case "features": return { features: ledger.listFeatures() };
     case "feature-get": return ledger.getFeature(String(input.name));
+    case "feature-create": return ledger.saveFeature({
+      name: String(input.name), description: input.description,
+      layout: input.layout ?? 'flat', plan: {}, draft: input.draft ?? null,
+    }, String(input.actor ?? 'planning-agent'));
     case "feature-save": return ledger.reviseFeature(
       String(input.name), input.sections, String(input.actor ?? "agent"),
       input.architectureImpact, input.topLevelDocument,
@@ -188,6 +192,13 @@ export function dispatchDevControl(
       String(input.id), String(input.leaseToken),
       { kind: String(input.kind), reference: String(input.reference) },
       input.readyForReview === true,
+    );
+    case "gate-review": return ledger.reviewExternalGate(
+      String(input.id), String(input.leaseToken), {
+        gate:input.gate,evidenceReference:input.evidenceReference,
+        runner:input.runner,reviewer:input.reviewer,
+        outcome:input.outcome,reviewNotes:input.reviewNotes,
+      },
     );
     case "verify": return ledger.verify(String(input.id), String(input.leaseToken));
     case "trace": return ledger.trace(String(input.id));

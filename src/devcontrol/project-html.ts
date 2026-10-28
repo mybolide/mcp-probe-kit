@@ -322,18 +322,16 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
   }
   function taskPlanNodes(){
     const roster=typeof releaseWorkPlan==="undefined"?null:releaseWorkPlan;
-    if(roster && roster.status!=="missing"){
-      const scope=(roster.status==="review_pending"||roster.status==="needs_revision")?
-        roster.proposal?.plan:roster.frozen?.plan;
-      return (scope?.workItems||[]).map(item=>({...item,kind:"leaf",_planOrigin:"release-work",
-        release:roster.release,featurePending:roster.status!=="frozen",
-        featureNeedsRevision:roster.status==="needs_revision",
-        featureReviewIssues:(roster.issues||[]).filter(issue=>
-          issue.startsWith(item.id+":")||issue.includes(" "+item.id+" "))}));
-    }
     const scope=releasePlan?.status==="review_pending"?
       releasePlan?.proposal:releasePlan?.frozen;
-    const releaseNodes=Array.isArray(scope?.nodes)?scope.nodes.map(item=>({...item,_planOrigin:"release"})):[];
+    const releaseNodes=roster && roster.status!=="missing"?
+      ((roster.status==="review_pending"||roster.status==="needs_revision"?
+        roster.proposal?.plan:roster.frozen?.plan)?.workItems||[]).map(item=>({...item,kind:"leaf",_planOrigin:"release-work",
+          release:roster.release,featurePending:roster.status!=="frozen",
+          featureNeedsRevision:roster.status==="needs_revision",
+          featureReviewIssues:(roster.issues||[]).filter(issue=>
+            issue.startsWith(item.id+":")||issue.includes(" "+item.id+" "))})):
+      Array.isArray(scope?.nodes)?scope.nodes.map(item=>({...item,_planOrigin:"release"})):[];
     const native=[];
     for(const record of (typeof featureTaskPlans==="undefined"?[]:featureTaskPlans)){
       const source=(record.status==="review_pending"||record.status==="needs_revision")?
@@ -346,6 +344,8 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
         featureNeedsRevision:record.status==="needs_revision",featureReviewIssues:record.review?.issues||[]});
     }
     const nativeIds=new Set(native.map(item=>item.id));
+    // Feature proposals must stay visible for planning review even when a
+    // separate whole-release plan is already frozen in the same project.
     return [...releaseNodes.filter(item=>!nativeIds.has(item.id)),...native];
   }
   function taskRows(){
@@ -403,7 +403,9 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
     // F0/F1 historical records are still available in SQLite, but a frozen
     // release's progress and task tabs must count only its 403 approved items.
     const frozenIds=new Set((releaseWorkPlan.frozen?.plan?.workItems||[]).map(item=>item.id));
-    return rows.filter(row=>frozenIds.has(row.item.id));
+    // Keep pending Feature plans visible without inflating frozen-release
+    // progress or allowing their proposed tasks to be claimed.
+    return rows.filter(row=>frozenIds.has(row.item.id)||row.pending);
   }
   function displayTaskTitle(task){
     // Historical task IDs/titles in SQLite must remain unchanged.
@@ -1003,7 +1005,7 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
       b.append(n("span",(f.status==="specified"?"规格已校验":"草稿待完善")+planning,"taskid"),
         n("b",f.name),n("small","SQLite · "+f.layout+" · 版本 "+f.revision));
       b.addEventListener("click",()=>openFeature(f.name));return b;
-    }):[n("div","暂无 SQLite 功能提案；首次调用 start_feature 后自动显示。","docs-empty")]));
+    }):[n("div","暂无 SQLite 功能提案；使用 DevControl feature-create 建立需求草稿。","docs-empty")]));
   }
   function preview(doc){
     const b=n("button",null,"previewbtn");

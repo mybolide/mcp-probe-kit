@@ -51,6 +51,8 @@ export interface ReleasePlanNode {
   /** Existing approved or verified tasks are referenced, NEVER rewritten. */
   existing?: boolean;
 }
+import { canonicalRequirementId } from './requirement-ids.js';
+import { validGateRequirements } from './gate-policy.js';
 
 export interface ReleasePlanProposal {
   release: string;
@@ -87,7 +89,8 @@ export function reviewReleasePlan(plan: ReleasePlanProposal,
   options: { approvedExternalDependencies?: ReadonlySet<string> } = {}): PlanReview {
   const issues: string[] = [];
   const nodes = Array.isArray(plan?.nodes) ? plan.nodes : [];
-  const requirements = Array.isArray(plan?.requirementIds) ? plan.requirementIds : [];
+  const requirements = Array.isArray(plan?.requirementIds)
+    ? plan.requirementIds.map(canonicalRequirementId) : [];
   if (!plan || typeof plan.release !== "string" ||
       !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,39}$/.test(plan.release)) issues.push("Invalid release");
   if (!Number.isSafeInteger(plan?.baseRevision) || plan.baseRevision < 0) {
@@ -120,9 +123,9 @@ export function reviewReleasePlan(plan: ReleasePlanProposal,
     if (item.kind !== "leaf" && item.kind !== "group") issues.push(item.id + ": invalid kind");
     if (item.kind === "leaf") {
       if (!Array.isArray(item.requirementIds) || !item.requirementIds.length ||
-          item.requirementIds.some(id => !requirements.includes(id))) {
+          item.requirementIds.some(id => !requirements.includes(canonicalRequirementId(id)))) {
         issues.push(item.id + ": link every leaf to in-scope FR/NFR");
-      } else for (const id of item.requirementIds) coverage.add(id);
+      } else for (const id of item.requirementIds) coverage.add(canonicalRequirementId(id));
       // Smallness is an upper bound, not a surrogate for acceptance quality.
       if (!item.existing) {
         if (plan.qualityProfile === "spec-depth-v2" || plan.qualityProfile === "spec-depth-v3") {
@@ -194,9 +197,8 @@ export function reviewReleasePlan(plan: ReleasePlanProposal,
               x.startsWith("/") || x.includes("\\") || x.split("/").includes(".."))) {
           issues.push(item.id + ": safe bounded file scopes required");
         }
-        if (!Array.isArray(item.requiredGates) || !item.requiredGates.length ||
-            item.requiredGates.some(x => !allowedGates.has(x))) {
-          issues.push(item.id + ": executable acceptance Gate required");
+        if (!validGateRequirements(item.requiredGates)) {
+          issues.push(item.id + ": named project acceptance requirements required (the Agent executes tests, not MCP)");
         }
         const text = [
           item.title, item.acceptance, item.designRef,

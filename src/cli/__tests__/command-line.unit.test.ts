@@ -45,17 +45,17 @@ describe("mcp-probe-kit CLI", () => {
   });
 
   test("exec 复用 Tool Registry 并返回结构化 JSON", async () => {
-    const root = createProject();
+    const root = createGitProject();
     const output = captureStdout();
 
     const exitCode = await runCommandLine([
       "exec",
-      "workflow",
+      "devcontrol",
       "--json",
       JSON.stringify({
-        intent: "开发一个本地任务看板",
-        scenario: "feature",
+        action: "next",
         project_root: root,
+        input: {},
       }),
     ]);
 
@@ -63,11 +63,11 @@ describe("mcp-probe-kit CLI", () => {
     const payload = JSON.parse(output());
     expect(payload).toMatchObject({
       ok: true,
-      tool: "workflow",
+      tool: "devcontrol",
       version: VERSION,
       project: { root: path.resolve(root) },
       runtime: { versionAligned: true },
-      structuredContent: { firstTool: "start_feature" },
+      structuredContent: { nextTask: null },
     });
     expect(fs.existsSync(path.join(root, ".mcp-probe-kit/bin/probe.ps1"))).toBe(true);
     expect(fs.existsSync(path.join(root, ".agents/skills/mcp-probe-kit/SKILL.md"))).toBe(true);
@@ -104,32 +104,32 @@ describe("mcp-probe-kit CLI", () => {
     });
   });
   test("UTF-8 BOM 输入能够正常解析", async () => {
-    const root = createProject();
+    const root = createGitProject();
     const output = captureStdout();
     const payload = `﻿${JSON.stringify({
-      intent: "验证 BOM 输入",
-      scenario: "feature",
+      action: "next",
       project_root: root,
+      input: {},
     })}`;
 
-    const exitCode = await runCommandLine(["exec", "workflow", "--json", payload]);
+    const exitCode = await runCommandLine(["exec", "devcontrol", "--json", payload]);
 
     expect(exitCode).toBe(0);
     expect(JSON.parse(output())).toMatchObject({
       ok: true,
-      structuredContent: { firstTool: "start_feature" },
+      structuredContent: { nextTask: null },
     });
   });
 
   test("工具级 --help 返回 Schema 而不是执行工具", async () => {
     const output = captureStdout();
 
-    const exitCode = await runCommandLine(["exec", "plan_heartbeat", "--help"]);
+    const exitCode = await runCommandLine(["exec", "devcontrol", "--help"]);
 
     expect(exitCode).toBe(0);
     expect(JSON.parse(output())).toMatchObject({
       ok: true,
-      tool: "plan_heartbeat",
+      tool: "devcontrol",
     });
   });
 

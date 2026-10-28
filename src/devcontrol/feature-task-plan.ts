@@ -4,6 +4,8 @@
  * The planning Agent authors the nodes; DevControl reviews their evidence.
  */
 import { reviewReleasePlan, type ReleasePlanNode } from "./release-plan.js";
+import { canonicalRequirementId } from './requirement-ids.js';
+import { reviewAtomicOutcome } from './task-atomicity.js';
 
 export interface FeatureTaskPlan {
   release: string;
@@ -37,7 +39,7 @@ export function reviewFeatureTaskPlan(source: FeatureTaskSource,
   if (source.status !== "specified") issues.push("Validate start_feature requirements/design/tasks before planning");
   if (!source.requirements.length) issues.push("Feature has no canonical FR/NFR identifiers");
   if (!nodes.some(n => n.kind === "leaf")) issues.push("At least one independent development leaf is required");
-  if (nodes.length > 150) issues.push("Split an oversized feature into smaller approved features");
+  if (nodes.length > 1000) issues.push("Feature task tree exceeds 1000 nodes: split into reviewed Feature batches");
   const leaves = nodes.filter(n => n.kind === "leaf");
   if (nodes.some(n => n.existing)) {
     issues.push("Feature task planning cannot use the legacy existing=true shortcut");
@@ -45,6 +47,14 @@ export function reviewFeatureTaskPlan(source: FeatureTaskSource,
   const design = `feature:${source.name}#design`;
   const reqRef = `feature:${source.name}#requirements`;
   for (const leaf of leaves) {
+    issues.push(...reviewAtomicOutcome({id:leaf.id,title:leaf.title,
+      acceptance:leaf.acceptance,estimatedHours:leaf.estimatedHours,maxHours:4}));
+    if(!leaf.allowedChangedFiles?.length)
+      issues.push(leaf.id+": leaf needs exact frozen file boundaries");
+    if(!leaf.testCases?.length||!leaf.negativeCases?.length)
+      issues.push(leaf.id+": leaf needs positive and failure test cases for its single outcome");
+    if(!leaf.outOfScope?.length||!leaf.stopConditions?.length)
+      issues.push(leaf.id+": specify non-goals and stop conditions so Agent cannot expand scope");
     if (leaf.designRef !== design) issues.push(`${leaf.id}: must reference reviewed SQLite feature design`);
     if (!leaf.sourceRefs?.includes(reqRef)) issues.push(`${leaf.id}: missing Feature requirement provenance`);
     if (leaf.openQuestions?.length) issues.push(`${leaf.id}: unresolved design decisions block approval`);
@@ -72,7 +82,8 @@ export function reviewFeatureTaskPlan(source: FeatureTaskSource,
     }
     const related = leaves.filter(n => n.sourceRefs?.includes(`feature:${source.name}#subspec:${sub.id}`));
     if (!related.length) issues.push(`Uncovered start_feature subspec: ${sub.id}`);
-    for (const req of sub.fr ?? []) if (!related.some(n => n.requirementIds?.includes(req))) {
+    for (const req of sub.fr ?? []) if (!related.some(n =>
+      n.requirementIds?.some(id => canonicalRequirementId(id) === canonicalRequirementId(req)))) {
       issues.push(`Subspec ${sub.id} has no leaf implementing ${req}`);
     }
     // If a subspec depends on another one, its implementing leaves must have

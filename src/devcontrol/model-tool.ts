@@ -17,13 +17,13 @@ export const V5_DEVC_ACTIONS = [
   'release-work-incremental-review', 'release-work-incremental-stage', 'release-work-incremental-get',
   'release-work-incremental-independent-review', 'release-work-incremental-approve',
   'release-work-incremental-withdraw', 'pause-for-scope', 'pause-for-reviewed-incremental',
-  'features', 'feature-get', 'feature-save', 'feature-validate', 'feature-export',
+  'features', 'feature-get', 'feature-create', 'feature-save', 'feature-validate', 'feature-export',
   'feature-task-brief', 'feature-task-plan', 'feature-task-plans', 'feature-task-review',
   'feature-task-stage', 'feature-task-propose', 'feature-task-approve',
   'work-items', 'work-record', 'architecture-sync', 'bug-get', 'bug-step-save', 'bug-task-link',
   'idea-capture', 'idea-list', 'idea-get', 'idea-assess', 'idea-review', 'idea-decide',
   'artifact-get', 'artifact-check', 'artifact-stage', 'artifact-independent-review', 'artifact-approve',
-  'claim', 'renew', 'release', 'check', 'report', 'complete', 'verify', 'trace',
+  'claim', 'renew', 'release', 'check', 'report', 'gate-review', 'complete', 'verify', 'trace',
   'decision-save', 'decision-get', 'local-developer', 'hook-status', 'hook-install',
 ] as const;
 
