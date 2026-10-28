@@ -1,5 +1,6 @@
 import { TOOL_CATALOG } from "./tool-catalog.js";
 import { allToolSchemas } from "../schemas/index.js";
+import { isV5Tool } from './v5-tool-policy.js';
 import type { ToolsetType } from "./tool-definition.js";
 import {
   APP_ONLY_TOOL_NAMES,
@@ -62,14 +63,14 @@ function namesForToolset(toolset: Exclude<ToolsetType, "full">): string[] {
   const catalogByName = new Map(TOOL_CATALOG.map((entry) => [entry.name, entry]));
   return allToolSchemas
     .map((schema) => schema.name)
-    .filter((name) => catalogByName.get(name)?.toolsets.includes(toolset));
+    .filter((name) => isV5Tool(name) && catalogByName.get(name)?.toolsets.includes(toolset));
 }
 
 function namesForGroup(groupId: string): string[] {
   const catalogByName = new Map(TOOL_CATALOG.map((entry) => [entry.name, entry]));
   return allToolSchemas
     .map((schema) => schema.name)
-    .filter((name) => catalogByName.get(name)?.skillRoute.groupId === groupId);
+    .filter((name) => isV5Tool(name) && catalogByName.get(name)?.skillRoute.groupId === groupId);
 }
 
 export function buildToolManifestSections() {
@@ -88,7 +89,7 @@ export function buildToolManifestSections() {
 
   const categories: Record<string, JsonRecord> = {};
   const seenGroups = new Set<string>();
-  for (const entry of TOOL_CATALOG) {
+  for (const entry of TOOL_CATALOG.filter((entry) => isV5Tool(entry.name))) {
     const groupId = entry.skillRoute.groupId;
     if (seenGroups.has(groupId)) continue;
     seenGroups.add(groupId);
@@ -105,7 +106,7 @@ export function buildToolManifestSections() {
   }
 
   return {
-    totalTools: TOOL_CATALOG.length,
+    totalTools: TOOL_CATALOG.filter((entry) => isV5Tool(entry.name)).length,
     toolsets: {
       compact: {
         description: `${compact.length} base model tools (before History/Memory conditionals)`,
@@ -169,9 +170,9 @@ export function buildToolManifestSections() {
         tools: workflow,
       },
       full: {
-        description: `All ${TOOL_CATALOG.length} tools`,
-        count: TOOL_CATALOG.length,
-        note: "Compatibility/debugging surface selected with MCP_TOOLSET=full",
+        description: `All active v5 SQLite-only tools`,
+        count: TOOL_CATALOG.filter((entry) => isV5Tool(entry.name)).length,
+        note: "No v4 file/Delegated Plan process operations, including with MCP_TOOLSET=full",
       },
     },
     categories,

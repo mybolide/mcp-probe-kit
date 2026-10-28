@@ -53,6 +53,9 @@ export function resolveHistoryDir(projectRoot: string, historyDir?: string): str
   if (!candidate.startsWith(root + path.sep) && candidate !== root) {
     throw historyError('PATH_OUTSIDE_WORKSPACE', 'history_dir must be inside project root', false);
   }
+  // v5 has ONE state authority. The virtual Markdown-shaped path is retained
+  // only as a compatibility locator for historical archive reads/imports.
+  sqliteProjectForHistoryDir(candidate);
   return candidate;
 }
 

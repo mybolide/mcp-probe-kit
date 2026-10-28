@@ -1,15 +1,5 @@
 export const COMPACT_MODEL_TOOL_NAMES = [
-  'start_feature',
-  'start_bugfix',
-  'start_ui',
-  'start_onboard',
-  'start_product',
-  'start_ralph',
-  'workflow',
-  'init_project_context',
-  'init_project',
-  'check_spec',
-  'estimate',
+  'devcontrol',
   'code_insight',
   'architecture',
   'gentest',
@@ -19,10 +9,6 @@ export const COMPACT_MODEL_TOOL_NAMES = [
   'git_work_report',
   'ui_design_system',
   'ui_search',
-  'plan_heartbeat',
-  'resume_plan',
-  'converge',
-  'interview',
 ] as const;
 
 export const MEMORY_MODEL_TOOL_NAMES = [

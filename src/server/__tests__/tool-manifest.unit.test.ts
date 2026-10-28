@@ -11,24 +11,24 @@ describe("Tool Manifest", () => {
   test("由 Catalog 生成真实工具集数量和成员", () => {
     const sections = buildToolManifestSections();
 
-    expect(sections.totalTools).toBe(39);
-    expect(sections.toolsets.core.count).toBe(13);
-    expect(sections.toolsets.workflow.count).toBe(38);
-    expect(sections.toolsets.compactWithHistory.count).toBe(29);
+    expect(sections.totalTools).toBe(24);
+    expect(sections.toolsets.core.count).toBe(8);
+    expect(sections.toolsets.workflow.count).toBe(23);
+    expect(sections.toolsets.compactWithHistory.count).toBe(15);
     expect(sections.toolsets.historyConditional.count).toBe(5);
-    expect(sections.toolsets.compactWithHistoryAndMemory.count).toBe(35);
-    expect(sections.toolsets.workflow.tools).toContain("workflow");
+    expect(sections.toolsets.compactWithHistoryAndMemory.count).toBe(21);
+    expect(sections.toolsets.workflow.tools).toContain("devcontrol");
     expect(sections.toolsets.workflow.tools).toEqual(
       expect.arrayContaining([
-        "plan_heartbeat",
-        "resume_plan",
-        "converge",
+        "devcontrol",
         "architecture",
         "history_session_bootstrap",
       ])
     );
     expect(sections.toolsets.workflow.tools).not.toContain("git_work_report");
-    expect(sections.categories.routing.tools).toEqual(["workflow"]);
+    expect(sections.categories.devcontrol.tools).toEqual(["devcontrol"]);
+    expect(sections.categories.routing).toBeUndefined();
+    expect(sections.toolsets.workflow.tools).not.toContain("start_feature");
   });
 
   test("同步时保留历史兼容说明并更新版本与 Current 协议日期", () => {

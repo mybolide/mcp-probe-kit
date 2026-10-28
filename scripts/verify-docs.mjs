@@ -69,9 +69,10 @@ check(generatedNames.size === expectedToolNames.size, 'generated tool documentat
 for (const name of expectedToolNames) {
   check(generatedNames.has(name), `generated tools include ${name}`);
 }
-check(toolsData.counts.default === 29, 'generated docs expose 29 default model tools');
-check(toolsData.counts.withMemory === 35, 'generated docs expose 35 tools with Memory');
-check(toolsData.counts.full === 39, 'generated docs expose 39-tool full surface');
+check(toolsData.counts.default === 15, 'generated docs expose 15 v5 default model tools');
+check(toolsData.counts.withMemory === 21, 'generated docs expose 21 v5 tools with Memory');
+check(toolsData.counts.full === 24, 'generated docs expose 24 active v5 full tools');
+check(generatedNames.has('devcontrol') && !generatedNames.has('plan_heartbeat'), 'v5 tool docs expose DevControl rather than old file Plan APIs');
 check(toolsData.counts.appOnly === 1, 'generated docs expose one App-only action');
 
 for (const lang of globalLanguages) {
@@ -321,7 +322,7 @@ check(!legacyMigration.includes('30 个工具'), 'legacy migration URL no longer
 
 const homepage = read('docs/index.html');
 check(homepage.includes('href="./pages/v5-best-practices.html"') && homepage.includes('v5 · FEATURED'), 'homepage prominently features v5 best practices instead of burying it in v4 examples');
-check(/tracking-tight">29<\/strong>/.test(homepage) && /tracking-tight">35<\/strong>/.test(homepage), 'homepage displays actual 29 default / 35 Memory model tools');
+check(/tracking-tight">15<\/strong>/.test(homepage) && /tracking-tight">21<\/strong>/.test(homepage), 'homepage displays actual 15 default / 21 Memory v5 tools');
 check(homepage.includes('v5 新能力') && homepage.includes('plan-approve'), 'homepage includes concrete new v5 project-governance capabilities');
 check(homepage.includes('.demo-frame { display: block; width: 100%; height: auto; object-fit: contain;'), 'homepage preserves GIF natural proportions');
 check(!homepage.includes('aspect-ratio: 1180 /'), 'homepage does not force legacy GIF aspect ratios');

@@ -5,6 +5,7 @@ import {
   formatAgentsSkillReferenceEn,
 } from "./agents-skill-ref.js";
 import { MCP_PROBE_SKILL_REL_PATH } from "./workflow-skill-template.js";
+import { renderV5AgentsMd } from './v5-sqlite-guidance.js';
 
 export interface AgentsMdTemplateInput {
   layout: ProjectContextLayout;
@@ -72,6 +73,9 @@ Memory (requires MEMORY_* env):
  */
 export function generateAgentsMdInner(input: AgentsMdTemplateInput): string {
   const { layout, locale } = input;
+  return renderV5AgentsMd(locale, locale === 'zh-CN'
+    ? formatAgentsSkillReference(link(layout, MCP_PROBE_SKILL_REL_PATH))
+    : formatAgentsSkillReferenceEn(link(layout, MCP_PROBE_SKILL_REL_PATH)));
   const contextReady = input.contextReady === true;
   const graphReady = input.graphReady === true;
   const graph = link(layout, layout.latestMarkdownPath);

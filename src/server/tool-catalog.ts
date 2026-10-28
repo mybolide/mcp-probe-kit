@@ -71,6 +71,17 @@ const PLAN = "长任务状态、恢复与正式收敛（按需）";
 
 export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
   tool({
+    name: 'devcontrol',
+    title: 'v5 项目研发管理 (SQLite)',
+    readOnly: false,
+    idempotent: false,
+    openWorld: false,
+    toolsets: ['core', 'workflow'],
+    groupId: 'devcontrol',
+    groupTitle: 'SQLite DevControl 项目治理',
+    whenToCall: 'v5 唯一需求/Feature/Bug/Idea/计划/任务审批/claim/complete/report/verify 入口。先恢复 History 和项目账本；仅在任务已获 Owner 冻结批准、Agent 独立复核后编码并执行真实 Gate。',
+  }),
+  tool({
     name: "start_feature",
     title: "新功能开发编排",
     readOnly: true,

@@ -47,6 +47,7 @@ const memory = new Set(manifest.toolsets.memoryConditional.tools);
 const outputSchemas = manifest.structuredOutput?.schemas ?? {};
 
 const categoryMap: Record<string, { key: string; title: string; icon: string }> = {
+  devcontrol: { key: 'devcontrol', title: 'SQLite DevControl 研发管理', icon: '▦' },
   orchestration: { key: 'workflow', title: '编排入口', icon: '🔄' },
   routing: { key: 'routing', title: '工具选择兜底', icon: '🧭' },
   'project-spec': { key: 'project', title: '项目与规格', icon: '📁' },

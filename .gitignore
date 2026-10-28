@@ -39,6 +39,7 @@ docs/verification/
 docs/*.md
 !docs/v5-development-guide.md
 !docs/v5-best-practices.md
+!docs/v5-sqlite-only.md
 !docs/memory-local-setup.md
 !docs/memory-local-setup.zh-CN.md
 !docs/src8-methodology.md

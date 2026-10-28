@@ -7,12 +7,13 @@ import {
   HISTORY_SESSION_MODEL_TOOL_NAMES,
   MEMORY_MODEL_TOOL_NAMES,
 } from '../server/tool-visibility.js';
+import { isV5Tool } from '../server/v5-tool-policy.js';
 
 export type { ToolsetType } from '../server/tool-definition.js';
 
 function namesFor(toolset: 'core' | 'ui' | 'workflow'): string[] {
   return TOOL_CATALOG
-    .filter((entry) => entry.toolsets.includes(toolset))
+    .filter((entry) => isV5Tool(entry.name) && entry.toolsets.includes(toolset))
     .map((entry) => entry.name);
 }
 
@@ -39,7 +40,7 @@ export function resolveToolsetNames(
   toolset: ToolsetType,
   options: ToolsetResolutionOptions = {},
 ): readonly string[] | 'all' {
-  if (toolset === 'full') return 'all';
+  if (toolset === 'full') return TOOL_CATALOG.filter((entry) => isV5Tool(entry.name)).map((entry) => entry.name);
   if (toolset !== 'compact') return TOOLSET_DEFINITIONS[toolset];
 
   const historyEnabled = options.historyEnabled ?? isHistorySessionEnabled();

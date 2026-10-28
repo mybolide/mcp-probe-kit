@@ -48,6 +48,8 @@ import { TOOL_CATALOG } from "./tool-catalog.js";
 import { resolveToolsetNames, type ToolsetResolutionOptions } from "../lib/toolset-manager.js";
 import { buildMcpAppToolMeta } from "../lib/mcp-apps.js";
 import { APP_ONLY_TOOL_NAME_SET } from "./tool-visibility.js";
+import { runV5DevControlTool } from '../devcontrol/model-tool.js';
+import { isV5Tool } from './v5-tool-policy.js';
 import type {
   RegisteredToolHandler,
   RegisteredToolSchema,
@@ -85,6 +87,7 @@ const appOnlySchemas: Record<string, RegisteredToolSchema> = {
 };
 
 const handlers: Record<string, RegisteredToolHandler> = {
+  devcontrol: runV5DevControlTool,
   init_project: async (args, context) => initProject(args as never, context),
   gencommit: async (args) => gencommit(args as never),
   code_review: async (args) => codeReview(args as never),
@@ -180,10 +183,11 @@ const TOOL_DEFINITION_BY_NAME = new Map(
 );
 
 export function listToolDefinitions(): readonly ToolDefinition[] {
-  return TOOL_DEFINITIONS;
+  return TOOL_DEFINITIONS.filter((definition) => isV5Tool(definition.name));
 }
 
 export function getToolDefinition(name: string): ToolDefinition | undefined {
+  if (!isV5Tool(name)) return undefined;
   return TOOL_DEFINITION_BY_NAME.get(name);
 }
 
@@ -200,9 +204,9 @@ export function listToolDefinitionsForToolset(
   options: ToolsetResolutionOptions = {},
 ): readonly ToolDefinition[] {
   const names = resolveToolsetNames(toolset, options);
-  if (names === "all") return TOOL_DEFINITIONS;
+  if (names === "all") return listToolDefinitions();
   const allowed = new Set(names);
-  return TOOL_DEFINITIONS.filter((definition) => allowed.has(definition.name));
+  return listToolDefinitions().filter((definition) => allowed.has(definition.name));
 }
 
 export interface PrepareRegisteredToolOptions {
@@ -276,6 +280,9 @@ export async function executeRegisteredTool(
   args: unknown,
   context?: Parameters<RegisteredToolHandler>[1]
 ) {
+  if (!isV5Tool(name)) {
+    throw new Error(`V5_SQLITE_ONLY: ${name} was removed. Use devcontrol with an approved SQLite task contract.`);
+  }
   const appOnlyHandler = appOnlyHandlers[name];
   if (appOnlyHandler) return appOnlyHandler(args, context);
   return requireToolDefinition(name).handler(args, context);

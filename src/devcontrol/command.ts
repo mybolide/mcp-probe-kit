@@ -11,6 +11,7 @@ import { hookStatus, installHook } from "./git-gate.js";
 import {
   configureWorkspaceAccess, lanAddresses, workspaceAccess, WORKSPACE_START_PORT,
 } from "./workspace-access.js";
+import { V5_DEVC_ACTIONS } from './model-tool.js';
 
 type FlagMap = Map<string, string | boolean>;
 
@@ -197,6 +198,11 @@ export function dispatchDevControl(
 export async function runDevControlCli(positionals: string[], flags: FlagMap): Promise<number> {
   const root = path.resolve(stringFlag(flags, "project-root") ?? process.cwd());
   const operation = positionals[0]?.trim() ?? "next";
+  if (!([...V5_DEVC_ACTIONS, 'serve', 'board', 'workspace-status', 'workspace-link',
+    'lan-enable', 'lan-disable', 'lan-access'].includes(operation))) {
+    throw new DevControlError('V5_SQLITE_ONLY',
+      `Operation ${operation} is not supported in v5; use reviewed SQLite release/feature/bug/idea/task operations.`);
+  }
   if (operation === "lan-enable" || operation === "lan-disable") {
     const access = configureWorkspaceAccess(root, {
       lanEnabled: operation === "lan-enable",

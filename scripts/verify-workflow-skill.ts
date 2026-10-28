@@ -5,12 +5,13 @@
  */
 
 import { allToolSchemas } from "../src/schemas/index.ts";
+import { isV5Tool } from '../src/server/v5-tool-policy.ts';
 import {
   formatSkillRegistryMismatchMessage,
   validateMcpToolSkillRegistry,
 } from "../src/lib/mcp-tool-skill-registry.ts";
 
-const registeredToolNames = allToolSchemas.map((tool) => tool.name).sort();
+const registeredToolNames = allToolSchemas.map((tool) => tool.name).filter(isV5Tool).sort();
 const result = validateMcpToolSkillRegistry(registeredToolNames);
 
 if (!result.ok) {

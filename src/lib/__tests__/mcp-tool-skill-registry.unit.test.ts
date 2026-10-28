@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { allToolSchemas } from "../../schemas/index.js";
+import { isV5Tool } from "../../server/v5-tool-policy.js";
 import {
   formatSkillRegistryMismatchMessage,
   listMcpToolSkillRegistryNames,
@@ -9,7 +10,7 @@ import { generateWorkflowSkillContent } from "../workflow-skill-template.js";
 
 describe("mcp-tool-skill-registry", () => {
   it("与 allToolSchemas 工具名一一对应", () => {
-    const registered = allToolSchemas.map((tool) => tool.name).sort();
+    const registered = allToolSchemas.filter(({ name }) => isV5Tool(name)).map((tool) => tool.name).sort();
     const result = validateMcpToolSkillRegistry(registered);
 
     expect(result.ok, formatSkillRegistryMismatchMessage(result)).toBe(true);
@@ -21,38 +22,31 @@ describe("mcp-tool-skill-registry", () => {
     for (const name of listMcpToolSkillRegistryNames()) {
       expect(content).toContain(`\`${name}\``);
     }
-    expect(content).toContain("## 参数构造纪律");
-    expect(content).toContain("不要先调用 `workflow` 做意图识别");
-    expect(content).toContain("显式 legacy files 模式才考虑 flat/parent-child Spec");
-    expect(content).toContain("不要求生成 Spec Markdown");
-    expect(content).toContain("Agent 主导业务");
-    expect(content).toContain("release-work-approve");
-    expect(content).toContain("明确单项能力直接调用对应工具");
-    expect(content).toContain("只有拿不准该调用哪个工具时");
-    expect(content).toContain("不做自然语言意图识别");
-    expect(content).toContain("独立能力不是必须被编排");
-    expect(content).toContain("托管交付流程在 `converge` 未通过时");
-    expect(content).toContain("用户明确进行独立记忆管理时也可直接调用");
-    expect(content).not.toContain("复杂任务的第一步");
+    expect(content).toContain("The only project-development workflow");
+    expect(content).toContain("SQLite + DevControl");
+    expect(content).toContain("Owner");
+    expect(content).toContain("Plan");
+    expect(content).toContain("real tests");
+    expect(content).toContain("not accepted");
+    expect(content).not.toContain("先调用 `resume_plan`");
   });
 
-  it("区分完整交付编排与可直接调用的独立能力", () => {
+  it("v5 不再把 v4 编排当做研发入口，同时保留原子辅助能力", () => {
     const content = generateWorkflowSkillContent("0.0.0-test");
 
-    expect(content).toContain("完整交付编排 `start_*`（按需使用）");
-    expect(content).toContain("只做 Bug 根因分析或使用 SRC-8 方法");
-    expect(content).toContain("fix_bug；不要求先 start_bugfix");
-    expect(content).toContain("code_insight；若后续转为完整交付");
-    expect(content).toContain("把 `workflow` 当作所有任务的强制入口");
-    expect(content).toContain("把 `start_*` 当作所有原子能力的上级");
+    expect(content).toContain("v4 file-backed");
+    expect(content).toContain("devcontrol");
+    expect(content).toContain("code_insight");
+    expect(content).toContain("fix_bug");
+    expect(content).toContain("history_session_bootstrap");
+    expect(content).toContain("MCP_HISTORY_STORAGE=files");
   });
 
-  it("关键工具的顶层描述明确复杂功能路由与上下文汇总要求", () => {
+  it("顶层 DevControl schema 明确唯一 SQLite 权威与 Agent 独立职责", () => {
     const byName = new Map(allToolSchemas.map((tool) => [tool.name, tool]));
-    expect(byName.get("start_feature")?.description).toContain("parent-child");
-    expect(byName.get("start_feature")?.description).toContain("当前对话已确认的完整");
-    expect(byName.get("workflow")?.description).toContain("不做自然语言意图识别");
-    expect(byName.get("workflow")?.description).toContain("只返回工具选择规则与速查表");
-    expect(byName.get("add_feature")?.description).toContain("不是复杂功能的首个入口");
+    expect(byName.get("devcontrol")?.description).toContain("SQLite");
+    expect(byName.get("devcontrol")?.description).toContain("approved frozen task contracts");
+    expect(byName.get("devcontrol")?.description).toContain("Agent reviews");
+    expect(isV5Tool("start_feature")).toBe(false);
   });
 });

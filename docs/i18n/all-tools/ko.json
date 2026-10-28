@@ -20,6 +20,7 @@
     "reportIssue": "문제 보고"
   },
   "toolShortDesc": {
+    "devcontrol": "SQLite DevControl",
     "start_feature": "새 기능",
     "start_bugfix": "버그 수정",
     "start_onboard": "빠른 시작",
@@ -62,6 +63,7 @@
     "history_session_read": "히스토리 읽기"
   },
   "categories": {
+    "devcontrol": { "title": "SQLite DevControl 개발 관리", "count": "1개 도구" },
     "workflow": {
       "title": "워크플로우 오케스트레이션",
       "count": "6개"
@@ -108,6 +110,11 @@
     }
   },
   "toolsData": {
+    "devcontrol": {
+      "description": "v5 유일한 프로젝트 개발 관리: SQLite 요구사항, 계획, Feature/Bug/Idea, 승인 작업 및 실제 테스트 검증.",
+      "usage": "action, 대상 Git project_root 및 input을 전달합니다. 독립 검토와 Owner 승인 필요.",
+      "prompt": "대상 Git project_root에서 devcontrol action=next를 호출하고 execution-contract를 확인한 뒤 claim / complete / report / verify를 수행하세요."
+    },
     "start_feature": {
       "description": "완전한 기능 개발 워크플로우 오케스트레이션: 그래프 베이스라인 보강 → GitNexus 갱신 → 범위 수렴 → 사양 생성 → 작업량 추정",
       "usage": "누락된 graph-insights 를 먼저 보강하고 GitNexus query/context/impact 로 범위를 수렴시킨 뒤 사양과 추정을 생성합니다",

@@ -5,11 +5,13 @@ export interface HistorySessionLimits {
 
 const CLOSED = new Set(['0', 'false', 'off', 'no']);
 
-/** Default ON: unset/empty/other → enabled; 0|false|off|no → disabled. */
+/** v5 SQLite project History is mandatory; disabling it would lose handoff state. */
 export function isHistorySessionEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   const raw = env.MCP_HISTORY_SESSION?.trim().toLowerCase();
-  if (!raw) return true;
-  return !CLOSED.has(raw);
+  if (raw && CLOSED.has(raw)) {
+    throw new Error('V5_SQLITE_ONLY: MCP_HISTORY_SESSION cannot be disabled. Project History is part of the SQLite development ledger.');
+  }
+  return true;
 }
 
 export function getHistoryLimits(env: NodeJS.ProcessEnv = process.env): HistorySessionLimits {

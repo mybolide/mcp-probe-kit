@@ -1,4 +1,4 @@
-/** Dedicated opt-in DevControl MCP surface, not part of the main feature tool list. */
+/** Dedicated optional DevControl MCP surface; v5 primary is main MCP DevControl. */
 import readline from "node:readline";
 import { dispatchDevControl } from "./command.js";
 import { DevControlError, ProjectTaskLedger } from "./task-ledger.js";
@@ -7,7 +7,7 @@ import { ensureProjectWorkspaceRunning } from "./workspace-process.js";
 import { lanAddresses } from "./workspace-access.js";
 import { resolveWorkbenchLocale } from "./i18n.js";
 
-const operations = [
+const previousOperations = [
   "idea-capture", "idea-list", "idea-get", "idea-assess", "idea-review", "idea-decide",
   "release-work-plan", "release-work-review", "release-work-stage", "release-work-approve",
   "release-work-scope-review", "release-work-scope-stage", "release-work-scope-get",
@@ -31,6 +31,10 @@ const operations = [
   "decision-save", "decision-get",
   "hook-status", "hook-install",
 ];
+// Old file import and ad-hoc task shortcuts cannot bypass the main v5 policy.
+// Avoid a top-level runtime import cycle through command.ts/model-tool.ts.
+const obsoleteFileActions = new Set(['import-spec', 'create', 'subtask', 'dependency', 'approve']);
+const operations = previousOperations.filter((operation) => !obsoleteFileActions.has(operation));
 const requiredFields: Record<string, string[]> = {
   "idea-capture":["release","title","description","sourceRef","submittedBy"],
   "idea-list":[],
@@ -130,8 +134,8 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
           answer = response(parsed.id, {
             protocolVersion: "2025-06-18",
             capabilities: { tools: { listChanged: false } },
-            serverInfo: { name: "mcp-probe-kit-devcontrol-rc", version: "0.4.0" },
-            instructions: "Project-level task registry and gates; Delegated Plans remain separate.",
+            serverInfo: { name: "mcp-probe-kit-devcontrol", version: "5.0.0" },
+            instructions: "v5 SQLite-only project development: requirements, Features, Bugs, Ideas, reviewed plans, scoped tasks and real gates. v4 file/Delegated Plan management is not supported.",
           });
         } else if (parsed.method === "ping") {
           answer = response(parsed.id, {});

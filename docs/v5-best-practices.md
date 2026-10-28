@@ -1,12 +1,18 @@
 # MCP Probe Kit v5 最佳实践：让 Agent 持续、受控地交付真实项目
 
+> **2026-10-28 破坏性变更**：v5 已取消 v4 的文件式研发流程入口。
+> 下文涉及旧 `start_feature`、`start_bugfix`、`plan_heartbeat`、
+> `resume_plan`、`converge` 或 Markdown Spec 的介绍属于此前的历史实践；
+> 不再是当前 v5 可执行操作。唯一运行路径以
+> [SQLite + DevControl v5 架构](v5-sqlite-only.md)为准。
+
 > **适用版本：** `feature/devcontrol-project-task-ledger` 分支的 **5.0.0 源码开发版**，尚未发布到 npm、MCP Registry，也不是 `latest`。公开稳定版仍为 `4.1.1`。
 >
 > **文档性质：** 从长期项目研发和 Neyna 试点归纳的可迁移工作方式；不是 Neyna 项目任务清单、Owner 授权记录、真机验收报告或替其他项目预设的冻结计划。实际功能以当前源码、[v5 安装与使用指南](v5-development-guide.md)及 [DevControl 参考](devcontrol.md)为准。
 
 ## 一、先理解 v5：工具负责约束，Agent 负责结果
 
-v4 已提供 `start_feature`、`start_bugfix`、MCP Apps、Plan/Heartbeat/Resume/Converge、代码与测试工具、可选 Memory。**v5 保留这些能力**，新增的是更完整的**项目研发治理层**：项目本地 SQLite 任务账本、整版计划审批、任务冻结合同、开发租约、真实验收 Gate、Idea 和架构变更复审、History Session SQLite 默认存储，以及只读项目工作台。
+v4 使用 `start_feature`、`start_bugfix`、文件式 Plan/Heartbeat/Resume/Converge 和 Spec 组织研发。**v5 已移除这些旧研发管理入口**，统一改由项目 SQLite + DevControl 管理版本计划、任务冻结合同、审核、租约、真实 Gate、Idea 和架构变更；History Session 只通过 SQLite `hs_*` 持久化。代码/测试/Git 辅助能力保留，但不再拥有单独的研发任务状态。
 
 最重要的分工是：
 
@@ -231,6 +237,6 @@ env PATH=/opt/homebrew/bin:/usr/bin:/bin npm run docs:verify
 - [5.0.0 源码安装与完整命令指南](v5-development-guide.md)
 - [DevControl 命令、任务合同、变更与 Gate 参考](devcontrol.md)
 - [v4 / V1 历史交付系统基线](mcp-probe-kit-delivery-system-v1.md)（保留历史要求，不等于 v5 的当前验收）
-- [README：v5 新特性与 v4 保留功能](../README.md)
+- [README：v5 SQLite-only 新特性与 v4 历史说明](../README.md)
 
 **English summary:** v5 keeps the v4 Agent workflows while adding project-local DevControl governance. Inspect real Git/project state and History first; independently review requirements and plans; obtain explicit hash-bound Owner approval; claim only eligible frozen tasks; implement and test within approved paths; commit, report and run the real verify gate for each task. Preserve user edits and interrupted work, evaluate new ideas before scope changes, keep `dc_*` task state separate from `hs_*` session History and optional Qdrant Memory, and never confuse an unpublished source milestone with an npm release.

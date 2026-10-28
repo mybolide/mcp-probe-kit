@@ -5,23 +5,13 @@
     "2025-11-25",
     "2026-07-28"
   ],
-  "totalTools": 39,
+  "totalTools": 24,
   "toolsets": {
     "compact": {
-      "description": "24 base model tools (before History/Memory conditionals)",
-      "count": 24,
+      "description": "10 base model tools (before History/Memory conditionals)",
+      "count": 10,
       "tools": [
-        "start_feature",
-        "start_bugfix",
-        "start_ui",
-        "start_onboard",
-        "start_product",
-        "start_ralph",
-        "workflow",
-        "init_project_context",
-        "init_project",
-        "check_spec",
-        "estimate",
+        "devcontrol",
         "code_insight",
         "architecture",
         "gentest",
@@ -30,29 +20,15 @@
         "gencommit",
         "git_work_report",
         "ui_design_system",
-        "ui_search",
-        "plan_heartbeat",
-        "resume_plan",
-        "converge",
-        "interview"
+        "ui_search"
       ],
       "note": "Base compact names; History Session is ON by default and adds 5 tools at tools/list time"
     },
     "compactWithHistory": {
-      "description": "29 model tools when History Session is enabled (default)",
-      "count": 29,
+      "description": "15 model tools when History Session is enabled (default)",
+      "count": 15,
       "tools": [
-        "start_feature",
-        "start_bugfix",
-        "start_ui",
-        "start_onboard",
-        "start_product",
-        "start_ralph",
-        "workflow",
-        "init_project_context",
-        "init_project",
-        "check_spec",
-        "estimate",
+        "devcontrol",
         "code_insight",
         "architecture",
         "gentest",
@@ -62,10 +38,6 @@
         "git_work_report",
         "ui_design_system",
         "ui_search",
-        "plan_heartbeat",
-        "resume_plan",
-        "converge",
-        "interview",
         "history_session_bootstrap",
         "history_session_checkpoint",
         "history_session_validate",
@@ -74,20 +46,10 @@
       ]
     },
     "compactWithMemory": {
-      "description": "30 model tools when Memory is configured (History off)",
-      "count": 30,
+      "description": "16 model tools when Memory is configured (History off)",
+      "count": 16,
       "tools": [
-        "start_feature",
-        "start_bugfix",
-        "start_ui",
-        "start_onboard",
-        "start_product",
-        "start_ralph",
-        "workflow",
-        "init_project_context",
-        "init_project",
-        "check_spec",
-        "estimate",
+        "devcontrol",
         "code_insight",
         "architecture",
         "gentest",
@@ -97,10 +59,6 @@
         "git_work_report",
         "ui_design_system",
         "ui_search",
-        "plan_heartbeat",
-        "resume_plan",
-        "converge",
-        "interview",
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
@@ -110,20 +68,10 @@
       ]
     },
     "compactWithHistoryAndMemory": {
-      "description": "35 model tools when History (default) and Memory are both enabled",
-      "count": 35,
+      "description": "21 model tools when History (default) and Memory are both enabled",
+      "count": 21,
       "tools": [
-        "start_feature",
-        "start_bugfix",
-        "start_ui",
-        "start_onboard",
-        "start_product",
-        "start_ralph",
-        "workflow",
-        "init_project_context",
-        "init_project",
-        "check_spec",
-        "estimate",
+        "devcontrol",
         "code_insight",
         "architecture",
         "gentest",
@@ -133,10 +81,6 @@
         "git_work_report",
         "ui_design_system",
         "ui_search",
-        "plan_heartbeat",
-        "resume_plan",
-        "converge",
-        "interview",
         "history_session_bootstrap",
         "history_session_checkpoint",
         "history_session_validate",
@@ -181,21 +125,16 @@
       ]
     },
     "core": {
-      "description": "13 core tools (daily high-frequency)",
-      "count": 13,
+      "description": "8 core tools (daily high-frequency)",
+      "count": 8,
       "tools": [
-        "init_project",
+        "devcontrol",
         "gencommit",
         "code_review",
         "code_insight",
         "refactor",
         "fix_bug",
         "gentest",
-        "workflow",
-        "init_project_context",
-        "add_feature",
-        "estimate",
-        "check_spec",
         "architecture"
       ]
     },
@@ -223,42 +162,29 @@
       ]
     },
     "ui": {
-      "description": "4 UI/UX tools (recommend using start_ui unified entry)",
-      "count": 4,
+      "description": "3 UI/UX tools (recommend using start_ui unified entry)",
+      "count": 3,
       "tools": [
         "ui_design_system",
         "ui_search",
-        "sync_ui_data",
-        "start_ui"
+        "sync_ui_data"
       ]
     },
     "workflow": {
-      "description": "38 workflow tools (includes core + orchestration + interactive + UI + memory + history)",
-      "count": 38,
+      "description": "23 workflow tools (includes core + orchestration + interactive + UI + memory + history)",
+      "count": 23,
       "tools": [
-        "init_project",
+        "devcontrol",
         "gencommit",
         "code_review",
         "code_insight",
         "refactor",
         "fix_bug",
         "gentest",
-        "workflow",
-        "init_project_context",
-        "add_feature",
-        "estimate",
-        "check_spec",
-        "start_feature",
-        "start_bugfix",
-        "start_onboard",
-        "start_ralph",
-        "interview",
         "ask_user",
         "ui_design_system",
         "ui_search",
         "sync_ui_data",
-        "start_ui",
-        "start_product",
         "search_memory",
         "read_memory_asset",
         "memorize_asset",
@@ -270,44 +196,20 @@
         "history_session_validate",
         "history_session_search",
         "history_session_read",
-        "plan_heartbeat",
-        "resume_plan",
-        "converge",
         "architecture"
       ]
     },
     "full": {
-      "description": "All 39 tools",
-      "count": 39,
-      "note": "Compatibility/debugging surface selected with MCP_TOOLSET=full"
+      "description": "All active v5 SQLite-only tools",
+      "count": 24,
+      "note": "No v4 file/Delegated Plan process operations, including with MCP_TOOLSET=full"
     }
   },
   "categories": {
-    "orchestration": {
-      "description": "Intelligent orchestration tools (6)",
+    "devcontrol": {
+      "description": "SQLite DevControl 项目治理 (1)",
       "tools": [
-        "start_feature",
-        "start_bugfix",
-        "start_onboard",
-        "start_ralph",
-        "start_ui",
-        "start_product"
-      ]
-    },
-    "routing": {
-      "description": "Agent intent routing tools (1)",
-      "tools": [
-        "workflow"
-      ]
-    },
-    "project-management": {
-      "description": "Project management and specification tools (5)",
-      "tools": [
-        "init_project",
-        "init_project_context",
-        "add_feature",
-        "estimate",
-        "check_spec"
+        "devcontrol"
       ]
     },
     "code-analysis": {
@@ -357,18 +259,9 @@
         "history_session_read"
       ]
     },
-    "plan-control": {
-      "description": "长任务状态、恢复与正式收敛（按需） (3)",
-      "tools": [
-        "plan_heartbeat",
-        "resume_plan",
-        "converge"
-      ]
-    },
     "interactive": {
-      "description": "Interactive tools (2)",
+      "description": "Interactive tools (1)",
       "tools": [
-        "interview",
         "ask_user"
       ]
     }

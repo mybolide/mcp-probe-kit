@@ -12,9 +12,9 @@ describe('history-session-config', () => {
     expect(isHistorySessionEnabled({ MCP_HISTORY_SESSION: 'yes' })).toBe(true);
   });
 
-  it('disables on 0|false|off|no', () => {
+  it('rejects disabling mandatory SQLite History on 0|false|off|no', () => {
     for (const value of ['0', 'false', 'off', 'no', 'FALSE', ' Off ']) {
-      expect(isHistorySessionEnabled({ MCP_HISTORY_SESSION: value })).toBe(false);
+      expect(() => isHistorySessionEnabled({ MCP_HISTORY_SESSION: value })).toThrow('V5_SQLITE_ONLY');
     }
   });
 

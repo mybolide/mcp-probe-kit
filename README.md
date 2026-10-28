@@ -13,6 +13,17 @@
 
 <!-- mcp-name: io.github.mybolide/mcp-probe-kit -->
 
+> **BREAKING v5 (2026-10-28):** v5 development management is now **SQLite + DevControl ONLY**.
+> The main MCP exposes `devcontrol` with `{action, project_root, input}`.
+> Project `dc_*` is authoritative for requirements, Features, Bugs, Ideas, tasks,
+> frozen approvals, leases and real gates; `hs_*` owns History. Node.js 22+
+> and a Git project are required. v4 file-backed Spec/Plan, `start_*`,
+> `plan_heartbeat`, `resume_plan`, `converge` and Markdown History **are
+> no longer callable in v5**. Earlier v4 workflow guidance below is historical
+> documentation for published v4.1.1, not current v5 instructions.
+> See [the v5 SQLite-only architecture and migration status](docs/v5-sqlite-only.md).
+> The breaking transition is **in progress and not release-verified**.
+
 > **5.0.0 development branch (not released):** The source on
 > [`feature/devcontrol-project-task-ledger`](https://github.com/mybolide/mcp-probe-kit/tree/feature/devcontrol-project-task-ledger)
 > now includes the project-local **DevControl task ledger/workbench, frozen
@@ -29,7 +40,7 @@
 
 ## What's new in 5.0.0 (source development, not an npm release)
 
-Version 5 moves beyond the v4 **Agent workflow toolkit** into **project-level development governance**. The v4 MCP Apps, delegated plans, Memory, code-review tools, and protocol compatibility remain available. The following capabilities are implemented on this branch and are being validated with a real project; they are **not** features of the published `4.1.1` npm package.
+Version 5 replaces v4 **file-backed development management** with **SQLite + DevControl as the only project workflow**. The v4 Delegated Plan, start_* management and file-based History are deliberately removed from the active v5 interface; independent code-review, Git, UI helper and optional Memory capabilities remain. v4 MCP Apps built around retired Plan state are historical demos pending a SQLite project-workbench replacement. The following capabilities are under source-development validation, **not** features of published `4.1.1`.
 
 | Area | v5 capability | Practical benefit |
 |---|---|---|
@@ -53,7 +64,7 @@ Version 5 moves beyond the v4 **Agent workflow toolkit** into **project-level de
 
 ### Try the 5.0.0 source branch
 
-**Requirements:** Node.js 22+ for DevControl and the default SQLite History backend; Node.js 20+ remains supported for older non-DevControl tools. Git, npm and an actual project are required for the project-governance examples.
+**Requirements:** Node.js 22+ for **all** v5 runtime entrypoints, mandatory project SQLite History and DevControl. Node.js 20 users must remain on published v4.1.1. Git, npm and a target application repository are required for development management.
 
 ```bash
 git clone --branch feature/devcontrol-project-task-ledger https://github.com/mybolide/mcp-probe-kit.git
@@ -73,7 +84,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol next --project-root 
 
 The workbench is a **read-only browser view**, normally served locally from port `38180`; the project keeps its own SQLite data. Trusted LAN viewing is optional, unauthenticated and **must not be exposed to the public Internet**. The MCP server can start the workbench automatically, unless `MCP_DEVCONTROL_AUTOSTART=0`. The optional separate DevControl MCP server is not automatically registered by installing the main server.
 
-**Data is intentionally separate:** `dc_*` holds development tasks and approvals; `hs_*` holds project chat History; optional Qdrant Memory stores reusable cross-project knowledge. Older `docs/history-session/N.md` files are retained for migration or explicit file mode (`MCP_HISTORY_STORAGE=files`). A History `expected_path` can be a virtual locator, not a file you should create.
+**Data is intentionally separate:** `dc_*` holds development tasks and approvals; `hs_*` holds project chat History; optional Qdrant Memory stores reusable cross-project knowledge. Older `docs/history-session/N.md` files are retained **only for read-only migration**; `MCP_HISTORY_STORAGE=files` is rejected in v5. A History `expected_path` can be a virtual locator, not a file you should create.
 
 **Important limits:** Some platform/device and end-to-end acceptance gates fail closed until a genuine runner/evidence exists. Git hooks can be bypassed locally, so protected branches and trusted CI are still necessary for stronger enforcement. Local workstation/Owner labels are not authentication. Do not claim Windows CI, production deployment or independent release certification without running them.
 
@@ -81,7 +92,7 @@ For a field-tested way to run a multi-task project without skipping reviews, tas
 
 ---
 
-## v4 stable capabilities retained in v5
+## Historical v4.1.1 reference — NOT supported v5 development workflows
 
 > **Talk is cheap, show me the Context.**
 > 

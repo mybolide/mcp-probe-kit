@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 工具目录 - 29/35/39 工具面与一句话调用",
-    "description": "MCP Probe Kit v4 完整工具目录：默认 29 个模型工具，Memory 配置后 35 个，full 兼容面 39 个，另有 1 个 App-only 动作。每个工具提供可复制的一句话调用方式。",
+    "title": "MCP Probe Kit v5 SQLite + DevControl 工具目录",
+    "description": "5.0.0 开发分支仅支持 SQLite 研发流程，默认 15 个模型工具，Memory 后 21，full 24 个活跃工具；不再支持 v4 Plan/Spec/Markdown 流程。",
     "keywords": "AI 开发工具, 代码生成工具, 代码审查工具, Git 自动化, UI 生成, 代码重构, 性能优化, 安全扫描"
   },
   "page": {
-    "subtitle": "默认 29 个模型工具，Memory 配置后 35 个，full 兼容面 39 个，另有 1 个 App-only 动作"
+    "subtitle": "v5 默认 15 个模型工具（含强制 SQLite History），Memory 后 21，full 24；不支持 v4 文件式 Plan"
   },
   "search": {
     "placeholder": "🔍 搜索工具名称或描述...",
@@ -20,6 +20,7 @@
     "reportIssue": "反馈问题"
   },
   "toolShortDesc": {
+    "devcontrol": "SQLite 研发管理",
     "start_feature": "新功能",
     "start_bugfix": "修Bug",
     "start_onboard": "快速上手",
@@ -62,6 +63,7 @@
     "history_session_read": "历史读取"
   },
   "categories": {
+    "devcontrol": { "title": "SQLite DevControl 研发管理", "count": "1 个" },
     "workflow": {
       "title": "工作流编排",
       "count": "6 个"
@@ -108,6 +110,11 @@
     }
   },
   "toolsData": {
+    "devcontrol": {
+      "description": "v5 唯一研发管理入口：项目 SQLite 中的需求、版本、Feature/Bug/Idea、任务审批、执行租约和真实验收。",
+      "usage": "传 action、目标业务 Git 项目的 project_root 和操作对应 input；独立复审和 Owner 授权必须真实有效。",
+      "prompt": "使用 devcontrol action=next 查询 <目标 Git 项目> 可执行任务，先读 execution-contract，再 claim、真实测试、complete/report/verify。"
+    },
     "start_feature": {
       "description": "完整的功能开发工作流编排：补齐图谱基线 → 刷新 GitNexus 图谱 → 收敛需求范围 → 生成规格 → 估算工作量",
       "usage": "用于启动完整的功能开发流程，自动补齐 graph-insights，并通过 GitNexus 的 query/context/impact 收敛需求范围后生成规格与估算",

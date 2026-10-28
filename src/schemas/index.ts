@@ -16,9 +16,11 @@ import { memoryToolSchemas } from "./memory-tools.js";
 import { historySessionToolSchemas } from "./history-session-tools.js";
 import { planToolSchemas } from "./plan-tools.js";
 import { architectureToolSchemas } from "./architecture-tools.js";
+import { devcontrolToolSchemas } from "./devcontrol-tools.js";
 
 // 合并所有工具 schemas；Tool Catalog/Registry 会在模块加载和测试中校验一一覆盖。
 export const allToolSchemas = [
+  ...devcontrolToolSchemas,
   ...basicToolSchemas,
   ...gitToolSchemas,
   ...codeAnalysisToolSchemas,

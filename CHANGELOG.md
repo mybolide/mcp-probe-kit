@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking, in-progress:** v5 development lifecycle now uses **SQLite +
+  DevControl exclusively**. Main MCP exposes a direct scoped devcontrol tool;
+  older file/Delegated-Plan/start_* workflows are blocked even in full mode;
+  History requires Git/Node22+ SQLite. Project migration and the former v4
+  contract regression suite are not yet release-verified. See
+  [v5 architecture and migration status](docs/v5-sqlite-only.md).
 - Promote **v5 Best Practices** into a first-class, browsable
   `docs/pages/v5-best-practices.html` page, with the real-project governance
   lifecycle, genuine test gates, scope/Idea controls, safe multi-task batches,

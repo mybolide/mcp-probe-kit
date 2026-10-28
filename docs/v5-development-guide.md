@@ -1,5 +1,11 @@
 # MCP Probe Kit 5.0.0 开发版使用指南 / Development guide
 
+> **2026-10-28 重大变更**：v5 的研发管理唯一机制是 **SQLite + DevControl**，
+> 不再支持 v4 文件式 Spec / Delegated Plan / Markdown History。本文旧章节中
+> “保留 v4 工作流”的说明已被此破坏性架构决定取代。请优先使用
+> [v5 SQLite-only 实际行为、迁移及验收状态](v5-sqlite-only.md)。
+> 旧数据迁移和全量回归尚未完成，不能将当前开发分支视为可发布版本。
+
 > **版本状态 / Release status:** 本仓库的 `feature/devcontrol-project-task-ledger` 分支是 **5.0.0 源码开发里程碑**，**尚未发布到 npm、MCP Registry，也不是 `latest`**。公开稳定版的安装文档仍适用于 **4.1.1**。不要运行 `npx mcp-probe-kit@5.0.0`，除非未来实际发布后重新验证。
 >
 > **English:** This branch contains the unpublished **5.0.0 source milestone**. npm `latest` still refers to the separately released stable line. Build and use this branch locally; do not assume `mcp-probe-kit@5.0.0` is available on npm.
@@ -83,7 +89,7 @@ More details: [DevControl reference](devcontrol.md), [v3 → v4 published-stable
 
 ## 5. v4 与 v5 到底有什么不同 / What actually changed
 
-v4's published toolkit focuses on selecting and executing **Agent-level development workflows**: `start_feature`, `start_bugfix`, `plan_heartbeat`, `resume_plan`, `converge`, MCP Apps, source inspection, tests, Git helpers and optional Qdrant Memory. **v5 retains those tools.** The new project-governance layer makes the entire **release, project, task and approval lifecycle** persistent and auditable between Agent sessions.
+v4's published toolkit focuses on **Agent-level document-backed workflows**: `start_feature`, `start_bugfix`, `plan_heartbeat`, `resume_plan`, `converge` and file-backed specs. **v5 deliberately removes these workflow interfaces** and makes SQLite DevControl the sole development process authority. Independent source inspection, testing, Git/UI helpers and optional Qdrant Memory remain as stateless supporting capabilities; legacy Plan-backed Apps are historical, not v5 workflow APIs.
 
 | Feature / 新能力 | How it works / 实现与使用 |
 |---|---|
@@ -158,7 +164,7 @@ Node.js 20+ remains sufficient for the legacy/non-DevControl tools; DevControl a
 
 ## 7. 中文实践说明：怎样真正使用 v5
 
-**v5 的核心变化是把单次 Agent 开发，扩展为跨会话、跨任务的项目研发管理。** v4 已有的 `start_feature`、`resume_plan`、MCP Apps、Memory 和测试/代码工具仍保留；v5 新增的 DevControl 不替代这些工具，也不替代编程 Agent。
+**v5 的核心变化是直接用 SQLite + DevControl 统一跨会话、跨任务研发管理。** v4 的 `start_feature`、`resume_plan`、Delegated Plan 和 Markdown Spec 不再提供对外工作流，旧版 MCP Apps 中基于这些状态的视图尚待迁移。独立代码/测试/Git 工具与可选 Memory 仍可作为辅助能力，但不能替代 DevControl 或独立编程 Agent。
 
 ### 新项目或旧项目如何开始
 

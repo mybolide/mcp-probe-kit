@@ -32,7 +32,7 @@
     },
     "tools": {
       "title": "Tools Documentation",
-      "description": "29 model-visible tools by default (History ON), 35 with Memory, plus five native MCP Apps",
+      "description": "v5 provides 15 default tools with SQLite History, 21 with Memory, and one SQLite DevControl project lifecycle",
       "allTools": "All Tools"
     },
     "guides": {

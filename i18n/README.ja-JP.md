@@ -1,5 +1,7 @@
 > **5.0.0 開発版（未公開）**：DevControl の承認済みタスク、実際のテストゲート、Node.js 22+ SQLite History の利用方法は **[5.0.0 開発版ガイド](../docs/v5-development-guide.md)** を参照してください。npm の公開安定版は **4.1.1** です。DevControl は Agent に代わってコードや SQL を実行したり、独立レビューを行ったりしません。
 
+> **v5 破壊的変更:** 開発管理は SQLite + DevControl のみ。v4 のファイル式 Spec/Plan と Markdown History はサポートしません。[v5 の正式な構成と移行状況](../docs/v5-sqlite-only.md)。以下の v4 節は過去の資料です。
+
 ## v5.0.0 の新機能（ソース開発版・未公開）
 
 **v4 の Agent ワークフローから、プロジェクト単位の開発管理へ拡張しました。** 以下は `feature/devcontrol-project-task-ledger` ブランチの実装で、公開 npm 版 `4.1.1` には含まれません。v4 の MCP Apps、Memory、Plan、コードツールは維持されています。

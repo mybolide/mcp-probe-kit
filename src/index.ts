@@ -13,9 +13,12 @@ import { runCommandLine } from "./cli/command-line.js";
 import { ensureProjectWorkspaceAtMcpStartup } from "./devcontrol/startup.js";
 
 /** 启动日志标识：用于确认客户端是否加载当前 build。 */
-const MCP_BUILD_TAG = "v4-cli-fallback-20260802";
+const MCP_BUILD_TAG = "v5-sqlite-devcontrol-20261028";
 
 async function main(): Promise<void> {
+  if (Number(process.versions.node.split('.')[0]) < 22) {
+    throw new Error('MCP Probe Kit v5 requires Node.js 22+ for SQLite DevControl. Use the published v4.1.1 for older Node.');
+  }
   const cliExitCode = await runCommandLine(process.argv.slice(2));
   if (cliExitCode !== null) {
     process.exitCode = cliExitCode;

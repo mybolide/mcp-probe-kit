@@ -18,28 +18,22 @@ const baseInput = {
 };
 
 describe('generateAgentsMdInner', () => {
-  it('includes memory workflow in zh-CN template', () => {
+  it('generates v5 SQLite + DevControl only guidance in zh-CN, without replacing user-owned docs', () => {
     const md = generateAgentsMdInner({ ...baseInput });
-    expect(md).toContain('记忆');
+    expect(md).toContain('SQLite + DevControl');
     expect(md).toContain('start_bugfix');
-    expect(md).toContain('memorize_asset');
+    expect(md).toContain('不支持 v4');
     expect(md).toContain('mcp-probe-kit/SKILL.md');
     expect(md).toContain('@.agents/skills/mcp-probe-kit/SKILL.md');
-    expect(md).toContain('待 Agent 落盘');
-    expect(md).toContain('bugfix');
-    expect(md).toContain('search_memory');
+    expect(md).toContain('idea-capture');
+    expect(md).toContain('plan-approve');
+    expect(md).toContain('claim');
+    expect(md).toContain('complete');
+    expect(md).toContain('verify');
     expect(md).toContain('history_session_bootstrap');
-    expect(md).toContain('MCP_HISTORY_SESSION');
-    expect(md).toContain('**写**');
-    expect(md).toContain('**读**');
-    expect(md).toContain('检查点最低清单');
+    expect(md).toContain('history_session_checkpoint');
     expect(md).toContain('resume_plan');
-    expect(md).toContain('.mcp-probe-kit/bin/probe.*');
-    expect(md).toContain('runtime.json.localOnly=true');
-    expect(md).toContain('MCP_PROBE_LOCAL_ONLY=1');
-    expect(md).toContain('自动注入');
-    expect(md).toContain('先调用 `resume_plan`');
-    expect(md).toContain('只传 `project_root`');
-    expect(md).toContain('禁止先用 Bash 探索');
+    expect(md).toContain('不支持 v4');
+    expect(md).not.toContain('先调用 `resume_plan`');
   });
 });

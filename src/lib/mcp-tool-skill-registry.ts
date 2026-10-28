@@ -4,6 +4,7 @@
  */
 
 import { TOOL_CATALOG } from "../server/tool-catalog.js";
+import { isV5Tool } from '../server/v5-tool-policy.js';
 import {
   WORKFLOW_SELECTION_GUIDE,
   type WorkflowSelectionGuideEntry,
@@ -42,7 +43,7 @@ export const MCP_SKILL_ARGUMENT_RULES = [
 export const MCP_TOOL_SKILL_GROUPS: McpToolSkillGroup[] = (() => {
   const groups = new Map<string, McpToolSkillGroup>();
 
-  for (const entry of TOOL_CATALOG) {
+  for (const entry of TOOL_CATALOG.filter((entry) => isV5Tool(entry.name))) {
     const { groupId, groupTitle, whenToCall } = entry.skillRoute;
     const group = groups.get(groupId) ?? {
       id: groupId,
@@ -128,14 +129,15 @@ export function validateMcpToolSkillRegistry(registeredToolNames: string[]): {
   duplicateInRegistry: string[];
 } {
   const registryNames = listMcpToolSkillRegistryNames();
-  const registered = new Set(registeredToolNames);
+  const currentNames = registeredToolNames.filter(isV5Tool);
+  const registered = new Set(currentNames);
   const registrySet = new Set(registryNames);
 
   const duplicates = registryNames.filter(
     (name, index) => registryNames.indexOf(name) !== index
   );
 
-  const missingInRegistry = registeredToolNames.filter((name) => !registrySet.has(name));
+  const missingInRegistry = currentNames.filter((name) => !registrySet.has(name));
   const extraInRegistry = registryNames.filter((name) => !registered.has(name));
 
   return {

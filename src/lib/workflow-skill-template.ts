@@ -5,6 +5,7 @@
 
 import { VERSION } from "../version.js";
 import { DEVCONTROL_AGENT_GUIDANCE } from "./devcontrol-agent-guidance.js";
+import { renderV5Skill } from './v5-sqlite-guidance.js';
 import {
   MCP_INTENT_QUICK_LOOKUP,
   MCP_SKILL_ARGUMENT_RULES,
@@ -145,6 +146,7 @@ function renderArgumentRules(): string {
 }
 
 export function generateWorkflowSkillBody(skillVersion: string = VERSION): string {
+  return renderV5Skill(skillVersion);
   return `# MCP 调用时机 — mcp-probe-kit
 
 > 本 Skill 负责：**什么情况直接调用独立能力，什么情况使用完整交付编排，以及调用前如何构造完整参数**。不是中央意图识别器。
@@ -257,7 +259,7 @@ ${renderAvoidRules()}
 
 export const MCP_PROBE_SKILL_NAME = "mcp-probe-kit";
 
-export const MCP_PROBE_SKILL_DESCRIPTION = `在已配置 mcp-probe-kit 的项目中，于新功能、Bug、UI、重构或提交前读取；区分独立能力与完整交付编排，汇总当前对话构造完整参数，并在不确定首工具时提供 workflow 兜底。Git/Node22 DevControl 项目由 Agent 自主规划整版 SQLite 原子任务、Review 和逐项真实验收；旧 files 模式才使用文件式 Spec。Skill 不承担中央意图识别，start_* 只组合场景所需能力。`;
+export const MCP_PROBE_SKILL_DESCRIPTION = `v5 SQLite + DevControl 唯一研发流程：项目需求、Feature、Bug、Idea、冻结任务、审批、真实测试和 History。Node22+；不再支持 v4 文件式 Spec、Delegated Plan、start_* 或 Markdown History。`;
 
 export function formatSkillFrontmatter(skillVersion: string = VERSION): string {
   return `---
@@ -272,5 +274,6 @@ export function generateWorkflowSkillContent(skillVersion: string = VERSION): st
   return `${formatSkillFrontmatter(skillVersion)}
 
 ${generateWorkflowSkillBody(skillVersion)}
+<!-- ${SKILL_GUIDANCE_MARKER}: ${SKILL_GUIDANCE_REVISION} -->
 `;
 }

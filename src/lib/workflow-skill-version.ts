@@ -4,7 +4,7 @@ import { VERSION } from "../version.js";
 export const SKILL_VERSION_FRONTMATTER_KEY = "mcp-probe-kit-version";
 
 /** Independently upgrade managed guidance without inventing an npm release. */
-export const SKILL_GUIDANCE_REVISION = "local-only-mcp-version-safety-20261024";
+export const SKILL_GUIDANCE_REVISION = "v5-sqlite-devcontrol-20261028";
 export const SKILL_GUIDANCE_MARKER = "mcp-probe:guidance-revision";
 
 /** @deprecated 旧版 HTML 版本标记，仍用于解析历史文件 */

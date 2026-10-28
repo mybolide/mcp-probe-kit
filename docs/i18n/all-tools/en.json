@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "MCP Probe Kit v4 Tool Catalog - 29/35/39 Surfaces and One-line Calls",
-    "description": "Complete MCP Probe Kit v4 tool catalog: 29 model tools by default, 35 with Memory, a 39-tool full compatibility surface, plus one App-only action. Every tool includes a copyable one-line call.",
+    "title": "MCP Probe Kit v5 SQLite DevControl Tools",
+    "description": "Unpublished v5 SQLite-only MCP tools: 15 default including History, 21 with Memory, 24 active tools in full mode. No v4 Plan/Spec/file-mode workflows.",
     "keywords": "AI development tools, code generation tools, code review tools, Git automation, UI generation, code refactoring, performance optimization, security scanning"
   },
   "page": {
-    "subtitle": "29 model-visible tools by default, 35 with Memory, a 39-tool full compatibility surface, plus one App-only action"
+    "subtitle": "v5: 15 default tools with mandatory SQLite History, 21 with Memory; full mode exposes 24 active tools, no v4 Plan workflows"
   },
   "search": {
     "placeholder": "🔍 Search tool name or description...",
@@ -20,6 +20,7 @@
     "reportIssue": "Report Issue"
   },
   "toolShortDesc": {
+    "devcontrol": "SQLite DevControl",
     "start_feature": "New Feature",
     "start_bugfix": "Fix Bug",
     "start_onboard": "Quick Start",
@@ -62,6 +63,7 @@
     "history_session_read": "History Read"
   },
   "categories": {
+    "devcontrol": { "title": "SQLite DevControl", "count": "1 tool" },
     "workflow": {
       "title": "Workflow Orchestration",
       "count": "6 tools"
@@ -108,6 +110,11 @@
     }
   },
   "toolsData": {
+    "devcontrol": {
+      "description": "v5 only: requirements, release planning, Feature/Bug/Idea, approved tasks, lease, real tests and verification in project SQLite.",
+      "usage": "Call devcontrol with action, target project_root and an operation-specific input object. Owner approval and real Agent tests remain required.",
+      "prompt": "Call devcontrol action=next with project_root=<target Git project>; read execution-contract before claim, then complete/report/verify the approved task."
+    },
     "start_feature": {
       "description": "Complete feature development workflow orchestration: bootstrap graph baseline → refresh GitNexus index → narrow scope → generate specs → estimate workload",
       "usage": "Used to start the full feature flow, backfill graph-insights when missing, then use GitNexus query/context/impact analysis to narrow scope before spec and estimation",

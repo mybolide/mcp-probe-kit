@@ -33,18 +33,29 @@ const req = createRequire(import.meta.url);
 
 export function usesHistorySqlite(projectRoot: string, historyDir: string): boolean {
   const mode = process.env.MCP_HISTORY_STORAGE?.trim().toLowerCase();
-  if (mode === 'files' || mode === 'markdown') return false;
-  if (Number.parseInt(process.versions.node.split('.')[0] || '0', 10) < 22) return false;
+  if (mode && mode !== 'sqlite') {
+    throw new Error('V5_SQLITE_ONLY: MCP_HISTORY_STORAGE=files/markdown is removed. Import old archives into project SQLite.');
+  }
+  if (Number.parseInt(process.versions.node.split('.')[0] || '0', 10) < 22) {
+    throw new Error('V5_REQUIRES_NODE22: History and DevControl require Node.js 22+.');
+  }
   const root = path.resolve(projectRoot);
-  if (path.resolve(historyDir) !== path.join(root, 'docs', 'history-session')) return false;
-  return fs.existsSync(path.join(root, '.git'));
+  if (path.resolve(historyDir) !== path.join(root, 'docs', 'history-session')) {
+    throw new Error('V5_SQLITE_ONLY: custom history_dir is unsupported. Use the project SQLite hs_* history.');
+  }
+  if (!fs.existsSync(path.join(root, '.git'))) {
+    throw new Error('V5_GIT_PROJECT_REQUIRED: History SQLite needs a real Git project root.');
+  }
+  return true;
 }
 
 /** Only the default project history directory may use the SQLite bridge. */
 export function sqliteProjectForHistoryDir(historyDir: string): string | null {
   const normalized = path.resolve(historyDir);
   if (path.basename(normalized) !== 'history-session' ||
-      path.basename(path.dirname(normalized)) !== 'docs') return null;
+      path.basename(path.dirname(normalized)) !== 'docs') {
+    throw new Error('V5_SQLITE_ONLY: history_dir must be <Git project>/docs/history-session (virtual locator).');
+  }
   const project = path.dirname(path.dirname(normalized));
   return usesHistorySqlite(project, normalized) ? project : null;
 }

@@ -52,8 +52,12 @@ suite("DevControl dedicated MCP stdio", () => {
       expect(exitCode, stderr).toBe(0);
       const results = stdout.trim().split("\n").map((line) => JSON.parse(line));
       expect(results.map((x) => x.id)).toEqual([1, 2, 3]);
-      expect(results[0].result.serverInfo.name).toBe("mcp-probe-kit-devcontrol-rc");
-      expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_import-spec")).toBe(true);
+      expect(results[0].result.serverInfo.name).toBe("mcp-probe-kit-devcontrol");
+      expect(results[0].result.serverInfo.version).toBe("5.0.0");
+      for (const unsupported of ["devcontrol_import-spec", "devcontrol_create",
+        "devcontrol_subtask", "devcontrol_dependency", "devcontrol_approve"]) {
+        expect(results[1].result.tools.some((tool: any) => tool.name === unsupported)).toBe(false);
+      }
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_renew")).toBe(true);
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_release")).toBe(true);
       expect(results[1].result.tools.some((tool: any) => tool.name === "devcontrol_complete")).toBe(true);

@@ -1,5 +1,7 @@
 > **5.0.0 开发版（尚未发布）**：当前开发分支已增加 DevControl 项目任务审批、范围冻结、真实验收 Gate 与 Node.js 22+ 的 SQLite History Session。请先阅读 **[5.0.0 安装、升级和完整使用指南](../docs/v5-development-guide.md)**。npm 公开稳定版仍为 **4.1.1**；不要把源码 5.0.0 当成已发布的 npm 版本。DevControl 不替 Agent 编码、执行 SQL 或独立复审。
 
+> **v5 破坏性变更：研发管理只用 SQLite + DevControl。** v4 文件式 Spec/Plan、Heartbeat/Resume/Converge、Markdown History 不再支持；旧档案仅做安全导入，不再双写。请以 [v5 唯一研发管理架构及迁移状态](../docs/v5-sqlite-only.md) 为准。下文 v4 内容是历史说明，不是 v5 可调用工作流。
+
 ## v5.0.0 新增能力（源码开发版，尚未发布）
 
 **从 v4 的 Agent 工作流工具扩展为项目级研发管理。** 下述能力仅适用于当前 `feature/devcontrol-project-task-ledger` 源码分支，**不包含在 npm 正式版 4.1.1 中**。v4 的 MCP Apps、Memory、Plan、代码工具和协议兼容功能仍然保留。
@@ -47,7 +49,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --p
 
 ---
 
-## v4 稳定版功能（v5 继续保留）
+## v4.1.1 历史功能说明（v5 不再兼容旧式研发流程）
 
 <div align="center">
 <img src="../docs/assets/logo.png" alt="知时MCP Logo" width="160"/>

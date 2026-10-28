@@ -1,7 +1,7 @@
 {
   "name": "mcp-probe-kit",
   "version": "5.0.0",
-  "description": "AI-powered MCP development toolkit with 29 default tools (24 base + 5 History Session), 35 with Memory, 39-tool compatibility mode, ARC-8 architecture support, and MCP Apps workbenches",
+  "description": "MCP Probe Kit v5 SQLite-only project development management via DevControl: requirements, release plans, features, bugs, ideas, task leases, real gates and project History",
   "mcpName": "io.github.mybolide/mcp-probe-kit",
   "type": "module",
   "main": "build/index.js",
@@ -79,7 +79,7 @@
   },
   "homepage": "https://mcp-probe-kit.bytezonex.com",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "files": [
     "build/index.js",
