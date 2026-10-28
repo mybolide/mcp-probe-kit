@@ -62,6 +62,7 @@
         <span class="hidden rounded-full border border-line bg-canvas px-2 py-0.5 text-[11px] font-medium text-subtle sm:inline">v4.1.1</span>
       </a>
       <div class="flex items-center gap-2 sm:gap-5">
+        <a href="./pages/v5-best-practices.html" class="hidden text-sm font-semibold text-accent hover:text-accentDark sm:inline" data-i18n="sidebar.v5BestPractices">v5 最佳实践</a>
         <a href="./pages/all-tools.html" class="hidden text-sm font-medium text-muted hover:text-accent sm:inline" data-i18n="nav.docs">文档</a>
         <a href="./pages/apps.html" class="hidden text-sm font-medium text-muted hover:text-accent sm:inline" data-i18n="nav.apps">MCP Apps</a>
         <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="text-sm font-medium text-muted hover:text-accent">GitHub</a>
@@ -84,12 +85,14 @@
         </h1>
         <p class="mt-6 max-w-[680px] text-base leading-7 text-muted sm:text-lg" data-i18n="hero.subtitle">让 Agent 看懂项目、按计划执行，并用可视化工作台追踪真实进度</p>
         <div class="mt-8 flex flex-wrap gap-3">
-          <a href="./pages/getting-started.html" class="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white shadow-soft hover:bg-accentDark" data-i18n="hero.quickStart">快速开始</a>
+          <a href="./pages/v5-best-practices.html" class="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white shadow-soft hover:bg-accentDark" data-i18n="sidebar.v5BestPractices">v5 最佳实践</a>
+          <a href="./pages/getting-started.html" class="rounded-lg border border-line bg-white px-5 py-3 text-sm font-semibold text-ink shadow-soft hover:border-[#B2CCFF] hover:text-accent" data-i18n="hero.quickStart">快速开始</a>
           <a href="./pages/apps.html" class="rounded-lg border border-line bg-white px-5 py-3 text-sm font-semibold text-ink shadow-soft hover:border-[#B2CCFF] hover:text-accent" data-i18n="showcase.openDemo">打开完整演示</a>
         </div>
         <div class="mt-5 rounded-xl border border-[#B2CCFF] bg-[#EFF4FF] px-4 py-3 text-sm leading-6 text-ink">
           <strong data-i18n="v5Notice.title">5.0.0 源码开发版（尚未发布）</strong>：
           <span data-i18n="v5Notice.description">DevControl 项目审批与真实验收、Node.js 22+ SQLite History 已有独立使用指南。公开 npm 稳定版仍为 4.1.1。</span>
+          <a href="./pages/v5-best-practices.html" class="font-semibold text-accent underline">先看 v5 最佳实践</a> ·
           <a href="./pages/v5-development.html" class="font-semibold text-accent underline" data-i18n="v5Notice.link">查看 5.0.0 安装和新用法</a>。
         </div>
         <div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-subtle">
@@ -162,7 +165,10 @@
           <article class="rounded-xl border border-line p-5"><h3 class="font-semibold">变更必须复审</h3><p class="mt-2 text-sm leading-6 text-muted">新想法先评估，再安排；范围增量、架构工件和冻结任务变更需对应的独立审查与 Owner 授权。</p></article>
           <article class="rounded-xl border border-line p-5"><h3 class="font-semibold">项目本地持久化</h3><p class="mt-2 text-sm leading-6 text-muted">任务状态使用 dc_* SQLite 表，History Session 在 Node.js 22+ Git 项目使用 hs_* 表；可选 Qdrant Memory 不代替两者。</p></article>
         </div>
-        <a href="./pages/v5-development.html" class="mt-6 inline-flex font-semibold text-accent underline">查看当前分支 v5 功能与源码安装指南</a>
+        <div class="mt-6 flex flex-wrap gap-x-6 gap-y-3">
+          <a href="./pages/v5-best-practices.html" class="inline-flex font-semibold text-accent underline">阅读 v5 最佳实践：从真实项目到可靠交付</a>
+          <a href="./pages/v5-development.html" class="inline-flex font-semibold text-accent underline">v5 源码安装与完整功能指南</a>
+        </div>
       </div>
     </section>
 
@@ -187,10 +193,10 @@
         <a href="./pages/all-tools.html" class="text-sm font-semibold text-accent" data-i18n="sections.tools.allTools">所有工具</a>
       </div>
       <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <a href="./pages/getting-started.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">01</div><h3 class="mt-6 font-semibold" data-i18n="sections.quickStart.title">快速开始</h3><p class="mt-2 text-sm text-muted" data-i18n="sections.quickStart.description">5 分钟快速上手 MCP Probe Kit v4.1.1</p></a>
-        <a href="./pages/apps.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">02</div><h3 class="mt-6 font-semibold" data-i18n="nav.apps">MCP Apps</h3><p class="mt-2 text-sm text-muted" data-i18n="apps.subtitle">五个原生 App 把计划、记忆、产品交付和证据闸门带进支持 MCP Apps 的客户端。</p></a>
-        <a href="./pages/examples.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">03</div><h3 class="mt-6 font-semibold" data-i18n="sections.guides.bestPractices">最佳实践</h3><p class="mt-2 text-sm text-muted" data-i18n="sections.guides.description">迁移指南和最佳实践</p></a>
-        <a href="./pages/migration-v4.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-2xl">04</div><h3 class="mt-6 font-semibold">v3 → v4</h3><p class="mt-2 text-sm text-muted">Tool surfaces, Tasks, Apps, Memory and compatibility.</p></a>
+        <a href="./pages/v5-best-practices.html" class="feature-card rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-soft"><div class="text-xs font-bold tracking-widest text-accent">v5 · FEATURED</div><h3 class="mt-6 font-semibold" data-i18n="sidebar.v5BestPractices">v5 最佳实践</h3><p class="mt-2 text-sm text-muted">来自 Neyna 的实战：完整规划、独立复审、冻结审批、真实 Gate、批量交付与 History 恢复。</p></a>
+        <a href="./pages/v5-development.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-xs font-semibold text-accent">v5 · SOURCE</div><h3 class="mt-6 font-semibold">v5 安装与研发指南</h3><p class="mt-2 text-sm text-muted">源码构建、DevControl 任务接口、版本边界及安全迁移说明。</p></a>
+        <a href="./pages/getting-started.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-xs text-text-tertiary">v4.1.1 · STABLE</div><h3 class="mt-6 font-semibold" data-i18n="sections.quickStart.title">快速开始</h3><p class="mt-2 text-sm text-muted" data-i18n="sections.quickStart.description">5 分钟快速上手 MCP Probe Kit v4.1.1</p></a>
+        <a href="./pages/examples.html" class="feature-card rounded-xl border border-line bg-white p-5 shadow-soft"><div class="text-xs text-text-tertiary">v4 · RETAINED</div><h3 class="mt-6 font-semibold" data-i18n="sidebar.examples">v4 工作流示例</h3><p class="mt-2 text-sm text-muted">v4 的 MCP Apps、Product、Feature、Bug 与 Converge 仍在 v5 中保留。</p></a>
       </div>
     </section>
   </main>

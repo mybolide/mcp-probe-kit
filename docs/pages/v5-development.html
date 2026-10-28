@@ -31,6 +31,7 @@
   <main>
     <p class="lang">Source milestone · Chinese / English quick reference</p>
     <h1>MCP Probe Kit 5.0.0 开发版指南</h1>
+    <p><a href="./v5-best-practices.html"><strong>推荐先读：v5 最佳实践 · 来自真实项目的冻结计划、独立复审、真实验收与跨会话恢复</strong></a></p>
     <div class="intro">
       <p class="status">5.0.0 已在开发分支，但尚未发布至 npm / MCP Registry，也没有正式发布 Tag。</p>
       <p>当前可公开安装的稳定版仍是 <strong>4.1.1</strong>。不要把 <code>npm latest</code>、<code>npx mcp-probe-kit@5.0.0</code> 或旧版迁移指南当作开发版的安装方式。</p>
@@ -67,6 +68,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --p
       <p>升级旧项目时先备份忽略状态和未提交的 Owner 工作，建立独立源码构建；确认正确项目根目录、历史恢复和已批准的任务门禁，绝不把迁移操作视为生产发布许可。</p>
       <p>详细中英文参考：</p>
       <ul>
+        <li><a href="./v5-best-practices.html">v5 最佳实践 / Field-tested delivery playbook（可直接阅读的独立页面）</a></li>
         <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-development-guide.md">5.0.0 完整使用与升级指南 / Full source-development guide</a></li>
         <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/devcontrol.md">DevControl 命令、计划审核、任务生命周期与安全范围 / Reference</a></li>
         <li><a href="./migration-v4.html">v3 → v4 已发布稳定版迁移说明 / Published-stable migration</a></li>

@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Promote **v5 Best Practices** into a first-class, browsable
+  `docs/pages/v5-best-practices.html` page, with the real-project governance
+  lifecycle, genuine test gates, scope/Idea controls, safe multi-task batches,
+  and SQLite History separation. Feature it in the documentation homepage,
+  all generated sidebars, the v5 landing guide and legacy v4 examples, while
+  keeping the complete Markdown reference in Git.
 - Add a dedicated **5.0.0 Best Practices** guide based on long-running Neyna
   development: substantive task/plan review, frozen approvals, bounded leases,
   commit-bound real gates, safe scope amendments, Idea triage, multi-task batches,

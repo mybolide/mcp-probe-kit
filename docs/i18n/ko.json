@@ -63,7 +63,8 @@
     "allTools": "모든 도구",
     "guides": "가이드",
     "migration": "마이그레이션 가이드",
-    "examples": "모범 사례",
+    "examples": "v4 워크플로 예시",
+    "v5BestPractices": "v5 모범 사례",
     "followUs": "팔로우",
     "getTechSharing": "기술 정보 받기",
     "apps": "MCP Apps 데모"

@@ -77,7 +77,7 @@ The workbench is a **read-only browser view**, normally served locally from port
 
 **Important limits:** Some platform/device and end-to-end acceptance gates fail closed until a genuine runner/evidence exists. Git hooks can be bypassed locally, so protected branches and trusted CI are still necessary for stronger enforcement. Local workstation/Owner labels are not authentication. Do not claim Windows CI, production deployment or independent release certification without running them.
 
-For a field-tested way to run a multi-task project without skipping reviews, task scopes or real gates, read **[v5 Best Practices / v5 最佳实践](docs/v5-best-practices.md)**. For complete task commands, plan reviews, scope amendments, Idea assessment, architecture artifacts, History, migration and rollback, see **[the v5 development guide](docs/v5-development-guide.md)** and **[DevControl reference](docs/devcontrol.md)**. For npm users, continue with **`mcp-probe-kit@4.1.1`**. **No 5.0.0 npm package, Tag or GitHub Release has been authorized.**
+For a field-tested way to run a multi-task project without skipping reviews, task scopes or real gates, start with the **[v5 Best Practices reading page](docs/pages/v5-best-practices.html)** or the [full v5 Best Practices Markdown](docs/v5-best-practices.md). For complete task commands, plan reviews, scope amendments, Idea assessment, architecture artifacts, History, migration and rollback, see **[the v5 development guide](docs/v5-development-guide.md)** and **[DevControl reference](docs/devcontrol.md)**. For npm users, continue with **`mcp-probe-kit@4.1.1`**. **No 5.0.0 npm package, Tag or GitHub Release has been authorized.**
 
 ---
 

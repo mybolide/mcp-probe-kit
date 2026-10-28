@@ -163,7 +163,19 @@ for (const file of readmes) {
 const v5Guide = read('docs/v5-development-guide.md');
 const v5Practices = read('docs/v5-best-practices.md');
 const v5Page = read('docs/pages/v5-development.html');
+const v5PracticesPage = read('docs/pages/v5-best-practices.html');
 const v5Devcontrol = read('docs/devcontrol.md');
+check(read('README.md').includes('docs/pages/v5-best-practices.html'), 'main README links directly to browsable v5 best-practices page');
+check(read('i18n/README.zh-CN.md').includes('../docs/pages/v5-best-practices.html'), 'Chinese README links directly to browsable v5 best-practices page');
+check(v5PracticesPage.includes('5.0.0 源码开发版') && v5PracticesPage.includes('4.1.1'), 'v5 best-practices page distinguishes unpublished development and public stable releases');
+check(v5PracticesPage.includes('docs/v5-best-practices.md'), 'v5 best-practices page references its complete authoritative Markdown source');
+for (const anchor of ['responsibilities', 'recover', 'workflow', 'scope', 'gates', 'batch', 'data', 'mistakes', 'handoff']) {
+  check(v5PracticesPage.includes(`id="${anchor}"`), `v5 best-practices page contains substantive section ${anchor}`);
+}
+for (const concept of ['DevControl', 'History Session', 'plan-review', 'plan-approve', 'claim', 'complete', 'report', 'verify', 'ios_device_e2e', 'flutter_test', 'dc_*', 'hs_*']) {
+  check(v5PracticesPage.includes(concept), `v5 best-practices page covers ${concept}`);
+}
+check(v5Page.includes('./v5-best-practices.html'), 'v5 installation landing links to the new best-practices page');
 check(v5Guide.includes('v5-best-practices.md'), 'v5 source-development guide links its best-practices companion');
 check(v5Devcontrol.includes('v5-best-practices.md'), 'DevControl reference links the end-to-end best-practices playbook');
 for (const phrase of [
@@ -219,6 +231,7 @@ for (const lang of ['zh-CN', 'en', 'ja', 'ko']) {
 }
 
 const documentationPages = [
+  'docs/pages/v5-best-practices.html',
   'docs/pages/getting-started.html',
   'docs/pages/all-tools.html',
   'docs/pages/apps.html',
@@ -226,6 +239,15 @@ const documentationPages = [
   'docs/pages/migration-v4.html',
   'docs/pages/migration.html',
 ];
+const shellGenerator = read('scripts/sync-doc-shell.ts');
+check(shellGenerator.includes("'docs/pages/v5-best-practices.html': 'v5-best-practices'"), 'canonical docs shell generates navigation for the v5 best-practices page');
+for (const page of documentationPages) {
+  check(read(page).includes('href="./v5-best-practices.html"'), `${page} sidebar prominently links v5 best practices`);
+}
+check(v5PracticesPage.includes('aria-current="page"') && v5PracticesPage.includes('data-i18n="sidebar.v5BestPractices"'), 'v5 best-practices page has active navigation in canonical docs shell');
+for (const lang of globalLanguages) {
+  check(globalTranslations[lang].sidebar?.v5BestPractices, `${lang} translates the new v5 best-practices navigation label`);
+}
 for (const file of documentationPages) {
   const text = read(file);
   check((text.match(/docs-shell:start/g) ?? []).length === 1, `${file} has one generated shell start marker`);
@@ -298,6 +320,7 @@ check(legacyMigration.includes('url=./migration-v4.html'), 'legacy migration URL
 check(!legacyMigration.includes('30 个工具'), 'legacy migration URL no longer serves obsolete tool counts');
 
 const homepage = read('docs/index.html');
+check(homepage.includes('href="./pages/v5-best-practices.html"') && homepage.includes('v5 · FEATURED'), 'homepage prominently features v5 best practices instead of burying it in v4 examples');
 check(/tracking-tight">29<\/strong>/.test(homepage) && /tracking-tight">35<\/strong>/.test(homepage), 'homepage displays actual 29 default / 35 Memory model tools');
 check(homepage.includes('v5 新能力') && homepage.includes('plan-approve'), 'homepage includes concrete new v5 project-governance capabilities');
 check(homepage.includes('.demo-frame { display: block; width: 100%; height: auto; object-fit: contain;'), 'homepage preserves GIF natural proportions');
@@ -307,6 +330,7 @@ check((homepage.match(/-mobile\.gif/g) ?? []).length >= 4, 'homepage serves resp
 const appsPage = read('docs/pages/apps.html');
 check(appsPage.includes('v5 源码开发版说明') && appsPage.includes('v5-development.html'), 'MCP Apps documentation distinguishes retained v4 Apps from v5 DevControl');
 const examplesPage = read('docs/pages/examples.html');
+check(examplesPage.includes('./v5-best-practices.html'), 'legacy v4 examples guide links readers to v5 best practices');
 check(examplesPage.includes('v5 开发流程以 DevControl') && examplesPage.includes('v5-development.html'), 'best practices distinguish v5 governance from v4 workflow examples');
 check(!examplesPage.includes('AI: 使用 gen_prd 工具'), 'best practices do not instruct calling an unavailable gen_prd tool');
 check(appsPage.includes('new ResizeObserver'), 'apps page observes demo content height');

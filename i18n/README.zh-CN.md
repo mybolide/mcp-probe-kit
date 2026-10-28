@@ -23,7 +23,7 @@
 5. 仅提交获准的 Git 文件，用 `complete`、`report` 留下实际证据，再由 `verify` 执行真实验收 Gate；未通过不算 Verified。
 6. 开发中的新想法先评估是否应纳入当前任务、后续计划或拒绝。冻结范围和架构改变需再次审批，不能擅自改计划。
 
-**从源码安装 v5**：Node.js 22+ 用于 DevControl 与默认 SQLite History。进入 [v5 完整使用指南](../docs/v5-development-guide.md) 获取 Git 分支、构建、MCP 宿主配置、CLI 用法、历史迁移及回滚步骤；[v5 最佳实践](../docs/v5-best-practices.md) 汇总长期研发中真正有效的任务拆分、独立复审、批量推进、真实验收和 History 交接方法；[DevControl 参考文档](../docs/devcontrol.md) 提供任务命令和受控变更细则。公开安装仍请使用 `npx -y mcp-probe-kit@4.1.1 install-agent`。局域网 Web 查看不带身份验证，不要把端口暴露到公网。部分真机/完整产品 Gate 尚需真实运行器，不能以模拟测试代替。
+**从源码安装 v5**：Node.js 22+ 用于 DevControl 与默认 SQLite History。进入 [v5 完整使用指南](../docs/v5-development-guide.md) 获取 Git 分支、构建、MCP 宿主配置、CLI 用法、历史迁移及回滚步骤；[v5 最佳实践阅读页面](../docs/pages/v5-best-practices.html) 与[完整 Markdown 原文](../docs/v5-best-practices.md) 汇总长期研发中真正有效的任务拆分、独立复审、批量推进、真实验收和 History 交接方法；[DevControl 参考文档](../docs/devcontrol.md) 提供任务命令和受控变更细则。公开安装仍请使用 `npx -y mcp-probe-kit@4.1.1 install-agent`。局域网 Web 查看不带身份验证，不要把端口暴露到公网。部分真机/完整产品 Gate 尚需真实运行器，不能以模拟测试代替。
 
 **v5 源码开发版安装示例**
 

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-type ActivePage = 'getting-started' | 'all-tools' | 'apps' | 'migration-v4' | 'examples' | 'migration-legacy';
+type ActivePage = 'getting-started' | 'all-tools' | 'apps' | 'migration-v4' | 'examples' | 'v5-best-practices' | 'migration-legacy';
 
 const root = resolve(import.meta.dirname, '..');
 const pages: Record<string, ActivePage> = {
@@ -9,6 +9,7 @@ const pages: Record<string, ActivePage> = {
   'docs/pages/all-tools.html': 'all-tools',
   'docs/pages/apps.html': 'apps',
   'docs/pages/examples.html': 'examples',
+  'docs/pages/v5-best-practices.html': 'v5-best-practices',
   'docs/pages/migration-v4.html': 'migration-v4',
   'docs/pages/migration.html': 'migration-legacy',
 };
@@ -63,8 +64,9 @@ function shell(current: ActivePage): string {
       </div>
       <div class="mb-4">
         <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
+        ${item('v5-best-practices', current, './v5-best-practices.html', '✦', 'sidebar.v5BestPractices', 'v5 最佳实践', 'v5')}
+        ${item('examples', current, './examples.html', '💡', 'sidebar.examples', 'v4 工作流示例')}
         ${item('migration-v4', current, './migration-v4.html', '🚀', 'sidebar.migration', 'v4 迁移指南')}
-        ${item('examples', current, './examples.html', '💡', 'sidebar.examples', '最佳实践')}
       </div>
       <div class="pt-4 border-t border-border">
         <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="${normal}"><span>💻</span><span>GitHub</span><span class="ml-auto text-xs">↗</span></a>

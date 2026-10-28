@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MCP Probe Kit v5 最佳实践：来自 Neyna 长期真实项目研发的经验，涵盖冻结计划、独立复审、Agent 研发、真实 Gate、范围变更、批量推进和 History 恢复。5.0.0 源码开发版，未发布。">
+  <title>v5 最佳实践 · 真正可持续的 Agent 研发 | MCP Probe Kit</title>
+  <link rel="icon" href="../assets/logo.png" type="image/png">
+  <script src="../assets/js/tailwind.js" data-cfasync="false"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: {
+      primary: { DEFAULT: '#2563EB', hover: '#1D4ED8' },
+      text: { primary: '#0F172A', secondary: '#475569', tertiary: '#64748B' },
+      bg: { page: '#F8FAFC', card: '#FFFFFF', hover: '#F1F5F9' },
+      border: '#E2E8F0'
+    } } } };
+  </script>
+  <link rel="stylesheet" href="../assets/css/docs-shell.css">
+  <style>
+    .practice-body { line-height: 1.85; color: #475569; }
+    .practice-body h2 { color: #0f172a; font-size: 1.25rem; font-weight: 700; letter-spacing: -.02em; margin-bottom: .7rem; }
+    .practice-body h3 { color: #0f172a; font-size: 1rem; font-weight: 650; margin: 1.1rem 0 .45rem; }
+    .practice-body p, .practice-body li { margin-top: .55rem; }
+    .practice-body ul, .practice-body ol { padding-left: 1.4rem; margin-top: .7rem; }
+    .practice-body ul { list-style-type: disc; }
+    .practice-body ol { list-style-type: decimal; }
+    .practice-body li::marker { color: #2563eb; }
+    .practice-body code { color: #1e40af; background: #eff6ff; padding: .1rem .3rem; border-radius: .25rem; overflow-wrap: anywhere; font-size: .875em; }
+    .practice-body pre { padding: 1.1rem; margin-top: .9rem; overflow-x: auto; background: #0f172a; border-radius: .6rem; color: #eff6ff; line-height: 1.65; }
+    .practice-body pre code { background: transparent; color: inherit; padding: 0; overflow-wrap: normal; font-size: .85rem; }
+    .practice-body .table-wrap { overflow-x: auto; margin-top: 1rem; }
+    .practice-body table { width: 100%; border-collapse: collapse; min-width: 580px; font-size: .89rem; }
+    .practice-body th, .practice-body td { padding: .7rem .85rem; text-align: left; vertical-align: top; border-bottom: 1px solid #e2e8f0; }
+    .practice-body th { color: #0f172a; background: #f8fafc; font-weight: 700; }
+    .practice-body a { color: #2563eb; text-decoration: underline; text-underline-offset: 3px; }
+    .practice-body section { scroll-margin-top: 5.5rem; }
+    .sidebar-drawer { transition: transform .24s ease; }
+    @media (max-width: 767px) { .sidebar-drawer { transform: translateX(-100%); } .sidebar-drawer.open { transform: translateX(0); } }
+  </style>
+</head>
+<body class="font-sans bg-bg-page text-text-primary min-h-screen flex flex-col">
+  <!-- docs-shell:start -->
+  <nav class="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-border z-50" data-doc-shell="topbar">
+    <div class="h-full px-4 flex items-center justify-between">
+      <a href="../index.html" class="flex items-center gap-2 text-base font-semibold text-text-primary no-underline">
+        <span aria-hidden="true">🚀</span><span class="sm:inline hidden">MCP Probe Kit</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <div id="lang-switcher-container"></div>
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 text-text-secondary hover:text-primary transition-colors" aria-label="Toggle documentation navigation" aria-controls="sidebar">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+  <div class="fixed inset-0 bg-black/50 z-40 backdrop opacity-0 pointer-events-none transition-opacity duration-300 md:hidden" onclick="toggleSidebar()" id="backdrop"></div>
+  <aside class="fixed left-0 top-14 bottom-0 w-64 bg-white border-r border-border z-50 sidebar-drawer overflow-y-auto md:translate-x-0 md:block" id="sidebar" data-doc-shell="sidebar">
+    <div class="p-4">
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.quickStart">快速开始</div>
+        <a href="../index.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🏠</span><span data-i18n="sidebar.home">文档首页</span></a>
+        <a href="./getting-started.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📖</span><span data-i18n="sidebar.installation">安装配置</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.toolsDocs">工具文档</div>
+        <a href="./all-tools.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🛠️</span><span data-i18n="sidebar.allTools">所有工具</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">39+1</span></a>
+        <a href="./apps.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>◫</span><span data-i18n="sidebar.apps">MCP Apps</span><span class="ml-auto bg-bg-page text-xs px-2 py-0.5 rounded-full">5</span></a>
+      </div>
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-2" data-i18n="sidebar.guides">指南</div>
+        <a href="./v5-best-practices.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-primary no-underline border-l-3 border-primary" aria-current="page"><span>✦</span><span data-i18n="sidebar.v5BestPractices">v5 最佳实践</span><span class="ml-auto bg-white text-xs px-2 py-0.5 rounded-full">v5</span></a>
+        <a href="./examples.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💡</span><span data-i18n="sidebar.examples">v4 工作流示例</span></a>
+        <a href="./migration-v4.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>🚀</span><span data-i18n="sidebar.migration">v4 迁移指南</span></a>
+      </div>
+      <div class="pt-4 border-t border-border">
+        <a href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>💻</span><span>GitHub</span><span class="ml-auto text-xs">↗</span></a>
+        <a href="https://npmjs.com/package/mcp-probe-kit" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-page hover:text-primary transition-colors no-underline"><span>📦</span><span>npm</span><span class="ml-auto text-xs">↗</span></a>
+      </div>
+      <div class="mt-4 pt-4 border-t border-border">
+        <div class="text-center">
+          <div class="text-xs font-semibold text-text-tertiary mb-2" data-i18n="sidebar.followUs">关注公众号</div>
+          <img src="https://oss.bolzjb.com/wx_qrcode.jpg" alt="微信公众号" class="w-[100px] h-[100px] mx-auto rounded-lg border border-border">
+          <div class="text-xs text-text-tertiary mt-2" data-i18n="sidebar.getTechSharing">获取更多技术分享</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <!-- docs-shell:end -->
+
+  <main class="flex-1 mt-14 min-h-screen md:ml-64">
+    <div class="w-full max-w-none p-4 sm:p-6 lg:p-8 xl:p-10">
+      <nav aria-label="Breadcrumb" class="mb-5 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+        <a href="../index.html" class="hover:text-primary">文档首页</a><span aria-hidden="true">/</span>
+        <span>指南</span><span aria-hidden="true">/</span><span class="font-medium text-text-primary">v5 最佳实践</span>
+      </nav>
+
+      <header class="relative overflow-hidden rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-9">
+        <div aria-hidden="true" class="absolute -right-12 -top-20 h-60 w-60 rounded-full bg-blue-50 blur-3xl"></div>
+        <div class="relative max-w-4xl">
+          <p class="text-xs font-bold tracking-widest text-primary">FIELD-TESTED DEVELOPMENT · v5.0.0 SOURCE</p>
+          <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mt-4 tracking-tight">v5 最佳实践：让 Agent 真正持续交付软件</h1>
+          <p class="mt-4 max-w-3xl text-sm leading-8 text-text-secondary">我们在 Neyna 的长期实战中发现：研发效率并不只靠更强的模型，而是让每次修改都拥有真实来源、审批边界、可恢复状态和可核验的测试证据。v5 把这些要求变成一套可以长期运行的项目研发流程。</p>
+          <div class="mt-5 flex flex-wrap gap-2 text-xs">
+            <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-600">真实项目经验整理</span>
+            <span class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700">5.0.0 源码开发版 · 未发布</span>
+            <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-600">npm 稳定版仍为 4.1.1</span>
+          </div>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#workflow" class="inline-flex rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white no-underline hover:bg-blue-700">阅读完整实战流程</a>
+            <a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-best-practices.md" class="inline-flex rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-text-primary no-underline hover:border-blue-300">查看 Markdown 完整原文</a>
+          </div>
+        </div>
+      </header>
+
+      <div class="mt-6 grid gap-4 sm:grid-cols-3">
+        <article class="rounded-xl border border-border bg-white p-5 shadow-sm"><p class="text-xs font-semibold text-primary">01 · PLAN</p><h2 class="mt-2 font-semibold text-text-primary">先审核，再开发</h2><p class="mt-2 text-sm leading-7 text-text-secondary">评估完整需求与依赖，提交计划草稿，独立复审后由 Owner 明确批准，不靠一句“继续”扩张授权。</p></article>
+        <article class="rounded-xl border border-border bg-white p-5 shadow-sm"><p class="text-xs font-semibold text-primary">02 · DELIVERY</p><h2 class="mt-2 font-semibold text-text-primary">逐任务、真测试</h2><p class="mt-2 text-sm leading-7 text-text-secondary">冻结路径、领取租约、实际编码、独立检查，再用与提交绑定的真实 Gate 判定完成。</p></article>
+        <article class="rounded-xl border border-border bg-white p-5 shadow-sm"><p class="text-xs font-semibold text-primary">03 · CONTINUITY</p><h2 class="mt-2 font-semibold text-text-primary">跨会话不断档</h2><p class="mt-2 text-sm leading-7 text-text-secondary">任务状态放 DevControl，用户原话与交接放 History，长期通用经验才进入可选 Memory。</p></article>
+      </div>
+
+      <div class="mt-7 grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)]">
+        <aside class="hidden xl:block" aria-label="章节目录">
+          <nav class="sticky top-20 rounded-xl border border-border bg-white p-4 text-sm">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-text-tertiary">内容导航</p>
+            <ol class="space-y-2 text-text-secondary">
+              <li><a href="#responsibilities" class="hover:text-primary">职责边界</a></li>
+              <li><a href="#recover" class="hover:text-primary">跨会话恢复</a></li>
+              <li><a href="#workflow" class="hover:text-primary">真实交付流程</a></li>
+              <li><a href="#scope" class="hover:text-primary">范围变更与新想法</a></li>
+              <li><a href="#gates" class="hover:text-primary">真实测试 Gate</a></li>
+              <li><a href="#batch" class="hover:text-primary">批量任务推进</a></li>
+              <li><a href="#data" class="hover:text-primary">数据与历史分层</a></li>
+              <li><a href="#mistakes" class="hover:text-primary">高频误区</a></li>
+              <li><a href="#handoff" class="hover:text-primary">交付与交接清单</a></li>
+            </ol>
+          </nav>
+        </aside>
+
+        <article lang="zh-CN" class="practice-body min-w-0 space-y-5">
+          <section id="responsibilities" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>1. v5 最重要的变化：明确谁对结果负责</h2>
+            <p><strong>DevControl 是项目管理与约束工具，不是替 Agent 编码或审核的“自动开发者”。</strong> 这一点是长期实践反复验证出来的边界。</p>
+            <div class="table-wrap"><table><thead><tr><th>角色</th><th>应该做什么</th><th>不能混淆</th></tr></thead><tbody>
+              <tr><td><strong>Owner</strong></td><td>决定产品取舍、批准准确的计划或变更哈希</td><td>口头继续不等于允许修改所有文件</td></tr>
+              <tr><td><strong>Agent</strong></td><td>审读需求、设计方案、独立复审、编码、真实测试</td><td>不能把 DevControl 的返回值当作业务正确性审核</td></tr>
+              <tr><td><strong>DevControl</strong></td><td>记录任务与审批、冻结文件范围、管理租约、核验 Gate</td><td>不代替 Agent 写代码、执行业务 SQL 或独立评审</td></tr>
+              <tr><td><strong>History Session</strong></td><td>保存用户原话、决策、发现、阻碍及跨窗口交接</td><td>不是任务账本，也不是 Qdrant Memory</td></tr>
+            </tbody></table></div>
+          </section>
+
+          <section id="recover" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>2. 新对话不要重新开工：先恢复已存在的项目</h2>
+            <p>正确的第一步是通过 <code>history_session_bootstrap</code> 恢复现有会话，然后核实真实 Git 分支、HEAD、未提交文件、需求、ADR、DevControl 任务、租约和环境。必要时通过 <code>history_session_search</code> / <code>history_session_read</code> 找到旧决策。</p>
+            <ol>
+              <li>确认业务项目的 Git 根目录，不要把 MCP 源码仓库误当成业务项目。</li>
+              <li>阅读 <code>AGENTS.md</code>、Skill、正式需求和架构，不重复初始化冻结计划。</li>
+              <li>调用 <code>devcontrol next</code>、<code>list</code>、<code>execution-contract</code> 确认下一项合法任务及旧租约。</li>
+              <li>先检查真实可执行环境、网络、数据库和设备，不把精简 <code>PATH</code> 误认为 SDK 未安装。</li>
+              <li>结束前调用 <code>history_session_checkpoint</code>，留下真实状态与下一步。</li>
+            </ol>
+          </section>
+
+          <section id="workflow" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>3. 研发闭环：从真实需求到 Verified</h2>
+            <p>任务不是一个标题，而是一份受控执行合同。先检查来源、成功/失败场景、依赖、输入输出、<code>allowedPaths</code>、真实测试和停止条件；随后才能领取。</p>
+            <div class="mt-4 grid gap-2 sm:grid-cols-5" aria-label="五阶段流程">
+              <div class="rounded-lg bg-blue-50 p-3 text-center"><strong class="block text-sm text-blue-900">Plan</strong><span class="text-xs text-blue-700">审核完整需求</span></div>
+              <div class="rounded-lg bg-blue-50 p-3 text-center"><strong class="block text-sm text-blue-900">Approve</strong><span class="text-xs text-blue-700">冻结 Owner 决定</span></div>
+              <div class="rounded-lg bg-blue-50 p-3 text-center"><strong class="block text-sm text-blue-900">Claim</strong><span class="text-xs text-blue-700">领取合法范围</span></div>
+              <div class="rounded-lg bg-blue-50 p-3 text-center"><strong class="block text-sm text-blue-900">Build</strong><span class="text-xs text-blue-700">实现 + 真测试</span></div>
+              <div class="rounded-lg bg-blue-50 p-3 text-center"><strong class="block text-sm text-blue-900">Verify</strong><span class="text-xs text-blue-700">证据 + Gate</span></div>
+            </div>
+            <h3>两个绝不能省略的审批层次</h3>
+            <p><code>plan-review → plan-propose → plan-approve</code> 依次完成检查、待审提案和按哈希授权；草稿不是可执行任务。已批准任务通过 <code>next → execution-contract → claim → renew</code> 执行，真实 Git 提交后以 <code>complete → report → verify</code> 验收。</p>
+            <pre><code># 下列是命令形式示例，不表示自动拥有任务授权
+probe devcontrol next --project-root .
+probe devcontrol execution-contract --project-root . --json '{"id":"APPROVED-TASK-ID"}'
+probe devcontrol claim --project-root . --json '{"id":"APPROVED-TASK-ID","agent":"developer-id","ttlSeconds":3600}'
+# 编码、独立审查、真实测试并仅提交已获准文件
+probe devcontrol check --project-root .
+# 根据返回的 leaseToken 执行 complete / report / verify</code></pre>
+            <p><strong>Commit 不等于 Verified。</strong> 即便代码已提交，未执行 Gate、缺依赖或测试证据不足，都必须保留真实未完成状态。</p>
+          </section>
+
+          <section id="scope" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>4. 新想法和范围变更不能随意打断开发</h2>
+            <p>新需求先用 <code>idea-capture → idea-assess → idea-review → idea-decide</code> 判断它属于当前已批准的合同、后续版本还是应该拒绝。这不是“所有新想法都不接”，而是结合风险、价值和依赖决定适当阶段。</p>
+            <ul>
+              <li><strong>超出冻结文件范围：</strong>停止越权修改。走 <code>release-work-scope-review</code>、<code>release-work-scope-stage</code>、<code>release-work-scope-independent-review</code>、<code>release-work-scope-approve</code> 等精确流程。</li>
+              <li><strong>已经领取的任务：</strong>使用受控暂停/恢复流程保留合法租约、已提交结果和用户原有 dirty，不直接 reset/stash 或跳过 Git Hook。</li>
+              <li><strong>API/Schema/安全架构变化：</strong>通过 <code>artifact-stage</code>、<code>artifact-independent-review</code>、<code>artifact-approve</code> 及 <code>artifact-check</code> 控制正式工件哈希。</li>
+            </ul>
+          </section>
+
+          <section id="gates" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>5. 真实 Gate：测试必须对应真实风险</h2>
+            <div class="table-wrap"><table><thead><tr><th>场景</th><th>真正需要的验证</th><th>不能用来代替的内容</th></tr></thead><tbody>
+              <tr><td>Go HTTP</td><td><code>go_http_integration</code>、实际请求、错误路径和持久化</td><td>只通过静态编译或模拟 HTTP</td></tr>
+              <tr><td>Flutter</td><td><code>flutter_test</code>、真实 Flutter SDK 测试和分析</td><td>空测试或假的 Flutter runner</td></tr>
+              <tr><td>PostgreSQL</td><td>获授权的测试库、真实权限/RLS/事务回滚证据</td><td>未执行的 SQL 或直接在生产库试错</td></tr>
+              <tr><td>iPhone 真机</td><td><code>ios_device_e2e</code>、实际系统授权/拒绝/恢复和设备证据</td><td>模拟器、UI 截图或单元测试冒充真机</td></tr>
+              <tr><td>文档和发布</td><td>真实文档构建与检查、必要 CI 和制品验证</td><td>只修改 README 或仅提交 Git</td></tr>
+            </tbody></table></div>
+            <p>没有真实运行器时，应标记阻塞、Not Run 或失败，而不是修改验收条件。可以合法推进其他没有该依赖的**已批准任务**。</p>
+          </section>
+
+          <section id="batch" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>6. 多任务推进：提高吞吐量，不降低标准</h2>
+            <p>长期研发不应该每次只交付半项；当依赖、环境和质量门禁允许时，可以把多个已批准的小任务分组处理。Neyna 试点曾采用约 10～12 项为目标、分组复核的节奏，<strong>这只是工作方式，不是产品硬规定</strong>。</p>
+            <ul>
+              <li>每项分别确认任务合同、租约、合法提交、实际测试和 <code>verify</code>；不能把批次 Git Commit 当作批次验收。</li>
+              <li>优先推进依赖就绪、相互不冲突的任务；高风险和跨端任务增加独立复审。</li>
+              <li>长命令设置超时，检查进程是否真的结束；未结束的测试不能宣称通过。</li>
+              <li>阻塞时报告真实的 Verified 数与未完成原因，不为了凑数量绕过门禁。</li>
+            </ul>
+          </section>
+
+          <section id="data" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>7. 任务、会话和长期经验各自有权威存储</h2>
+            <div class="table-wrap"><table><thead><tr><th>数据类型</th><th>权威存储</th><th>用途</th></tr></thead><tbody>
+              <tr><td>任务/审批/证据</td><td>项目 SQLite <code>dc_*</code></td><td>DevControl 的工作状态与审计</td></tr>
+              <tr><td>会话原话/交接</td><td>Git/Node22+ 项目默认 SQLite <code>hs_*</code></td><td>History API 跨会话恢复；旧 Markdown 可迁移</td></tr>
+              <tr><td>跨项目可复用经验</td><td>可选 Qdrant Memory</td><td>检索经验证的方法，不代替当前任务记录</td></tr>
+              <tr><td>正式需求/架构/业务数据</td><td>项目 Git 规范文档 / 业务自己的数据库</td><td>不能混进 DevControl 的研发账本</td></tr>
+            </tbody></table></div>
+          </section>
+
+          <section id="mistakes" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>8. Neyna 实战反复提醒我们的误区</h2>
+            <ol>
+              <li>误把 DevControl 当成“独立审核者”——实际需要 Agent 自行评估代码与风险。</li>
+              <li>收到新想法立刻插入开发——应该先评估是否影响冻结任务与依赖计划。</li>
+              <li>范围不匹配就随手修改文件——必须先提交最小修订并复审，再继续执行。</li>
+              <li>真机不可用却宣称已验收——只能保留待测和阻塞状态。</li>
+              <li>跨聊天窗口重新生成整版计划——先从 History 和实际 SQLite 任务恢复。</li>
+              <li>把用户原先的 dirty 用 <code>git add .</code> 混入任务——应只暂存获批文件并保留所有权。</li>
+              <li>将 GitHub 推送误认为 npm 5.0.0 已发布——源码、文档、构建、正式发布是不同阶段。</li>
+            </ol>
+          </section>
+
+          <section id="handoff" class="rounded-xl border border-border bg-white p-5 sm:p-7">
+            <h2>9. 一轮研发结束时的交付清单</h2>
+            <ol>
+              <li><strong>目标：</strong>本轮完成了哪些已批准任务，是否存在获批变更。</li>
+              <li><strong>代码：</strong>准确的 Git 分支、Commit SHA、修改路径和可观察业务效果。</li>
+              <li><strong>证据：</strong>实际运行的命令、平台、通过/失败/未运行及真机独立证明。</li>
+              <li><strong>状态：</strong>按 DevControl 区分 In Progress、In Review、Verified 与阻塞。</li>
+              <li><strong>保护：</strong>保留的其他用户改动、风险和必须处理的环境问题。</li>
+              <li><strong>交接：</strong><code>history_session_checkpoint</code> 保存用户原话、决策、测试和下一可执行任务，并核查调用成功。</li>
+            </ol>
+            <p><strong>成功标准：</strong>换一个 Agent 或新开聊天，不需要猜测“上轮到底做完没有”；Owner 能追溯为什么做、依据什么批准、改了什么、哪些验收真正通过。</p>
+          </section>
+
+          <section class="rounded-xl border border-blue-200 bg-blue-50 p-5 sm:p-7">
+            <h2>继续深入：完整最佳实践与技术参考</h2>
+            <p>本页面是适合浏览的操作精华，规范性完整材料仍以仓库中的 Markdown 为准。该原文含更细的命令示例、计划合同检查表、Task/Feature/Bug/Idea/架构审批建议和版本边界。</p>
+            <ul>
+              <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-best-practices.md">完整《v5 最佳实践》Markdown 原文</a></li>
+              <li><a href="./v5-development.html">5.0.0 源码安装与 DevControl 入门</a></li>
+              <li><a href="./examples.html">v4 已有工具的工作流示例（v5 继续保留）</a></li>
+            </ul>
+            <p class="mt-3 text-xs text-text-tertiary"><strong>English summary:</strong> Restore true project state; independently review complete requirements; approve exact plan hashes; claim only scoped tasks; execute real tests; report and verify against the task gate; review new ideas and scope changes before implementation; keep task SQLite, History and optional Memory separate. Version 5 remains an unpublished source milestone.</p>
+          </section>
+        </article>
+      </div>
+      <footer class="mt-10 border-t border-border py-6 text-xs text-text-tertiary">
+        MCP Probe Kit · 5.0.0 source development · 4.1.1 published stable · <a class="text-primary underline" href="../index.html">返回文档首页</a>
+      </footer>
+    </div>
+  </main>
+  <script src="../assets/js/i18n.js"></script>
+  <script src="../assets/js/docs-shell.js"></script>
+</body>
+</html>
