@@ -11,7 +11,8 @@ const brandMark='data:image/webp;base64,'+
 const style=readFileSync(resolve(root,'styles.css'),'utf8')+'\n'+
   readFileSync(resolve(root,'light.css'),'utf8')+'\n'+
   readFileSync(resolve(root,'overview.css'),'utf8')+'\n'+
-  readFileSync(resolve(root,'clarity.css'),'utf8');
+  readFileSync(resolve(root,'clarity.css'),'utf8')+'\n'+
+  readFileSync(resolve(root,'design-system.css'),'utf8');
 const css=await transform(style,{loader:'css',minify:true,target:'es2020'});
 const router=readFileSync(resolve(root,'router.js'),'utf8').replace('export function createHashRouter',
   'function createHashRouter');

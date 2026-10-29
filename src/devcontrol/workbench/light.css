@@ -60,10 +60,8 @@ h2{font-size:17px;letter-spacing:-.35px}h3{font-size:14px}
 .task-tabs .count,.task-tabs button[aria-selected=true] .count{color:#7a8797}
 .simple-task,.previewbtn,.docitem,.issue-details section{background:#fff;border:1px solid #e7ebf1;color:#26364a;border-radius:11px}
 .simple-task:hover,.previewbtn:hover,.docitem:hover{background:#f6f9fe;border-color:#ccd9eb}
-.simple-task-title,.work-grid-row .work-title{color:#24354a}.simple-task-meta,.simple-task-summary,.docitem small{color:#87919e}
-.task-phase{background:#f9fafc}.task-phase-head,.work-grid-header{background:#f1f4f8;border-color:#e5eaf0;color:#66768a}
-.work-grid,.work-grid-row{border-color:#e7ebf1}.work-grid-row{background:#fff;color:#344357}.work-grid-row:hover{background:#f5f8fd}
-.work-grid-row .work-id,.work-grid-row .work-context{color:#72859c}.work-grid-row .work-summary{color:#758396}
+.simple-task-title{color:#24354a}.simple-task-meta,.simple-task-summary,.docitem small{color:#87919e}
+.task-phase{background:#f9fafc}.task-phase-head{background:#f1f4f8;border-color:#e5eaf0;color:#66768a}
 .issue-controls input,.issue-controls select,.search{background:#fff;border:1px solid #dae1ea;color:#354154}
 .issue-state{background:#edf3f9;color:#47637e}.issue-state.pending,.review-state{background:#fff4de;color:#936623}
 .issue-state.done,.review-state.resolved{background:#eaf8f1;color:#24754e}.issue-state.blocked{background:#fff0eb;color:#b35c45}

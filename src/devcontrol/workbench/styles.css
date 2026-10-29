@@ -54,17 +54,6 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .task-phase{border:1px solid #2b4057;border-radius:13px;background:#0e1b2b;overflow:hidden;margin:13px 0}
 .task-phase-head{padding:14px 17px;background:#17283e;border-bottom:1px solid #2b4057;display:flex;gap:12px;align-items:center;justify-content:space-between}
 .task-phase-head strong{font-size:13px}.task-phase-head small{color:#90a8c0;font-size:11px}
-.work-grid{width:100%;overflow-x:auto;border:1px solid #30475e;border-radius:10px}
-.work-grid-header,.work-grid-row{display:grid;grid-template-columns:minmax(250px,3fr) minmax(95px,1fr) minmax(130px,1.2fr) minmax(105px,1fr) minmax(145px,1.4fr);min-width:780px;gap:7px;align-items:center;padding:11px 13px}
-.work-grid-header{background:#20364d;font-size:11px;color:#abc3db;font-weight:700}
-.work-grid-row{width:100%;border:0;border-top:1px solid #304056;color:#dbe8f7;background:#112238;text-align:left;font-size:12px;cursor:pointer}
-.work-grid-row:hover{background:#203951}
-.work-grid-row span{overflow-wrap:anywhere}
-.work-grid-row .work-id{display:block;color:#79a9c5;font:10px ui-monospace,monospace;margin-bottom:5px}
-.work-grid-row .work-title{display:block;color:#eaf5ff;line-height:1.55}
-.work-grid-row .work-summary{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;color:#bbd1e4;font-weight:400;line-height:1.6;margin-top:6px}
-.work-grid-row .work-context{display:block;color:#82a9c4;font-size:10px;margin-top:6px;line-height:1.4}
-.work-grid-row .issue-state{width:fit-content}
 .issue-controls select{background:#12253c;color:#d7e6f6;border:1px solid #35516c;border-radius:8px;padding:9px;min-width:112px}
 .task-phase-items{padding:10px;display:grid;gap:9px}.task-phase-items .simple-task{background:#132238}
 .feature-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}

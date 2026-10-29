@@ -41,6 +41,7 @@
     "audit:tools:agent": "node scripts/claude-tool-contract-audit.mjs",
     "clean:build": "node scripts/clean-build.mjs",
     "smoke:gitnexus-sidecar": "node scripts/gitnexus-sidecar-smoke.mjs",
+    "smoke:workbench:browser": "node scripts/workbench-browser-acceptance.mjs",
     "docs:build-demos": "npm run build-mcp-apps && tsx scripts/build-doc-demos.ts",
     "docs:record-demos": "python scripts/render-doc-demo-gifs.py",
     "docs:sync-tools": "tsx scripts/sync-doc-tools.ts",

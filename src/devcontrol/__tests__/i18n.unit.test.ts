@@ -22,12 +22,13 @@ describe("Per-reader project-neutral language",()=>{
 
   it("keeps the project task list focused without planned start/finish presentation columns",()=>{
     const html=projectHtml("nonce","zh-CN");
-    expect(html).toContain('const cols=["工作项","状态","负责人","类型 / 平台","备注 / 阻塞"]');
+    expect(html).toContain('const shell=n("div",null,"task-collection")');
+    expect(html).toContain('const item=row.item,button=n("button",null,"task-card")');
     expect(html).not.toContain('"计划开始"');
     expect(html).not.toContain('"计划完成"');
     expect(html).not.toContain('item.plannedStartAt||"未排期"');
     expect(html).not.toContain('item.plannedEndAt||"未排期"');
-    expect(html).toContain('grid-template-columns:minmax(250px,3fr) minmax(95px,1fr) minmax(130px,1.2fr) minmax(105px,1fr) minmax(145px,1.4fr)');
+    expect(html).toContain('grid-template-areas:"leading side" "support side"');
     expect(html).toContain('"负责人 / 开发电脑"');
     // Nothing in this view change mutates canonical SQLite schedule/audit data.
   });

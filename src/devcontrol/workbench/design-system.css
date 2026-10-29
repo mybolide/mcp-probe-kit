@@ -1,0 +1,273 @@
+/*
+ * v5 Workbench design system.
+ * One typographic scale and spacing language across all eight views.
+ * Layout-first design, not a palette-only reskin.  No remote assets.
+ */
+:root{
+  color-scheme:light;
+  --bg:#f8f9fb; --side:#fff; --surface:#fff; --raised:#f4f7fb;
+  --stroke:#e3e7ef; --text:#17212f; --muted:#526275;
+  --blue:#1769d2; --cyan:#1769d2; --green:#237c61; --warn:#a86b1a;
+  --radius:16px;
+  --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",
+    "Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+body{font-family:var(--font-ui);font-size:15px;line-height:1.6;color:var(--text);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;background:var(--bg)}
+button,input,select{font-family:inherit;font-size:inherit}
+button{cursor:pointer}button:disabled{cursor:not-allowed}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{
+  outline:3px solid #77aef5;outline-offset:3px}
+.layout{grid-template-columns:246px minmax(0,1fr);align-items:start}
+.sidebar{height:100dvh;position:sticky;top:0;padding:28px 15px 21px;
+  border-right:1px solid var(--stroke);background:#fff}
+.brand{padding:0 8px 31px;gap:13px}
+.brand-image{width:48px;height:51px}
+.brand-image img{height:48px;max-width:44px}
+.brand strong{font-size:17px;letter-spacing:-.55px;font-weight:750;color:#16243a}
+.brand small{font-size:12px;letter-spacing:0;color:#546275;line-height:1.5}
+.group-label{margin:10px 15px 12px;font-size:11px;letter-spacing:.08em;
+  color:#64748b;font-weight:700}
+.nav{gap:5px}
+.navbtn{min-height:48px;padding:11px 15px;font-size:15px;border-radius:12px;
+  font-weight:570;color:#344258;gap:14px;transition:background .14s,color .14s}
+.navbtn .symbol{width:22px;color:#68788d;font-size:18px}
+.navbtn.active{color:#0758b7;background:#eaf3ff;border:1px solid #d9eafb;font-weight:710}
+.navbtn.active .symbol{color:#146bc6}
+.navbtn:hover:not(.active){color:#1f344e;background:#f0f4f9}
+.sidefooter{padding:17px 13px 5px;border-color:#edf0f4}
+.sidefooter .status{font-size:13px;color:#37556d}.sidefooter p{font-size:12px;color:#5a6c81}
+.main{width:100%;max-width:1580px;margin:0 auto;padding:34px clamp(24px,3.6vw,64px) 64px;
+  background:transparent}
+.bar{padding:0 0 21px;margin:0 0 38px;border-bottom:1px solid #e4e9f0;
+  min-height:48px;gap:20px}
+.breadcrumbs,.breadcrumbs b{font-size:14px;line-height:1.45;color:#4f6077}
+.breadcrumbs b{font-weight:720;color:#233c60}
+.actions{gap:10px;flex-wrap:wrap}
+.badge{font-size:12px;color:#536880;background:#fff;border-color:#e0e6ee;padding:8px 13px}
+.btn{font-size:14px;min-height:40px;padding:8px 15px;background:#fff;color:#24568a;
+  border:1px solid #d8e2ee;border-radius:10px;font-weight:630}
+.btn:hover{border-color:#aec9e8;background:#eff6ff}
+h1,.sectionhead h1{font-size:clamp(30px,2.9vw,43px);letter-spacing:-1.35px;
+  line-height:1.19;color:#172437;font-weight:760;margin:8px 0 13px}
+h2{font-size:21px;letter-spacing:-.5px;color:#1d2c40;font-weight:710;line-height:1.35}
+h3{font-size:17px;color:#243449;line-height:1.4}
+.eyebrow{font-size:11px;letter-spacing:.105em;color:#1b65bc;font-weight:770}
+.sectionhead{margin:0 0 26px}
+.sectionhead .sub,.sub,.body{font-size:15px;line-height:1.75;color:#526276}
+.sectionhead .sub{max-width:900px}
+.sectionhead h1{margin:9px 0 14px}
+.link{font-size:14px;color:#1769c8;font-weight:680}
+.link:hover{text-decoration:underline}
+.panel,.info,.widebox,.hero,.overview-metrics,.review-overview,
+.review-disclosure,.review-card,.release-review{
+  background:#fff;border:1px solid #e2e7ee;box-shadow:0 2px 11px #152b4c07;
+  border-radius:17px;color:#24344a}
+.panel,.info,.widebox{padding:27px 30px}
+.panelhead{margin-bottom:19px;align-items:center}
+.panelhead h2{margin:0}
+.widebox{padding:30px 35px;margin-bottom:22px}
+.widebox .body{font-size:16px;color:#38495f;line-height:1.8}
+.cards{gap:18px}.info h3{font-size:19px}.info p{font-size:15px;color:#506076;line-height:1.75}
+.info .docpath{font-size:12px;color:#64768c}
+.grid{gap:16px}
+.hero{border-radius:22px}
+.hero-main{padding:39px clamp(29px,3.5vw,50px)}
+.hero h1{font-size:clamp(32px,3.1vw,45px)}
+.hero p{font-size:16px;color:#516379}
+.chip{font-size:12px;color:#355a83;padding:7px 11px}
+.overview-primary{gap:18px}
+.overview-primary .panel{padding:30px 32px}
+.overview-primary .panelhead h2,.overview-metrics-head h2{font-size:21px}
+.focus-content strong{font-size:clamp(19px,2vw,25px);line-height:1.43}
+.focus-content p,.focus-bottom,.action-panel .sub{font-size:14px}
+.focus-link{font-size:14px;min-height:38px}
+.workflow-steps div{font-size:14px}
+.overview-metrics{padding:27px 31px}
+.overview-metrics .stat strong{font-size:37px}
+.overview-metrics .stat span{font-size:14px;color:#47586e}
+.baseline-details summary strong{font-size:16px}
+.baseline-open,.onboardrow b{font-size:14px}
+.onboardrow small{font-size:13px;color:#526579}
+.workbench-footer{margin-top:28px;padding-top:22px;border-top:1px solid #e2e7ee;
+  color:#627285;font-size:13px;line-height:1.6}
+/* Task management: reading-first cards, with clear primary and secondary content. */
+#view-tasks .sectionhead{margin-bottom:23px}
+.task-progress{margin-bottom:20px;padding:19px 23px;border-radius:14px;
+  background:#fff;border:1px solid #e3e8ef}
+#task-progress-label{font-size:14px;font-weight:660;color:#304763;line-height:1.55}
+.task-progress progress{margin-top:14px;height:7px;accent-color:#176ad1;border-radius:99px}
+.task-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+  padding:5px;background:#ebeff5;border-radius:14px;margin-bottom:20px}
+.task-tabs button{font-size:15px;padding:13px 18px;min-height:51px;color:#42556d;
+  border-radius:10px;font-weight:640}
+.task-tabs button[aria-selected="true"]{color:#1758a9;box-shadow:0 2px 6px #1e38521c;background:#fff}
+.task-tabs .count,.task-tabs button[aria-selected="true"] .count{
+  font-size:14px;color:inherit;font-variant-numeric:tabular-nums}
+.issue-controls{display:grid;grid-template-columns:minmax(200px,1fr) 170px 170px;
+  align-items:stretch;gap:12px;margin:0 0 17px}
+.issue-controls input,.issue-controls select,.search,.documentbar input{
+  min-width:0;width:100%;height:48px;border:1px solid #dbe3ed;background:#fff;
+  color:#24374d;font-size:14px;border-radius:12px;padding:0 15px}
+.issue-controls input::placeholder,.search::placeholder{color:#78879a}
+.issue-controls select{max-width:none}
+.task-results-header{display:flex;justify-content:space-between;align-items:baseline;
+  margin:25px 0 14px;gap:15px}
+.task-results-header h2{margin:0;font-size:19px}
+.issue-count{font-size:13px;color:#586b81;padding:0;margin:0}
+.task-collection{display:grid;gap:12px}
+.task-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,240px);
+  grid-template-areas:"leading side" "support side";gap:13px 22px;
+  border:1px solid #e1e7f0;background:#fff;border-radius:16px;
+  box-shadow:0 2px 9px #162f5106;text-align:left;width:100%;
+  color:#243348;padding:23px 26px;min-width:0;transition:border-color .14s,box-shadow .14s,transform .14s}
+.task-card:hover{border-color:#aac9eb;box-shadow:0 7px 21px #133c6910;transform:translateY(-1px)}
+.task-card-leading{grid-area:leading;display:flex;flex-direction:column;gap:10px;min-width:0}
+.task-card-heading{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.task-card-id{font:700 12px/1.5 var(--font-mono);letter-spacing:.02em;color:#426b99;
+  white-space:nowrap}
+.task-card-title{font-size:18px;font-weight:710;line-height:1.45;
+  letter-spacing:-.25px;color:#18293f}
+.task-card-description{font-size:14px;line-height:1.65;color:#4c5d71;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.task-card-side{grid-area:side;display:flex;flex-direction:column;
+  align-items:flex-start;justify-content:space-between;gap:18px;padding-left:22px;
+  border-left:1px solid #edf0f4;min-width:0}
+.task-card-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.issue-state{font-size:13px;font-weight:650;border-radius:999px;padding:5px 12px;
+  color:#3b5572;background:#eff4fa;white-space:normal}
+.issue-state.pending{color:#895d11;background:#fff1d6}
+.issue-state.done{color:#19735b;background:#e9f7ef}
+.issue-state.blocked{color:#9c4d40;background:#fff0ec}
+.task-card-type{color:#52677e;font-size:12px}
+.task-card-owner{display:flex;flex-direction:column;gap:3px;color:#283d56;
+  font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.task-card-label{font-size:12px;color:#657891;font-weight:600}
+.task-card-detail{font-size:13px;font-weight:700;color:#1769c9}
+.task-card-detail::after{content:"  ↗"}
+.task-card-support{grid-area:support;display:flex;gap:8px 20px;flex-wrap:wrap;
+  min-width:0;color:#61738a;font-size:12px;line-height:1.6}
+.task-card-contract{overflow-wrap:anywhere}
+.task-card-note{color:#8b621f}
+.task-phase-head strong{font-size:15px}
+.simple-task{padding:23px 25px}
+.simple-task-title{font-size:17px}
+.simple-task-meta,.simple-task-summary{font-size:14px;line-height:1.65}
+.review-disclosure{padding:18px 22px}
+.review-disclosure>summary{font-size:15px;line-height:1.6}
+.review-grid{gap:15px}.review-card{padding:22px}
+.review-card p,.review-intro p,.review-card .review-detail-trigger{font-size:14px}
+.review-card>strong{font-size:17px}
+.review-overview b,.review-overview p{font-size:14px}
+/* Requirements, design, Bug, History, guides and doc browsing use same system. */
+.doclist{gap:13px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.docitem,.previewbtn{padding:23px 25px;border-radius:14px;border:1px solid #e1e7ef;
+  background:#fff;box-shadow:0 2px 9px #1c355007}
+.docitem:hover,.previewbtn:hover{background:#f6faff;border-color:#aac9ea}
+.docitem b,.previewbtn strong{font-size:16px;line-height:1.5;color:#1e3249}
+.docitem small,.previewbtn small{font-size:13px;line-height:1.6;margin-top:9px;color:#61758b}
+.docs-empty{font-size:15px;padding:35px}
+.kpi{padding:20px 24px;background:#f5f8fc;border:1px solid #e4ebf3;border-radius:13px}
+.kpi b{font-size:32px}.kpi span{font-size:14px;color:#51637b}
+.guide-intents{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0}
+.guide-intent{padding:22px 24px;border-radius:16px;border:1px solid #e1e6ee;
+  box-shadow:0 2px 10px #11274107;transition:border-color .14s,background .14s}
+.guide-intent strong{font-size:16px;line-height:1.5;color:#203550}
+.guide-intent small{font-size:13px;color:#586e87;line-height:1.6;margin-top:8px}
+.guide-intent.selected{background:#eef5ff;border-color:#8fb9f0}
+.guide-actions{gap:9px}
+.guide-action{padding:8px 12px;font-size:13px;color:#275480}
+.guide-example{font:13px/1.75 var(--font-mono);padding:22px;border-radius:13px;color:#243b57}
+.settings-main{gap:20px}.settings-section{padding:29px 32px}
+.settings-section h2{font-size:21px}
+.settings-switch-row{padding:20px 0}.settings-switch-row strong{font-size:16px}
+.settings-switch-row p,.settings-note,.settings-inline-remove,.settings-caption{
+  font-size:14px;line-height:1.7;color:#4d6075}
+.settings-form-grid{gap:19px 17px}
+.settings-form-grid label{font-size:14px;font-weight:640;gap:9px}
+.settings-form-grid input,.settings-form-grid select{font-size:15px;height:49px;border-radius:11px}
+.settings-aside .panel{padding:25px}
+.settings-aside h2{font-size:18px}
+.settings-row{padding:14px 0}
+.settings-row strong,.settings-row span{font-size:13px}
+.settings-help{padding:23px;border-radius:15px}
+.settings-help strong{font-size:16px}.settings-help p{font-size:14px}
+.settings-save{font-size:15px;min-height:46px;padding:12px 22px}
+#settings-feedback{font-size:14px;line-height:1.65}
+.secret-status{font-size:12px}
+.drawer{width:min(940px,100%);padding:32px clamp(23px,3vw,48px)}
+.drawer h2{font-size:29px;line-height:1.35}
+.source{font:13px/1.6 var(--font-mono);color:#5f7690}
+.content{font-size:16px;line-height:1.85;color:#2e3e54}
+.content h1{font-size:27px}.content h2{font-size:23px}.content h3{font-size:19px}
+.content p,.content li{line-height:1.8}
+.content .md-table th,.content .md-table td{font-size:14px;line-height:1.6}
+.issue-details section{padding:21px;border-radius:13px;background:#f7f9fc}
+.issue-details h3{font-size:17px}
+.issue-details p{font-size:15px}
+/* Explicit smaller-screen contract, no minimum-width table or tiny text. */
+@media(max-width:1220px){
+  .layout{grid-template-columns:220px minmax(0,1fr)}
+  .main{padding:28px 28px 50px}
+  .overview-primary{grid-template-columns:1fr}
+  .task-card{grid-template-columns:minmax(0,1fr) 190px}
+  .settings-layout{grid-template-columns:1fr}
+  .settings-aside{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:850px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .sidebar{height:auto;position:sticky;z-index:10;top:0;padding:12px 14px 11px;
+    border-right:0;border-bottom:1px solid var(--stroke)}
+  .brand{padding:0 4px 11px}
+  .brand-image{height:37px;width:34px}.brand-image img{height:35px}
+  .brand strong{font-size:15px}.brand small{font-size:11px;margin-top:2px}
+  .group-label,.sidefooter{display:none}
+  .nav{display:flex;flex-direction:row;overflow-x:auto;gap:5px;scrollbar-width:thin}
+  .navbtn{width:auto;white-space:nowrap;min-height:40px;padding:8px 12px;font-size:14px}
+  .navbtn .symbol{font-size:15px;width:auto}
+  .main{padding:25px 20px 44px}
+  .bar{flex-wrap:wrap;gap:10px;margin-bottom:26px}
+  .guide-intents{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .doclist,.cards{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .main{padding:19px 15px 40px}
+  .sectionhead h1,h1{font-size:30px}
+  .sectionhead .sub{font-size:14px}
+  .panel,.widebox,.info{padding:21px}
+  .hero-main{padding:26px 23px}
+  .task-tabs{gap:2px;padding:4px}
+  .task-tabs button{font-size:13px;padding:10px 5px;min-height:45px}
+  .issue-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .issue-controls input{grid-column:1/-1}
+  .task-results-header{display:block}
+  .task-results-header .issue-count{margin-top:5px}
+  .task-card{grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"leading" "side" "support";padding:20px;gap:14px}
+  .task-card-side{border:0;border-top:1px solid #edf0f4;padding:13px 0 0;
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:center}
+  .task-card-owner{flex:1;min-width:140px}
+  .task-card-heading{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+  .task-card-title{font-size:17px}
+  .task-card-description{font-size:14px}
+  .settings-aside,.settings-form-grid,.guide-intents{grid-template-columns:1fr}
+  .settings-section{padding:22px}
+  .overview-metrics .stat strong{font-size:28px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+/* Document and diagram widths must never expand the mobile viewport. */
+#view-architecture, #view-architecture .widebox,
+#view-architecture .cards, #view-architecture .info,
+#architecture-diagram {min-width:0;max-width:100%}
+#architecture-diagram {overflow-x:auto;white-space:pre-wrap!important;overflow-wrap:anywhere}
+#view-architecture .cards>* {min-width:0;overflow-wrap:anywhere}
+.task-progress progress {color:#1769d2;accent-color:#1769d2}
+.task-progress progress::-webkit-progress-bar{background:#e7edf5;border-radius:99px}
+.task-progress progress::-webkit-progress-value{background:#1769d2;border-radius:99px}
+.task-progress progress::-moz-progress-bar{background:#1769d2;border-radius:99px}

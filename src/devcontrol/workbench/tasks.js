@@ -400,33 +400,44 @@
     });
     if((typeof releaseWorkPlan!=="undefined")&&releaseWorkPlan&&
       releaseWorkPlan.status!=="missing"){
-      const cols=["工作项","状态","负责人","类型 / 平台","备注 / 阻塞"];
-      const shell=n("div",null,"work-grid");
-      const headings=n("div",null,"work-grid-header");
-      cols.forEach(name=>headings.append(n("span",name)));
-      shell.append(headings);
+      // One readable, responsive task surface across desktop and mobile.
+      // Keep every task's approved identity, state, evidence and detail action.
+      const shell=n("div",null,"task-collection");
       for(const row of filtered){
-        const item=row.item,button=n("button",null,"work-grid-row");button.type="button";
+        const item=row.item,button=n("button",null,"task-card");button.type="button";
         const brief=taskBrief(row);
-        const title=n("span");title.append(n("small",item.id+" · "+(item.stageId||""),"work-id"),
-          n("strong",displayTaskTitle(item),"work-title"),
-          n("span",brief.summary,"work-summary"),
-          n("small",[
-            brief.requirementIds.length?("需求 "+brief.requirementIds.join("、")):"未关联需求",
-            brief.gates.length?("Gate "+brief.gates.join("、")):"未记录 Gate",
-          ].join(" · "),"work-context"));
         const [status,state]=taskStatus(row);
         const actualOwner=row.current?.owner||item.owner;
         const actualDevice=row.current?.ownerAssignment?.device;
-        button.append(title,n("span",status,"issue-state "+state),
+        const heading=n("span",null,"task-card-heading");
+        heading.append(n("small",item.id+" · "+(item.stageId||row.phase||"当前阶段"),"task-card-id"),
+          n("strong",displayTaskTitle(item),"task-card-title"));
+        const leading=n("span",null,"task-card-leading");
+        leading.append(heading,n("span",brief.description||brief.acceptance||
+          "尚无详细任务说明，请打开任务合同核对。","task-card-description"));
+        const chips=n("span",null,"task-card-chips");
+        chips.append(n("span",status,"issue-state "+state));
+        chips.append(n("span",(item.type||"工作项")+" · "+(item.platform||"—"),"task-card-type"));
+        const owner=n("span",null,"task-card-owner");
+        owner.append(n("small","负责人","task-card-label"),
           n("span",actualOwner?(actualOwner+(actualDevice?" · "+actualDevice:"")):
-            ("未领取 · "+(item.ownerRole||"研发角色待定"))),
-          n("span",(item.type||"—")+" / "+(item.platform||"—")),
-          n("span",row.current?.pendingVerification?
-            ("待验证："+row.current.pendingVerification.gate+" · "+
-              row.current.pendingVerification.reason):
-            (item.blockingReason||item.remark||"—")));
-        button.addEventListener("click",()=>openPlanTask(row));shell.append(button);
+            ("未领取 · "+(item.ownerRole||"待分配"))));
+        const supporting=n("span",null,"task-card-support");
+        supporting.append(n("span",[
+          brief.requirementIds.length?"需求 "+brief.requirementIds.join("、"):"待关联需求",
+          brief.gates.length?"Gate "+brief.gates.join("、"):"待记录 Gate",
+        ].join(" · "),"task-card-contract"));
+        const note=row.current?.pendingVerification?
+          ("待验证："+row.current.pendingVerification.gate+" · "+
+            row.current.pendingVerification.reason):
+          (item.blockingReason||item.remark||"");
+        if(note)supporting.append(n("span",note,"task-card-note"));
+        const side=n("span",null,"task-card-side");
+        side.append(chips,owner,n("span","查看详情","task-card-detail"));
+        button.append(leading,side,supporting);
+        button.setAttribute("aria-label",item.id+" "+displayTaskTitle(item)+"，"+status+"，查看任务详情");
+        button.addEventListener("click",()=>openPlanTask(row));
+        shell.append(button);
       }
       $("task-rows").replaceChildren(filtered.length?shell:n("div","当前筛选无工作项。","docs-empty"));
       $("task-list-count").textContent="当前版本 "+releaseWorkPlan.release+" · "+

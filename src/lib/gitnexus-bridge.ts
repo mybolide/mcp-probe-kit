@@ -1747,6 +1747,23 @@ async function runCodeInsightBridgeUncapped(
         repo: retryRepo,
       });
     }
+    if (/Repository\s+["'][^"']+["']\s+not found/i.test(failureText)) {
+      // A valid installed provider is not sufficient: each Git repository
+      // requires its own initial index. Do not silently analyze a large repo
+      // during a short Host call, nor try an unrelated project's index.
+      bridgeFailureUntil = Date.now() + FAILURE_CACHE_TTL_MS;
+      bridgeFailureReason = "当前项目缺少 GitNexus 索引";
+      return {
+        provider:"gitnexus", enabled:true, available:false, degraded:true,
+        modeRequested, modeResolved, executions:failed,
+        summary:"当前 Git 项目尚未建立 GitNexus 图谱索引。请在该 Git 项目根目录运行 mcp-probe-kit doctor gitnexus --index，然后重试；研发管理与其它代码工具可正常继续。",
+        warnings:["index_missing","bridge_call_failed",...warnings],
+        repo:effectiveRepo,launcherStrategy:launcher.strategy,
+        ambiguities:[],workspaceMode:workspace.workspaceMode,
+        sourceRoot:workspace.sourceRoot,analysisRoot:workspace.analysisRoot,
+        pathMapped:workspace.pathMapped,
+      };
+    }
   }
 
   bridgeFailureUntil = 0;

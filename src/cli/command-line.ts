@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { VERSION } from "../version.js";
@@ -31,6 +32,7 @@ import {
   resolveGitNexusMode,
   tryResolveCompatibleGitNexus,
 } from "../lib/gitnexus-runtime-manager.js";
+import { buildManagedGitNexusProcessEnv } from "../lib/gitnexus-runtime-config.js";
 import { CliError } from "./cli-error.js";
 import {
   resolveCliProjectForTool,
@@ -266,8 +268,45 @@ async function runDoctor(parsed: ParsedArgv): Promise<number> {
               ? "managed_pending"
               : "managed_unsupported";
 
+  // Indexing is an explicit CLI maintenance operation. Never attempt a
+  // potentially multi-minute analysis inside the MCP tools/call budget.
+  let index: Record<string, unknown> | undefined;
+  if (parsed.flags.has("index")) {
+    const requested = parsed.flags.get("project-root");
+    const root = path.resolve(typeof requested === "string" ? requested : process.cwd());
+    const check = spawnSync("git", ["-C", root, "rev-parse", "--show-toplevel"], {
+      encoding: "utf8", timeout: 5000, windowsHide: true,
+    });
+    if (check.status !== 0 || !check.stdout.trim()
+        || path.resolve(check.stdout.trim()) !== root) {
+      throw new CliError("GITNEXUS_INDEX_ROOT_INVALID",
+        "Index requires an existing Git repository root; pass --project-root explicitly");
+    }
+    if (!managed?.valid || !managed.cliPath || !compatibility) {
+      throw new CliError("GITNEXUS_RUNTIME_UNAVAILABLE",
+        "GitNexus runtime is not installed; run doctor gitnexus --install first");
+    }
+    const analysis = spawnSync(process.execPath, [
+      managed.cliPath, "analyze", "--skip-agents-md",
+      ...(compatibility.analyzeArgs ?? ["--workers", "1"]),
+    ], {
+      cwd: root, encoding: "utf8", timeout: 180_000, windowsHide: true,
+      maxBuffer: 1_000_000,
+      env: buildManagedGitNexusProcessEnv(compatibility),
+    });
+    index = {
+      projectRoot: root,
+      passed: analysis.status === 0 && !analysis.error,
+      exitCode: analysis.status,
+      durationLimitMs: 180_000,
+      error: analysis.error ? String(analysis.error.message).slice(0, 300) :
+        analysis.status === 0 ? null : "GitNexus analyze failed; inspect local CLI diagnostics",
+    };
+  }
+
   writeJson({
-    ok: true,
+    ok: index ? index.passed : true,
+    ...(index ? { index } : {}),
     version: VERSION,
     component: "gitnexus",
     mode,
@@ -327,7 +366,7 @@ function runScopedHelp(parsed: ParsedArgv): number {
     return runSchema({ ...parsed, command: "schema", positionals: [parsed.positionals[0]] });
   }
   if (parsed.command === "doctor") {
-    process.stdout.write("用法:\n  mcp-probe-kit doctor gitnexus [--install]\n");
+    process.stdout.write("用法:\n  mcp-probe-kit doctor gitnexus [--install] [--index --project-root PATH]\n");
     return 0;
   }
   printHelp();
@@ -486,7 +525,7 @@ function printHelp(): void {
   process.stdout.write("  mcp-probe-kit schema <tool>\n");
   process.stdout.write("  mcp-probe-kit install-agent --project-root .\n");
   process.stdout.write("  mcp-probe-kit status --project-root .\n");
-  process.stdout.write("  mcp-probe-kit doctor gitnexus [--install]\n");
+  process.stdout.write("  mcp-probe-kit doctor gitnexus [--install] [--index --project-root PATH]\n");
   process.stdout.write("  mcp-probe-kit devcontrol next --project-root .\n");
   process.stdout.write("  mcp-probe-kit devcontrol onboard --project-root .  # inspect existing project; no generated plans\n");
   process.stdout.write("  mcp-probe-kit devcontrol create --project-root . --json '{...}'\n");

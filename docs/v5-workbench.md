@@ -29,7 +29,8 @@
 | `src/devcontrol/workbench/page.html` | 页面布局和八菜单内容，不编写业务状态 |
 | `src/devcontrol/workbench/styles.css` | 原有能力所需的基础布局与任务详情 |
 | `src/devcontrol/workbench/light.css` | 现代简约浅色主题，系统字体、响应式布局 |
-| `src/devcontrol/workbench/overview.css` | 官方品牌、宽屏排版、任务优先首页、统一进度及可折叠基线 |
+| `src/devcontrol/workbench/overview.css` | 官方品牌与任务优先首页、统一进度及可折叠基线 |
+| `src/devcontrol/workbench/design-system.css` | 全站统一字体比例、内容宽度、间距、阅读组件及 1500/1024/390px 响应式规则 |
 | `src/devcontrol/workbench/brand-mark.webp` | 从仓库官方 Logo 衍生的轻量标志，编译为 CSP 安全的内联图片 |
 | `src/devcontrol/workbench/router.js` | 原生 Hash 路由、深链接及浏览器前进后退 |
 | `src/devcontrol/workbench/app.js`、`state.js` | 最小启动外壳、当前项目状态和导航 |
@@ -38,6 +39,7 @@
 | `src/devcontrol/workbench/markdown.js`、`documents.js` | 安全文档渲染、需求与架构索引 |
 | `src/devcontrol/workbench/runtime.js` | 数据同步、可见状态刷新、事件绑定 |
 | `scripts/build-workbench.mjs` | 构建时检查 JS、压缩 CSS，生成 CSP nonce 安全的内联资源 |
+| `scripts/workbench-browser-acceptance.mjs` | 真实 Chrome 对八页面、桌面/平板/手机视口做字体、布局与横向溢出回归，并保存逐页截图 |
 | `src/devcontrol/project-html.ts` | 极薄的安全模板装配层 |
 
 `npm run build:workbench` 单独编译页面，`npm run build` 的 prebuild 会自动执行。多份按职责维护的浏览器源码在**构建时按声明的顺序组合、执行 JS 语法校验并压缩 CSS**；没有额外浏览器依赖或生产模块请求。构建后的 `workbench/generated.ts` 为生成物，**不要直接修改**。
@@ -53,3 +55,13 @@ Hash 页面路由例子：`/#overview`、`/#requirements`、`/#architecture`、`
 除单独的 `POST /api/settings`（仅本机同源、CSRF Token、白名单 env 字段及严格格式校验）外，所有 DevControl 治理 / 需求 / 任务 / 验证 API 仍然只读。原 Host/LAN、CSP nonce、No-store 和 Source of Truth 门禁均保留。敏感凭据从不写入 DevControl SQLite、History、Git 或浏览器回显。`/api/guide` 只返回支持动作的规范说明，没有数据库写入副作用；服务工作台协议版本提升后不允许复用旧前端进程。禁用对任务结论的猜测；缺真实 Gate 不会展示为 Verified。
 
 测试覆盖：八菜单及 Hash 路由、CSP、页面 gzip 尺寸、保留现有任务统计/详情回归、真实 HTTP 指引接口、仅本地访问默认行为与非 GET 拒绝。实际 Windows 浏览器和浏览器视觉回归仍须在具备环境后追加验收。
+
+## v5 全站视觉回归（开发版）
+
+以已编译的工作台实例为对象，而不是只检查 CSS。全站统一的 15px 正文基准、清晰的标题层级、任务卡片、响应式表单与文档阅读器，共同支持八个一级菜单。冻结任务、验收依据、父子关系及 Gate 仍来自 DevControl SQLite。
+
+先执行 `npm run build`，用真实 Git 项目启动 `node build/index.js devcontrol board --project-root /path/to/git-project --port 38182`，再运行 `npm run smoke:workbench:browser -- --url=http://127.0.0.1:38182/`。
+
+需要本机 Chrome。覆盖八个菜单与 1500/1024/390px 视口，共 24 次检查；验证页面活动状态、字号和横向溢出，检查任务数据确实渲染。默认截图输出到本机临时目录，可通过 `--out=/path/to/ignored/screenshots` 指定。测试不会更改任务数据。
+
+自动检查不能代替人工验收，需实际查看各页数据加载后的布局，尤其注意长路径、任务详情与手机窄屏。

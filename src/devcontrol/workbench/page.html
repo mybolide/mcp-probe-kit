@@ -90,7 +90,7 @@
     <div class="cards" id="architecture-docs"></div>
   </section>
   <section id="view-tasks" class="view">
-    <div class="sectionhead"><div class="eyebrow">任务管理</div><h1>任务列表</h1>
+    <div class="sectionhead"><div class="eyebrow">任务管理 / TASKS</div><h1>清晰的任务，可靠的交付</h1>
       <p class="sub">按实际任务状态查看进度；待审核任务归入未开始，不等于获准开发。</p></div>
     <div class="task-progress"><span id="task-progress-label">正在读取已验证的工作项进度…</span>
       <progress id="task-progress-bar" value="0" max="1" aria-label="正式版本已验证工作项进度"></progress></div>
@@ -101,12 +101,12 @@
     </div>
     <div id="task-list-panel" role="tabpanel" aria-label="当前状态的任务">
       <div class="issue-controls">
-        <input id="task-search" type="search" placeholder="搜索任务或验收结果…" aria-label="搜索任务">
+        <input id="task-search" type="search" placeholder="搜索任务编号、目标或验收条件…" aria-label="搜索任务">
         <select id="task-stage-filter" aria-label="按版本阶段筛选"><option value="">全部阶段</option></select>
         <select id="task-type-filter" aria-label="按工作项类型筛选"><option value="">全部类型</option></select>
       </div>
       <div id="release-review-summary"></div>
-      <p class="issue-count" id="task-list-count">正在读取任务…</p>
+      <div class="task-results-header"><h2>工作项</h2><p class="issue-count" id="task-list-count">正在读取任务…</p></div>
       <div id="task-rows" class="simple-task-list" aria-live="polite"></div>
     </div>
   </section>
@@ -189,7 +189,7 @@
       </aside>
     </div>
   </section>
-  <footer style="padding-top:25px;margin-top:20px;border-top:1px solid #203249;color:#6e829b;font-size:11px">
+  <footer class="workbench-footer">
     DevControl 项目工作台 · 数据取自当前 Git 项目与本地任务数据库 · <span id="synced">等待同步</span>
   </footer>
 </main></div>

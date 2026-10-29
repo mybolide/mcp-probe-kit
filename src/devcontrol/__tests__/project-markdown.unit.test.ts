@@ -62,12 +62,17 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain("linkedByRequirement.get(req.id)||[]");
     expect(html).toContain('function openRequirement(req,linked,progress)');
     expect(html).toContain('id="task-progress-bar"');
-    expect(html).toContain('n("span",brief.summary,"work-summary")');
+    expect(html).toContain('n("button",null,"task-card")');
+    expect(html).toContain('n("span",brief.description||brief.acceptance||');
     expect(html).toContain('section("任务说明",task.purpose||brief.description');
     expect(html).toContain('section("必须完成什么 · 验收目标",brief.acceptance');
     expect(html).toContain('section("文件修改范围",brief.paths.length');
     expect(html).toContain('"正式工作项已验证 "+verifiedTasks');
     expect(html).toContain('const productTasks=currentReleaseRows();');
+    expect(html).toContain('if(row.current?.pendingVerification)return ["待设备/外部验收",""];');
+    expect(html).toContain('待验证 — 未通过正式 Gate');
+    expect(html).toContain('row.current.pendingVerification.reason');
+    expect(html).toContain('开发中 / 待验证');
     expect(html).toContain('const actualOwner=row.current?.owner||item.owner;');
     expect(html).toContain('window.addEventListener("focus"');
     expect(html).toContain('document.addEventListener("visibilitychange"');

@@ -107,3 +107,13 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | 本地工具 / Local developer and hooks (3) | `local-developer`、`hook-status`、`hook-install` |
 
 以上分组中的数字仅用于阅读，不影响正式任务批准。DevControl 管理过程和证据，不运行 Python/Go/gRPC/Flutter 等项目业务测试；外部测试结论必须由 Agent 真实执行并独立复审记录。**原子任务只允许一个可独立验收结果**，宽泛目标必须先拆解。
+
+## GitNexus 代码图谱的项目初始化
+
+GitNexus 是可选代码分析提供者，不是 DevControl 的研发状态库。安装 GitNexus 托管运行时，不等于当前 Git 仓库已经建立图谱。查询若出现 `index_missing`，在实际 Git 项目根目录执行：
+
+```sh
+mcp-probe-kit doctor gitnexus --index --project-root /path/to/git-project
+```
+
+CLI 要求 Node.js 22+、有效的托管运行时及 Git 仓库根目录，分析上限为 180 秒，使用一名受控 Worker；不会发布版本或改写用户的 AGENTS.md。完成后重试代码查询。若仍不可用，应明确降级到 Git / 其他静态分析，不应把缺失图谱的结果当作已验证的依赖分析。

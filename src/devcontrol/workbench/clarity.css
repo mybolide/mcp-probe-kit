@@ -35,8 +35,8 @@ h1,h2,h3,.sectionhead h1{color:#122238}
 .link,.baseline-open{color:#0068d7}
 #task-progress-label{color:#2c4a69;font-size:13px;font-weight:650}
 .task-tabs button{font-size:14px;color:#344b66}
-.simple-task-title,.work-grid-row .work-title,.review-card p b{color:#1d3047}
-.simple-task-summary,.work-grid-row .work-summary{color:#435c75}
+.simple-task-title,.review-card p b{color:#1d3047}
+.simple-task-summary{color:#435c75}
 .review-overview,.review-disclosure,.review-card,.release-review{background:#fff;border-color:#d9e3ef}
 .review-head strong,.review-disclosure>summary{color:#1b3d64}
 .settings-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(235px,28%);gap:21px;align-items:start}

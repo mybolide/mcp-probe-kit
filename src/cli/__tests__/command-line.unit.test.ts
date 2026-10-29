@@ -156,6 +156,16 @@ describe("mcp-probe-kit CLI", () => {
     });
   });
 
+  test("GitNexus 显式索引拒绝非 Git 项目", async () => {
+    const root = createProject();
+    const output = captureStdout();
+    const code = await runCommandLine([
+      "doctor", "gitnexus", "--index", "--project-root", root,
+    ]);
+    expect(code).toBe(1);
+    expect(output()).toContain("GITNEXUS_INDEX_ROOT_INVALID");
+  });
+
   test("doctor gitnexus 默认只诊断，不触发安装", async () => {
     const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "probe-gitnexus-doctor-"));
     tempDirs.push(runtimeRoot);
