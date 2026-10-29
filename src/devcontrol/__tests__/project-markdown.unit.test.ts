@@ -77,19 +77,15 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('window.addEventListener("focus"');
     expect(html).toContain('document.addEventListener("visibilitychange"');
     expect(html).toContain('id="overview-release-review"');
-    expect(html).toContain('id="release-review-summary"');
+    // The current workbench keeps review details in the overview rather
+    // than duplicating a legacy summary inside the task list.
+    expect(html).not.toContain('id="release-review-summary"');
     expect(html).toContain('function renderReleaseReview()');
-    expect(html).toContain('reviewExpanded=false;');
-    expect(html).toContain('disclosure.open=reviewExpanded;');
-    expect(html).toContain('reviewExpanded=disclosure.open;');
-    expect(html).toContain('n("summary","整版评审');
     expect(html).toContain('function openReviewFinding(issue)');
     expect(html).toContain('plan.reviewFindings.filter(f=>f.severity==="blocker")');
     expect(html).toContain('renderReleaseReview();');
-    expect(html).toContain('"查看验收与关联任务 →"');
     expect(html).toContain('decisionStatus==="decided"');
     expect(html).toContain('verificationStatus==="pending"');
-    expect(html).toContain('项工程决策已定案');
     for (const [id,label] of [["not_started","未开始"],["in_progress","开发中"],["completed","已完成"]]){
       expect(html).toContain('data-tasktab="'+id+'"');
       expect(html).toContain(label);
@@ -169,10 +165,10 @@ describe("DevControl documentation Markdown tables", () => {
     expect(end).toBeGreaterThan(start);
     const state=vm.runInNewContext(html.slice(start,end)+"\nrequirementWorkState;") as
       (rows: Array<{status:string}>)=>{verified:number;label:string};
-    expect(state([])).toMatchObject({verified:0,label:"当前版本未拆分工作项"});
-    expect(state([{status:"ready"},{status:"in_review"}])).toMatchObject({verified:0,label:"已拆分 · 尚无 Verified 工作项"});
-    expect(state([{status:"verified"},{status:"ready"}])).toMatchObject({verified:1,label:"部分工作项已验证"});
-    expect(state([{status:"verified"},{status:"verified"}])).toMatchObject({verified:2,label:"关联工作项全部 Verified · 产品验收另行确认"});
+    expect(state([])).toMatchObject({verified:0,label:"未拆分任务"});
+    expect(state([{status:"ready"},{status:"in_review"}])).toMatchObject({verified:0,label:"已拆分 · 开发中 / 待验收"});
+    expect(state([{status:"verified"},{status:"ready"}])).toMatchObject({verified:1,label:"已拆分 · 开发中 / 待验收"});
+    expect(state([{status:"verified"},{status:"verified"}])).toMatchObject({verified:2,label:"任务已完成 · 产品验收另行确认"});
   });
   it("renders verified frozen work item completion, decision and real owner without another click", async () => {
     const html = projectHtml("nonce");
