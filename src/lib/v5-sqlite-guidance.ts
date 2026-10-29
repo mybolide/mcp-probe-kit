@@ -133,7 +133,7 @@ ${managedRevision}
 - **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码/正式 PRD/ADR/API/Schema 仍归 Git，业务数据库独立。
 - **逐任务闭环**：Agent 独立审查需求，\`plan-review\` → \`plan-propose\` → 精确 Hash 的 Owner 批准 \`plan-approve\`；然后 \`claim\` → 真正编码、审查、测试与合法 Git 提交 → \`complete\` / \`report\` / \`verify\`。DevControl 只是管控与证据门禁，不替 Agent 编码/跑 SQL/独立审核。
 - **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；再 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\`，最终由独立复审及精确 Hash 的 Owner \`feature-task-approve\`。草稿父子任务应可见但不能执行；FR-1 与 FR-001 统一关联并保留原文。
-- **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新增 Feature 叶子不超过 4 小时，过大必须拆分。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
+- **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新 Feature 叶子任务以 30–60 分钟为主，必须填写预计工时；1–2 小时需具体说明无法继续安全拆分的原因，超过 2 小时须拆分。新整版计划可采用 task-detail-v2 执行相同严格规则；旧已冻结计划不得直接重写。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
 - **外部真实测试**：Python/Go/Flutter/gRPC 业务测试由 Agent 实际运行，DevControl 只记录计划要求、证据和独立 Reviewer 的结果。外部 Gate 用 gate-review 留痕，证据存在不代表测试通过，也不能自动 verify。
 - **缺少真机或外部验收环境**：代码已提交、完成说明和证据入账的 \`in_review\` 任务可使用 \`defer-verification\`（当前租约、精确Gate、真实原因）登记待验证并释放任务租约。它不减少或放宽原 Gate，不增加 Verified。必须维护 Git/Owner 未提交文件完整性；不能为了延期直接改 SQLite 或 stash/reset。真机回来后使用 \`resume-verification\` 并运行真实 \`verify\`；其间其它任务只能按正常独立冻结范围开发。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
@@ -166,7 +166,7 @@ ${managedRevision}
   feature-validate, feature-task-brief/review/stage/propose, independent
   review and exact Owner feature-task-approve. Unapproved children remain
   visible but are not executable. Each leaf has a single verifiable goal,
-  exact files, dependencies, positive/negative tests and stop conditions.
+  exact files, dependencies, positive/negative tests and stop conditions. New Feature leaves target 0.5–1h, require a specific reason for any 1–2h exception, and reject tasks over 2h; new whole-release planning can opt into task-detail-v2 without invalidating existing frozen tasks.
 - Agents run real Python/Go/Flutter/gRPC project tests; DevControl records
   reported evidence and independently reviewed gate-review results only.
 - Plan/review/propose, obtain exact hash-bound Owner approval; claim an

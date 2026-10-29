@@ -370,6 +370,46 @@
       "规划仍待审核；不能仅凭标题、预计工时和单条验收文字批准开发。",
     ]);
   }
+  // Shared task card for whole-release and Feature planning alike.
+  // The prior Feature fallback rendered dark .simple-task cards inside v5 light UI.
+  function renderTaskCard(row){
+        const item=row.item,button=n("button",null,"task-card");button.type="button";
+        const brief=taskBrief(row);
+        const [status,state]=taskStatus(row);
+        const actualOwner=row.current?.owner||item.owner;
+        const actualDevice=row.current?.ownerAssignment?.device;
+        const heading=n("span",null,"task-card-heading");
+        heading.append(n("small",item.id+" · "+(item.stageId||row.phase||"当前阶段"),"task-card-id"),
+          n("strong",displayTaskTitle(item),"task-card-title"));
+        const leading=n("span",null,"task-card-leading");
+        leading.append(heading,n("span",brief.description||brief.acceptance||
+          "尚无详细任务说明，请打开任务合同核对。","task-card-description"));
+        const chips=n("span",null,"task-card-chips");
+        chips.append(n("span",status,"issue-state "+state));
+        chips.append(n("span",(item.type||"工作项")+" · "+(item.platform||"—"),"task-card-type"));
+        const owner=n("span",null,"task-card-owner");
+        owner.append(n("small","负责人","task-card-label"),
+          n("span",actualOwner?(actualOwner+(actualDevice?" · "+actualDevice:"")):
+            ("未领取 · "+(item.ownerRole||"待分配"))));
+        const supporting=n("span",null,"task-card-support");
+        supporting.append(n("span",[
+          brief.requirementIds.length?"需求 "+brief.requirementIds.join("、"):"待关联需求",
+          brief.gates.length?"Gate "+brief.gates.join("、"):"待记录 Gate",
+        ].join(" · "),"task-card-contract"));
+        const note=row.pending?
+          "任务规划尚未批准，不可领取或执行":
+          row.current?.pendingVerification?
+          ("待验证："+row.current.pendingVerification.gate+" · "+
+            row.current.pendingVerification.reason):
+          (item.blockingReason||item.remark||"");
+        if(note)supporting.append(n("span",note,"task-card-note"));
+        const side=n("span",null,"task-card-side");
+        side.append(chips,owner,n("span","查看详情","task-card-detail"));
+        button.append(leading,side,supporting);
+        button.setAttribute("aria-label",item.id+" "+displayTaskTitle(item)+"，"+status+"，查看任务详情");
+        button.addEventListener("click",()=>openPlanTask(row));
+        return button;
+  }
   function renderTaskList(){
     const rows=currentReleaseRows();
     for(const [name,key,choices] of [
@@ -403,42 +443,7 @@
       // One readable, responsive task surface across desktop and mobile.
       // Keep every task's approved identity, state, evidence and detail action.
       const shell=n("div",null,"task-collection");
-      for(const row of filtered){
-        const item=row.item,button=n("button",null,"task-card");button.type="button";
-        const brief=taskBrief(row);
-        const [status,state]=taskStatus(row);
-        const actualOwner=row.current?.owner||item.owner;
-        const actualDevice=row.current?.ownerAssignment?.device;
-        const heading=n("span",null,"task-card-heading");
-        heading.append(n("small",item.id+" · "+(item.stageId||row.phase||"当前阶段"),"task-card-id"),
-          n("strong",displayTaskTitle(item),"task-card-title"));
-        const leading=n("span",null,"task-card-leading");
-        leading.append(heading,n("span",brief.description||brief.acceptance||
-          "尚无详细任务说明，请打开任务合同核对。","task-card-description"));
-        const chips=n("span",null,"task-card-chips");
-        chips.append(n("span",status,"issue-state "+state));
-        chips.append(n("span",(item.type||"工作项")+" · "+(item.platform||"—"),"task-card-type"));
-        const owner=n("span",null,"task-card-owner");
-        owner.append(n("small","负责人","task-card-label"),
-          n("span",actualOwner?(actualOwner+(actualDevice?" · "+actualDevice:"")):
-            ("未领取 · "+(item.ownerRole||"待分配"))));
-        const supporting=n("span",null,"task-card-support");
-        supporting.append(n("span",[
-          brief.requirementIds.length?"需求 "+brief.requirementIds.join("、"):"待关联需求",
-          brief.gates.length?"Gate "+brief.gates.join("、"):"待记录 Gate",
-        ].join(" · "),"task-card-contract"));
-        const note=row.current?.pendingVerification?
-          ("待验证："+row.current.pendingVerification.gate+" · "+
-            row.current.pendingVerification.reason):
-          (item.blockingReason||item.remark||"");
-        if(note)supporting.append(n("span",note,"task-card-note"));
-        const side=n("span",null,"task-card-side");
-        side.append(chips,owner,n("span","查看详情","task-card-detail"));
-        button.append(leading,side,supporting);
-        button.setAttribute("aria-label",item.id+" "+displayTaskTitle(item)+"，"+status+"，查看任务详情");
-        button.addEventListener("click",()=>openPlanTask(row));
-        shell.append(button);
-      }
+      for(const row of filtered)shell.append(renderTaskCard(row));
       $("task-rows").replaceChildren(filtered.length?shell:n("div","当前筛选无工作项。","docs-empty"));
       $("task-list-count").textContent="当前版本 "+releaseWorkPlan.release+" · "+
         filtered.length+" 项独立工作 · "+(releaseWorkPlan.status==="needs_revision"?
@@ -457,30 +462,8 @@
       const head=n("div",null,"task-phase-head");
       head.append(n("strong",phase+" · "+(groups.get(phase)?.title||"独立任务")),
         n("small",items.length+" 项 · "+items.filter(x=>x.pending).length+" 项待审批"));
-      const list=n("div",null,"task-phase-items");
-      for(const row of items){
-        const task=row.item;
-        const button=n("button",null,"simple-task");button.type="button";
-        const top=n("div",null,"simple-task-head");
-        top.append(n("span",displayTaskTitle(task),"simple-task-title"));
-        const [label,cls]=taskStatus(row);
-        top.append(n("span",label,"issue-state "+cls));
-        const owner=row.current?.owner||(row.pending?localGit?.name:null);
-        const device=row.current?.ownerAssignment?.device||localGit?.device;
-        button.append(top,n("div",task.id+" · "+translate("负责人")+": "+
-          (owner||(locale==="en"?"Not recorded":"历史未记录"))+
-          (device?" · "+(locale==="en"?"Device":"设备")+": "+device:""),"simple-task-meta"));
-        button.append(n("div",task.scenario||task.acceptance||row.current?.spec?.acceptance||
-          "尚无独立执行规格，不得凭标题直接开始开发。","simple-task-summary"));
-        if(row.current?.pendingVerification){
-          button.append(n("small","待验收 Gate："+row.current.pendingVerification.gate+
-            " · 原有验收仍未通过，不占用下一研发任务","sub"));
-        } else if(row.pending||row.current?.blockedBy?.length||row.current?.unverifiedChildren?.length){
-          button.append(n("small",row.pending?"任务提案尚未审批，不能领取":
-            "前置依赖尚未验收，不能领取","sub"));
-        }
-        button.addEventListener("click",()=>openPlanTask(row));list.append(button);
-      }
+      const list=n("div",null,"task-collection");
+      for(const row of items)list.append(renderTaskCard(row));
       container.append(head,list);return container;
     }):[n("div",search?"没有匹配的任务。":"当前没有任务。","docs-empty")]));
     const pending=rows.filter(row=>row.pending&&taskBucket(row)===taskTab).length;

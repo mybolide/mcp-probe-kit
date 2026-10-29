@@ -1496,7 +1496,7 @@ describe("project ledger and legacy migration", () => {
       testCases:["POST a valid first event and assert one durable event is created.",
         "Restart Core and repeat the event with matching identity and key."],
       outOfScope:["Client-side event rendering"],deliverables:["services/core/ingest.go","Core integration test evidence"],
-      allowedPaths:["services/core/**"],requiredGates:["docs"],estimatedHours:4,
+      allowedPaths:["services/core/**"],requiredGates:["docs"],estimatedHours:1,
     };
     const plan={release:"V0.1",rationale:"Deliver one auditable event ingestion feature with clear restart semantics and no client-facing changes.",
       nodes:[{id:"INGEST-GROUP",title:"Core event ingestion",kind:"group" as const},node]};

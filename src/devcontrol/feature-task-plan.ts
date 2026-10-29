@@ -47,8 +47,12 @@ export function reviewFeatureTaskPlan(source: FeatureTaskSource,
   const design = `feature:${source.name}#design`;
   const reqRef = `feature:${source.name}#requirements`;
   for (const leaf of leaves) {
+    // New Feature proposals should be granular by default. Previously frozen
+    // tasks are not rewritten. 1–2h exceptions need a specific explanation.
     issues.push(...reviewAtomicOutcome({id:leaf.id,title:leaf.title,
-      acceptance:leaf.acceptance,estimatedHours:leaf.estimatedHours,maxHours:4}));
+      acceptance:leaf.acceptance,estimatedHours:leaf.estimatedHours,
+      maxHours:2,preferredHours:1,
+      granularityJustification:leaf.granularityJustification,requireEstimate:true}));
     if(!leaf.allowedChangedFiles?.length)
       issues.push(leaf.id+": leaf needs exact frozen file boundaries");
     if(!leaf.testCases?.length||!leaf.negativeCases?.length)

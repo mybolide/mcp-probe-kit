@@ -37,6 +37,8 @@ export interface ReleasePlanNode {
   outOfScope?: string[];
   deliverables?: string[];
   estimatedHours?: number;
+  /** Required when a new micro-task exception needs 1–2 hours. */
+  granularityJustification?: string;
   /** Visible one-row work item metadata; detailed workflow stays in its drawer. */
   workType?: "analysis" | "decision" | "coordination" | "development" | "testing" | "integration" | "bugfix" | "release";
   platform?: string;

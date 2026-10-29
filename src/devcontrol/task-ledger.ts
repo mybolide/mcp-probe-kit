@@ -31,6 +31,7 @@ import { incrementalSubjectHash, checkIncrementalShape, checkIncrementalIndepend
 import { artifactIsCovered, manifestSubjectHash, reviewArtifactChange, reviewManifest,
   type GovernedArtifactManifest, type GovernedArtifactReview,
 } from "./governed-artifacts.js";
+import { reviewAtomicOutcome } from './task-atomicity.js';
 import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, reviewDetailedWorkItems, reviewTaskQualityJudgments, auditAtomicWorkItemDetail, scopeStages, type ReleaseWorkPlan } from "./release-work.js";
 import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
@@ -1604,7 +1605,8 @@ export class ProjectTaskLedger {
       if(item.estimatedHours!==undefined&&
         (!Number.isFinite(item.estimatedHours)||item.estimatedHours<=0||item.estimatedHours>8))
         issues.push(item.id+": split work greater than eight hours");
-      if(approved.plan.qualityProfile==="task-detail-v1")
+      if(approved.plan.qualityProfile==="task-detail-v1"||
+          approved.plan.qualityProfile==="task-detail-v2")
         issues.push(...reviewDetailedWorkItems([item]));
     }
     const additions=new Set(input.addDependencies.map(change=>change.taskId));
@@ -1838,9 +1840,16 @@ export class ProjectTaskLedger {
       "SELECT id FROM dc_tasks WHERE status='verified'"
     ).all().map(row=>String(row.id)));
     issues.push(...reviewAtomicWorkItems(workItems,ids,existingIds));
-    if(input.qualityProfile==="task-detail-v1")
+    if(input.qualityProfile==="task-detail-v1"||input.qualityProfile==="task-detail-v2")
       issues.push(...reviewDetailedWorkItems(workItems),...reviewTaskQualityJudgments(input));
-    else if(input.qualityProfile!==undefined)
+    if(input.qualityProfile==="task-detail-v2")
+      for(const item of workItems)issues.push(...reviewAtomicOutcome({
+        id:item.id,title:item.title,acceptance:item.acceptance,
+        estimatedHours:item.estimatedHours,maxHours:2,preferredHours:1,
+        granularityJustification:item.granularityJustification,requireEstimate:true,
+      }));
+    if(input.qualityProfile!==undefined&&
+        input.qualityProfile!=="task-detail-v1"&&input.qualityProfile!=="task-detail-v2")
       issues.push("Unknown release task detail quality profile");
     // The host Agent is responsible for semantic judgement. DevControl only
     // verifies a separate review artifact tied to the exact roster snapshot.

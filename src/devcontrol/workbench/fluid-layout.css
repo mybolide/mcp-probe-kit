@@ -153,3 +153,32 @@
   .sidebar .navbtn.active{background:#e7f1ff;border-color:#c7ddf6}
   .sidebar .navbtn:focus-visible{outline-offset:1px}
 }
+
+
+/* All legitimate task plan shapes share a single visual language. */
+.task-phase{background:transparent;border:1px solid #e2e8f0;
+  box-shadow:none;border-radius:17px;overflow:hidden;margin:0 0 18px}
+.task-phase-head{display:flex;justify-content:space-between;align-items:center;
+  gap:14px;padding:16px 21px;background:#f0f5fb;color:#243c59;
+  border-bottom:1px solid #dce5f0}
+.task-phase-head strong{font-size:16px;font-weight:720;color:#1d3858}
+.task-phase-head small{font-size:13px;color:#59738d}
+.task-phase-items,.task-phase>.task-collection{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));
+  gap:13px;padding:15px}
+.task-phase>.task-collection .task-card{grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"leading" "support" "side";gap:13px;padding:20px 22px;
+  border-color:#dee7f2;color:#20354e;background:#fff}
+.task-phase>.task-collection .task-card-side{
+  border:0;border-top:1px solid #e8eef5;padding:13px 0 0;
+  flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.task-phase>.task-collection .task-card-owner{max-width:none}
+.task-phase>.task-collection .task-card-chips{order:1}
+.task-phase>.task-collection .task-card-owner{order:2;flex:1}
+.task-phase>.task-collection .task-card-detail{order:3}
+@media(max-width:620px){
+  .task-phase-head{align-items:flex-start;padding:13px 16px}
+  .task-phase-head small{font-size:12px;text-align:right}
+  .task-phase>.task-collection{padding:10px;gap:10px}
+  .task-phase>.task-collection .task-card{padding:16px}
+}

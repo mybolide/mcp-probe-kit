@@ -47,6 +47,12 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('id="roadmap-title"');
     expect(html).toContain('id="okr-title"');
     expect(html).toContain('id="architecture-changes"');
+    // Feature plans in independent projects must never render the retired dark
+    // simple-task cards while whole-release plans use light cards.
+    expect(html).toContain('function renderTaskCard(row)');
+    expect(html).toContain('for(const row of items)list.append(renderTaskCard(row))');
+    expect(html).not.toContain('n("button",null,"simple-task")');
+
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind==="bug")');
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind!=="bug")');
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');

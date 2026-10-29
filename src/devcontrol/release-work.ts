@@ -39,11 +39,13 @@ export interface AtomicWorkItem {
   allowedPaths:string[];
   requiredGates:string[];
   estimatedHours?:number;
+  /** 1–2h micro-task exception; specific, independently reviewed reasoning. */
+  granularityJustification?:string;
 }
 
 /** The host reviewer must explain EACH item, not rubber-stamp an 11-field form. */
 export function reviewTaskQualityJudgments(plan:ReleaseWorkPlan):string[] {
-  if(plan.qualityProfile!=="task-detail-v1")return [];
+  if(plan.qualityProfile!=="task-detail-v1"&&plan.qualityProfile!=="task-detail-v2")return [];
   const checks=plan.agentReview?.taskChecks;
   if(!Array.isArray(checks))return ["Independent task-level quality review missing"];
   const issues:string[]=[];
@@ -245,7 +247,7 @@ export interface ReleaseWorkStage {
 export interface ReleaseWorkPlan {
   release:string;
   /** Opt-in strict depth for new, separately reviewed plans. Existing frozen plans stay valid. */
-  qualityProfile?:"task-detail-v1";
+  qualityProfile?:"task-detail-v1"|"task-detail-v2";
   scopeSource:string;
   stages:ReleaseWorkStage[];
   workItems:AtomicWorkItem[];
