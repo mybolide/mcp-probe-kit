@@ -1713,11 +1713,15 @@ describe("project ledger and legacy migration", () => {
   it("renders a valid zero-dependency workspace client with all required sections", () => {
     const output = projectHtml("safe-nonce");
     for (const section of [
-      "view-overview", "view-product", "view-requirements",
+      "view-overview", "view-requirements", "view-issues",
       "view-architecture", "view-tasks", "view-docs",
     ]) {
       expect(output).toContain('id="' + section + '"');
     }
+    // Product goals are now visible on the overview, not a ninth hidden page.
+    expect(output).toContain('id="vision-title"');
+    expect(output).toContain('id="roadmap-title"');
+    expect(output).toContain('id="okr-title"');
     expect(output).toContain('data-tasktab="not_started"');
     expect(output).toContain('data-tasktab="in_progress"');
     expect(output).toContain('data-tasktab="completed"');

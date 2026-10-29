@@ -55,6 +55,14 @@
         <p class="sub" id="onboarding-next"></p><div id="onboarding-steps"></div>
       </details>
     </section>
+    <section class="overview-product" aria-label="产品规划与阶段目标">
+      <div class="section-row"><div><span class="eyebrow">PRODUCT / ROADMAP</span><h2>产品方向与版本规划</h2><p class="sub">从项目原始愿景、路线图和 OKR 读取，不把任务数量当作产品目标。</p></div><button class="link" data-go="requirements">进入需求管理 ↗</button></div>
+      <div class="overview-product-grid">
+        <article class="panel product-vision"><span class="eyebrow">VISION</span><h3 id="vision-title">产品愿景</h3><p id="vision-summary" class="body">读取中…</p><button class="link" id="open-vision" type="button">阅读产品愿景 ↗</button></article>
+        <article class="panel"><span class="eyebrow">RELEASE</span><h3 id="roadmap-title">版本路线图</h3><p id="roadmap-summary" class="body">读取中…</p><div class="foot"><span id="roadmap-source" class="docpath"></span><button class="link" id="open-roadmap" type="button">查看版本规划 ↗</button></div></article>
+        <article class="panel"><span class="eyebrow">OUTCOMES</span><h3 id="okr-title">阶段目标与原则</h3><p id="okr-summary" class="body">读取中…</p><div class="foot"><span id="okr-source" class="docpath"></span><button class="link" id="open-okr" type="button">查看阶段目标 ↗</button></div></article>
+      </div>
+    </section>
     <section class="panel overview-process" style="margin-top:18px"><div class="panelhead"><h2>从需求到可验证交付</h2><span class="eyebrow">研发流程</span></div>
       <div class="flow"><div class="flowitem"><span class="flownum">01 / DEFINE</span><b>产品目标</b><p>愿景、OKR、需求定义要解决的问题</p></div>
       <div class="flowitem"><span class="flownum">02 / DESIGN</span><b>架构与规格</b><p>模块所有权、ADR、功能 Spec</p></div>
@@ -62,19 +70,12 @@
       <div class="flowitem"><span class="flownum">04 / VERIFY</span><b>质量与追溯</b><p>真实提交、验收证据和 SQLite 结果</p></div></div>
     </section>
   </section>
-  <section id="view-product" class="view">
-    <div class="sectionhead"><div class="eyebrow">产品愿景</div><h1>产品定位与阶段目标</h1><p class="sub">从原始愿景与路线图读取，不产生重复的项目介绍文件。</p></div>
-    <div class="widebox"><div class="eyebrow">项目使命</div><h2 id="vision-title" style="margin-top:14px">产品愿景</h2><p class="body" id="vision-summary">读取中…</p><button class="link" id="open-vision" type="button">阅读完整产品愿景 →</button></div>
-    <div class="cards">
-      <div class="info"><div class="eyebrow">版本规划</div><h3 style="margin-top:12px" id="roadmap-title">版本路线图</h3><p id="roadmap-summary">读取中…</p><div class="foot"><span class="docpath" id="roadmap-source"></span><button class="link" id="open-roadmap">查看版本路线 →</button></div></div>
-      <div class="info"><div class="eyebrow">阶段目标</div><h3 style="margin-top:12px" id="okr-title">阶段目标与原则</h3><p id="okr-summary">读取中…</p><div class="foot"><span class="docpath" id="okr-source">docs/okr/</span><button class="link" id="open-okr">查看阶段目标 →</button></div></div>
-    </div>
-  </section>
   <section id="view-requirements" class="view">
     <div class="sectionhead"><div class="eyebrow">需求范围</div><h1>需求与功能边界</h1><p class="sub">每个功能编号在需求文档中定义，关联规格与任务；此处只读原始需求。</p></div>
     <div class="widebox"><h2 id="requirements-title">产品需求</h2><p class="body">下面的数量由需求文档中实际 FR/NFR 编号去重计算，不是完成比例。</p>
       <div class="kpirow"><div class="kpi"><b id="fr-count">—</b><span>功能需求 FR</span></div><div class="kpi"><b id="nfr-count">—</b><span>非功能需求 NFR</span></div></div>
       <button class="link" id="open-requirements">查看完整产品需求 →</button></div>
+    <div class="requirements-principles" role="note"><div><span class="eyebrow">CHANGE CONTROL</span><strong>需求变更和候选 Idea</strong></div><p>新想法先进入需求评估，再明确影响、设计和审批；未冻结的想法不能直接进入开发。当前页面只展示已有权威需求与 Feature 记录，不将候选想法虚报为已批准任务。</p><button class="link" data-go="guide">查看研发流程 ↗</button></div>
     <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能需求清单</h2><button class="link" data-doc="docs/product/requirements.md">查看完整 PRD →</button></div>
       <div class="doclist" id="requirement-list"></div></div>
     <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能提案与规格</h2><span class="eyebrow">数据库记录</span></div>
@@ -87,7 +88,15 @@
     <div class="widebox"><h2 id="architecture-title">总体架构</h2><p class="body" id="architecture-summary">读取中…</p>
       <pre id="architecture-diagram" class="hide" style="white-space:pre;max-width:100%;overflow-x:auto;font:12px/1.5 ui-monospace,monospace;background:#0a1929;border:1px solid #2a4e68;border-radius:10px;color:#b4def0;padding:18px;margin:18px 0"></pre>
       <button class="link" id="open-architecture">查看完整架构说明 →</button></div>
-    <div class="cards" id="architecture-docs"></div>
+    <div class="architecture-sections">
+      <section class="panel architecture-doc-section"><div class="panelhead"><div><span class="eyebrow">DESIGN REFERENCES</span><h2>架构文档与 ADR</h2></div><button class="link" data-go="docs">全部文档 ↗</button></div>
+        <div class="cards" id="architecture-docs"></div>
+      </section>
+      <section class="panel architecture-change-section"><div class="panelhead"><div><span class="eyebrow">REVIEW QUEUE</span><h2>架构变更与待审决策</h2></div></div>
+        <p class="sub">仅展示 DevControl 中有真实记录的架构变更，审批状态以 SQLite 为准。</p>
+        <div class="doclist" id="architecture-changes" aria-live="polite"></div>
+      </section>
+    </div>
   </section>
   <section id="view-tasks" class="view">
     <div class="sectionhead"><div class="eyebrow">任务管理 / TASKS</div><h1>清晰的任务，可靠的交付</h1>
@@ -113,6 +122,7 @@
   <section id="view-issues" class="view">
     <div class="sectionhead"><div class="eyebrow">缺陷管理</div><h1>Bug 管理</h1>
       <p class="sub">缺陷记录、修复任务与回归结果。需求变更归需求管理，架构变更归技术架构审核。</p></div>
+    <div class="section-row"><div><span class="eyebrow">SRC-8 / QUALITY</span><h2>缺陷追踪与回归</h2></div><span class="sub" id="bug-list-count">读取真实 Bug 记录…</span></div>
     <div class="doclist" id="issues-list"></div>
   </section>
   <section id="view-history" class="view">
@@ -121,6 +131,7 @@
     <div class="documentbar"><input class="search" id="history-search" type="search"
       placeholder="搜索决策、上下文、问题、历史开发记录…" aria-label="搜索项目历史会话">
       <button class="btn" id="history-refresh">检索历史</button></div>
+    <div class="section-row"><div><span class="eyebrow">SOURCE OF TRUTH</span><h2>可追溯的开发记录</h2></div><span class="sub" id="history-list-count">查询项目 History</span></div>
     <div class="doclist" id="history-list"></div>
     <div class="docs-empty hide" id="history-empty">没有匹配的项目历史会话。</div>
   </section>

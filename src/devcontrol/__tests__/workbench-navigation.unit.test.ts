@@ -41,9 +41,16 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain("router.current()==='tasks'");
     expect(html).not.toMatch(/<script[^>]+src=/);
     expect(html).not.toMatch(/<link[^>]+(googleapis|fonts)/);
-    // A no-framework local page should remain small even with all frozen
+    // Single-file no-runtime framework stays under 48 KB gzip even with full-wide\n    // responsive layout and visible product/architecture governance sections.\n    // A no-framework local page should remain small even with all frozen
     // task evidence details included. No absolute bundle size handwaving.
-    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(45_000);
+    expect(html).toContain('id="vision-title"');
+    expect(html).toContain('id="roadmap-title"');
+    expect(html).toContain('id="okr-title"');
+    expect(html).toContain('id="architecture-changes"');
+    expect(html).toContain('items=(data.items||[]).filter(item=>item.kind==="bug")');
+    expect(html).toContain('items=(data.items||[]).filter(item=>item.kind!=="bug")');
+    expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
+    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(48_000);
   });
 
   test('Hash navigation handles deep links and back/forward without reload', () => {

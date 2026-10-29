@@ -20,28 +20,42 @@
         "无法获取当前项目的局域网地址，请检查 MCP 服务和网络连接。","error"));
     }
   }
+  function workItemButton(item){
+    const b=n("button",null,"docitem");b.type="button";
+    b.append(n("span",item.id+" · "+item.status,"taskid"),
+      n("b",item.title),
+      n("small",[item.sourceRef,item.topLevelDocument].filter(Boolean).join(" · ")||"DevControl SQLite"));
+    b.addEventListener("click",()=>{
+      if(item.kind==="bug"){openBug(item.id);return;}
+      $("overlay").classList.add("open");
+      $("doc-title").textContent=item.title;
+      $("doc-source").textContent=item.id+" · "+item.status;
+      markdown($("doc-content"),[
+        "# 变更内容",item.description,
+        "# 来源",item.sourceRef||"未填写",
+        "# 对应功能",item.featureName||"未关联",
+        "# 顶层架构",item.topLevelDocument||"尚未指定",
+        "# 记录者与设备",(item.creator||"—")+" / "+(item.device||"—"),
+      ].join("\n\n"));
+    });return b;
+  }
   async function loadIssues(){
     const container=$("issues-list");
     try{
       const data=await fetchJSON("/api/work-items");
-      container.replaceChildren(...(data.items.length?data.items.map(item=>{
-        const b=n("button",null,"docitem");b.type="button";
-        b.append(n("span",item.kind==="bug"?"BUG · "+item.status:item.status==="synced"?"已同步顶层设计":"待同步顶层设计","taskid"),
-          n("b",item.title),n("small",item.creator+" · "+item.device+" · "+(item.topLevelDocument||item.id)));
-        b.addEventListener("click",()=>{
-          if(item.kind==="bug"){openBug(item.id);return;}
-          $("overlay").classList.add("open");
-          $("doc-title").textContent=item.title;
-          $("doc-source").textContent=item.id+" · "+item.status;
-          markdown($("doc-content"),[
-            "# 条目内容",item.description,
-            "# 来源",item.sourceRef||"未填写",
-            "# 对应功能",item.featureName||"未关联",
-            "# 顶层架构",item.topLevelDocument||"不适用",
-            "# 创建者与设备",item.creator+" / "+item.device,
-          ].join("\n\n"));
-        });return b;
-      }):[n("div","当前项目尚无 Bug 或待审架构变更。","docs-empty")]));
+      const items=(data.items||[]).filter(item=>item.kind==="bug");
+      $("bug-list-count").textContent="共 "+items.length+" 条 Bug · 修复与回归以真实 Gate 为准";
+      container.replaceChildren(...(items.length?items.map(workItemButton):
+        [n("div","当前项目没有 Bug 记录。","docs-empty")]));
+    }catch(e){container.replaceChildren(n("div","读取失败："+e.message,"error"));}
+  }
+  async function loadArchitectureChanges(){
+    const container=$("architecture-changes");
+    try{
+      const data=await fetchJSON("/api/work-items");
+      const items=(data.items||[]).filter(item=>item.kind!=="bug");
+      container.replaceChildren(...(items.length?items.map(workItemButton):
+        [n("div","当前没有已登记的架构变更提案；Git ADR 仍在左侧架构文档中。","docs-empty")]));
     }catch(e){container.replaceChildren(n("div","读取失败："+e.message,"error"));}
   }
   async function openBug(id){
@@ -90,6 +104,7 @@
     try{
       const q=$("history-search").value.trim();
       const data=await fetchJSON("/api/history?q="+encodeURIComponent(q)+"&limit=30");
+      $("history-list-count").textContent="本次检索 "+data.results.length+" 条 · SQLite History";
       container.replaceChildren(...(data.results.length?data.results.map(hit=>{
         const b=n("button",null,"docitem");b.type="button";
         b.append(n("span","SESSION #"+hit.number,"taskid"),n("b",hit.title),

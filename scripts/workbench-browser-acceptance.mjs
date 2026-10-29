@@ -44,26 +44,41 @@ try {
  await send('Page.enable');
  const views=['overview','requirements','architecture','tasks','issues','history','guide','settings'];
  const results=[],files=[];
- for(const width of [1500,1024,390]){
+ for(const width of [1500,1920,2560,1024,768,390]){
   await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
   for(const view of views){
    await send('Page.navigate',{url:url+'#'+view});
    let v;
    for(let i=0;i<50;i++){
     await sleep(130);
-    const expr='(()=>{const s=document.querySelector("#view-'+view+'");const h=s?.querySelector("h1");return {active:!!s?.classList.contains("active"),font:parseFloat(getComputedStyle(document.body).fontSize),titleSize:h?parseFloat(getComputedStyle(h).fontSize):0,scrollWidth:document.documentElement.scrollWidth,cardCount:document.querySelectorAll(".task-card").length}})()';
+    const expr='(()=>{const s=document.querySelector("#view-'+view+'");const h=s?.querySelector("h1");const main=document.querySelector(".main");const task=document.querySelector(".task-collection");const nav=document.querySelector(".nav");return {active:!!s?.classList.contains("active"),font:parseFloat(getComputedStyle(document.body).fontSize),titleSize:h?parseFloat(getComputedStyle(h).fontSize):0,scrollWidth:document.documentElement.scrollWidth,mainRight:Math.round(main?.getBoundingClientRect().right||0),taskCols:task?getComputedStyle(task).gridTemplateColumns.split(" ").length:0,navWidth:nav?.clientWidth,navScroll:nav?.scrollWidth,hasPlanning:!!document.getElementById("vision-title")&&!!document.getElementById("roadmap-title")&&!!document.getElementById("okr-title"),hasArchChanges:!!document.getElementById("architecture-changes"),navItems:document.querySelectorAll(".navbtn").length,cardCount:document.querySelectorAll(".task-card").length}})()';
     v=await evalJS(expr);
     if(v?.active)break;
    }
+   // A rendered shell alone is not a meaningful visual acceptance.
+   // Wait for the actual project data before capturing and scoring content.
+   if(['overview','requirements','architecture'].includes(view)){
+     let loaded=false;
+     for(let k=0;k<35;k++){
+       loaded=await evalJS('(()=>{const view="'+view+'";if(view==="overview")return !document.getElementById("project-intro").textContent.includes("正在读取");if(view==="requirements")return document.getElementById("fr-count").textContent!=="—";return !document.getElementById("architecture-summary").textContent.includes("读取中");})()');
+       if(loaded)break;
+       await sleep(115);
+     }
+     v.dataLoaded=loaded;
+   }
    results.push({view,width,...v});
-   if(width===1500||view==='tasks'||view==='settings'){
+   if(width===1500||width===2560&&view==='tasks'||width===1920&&view==='overview'||width===390&&['tasks','overview','settings','architecture'].includes(view)){
     const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
     const file=join(out,view+'-'+width+'.png');
     writeFileSync(file,Buffer.from(shot.data,'base64'));files.push(file);
    }
   }
  }
- const failures=results.filter(v=>!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3);
+ const failures=results.filter(v=>v.dataLoaded===false||!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3||v.navItems!==8
+ ||v.mainRight<v.width-3 ||(v.view==='overview'&&!v.hasPlanning)
+ ||(v.view==='architecture'&&!v.hasArchChanges)
+ ||(v.view==='tasks'&&v.width>=1920&&v.taskCols<2)
+ ||(v.width===390&&v.navScroll>v.navWidth+3));
  if(!results.some(v=>v.view==='tasks'&&v.width===1500&&v.cardCount>0))failures.push({reason:'Task list did not render'});
  process.stdout.write(JSON.stringify({ok:failures.length===0,results,failures,files})+'\n');
  if(failures.length)process.exitCode=1;
