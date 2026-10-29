@@ -562,6 +562,15 @@ If another external test remains unavailable after resumption, `defer-verificati
 may preserve **only byte-identical in-scope WIP** already fingerprinted in
 that task's original deferral. New or edited scoped WIP and staged changes
 still block re-deferral; neither in-progress code nor a snapshot is acceptance.
+When the responsible Agent completes a **new committed task revision** while an
+external Gate is resumed, DevControl binds newly submitted project-test evidence
+to that new Git HEAD, not the previous frozen completion. If the external Gate
+still genuinely needs further device verification, an explicitly preserved
+worktree and fresh evidence for that new revision allow re-deferral: DevControl
+retains an immutable audit link to the superseded commit, records the new
+completion revision, releases the lease, and leaves the Gate **not passed**.
+This is permitted only for approved in-scope committed files and the original
+Gate; it neither waives physical acceptance nor rewrites history.
 For older legacy completion records using a protected Owner-edit manifest,
 `review-worktree` records a separate explicit developer audit after legitimate
 intervening commits: the reviewed current Git HEAD, a substantive explanation,

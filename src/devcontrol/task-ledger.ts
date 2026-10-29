@@ -4475,6 +4475,43 @@ export class ProjectTaskLedger {
       const resumed=this.db.prepare(`SELECT * FROM dc_verification_deferrals
         WHERE task_id=? AND resumed_at IS NOT NULL`).get(input.id);
       if(resumed){
+        // A real developer may legitimately finish more scoped code after an
+        // external test is deferred. That is a NEW completion revision, never
+        // a retroactive claim that the old frozen code or Gate was sufficient.
+        if(note.revision>resumed.completion_revision&&
+            note.git_head===head&&
+            resumed.gate_name===input.gate&&resumed.base_head===lease.base_head&&
+            run(this.root,'git',['merge-base','--is-ancestor',
+              resumed.completion_head,head]).passed){
+          const delivered=committedFilesBetween(this.root,lease.base_head,head);
+          const allowed=JSON.parse(task.allowed_paths) as string[];
+          if(!delivered.length||delivered.some(file=>
+            !allowed.some(pattern=>pathAllowed(file,pattern))))
+            fail('DELIVERY_SCOPE_INVALID','New deferred revision must contain only approved committed files');
+          const current=preservedWorktreeSnapshot(this.root);
+          if(input.preserveExistingWorktree!==true||
+              JSON.stringify(current)!==String(note.preserved_worktree_json??'[]'))
+            fail('WORKTREE_CHANGED','Updated completion must preserve its exact existing worktree snapshot');
+          if(!this.db.prepare(`SELECT id FROM dc_evidence WHERE task_id=? AND git_head=?
+              LIMIT 1`).get(input.id,head))
+            fail('CURRENT_REVISION_EVIDENCE_REQUIRED',
+              'New completion needs its own actual local evidence before renewed external deferral');
+          this.db.prepare(`UPDATE dc_verification_deferrals SET
+            reason=?,base_head=?,completion_head=?,completion_revision=?,
+            deferred_by=?,deferred_at=?,preserved_worktree_json=?,resumed_at=NULL
+            WHERE task_id=?`).run(input.reason.trim(),lease.base_head,head,
+              note.revision,lease.agent,utc(),JSON.stringify(current),input.id);
+          this.db.prepare('DELETE FROM dc_leases WHERE singleton=1').run();
+          this.audit(input.id,'verification_redeferred_new_revision',lease.agent,{
+            gate:input.gate,previousCompletionHead:resumed.completion_head,
+            currentCompletionHead:head,completionRevision:note.revision,
+            scopeFiles:delivered,gatePassed:false,leaseReleased:true,
+            preservedUncommittedFiles:current.length,
+          });
+          return {taskId:input.id,status:'in_review',pendingVerification:true,
+            gate:input.gate,gatePassed:false,leaseReleased:true,
+            originalHead:head,redeferred:true,newCompletionRevision:true};
+        }
         // The original submitted delivery stays immutable when a genuinely
         // unavailable external Gate is deferred again after an actual retry.
         if(resumed.gate_name!==input.gate||resumed.base_head!==lease.base_head||
@@ -4871,11 +4908,18 @@ export class ProjectTaskLedger {
     return this.inTransaction(() => {
       const lease = this.requireLease(id, token);
       const current = this.requireTask(id);
-      const deferred=this.db.prepare(`SELECT completion_head,resumed_at FROM dc_verification_deferrals
+      const deferred=this.db.prepare(`SELECT completion_head,completion_revision,resumed_at FROM dc_verification_deferrals
         WHERE task_id=?`).get(id);
       const completion=this.latestCompletion(id);
-      const resumedEvidence=current.status==='in_review'&&!!deferred?.resumed_at&&
+      const observedHead=git(this.root,['rev-parse','HEAD']);
+      const resumedFrozen=current.status==='in_review'&&!!deferred?.resumed_at&&
         completion?.git_head===deferred.completion_head;
+      const resumedNewRevision=current.status==='in_review'&&!!deferred?.resumed_at&&
+        completion?.revision>deferred.completion_revision&&
+        completion?.git_head===observedHead&&
+        run(this.root,'git',['merge-base','--is-ancestor',
+          deferred.completion_head,observedHead]).passed;
+      const resumedEvidence=resumedFrozen||resumedNewRevision;
       if(current.status!=='in_progress'&&!resumedEvidence)
         fail('INVALID_STATE','Report during development or after an explicitly resumed verification');
       if (typeof evidence?.kind!=="string"||typeof evidence?.reference!=="string"||
@@ -4884,9 +4928,8 @@ export class ProjectTaskLedger {
         ["undefined","null"].includes(evidence.reference.trim().toLowerCase())) {
         fail("EVIDENCE_REQUIRED", "Evidence kind and reference required");
       }
-      const observedHead=git(this.root,['rev-parse','HEAD']);
-      if(resumedEvidence)this.checkReviewDeliveryHead(id,String(lease.base_head),String(completion!.git_head));
-      const head=resumedEvidence?String(completion!.git_head):observedHead;
+      if(resumedFrozen)this.checkReviewDeliveryHead(id,String(lease.base_head),String(completion!.git_head));
+      const head=resumedFrozen?String(completion!.git_head):observedHead;
       this.db.prepare(
         "INSERT INTO dc_evidence(task_id,kind,reference,git_head,created_at) VALUES(?,?,?,?,?)",
       ).run(id, evidence.kind, evidence.reference, head, utc());
