@@ -10,6 +10,15 @@
 
 # mcp-probe-kit — Know the Context, Feed the Moment
 
+> **v5 lightweight workbench (development branch):** eight single-project menus,
+> modern native light styling, Hash links and in-place task-data refresh.
+> See [workbench architecture](docs/v5-workbench.md) and
+> [Agent / developer usage](docs/v5-agent-action-guide.md).
+> The local Settings page edits allowlisted `mcpServers.mcp-probe-kit.env`-equivalent
+> project parameters (Memory/Qdrant, embeddings, API keys, search limits and
+> feature flags), not a separate Token Management service. Client-provided
+> `mcpServers.env` retains precedence; reconnect MCP to apply project overrides.
+
 <div align="center">
   <img src="docs/assets/logo.png" alt="知时MCP Logo" width="160"/>
   <h1>知时MCP | mcp-probe-kit</h1>

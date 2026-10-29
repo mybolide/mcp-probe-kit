@@ -11,6 +11,7 @@ import { getProtocolModeFromEnv } from "./protocol/protocol-capabilities.js";
 import type { InternalTaskRecord } from "./tasks/task-types.js";
 import { runCommandLine } from "./cli/command-line.js";
 import { ensureProjectWorkspaceAtMcpStartup } from "./devcontrol/startup.js";
+import { applyProjectSettingsToEnv } from "./devcontrol/project-settings.js";
 
 /** 启动日志标识：用于确认客户端是否加载当前 build。 */
 const MCP_BUILD_TAG = "v5-sqlite-devcontrol-20261028";
@@ -31,6 +32,11 @@ async function runMcpServer(): Promise<void> {
   const protocolMode = getProtocolModeFromEnv();
   const startup = ensureMcpProbeKitBootstrapAtStartup();
   reportStartupBootstrap(startup);
+  try{
+    applyProjectSettingsToEnv(startup.workspace.root);
+  }catch{
+    console.error("[MCP Probe Kit] 本地设置不可读取；请检查配置或本机密钥权限。未加载项目覆盖项。");
+  }
   // Project injection/MCP connection is the only trigger needed to make the
   // dashboard available. Never write to stdout (reserved for MCP protocol).
   void ensureProjectWorkspaceAtMcpStartup(startup.workspace.root)

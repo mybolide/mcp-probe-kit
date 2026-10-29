@@ -47,7 +47,12 @@ async function existingProject(port: number): Promise<RunningProject | null> {
             typeof meta.root === "string"
             ? {
               root: meta.root, lanEnabled: meta.lanEnabled === true,
-              version: meta.version,
+              // v5 displays the package version as product version. Workspace
+              // supervision still compares an internal protocol revision, not
+              // a fictitious second product version. Old servers expose the
+              // protocol revision under version; accept those during upgrade.
+              version: typeof meta.workspaceSchemaVersion === "string"
+                ? meta.workspaceSchemaVersion : meta.version,
               pid: Number.isSafeInteger(meta.pid) && meta.pid > 0 ? meta.pid : null,
               instanceId: typeof meta.instanceId === "string" ? meta.instanceId : null,
               startedAt: typeof meta.startedAt === "string" ? meta.startedAt : null,

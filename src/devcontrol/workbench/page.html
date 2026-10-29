@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="__LOCALE__">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>mcp-probe-kit · 研发工作台</title>
+<style nonce="__NONCE__">__STYLES__</style></head>
+<body><div class="layout">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-image"><img src="__BRAND_MARK__" alt="mcp-probe-kit 官方 Logo"></div><div class="brand-copy"><strong>mcp-probe-kit</strong><small>研发工作台 <span id="brand-version">v—</span></small></div></div>
+  <div class="group-label">当前项目</div>
+  <nav class="nav" aria-label="研发工作台导航">
+    <button type="button" class="navbtn active" data-view="overview"><span class="symbol">▦</span>工作台</button>
+    <button type="button" class="navbtn" data-view="requirements"><span class="symbol">☰</span>需求管理</button>
+    <button type="button" class="navbtn" data-view="architecture"><span class="symbol">⌘</span>技术架构</button>
+    <button type="button" class="navbtn" data-view="tasks"><span class="symbol">▤</span>任务管理</button>
+    <button type="button" class="navbtn" data-view="issues"><span class="symbol">◉</span>Bug 管理</button>
+    <button type="button" class="navbtn" data-view="history"><span class="symbol">◷</span>历史会话</button>
+    <button type="button" class="navbtn" data-view="guide"><span class="symbol">◇</span>研发指南</button>
+    <button type="button" class="navbtn" data-view="settings"><span class="symbol">⚙</span>设置</button>
+  </nav>
+  <div class="sidefooter"><div class="status"><span class="pulse"></span>本地工作台</div>
+    <p>mcp-probe-kit <span id="footer-version">v—</span> · SQLite</p></div>
+</aside>
+<main class="main">
+  <header class="bar"><div class="breadcrumbs"><span id="projectcrumb">项目</span><span>/</span><b id="crumb">工作台</b></div>
+  <div class="actions"><span class="badge" id="branch">Git · 读取中</span>
+    <button class="btn" id="share-lan" type="button">连接信息</button>
+    <button class="btn" id="reload" type="button">↻ 同步</button></div></header>
+  <section id="view-overview" class="view active">
+    <div class="hero">
+      <div class="hero-main"><div class="eyebrow">SINGLE PROJECT · 当前 Git 项目</div>
+        <h1>继续当前项目<span class="hero-period">.</span></h1>
+        <p id="project-intro">正在读取项目研发上下文…</p>
+        <div class="meta-row"><span class="chip" id="projectname">PROJECT</span><span class="chip" id="projectstate">读取项目状态</span><span class="chip" id="governance-count">工程治理 · —</span></div>
+      </div>
+      <div class="hero-aside" aria-hidden="true"><span class="hero-aside-kicker">DEVELOPMENT</span><span class="hero-aside-word">Build<br>with clarity.</span><span class="hero-aside-footer">SINGLE PROJECT · GIT + SQLITE</span></div>
+    </div>
+    <section class="overview-primary" aria-label="当前工作和审核">
+      <section class="panel focus-panel"><div class="panelhead"><div><span class="eyebrow">NEXT ACTION</span><h2>当前研发焦点</h2></div><button class="focus-link" data-go="tasks">打开任务 <span aria-hidden="true">↗</span></button></div>
+        <div class="focus-content"><span class="taskid" id="next-id">当前任务</span><strong id="next-title">读取下一任务…</strong><p id="next-detail">由任务依赖与验收状态决定，不随聊天内容任意跳步。</p></div>
+        <div class="focus-bottom"><span class="focus-dot"></span> 从经过批准的任务合同继续，不重新规划</div>
+      </section>
+      <section class="panel action-panel"><div class="panelhead"><div><span class="eyebrow">WORKFLOW</span><h2>研发指南</h2></div><button class="link" data-go="guide">查看指南 ↗</button></div>
+        <div class="workflow-steps"><div><span>01</span> 需求</div><i></i><div><span>02</span> 设计</div><i></i><div><span>03</span> 原子任务</div><i></i><div><span>04</span> 验收</div></div>
+        <p class="sub">Agent 和开发者遵循同一份需求、架构与任务合同。</p><div class="hide" id="quickdocs"></div></section>
+    </section>
+    <div class="review-overview hide" id="overview-release-review"></div>
+    <div class="overview-metrics"><div class="overview-metrics-head"><div><span class="eyebrow">EXECUTION</span><h2>研发进度</h2></div><button class="link" data-go="tasks">全部任务 ↗</button></div>
+    <div class="grid stats">
+      <div class="stat"><strong id="s-total">—</strong><span>任务总数（含待审核）</span></div><div class="stat"><strong id="s-done">—</strong><span>已完成</span></div>
+      <div class="stat"><strong id="s-active">—</strong><span>开发中 / 待验证</span></div><div class="stat"><strong id="s-pending">—</strong><span>未开始（含待审核）</span></div>
+    </div></div>
+    <section class="panel hide" id="onboarding-panel" aria-label="项目接入状态">
+      <details class="baseline-details"><summary><span><span class="eyebrow">PROJECT BASELINE</span><strong id="onboarding-title">项目接入</strong></span><span class="baseline-open">查看核对项 <span aria-hidden="true">⌄</span></span></summary>
+        <p class="sub" id="onboarding-next"></p><div id="onboarding-steps"></div>
+      </details>
+    </section>
+    <section class="panel overview-process" style="margin-top:18px"><div class="panelhead"><h2>从需求到可验证交付</h2><span class="eyebrow">研发流程</span></div>
+      <div class="flow"><div class="flowitem"><span class="flownum">01 / DEFINE</span><b>产品目标</b><p>愿景、OKR、需求定义要解决的问题</p></div>
+      <div class="flowitem"><span class="flownum">02 / DESIGN</span><b>架构与规格</b><p>模块所有权、ADR、功能 Spec</p></div>
+      <div class="flowitem"><span class="flownum">03 / EXECUTE</span><b>任务与计划</b><p>父子任务、依赖、Agent 执行</p></div>
+      <div class="flowitem"><span class="flownum">04 / VERIFY</span><b>质量与追溯</b><p>真实提交、验收证据和 SQLite 结果</p></div></div>
+    </section>
+  </section>
+  <section id="view-product" class="view">
+    <div class="sectionhead"><div class="eyebrow">产品愿景</div><h1>产品定位与阶段目标</h1><p class="sub">从原始愿景与路线图读取，不产生重复的项目介绍文件。</p></div>
+    <div class="widebox"><div class="eyebrow">项目使命</div><h2 id="vision-title" style="margin-top:14px">产品愿景</h2><p class="body" id="vision-summary">读取中…</p><button class="link" id="open-vision" type="button">阅读完整产品愿景 →</button></div>
+    <div class="cards">
+      <div class="info"><div class="eyebrow">版本规划</div><h3 style="margin-top:12px" id="roadmap-title">版本路线图</h3><p id="roadmap-summary">读取中…</p><div class="foot"><span class="docpath" id="roadmap-source"></span><button class="link" id="open-roadmap">查看版本路线 →</button></div></div>
+      <div class="info"><div class="eyebrow">阶段目标</div><h3 style="margin-top:12px" id="okr-title">阶段目标与原则</h3><p id="okr-summary">读取中…</p><div class="foot"><span class="docpath" id="okr-source">docs/okr/</span><button class="link" id="open-okr">查看阶段目标 →</button></div></div>
+    </div>
+  </section>
+  <section id="view-requirements" class="view">
+    <div class="sectionhead"><div class="eyebrow">需求范围</div><h1>需求与功能边界</h1><p class="sub">每个功能编号在需求文档中定义，关联规格与任务；此处只读原始需求。</p></div>
+    <div class="widebox"><h2 id="requirements-title">产品需求</h2><p class="body">下面的数量由需求文档中实际 FR/NFR 编号去重计算，不是完成比例。</p>
+      <div class="kpirow"><div class="kpi"><b id="fr-count">—</b><span>功能需求 FR</span></div><div class="kpi"><b id="nfr-count">—</b><span>非功能需求 NFR</span></div></div>
+      <button class="link" id="open-requirements">查看完整产品需求 →</button></div>
+    <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能需求清单</h2><button class="link" data-doc="docs/product/requirements.md">查看完整 PRD →</button></div>
+      <div class="doclist" id="requirement-list"></div></div>
+    <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能提案与规格</h2><span class="eyebrow">数据库记录</span></div>
+      <p class="sub" style="margin-bottom:18px">Feature 的需求、技术方案与原子任务分别保存在项目 SQLite；点击阅读完整版本记录。</p>
+      <div class="doclist" id="db-features"></div></div>
+    <div class="panel"><div class="panelhead"><h2>既有 Git 功能规格</h2><button class="link" data-go="docs">全部文档 →</button></div><div class="doclist" id="specdocs"></div></div>
+  </section>
+  <section id="view-architecture" class="view">
+    <div class="sectionhead"><div class="eyebrow">架构与职责</div><h1>系统架构与工程边界</h1><p class="sub">新人从这里理解组件、所有权以及重要技术决策。</p></div>
+    <div class="widebox"><h2 id="architecture-title">总体架构</h2><p class="body" id="architecture-summary">读取中…</p>
+      <pre id="architecture-diagram" class="hide" style="white-space:pre;max-width:100%;overflow-x:auto;font:12px/1.5 ui-monospace,monospace;background:#0a1929;border:1px solid #2a4e68;border-radius:10px;color:#b4def0;padding:18px;margin:18px 0"></pre>
+      <button class="link" id="open-architecture">查看完整架构说明 →</button></div>
+    <div class="cards" id="architecture-docs"></div>
+  </section>
+  <section id="view-tasks" class="view">
+    <div class="sectionhead"><div class="eyebrow">任务管理</div><h1>任务列表</h1>
+      <p class="sub">按实际任务状态查看进度；待审核任务归入未开始，不等于获准开发。</p></div>
+    <div class="task-progress"><span id="task-progress-label">正在读取已验证的工作项进度…</span>
+      <progress id="task-progress-bar" value="0" max="1" aria-label="正式版本已验证工作项进度"></progress></div>
+    <div class="task-tabs" role="tablist" aria-label="任务状态">
+      <button type="button" role="tab" data-tasktab="not_started" aria-selected="true" aria-controls="task-list-panel">未开始 <span id="count-not_started" class="count">0</span></button>
+      <button type="button" role="tab" data-tasktab="in_progress" aria-selected="false" aria-controls="task-list-panel">开发中 / 待验证 <span id="count-in_progress" class="count">0</span></button>
+      <button type="button" role="tab" data-tasktab="completed" aria-selected="false" aria-controls="task-list-panel">已完成 <span id="count-completed" class="count">0</span></button>
+    </div>
+    <div id="task-list-panel" role="tabpanel" aria-label="当前状态的任务">
+      <div class="issue-controls">
+        <input id="task-search" type="search" placeholder="搜索任务或验收结果…" aria-label="搜索任务">
+        <select id="task-stage-filter" aria-label="按版本阶段筛选"><option value="">全部阶段</option></select>
+        <select id="task-type-filter" aria-label="按工作项类型筛选"><option value="">全部类型</option></select>
+      </div>
+      <div id="release-review-summary"></div>
+      <p class="issue-count" id="task-list-count">正在读取任务…</p>
+      <div id="task-rows" class="simple-task-list" aria-live="polite"></div>
+    </div>
+  </section>
+  <section id="view-issues" class="view">
+    <div class="sectionhead"><div class="eyebrow">缺陷管理</div><h1>Bug 管理</h1>
+      <p class="sub">缺陷记录、修复任务与回归结果。需求变更归需求管理，架构变更归技术架构审核。</p></div>
+    <div class="doclist" id="issues-list"></div>
+  </section>
+  <section id="view-history" class="view">
+    <div class="sectionhead"><div class="eyebrow">项目记录</div><h1>项目历史会话</h1>
+      <p class="sub">直接读取 mcp-probe-kit 的 History Session；支持搜索、读取原始检查点与跨会话恢复。它不是 Qdrant 共享记忆。</p></div>
+    <div class="documentbar"><input class="search" id="history-search" type="search"
+      placeholder="搜索决策、上下文、问题、历史开发记录…" aria-label="搜索项目历史会话">
+      <button class="btn" id="history-refresh">检索历史</button></div>
+    <div class="doclist" id="history-list"></div>
+    <div class="docs-empty hide" id="history-empty">没有匹配的项目历史会话。</div>
+  </section>
+  <section id="view-docs" class="view">
+    <div class="sectionhead"><div class="eyebrow">项目文档</div><h1>项目文档中心</h1><p class="sub">Git 文档是规范事实源；任务状态、完成说明则在 SQLite，避免重复维护。</p></div>
+    <div class="documentbar"><input id="doc-search" class="search" type="search" placeholder="搜索产品、架构、需求、ADR、Spec…" aria-label="搜索文档"></div>
+    <div id="docs-list" class="doclist"></div><div class="docs-empty hide" id="docs-empty">没有匹配的文档，或项目尚未建立规范索引。</div>
+  </section>
+  <section id="view-guide" class="view">
+    <div class="sectionhead"><div class="eyebrow">Agent + Developer</div><h1>研发指南</h1>
+      <p class="sub">一个 DevControl 工具，按意图选择操作。MCP 管理流程和证据，开发者及 Agent 执行真正的开发和测试。</p></div>
+    <div class="guide-intents" id="guide-intents" aria-label="研发阶段导航"></div>
+    <div class="panel guide-detail"><div class="panelhead"><h2 id="guide-title">选择一个研发阶段</h2><span class="eyebrow">只读操作引导</span></div>
+      <p class="sub" id="guide-description">从需求或当前任务开始，逐步查看操作依据。</p>
+      <div id="guide-actions" class="guide-actions"></div><pre class="guide-example" id="guide-example" aria-label="MCP 调用示例"></pre>
+      <p class="sub" id="guide-caution"></p></div>
+    <div class="panel"><div class="panelhead"><h2>项目原始文档</h2><button class="link" data-go="docs">打开文档索引 →</button></div>
+      <p class="sub">Git 中的 PRD / ADR / API 合同仍是技术设计依据；SQLite 是任务状态的唯一事实来源。</p>
+    </div>
+  </section>
+  <section id="view-settings" class="view">
+    <div class="sectionhead"><div class="eyebrow">PROJECT SETTINGS</div><h1>项目设置</h1>
+      <p class="sub">这里配置 mcpServers.mcp-probe-kit.env 中对应的环境参数，不是独立 Token 管理系统。保存后重新连接 MCP 生效。</p></div>
+    <div class="settings-layout">
+      <div class="settings-main">
+        <section class="panel settings-section"><div class="panelhead"><div><span class="eyebrow">FEATURE FLAGS</span><h2>功能开关</h2></div></div>
+          <div class="settings-switch-row"><div><strong>MCP Apps</strong><p>启用支持的 MCP 内嵌界面</p></div>
+            <label class="switch"><input id="flag-ui-apps" type="checkbox" aria-label="启用 MCP Apps"><span class="switch-track"></span></label></div>
+          <div class="settings-switch-row"><div><strong>GitNexus 桥接</strong><p>让 Agent 使用项目代码结构关联分析</p></div>
+            <label class="switch"><input id="flag-gitnexus" type="checkbox" aria-label="启用 GitNexus 桥接"><span class="switch-track"></span></label></div>
+        </section>
+        <section class="panel settings-section"><div class="panelhead"><div><span class="eyebrow">MEMORY SERVICE</span><h2>Memory / Qdrant</h2></div><span class="settings-caption">对应 MCP 的 env 参数</span></div>
+          <div class="settings-form-grid">
+            <label>Qdrant 地址<input id="setting-qdrant-url" type="url" maxlength="500" placeholder="http://localhost:6333" autocomplete="off"></label>
+            <label>Memory Collection<input id="setting-collection" type="text" maxlength="500" placeholder="mcp_probe_memory" autocomplete="off"></label>
+            <label>Qdrant API Key <span id="qdrant-key-state" class="secret-status">未设置</span>
+              <input id="setting-qdrant-key" type="password" maxlength="8192" autocomplete="new-password" placeholder="留空保持原值"></label>
+          </div>
+          <label class="settings-inline-remove"><input type="checkbox" id="clear-qdrant-key"> 清除本项目保存的 Qdrant API Key</label>
+        </section>
+        <section class="panel settings-section"><div class="panelhead"><div><span class="eyebrow">EMBEDDINGS</span><h2>Embedding 模型</h2></div></div>
+          <div class="settings-form-grid">
+            <label>Provider<select id="setting-provider"><option value="ollama">Ollama</option><option value="openai-compatible">OpenAI-compatible</option></select></label>
+            <label>模型名称<input id="setting-model" type="text" maxlength="500" placeholder="nomic-embed-text" autocomplete="off"></label>
+            <label>接口 URL<input id="setting-embedding-url" type="url" maxlength="500" placeholder="http://localhost:11434" autocomplete="off"></label>
+            <label>Embedding API Key <span id="embedding-key-state" class="secret-status">未设置</span>
+              <input id="setting-embedding-key" type="password" maxlength="8192" autocomplete="new-password" placeholder="留空保持原值"></label>
+          </div>
+          <label class="settings-inline-remove"><input type="checkbox" id="clear-embedding-key"> 清除本项目保存的 Embedding API Key</label>
+          <p class="settings-note">API Key 就是 MCP 环境变量的一部分，不是独立的 Token 管理。敏感值不会回显；项目内加密保存，独立密钥保存在本机用户目录。</p>
+        </section>
+        <section class="panel settings-section"><div class="panelhead"><div><span class="eyebrow">SEARCH</span><h2>检索参数</h2></div></div>
+          <div class="settings-form-grid">
+            <label>MEMORY_SEARCH_LIMIT<input id="setting-search-limit" type="number" min="1" max="100" step="1" value="3"></label>
+            <label>MEMORY_SUMMARY_MAX_CHARS<input id="setting-summary-max" type="number" min="1" max="100000" step="1" value="280"></label>
+          </div>
+        </section>
+        <div class="settings-bottom">
+          <div id="settings-feedback" role="status" aria-live="polite">MCP 客户端 mcpServers.env 优先于项目保存值；保存后需要重连 MCP。</div>
+          <button class="settings-save" id="settings-save" type="button">保存 MCP 环境配置</button>
+        </div>
+      </div>
+      <aside class="settings-aside">
+        <section class="panel"><div class="panelhead"><h2>当前项目</h2></div><div id="settings-status" class="settings-rows" aria-live="polite"><p class="sub">读取中…</p></div></section>
+        <div class="settings-help"><strong>配置优先级</strong><p>已在 MCP 客户端的 mcpServers.env 中设置的变量优先生效；这里保存的项目覆盖配置不会擅自修改 Cursor、Claude、ChatGPT 等客户端文件。只有本机可修改，局域网工作台只读。</p></div>
+      </aside>
+    </div>
+  </section>
+  <footer style="padding-top:25px;margin-top:20px;border-top:1px solid #203249;color:#6e829b;font-size:11px">
+    DevControl 项目工作台 · 数据取自当前 Git 项目与本地任务数据库 · <span id="synced">等待同步</span>
+  </footer>
+</main></div>
+<div id="overlay" class="overlay" role="presentation"><aside class="drawer" role="dialog" aria-modal="true" aria-label="项目文档">
+  <div class="drawerhead"><span class="eyebrow">任务详情 / 原始依据</span><button id="close" class="btn" type="button">关闭 ×</button></div>
+  <h2 id="doc-title">文档</h2><div class="source" id="doc-source"></div><div id="doc-content" class="content"></div>
+</aside></div>
+<script nonce="__NONCE__">__SCRIPT__</script></body></html>

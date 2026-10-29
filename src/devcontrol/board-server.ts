@@ -1,12 +1,15 @@
 /** Local read-only DevControl Kanban. The board is a projection of SQLite. */
 import http, { type ServerResponse } from "node:http";
 import { randomBytes } from "node:crypto";
+import { VERSION } from "../version.js";
 import { ProjectTaskLedger, DevControlError } from "./task-ledger.js";
 import { boardHtml } from "./board-html.js";
 import { projectHtml } from "./project-html.js";
+import { devControlGuide } from './action-guide.js';
 import { resolveWorkbenchLocale } from "./i18n.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
 import { projectOnboarding } from "./project-onboarding.js";
+import { publicProjectSettings, saveProjectSettings } from "./project-settings.js";
 import { searchHistorySession, readHistorySession } from "../lib/history-session/index.js";
 import {
   allowedHost, isLoopback, isPrivateLanAddress, lanAddresses, workspaceAccess,
@@ -14,7 +17,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.9.12";
+export const WORKSPACE_SCHEMA_VERSION = "0.11.0";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
@@ -31,7 +34,7 @@ function respond(
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": frame === "sameorigin" ? "SAMEORIGIN" : "DENY",
     "Referrer-Policy": "no-referrer",
-    "Content-Security-Policy": `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; ${childFrames ? "frame-src 'self'; " : ""}base-uri 'none'; frame-ancestors '${frame === "sameorigin" ? "self" : "none"}'`,
+    "Content-Security-Policy": `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src data:; connect-src 'self'; ${childFrames ? "frame-src 'self'; " : ""}base-uri 'none'; frame-ancestors '${frame === "sameorigin" ? "self" : "none"}'`,
   });
   res.end(body);
 }
@@ -44,6 +47,7 @@ export function createDevControlBoardServer(
   const ledger = typeof source === "string" ? new ProjectTaskLedger(source) : source;
   const config = workspaceAccess(ledger.root);
   const lanEnabled = options.lanEnabled ?? config.lanEnabled;
+  const settingsToken = randomBytes(32).toString("hex");
   const server = http.createServer((req, res) => {
     // LAN disable revokes remote access immediately, without a restart.
     const live = options.lanEnabled === undefined ? workspaceAccess(ledger.root) : null;
@@ -61,6 +65,39 @@ export function createDevControlBoardServer(
     }
     const nonce = randomBytes(18).toString("base64");
     const route = new URL(req.url ?? "/", "http://localhost").pathname;
+    // The public/LAN workbench is read-only; only THIS computer may edit
+    // project settings, with an explicit same-origin JSON request + CSRF
+    // challenge. Ordinary HTML forms, forged cross-site POST and CORS do not
+    // authorize configuration or secret updates.
+    if(route==="/api/settings"&&req.method==="POST"){
+      const origin=String(req.headers.origin??"");
+      const host=String(req.headers.host??"");
+      const contentType=String(req.headers["content-type"]??"").split(";")[0].trim().toLowerCase();
+      if(!local||req.headers["x-mcp-settings-token"]!==settingsToken||
+          origin!==`http://${host}`||contentType!=="application/json"||
+          (req.headers["sec-fetch-site"]&&req.headers["sec-fetch-site"]!=="same-origin")){
+        respond(res,403,"Local settings authorization required");
+        return;
+      }
+      let raw="",tooLarge=false;
+      req.on("data",(chunk:Buffer)=>{
+        raw+=chunk.toString("utf8");
+        if(raw.length>16_384)tooLarge=true;
+      });
+      req.on("end",()=>{
+        if(tooLarge){respond(res,413,"Settings request too large");return;}
+        try{
+          const saved=saveProjectSettings(ledger.root,JSON.parse(raw));
+          respond(res,200,JSON.stringify({...saved,csrfToken:settingsToken}),nonce,
+            "application/json; charset=utf-8");
+        }catch{
+          // Never echo invalid inputs, credentials, filenames or stack traces.
+          respond(res,400,'{"error":"Invalid settings update"}',nonce,
+            "application/json; charset=utf-8");
+        }
+      });
+      return;
+    }
     if (req.method !== "GET") {
       respond(res, 405, "Read-only board");
       return;
@@ -74,7 +111,10 @@ export function createDevControlBoardServer(
       } else if (route === "/api/meta") {
         respond(res, 200, JSON.stringify({
           root: ledger.root, schema: "devcontrol-project-workspace",
-          version: WORKSPACE_SCHEMA_VERSION, lanEnabled: enabledNow,
+          product: "mcp-probe-kit",
+          version: VERSION,
+          workspaceSchemaVersion: WORKSPACE_SCHEMA_VERSION,
+          lanEnabled: enabledNow,
           // Process identity is only exposed to the local supervisor, not LAN guests.
           ...(local ? {
             pid: process.pid,
@@ -82,6 +122,15 @@ export function createDevControlBoardServer(
             startedAt: process.env.DEVCONTROL_WORKSPACE_STARTED_AT ?? null,
           } : {}),
         }), nonce, "application/json; charset=utf-8");
+      } else if (route === '/api/guide') {
+        const intent=new URL(req.url??'/', 'http://localhost').searchParams.get('intent')??'';
+        respond(res,200,JSON.stringify(devControlGuide({intent})),nonce,
+          'application/json; charset=utf-8');
+      } else if (route === "/api/settings") {
+        if(!local){respond(res,403,"Local-only settings");return;}
+        respond(res,200,JSON.stringify({
+          ...publicProjectSettings(ledger.root),csrfToken:settingsToken,
+        }),nonce,"application/json; charset=utf-8");
       } else if (route === "/api/access") {
         const serverAddress = server.address();
         const port = typeof serverAddress === "object" && serverAddress

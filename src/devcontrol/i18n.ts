@@ -27,6 +27,17 @@ export function resolveWorkbenchLocale(
  * New languages can add independent catalogs using the same keys.
  */
 export const enUi: Record<string,string> = {
+  "工作台":"Workspace","单项目研发工作台":"Single-project development",
+  "当前项目":"Current project","本地 · 只读视图":"Local · read-only",
+  "Bug 管理":"Bug management","研发指南":"Development guide",
+  "设置":"Settings","连接信息":"Connection","↻ 同步":"↻ Sync",
+  "继续当前项目":"Continue this project","正在读取项目研发上下文…":"Loading project context…",
+  "读取项目状态":"Reading project status","开发中 / 待验证":"In progress / pending verification",
+  "Agent + Developer":"Agent + Developer","选择一个研发阶段":"Choose a development stage",
+  "只读操作引导":"Read-only guidance","工作台连接":"Workspace access",
+  "正在读取本机配置…":"Reading local settings…","安全边界":"Security boundary",
+  "AI、Token 与功能开关":"AI, tokens & feature flags",
+  "缺陷管理":"Bug management",
   "研发工作台":"Development workspace","项目工作台":"Project workspace",
   "项目总览":"Overview","产品与目标":"Product & goals",
   "需求管理":"Requirements","技术架构":"Architecture","任务与进度":"Tasks & progress",

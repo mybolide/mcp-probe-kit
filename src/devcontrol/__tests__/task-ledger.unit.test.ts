@@ -1938,9 +1938,10 @@ describe("project ledger and legacy migration", () => {
       const page = await fetch(base + "/");
       expect(page.status).toBe(200);
       const meta = await (await fetch(base + "/api/meta")).json();
-      expect(meta.version).toBe(WORKSPACE_SCHEMA_VERSION);
+      expect(meta.version).toBe((await import("../../version.js")).VERSION);
+      expect(meta.workspaceSchemaVersion).toBe(WORKSPACE_SCHEMA_VERSION);
       expect(meta.root).toBe(root);
-      expect(await page.text()).toContain("DevControl · 项目工作台");
+      expect(await page.text()).toContain("mcp-probe-kit · 研发工作台");
       expect(page.headers.get("content-security-policy")).toContain("script-src 'nonce-");
       expect(page.headers.get("content-security-policy")).toContain("frame-src 'self'");
       expect(page.headers.get("x-frame-options")).toBe("DENY");
