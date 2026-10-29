@@ -65,6 +65,10 @@ describe('v5 lightweight single-project workbench', () => {
     // Feature-only plans do not have the release-work summary node. A stale
     // dereference used to throw after opening the drawer, leaving it blank.
     expect(html).not.toContain('$("release-review-summary").replaceChildren()');
+    expect(html).toContain("input.closest('.settings-switch-row')||input.closest('label')");
+    expect(html).toContain('.settings-switch-row>.switch');
+    expect(html).toContain('function renderTaskContract(contract)');
+    expect(html).toContain('renderTaskContract(safeSummary)');
     for(const label of ['任务说明','必须完成什么 · 验收目标','对应需求',
       '已批准的执行步骤','实施步骤的规格状态','文件修改范围',
       '必须通过的质量门禁','交付验收应保留的真实证据']){

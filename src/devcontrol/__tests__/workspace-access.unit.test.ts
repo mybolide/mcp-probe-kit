@@ -25,6 +25,7 @@ describe("project workbench LAN access", () => {
   it("uses high ports and independent Git-ignored LAN configurations for projects", () => {
     expect(WORKSPACE_START_PORT).toBe(38180);
     const first = project(), second = project();
+    expect(workspaceAccess(first).lanEnabled).toBe(true);
     const x = configureWorkspaceAccess(first, { lanEnabled: true });
     const y = configureWorkspaceAccess(second, { lanEnabled: true });
     expect(x.lanEnabled).toBe(true);
@@ -42,6 +43,20 @@ describe("project workbench LAN access", () => {
     expect(workspaceAccess(second).lanEnabled).toBe(false);
     expect(workspaceAccess(first).lanEnabled).toBe(true);
     if (process.platform !== "win32") expect(fs.statSync(file).mode & 0o077).toBe(0);
+  });
+
+  it('accepts only explicitly configured FRPC hosts, without overriding LAN disable',()=>{
+    const prior=process.env.DEVCONTROL_ALLOWED_HOSTS;
+    try{
+      process.env.DEVCONTROL_ALLOWED_HOSTS='devcontrol.example.test, staging.example.test';
+      expect(allowedHost('devcontrol.example.test:443',true)).toBe(true);
+      expect(allowedHost('staging.example.test:38180',true)).toBe(true);
+      expect(allowedHost('unknown.example.test:38180',true)).toBe(false);
+      expect(allowedHost('devcontrol.example.test:38180',false)).toBe(false);
+    }finally{
+      if(prior===undefined)delete process.env.DEVCONTROL_ALLOWED_HOSTS;
+      else process.env.DEVCONTROL_ALLOWED_HOSTS=prior;
+    }
   });
 
   it("scrubs obsolete access credentials while keeping LAN settings", () => {

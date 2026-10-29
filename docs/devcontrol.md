@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **82 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **83 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -373,11 +373,16 @@ draft guidance on demand. A template with placeholder fields remains draft,
 even if its saved JSON is long. UI visibility never substitutes for the
 review/approval and implementation Gate.
 
-Network mode is **explicitly project-scoped**. To let a central computer
-view the project, enable LAN once using `devcontrol lan-enable --project-root .`;
-disable with `lan-disable`. The configuration is in the project's
-Git-ignored SQLite state directory. In LAN mode, DevControl accepts only
-private IPv4 sources (RFC1918) and Host headers belonging to this computer.
+Network mode is **explicitly project-scoped**. New projects enable
+private LAN by default; an existing explicit `lanEnabled:false` remains off.
+Disable with `devcontrol lan-disable --project-root .` at any time. Its
+configuration remains in the project's Git-ignored state. DevControl accepts
+private IPv4 sources and recognized local Host headers. FRPC forwarding with
+a custom domain requires explicitly setting
+`DEVCONTROL_ALLOWED_HOSTS=devcontrol.example.com` (or `FRPC_DOMAIN`) in the
+board process environment before starting it. Simply enabling LAN does not
+authorize an arbitrary proxy Host: unknown domains fail closed.
+
 **There is no password, login screen, access key or cookie**; the dashboard's
 **局域网连接** view shows the actual URLs and central browsers open them
 directly. All workspace pages, Feature proposals, Bug details, architecture

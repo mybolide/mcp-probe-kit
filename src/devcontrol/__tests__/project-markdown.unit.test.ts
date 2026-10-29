@@ -64,9 +64,10 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('id="task-progress-bar"');
     expect(html).toContain('n("button",null,"task-card")');
     expect(html).toContain('n("span",brief.description||brief.acceptance||');
-    expect(html).toContain('section("任务说明",task.purpose||brief.description');
-    expect(html).toContain('section("必须完成什么 · 验收目标",brief.acceptance');
-    expect(html).toContain('section("文件修改范围",brief.paths.length');
+    expect(html).toContain('function renderTaskContract(contract)');
+    expect(html).toContain('fetchJSON("/api/tasks/"+encodeURIComponent');
+    expect(html).toContain('["任务说明",contract.purpose||contract.description]');
+    expect(html).toContain('["文件修改范围",contract.allowedPaths]');
     expect(html).toContain('"正式工作项已验证 "+verifiedTasks');
     expect(html).toContain('const productTasks=currentReleaseRows();');
     expect(html).toContain('if(row.current?.pendingVerification)return ["待设备/外部验收",""];');
@@ -99,7 +100,7 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).not.toContain("ENGINEERING OS");
     expect(html).toContain("未分配");
     expect(html).toContain("未排期");
-    expect(html).toContain('showDelivery();');
+    expect(html).toContain('function renderTaskContract(contract)');
     expect(html).toContain('"完成总结："+note.summary');
     expect(html).toContain('"实际交付："+note.implementation');
     expect(html).toContain('taskTab="not_started"');

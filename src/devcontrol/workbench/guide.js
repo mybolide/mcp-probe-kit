@@ -100,7 +100,9 @@
     for(const [key,id] of Object.entries(settingInputs)){
       const input=$(id),source=effectiveSettingSources[key];
       input.disabled=!!source?.overridden;
-      const container=input.closest('label')||input.closest('.settings-switch-row');
+      // Toggle labels are only 46px wide. Attribution text belongs to the
+      // full settings row, never inside the switch (which made it vertical).
+      const container=input.closest('.settings-switch-row')||input.closest('label');
       if(!container)continue;
       let label=container.querySelector('[data-env-source]');
       if(!label){label=n('small',null,'settings-env-source');

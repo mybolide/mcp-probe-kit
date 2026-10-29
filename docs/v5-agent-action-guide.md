@@ -1,10 +1,10 @@
-# MCP Probe Kit v5：让 Agent 不必记住 82 个 action
+# MCP Probe Kit v5：让 Agent 不必记住 83 个 action
 
 > **状态**：v5.0.0 源码开发分支，尚未发布 npm / MCP Registry；公开稳定版仍为 v4.1.1。Node.js 22+ 与真实 Git 业务项目是 v5 研发管理的基本条件。
 >
-> **一句话**：对 Agent 而言只有 **一个正式研发管理 MCP 工具 `devcontrol`**；其中 `guide` 是**只读导航入口**，其他 81 个是业务操作。Agent 按意图先导航，再按 SQLite 冻结合同执行；不需要死记参数、也不在 MCP 层执行任何业务项目的测试。
+> **一句话**：对 Agent 而言只有 **一个正式研发管理 MCP 工具 `devcontrol`**；其中 `guide` 是**只读导航入口**，其他 82 个是业务操作。Agent 按意图先导航，再按 SQLite 冻结合同执行；不需要死记参数、也不在 MCP 层执行任何业务项目的测试。
 
-## 如何避免 82 个 action 造成工具选择困难？
+## 如何避免 83 个 action 造成工具选择困难？
 
 当 Agent 不知道下一步使用哪个动作时，先调用：
 
@@ -46,7 +46,7 @@
 4. **拆解**：`feature-task-brief` → `feature-task-review` / `feature-task-stage` / `feature-task-propose`，阶段与父任务仅负责组织，每个叶子任务**只有一个可独立验证的目标**，写清文件范围、依赖、正反测试、证据、不做事项与停止条件。新 Feature 叶子任务建议 30–60 分钟，1–2 小时须说明为什么不能安全拆分，超过 2 小时须继续拆分；旧冻结任务不能直接重写。
 5. **严格分轮复审**：第一轮完成 `feature-task-review` / `feature-task-propose`，保存提案和精确 Hash，结束规划轮次。下一轮必须重新读取已保存的提案，从需求覆盖、依赖、失败场景、文件范围和验收依据重新检查，调用 `feature-task-second-review` 将审阅结果与 Hash 单独存入 SQLite。通过后才能 `feature-task-approve`。同一个开发 Agent 可以执行两个轮次，**不需要另设审核 Agent**，但不能把规划和二次 Review 放在同一轮里。普通子任务不用逐条申请 Owner；新版本范围、重大变更和冻结范围扩展仍需 Owner 明确授权。未经计划确认的草稿可以查看，但**不得领取开发**。
 6. **实施**：`next` → `execution-contract` → `claim`，Agent 只修改受批准路径，使用 Git 提交真实修改。
-7. **正式交接、独立审核与验收**：**所有业务 Gate（包括旧 `docs`、`go_contract`、`flutter_test`、`ios_device_e2e`）仅是验收条件名称，DevControl 不运行任何业务测试命令。** 开发 Agent 通过项目自身测试体系完成测试、提交与 Git 版本绑定的证据；独立 Reviewer 针对每个 Gate 使用 `gate-review` 记录证据覆盖判断，不以 MCP 是否安装测试 SDK 判定通过。先调用只读 `task-closure-status` 获得顺序明确的 nextAction 与缺失证据清单。开发 Agent 自行执行 Python、Go、Flutter、gRPC 等真实业务测试，`complete` / `report` 记录真实提交与证据；然后使用 `review-handoff` 持当前租约令牌生成单次 Reviewer 凭据。不同的 Reviewer 必须核对真实 Git 提交、任务范围和测试证据，通过 `review-submit` 明确通过或退回。通过后调用 `reviewed-verify` 执行原有全部 Gate，再决定是否 Verified。失败则退回 `in_progress`，不允许冒充验证完成。外部 Gate 的 `gate-review` 仍须按原规则独立执行，不能由交接审批替代。
+7. **正式交接、独立审核与验收**：新建 Feature 与 release-work 使用统一冻结任务合同；详细读取以原审批 Hash/修订对应的 SQLite 快照为准，报告缺失字段而不是从简化 dc_task_specs 伪造内容。**所有业务 Gate（包括旧 `docs`、`go_contract`、`flutter_test`、`ios_device_e2e`）仅是验收条件名称，DevControl 不运行任何业务测试命令。** 开发 Agent 通过项目自身测试体系完成测试、提交与 Git 版本绑定的证据；独立 Reviewer 针对每个 Gate 使用 `gate-review` 记录证据覆盖判断，不以 MCP 是否安装测试 SDK 判定通过。先调用只读 `task-closure-status` 获得顺序明确的 nextAction 与缺失证据清单。开发 Agent 自行执行 Python、Go、Flutter、gRPC 等真实业务测试，`complete` / `report` 记录真实提交与证据；然后使用 `review-handoff` 持当前租约令牌生成单次 Reviewer 凭据。不同的 Reviewer 必须核对真实 Git 提交、任务范围和测试证据，通过 `review-submit` 明确通过或退回。通过后调用 `reviewed-verify` 执行原有全部 Gate，再决定是否 Verified。失败则退回 `in_progress`，不允许冒充验证完成。外部 Gate 的 `gate-review` 仍须按原规则独立执行，不能由交接审批替代。
 8. **会话恢复和本地文件保护**：领取时记录无关未提交文件哈希；对领取后才出现的其他项目文件，完成登记时也可核实其范围并保护，不强制清理。不得 stash/reset、删除、提交无关文件，或把它们算作任务完成证据。原开发 Agent 丢失会话且任务仍在 `in_progress` 时，租约到期后可用 `recover-task` 安全接管原 Git 基线，继续真实 `complete` / `report`，再执行 `review-handoff`。如果已经 `in_review`，可使用 `review-handoff` 恢复审核办理权限。两种 Owner 恢复操作都必须有至少 24 字符的 `DEVCONTROL_OWNER_RECOVERY_KEY` 环境配置、真实匹配凭据及理由。单靠 Owner 名称不构成身份验证。接管只交付新的短期租约，不修改代码、不替代 Gate 或独立 Reviewer。
 9. **延期后恢复审核**：`defer-verification` 冻结原任务完成 Commit 和文件清单。后续任务只要不修改原任务文件，就允许继续推进 HEAD。`resume-verification` 后，再用 `task-closure-status` 引导 review-handoff → review-submit → 按需要补录真实设备测试 report / gate-review → reviewed-verify。审阅绑定原完成 Commit，不能强迫 Git HEAD 回退。后续一旦修改原任务文件必须重新审查，独立 Review 不代替尚未执行的真实 Gate。
 10. **History 交接**：`history_session_checkpoint` 保存用户原话、决策、Commit、测试、租约和下一步，但不能代替 DevControl 的任务交接、审核或 Verified。
@@ -63,7 +63,7 @@ MCP 每次启动在识别目标 Git 项目时检查 `.agents/skills/mcp-probe-ki
 
 ## 工具和安全边界
 
-- v5 主模型工具共 **24 个**；DevControl 通过一个工具暴露 **82 个 action（含只读 `guide`）**，完整分组可见 `docs/v5-sqlite-only.md` 与自动生成的 Skill；这不是 82 个并列 MCP 工具。
+- v5 主模型工具共 **24 个**；DevControl 通过一个工具暴露 **83 个 action（含只读 `guide`）**，完整分组可见 `docs/v5-sqlite-only.md` 与自动生成的 Skill；这不是 83 个并列 MCP 工具。
 - 研发流程状态归 SQLite `dc_*`，会话 History 归同项目 `hs_*`。旧 Markdown History 只允许只读导入，不支持双写/回退文件式工作流。
 - 开发 Agent 执行代码、SQL、测试和独立审核；DevControl 负责组织、权限边界和保存证据。MCP 不需要为每种语言实现测试执行器，也不会独立决定测试真实通过。
 - v4 `start_feature`、`start_bugfix`、`resume_plan`、`plan_heartbeat`、`converge` 均不是 v5 可调用流程。

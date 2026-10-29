@@ -1,6 +1,7 @@
 /**
  * Per-project workbench network configuration. No global configuration,
- * shared credentials, cloud service or database. LAN is opt-in.
+ * shared credentials, cloud service or database. New workspaces enable private
+ * LAN by default; users can explicitly turn it off for any project.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -34,12 +35,12 @@ function configPath(project: string): string {
 export function workspaceAccess(project: string): WorkspaceAccess {
   const filename = configPath(project);
   if (!fs.existsSync(filename)) return {
-    lanEnabled: false, basePort: WORKSPACE_START_PORT,
+    lanEnabled: true, basePort: WORKSPACE_START_PORT,
   };
   const parsed = JSON.parse(fs.readFileSync(filename, "utf8")) as Partial<WorkspaceAccess>;
   const port = Number(parsed.basePort);
   const access = {
-    lanEnabled: parsed.lanEnabled === true,
+    lanEnabled: parsed.lanEnabled !== false,
     basePort: Number.isSafeInteger(port) && port >= 1025 && port <= 65535
       ? port : WORKSPACE_START_PORT,
   };
@@ -86,9 +87,19 @@ export function isLoopback(address?: string | null): boolean {
     address === "::1" || /^::ffff:127\./.test(address));
 }
 
+/** Explicit reverse-proxy host allowlist. Never trust arbitrary Host headers:
+ * FRPC often forwards a custom hostname that isn't a local interface IP.
+ * DEVCONTROL_ALLOWED_HOSTS or FRPC_DOMAIN must name it deliberately.
+ */
+function configuredProxyHosts():string[] {
+  return [process.env.DEVCONTROL_ALLOWED_HOSTS??'',process.env.FRPC_DOMAIN??'']
+    .flatMap(value=>value.split(','))
+    .map(value=>value.trim().toLowerCase()).filter(value=>
+      /^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/.test(value)&&!value.includes('..'));
+}
 export function allowedHost(hostHeader: string | undefined, lanEnabled: boolean): boolean {
   if (!hostHeader || !/^[a-zA-Z0-9.\-]+(?::\d{1,5})?$/.test(hostHeader)) return false;
   const hostname = hostHeader.replace(/:\d{1,5}$/, "").toLowerCase();
   return hostname === "localhost" || hostname === "127.0.0.1" ||
-    (lanEnabled && lanAddresses().includes(hostname));
+    (lanEnabled && (lanAddresses().includes(hostname)||configuredProxyHosts().includes(hostname)));
 }

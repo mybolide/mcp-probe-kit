@@ -35,6 +35,8 @@ import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
 import { extractRequirementRefs } from './requirement-ids.js';
 import { validGateRequirements, isEvidenceGate } from './gate-policy.js';
+import { normalizeFrozenTaskContract, auditNormalizedTaskContract,
+  reviewSharedTaskPlanningFields, type TaskContractSource } from './task-contract.js';
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -2312,11 +2314,14 @@ export class ProjectTaskLedger {
     if(input.qualityProfile==="task-detail-v1"||input.qualityProfile==="task-detail-v2")
       issues.push(...reviewDetailedWorkItems(workItems),...reviewTaskQualityJudgments(input));
     if(input.qualityProfile==="task-detail-v2")
-      for(const item of workItems)issues.push(...reviewAtomicOutcome({
+      for(const item of workItems){
+        issues.push(...reviewSharedTaskPlanningFields(item));
+        issues.push(...reviewAtomicOutcome({
         id:item.id,title:item.title,acceptance:item.acceptance,
         estimatedHours:item.estimatedHours,maxHours:2,preferredHours:1,
         granularityJustification:item.granularityJustification,requireEstimate:true,
-      }));
+        }));
+      }
     if(input.qualityProfile!==undefined&&
         input.qualityProfile!=="task-detail-v1"&&input.qualityProfile!=="task-detail-v2")
       issues.push("Unknown release task detail quality profile");
@@ -2523,9 +2528,74 @@ export class ProjectTaskLedger {
     });
   }
 
-  /** A reviewable, frozen execution brief, not an invitation to redesign. */
+  /** Resolve the approved snapshot revision that introduced this task.
+   * Later plan revisions may add work but cannot redefine frozen ancestors.
+   */
+  frozenTaskContract(id:string):Row {
+    const task=this.get(id),planId=String(task.planId??"");
+    let node:Row|null=null;
+    let source:TaskContractSource={kind:"legacy",planId:task.planId??null,
+      planHash:null,revision:null,approvedBy:null,approvedAt:null,
+      frozen:false,qualityProfile:null};
+    if(planId.startsWith("feature:")){
+      const match=/^feature:([a-z0-9-]+):v(\d+)$/.exec(planId);
+      if(match){
+        const revision=Number(match[2]);
+        const row=this.db.prepare(`SELECT * FROM dc_feature_task_plan_revisions
+          WHERE feature_name=? AND revision=?`).get(match[1],revision);
+        if(row){
+          const frozen=JSON.parse(String(row.snapshot_json)) as Row;
+          node=(frozen.plan?.nodes??[]).find((item:Row)=>item.id===id)??null;
+          source={kind:"feature",planId,revision,planHash:row.hash,
+            approvedBy:row.approved_by,approvedAt:row.approved_at,
+            frozen:!!node,qualityProfile:"spec-depth-v3"};
+        }
+      }
+    }else if(planId.startsWith("release-work:")){
+      const release=planId.slice("release-work:".length);
+      const revisions=this.db.prepare(`SELECT * FROM dc_release_work_history
+        WHERE release=? ORDER BY revision ASC`).all(release);
+      for(const row of revisions){
+        const frozen=JSON.parse(String(row.snapshot_json)) as Row;
+        const item=(frozen.plan?.workItems??[]).find((entry:Row)=>entry.id===id);
+        if(item){
+          node=item;source={kind:"release-work",planId,revision:row.revision,
+            planHash:row.hash,approvedBy:row.approved_by,
+            approvedAt:row.approved_at,frozen:true,
+            qualityProfile:frozen.plan?.qualityProfile??"legacy"};
+          break;
+        }
+      }
+    }else if(planId){
+      const revisions=this.db.prepare(`SELECT * FROM dc_release_plan_revisions
+        WHERE release=? ORDER BY revision ASC`).all(String(task.release));
+      for(const entry of revisions){
+        const frozen=JSON.parse(String(entry.snapshot_json)) as Row;
+        const item=(frozen.nodes??[]).find((candidate:Row)=>candidate.id===id);
+        if(item){
+          node=item;source={kind:"release-plan",planId,revision:entry.revision,
+            planHash:entry.hash,approvedBy:entry.approved_by,
+            approvedAt:entry.approved_at,frozen:true,
+            qualityProfile:frozen.qualityProfile??null};
+          break;
+        }
+      }
+    }
+    const contract=normalizeFrozenTaskContract(task,node,source);
+    return {...contract,source,audit:auditNormalizedTaskContract(contract)};
+  }
+
+  /** Advisory audit never modifies historical approval or Verified. */
   taskDetailAudit(id:string):Row {
     const task=this.get(id);
+    const normalized=this.frozenTaskContract(id);
+    if(normalized.source.kind==="feature"||normalized.source.kind==="release-plan"){
+      return {taskId:id,scope:normalized.source.frozen?"frozen":"missing",
+        release:task.release,planHash:normalized.source.planHash,
+        revision:normalized.source.revision,
+        qualityProfile:normalized.source.qualityProfile,
+        ...normalized.audit};
+    }
     const roster=this.releaseWorkPlan(String(task.release));
     const item=(roster.status==="frozen"?roster.frozen?.plan?.workItems:
       roster.proposal?.plan?.workItems)?.find((entry:{id:string})=>entry.id===id);
