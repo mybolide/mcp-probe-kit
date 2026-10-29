@@ -6,6 +6,7 @@
 import { reviewReleasePlan, type ReleasePlanNode } from "./release-plan.js";
 import { canonicalRequirementId } from './requirement-ids.js';
 import { reviewAtomicOutcome } from './task-atomicity.js';
+import { reviewSharedTaskPlanningFields } from './task-contract.js';
 
 export interface FeatureTaskPlan {
   release: string;
@@ -47,6 +48,7 @@ export function reviewFeatureTaskPlan(source: FeatureTaskSource,
   const design = `feature:${source.name}#design`;
   const reqRef = `feature:${source.name}#requirements`;
   for (const leaf of leaves) {
+    issues.push(...reviewSharedTaskPlanningFields(leaf));
     // New Feature proposals should be granular by default. Previously frozen
     // tasks are not rewritten. 1–2h exceptions need a specific explanation.
     issues.push(...reviewAtomicOutcome({id:leaf.id,title:leaf.title,

@@ -70,7 +70,7 @@
   }
   let reloadInProgress=false;
   const refreshChoices=new Set([5,10,30,60]);
-  let refreshSeconds=10,refreshRemaining=10;
+  let refreshSeconds=5,refreshRemaining=5;
   try{
     const stored=Number(localStorage.getItem('devcontrol-refresh-seconds'));
     if(refreshChoices.has(stored))refreshSeconds=stored;
@@ -79,10 +79,21 @@
   $('refresh-interval').value=String(refreshSeconds);
   function updateRefreshCountdown(){
     const active=router.current()==='tasks'||router.current()==='overview';
-    $('refresh-countdown').textContent=active?
-      (refreshRemaining+' 秒后刷新'):'仅工作台与任务管理自动刷新';
+    $('refresh-countdown').textContent=!active?'仅工作台与任务管理自动刷新':
+      reloadInProgress||taskRefreshInProgress?'正在刷新，等待全部接口返回…':
+      (refreshRemaining+' 秒后刷新');
   }
   function resetRefreshClock(){refreshRemaining=refreshSeconds;updateRefreshCountdown();}
+  // Promise.all rejects at the first failed endpoint while other requests
+  // may still be running. Always settle EVERY endpoint before displaying an
+  // error or starting the next countdown; keep old UI data on batch failure.
+  async function awaitRefreshRequests(requests,optionalLast=false){
+    const results=await Promise.allSettled(requests);
+    const failed=results.find((result,index)=>result.status==='rejected'&&
+      !(optionalLast&&index===results.length-1));
+    if(failed)throw failed.reason;
+    return results.map(result=>result.status==='fulfilled'?result.value:null);
+  }
   async function loadBrandVersion(){
     try{
       const meta=await fetchJSON('/api/meta');
@@ -95,14 +106,14 @@
     }
   }
   async function reload(){
-    if(reloadInProgress)return;
-    reloadInProgress=true;
-    try{const [nextProject,nextBoard,nextFeatures,nextFeatureTaskPlans,nextReleaseWorkPlan,nextOnboarding,nextReleasePlan,nextDeveloper,nextInsights]=await Promise.all([
+    if(reloadInProgress||taskRefreshInProgress)return;
+    reloadInProgress=true;updateRefreshCountdown();
+    try{const [nextProject,nextBoard,nextFeatures,nextFeatureTaskPlans,nextReleaseWorkPlan,nextOnboarding,nextReleasePlan,nextDeveloper,nextInsights]=await awaitRefreshRequests([
       fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),
       fetchJSON("/api/feature-task-plans"),fetchJSON("/api/release-work-plan"),
       fetchJSON("/api/onboarding"),
       fetchJSON("/api/release-plan"),fetchJSON("/api/local-developer"),
-      fetchJSON('/api/insights').catch(()=>null)]);
+      fetchJSON('/api/insights')],true);
       project=nextProject;board=nextBoard;features=nextFeatures.features||[];
       featureTaskPlans=nextFeatureTaskPlans.plans||[];
       releaseWorkPlan=nextReleaseWorkPlan;
@@ -115,9 +126,9 @@
   let taskRefreshInProgress=false;
   async function refreshTaskData(){
     if(taskRefreshInProgress||reloadInProgress)return;
-    taskRefreshInProgress=true;
+    taskRefreshInProgress=true;updateRefreshCountdown();
     try{
-      const [nextBoard,nextPlans,nextWork,nextRelease]=await Promise.all([
+      const [nextBoard,nextPlans,nextWork,nextRelease]=await awaitRefreshRequests([
         fetchJSON('/api/board'),fetchJSON('/api/feature-task-plans'),
         fetchJSON('/api/release-work-plan'),fetchJSON('/api/release-plan'),
       ]);
@@ -161,13 +172,13 @@
     button.addEventListener('click',()=>{
       $('history-search').value=button.dataset.historyQuery;loadHistory();
     });
-  $("reload").addEventListener("click",()=>{resetRefreshClock();reload();});
+  $("reload").addEventListener("click",()=>reload());
   $('refresh-interval').addEventListener('change',()=>{
     const next=Number($('refresh-interval').value);
     if(!refreshChoices.has(next))return;
     refreshSeconds=next;
     try{localStorage.setItem('devcontrol-refresh-seconds',String(next));}catch{}
-    resetRefreshClock();
+    if(!reloadInProgress&&!taskRefreshInProgress)resetRefreshClock();
   });
   $("share-lan").addEventListener("click",showLanAccess);
   $("settings-save").addEventListener("click",saveSettings);
@@ -188,7 +199,9 @@
     if(reloadInProgress||taskRefreshInProgress){updateRefreshCountdown();return;}
     refreshRemaining=Math.max(0,refreshRemaining-1);
     if(refreshRemaining===0){
-      resetRefreshClock();
+      // Show the waiting state now. Only the async finally block can reset
+      // the timer after every endpoint has settled and rendering completed.
+      updateRefreshCountdown();
       if(view==='overview')reload();else refreshTaskData();
     }else updateRefreshCountdown();
   },1000);

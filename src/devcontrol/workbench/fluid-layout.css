@@ -60,6 +60,10 @@
 #view-guide .guide-detail{max-width:none}
 .settings-layout{grid-template-columns:minmax(0,2.4fr) minmax(310px,.85fr);gap:20px}
 .settings-section{width:100%}
+.settings-switch-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;min-width:0}
+.settings-switch-row>div{min-width:0;overflow-wrap:break-word}
+.settings-switch-row>.switch{display:flex;width:46px;min-width:46px;max-width:46px;height:27px;flex:0 0 46px;justify-self:end;white-space:nowrap}
+.settings-switch-row .settings-env-source{grid-column:1/-1;min-width:0;max-width:100%;overflow-wrap:break-word;white-space:normal}
 .settings-aside{position:sticky;top:32px}
 #view-tasks .task-progress{display:flex;gap:18px;align-items:center;justify-content:space-between}
 #view-tasks .task-progress span{max-width:68%;margin:0}

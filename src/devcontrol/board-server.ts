@@ -265,7 +265,8 @@ export function createDevControlBoardServer(
         }));
         const decision = ledger.getDecision(id).decision;
         const detailAudit = ledger.taskDetailAudit(id);
-        respond(res, 200, JSON.stringify({ task, evidence, completion, audit: events, decision, detailAudit }),
+        const contract = ledger.frozenTaskContract(id);
+        respond(res, 200, JSON.stringify({ task, contract, evidence, completion, audit: events, decision, detailAudit }),
           nonce, "application/json; charset=utf-8");
       } else {
         respond(res, 404, "Not found");

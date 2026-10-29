@@ -2006,6 +2006,10 @@ describe("project ledger and legacy migration", () => {
     expect(audit).toMatchObject({taskId:"WORK-101",passed:false,
       scope:"frozen",qualityProfile:"legacy",retroactiveGateApplied:false});
     expect(audit.missing).toContain("purpose");
+    const originalContract=ledger!.frozenTaskContract("WORK-101");
+    expect(originalContract).toMatchObject({authoritative:true,
+      source:{kind:"release-work",revision:1,planHash:approved.hash},
+      acceptance:"首次写入返回稳定事件编号"});
     expect(ledger!.executionContract("WORK-101").eligible).toBe(true);
     expect(contract.spec).toMatchObject({title:"实现本地事件创建接口",
       acceptance:"首次写入返回稳定事件编号"});
@@ -2314,6 +2318,32 @@ describe("project ledger and legacy migration", () => {
       .toMatchObject({status:'frozen',alreadyApplied:true});
     expect(ledger!.get("INGEST-LEAF").dependsOn).toEqual(["F0"]);
     expect(ledger!.executionContract("INGEST-LEAF")).toMatchObject({eligible:true,profile:"spec-depth-v3"});
+    const frozenContract=ledger!.frozenTaskContract("INGEST-LEAF");
+    expect(frozenContract).toMatchObject({
+      taskId:"INGEST-LEAF",authoritative:true,
+      source:{kind:"feature",revision:approved.revision,planHash:pending.hash,frozen:true},
+      scenario:node.scenario,workflow:node.workflow,
+      businessRules:node.businessRules,requirementIds:["FR-101"],
+      verificationEvidence:node.verificationEvidence,
+      allowedChangedFiles:node.allowedChangedFiles,
+    });
+    expect(ledger!.taskDetailAudit('INGEST-LEAF')).toMatchObject({
+      taskId:'INGEST-LEAF',scope:'frozen',applicable:true,
+      retroactiveGateApplied:false,
+    });
+    const featureWeb=createDevControlBoardServer(ledger!);
+    await new Promise<void>(resolve=>featureWeb.listen(0,'127.0.0.1',resolve));
+    try {
+      const address=featureWeb.address();
+      const base='http://127.0.0.1:'+(address&&typeof address==='object'?address.port:0);
+      const response=await fetch(base+'/api/tasks/INGEST-LEAF');
+      const data=await response.json();
+      expect(data.contract).toMatchObject({
+        source:{kind:'feature',planHash:pending.hash},
+        scenario:node.scenario,workflow:node.workflow,
+      });
+      expect(data.task.spec.scenario).toBeUndefined(); // compatibility summary stays small.
+    }finally{await new Promise<void>(resolve=>featureWeb.close(()=>resolve()));}
     expect(()=>ledger!.claim("INGEST-GROUP","agent")).toThrow(/leaf|group/i);
     const claimed=ledger!.claim("INGEST-LEAF","agent");
     expect(claimed.task.id).toBe("INGEST-LEAF");

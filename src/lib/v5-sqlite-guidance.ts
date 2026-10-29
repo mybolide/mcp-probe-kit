@@ -118,7 +118,18 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    changes need separately reviewed \`release-work-scope-*\` or
    \`release-work-incremental-*\` revisions. Frozen schemas/API/security
    files use \`artifact-stage\` / independent review / approve / check.
-7. Before replying with a session handoff, checkpoint real user text, findings,
+7. All approved Feature tasks and whole-release work items use the SAME
+   frozen task contract for reading and auditing. Use \`execution-contract\`
+   for eligibility and \`task-detail-audit\` for advisory quality, and
+   GET /api/tasks/:id for a normalized full contract with original source
+   type, exact approval hash and revision. Do not treat the smaller
+   dc_task_specs summary as the complete contract. Missing fields must stay
+   missing; never fabricate scenarios, tests or file scope. Approval and
+   historical Verified remain immutable, even when an advisory audit finds
+   gaps. New projects enable private LAN access by default; explicit disable
+   persists. For FRPC custom hostnames, set DEVCONTROL_ALLOWED_HOSTS or
+   FRPC_DOMAIN in the board environment; do not disable Host validation.
+8. Before replying with a session handoff, checkpoint real user text, findings,
    decisions, paths, tests, Git/lease state, blockers and next actions using
    \`history_session_checkpoint\`. Search/read earlier History on demand.
 
