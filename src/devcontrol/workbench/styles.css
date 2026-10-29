@@ -42,20 +42,10 @@ h2{font-size:20px;letter-spacing:-.5px;margin:0 0 9px}h3{font-size:15px;margin:0
 .task-tabs button{border:0;background:transparent;color:#a5b9d0;border-radius:8px;padding:13px 12px;font-weight:650;text-align:center}
 .task-tabs button[aria-selected="true"]{color:#e9f8ff;background:#264865;box-shadow:inset 0 -2px #7ee5e8}
 .task-tabs .count{font-size:11px;color:#8ea7bd;margin-left:7px}.task-tabs button[aria-selected="true"] .count{color:#aef0f2}
-.simple-task-list{display:grid;gap:9px;margin-top:12px}
-.simple-task{display:block;width:100%;background:#122034;border:1px solid #2b4057;border-radius:11px;text-align:left;color:inherit;padding:18px 19px;cursor:pointer}
-.simple-task:hover{background:#1b3048;border-color:#46758d}
-.simple-task:focus-visible{outline:2px solid var(--cyan)}
-.simple-task-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
-.simple-task-title{font-size:14px;font-weight:650;line-height:1.55;color:#e6f3ff}
-.simple-task-meta{font-size:11px;color:#8aa8be;margin-top:5px}
-.simple-task-summary{font-size:12px;color:#adc4d8;line-height:1.6;margin-top:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.simple-task .issue-state{flex:none;font-size:11px}
 .task-phase{border:1px solid #2b4057;border-radius:13px;background:#0e1b2b;overflow:hidden;margin:13px 0}
 .task-phase-head{padding:14px 17px;background:#17283e;border-bottom:1px solid #2b4057;display:flex;gap:12px;align-items:center;justify-content:space-between}
 .task-phase-head strong{font-size:13px}.task-phase-head small{color:#90a8c0;font-size:11px}
 .issue-controls select{background:#12253c;color:#d7e6f6;border:1px solid #35516c;border-radius:8px;padding:9px;min-width:112px}
-.task-phase-items{padding:10px;display:grid;gap:9px}.task-phase-items .simple-task{background:#132238}
 .feature-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
 .feature-summary .spec-block{margin:0;text-align:center;padding:12px}
 .issue-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:15px 0}

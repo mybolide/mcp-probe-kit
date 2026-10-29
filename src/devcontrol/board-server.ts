@@ -7,6 +7,7 @@ import { boardHtml } from "./board-html.js";
 import { projectHtml } from "./project-html.js";
 import { devControlGuide } from './action-guide.js';
 import { workbenchInsights } from './workbench-insights.js';
+import { projectDatabaseDesign } from './project-database-design.js';
 import { resolveWorkbenchLocale } from "./i18n.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
 import { projectOnboarding } from "./project-onboarding.js";
@@ -129,6 +130,12 @@ export function createDevControlBoardServer(
           'application/json; charset=utf-8');
       } else if (route === '/api/insights') {
         respond(res,200,JSON.stringify(workbenchInsights(ledger)),nonce,
+          'application/json; charset=utf-8');
+      } else if (route === '/api/architecture/database') {
+        respond(res,200,JSON.stringify({
+          ...projectDatabaseDesign(ledger.root),
+          designReviews:ledger.listWorkItems('architecture_change'),
+        }),nonce,
           'application/json; charset=utf-8');
       } else if (/^\/api\/ideas\/IDEA-[0-9a-f-]{36}$/.test(route)) {
         // Read-only Idea evidence, including independent assessment/review and

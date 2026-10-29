@@ -182,8 +182,15 @@ button.insight-row:hover{background:#f0f7ff;border-color:#9fc4ed}
 .settings-change-panel{margin:18px 0;padding:21px 24px}
 .settings-change-panel>strong{display:block;font-size:15px;margin-bottom:10px}
 .settings-change-panel .insight-list{grid-template-columns:1fr}
+.settings-env-source{display:block;font-size:11px;line-height:1.5;color:#55718b;margin-top:5px}
+#view-settings input:disabled,#view-settings select:disabled{background:#eff3f8;color:#526a84;cursor:not-allowed}
 .insight-change{padding:11px 14px;background:#eff6ff;border:1px solid #d7e7f9;
   border-radius:9px;font-size:13px;color:#28537f}
+.database-design-section{margin:0 0 20px}
+.database-schema-list h3{font-size:16px;margin:20px 0 10px}
+.database-tables-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,185px),1fr));gap:8px}
+.database-table-name{font:13px/1.5 ui-monospace,monospace;overflow-wrap:anywhere;
+  padding:12px 13px;color:#254569;background:#f2f7fc;border:1px solid #deebf7;border-radius:10px}
 @media(max-width:1260px){.insight-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){
   .insight-panel{padding:20px 18px}

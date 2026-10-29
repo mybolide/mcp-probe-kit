@@ -183,6 +183,9 @@ try {
 } catch { /* Fail the release check instead of accepting local-only docs. */ }
 check(actionGuideTracked,
   'v5 authoritative Agent action guide must be tracked in Git for clean installs');
+const gitIgnoreText=read('.gitignore');
+check(!/^docs\/\*\.md\s*$/m.test(gitIgnoreText),
+  'canonical docs Markdown must not be ignored wholesale; ignore only generated or private artifacts');
 const v5Sqlite = read('docs/v5-sqlite-only.md');
 const actionGuidePage = read('docs/pages/v5-action-guide.html');
 const actionCatalogSource = read('src/devcontrol/action-catalog.ts');

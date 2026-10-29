@@ -37,18 +37,13 @@ npm-debug.log*
 # Docs
 docs/specs/
 docs/verification/
-docs/*.md
-!docs/v5-development-guide.md
-!docs/v5-agent-action-guide.md
-!docs/v5-best-practices.md
-!docs/v5-sqlite-only.md
-!docs/v5-workbench.md
-!docs/memory-local-setup.md
-!docs/memory-local-setup.zh-CN.md
-!docs/src8-methodology.md
-!docs/src8-methodology.zh-CN.md
-!docs/engineering-control-plane-v1.md
-!docs/mcp-probe-kit-delivery-system-v1.md
+# Canonical Markdown is allowed in Git by default. Ignore only generated,
+# private or throwaway documentation, never the entire docs/*.md category.
+docs/.cache/
+docs/generated/
+docs/*.tmp.md
+docs/*.scratch.md
+docs/*.draft.md
 docs/project-context
 # Local agent session archives (project-active; do not commit)
 docs/history-session/

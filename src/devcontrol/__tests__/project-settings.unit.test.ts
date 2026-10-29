@@ -74,6 +74,19 @@ describe("single-project MCP environment configuration",()=>{
     expect(process.env.MEMORY_SEARCH_LIMIT).toBe("3");
     expect(process.env.MEMORY_EMBEDDING_URL).toBe("http://127.0.0.1:50012/embeddings");
   });
+  it('reads effective process env before stored project flag values',()=>{
+    withoutClientEnv();const root=project();
+    saveProjectSettings(root,{flags:{MCP_ENABLE_UI_APPS:true,
+      MCP_ENABLE_GITNEXUS_BRIDGE:false}});
+    process.env.MCP_ENABLE_UI_APPS='0';
+    process.env.MCP_ENABLE_GITNEXUS_BRIDGE='1';
+    expect(publicProjectSettings(root)).toMatchObject({flags:{
+      MCP_ENABLE_UI_APPS:{value:false,effective:false,saved:true,overridden:true,
+        source:'environment'},
+      MCP_ENABLE_GITNEXUS_BRIDGE:{value:true,effective:true,saved:false,overridden:true,
+        source:'environment'},
+    }});
+  });
   it("client mcpServers.env wins and GET does not leak client-supplied API keys",()=>{
     withoutClientEnv();
     const root=project();

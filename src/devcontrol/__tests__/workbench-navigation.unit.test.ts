@@ -47,6 +47,8 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('id="roadmap-title"');
     expect(html).toContain('id="okr-title"');
     expect(html).toContain('id="architecture-changes"');
+    expect(html).toContain('id="database-design-sources"');
+    expect(html).toContain("fetchJSON('/api/architecture/database')");
     for(const id of ['overview-insight-metrics','idea-list','task-granularity',
       'bug-insight-metrics','guide-project-context','settings-diff','history-shortcuts']){
       expect(id==='history-shortcuts'?html.includes('class="history-shortcuts"'):

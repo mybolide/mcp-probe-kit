@@ -10,7 +10,10 @@
     document.querySelectorAll(".view").forEach(e=>e.classList.toggle("active",e.id==="view-"+view));
     $("crumb").textContent=translate(titles[view]);
     if(view==="history")loadHistory();
-    if(view==="architecture")loadArchitectureChanges();
+    if(view==="architecture"){
+      loadArchitectureChanges();
+      loadDatabaseDesign();
+    }
     if(view==="issues")loadIssues();
     if(view==="guide")loadGuide();
     if(view==="settings")loadSettings();

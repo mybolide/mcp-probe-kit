@@ -146,9 +146,11 @@ function parseInput(input:unknown):{
 export function publicProjectSettings(root:string):Record<string,unknown>{
   const stored=storedSettings(root),encrypted=secretEntries(root);
   const flags=Object.fromEntries(SETTINGS_FLAGS.map(key=>[key,{
-    value:stored.flags[key]??true,
+    value:process.env[key]!==undefined?isTrue(process.env[key]):stored.flags[key]??true,
     source:process.env[key]!==undefined?"environment":stored.flags[key]===undefined?"default":"project",
     effective:process.env[key]!==undefined?isTrue(process.env[key]):stored.flags[key]??true,
+    overridden:process.env[key]!==undefined,
+    saved:stored.flags[key]??null,
   }]));
   const aiDefaults:Record<string,string>={
     MEMORY_QDRANT_COLLECTION:"mcp_probe_memory",MEMORY_EMBEDDING_MODEL:"nomic-embed-text",

@@ -20,6 +20,52 @@
         "无法获取当前项目的局域网地址，请检查 MCP 服务和网络连接。","error"));
     }
   }
+  async function loadDatabaseDesign(){
+    const root=$('database-design-sources'),tableRoot=$('database-design-tables');
+    try{
+      const data=await fetchJSON('/api/architecture/database');
+      const cards=[];
+      for(const source of data.documents||[]){
+        const button=n('button',null,'insight-row');button.type='button';
+        button.append(n('strong','正式架构 / 数据契约'),n('span',source),
+          n('small','读取项目 Git 文档 ↗'));
+        button.addEventListener('click',()=>openDoc(source));cards.push(button);
+      }
+      for(const source of data.migrations||[]){
+        const card=n('div',null,'insight-row');
+        card.append(n('strong','SQL 迁移源码'),n('span',source.path),
+          n('small',(source.tables||[]).length+' 张表 · 源码存在不代表已部署'));
+        cards.push(card);
+      }
+      if(data.implementation?.length){
+        const card=n('div',null,'insight-row');
+        card.append(n('strong','持久化实现与迁移安全约束'),
+          n('span',data.implementation.join(' · ')),
+          n('small','仅显示实际源码路径，不执行任何数据库操作'));
+        cards.push(card);
+      }
+      for(const review of data.designReviews||[]){
+        const card=workItemButton(review);
+        card.classList.add('insight-row');
+        cards.push(card);
+      }
+      root.replaceChildren(...(cards.length?cards:[n('div',
+        '当前没有已登记的数据库设计审核或正式数据库迁移。可先通过 DevControl 建立受控架构变更记录。','docs-empty')]));
+      const tables=data.migrations?.flatMap(m=>m.tables)||[];
+      const unique=[...new Set(tables)];
+      $('database-design-status').textContent=(data.designReviews||[]).length+
+        ' 项 SQLite 架构评审 · '+unique.length+' 张迁移源码表 · 未验证实际部署';
+      tableRoot.replaceChildren(...(unique.length?[
+        n('h3','数据库实体 / 设计表名'),
+        (()=>{const list=n('div',null,'database-tables-grid');
+          for(const name of unique)list.append(n('code',name,'database-table-name'));
+          return list;})(),
+      ]:[n('p','尚无正式迁移 SQL。SQLite 中的设计评审与 Git 概念契约请从上方记录查看。','sub')]));
+    }catch(error){
+      root.replaceChildren(n('div','数据库设计读取失败：'+error.message,'error'));
+      $('database-design-status').textContent='读取失败';
+    }
+  }
   function workItemButton(item){
     const b=n("button",null,"docitem");b.type="button";
     b.append(n("span",item.id+" · "+item.status,"taskid"),

@@ -58,9 +58,9 @@ h2{font-size:17px;letter-spacing:-.35px}h3{font-size:14px}
 .task-tabs{background:#f0f2f5;border:0;border-radius:10px;padding:4px}
 .task-tabs button{color:#66717e;padding:10px}.task-tabs button[aria-selected=true]{background:#fff;color:#25354a;box-shadow:0 1px 5px #19273a16}
 .task-tabs .count,.task-tabs button[aria-selected=true] .count{color:#7a8797}
-.simple-task,.previewbtn,.docitem,.issue-details section{background:#fff;border:1px solid #e7ebf1;color:#26364a;border-radius:11px}
-.simple-task:hover,.previewbtn:hover,.docitem:hover{background:#f6f9fe;border-color:#ccd9eb}
-.simple-task-title{color:#24354a}.simple-task-meta,.simple-task-summary,.docitem small{color:#87919e}
+.previewbtn,.docitem,.issue-details section{background:#fff;border:1px solid #e7ebf1;color:#26364a;border-radius:11px}
+.previewbtn:hover,.docitem:hover{background:#f6f9fe;border-color:#ccd9eb}
+.docitem small{color:#87919e}
 .task-phase{background:#f9fafc}.task-phase-head{background:#f1f4f8;border-color:#e5eaf0;color:#66768a}
 .issue-controls input,.issue-controls select,.search{background:#fff;border:1px solid #dae1ea;color:#354154}
 .issue-state{background:#edf3f9;color:#47637e}.issue-state.pending,.review-state{background:#fff4de;color:#936623}

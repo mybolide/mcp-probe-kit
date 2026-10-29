@@ -37,6 +37,14 @@
   }
   let settingsLoaded=false,settingsToken='',settingsBaseline=null;
   const settingValue=id=>$(id).value.trim();
+  const settingInputs={
+    MCP_ENABLE_UI_APPS:'flag-ui-apps',MCP_ENABLE_GITNEXUS_BRIDGE:'flag-gitnexus',
+    MEMORY_EMBEDDING_PROVIDER:'setting-provider',MEMORY_EMBEDDING_MODEL:'setting-model',
+    MEMORY_EMBEDDING_URL:'setting-embedding-url',MEMORY_QDRANT_URL:'setting-qdrant-url',
+    MEMORY_QDRANT_COLLECTION:'setting-collection',MEMORY_SEARCH_LIMIT:'setting-search-limit',
+    MEMORY_SUMMARY_MAX_CHARS:'setting-summary-max',
+  };
+  let effectiveSettingSources={};
   function settingsDraft(){
     return {
       MCP_ENABLE_UI_APPS:$('flag-ui-apps').checked,
@@ -82,6 +90,24 @@
     $('setting-qdrant-key').value='';
     $('clear-embedding-key').checked=false;
     $('clear-qdrant-key').checked=false;
+    const embeddingEnv=data.secrets.MEMORY_EMBEDDING_API_KEY.source==='client-env';
+    const qdrantEnv=data.secrets.MEMORY_QDRANT_API_KEY.source==='client-env';
+    $('setting-embedding-key').disabled=embeddingEnv;
+    $('clear-embedding-key').disabled=embeddingEnv;
+    $('setting-qdrant-key').disabled=qdrantEnv;
+    $('clear-qdrant-key').disabled=qdrantEnv;
+    effectiveSettingSources={...data.flags,...data.ai};
+    for(const [key,id] of Object.entries(settingInputs)){
+      const input=$(id),source=effectiveSettingSources[key];
+      input.disabled=!!source?.overridden;
+      const container=input.closest('label')||input.closest('.settings-switch-row');
+      if(!container)continue;
+      let label=container.querySelector('[data-env-source]');
+      if(!label){label=n('small',null,'settings-env-source');
+        label.dataset.envSource='true';container.append(label);}
+      label.textContent=source?.overridden?'当前工作台进程环境变量 · 只读':
+        source?.source==='project'?'项目配置覆盖值':'默认值，可配置';
+    }
   }
   async function loadSettings(){
     if(settingsLoaded)return;
@@ -97,7 +123,7 @@
       const overridden=Object.entries(data.ai).filter(([,value])=>value.overridden)
         .map(([name])=>name);
       if(overridden.length) $('settings-feedback').textContent=
-        '注意：'+overridden.join('、')+' 已由 MCP 客户端环境变量指定，项目保存值无法覆盖客户端配置。';
+        '注意：'+overridden.join('、')+' 已由当前工作台进程环境变量指定，只读且不会写入项目覆盖值。其他独立 MCP 客户端进程的环境配置无法从浏览器直接读取。';
       const rows=[
         ['项目','当前 Git 项目 · '+(currentProject?.name||'未知')],
         ['当前分支',currentProject?.git?.branch||'未识别'],
@@ -105,6 +131,7 @@
         ['配置权限','仅本机 · 同源授权'],
         ['mcp-probe-kit 版本',meta.version||'未知'],
         ['生效时间','重连 MCP 后生效'],
+        ['配置优先级','当前工作台进程环境变量 > 项目保存值 > 默认值'],
       ];
       $('settings-status').replaceChildren(...rows.map(([label,value])=>{
         const div=n('div',null,'settings-row');
@@ -124,28 +151,26 @@
     const secrets={};
     const emb=settingValue('setting-embedding-key');
     const qdr=settingValue('setting-qdrant-key');
-    if($('clear-embedding-key').checked)secrets.MEMORY_EMBEDDING_API_KEY=null;
-    else if(emb)secrets.MEMORY_EMBEDDING_API_KEY=emb;
-    if($('clear-qdrant-key').checked)secrets.MEMORY_QDRANT_API_KEY=null;
-    else if(qdr)secrets.MEMORY_QDRANT_API_KEY=qdr;
+    if(!$('setting-embedding-key').disabled){
+      if($('clear-embedding-key').checked)secrets.MEMORY_EMBEDDING_API_KEY=null;
+      else if(emb)secrets.MEMORY_EMBEDDING_API_KEY=emb;
+    }
+    if(!$('setting-qdrant-key').disabled){
+      if($('clear-qdrant-key').checked)secrets.MEMORY_QDRANT_API_KEY=null;
+      else if(qdr)secrets.MEMORY_QDRANT_API_KEY=qdr;
+    }
     try{
+      const draft=settingsDraft(),flags={},ai={};
+      for(const [key,id] of Object.entries(settingInputs)){
+        if($(id).disabled||draft[key]===settingsBaseline?.[key])continue;
+        if(key.startsWith('MCP_ENABLE_'))flags[key]=draft[key];
+        else ai[key]=draft[key];
+      }
       const response=await fetch('/api/settings',{
         method:'POST',headers:{
           'Content-Type':'application/json','X-MCP-Settings-Token':settingsToken,
         },cache:'no-store',body:JSON.stringify({
-          flags:{
-            MCP_ENABLE_UI_APPS:$('flag-ui-apps').checked,
-            MCP_ENABLE_GITNEXUS_BRIDGE:$('flag-gitnexus').checked,
-          },
-          ai:{
-            MEMORY_EMBEDDING_PROVIDER:settingValue('setting-provider'),
-            MEMORY_EMBEDDING_MODEL:settingValue('setting-model'),
-            MEMORY_EMBEDDING_URL:settingValue('setting-embedding-url'),
-            MEMORY_QDRANT_URL:settingValue('setting-qdrant-url'),
-            MEMORY_QDRANT_COLLECTION:settingValue('setting-collection'),
-            MEMORY_SEARCH_LIMIT:settingValue('setting-search-limit'),
-            MEMORY_SUMMARY_MAX_CHARS:settingValue('setting-summary-max'),
-          },secrets,
+          flags,ai,secrets,
         }),
       });
       if(!response.ok)throw Error('HTTP '+response.status);
