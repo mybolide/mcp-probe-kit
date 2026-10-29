@@ -883,7 +883,8 @@ export class ProjectTaskLedger {
       fail("HANDOFF_EVIDENCE_REQUIRED","Provide actor and concrete handoff reason");
     const lease=this.db.prepare("SELECT * FROM dc_leases WHERE task_id=?").get(id);
     if(!lease)fail("LEASE_REQUIRED","Task has no retained lease for audited handoff");
-    const normal=typeof input.leaseToken==="string"&&input.leaseToken===lease.token;
+    const normal=typeof input.leaseToken==="string"&&
+      input.leaseToken===lease.token&&lease.expires_at>Date.now();
     const expected=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??"";
     const supplied=String(input.ownerRecoveryKey??"");
     const authorizedRecovery=expected.length>=24&&supplied.length===expected.length&&

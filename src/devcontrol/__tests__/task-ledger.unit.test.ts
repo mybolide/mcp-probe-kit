@@ -234,6 +234,10 @@ describe("project ledger and legacy migration", () => {
     process.env.DEVCONTROL_OWNER_RECOVERY_KEY='test-only-owner-secret-at-least-24-characters';
     try{
       expect(()=>ledger!.handoffReview('NEYNA-200',{
+        leaseToken:claimed.leaseToken,actor:'departed-implementer',
+        reason:'Attempting to use a previously expired developer lease is prohibited',
+      })).toThrow(/credential/);
+      expect(()=>ledger!.handoffReview('NEYNA-200',{
         actor:'project-owner',reason:'Recovered after original Agent session was lost',
         ownerRecoveryKey:'wrong-secret',
       })).toThrow(/credential/);
