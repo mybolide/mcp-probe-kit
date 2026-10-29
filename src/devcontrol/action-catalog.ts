@@ -39,7 +39,8 @@ export const V5_DEVC_ACTION_GROUPS = [
     title: 'Feature：需求 → 设计 → 任务 / Requirements to design to atomic tasks',
     actions: ['features', 'feature-get', 'feature-create', 'feature-save', 'feature-validate',
       'feature-export', 'feature-task-brief', 'feature-task-plan', 'feature-task-plans',
-      'feature-task-review', 'feature-task-stage', 'feature-task-propose', 'feature-task-approve'],
+      'feature-task-review', 'feature-task-stage', 'feature-task-propose',
+      'feature-task-second-review', 'feature-task-approve'],
   },
   {
     title: '工作项和架构 / Work items and architecture',
@@ -60,7 +61,9 @@ export const V5_DEVC_ACTION_GROUPS = [
   },
   {
     title: '领取、报告与验收 / Execution and evidence',
-    actions: ['claim', 'renew', 'release', 'check', 'report', 'gate-review', 'complete',
+    actions: ['claim', 'renew', 'recover-task', 'release', 'defer-verification','resume-verification',
+      'check', 'report', 'gate-review', 'complete',
+      'review-handoff','review-submit','reviewed-verify',
       'verify', 'trace'],
   },
   {

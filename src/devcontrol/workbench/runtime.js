@@ -69,6 +69,20 @@
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
   let reloadInProgress=false;
+  const refreshChoices=new Set([5,10,30,60]);
+  let refreshSeconds=10,refreshRemaining=10;
+  try{
+    const stored=Number(localStorage.getItem('devcontrol-refresh-seconds'));
+    if(refreshChoices.has(stored))refreshSeconds=stored;
+  }catch{}
+  refreshRemaining=refreshSeconds;
+  $('refresh-interval').value=String(refreshSeconds);
+  function updateRefreshCountdown(){
+    const active=router.current()==='tasks'||router.current()==='overview';
+    $('refresh-countdown').textContent=active?
+      (refreshRemaining+' 秒后刷新'):'仅工作台与任务管理自动刷新';
+  }
+  function resetRefreshClock(){refreshRemaining=refreshSeconds;updateRefreshCountdown();}
   async function loadBrandVersion(){
     try{
       const meta=await fetchJSON('/api/meta');
@@ -95,7 +109,7 @@
       onboarding=nextOnboarding;releasePlan=nextReleasePlan;localGit=nextDeveloper;
       insights=nextInsights;render();}
     catch(e){$("synced").textContent="同步失败："+e.message+"；保留上一次结果";}
-    finally{reloadInProgress=false;}
+    finally{reloadInProgress=false;resetRefreshClock();}
   }
   let lastTaskSnapshot='';
   let taskRefreshInProgress=false;
@@ -125,7 +139,7 @@
       if(document.scrollingElement)document.scrollingElement.scrollTop=scroll;
       $('synced').textContent='任务同步于 '+new Date().toLocaleTimeString();
     }catch(error){$('synced').textContent='任务同步失败：'+error.message+'（原数据保留）';}
-    finally{taskRefreshInProgress=false;}
+    finally{taskRefreshInProgress=false;resetRefreshClock();}
   }
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));
   for(const b of document.querySelectorAll("[data-go]"))b.addEventListener("click",()=>go(b.dataset.go));
@@ -147,7 +161,14 @@
     button.addEventListener('click',()=>{
       $('history-search').value=button.dataset.historyQuery;loadHistory();
     });
-  $("reload").addEventListener("click",reload);
+  $("reload").addEventListener("click",()=>{resetRefreshClock();reload();});
+  $('refresh-interval').addEventListener('change',()=>{
+    const next=Number($('refresh-interval').value);
+    if(!refreshChoices.has(next))return;
+    refreshSeconds=next;
+    try{localStorage.setItem('devcontrol-refresh-seconds',String(next));}catch{}
+    resetRefreshClock();
+  });
   $("share-lan").addEventListener("click",showLanAccess);
   $("settings-save").addEventListener("click",saveSettings);
   $("close").addEventListener("click",()=>$("overlay").classList.remove("open"));
@@ -156,10 +177,21 @@
   localizeChrome();
   router.sync();
   loadBrandVersion();
-  reload();setInterval(()=>{if(document.visibilityState==="visible")reload();},30000);
-  // Refresh TASK DATA (not the browser page) when the task view is active.
-  // Preserve the current Hash route, task tab, search text and filter controls.
-  setInterval(()=>{if(document.visibilityState==="visible"&&router.current()==='tasks')refreshTaskData();},12000);
+  reload();updateRefreshCountdown();
+  // Visible countdown matches the actual polling schedule. Pause when hidden
+  // or when the user is reading a detail drawer, avoiding stale replacements.
+  setInterval(()=>{
+    const view=router.current();
+    if(document.visibilityState!=='visible'||
+      $('overlay').classList.contains('open')||
+      (view!=='overview'&&view!=='tasks')){updateRefreshCountdown();return;}
+    if(reloadInProgress||taskRefreshInProgress){updateRefreshCountdown();return;}
+    refreshRemaining=Math.max(0,refreshRemaining-1);
+    if(refreshRemaining===0){
+      resetRefreshClock();
+      if(view==='overview')reload();else refreshTaskData();
+    }else updateRefreshCountdown();
+  },1000);
   window.addEventListener("focus",()=>{if(document.visibilityState==="visible")reload();});
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")reload();});
 })();

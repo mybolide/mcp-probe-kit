@@ -163,7 +163,7 @@ export function reviewDetailedWorkItems(items:AtomicWorkItem[]):string[] {
   });
 }
 
-/** Evidence of independent Agent reasoning, NOT proof that business coverage is correct. */
+/** Evidence of reasoned Agent review, NOT proof that business coverage is correct. */
 export type ReleaseReviewDimension =
   "scope_completeness"|"happy_path"|"failure_recovery"|
   "cross_component"|"security_privacy"|"test_release";
@@ -174,7 +174,8 @@ export const REVIEW_DIMENSIONS:readonly ReleaseReviewDimension[]=[
 export interface ReleaseAgentReview {
   /** Audit label supplied by the host; not identity authentication. */
   reviewer:string;
-  method:"independent-agent-pass";
+  /** A solo developer can review their own exact plan in a separate pass. */
+  method:"independent-agent-pass"|"agent-self-check";
   /** Hash binds the review to the exact stage, requirement and task roster. */
   subjectHash:string;
   /** Referenced canonical Git sources used in the independent read. */
@@ -187,7 +188,7 @@ export interface ReleaseAgentReview {
     /** Specific work-item examples, not just an unsupported 'passed' flag. */
     workItemIds:string[];
   }[];
-  /** Required for task-detail-v1. Labels do not authenticate reviewers. */
+  /** Required for detailed tasks. Labels do not authenticate reviewers. */
   taskChecks?:{
     workItemId:string;
     outcome:"ready"|"needs_revision";
@@ -209,11 +210,11 @@ export function releaseReviewSubjectHash(input:ReleaseWorkPlan):string {
 
 export function reviewAgentReview(plan:ReleaseWorkPlan):string[] {
   const review=plan.agentReview;
-  if(!review)return ["Independent Agent semantic review missing: submit agentReview before version approval"];
+  if(!review)return ["Agent semantic review missing: review this plan before version activation"];
   const issues:string[]=[];
-  if(review.method!=="independent-agent-pass"||
+  if(!["independent-agent-pass","agent-self-check"].includes(review.method)||
     typeof review.reviewer!=="string"||!review.reviewer.trim())
-    issues.push("Independent Agent reviewer label and separate review pass required");
+    issues.push("Agent review requires a named self-check or external review pass");
   if(review.subjectHash!==releaseReviewSubjectHash(plan))
     issues.push("Agent semantic review is stale: task/requirements/stage roster changed");
   if(!Array.isArray(review.sourceRefs)||!review.sourceRefs.includes(plan.scopeSource)||

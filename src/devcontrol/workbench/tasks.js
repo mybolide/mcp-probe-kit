@@ -12,13 +12,16 @@
       Array.isArray(scope?.nodes)?scope.nodes.map(item=>({...item,_planOrigin:"release"})):[];
     const native=[];
     for(const record of (typeof featureTaskPlans==="undefined"?[]:featureTaskPlans)){
-      const source=(record.status==="review_pending"||record.status==="needs_revision")?
+      const source=(record.status==="review_pending"||record.status==="needs_revision"||
+        record.status==="awaiting_second_review")?
         record.proposal:record.frozen;
       const previous=new Set((record.frozen?.plan?.nodes||[]).map(item=>item.id));
       if(!Array.isArray(source?.plan?.nodes))continue;
       for(const item of source.plan.nodes)native.push({...item,
         _planOrigin:"feature",featureName:record.featureName,release:source.plan.release,
-        featurePending:(record.status==="review_pending"||record.status==="needs_revision")&&!previous.has(item.id),
+        featurePending:(record.status==="review_pending"||record.status==="needs_revision"||
+          record.status==="awaiting_second_review")&&!previous.has(item.id),
+        pendingSecondReview:record.status==="awaiting_second_review",
         featureNeedsRevision:record.status==="needs_revision",featureReviewIssues:record.review?.issues||[]});
     }
     const nativeIds=new Set(native.map(item=>item.id));
@@ -62,7 +65,8 @@
   function taskStatus(row){
     const s=row.status;
     if(row.current?.pendingVerification)return ["待设备/外部验收",""];
-    if(s==="pending")return [row.item.featureNeedsRevision?"规划待完善":"待审核","pending"];
+    if(s==="pending")return [row.item.featureNeedsRevision?"规划需修订":
+      row.item.pendingSecondReview?"待二次 Review":"规划待确认","pending"];
     if(s==="verified")return ["已完成","done"];
     if(s==="in_progress")return ["开发中",""];
     if(s==="in_review")return ["等待验收",""];
@@ -140,51 +144,40 @@
   }
   function renderReleaseReview(){
     const findings=releaseReviewFindings();
-    const panel=$("release-review-summary"),overview=$("overview-release-review");
-    panel.replaceChildren();overview.replaceChildren();
-    overview.classList.toggle("hide",!findings.length);
+    const overview=$("overview-release-review"),container=$('requirement-review-list');
+    const panel=$('requirement-review-panel');
+    overview.replaceChildren();container.replaceChildren();
+    panel.classList.toggle('hide',!findings.length);
+    overview.classList.toggle('hide',!findings.length);
+    $('requirement-review-count').textContent=findings.length+' 项实际评审记录';
     if(!findings.length)return;
-    const undecided=findings.filter(x=>x.decisionStatus!=="decided");
-    const pending=findings.filter(x=>x.verificationStatus==="pending");
-    const decided=findings.length-undecided.length;
-    const agentReview=releaseWorkPlan?.proposal?.plan?.agentReview||
-      releaseWorkPlan?.frozen?.plan?.agentReview;
-    const reviewState=agentReview?
-      "宿主 Agent 独立复审已提交（MCP仅校验引用和快照）":
-      "宿主 Agent 独立复审尚未提交，整版不能审批";
-    const intro=n("div");
-    intro.append(n("b",releaseWorkPlan.release+" · 版本评审："+
-      decided+"/"+findings.length+" 项工程决策已定案 · "+pending.length+" 项产品验收未完成"),
-      n("p","研发负责人承担技术选型；实际实现与测试仍按原子任务、Git证据和发布Gate独立验收。"+reviewState));
-    const nav=n("button","查看 "+findings.length+" 项评审 →","btn");nav.type="button";
-    nav.addEventListener("click",()=>{
-      go("tasks");$("release-review-summary").scrollIntoView({behavior:"smooth",block:"start"});
-    });
-    overview.append(intro,nav);
-    const disclosure=n("details",null,"review-disclosure");
-    disclosure.open=reviewExpanded;
-    disclosure.addEventListener("toggle",()=>{reviewExpanded=disclosure.open;});
-    disclosure.append(n("summary","整版评审 · "+findings.length+" 项工程决策 · "+pending.length+" 项待产品验收（点击展开）"));
-    const head=n("div",null,"review-intro"),left=n("div");
-    left.append(n("h2","整版评审 · "+findings.length+" 项工程决策"),
-      n("p","方案由工程团队确定；可独立核验的代码与真机结果在任务执行后关闭。"+reviewState));
-    head.append(left,n("span",pending.length+" 项待产品验收","issue-state pending"));
-    const grid=n("div",null,"review-grid");
+    const rows=taskRows();
+    const byId=new Map(rows.map(row=>[row.item.id,row]));
+    const unresolved=findings.filter(f=>f.verificationStatus!=='passed');
+    const summary=n('div');
+    summary.append(n('b',unresolved.length+' 项需求或验收事项待落实'),
+      n('p','已定案的工程设计不等于已经完成开发；每项须依据真实工作项及产品验收状态确认。'));
+    const goToRequirements=n('button','查看需求状态 ↗','btn');
+    goToRequirements.type='button';
+    goToRequirements.addEventListener('click',()=>go('requirements'));
+    overview.append(summary,goToRequirements);
     for(const issue of findings){
-      const card=n("article",null,"review-card"),header=n("div",null,"review-head");
-      header.append(n("span",issue.id,"review-id"),
-        n("span",issue.decisionStatus==="decided"?"工程已定案":"待工程定案",
-          "review-state resolved"),
-        n("span",issue.verificationStatus==="pending"?"待实测":"规划已处理",
-          "review-state"+(issue.verificationStatus==="pending"?"":" resolved")));
-      const decision=n("p");
-      decision.append(n("b","方案："),document.createTextNode(issue.decision||"评审尚未记录实施方案"));
-      const action=n("button","查看验收与关联任务 →","review-detail-trigger");
-      action.type="button";action.addEventListener("click",()=>openReviewFinding(issue));
-      card.append(header,n("strong",issue.title),decision,action);grid.append(card);
+      const linked=(issue.affectedIds||[]).map(id=>byId.get(id)).filter(Boolean);
+      const unknown=(issue.affectedIds||[]).filter(id=>!byId.has(id));
+      const verified=linked.filter(row=>row.current?.status==='verified').length;
+      const active=linked.some(row=>['in_progress','in_review'].includes(row.current?.status));
+      const state=!linked.length?'未拆分为可追踪任务':
+        (verified===linked.length&&issue.verificationStatus==='passed'?'已完成并验收':
+         verified===linked.length?'任务已完成 · 待产品验收':
+         active?'已拆分 · 开发中':'已拆分 · 待开发');
+      const item=n('button',null,'docitem');item.type='button';
+      item.append(n('span',issue.id+' · '+state,'taskid'),n('b',issue.title),
+        n('small',(issue.decisionStatus==='decided'?'工程方案已定案':'工程方案待定案')+
+          ' · 关联 '+linked.length+' 项任务 · Verified '+verified+
+          ' · 未找到 '+unknown.length+' 项原始任务'));
+      item.addEventListener('click',()=>openReviewFinding(issue));
+      container.append(item);
     }
-    disclosure.append(head,grid);
-    panel.append(disclosure);
   }
   function setTaskTab(tab){
     if(!["not_started","in_progress","completed"].includes(tab))return;
@@ -309,13 +302,13 @@
       if(task.blockingReason)section("阻塞原因",task.blockingReason);
       section("前置依赖",task.dependsOn||[]);
       if(task.featureReviewIssues?.length)section("整版评审未通过",task.featureReviewIssues);
-      if(row.pending)section("开发限制","当前版本尚未整体审批。此工作项不可领取或执行。");
+      if(row.pending)section("开发限制","当前版本计划尚未确认，普通子任务无需逐项找 Owner 审批。开发 Agent 应先检查计划再按范围确认；此前不可领取。");
       showDelivery();
       return;
     }
     $("release-review-summary").replaceChildren();
     section("当前状态与执行边界",row.pending?
-      (task.featureNeedsRevision?"规划仍有阻塞，须补全再审核 · ":"规划待审核 · ")+"不可领取、执行或计入版本完成率。":
+      (task.featureNeedsRevision?"规划仍有缺口，需完善 · ":"规划待 Agent 确认 · ")+"不可领取、执行或计入版本完成率。":
       "状态："+status+"。执行以真实 SQLite 状态、依赖和 Gate 为准。");
     if(task.featureReviewIssues?.length)section("DevControl 规划检查：待修正问题",task.featureReviewIssues);
     const displayOwner=actual?.owner||(row.pending?localGit?.name:null);
@@ -367,7 +360,7 @@
       ...((task.workflow||[]).length<3?["缺少端到端步骤与状态转换。"]:[]),
       ...((task.testCases||[]).length<=1?["正向测试场景不足，需要按相关 Spec 核验边界覆盖。"]:[]),
       ...((task.negativeCases||[]).length<=1?["反例目前只有一条，不能代表所有失败与异常分支。"]:[]),
-      "规划仍待审核；不能仅凭标题、预计工时和单条验收文字批准开发。",
+      "由当前开发 Agent 自检任务覆盖、范围和测试，并提交计划确认。无需额外审核 Agent；重大范围变更仍需 Owner 授权。",
     ]);
   }
   // Shared task card for whole-release and Feature planning alike.
@@ -388,16 +381,20 @@
         chips.append(n("span",status,"issue-state "+state));
         chips.append(n("span",(item.type||"工作项")+" · "+(item.platform||"—"),"task-card-type"));
         const owner=n("span",null,"task-card-owner");
-        owner.append(n("small","负责人","task-card-label"),
-          n("span",actualOwner?(actualOwner+(actualDevice?" · "+actualDevice:"")):
-            ("未领取 · "+(item.ownerRole||"待分配"))));
+        const ownerDisplay=actualOwner?(actualOwner+(actualDevice?" · "+actualDevice:"")):
+          ("未领取 · "+(item.ownerRole||"待分配"));
+        const ownerValue=n("span",ownerDisplay,"task-card-owner-value");
+        ownerValue.title=ownerDisplay;
+        owner.append(n("small",actualOwner?"负责人":"责任角色","task-card-label"),ownerValue);
         const supporting=n("span",null,"task-card-support");
         supporting.append(n("span",[
           brief.requirementIds.length?"需求 "+brief.requirementIds.join("、"):"待关联需求",
           brief.gates.length?"Gate "+brief.gates.join("、"):"待记录 Gate",
         ].join(" · "),"task-card-contract"));
         const note=row.pending?
-          "任务规划尚未批准，不可领取或执行":
+          (item.pendingSecondReview?
+            "规划已保存，需下一轮独立审阅操作；同一 Agent 可复审":
+            "规划尚未确认，需按当前审核证据确认；此前不可领取"):
           row.current?.pendingVerification?
           ("待验证："+row.current.pendingVerification.gate+" · "+
             row.current.pendingVerification.reason):
@@ -448,7 +445,7 @@
       $("task-list-count").textContent="当前版本 "+releaseWorkPlan.release+" · "+
         filtered.length+" 项独立工作 · "+(releaseWorkPlan.status==="needs_revision"?
         "整版规划待完善":releaseWorkPlan.status==="review_pending"?
-        "整版待审批":releaseWorkPlan.status==="frozen"?"整版已冻结":"尚未规划");
+        "整版待确认":releaseWorkPlan.status==="frozen"?"整版已冻结":"尚未规划");
       return;
     }
     const phases=new Map(),groups=new Map(taskPlanNodes().filter(x=>x.kind==="group").map(x=>[x.id,x]));
@@ -461,13 +458,13 @@
       const container=n("section",null,"task-phase");
       const head=n("div",null,"task-phase-head");
       head.append(n("strong",phase+" · "+(groups.get(phase)?.title||"独立任务")),
-        n("small",items.length+" 项 · "+items.filter(x=>x.pending).length+" 项待审批"));
+        n("small",items.length+" 项 · "+items.filter(x=>x.pending).length+" 项待规划确认"));
       const list=n("div",null,"task-collection");
       for(const row of items)list.append(renderTaskCard(row));
       container.append(head,list);return container;
     }):[n("div",search?"没有匹配的任务。":"当前没有任务。","docs-empty")]));
     const pending=rows.filter(row=>row.pending&&taskBucket(row)===taskTab).length;
     $("task-list-count").textContent=locale==="en"?
-      ("Showing "+filtered.length+" tasks"+(pending?" · "+pending+" pending review (not authorized to implement)":"")):
-      ("显示 "+filtered.length+" 项"+(pending?" · 其中 "+pending+" 项待审核（尚未允许开发）":""));
+      ("Showing "+filtered.length+" tasks"+(pending?" · "+pending+" awaiting plan confirmation (not executable)":"")):
+      ("显示 "+filtered.length+" 项"+(pending?" · "+pending+" 项待规划确认（尚不可领取）":""));
   }

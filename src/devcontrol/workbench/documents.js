@@ -1,9 +1,11 @@
   function requirementWorkState(rows){
     const verified=rows.filter(row=>row.status==="verified").length;
-    if(!rows.length)return {verified,label:"当前版本未拆分工作项"};
-    if(verified===rows.length)return {verified,label:"关联工作项全部 Verified · 产品验收另行确认"};
-    if(verified)return {verified,label:"部分工作项已验证"};
-    return {verified,label:"已拆分 · 尚无 Verified 工作项"};
+    const active=rows.some(row=>row.status==="in_progress"||row.status==="in_review");
+    if(!rows.length)return {verified,label:"未拆分任务",state:"undivided"};
+    if(rows.every(row=>row.pending))return {verified,label:"已拆分 · 待规划复核",state:"planned"};
+    if(verified===rows.length)return {verified,label:"任务已完成 · 产品验收另行确认",state:"done"};
+    if(active||verified)return {verified,label:"已拆分 · 开发中 / 待验收",state:"active"};
+    return {verified,label:"已拆分任务 · 待开发",state:"planned"};
   }
   function openRequirement(req,linked,progress){
     $("overlay").classList.add("open");
@@ -44,7 +46,8 @@
       const tag=n("span",req.stage,"chip");tag.style.float="right";
       const linked=linkedByRequirement.get(req.id)||[];
       const progress=requirementWorkState(linked);
-      b.append(head,tag,n("b",req.title),n("small","验收重点 · "+req.acceptance),
+      b.append(head,tag,n("b",req.title),n('span',progress.label,'req-work-status '+progress.state),
+        n("small","验收重点 · "+req.acceptance),
         n("small",progress.label+" · "+progress.verified+" / "+linked.length+" 工作项已验证"));
       b.addEventListener("click",()=>openRequirement(req,linked,progress));
       return b;

@@ -94,6 +94,27 @@ try {
      }
      v.reviewLoaded=reviewLoaded;
    }
+   if(view==='tasks'){
+     v.footerLayout=await evalJS(`(()=>{
+       const cards=[...document.querySelectorAll('#task-rows .task-card')].slice(0,12);
+       if(!cards.length)return {checked:0,broken:0};
+       const broken=cards.filter(card=>{
+         const owner=card.querySelector('.task-card-owner-value');
+         const detail=card.querySelector('.task-card-detail');
+         if(!owner||!detail)return true;
+         const a=owner.getBoundingClientRect(),b=detail.getBoundingClientRect();
+         const style=getComputedStyle(owner);
+         const tall=a.height>parseFloat(style.lineHeight)*1.8;
+         return a.width<65||b.width<48||tall||a.right>b.left;
+       });
+       const first=cards[0];const owner=first.querySelector('.task-card-owner-value');
+       const detail=first.querySelector('.task-card-detail');
+       const coords=element=>{const r=element.getBoundingClientRect();return [Math.round(r.left),Math.round(r.right),Math.round(r.width),Math.round(r.height)];};
+       return {checked:cards.length,broken:broken.length,
+         sample:{owner:coords(owner),detail:coords(detail),
+           footerStyle:getComputedStyle(first.querySelector('.task-card-side')).display}};
+     })()`);
+   }
    results.push({view,width,...v});
    if(args.debug==='true')process.stderr.write('checked '+width+' '+view+' loaded='+v.insightsLoaded+'\n');
    if(width===1500||width===2560&&view==='tasks'||width===1920&&view==='overview'||width===390&&['tasks','overview','settings','architecture'].includes(view)){
@@ -107,6 +128,7 @@ try {
  ||v.mainRight<v.width-3 ||(v.view==='overview'&&!v.hasPlanning)
  ||(v.view==='architecture'&&!v.hasArchChanges)
  ||(v.view==='tasks'&&v.width>=1920&&v.taskCols<2)
+ ||(v.view==='tasks'&&v.footerLayout?.broken>0)
  ||(v.width===390&&v.navScroll>v.navWidth+3));
  if(!results.some(v=>v.view==='tasks'&&v.width===1500&&v.cardCount>0))failures.push({reason:'Task list did not render'});
  process.stdout.write(JSON.stringify({ok:failures.length===0,results,failures,files})+'\n');

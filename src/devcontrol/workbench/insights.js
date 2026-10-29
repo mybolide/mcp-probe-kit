@@ -45,7 +45,6 @@
       for(const id of ['overview-insight-actions','idea-list','guide-project-context'])
         $(id).replaceChildren(n('div','项目审核摘要暂不可读取，请刷新后核对原始 SQLite 记录。','docs-empty'));
       $('idea-count').textContent='暂不可用';
-      $('task-granularity-note').textContent='粒度统计暂不可用，不能据此批准规划。';
       return;
     }
     const ideas=insights.ideas||[],bugs=insights.bugs||[];
@@ -54,7 +53,7 @@
     const problematic=bugs.filter(b=>b.completedSteps<b.totalSteps);
     $('overview-insight-metrics').replaceChildren(
       metric('尚未决策的 Idea',openIdeas.length,'不能直接开发'),
-      metric('功能规划待审核或修订',pendingFeatures.length,'按原计划审核'),
+      metric('功能规划待复审或修订',pendingFeatures.length,'须分轮 Review，不强制第二个 Agent'),
       metric('SRC-8 尚未结束的 Bug',problematic.length,'不代表修复完成'),
       metric('有前置阻断的任务',insights.taskState.blocked,'不能领取')
     );
@@ -87,18 +86,6 @@
       metric('存在受阻分析步骤',bugs.filter(b=>b.blockedSteps).length),
       metric('已关联回归任务',bugs.reduce((sum,b)=>sum+b.linkedTestTasks,0),'关联并非验收通过')
     );
-    const rows=currentReleaseRows();
-    const known=rows.filter(row=>Number.isFinite(row.item.estimatedHours));
-    const long=known.filter(row=>row.item.estimatedHours>2);
-    const exception=known.filter(row=>row.item.estimatedHours>1&&row.item.estimatedHours<=2);
-    $('task-granularity').replaceChildren(
-      metric('有预计工时的工作项',known.length,'当前筛选范围之外也纳入'),
-      metric('超过 2 小时',long.length,'历史任务不自动作废'),
-      metric('1–2 小时',exception.length,'新提案需具体拆分说明'),
-      metric('没有预计工时',rows.length-known.length,'新细粒度计划须填写')
-    );
-    $('task-granularity-note').textContent=
-      '新 Feature 叶子推荐 0.5–1 小时；1–2 小时须证明不可合理拆分，超过 2 小时须重新规划。此处只展示已登记的工时，不把旧冻结任务改为不合格。';
     const readiness=[];
     if(onboarding&&onboarding.readiness!=='ready_for_review')
       readiness.push(guidanceRow('项目接入基线尚不完整',onboarding.nextAction||'请核查缺少的项目来源。','overview'));

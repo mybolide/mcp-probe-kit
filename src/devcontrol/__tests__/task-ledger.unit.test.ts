@@ -86,6 +86,177 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it('protects pre-existing unrelated untracked files while an independent reviewer verifies actual committed task work',()=>{
+    create({id:'NEYNA-200',requiredGates:['docs']});
+    ledger!.approve('NEYNA-200','project-owner');
+    save('other-project/private-notes.txt','existing unrelated project note - DO NOT DELETE\n');
+    const original=fs.readFileSync(path.join(root,'other-project/private-notes.txt'));
+    const claimed=ledger!.claim('NEYNA-200','implementer',600);
+    save('tests/contracts/task-evidence.json','{"ready":true}');
+    git('add','tests/contracts/task-evidence.json');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','real scoped task implementation');
+    const head=git('rev-parse','HEAD');
+    ledger!.report('NEYNA-200',claimed.leaseToken,{kind:'docs_test',
+      reference:'docs:verify executed with success in the fixture'},true);
+    const complete=ledger!.complete('NEYNA-200',claimed.leaseToken,{
+      summary:'Implemented the approved contract task and committed its scoped test fixture',
+      implementation:'Only the contracts test fixture was created and committed',
+      verification:'Documentation validation was actually run by the project gate',
+    });
+    expect(complete.preservedUncommittedFiles).toBe(1);
+    const handoff=ledger!.handoffReview('NEYNA-200',{
+      leaseToken:claimed.leaseToken,actor:'implementer',
+      reason:'Implementation and completion evidence are ready for an independent reviewer to inspect',
+    });
+    expect(handoff.completionHead).toBe(head);
+    expect(()=>ledger!.independentTaskReview('NEYNA-200',handoff.ticket,{
+      reviewer:'implementer',outcome:'passed',
+      findings:'Confirmed all required tests and verified that existing private files were untouched.',
+      evidenceReference:'docs:verify executed with success in the fixture',
+    })).toThrow(/Reviewer must differ/);
+    const reviewed=ledger!.independentTaskReview('NEYNA-200',handoff.ticket,{
+      reviewer:'independent-qa',outcome:'passed',
+      findings:'Inspected the real commit and test fixture, verified the changed-file scope and preserved unrelated files.',
+      evidenceReference:'docs:verify executed with success in the fixture',
+    });
+    expect(reviewed.outcome).toBe('passed');
+    expect(ledger!.verifyReviewedTask('NEYNA-200',handoff.ticket)).toMatchObject({
+      passed:true,reviewer:'independent-qa',
+    });
+    expect(ledger!.get('NEYNA-200').status).toBe('verified');
+    expect(ledger!.next().activeLease).toBeNull();
+    expect(fs.readFileSync(path.join(root,'other-project/private-notes.txt'))).toEqual(original);
+    const trace=ledger!.trace('NEYNA-200');
+    expect(trace.reviewHandoff).toMatchObject({reviewer:'independent-qa',outcome:'passed'});
+    expect(trace.audit.map((row:any)=>row.event)).toContain('reviewed_task_verified');
+    expect(JSON.stringify(trace)).not.toContain(handoff.ticket);
+  });
+
+  it('recovers an expired in_progress lease and completes the original Git task through independent review',()=>{
+    create({id:'NEYNA-200'});ledger!.approve('NEYNA-200','owner');
+    const initial=ledger!.claim('NEYNA-200','lost-developer',60);
+    save('other-project/existing.txt','non-task material must stay intact');
+    save('tests/contracts/real-submission.json','{"contract":true}');
+    git('add','tests/contracts/real-submission.json');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','scoped completed submission before developer left');
+    const committed=git('rev-parse','HEAD');
+    const db=(ledger! as any).db;
+    db.prepare("UPDATE dc_leases SET expires_at=? WHERE task_id='NEYNA-200'")
+      .run(Date.now()-5);
+    const prior=process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
+    process.env.DEVCONTROL_OWNER_RECOVERY_KEY='test-only-expired-lease-recovery-password';
+    try{
+      expect(()=>ledger!.recoverTaskLease('NEYNA-200',{
+        actor:'owner-coordinator',ownerRecoveryKey:'invalid',
+        reason:'Recover a stranded scoped delivery after the original Agent session disappeared',
+      })).toThrow(/Owner recovery credential/);
+      const takeover=ledger!.recoverTaskLease('NEYNA-200',{
+        actor:'owner-coordinator',ownerRecoveryKey:process.env.DEVCONTROL_OWNER_RECOVERY_KEY!,
+        reason:'The original developer session was lost after the reviewed Git commit and cannot return',
+      });
+      expect(takeover).toMatchObject({originalBaseHead:initial.baseHead,currentHead:committed,
+        status:'in_progress'});
+      expect(takeover.leaseToken).not.toBe(initial.leaseToken);
+      ledger!.complete('NEYNA-200',takeover.leaseToken,{
+        summary:'Original task implementation was already committed and retains its exact Git ancestry',
+        implementation:'Recovered the original in-scope committed fixture without touching unrelated files',
+        verification:'The exact scoped Git commit and required docs gate remain subject to review',
+      });
+      ledger!.report('NEYNA-200',takeover.leaseToken,{
+        kind:'docs',reference:'recovered task test evidence tied to committed revision'},true);
+      const review=ledger!.handoffReview('NEYNA-200',{
+        leaseToken:takeover.leaseToken,actor:'owner-coordinator',
+        reason:'Recovered original delivery was documented and passed to a distinct Reviewer for approval',
+      });
+      ledger!.independentTaskReview('NEYNA-200',review.ticket,{
+        reviewer:'external-qa-agent',outcome:'passed',
+        findings:'Independently inspected the preserved original Git commit, complete report and real fixture evidence.',
+        evidenceReference:'recovered task test evidence tied to committed revision',
+      });
+      expect(ledger!.verifyReviewedTask('NEYNA-200',review.ticket).passed).toBe(true);
+      expect(ledger!.get('NEYNA-200').status).toBe('verified');
+      expect(fs.readFileSync(path.join(root,'other-project/existing.txt'),'utf8'))
+        .toBe('non-task material must stay intact');
+      expect(ledger!.trace('NEYNA-200').audit.map((e:any)=>e.event))
+        .toContain('owner_task_lease_recovered');
+    }finally{
+      if(prior===undefined)delete process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
+      else process.env.DEVCONTROL_OWNER_RECOVERY_KEY=prior;
+    }
+  });
+
+  it('returns a rejected independent review for rework without removing project files',()=>{
+    create({id:'NEYNA-200'});ledger!.approve('NEYNA-200','owner');
+    const claim=ledger!.claim('NEYNA-200','developer');
+    save('tests/contracts/rejection.json','{}');
+    git('add','tests/contracts/rejection.json');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','task awaiting review');
+    ledger!.report('NEYNA-200',claim.leaseToken,{kind:'docs',reference:'required verification evidence'},true);
+    ledger!.complete('NEYNA-200',claim.leaseToken,{
+      summary:'Submitted actual scoped implementation',
+      implementation:'Created a contract fixture under the approved task path',
+      verification:'Submitted documentation validation evidence for review',
+    });
+    const handoff=ledger!.handoffReview('NEYNA-200',{
+      leaseToken:claim.leaseToken,actor:'developer',
+      reason:'Ready for an independent agent to inspect the exact task submission',
+    });
+    expect(ledger!.independentTaskReview('NEYNA-200',handoff.ticket,{
+      reviewer:'reviewer-two',outcome:'failed',
+      findings:'The fixture lacks the expected negative-case assertions and needs code changes before verification.',
+      evidenceReference:'required verification evidence',
+    })).toMatchObject({status:'returned_for_rework'});
+    expect(ledger!.get('NEYNA-200').status).toBe('in_progress');
+    expect(()=>ledger!.verifyReviewedTask('NEYNA-200',handoff.ticket)).toThrow(/ticket/i);
+  });
+
+  it('restores review authority after a lost developer session using an explicit Owner credential',()=>{
+    create({id:'NEYNA-200'});ledger!.approve('NEYNA-200','owner');
+    const claimed=ledger!.claim('NEYNA-200','departed-implementer',60);
+    save('tests/contracts/session-handoff.json','{"safe":true}');
+    git('add','tests/contracts/session-handoff.json');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','task already committed before session was lost');
+    ledger!.report('NEYNA-200',claimed.leaseToken,{
+      kind:'docs',reference:'original completion evidence from departed agent'},true);
+    ledger!.complete('NEYNA-200',claimed.leaseToken,{
+      summary:'The original implementer committed the scoped change before leaving',
+      implementation:'An isolated contract fixture is retained in original Git history',
+      verification:'The original task evidence is available to an independent reviewer',
+    });
+    const database=(ledger! as any).db;
+    database.prepare("UPDATE dc_leases SET expires_at=? WHERE task_id='NEYNA-200'")
+      .run(Date.now()-1);
+    const original=process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
+    process.env.DEVCONTROL_OWNER_RECOVERY_KEY='test-only-owner-secret-at-least-24-characters';
+    try{
+      expect(()=>ledger!.handoffReview('NEYNA-200',{
+        actor:'project-owner',reason:'Recovered after original Agent session was lost',
+        ownerRecoveryKey:'wrong-secret',
+      })).toThrow(/credential/);
+      const recovered=ledger!.handoffReview('NEYNA-200',{
+        actor:'project-owner',
+        reason:'Authorized recovery of a stranded completed task without modifying its Git commits',
+        ownerRecoveryKey:process.env.DEVCONTROL_OWNER_RECOVERY_KEY,
+      });
+      expect(recovered.completionHead).toBe(git('rev-parse','HEAD'));
+      ledger!.independentTaskReview('NEYNA-200',recovered.ticket,{
+        reviewer:'independent-security-reviewer',outcome:'passed',
+        findings:'Audited the old completion and scoped commit using recorded evidence; no task file was rewritten.',
+        evidenceReference:'original completion evidence from departed agent',
+      });
+      expect(ledger!.verifyReviewedTask('NEYNA-200',recovered.ticket).passed).toBe(true);
+      expect(ledger!.get('NEYNA-200').status).toBe('verified');
+      expect(ledger!.trace('NEYNA-200').audit.some((e:any)=>
+        e.event==='review_handed_off'&&e.details.via==='authorized_owner_recovery')).toBe(true);
+    }finally{
+      if(original===undefined)delete process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
+      else process.env.DEVCONTROL_OWNER_RECOVERY_KEY=original;
+    }
+  });
   it("preserves leased WIP and exact owner-dirty bytes through reviewed incremental approval", () => {
     save("docs/roadmap/recovery-version.md",
       "# Scope\n\n| 阶段 | 描述 |\n| --- | --- |\n| F0 | Baseline |\n| F1 | Build |\n| F2 | Integration |\n");
@@ -212,6 +383,50 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.claim("WORK-A","developer").baseHead).toBe(claim.baseHead);
     expect(fs.readFileSync(path.join(root,"README.md"),"utf8"))
       .toContain("owner's longstanding dirty edits remain untouched");
+  });
+
+  it("records a committed task's completion without moving unrelated tracked or untracked main work", () => {
+    create({id:"NEYNA-200",requiredGates:["ios_device_e2e"]});
+    ledger!.approve("NEYNA-200","owner");
+    const lease=ledger!.claim("NEYNA-200","audio-agent");
+    save("tests/contracts/capture.json",'{"frameCount":1000}');
+    commit("real capture frame counter implemented");
+    const commitHead=git("rev-parse","HEAD");
+    ledger!.report("NEYNA-200",lease.leaseToken,{
+      kind:"native_xctest_usb_partial",reference:"Real USB device 15 pass; live microphone pending",
+    },true);
+    save("README.md","existing owner notes, absolutely do not overwrite\n");
+    save("tests/contracts/future.wav",'{"otherTaskWip":true}');
+    const statusBefore=git("status","--porcelain=v1");
+    const report={
+      summary:"Real bounded audio frame counter delivered",
+      implementation:"Only the committed code belongs to the current task",
+      verification:"Real native XCTest passed but live permission Gate remains pending",
+      remaining:"Real physical microphone permission and foreground sampling required",
+    };
+    expect(() => ledger!.complete("NEYNA-200",lease.leaseToken,report))
+      .toThrow(/dirty|untracked|worktree/i);
+    const done=ledger!.complete("NEYNA-200",lease.leaseToken,{
+      ...report,preserveExistingWorktree:true,
+    });
+    expect(done.gitHead).toBe(commitHead);
+    expect(done.preservedUncommittedFiles).toBe(2);
+    expect(git("status","--porcelain=v1")).toBe(statusBefore);
+    const beforeGate=ledger!.verify("NEYNA-200",lease.leaseToken);
+    expect(beforeGate.passed).toBe(false);
+    expect(beforeGate.reason??"").not.toContain("Uncommitted files");
+    expect(git("status","--porcelain=v1")).toBe(statusBefore);
+    const deferred=ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:lease.leaseToken,gate:"ios_device_e2e",
+      reason:"Physical microphone consent unavailable, real iPhone Gate pending",
+      preserveExistingWorktree:true,
+    });
+    expect(deferred.gatePassed).toBe(false);
+    expect(deferred.preservedUncommittedFiles).toBe(2);
+    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
+    expect(ledger!.get("NEYNA-200").pendingVerification.gate).toBe("ios_device_e2e");
+    expect(ledger!.next().activeLease).toBeNull();
+    expect(git("status","--porcelain=v1")).toBe(statusBefore);
   });
 
   it("preserves exact unrelated Owner edits while completing and verifying a committed task", () => {
@@ -965,7 +1180,18 @@ describe("project ledger and legacy migration", () => {
     });
     ledger!.report("WORK-DEC1",first.leaseToken,{kind:"sqlite_decision",
       reference:"decision:WORK-DEC1#revision=2"},true);
-    expect(ledger!.verify("WORK-DEC1",first.leaseToken)).toMatchObject({
+    expect(ledger!.verify('WORK-DEC1',first.leaseToken)).toMatchObject({
+      passed:false,reason:'INDEPENDENT_REVIEW_REQUIRED'});
+    const decisionHandoff=ledger!.handoffReview('WORK-DEC1',{
+      leaseToken:first.leaseToken,actor:'decision-agent',
+      reason:'Submitted immutable decision record to a distinct Agent for security review',
+    });
+    ledger!.independentTaskReview('WORK-DEC1',decisionHandoff.ticket,{
+      reviewer:'security-reviewer',outcome:'passed',
+      findings:'Inspected the two historical decision revisions and verified the accepted recovery constraints.',
+      evidenceReference:'decision:WORK-DEC1#revision=2',
+    });
+    expect(ledger!.verifyReviewedTask("WORK-DEC1",decisionHandoff.ticket)).toMatchObject({
       passed:true,files:[],results:{sqlite_decision:{passed:true}}});
     expect(git("rev-parse","HEAD")).toBe(head);
     expect(git("status","--porcelain")).toBe("");
@@ -985,7 +1211,16 @@ describe("project ledger and legacy migration", () => {
     });
     ledger!.report("WORK-DEC2",second.leaseToken,{kind:"sqlite_decision",
       reference:"decision:WORK-DEC2#revision=1"},true);
-    expect(ledger!.verify("WORK-DEC2",second.leaseToken)).toMatchObject({
+    const legacyDecisionHandoff=ledger!.handoffReview('WORK-DEC2',{
+      leaseToken:second.leaseToken,actor:'security-agent',
+      reason:'Legacy frozen decision is ready for a separate evidence-based review',
+    });
+    ledger!.independentTaskReview('WORK-DEC2',legacyDecisionHandoff.ticket,{
+      reviewer:'independent-policy-reviewer',outcome:'passed',
+      findings:'Independently checked bearer token revocation and expiry against the persisted decision.',
+      evidenceReference:'decision:WORK-DEC2#revision=1',
+    });
+    expect(ledger!.verifyReviewedTask("WORK-DEC2",legacyDecisionHandoff.ticket)).toMatchObject({
       passed:true,files:[],results:{sqlite_decision:{passed:true}}});
     expect(ledger!.get("WORK-DEV1").status).toBe("ready");
     expect(ledger!.executionContract("WORK-DEC2").requiredGates).toEqual(["docs"]);
@@ -1001,6 +1236,54 @@ describe("project ledger and legacy migration", () => {
     expect(f.draft.guidance).toContain("不生成");
     expect(f.draft.structuredContent).toBeNull();
   });
+  it("imports 56 reviewed atomic tasks within one bounded transaction and reconciles lost replies",()=>{
+    save("docs/roadmap/bulk-version.md","# Version\n\n| 阶段 | 描述 |\n| --- | --- |\n| F0 | 旧基线 |\n| F1 | 新工作 |\n| F2 | 联调 |\n| F3 | 验收 |\n");
+    commit("freeze bulk version scope");
+    const verificationItems=Array.from({length:54},(_,index)=>({
+      id:"BULK-"+String(index+1).padStart(3,"0"),
+      title:"验证事件批次 "+(index+1)+" 的边界输入",
+      stageId:"F1",type:"testing" as const,ownerRole:"QA Engineer",platform:"Python",
+      acceptance:"第 "+(index+1)+" 批非法输入拒绝且无持久副作用",
+      allowedPaths:["tests/**"],requiredGates:["docs"],dependsOn:["F0"],
+    }));
+    const workItems=[...verificationItems,{
+      id:"BULK-055",title:"执行全批次异常联调",stageId:"F2",type:"integration" as const,
+      ownerRole:"Integration Engineer",platform:"Python",
+      acceptance:"全部五十四批次都返回正确的拒绝状态",
+      allowedPaths:["tests/**"],requiredGates:["docs"],
+      dependsOn:verificationItems.map(item=>item.id),
+    },{
+      id:"BULK-056",title:"核验最终发布检查清单",stageId:"F3",type:"release" as const,
+      ownerRole:"Release Engineer",platform:"Python",
+      acceptance:"所有联调结果通过并保留发布核对记录",
+      allowedPaths:["docs/**"],requiredGates:["docs"],dependsOn:["BULK-055"],
+    }];
+    const base={release:"V0.1",scopeSource:"docs/roadmap/bulk-version.md",
+      rationale:"Validate independently bounded input batches with a stable upstream verified baseline and no scope creep.",
+      stages:[{id:"F0",verifiedTaskIds:["F0"]},{id:"F1"},{id:"F2"},{id:"F3"}],workItems};
+    const plan={...base,agentReview:{reviewer:"same-developer-later-pass",
+      method:"agent-self-check" as const,
+      subjectHash:releaseReviewSubjectHash(base as any),
+      sourceRefs:["docs/roadmap/bulk-version.md"],reviewedStageIds:["F0","F1","F2","F3"],
+      checks:REVIEW_DIMENSIONS.map(dimension=>({
+        dimension,conclusion:"Rechecked exact batch scope and acceptance requirements for "+dimension,
+        workItemIds:["BULK-001","BULK-056"],
+      }))}};
+    const reviewed=ledger!.reviewReleaseWork(plan as any);
+    expect(reviewed.issues).toEqual([]);
+    const proposed=ledger!.stageReleaseWork(plan as any,"solo-planner");
+    const start=performance.now();
+    const frozen=ledger!.approveReleaseWork("V0.1",proposed.hash);
+    const elapsed=performance.now()-start;
+    expect(frozen.added).toHaveLength(56);
+    expect(elapsed).toBeLessThan(20000);
+    expect(ledger!.get("BULK-056").status).toBe("ready");
+    expect(ledger!.approveReleaseWork("V0.1",proposed.hash)).toMatchObject({
+      status:"frozen",alreadyApplied:true,hash:proposed.hash,
+    });
+    expect(ledger!.list().filter(task=>task.id.startsWith("BULK-"))).toHaveLength(56);
+  });
+
   it("plans an entire version as simple single-action rows, blocks early coding, then atomically approves", async () => {
     save("docs/roadmap/test-version.md",
       "# Version\n\n| 阶段 | 描述 |\n| --- | --- |\n| F0 | 已验证基线 |\n| F1 | 接口准备 |\n| F2 | 联调发布 |\n");
@@ -1062,7 +1345,7 @@ describe("project ledger and legacy migration", () => {
     expect(()=>ledger!.approveReleaseWork("V0.1",draft.hash)).toThrow(/title must describe one bounded action/);
     expect(()=>ledger!.get("WORK-101")).toThrow();
     expect(ledger!.reviewReleaseWork(plan as any).issues)
-      .toContain("Independent Agent semantic review missing: submit agentReview before version approval");
+      .toContain("Agent semantic review missing: review this plan before version activation");
     const complete=withReview(plan);
     const review=ledger!.reviewReleaseWork(complete as any);
     expect(review).toMatchObject({passed:true,workItemCount:4});
@@ -1312,7 +1595,16 @@ describe("project ledger and legacy migration", () => {
     });
     ledger!.report("WORK-102",resumed.leaseToken,{
       kind:"test",reference:"real previously committed in-scope fixture file"},true);
-    expect(ledger!.verify("WORK-102",resumed.leaseToken)).toMatchObject({
+    const recoveredHandoff=ledger!.handoffReview('WORK-102',{
+      leaseToken:resumed.leaseToken,actor:'coding-agent',
+      reason:'The recovered scoped commit is ready for independent verification without touching Owner files',
+    });
+    ledger!.independentTaskReview('WORK-102',recoveredHandoff.ticket,{
+      reviewer:'second-reviewer',outcome:'passed',
+      findings:'Validated the original stored Git ancestry, completion revision and the independently retested contract fixture.',
+      evidenceReference:'real previously committed in-scope fixture file',
+    });
+    expect(ledger!.verifyReviewedTask("WORK-102",recoveredHandoff.ticket)).toMatchObject({
       passed:true,files:["tests/contracts/partial-replay.json"]});
     // Owner-approved new work MUST be its own frozen task, never masquerade
     // as expanded QA scope. Hash-bound review and approval are separate.
@@ -1514,7 +1806,7 @@ describe("project ledger and legacy migration", () => {
     const before=ledger!.list().length;
     const pending=ledger!.proposeFeatureTasks("event-ingest",brief.feature.revision,plan,
       "planning-agent",savedDraft.hash);
-    expect(pending.status).toBe("review_pending");
+    expect(pending.status).toBe("awaiting_second_review");
     expect(ledger!.list()).toHaveLength(before);
     expect(ledger!.listFeatureTaskPlans()).toHaveLength(1);
     expect(ledger!.listFeatureTaskPlans()[0].proposal.plan.nodes[1].scenario).toContain("logged-in user");
@@ -1524,7 +1816,7 @@ describe("project ledger and legacy migration", () => {
       const address=web.address();
       const base="http://127.0.0.1:"+(address&&typeof address==="object"?address.port:0);
       const plans=await (await fetch(base+"/api/feature-task-plans")).json();
-      expect(plans.plans[0].status).toBe("review_pending");
+      expect(plans.plans[0].status).toBe("awaiting_second_review");
       expect(plans.plans[0].proposal.plan.nodes[1].id).toBe("INGEST-LEAF");
       expect(await (await fetch(base+"/")).text()).toContain("/api/feature-task-plans");
       expect((await fetch(base+"/api/feature-task-plans",{method:"POST"})).status).toBe(405);
@@ -1534,11 +1826,29 @@ describe("project ledger and legacy migration", () => {
       "planning-agent")).toThrow(/Pending Feature plan differs/);
     expect(ledger!.featureTaskPlan("event-ingest").proposalHash).toBe(pending.hash);
     expect(()=>ledger!.approveFeatureTasks("event-ingest","owner","0".repeat(64))).toThrow(/matching Feature proposal/);
+    expect(()=>ledger!.approveFeatureTasks("event-ingest","owner",pending.hash))
+      .toThrow(/separate feature-task-second-review/);
+    const second={reviewer:'same-planning-agent',
+      coverage:'Rechecked FR-101 and the persistent restart outcome against the stored Feature requirements.',
+      dependencies:'Verified F0 is a real upstream task and the group only organizes this development leaf.',
+      failureCases:'Verified conflicting idempotency payloads and unauthenticated requests fail without persistence.',
+      fileScope:'Compared services/core/ingest.go and services/core boundaries to the exact frozen scope.',
+      verification:'Inspected integration tests for valid POST, restart, failure responses and persistent evidence.',
+      checkedTaskIds:['INGEST-LEAF']};
+    expect(()=>ledger!.recordFeatureSecondReview('event-ingest','0'.repeat(64),second))
+      .toThrow(/Re-open/);
+    const reviewedAgain=ledger!.recordFeatureSecondReview('event-ingest',pending.hash,second);
+    expect(reviewedAgain).toMatchObject({status:'reviewed',proposalHash:pending.hash,checkedTaskCount:1});
+    expect(()=>ledger!.recordFeatureSecondReview('event-ingest',pending.hash,second))
+      .toThrow(/immutable/);
+    expect(ledger!.featureTaskPlan('event-ingest')).toMatchObject({status:'review_pending'});
     const expectedLocalApprover=ledger!.localDeveloper().name||ledger!.localDeveloper().device;
     const approved=ledger!.approveFeatureTasks("event-ingest","untrusted caller text",pending.hash);
     expect(approved.added).toEqual(["INGEST-GROUP","INGEST-LEAF"]);
     expect(ledger!.get("INGEST-LEAF").approvedBy).toBe(expectedLocalApprover);
     expect(ledger!.get("INGEST-LEAF").status).toBe("ready");
+    expect(ledger!.approveFeatureTasks("event-ingest","agent",pending.hash))
+      .toMatchObject({status:'frozen',alreadyApplied:true});
     expect(ledger!.get("INGEST-LEAF").dependsOn).toEqual(["F0"]);
     expect(ledger!.executionContract("INGEST-LEAF")).toMatchObject({eligible:true,profile:"spec-depth-v3"});
     expect(()=>ledger!.claim("INGEST-GROUP","agent")).toThrow(/leaf|group/i);
@@ -1718,7 +2028,8 @@ describe("project ledger and legacy migration", () => {
     ]) {
       expect(output).toContain('id="' + section + '"');
     }
-    // Product goals are now visible on the overview, not a ninth hidden page.
+    // Product goals are now visible inside the overview, not stranded
+    // on an unreachable ninth page.
     expect(output).toContain('id="vision-title"');
     expect(output).toContain('id="roadmap-title"');
     expect(output).toContain('id="okr-title"');
@@ -2102,6 +2413,198 @@ describe("project ledger and legacy migration", () => {
     const released = ledger!.release("NEYNA-200", claimed.leaseToken);
     expect(released.released).toBe(true);
     expect(ledger!.get("NEYNA-200").status).toBe("ready");
+    expect(ledger!.next().activeLease).toBeNull();
+  });
+
+  it("defers a submitted device gate without passing it, releases the singleton and preserves original Git evidence after other tasks commit", () => {
+    create({id:"NEYNA-200",requiredGates:["ios_device_e2e"]});
+    create({id:"NEYNA-201",requiredGates:["docs"]});
+    ledger!.approve("NEYNA-200","owner");
+    ledger!.approve("NEYNA-201","owner");
+    const first=ledger!.claim("NEYNA-200","audio-agent");
+    save("tests/contracts/audio-session.json",'{"realSession":true}');
+    commit("implement offline-device session");
+    const originalHead=git("rev-parse","HEAD");
+    ledger!.report("NEYNA-200",first.leaseToken,{
+      kind:"flutter_test",reference:"Actual Flutter local tests pass; device absent",
+    },true);
+    ledger!.complete("NEYNA-200",first.leaseToken,{
+      summary:"Real device session implementation committed for independent iPhone tests",
+      implementation:"Committed explicit audio session without fabricated hardware evidence",
+      verification:"Flutter tests pass, physical iPhone unavailable",
+      remaining:"Real iPhone acceptance is pending; its Gate is NOT passed",
+    });
+    expect(() => ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:"wrong",gate:"ios_device_e2e",
+      reason:"Physical iPhone is disconnected and real tests must be replayed",
+    })).toThrow(/lease/i);
+    const deferred=ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:first.leaseToken,gate:"ios_device_e2e",
+      reason:"Physical iPhone unavailable; rerun real signed device XCTest once it returns",
+    });
+    expect(deferred.leaseReleased).toBe(true);
+    expect(deferred.gatePassed).toBe(false);
+    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
+    expect(ledger!.get("NEYNA-200").pendingVerification.gate).toBe("ios_device_e2e");
+    expect(ledger!.board().counts.pendingVerification).toBe(1);
+    expect(ledger!.next().activeLease).toBeNull();
+    expect(ledger!.next().nextTask?.id).not.toBe("NEYNA-200");
+    expect(() => ledger!.claim("NEYNA-200","other-agent")).toThrow(/resume-verification/i);
+
+    const second=ledger!.claim("NEYNA-201","other-agent");
+    save("tests/contracts/other-delivery.json",'{"nextTask":true}');
+    commit("independent second task after iPhone unavailable");
+    ledger!.report("NEYNA-201",second.leaseToken,{
+      kind:"unit_test",reference:"Real test of next task succeeded",
+    },true);
+    ledger!.complete("NEYNA-201",second.leaseToken,{
+      summary:"Independent next task was finished on the same main branch",
+      implementation:"A separate implementation was committed after the deferred task",
+      verification:"Real docs gate available and executed successfully",
+    });
+    expect(ledger!.verify("NEYNA-201",second.leaseToken).passed).toBe(true);
+    const laterHead=git("rev-parse","HEAD");
+    expect(laterHead).not.toBe(originalHead);
+    const resumed=ledger!.resumeVerification("NEYNA-200","audio-agent");
+    expect(resumed.baseHead).toBe(first.baseHead);
+    expect(resumed.originalCompletionHead).toBe(originalHead);
+    expect(ledger!.get("NEYNA-200").pendingVerification).toBeNull();
+    const missingPhysicalGate=ledger!.verify("NEYNA-200",resumed.leaseToken);
+    expect(missingPhysicalGate.passed).toBe(false);
+    expect(missingPhysicalGate.files).toEqual(["tests/contracts/audio-session.json"]);
+    expect(missingPhysicalGate.reason).toBeUndefined(); // not a stale Git head or wrong diff
+    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
+    expect(ledger!.trace("NEYNA-200").verificationDeferral.completion_head)
+      .toBe(originalHead);
+  });
+
+  it("cannot defer unfinished code, an unrelated gate or user-dirty files", () => {
+    create({id:"NEYNA-200",requiredGates:["ios_device_e2e"]});
+    ledger!.approve("NEYNA-200","owner");
+    const first=ledger!.claim("NEYNA-200","audio-agent");
+    save("tests/contracts/audio.json",'{"real":true}');
+    commit("submit audio code");
+    const reason="Device unavailable; need real independently reviewed iPhone Gate";
+    expect(() => ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:first.leaseToken,
+      gate:"ios_device_e2e",reason,
+    })).toThrow(/review|completed|completion/i);
+    ledger!.report("NEYNA-200",first.leaseToken,{
+      kind:"flutter_test",reference:"Executed local Flutter suite",
+    },true);
+    ledger!.complete("NEYNA-200",first.leaseToken,{
+      summary:"Real code committed while external iPhone was disconnected",
+      implementation:"User action bound to actual audio session API",
+      verification:"Local tests pass; physical test pending",
+    });
+    expect(() => ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:first.leaseToken,
+      gate:"docs",reason,
+    })).toThrow(/external|physical/i);
+    save("tests/contracts/dirty.json",'{"uncommitted":true}');
+    expect(() => ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:first.leaseToken,
+      gate:"ios_device_e2e",reason,
+    })).toThrow(/dirty|manifest|untracked/i);
+    expect(ledger!.get("NEYNA-200").pendingVerification).toBeNull();
+    expect(ledger!.next().activeLease?.taskId).toBe("NEYNA-200");
+  });
+
+  it("explicitly preserves byte-identical later tracked and untracked work on main without stashing or weakening the real device Gate", () => {
+    create({id:"NEYNA-200",requiredGates:["ios_device_e2e"]});
+    create({id:"NEYNA-201",requiredGates:["docs"]});
+    ledger!.approve("NEYNA-200","owner");
+    ledger!.approve("NEYNA-201","owner");
+    const old=ledger!.claim("NEYNA-200","audio-agent");
+    save("tests/contracts/capture.json",'{"session":true}');
+    commit("frozen explicit audio session");
+    ledger!.report("NEYNA-200",old.leaseToken,{
+      kind:"flutter_test",reference:"Local Flutter tests pass, device absent",
+    },true);
+    ledger!.complete("NEYNA-200",old.leaseToken,{
+      summary:"Captured a real frozen implementation for a device test",
+      implementation:"Committed bounded native session work",
+      verification:"Only local Flutter tests; true iPhone gate still unavailable",
+    });
+    save("tests/contracts/capture.json",'{"session":true,"laterWork":"uncommitted"}');
+    save("tests/contracts/future.json",'{"futureTask":true}');
+    save("README.md","preserve pre-existing tracked edits exactly\n");
+    const unchanged=git("status","--porcelain=v1");
+    expect(() => ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:old.leaseToken,
+      gate:"ios_device_e2e",
+      reason:"Real device unavailable, restore physical iPhone before verifying",
+    })).toThrow(/dirty|worktree|untracked|manifest/i);
+    const deferred=ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:old.leaseToken,gate:"ios_device_e2e",
+      reason:"Physical iPhone is absent, verification is held until it returns",
+      preserveExistingWorktree:true,
+    });
+    expect(deferred.gatePassed).toBe(false);
+    expect(deferred.leaseReleased).toBe(true);
+    expect(deferred.preservedUncommittedFiles).toBe(3);
+    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
+    const record=ledger!.trace("NEYNA-200").verificationDeferral;
+    const fingerprint=JSON.parse(record.preserved_worktree_json) as {
+      path:string;sha256:string;size:number;
+    }[];
+    expect(fingerprint.map(file=>file.path).sort()).toEqual([
+      "README.md","tests/contracts/capture.json","tests/contracts/future.json",
+    ]);
+    expect(fingerprint.every(item=>item.sha256.length===64)).toBe(true);
+    expect(git("status","--porcelain=v1")).toBe(unchanged);
+    expect(ledger!.next().activeLease).toBeNull();
+    expect(ledger!.claim("NEYNA-201","next-agent").task.id).toBe("NEYNA-201");
+  });
+
+  it("cannot hide a staged index in a deferred verification manifest", () => {
+    create({id:"NEYNA-200",requiredGates:["ios_device_e2e"]});
+    ledger!.approve("NEYNA-200","owner");
+    const old=ledger!.claim("NEYNA-200","audio-agent");
+    save("tests/contracts/capture.json",'{"session":true}');
+    commit("original submission");
+    ledger!.report("NEYNA-200",old.leaseToken,{
+      kind:"flutter_test",reference:"Real simulator tests, physical iPhone absent",
+    },true);
+    ledger!.complete("NEYNA-200",old.leaseToken,{
+      summary:"Actual audio session delivery",
+      implementation:"Native permission and consent controls committed",
+      verification:"Only simulator tests passed",
+    });
+    save("tests/contracts/new-staged.json",'{"staged":true}');
+    git("add","tests/contracts/new-staged.json");
+    expect(() => ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:old.leaseToken,
+      gate:"ios_device_e2e",
+      reason:"Device disconnected, rerun real capture before acceptance",
+      preserveExistingWorktree:true,
+    })).toThrow(/staged|index/i);
+    expect(ledger!.get("NEYNA-200").pendingVerification).toBeNull();
+  });
+
+  it("refuses to resume deferred verification when a later task rewrites its original files", () => {
+    create({id:"NEYNA-200",requiredGates:["ios_device_e2e"]});
+    ledger!.approve("NEYNA-200","owner");
+    const first=ledger!.claim("NEYNA-200","audio-agent");
+    save("tests/contracts/audio-session.json",'{"sample":1}');
+    commit("frozen device task");
+    ledger!.report("NEYNA-200",first.leaseToken,{
+      kind:"flutter_test",reference:"Verified local file tests only",
+    },true);
+    ledger!.complete("NEYNA-200",first.leaseToken,{
+      summary:"Device task completed without device validation",
+      implementation:"Committed native-facing code",
+      verification:"Device absent; later physical verification is required",
+    });
+    ledger!.deferVerification({
+      id:"NEYNA-200",leaseToken:first.leaseToken,gate:"ios_device_e2e",
+      reason:"No physical device connected; retry when the Owner provides one",
+    });
+    save("tests/contracts/audio-session.json",'{"sample":2}');
+    commit("later source change must invalidate frozen device evidence");
+    expect(() => ledger!.resumeVerification("NEYNA-200","audio-agent"))
+      .toThrow(/modified|changed/i);
+    expect(ledger!.get("NEYNA-200").pendingVerification).not.toBeNull();
     expect(ledger!.next().activeLease).toBeNull();
   });
 

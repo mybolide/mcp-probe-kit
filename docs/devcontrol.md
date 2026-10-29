@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **74 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **81 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -523,10 +523,43 @@ and releases **only the singleton task lease** so independent work can move
 forward. It never marks the Gate passed or increases Verified. Staged,
 untracked, or changed Owner files are not silently discarded; resolve
 uncommitted code provenance before deferring.
+If subsequent work already exists in the same main worktree, use the explicit
+`preserveExistingWorktree:true` option only after reviewing the current
+Git status and task provenance. This does not count the uncommitted code
+toward the deferred task: the tool records an exact SHA-256 snapshot of all
+regular tracked/untracked changes, rejects staged files and symlinks, and
+leaves every file and the index untouched. The normal `verify` path remains
+strict; the snapshot cannot satisfy any Gate.
+For an already **committed, scoped** task, the same explicitly approved
+preservation option also works during `complete`: it records all unrelated
+tracked/untracked WIP byte fingerprints without changing Git or source files.
+The later `defer-verification` must match that exact snapshot. Neither
+completion nor deferral passes the real device Gate.
 Once the real device/runner is available, use `resume-verification` to
 explicitly claim the old task and run its full real `verify`. Later commits
 cannot be counted in the frozen original task diff; later modifications to
 the original delivered files block direct resumption for fresh review.
+
+**Task-scoped iPhone XCTest receipts (existing frozen `ios_device_e2e` Gate):**
+The development Agent must run an actual, scope-appropriate XCTest on a
+paired physical iPhone, then record its Apple `.xcresult` evidence in the
+task. For supported iOS/audio work, provide
+`DEVCONTROL_IOS_DEVICE_UDID` and
+`DEVCONTROL_IOS_DEVICE_GATE_MANIFEST` pointing to a JSON file within
+`.neyna/state/` containing `taskId`, `testSource`,
+`testMethod` (without trailing `()`), `resultBundle` and a full
+`gitHead`. The test case must contain the task ID (e.g. `F415`) and
+the source method must exist in that Git revision. The Gate independently
+checks Apple's real `xcresulttool` summary and test tree: one matching
+unskipped, passing XCTest, no other tests or failures, a recent report, the
+same physical iPhone UDID and a live CoreDevice tunnel. It reacquires an
+idle USB tunnel through the supported Apple interface before rechecking.
+An absent or mismatched receipt fails closed; documentation, fabricated
+timestamps, synthetic PCM unit tests or an installed app alone are not
+proof of the frozen real-device acceptance requirement. Do not interpret
+this machine-check as a separate human review of additional acceptance
+conditions. The legacy F4-03 fresh-permission Gate retains its stricter
+two-screenshot/isolated-test requirements unchanged.
 
 The `import-spec` operation uses stable manifest subspec IDs rather than array
 positions, and its full task/dependency import is **transactional**. Reordering

@@ -80,6 +80,22 @@
   .task-card-title{font-size:17px}
   .task-card-support{align-self:start}
 }
+.task-section-heading{display:flex;align-items:center;gap:12px;margin:12px 0 14px;
+  color:#183451;font-size:16px}
+.task-section-heading strong{font-weight:730}
+.task-section-heading span{font-size:12px;color:#58708d}
+.refresh-control{display:flex;align-items:center;gap:7px;white-space:nowrap;
+  font-size:12px;color:#39536e}
+.refresh-control select{border:1px solid #d6e2ef;border-radius:8px;background:white;
+  color:#1b446d;padding:7px 8px;font:inherit;min-width:76px}
+.refresh-countdown{min-width:72px;font-size:12px;color:#456787;white-space:nowrap}
+.req-work-status{display:inline-block;margin:8px 0 5px;padding:4px 8px;
+  border:1px solid #c7dff6;border-radius:7px;color:#245c90;font-size:12px;line-height:1.4}
+.req-work-status.done{color:#24694c;border-color:#c9e5d2}
+.req-work-status.undivided{color:#895722;border-color:#edd8b8}
+@media(max-width:980px){.refresh-control{font-size:0}.refresh-control select{font-size:12px}
+  .refresh-countdown{min-width:57px;font-size:11px}}
+@media(max-width:540px){.refresh-countdown{min-width:0;max-width:65px;white-space:normal;line-height:1.3}}
 @media(min-width:2700px){
   .task-collection{grid-template-columns:repeat(3,minmax(0,1fr))}
   .overview-product-grid{grid-template-columns:1.25fr 1fr 1fr}
@@ -175,8 +191,6 @@
 .insight-row small{font-size:12px;color:#426ca0}
 button.insight-row:hover{background:#f0f7ff;border-color:#9fc4ed}
 .insight-meta{font-size:13px;color:#506680;line-height:1.6}
-.task-insight{margin:15px 0 20px}
-.task-insight .sub{font-size:13px;line-height:1.6}
 .history-shortcuts{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 20px}
 .history-shortcuts .btn{font-size:13px;min-height:36px}
 .settings-change-panel{margin:18px 0;padding:21px 24px}
@@ -220,6 +234,49 @@ button.insight-row:hover{background:#f0f7ff;border-color:#9fc4ed}
 .task-phase>.task-collection .task-card-chips{order:1}
 .task-phase>.task-collection .task-card-owner{order:2;flex:1}
 .task-phase>.task-collection .task-card-detail{order:3}
+/* One stable footer for all task-plan formats. Long role names must never
+ * consume the details column or become single-character vertical text. */
+.task-card-side,
+.task-phase>.task-collection .task-card-side{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto auto;grid-template-areas:"chips chips" "owner detail";
+  gap:12px 15px;align-items:center;justify-content:stretch;
+  padding:13px 0 0;border-left:0;border-top:1px solid #e8eef5;
+  min-width:0;width:100%;
+}
+.task-card-chips,.task-phase>.task-collection .task-card-chips{
+  grid-area:chips;order:initial;display:flex;gap:8px;min-width:0;
+}
+.task-card-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;max-width:100%}
+.task-card-owner,.task-phase>.task-collection .task-card-owner{
+  grid-area:owner;order:initial;flex:none;max-width:100%;width:100%;
+  display:flex;flex-direction:row;align-items:baseline;gap:7px;
+  min-width:0;font-size:12px;line-height:1.5;overflow:hidden;
+}
+.task-card-owner .task-card-label{flex:none;white-space:nowrap}
+.task-card-owner-value{display:block;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;flex:1}
+.task-card-detail,.task-phase>.task-collection .task-card-detail{
+  grid-area:detail;order:initial;flex:none;white-space:nowrap;
+  justify-self:end;font-size:13px;
+}
+/* Avoid three cramped 450px cards at normal desktop widths. */
+.task-phase>.task-collection{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:2250px){
+  .task-phase>.task-collection{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:1150px){
+  .task-phase>.task-collection{grid-template-columns:1fr}
+}
+/* At tablet widths a fixed 200px right rail makes owner names unreadable.
+ * Stack every task card before that width, including ReleaseWorkPlan cards. */
+@media(max-width:1260px){
+  .task-card{grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"leading" "support" "side"}
+  .task-card-side{border-left:0;padding-left:0;
+    border-top:1px solid #e8eef5;padding-top:13px}
+}
 @media(max-width:620px){
   .task-phase-head{align-items:flex-start;padding:13px 16px}
   .task-phase-head small{font-size:12px;text-align:right}

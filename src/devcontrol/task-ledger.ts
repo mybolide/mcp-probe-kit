@@ -8,6 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID, createHash } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { createRequire } from "node:module";
 import { ensureDatabaseIgnored, resolveProjectDatabase } from "./project-storage.js";
 import os from "node:os";
@@ -44,6 +45,64 @@ interface SqlStmt {
   get(...args: Value[]): Row | undefined;
   all(...args: Value[]): Row[];
   run(...args: Value[]): { changes: number };
+}
+
+/** For an already committed task, subsequent uncommitted work is not delivery
+ * evidence. An explicit Owner-authorized preservation mode fingerprints it
+ * without staging, stashing, resetting, overwriting or claiming ownership.
+ */
+function preservedWorktreeSnapshot(root:string):Array<{
+  path:string;kind:"tracked"|"untracked";sha256:string;size:number;
+}> {
+  const readGitPaths=(args:string[]):string[]=>{
+    const result=spawnSync("git",[...args,"-z"],{
+      cwd:root,windowsHide:true,encoding:"buffer",timeout:12_000,
+    });
+    if(result.status!==0||!Buffer.isBuffer(result.stdout))
+      fail("GIT_ERROR","Cannot fingerprint existing uncommitted work");
+    return result.stdout.toString("utf8").split("\0").filter(Boolean).sort();
+  };
+  if(readGitPaths(["diff","--cached","--name-only"]).length)
+    fail("STAGED_WORKTREE",
+      "Preserving an existing working tree cannot hide staged content; review the index first");
+  const tracked=readGitPaths(["diff","--name-only","--no-ext-diff"]);
+  const untracked=readGitPaths(["ls-files","--others","--exclude-standard"]);
+  const paths=[
+    ...tracked.map(file=>({path:file,kind:"tracked" as const})),
+    ...untracked.map(file=>({path:file,kind:"untracked" as const})),
+  ];
+  if(paths.length>256)fail("WORKTREE_TOO_LARGE",
+    "More than 256 uncommitted files; reconcile their provenance before deferring");
+  const realRoot=fs.realpathSync(root);
+  return paths.map(item=>{
+    if(!item.path||path.isAbsolute(item.path)||item.path.split("/").includes(".."))
+      fail("INVALID_WORKTREE_PATH","Cannot protect non-project working files");
+    const target=path.join(root,item.path);
+    const meta=fs.lstatSync(target);
+    if(!meta.isFile()||meta.size>64*1024*1024)
+      fail("UNSAFE_WORKTREE_ENTRY",
+        "Cannot defer with non-regular or oversized uncommitted source files");
+    const real=fs.realpathSync(target);
+    if(!real.startsWith(realRoot+path.sep))
+      fail("UNSAFE_WORKTREE_ENTRY","Cannot fingerprint a file outside the Git project");
+    return {...item,size:meta.size,
+      sha256:createHash("sha256").update(fs.readFileSync(target)).digest("hex")};
+  });
+}
+
+/** An immutable task submission must retain its own diff after other tasks
+ * advance HEAD. Never credit subsequent commits to the deferred task.
+ */
+function committedFilesBetween(root: string, base: string, end: string,
+  filter = "ACMRTD"): string[] {
+  const result = spawnSync("git", [
+    "diff", "--no-renames", "--name-only", "-z", "--diff-filter=" + filter, base, end,
+  ], { windowsHide:true, cwd:root, encoding:"buffer", timeout:12_000 });
+  if (result.status!==0 || !Buffer.isBuffer(result.stdout)) {
+    fail("GIT_ERROR","Cannot inspect frozen task Git revision");
+  }
+
+  return [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
 }
 
 /** Preflight only: an impossible frozen file scope must not be claimable.
@@ -229,6 +288,10 @@ export interface CompletionReport {
   remaining?: string;
   /** Explicit Owner-preserved tracked edits outside this task's frozen scope. */
   existingDirtyFiles?: Array<{path:string;sha256:string}>;
+  /** Explicit audit-only snapshot of unrelated pre-existing WIP. It never
+   * counts as task delivery, passed Gate, or permission to rewrite any file.
+   */
+  preserveExistingWorktree?: boolean;
 }
 
 export interface FeatureProposal {
@@ -245,11 +308,13 @@ export class ProjectTaskLedger {
   private readonly db: SqlDatabase;
   private transactionDepth = 0;
   private releaseWorkApprovalInProgress = false;
-  readonly root: string;
+  root: string;
+  readonly projectRoot: string;
   readonly databasePath: string;
 
   constructor(root: string, dbPath?: string) {
     this.root = path.resolve(root);
+    this.projectRoot = this.root;
     if (!fs.existsSync(path.join(this.root, ".git"))) {
       fail("NOT_GIT_PROJECT", "DevControl requires a Git project root");
     }
@@ -342,6 +407,18 @@ export class ProjectTaskLedger {
         allowed_paths TEXT NOT NULL, required_gates TEXT NOT NULL,
         spec_id TEXT, plan_id TEXT, approved_by TEXT,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL, verified_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_worktree_baselines (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        base_head TEXT NOT NULL, snapshot_json TEXT NOT NULL,
+        captured_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_review_handoffs (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        completion_revision INTEGER NOT NULL, completion_head TEXT NOT NULL,
+        developer TEXT NOT NULL, ticket_hash TEXT NOT NULL UNIQUE,
+        issued_at TEXT NOT NULL, expires_at INTEGER NOT NULL,
+        reviewer TEXT, outcome TEXT, findings TEXT, reviewed_at TEXT
       );
       CREATE TABLE IF NOT EXISTS dc_release_plans (
         release TEXT PRIMARY KEY,
@@ -448,6 +525,31 @@ export class ProjectTaskLedger {
         task_id TEXT NOT NULL REFERENCES dc_tasks(id), agent TEXT NOT NULL,
         token TEXT NOT NULL, base_head TEXT NOT NULL, expires_at INTEGER NOT NULL
       );
+      -- Non-destructive v5 upgrade: retain the original singleton table as
+      -- legacy history. New claims use a per-task lease and isolated checkout.
+      CREATE TABLE IF NOT EXISTS dc_task_leases (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        agent TEXT NOT NULL, token TEXT NOT NULL UNIQUE,
+        base_head TEXT NOT NULL, expires_at INTEGER NOT NULL,
+        worktree_path TEXT NOT NULL DEFAULT ''
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_integration_ready (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        commit_head TEXT NOT NULL, token_hash TEXT NOT NULL,
+        reviewed_at TEXT NOT NULL, review_json TEXT NOT NULL
+      );
+      -- A deferred Gate is NOT a passed Gate or a new task state. Preserve
+      -- the original task submission and Git baseline, releasing only the
+      -- singleton worktree lease. Its original acceptance remains required.
+      CREATE TABLE IF NOT EXISTS dc_verification_deferrals (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        gate_name TEXT NOT NULL, reason TEXT NOT NULL,
+        base_head TEXT NOT NULL, completion_head TEXT NOT NULL,
+        completion_revision INTEGER NOT NULL,
+        deferred_by TEXT NOT NULL, deferred_at TEXT NOT NULL,
+        preserved_worktree_json TEXT NOT NULL DEFAULT '[]',
+        resumed_at TEXT
+      );
       CREATE TABLE IF NOT EXISTS dc_scope_pauses (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
         release TEXT NOT NULL,
@@ -501,6 +603,7 @@ export class ProjectTaskLedger {
         verification TEXT NOT NULL,
         remaining TEXT NOT NULL DEFAULT '',
         preserved_dirty_json TEXT NOT NULL DEFAULT '[]',
+        preserved_worktree_json TEXT NOT NULL DEFAULT '[]',
         git_head TEXT NOT NULL,
         agent TEXT NOT NULL,
         created_at TEXT NOT NULL,
@@ -559,6 +662,15 @@ export class ProjectTaskLedger {
         revision INTEGER NOT NULL, hash TEXT NOT NULL,
         snapshot_json TEXT NOT NULL, proposed_by TEXT NOT NULL,
         proposed_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_feature_task_second_reviews (
+        feature_name TEXT NOT NULL REFERENCES dc_features(name),
+        proposal_hash TEXT NOT NULL,
+        review_json TEXT NOT NULL,
+        review_hash TEXT NOT NULL,
+        reviewed_by TEXT NOT NULL,
+        reviewed_at TEXT NOT NULL,
+        PRIMARY KEY(feature_name,proposal_hash)
       );
       CREATE TABLE IF NOT EXISTS dc_feature_task_plans (
         feature_name TEXT PRIMARY KEY REFERENCES dc_features(name),
@@ -635,6 +747,18 @@ export class ProjectTaskLedger {
     );
     if(!completionColumns.has("preserved_dirty_json"))
       this.db.exec("ALTER TABLE dc_completion_notes ADD COLUMN preserved_dirty_json TEXT NOT NULL DEFAULT '[]'");
+    if(!completionColumns.has("preserved_worktree_json"))
+      this.db.exec("ALTER TABLE dc_completion_notes ADD COLUMN preserved_worktree_json TEXT NOT NULL DEFAULT '[]'");
+    const deferralColumns=new Set(
+      this.db.prepare("PRAGMA table_info(dc_verification_deferrals)").all().map(row=>row.name),
+    );
+    if(!deferralColumns.has("preserved_worktree_json"))
+      this.db.exec("ALTER TABLE dc_verification_deferrals ADD COLUMN preserved_worktree_json TEXT NOT NULL DEFAULT '[]'");
+    // Existing active, expired or crash-recoverable lease rows are copied
+    // in place. No approval, audit, evidence or original lease row is deleted.
+    this.db.prepare(`INSERT OR IGNORE INTO dc_task_leases
+      (task_id,agent,token,base_head,expires_at,worktree_path)
+      SELECT task_id,agent,token,base_head,expires_at,'' FROM dc_leases`).run();
     const alreadyImported = this.db.prepare("SELECT value FROM dc_meta WHERE key='bootstrap'").get();
     if (alreadyImported) return;
     // Import from the previous Neyna Python experiment without deleting or
@@ -698,6 +822,162 @@ export class ProjectTaskLedger {
     const row = this.db.prepare("SELECT * FROM dc_tasks WHERE id=?").get(id);
     if (!row) fail("TASK_NOT_FOUND", `Unknown project task: ${id}`);
     return row!;
+  }
+
+  /** Recover an abandoned in-progress or in-review task with explicit Owner
+   * authorization. Does NOT mark complete, approve tests, or modify Git.
+   * The original claim HEAD remains the immutable comparison baseline.
+   */
+  recoverTaskLease(id:string,input:{actor:string;ownerRecoveryKey:string;
+    reason:string;ttlSeconds?:number}):Row {
+    const actor=String(input?.actor??'').trim(),reason=String(input?.reason??'').trim();
+    const ttl=input.ttlSeconds??1800;
+    if(actor.length<2||reason.length<30||!Number.isSafeInteger(ttl)||ttl<60||ttl>3600)
+      fail('RECOVERY_EVIDENCE_REQUIRED','Provide responsible actor, concrete reason, and 60–3600s TTL');
+    const secret=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??'';
+    const supplied=String(input.ownerRecoveryKey??'');
+    if(secret.length<24||supplied.length!==secret.length||
+      !timingSafeEqual(Buffer.from(supplied),Buffer.from(secret)))
+      fail('OWNER_AUTH_REQUIRED','Explicit configured Owner recovery credential required');
+    const lease=this.db.prepare('SELECT * FROM dc_leases WHERE task_id=?').get(id);
+    if(!lease)fail('LEASE_REQUIRED','No original task lease to restore');
+    if(lease.expires_at>Date.now())fail('LEASE_STILL_ACTIVE',
+      'An active developer lease cannot be taken without a deliberate handoff');
+    const task=this.requireTask(id);
+    if(!['in_progress','in_review'].includes(task.status))
+      fail('TASK_NOT_ACTIVE','Only unfinished or review-ready tasks can be resumed');
+    const head=git(this.root,['rev-parse','HEAD']);
+    if(!run(this.root,'git',['merge-base','--is-ancestor',String(lease.base_head),head]).passed)
+      fail('GIT_HISTORY_CHANGED','Original task baseline is no longer an ancestor of HEAD');
+    this.protectedClaimWorktree(id,task,String(lease.base_head));
+    const changed=committedFilesBetween(this.root,String(lease.base_head),head);
+    const allowed=JSON.parse(task.allowed_paths) as string[];
+    if(changed.some(file=>!allowed.some(pattern=>pathAllowed(file,pattern))))
+      fail('RECOVERY_SCOPE_CONFLICT','Git commits since the original claim exceed the approved task scope');
+    const newToken=randomUUID(),expiresAt=Date.now()+ttl*1000;
+    return this.inTransaction(()=>{
+      // Defensive compare-and-swap to avoid an interleaving claim or renewal.
+      const updated=this.db.prepare(`UPDATE dc_leases SET agent=?,token=?,expires_at=?
+        WHERE task_id=? AND token=? AND expires_at<=?`).run(
+        actor,newToken,expiresAt,id,String(lease.token),Date.now());
+      if(updated.changes!==1)fail('RECOVERY_RACE','Lease changed while Owner was inspecting it');
+      this.audit(id,'owner_task_lease_recovered',actor,{
+        previousAgent:lease.agent,originalBaseHead:lease.base_head,
+        currentHead:head,reason,ttlSeconds:ttl,previousStatus:task.status,
+        committedFiles:changed});
+      return {taskId:id,status:task.status,leaseToken:newToken,
+        originalBaseHead:lease.base_head,currentHead:head,expiresAt,
+        nextActions:['complete','report','review-handoff'],
+        warning:'Recovery restores processing rights only; no tests, review or Gate passed'};
+    });
+  }
+
+  /** Controlled delivery handoff. A reviewer does not receive the developer's
+   * lease token or gain permission to edit source. Owner recovery requires a
+   * separately provisioned secret, never a self-declared "Owner" label.
+   */
+  handoffReview(id:string,input:{leaseToken?:string;ownerRecoveryKey?:string;
+    actor:string;reason:string}):Row {
+    if(typeof input?.actor!=="string"||input.actor.trim().length<2||
+      typeof input.reason!=="string"||input.reason.trim().length<20)
+      fail("HANDOFF_EVIDENCE_REQUIRED","Provide actor and concrete handoff reason");
+    const lease=this.db.prepare("SELECT * FROM dc_leases WHERE task_id=?").get(id);
+    if(!lease)fail("LEASE_REQUIRED","Task has no retained lease for audited handoff");
+    const normal=typeof input.leaseToken==="string"&&input.leaseToken===lease.token;
+    const expected=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??"";
+    const supplied=String(input.ownerRecoveryKey??"");
+    const authorizedRecovery=expected.length>=24&&supplied.length===expected.length&&
+      timingSafeEqual(Buffer.from(supplied),Buffer.from(expected));
+    if(!normal&&!authorizedRecovery)
+      fail("HANDOFF_AUTH_REQUIRED","Provide current lease token or configured Owner recovery credential");
+    const task=this.requireTask(id),note=this.latestCompletion(id);
+    if(task.status!=="in_review"||!note||!this.db.prepare(
+      "SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1").get(id))
+      fail("REVIEW_NOT_READY","Completion report and task evidence are required before handoff");
+    const head=git(this.root,["rev-parse","HEAD"]);
+    if(head!==note.git_head||
+      !run(this.root,"git",["merge-base","--is-ancestor",lease.base_head,head]).passed)
+      fail("HANDOFF_HEAD_CHANGED","Review handoff requires exact committed completion HEAD and original Git ancestry");
+    // Do not move or discard dirty files while changing the workflow actor.
+    this.protectedClaimWorktree(id,task,lease.base_head);
+    const token=randomUUID()+randomUUID();
+    const ticketHash=createHash('sha256').update(token).digest('hex');
+    const expiresAt=Date.now()+24*60*60*1000;
+    return this.inTransaction(()=>{
+      const existing=this.db.prepare("SELECT ticket_hash FROM dc_task_review_handoffs WHERE task_id=?").get(id);
+      if(existing)fail("HANDOFF_EXISTS","Existing review handoff must be completed or explicitly rejected first");
+      this.db.prepare(`INSERT INTO dc_task_review_handoffs
+        (task_id,completion_revision,completion_head,developer,ticket_hash,issued_at,expires_at)
+        VALUES(?,?,?,?,?,?,?)`).run(id,note.revision,head,lease.agent,ticketHash,utc(),expiresAt);
+      this.db.prepare("UPDATE dc_leases SET expires_at=? WHERE task_id=?")
+        .run(expiresAt,id);
+      this.audit(id,"review_handed_off",input.actor.trim(),{
+        developer:lease.agent,revision:note.revision,head,reason:input.reason,
+        via:normal?'developer_lease':'authorized_owner_recovery',expiresAt});
+      return {taskId:id,status:'awaiting_independent_review',ticket:token,
+        completionRevision:note.revision,completionHead:head,expiresAt};
+    });
+  }
+
+  independentTaskReview(id:string,ticket:string,input:{reviewer:string;
+    outcome:'passed'|'failed';findings:string;evidenceReference:string}):Row {
+    if(!input||!['passed','failed'].includes(input.outcome)||
+      typeof input.reviewer!=="string"||input.reviewer.trim().length<2||
+      typeof input.findings!=="string"||input.findings.trim().length<40||
+      typeof input.evidenceReference!=="string"||!input.evidenceReference.trim())
+      fail("REVIEW_EVIDENCE_REQUIRED","Reviewer must provide decision, findings and actual evidence reference");
+    return this.inTransaction(()=>{
+      const handoff=this.requireReviewTicket(id,ticket);
+      if(input.reviewer.trim()===handoff.developer)
+        fail("REVIEWER_NOT_INDEPENDENT","Reviewer must differ from the delivering Agent");
+      if(handoff.outcome)fail("REVIEW_ALREADY_DECIDED","Previous independent review is immutable");
+      const note=this.latestCompletion(id);
+      if(!note||note.revision!==handoff.completion_revision||
+        note.git_head!==handoff.completion_head||
+        git(this.root,["rev-parse","HEAD"])!==handoff.completion_head)
+        fail("REVIEW_BASE_CHANGED","Completion or Git HEAD changed; begin a new handoff");
+      const evidence=this.db.prepare(
+        "SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=?",
+      ).get(id,input.evidenceReference,handoff.completion_head);
+      if(!evidence)fail("REVIEW_EVIDENCE_MISSING","Review must cite actual task evidence at the completion commit");
+      this.db.prepare(`UPDATE dc_task_review_handoffs
+        SET reviewer=?,outcome=?,findings=?,reviewed_at=? WHERE task_id=?`)
+        .run(input.reviewer.trim(),input.outcome,input.findings.trim(),utc(),id);
+      this.audit(id,"independent_task_reviewed",input.reviewer.trim(),{
+        outcome:input.outcome,completionRevision:note.revision,head:note.git_head,
+        evidenceReference:input.evidenceReference,findings:input.findings});
+      if(input.outcome==='failed'){
+        this.db.prepare("UPDATE dc_tasks SET status='in_progress',updated_at=? WHERE id=?")
+          .run(utc(),id);
+        this.db.prepare("DELETE FROM dc_task_review_handoffs WHERE task_id=?").run(id);
+        this.audit(id,"review_returned_for_rework",input.reviewer.trim(),{
+          completionRevision:note.revision,reason:input.findings});
+      }
+      return {taskId:id,outcome:input.outcome,status:input.outcome==='passed'?
+        'reviewed_for_gate_verification':'returned_for_rework',head:note.git_head};
+    });
+  }
+
+  private requireReviewTicket(id:string,ticket:string):Row {
+    if(typeof ticket!=="string"||ticket.length<50)
+      fail("REVIEW_TICKET_REQUIRED","Valid handoff ticket required");
+    const hash=createHash('sha256').update(ticket).digest('hex');
+    const row=this.db.prepare("SELECT * FROM dc_task_review_handoffs WHERE task_id=? AND ticket_hash=?")
+      .get(id,hash);
+    if(!row||row.expires_at<=Date.now())fail("REVIEW_TICKET_EXPIRED",
+      "Missing or expired handoff ticket; recover via authorized Owner action");
+    return row;
+  }
+
+  verifyReviewedTask(id:string,ticket:string):Row {
+    const row=this.requireReviewTicket(id,ticket);
+    if(row.outcome!=='passed')fail("INDEPENDENT_REVIEW_REQUIRED",
+      "Independent review must pass before running real acceptance Gates");
+    const lease=this.db.prepare("SELECT * FROM dc_leases WHERE task_id=?").get(id);
+    if(!lease||lease.agent!==row.developer)
+      fail("LEASE_CHANGED","Original developer's task lease is no longer available");
+    const result=this.verify(id,String(lease.token));
+    return {...result,reviewer:row.reviewer};
   }
 
   /** Persist an engineering decision without generating any ADR/Spec Markdown.
@@ -1244,9 +1524,18 @@ export class ProjectTaskLedger {
     const assignment=this.db.prepare(
       "SELECT owner,assigned_by,decision_ref,assigned_at,device,identity_source FROM dc_task_assignments WHERE task_id=?",
     ).get(row.id);
+    const deferred=this.db.prepare(
+      "SELECT gate_name,reason,completion_head,deferred_by,deferred_at "+
+      "FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NULL",
+    ).get(row.id);
     return {
       id: row.id, title: row.title, parentId: row.parent_id ?? null,
       track: row.track, release: row.release, priority: row.priority, status: row.status,
+      pendingVerification: deferred ? {
+        gate:deferred.gate_name,reason:deferred.reason,
+        completionHead:deferred.completion_head,
+        deferredBy:deferred.deferred_by,deferredAt:deferred.deferred_at,
+      } : null,
       allowedPaths: JSON.parse(row.allowed_paths), requiredGates: JSON.parse(row.required_gates),
       specId: row.spec_id, planId: row.plan_id, approvedBy: row.approved_by,
       owner:assignment?.owner??null,
@@ -1972,7 +2261,14 @@ export class ProjectTaskLedger {
       fail("PLAN_APPROVAL_REQUIRED","Exact whole-release proposal hash required");
     return this.inTransaction(()=>{
       const row=this.db.prepare("SELECT * FROM dc_release_work_proposals WHERE release=?").get(release);
-      if(!row||row.hash!==expectedHash)fail("PLAN_REVIEW_MISMATCH","Version proposal changed");
+      if(!row){
+        const frozen=this.db.prepare("SELECT revision,hash FROM dc_release_work_plans WHERE release=?").get(release);
+        if(frozen?.hash===expectedHash)return {release,status:'frozen',hash:frozen.hash,
+          revision:frozen.revision,alreadyApplied:true,
+          note:'Exact approved version is already frozen; no duplicate tasks imported'};
+      }
+      if(!row||row.hash!==expectedHash)fail("PLAN_REVIEW_MISMATCH",
+        "Version proposal changed; query release-work-plan before retrying");
       if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
         fail("ACTIVE_TASK","Wait until the active task is reviewed");
       const {plan,review:original}=JSON.parse(row.snapshot_json) as {plan:ReleaseWorkPlan;review:Row};
@@ -1984,12 +2280,14 @@ export class ProjectTaskLedger {
       const approver=String(this.localDeveloper().name||this.localDeveloper().device||"local-computer");
       // Every record below is one independent task row. Feature Specs are source
       // references, not another layer of multi-step executable tasks.
+      const developerInfo=this.localDeveloper() as {name:string;device:string;source:string};
       const added:string[]=[];
       for(const item of plan.workItems) {
-        this.create({id:item.id,title:item.title,release,track:"product",
+        this.insertApprovedPlanTask({id:item.id,title:item.title,release,track:"product",
           dependsOn:[],allowedPaths:item.allowedPaths,requiredGates:item.requiredGates,
           priority:item.priority,planId:"release-work:"+release,
-          specId:item.featureName?"feature:"+item.featureName:"#release-work:"+release},approver);
+          specId:item.featureName?"feature:"+item.featureName:"#release-work:"+release},
+          approver,developerInfo);
         this.db.prepare("UPDATE dc_tasks SET status='ready',approved_by=?,updated_at=? WHERE id=?")
           .run(approver,utc(),item.id);
         this.db.prepare("UPDATE dc_task_assignments SET owner=?,assigned_by=?,decision_ref=?,identity_source=? WHERE task_id=?")
@@ -2532,7 +2830,7 @@ export class ProjectTaskLedger {
         "Every leaf supplies a real trigger/outcome, workflow, business rules, inputs/outputs, preconditions/state transitions, exact files, prohibitions/stops, positive/negative tests, evidence, deliverables and <=8h estimate.",
         "Use feature:"+name+"#design as designRef, feature:"+name+"#requirements in sourceRefs and feature:"+name+"#subspec:<id> for any parent-child coverage.",
         "All IDs, code paths and tests must be grounded in the Git project. Unresolved decisions are blockers, not work left for the coding Agent.",
-        "Run feature-task-review and feature-task-propose. Only explicit Owner feature-task-approve creates executable SQLite tasks; coding requires claim and eligible execution-contract.",
+        "First planning round: feature-task-review and feature-task-propose. Stop this round after recording the proposal hash. In a later work round, re-read the stored proposal, perform feature-task-second-review with five concrete findings and known leaf IDs; the same Agent is allowed, but not a one-pass rubber stamp. Then feature-task-approve confirms the exact reviewed hash. No per-leaf Owner approval; material frozen-scope changes still need explicit Owner consent.",
       ],
       outputContract: {
         operation: "feature-task-review / feature-task-propose",
@@ -2549,12 +2847,17 @@ export class ProjectTaskLedger {
     this.getFeature(name);
     const approved = this.db.prepare("SELECT * FROM dc_feature_task_plans WHERE feature_name=?").get(name);
     const pending = this.db.prepare("SELECT * FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
+    const secondReview=(pending||approved)?this.db.prepare(
+      "SELECT review_hash,reviewed_by,reviewed_at FROM dc_feature_task_second_reviews WHERE feature_name=? AND proposal_hash=?",
+    ).get(name,(pending??approved)?.hash??''):null;
     const frozen = approved ? JSON.parse(approved.snapshot_json) as Row : null;
     const proposal = pending ? JSON.parse(pending.snapshot_json) as Row : null;
     const review = proposal?.review ?? null;
-    return { featureName:name, status:pending?(review && !review.passed?"needs_revision":"review_pending"):approved?"frozen":"missing",
+    return { featureName:name, status:pending?(review && !review.passed?"needs_revision":
+      secondReview?"review_pending":"awaiting_second_review"):approved?"frozen":"missing",
       revision:approved?.revision??0, hash:approved?.hash??null,
       frozen, proposal, proposalHash:pending?.hash??null, review,
+      secondReview:secondReview??null,
       sourceDrift: frozen ? !this.featureBindingMatches(frozen.sourceFeature) : false };
   }
 
@@ -2562,6 +2865,50 @@ export class ProjectTaskLedger {
     const names=this.db.prepare(`SELECT feature_name FROM dc_feature_task_proposals
       UNION SELECT feature_name FROM dc_feature_task_plans ORDER BY feature_name`).all();
     return names.map(row=>this.featureTaskPlan(String(row.feature_name)));
+  }
+
+  /** A second explicit host action AFTER the proposal has been persisted.
+   * The same Agent may perform this review, but it cannot be bundled into the
+   * planning call. Source evidence and known task IDs are checked, not identity
+   * labels. Hosts should run this in a separate conversational work round.
+   */
+  recordFeatureSecondReview(name:string,expectedHash:string,input:{
+    reviewer:string;coverage:string;dependencies:string;failureCases:string;
+    fileScope:string;verification:string;checkedTaskIds:string[];
+  }):Row {
+    if(!/^[a-f0-9]{64}$/.test(expectedHash))fail("REVIEW_HASH_REQUIRED","Exact staged Feature hash required");
+    return this.inTransaction(()=>{
+      const staged=this.db.prepare("SELECT * FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
+      if(!staged||staged.hash!==expectedHash)fail("REVIEW_PROPOSAL_CHANGED","Re-open staged Feature plan before the second review");
+      if(this.db.prepare("SELECT review_hash FROM dc_feature_task_second_reviews WHERE feature_name=? AND proposal_hash=?")
+        .get(name,expectedHash))fail("SECOND_REVIEW_ALREADY_RECORDED","Second review is immutable; stage a revised plan for a new review");
+      const snapshot=JSON.parse(staged.snapshot_json) as {plan:FeatureTaskPlan;sourceFeature:{revision:number}};
+      const evaluated=this.reviewFeatureTasks(name,snapshot.sourceFeature.revision,snapshot.plan);
+      if(!evaluated.passed)fail("PLAN_NOT_REVIEWABLE",evaluated.issues.join('; '));
+      if(typeof input?.reviewer!=="string"||input.reviewer.trim().length<2)
+        fail("SECOND_REVIEW_INCOMPLETE","Record the inspecting Agent label");
+      const fields=['coverage','dependencies','failureCases','fileScope','verification'] as const;
+      const assessments=fields.map(key=>input?.[key]);
+      if(assessments.some(value=>typeof value!=="string"||value.trim().length<42)||
+        new Set(assessments.map(value=>String(value).trim())).size!==fields.length)
+        fail("SECOND_REVIEW_INCOMPLETE","Separate review round needs five distinct concrete coverage, dependency, failure, file and verification findings");
+      const leaves=snapshot.plan.nodes.filter(item=>item.kind==='leaf');
+      const known=new Set(leaves.map(item=>item.id));
+      const ids=input.checkedTaskIds;
+      if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||
+        ids.some(id=>!known.has(id)))
+        fail("SECOND_REVIEW_INCOMPLETE","Second review must cite real leaf task IDs from the staged plan");
+      const reviewedAt=utc(),hash=createHash('sha256').update(JSON.stringify({
+        proposalHash:expectedHash,reviewer:input.reviewer,assessments,checkedTaskIds:ids,
+      })).digest('hex');
+      this.db.prepare(`INSERT INTO dc_feature_task_second_reviews
+        (feature_name,proposal_hash,review_json,review_hash,reviewed_by,reviewed_at)
+        VALUES(?,?,?,?,?,?)`).run(name,expectedHash,JSON.stringify(input),hash,input.reviewer.trim(),reviewedAt);
+      this.audit(null,'feature_task_second_reviewed',input.reviewer.trim(),{
+        name,proposalHash:expectedHash,reviewHash:hash,checkedTaskIds:ids});
+      return {featureName:name,status:'reviewed',proposalHash:expectedHash,reviewHash:hash,
+        reviewedAt,checkedTaskCount:ids.length};
+    });
   }
 
   /** Rich, feature-scoped quality check before any task is made executable. */
@@ -2642,7 +2989,7 @@ export class ProjectTaskLedger {
       this.audit(null,"feature_task_plan_staged",actor,{name,revision,hash,
         reviewPassed:review.passed,issues:review.issues.length});
       return {featureName:name,revision,hash,
-        status:review.passed?"review_pending":"needs_revision",review,
+        status:review.passed?"awaiting_second_review":"needs_revision",review,
         executableTasksCreated:0};
     });
   }
@@ -2670,7 +3017,48 @@ export class ProjectTaskLedger {
         proposed_by=excluded.proposed_by,proposed_at=excluded.proposed_at`)
         .run(name,revision,hash,raw,actor.trim(),utc());
       this.audit(null,"feature_task_plan_proposed",actor,{name,revision,hash,leaves:review.generatedLeaves});
-      return { featureName:name,revision,hash,status:"review_pending",review };
+      return { featureName:name,revision,hash,status:"awaiting_second_review",review,
+        nextAction:'feature-task-second-review in a separate work round'};
+    });
+  }
+
+  /** Fast transaction-local insertion of an exact hash-bound approved plan.
+   * Avoids a Git process and an O(ledger size) duplicate scan per task.
+   */
+  private insertApprovedPlanTask(input:CreateWorkItem,actor:string,
+    developer:{name:string;device:string;source:string}):void {
+    if(!idPattern.test(input.id)||!input.title?.trim())
+      fail("INVALID_PLAN_TASK","Reviewed plan has invalid task identity");
+    const sqlDecision=input.requiredGates.length===1&&input.requiredGates[0]==="sqlite_decision";
+    const paths=safePaths(input.allowedPaths,sqlDecision);
+    if(!validGateRequirements(input.requiredGates)||
+        (input.requiredGates.includes("sqlite_decision")&&(!sqlDecision||
+        !String(input.planId??"").startsWith("release-work:"))))
+      fail("INVALID_PLAN_GATE","Reviewed plan requires valid acceptance Gates");
+    if(this.db.prepare("SELECT id FROM dc_tasks WHERE id=?").get(input.id))
+      fail("DUPLICATE_TASK","Already imported plan task: "+input.id);
+    if(input.parentId&&!this.db.prepare(
+      "SELECT id FROM dc_tasks WHERE id=? AND status NOT IN ('verified','cancelled')",
+    ).get(input.parentId))fail("PARENT_CLOSED","Reviewed parent missing or closed");
+    const now=utc(),owner=String(developer.name||developer.device).slice(0,120);
+    this.db.prepare(`INSERT INTO dc_tasks
+      (id,title,parent_id,track,release,priority,status,allowed_paths,
+       required_gates,spec_id,plan_id,created_at,updated_at)
+       VALUES(?,?,?,?,?,?,'draft',?,?,?,?,?,?)`).run(
+      input.id,input.title.trim(),input.parentId??null,input.track??"product",
+      input.release??"V0.1",input.priority??50,
+      JSON.stringify(paths),JSON.stringify(input.requiredGates),
+      input.specId??null,input.planId??null,now,now);
+    this.db.prepare(`INSERT INTO dc_task_assignments
+      (task_id,owner,assigned_by,decision_ref,assigned_at,device,identity_source)
+      VALUES(?,?,?,?,?,?,?)`).run(input.id,owner,owner,"local-git:created",
+      now,developer.device,developer.source);
+    this.audit(input.id,"developer_recorded",owner,{event:"created",
+      owner,device:developer.device,source:developer.source});
+    this.audit(input.id,"created_proposal",actor,{
+      parentId:input.parentId??null,dependsOn:input.dependsOn??[],
+      specId:input.specId,planId:input.planId,
+      device:developer.device,developer:developer.name,
     });
   }
 
@@ -2682,7 +3070,13 @@ export class ProjectTaskLedger {
     const approvedBy=developer.name?.trim()||developer.device.trim()||"local-computer";
     return this.inTransaction(()=>{
       const row=this.db.prepare("SELECT * FROM dc_feature_task_proposals WHERE feature_name=?").get(name);
-      if(!row||row.hash!==expectedHash)fail("PLAN_REVIEW_MISMATCH","No matching Feature proposal pending");
+      if(!row){
+        const frozen=this.db.prepare("SELECT revision,hash FROM dc_feature_task_plans WHERE feature_name=?").get(name);
+        if(frozen?.hash===expectedHash)return {featureName:name,revision:frozen.revision,
+          hash:frozen.hash,status:'frozen',alreadyApplied:true,
+          note:'Exact proposal already committed; no tasks imported again'};
+      }
+      if(!row||row.hash!==expectedHash)fail("PLAN_REVIEW_MISMATCH","No matching Feature proposal pending; query feature-task-plan before retrying");
       if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
         fail("ACTIVE_TASK","Cannot freeze Feature tasks during an active task lease");
       const snapshot=JSON.parse(row.snapshot_json) as {
@@ -2697,22 +3091,26 @@ export class ProjectTaskLedger {
         fail("FEATURE_SOURCE_DRIFT","start_feature specifications changed since planning");
       const review=this.reviewFeatureTasks(name,snapshot.sourceFeature.revision,snapshot.plan);
       if(!review.passed)fail("INCOMPLETE_FEATURE_TASKS",review.issues.join("; "));
+      if(!this.db.prepare("SELECT review_hash FROM dc_feature_task_second_reviews WHERE feature_name=? AND proposal_hash=?")
+        .get(name,expectedHash))fail("SECOND_REVIEW_REQUIRED",
+          "Staged Feature plan requires a separate feature-task-second-review call before activation");
       const previous=this.featureTaskPlan(name).frozen as Row|null;
       const oldIds=new Set<string>((previous?.plan?.nodes??[]).map((node:ReleasePlanNode)=>node.id));
       const remaining=snapshot.plan.nodes.filter(node=>!oldIds.has(node.id));
       const added:string[]=[];
+      const developerInfo=this.localDeveloper() as {name:string;device:string;source:string};
       const present=new Set<string>(oldIds);
       while(remaining.length){
         let progress=false;
         for(let i=0;i<remaining.length;i++){
           const node=remaining[i];
           if(node.parentId&&!present.has(node.parentId))continue;
-          const created=this.create({id:node.id,title:node.title,
+          this.insertApprovedPlanTask({id:node.id,title:node.title,
             parentId:node.parentId,allowedPaths:node.allowedPaths??["docs/**"],
             requiredGates:node.requiredGates??["docs"],release:snapshot.plan.release,
             track:"product",specId:`feature:${name}#${node.id}`,
-            planId:`feature:${name}:v${row.revision}`},`feature-plan:${approvedBy}`);
-          if(created.status!=="draft")fail("PLAN_IMPORT_FAILED","Task was not created as draft");
+            planId:`feature:${name}:v${row.revision}`},`feature-plan:${approvedBy}`,
+            developerInfo);
           this.db.prepare("UPDATE dc_tasks SET status='ready',approved_by=?,updated_at=? WHERE id=?")
             .run(approvedBy.trim(),utc(),node.id);
           if(node.kind==="leaf")this.db.prepare(`INSERT INTO dc_task_specs
@@ -2742,6 +3140,8 @@ export class ProjectTaskLedger {
         (feature_name,revision,hash,snapshot_json,approved_by,approved_at)
         VALUES(?,?,?,?,?,?)`).run(name,row.revision,row.hash,row.snapshot_json,approvedBy.trim(),utc());
       this.db.prepare("DELETE FROM dc_feature_task_proposals WHERE feature_name=?").run(name);
+      // Preserve the exact separate-round review forever as SQLite evidence.
+      // Deleting it here would make a timed-out approval unauditable.
       this.audit(null,"feature_task_plan_approved",approvedBy,{name,hash:row.hash,added});
       return {featureName:name,revision:row.revision,hash:row.hash,status:"frozen",added,review};
     });
@@ -3121,6 +3521,7 @@ export class ProjectTaskLedger {
       const latest = this.latestCompletion(task.id);
       const card = {
         id: task.id, title: task.title, status: task.status,
+        pendingVerification:task.pendingVerification,
         owner:task.owner,
         parentId: task.parentId, childIds: task.childIds, dependsOn: task.dependsOn,
         track: task.track, release: task.release, priority: task.priority,
@@ -3137,6 +3538,7 @@ export class ProjectTaskLedger {
       counts: {
         todo: groups.todo.length, inProgress: groups.inProgress.length,
         done: groups.done.length, archived,
+        pendingVerification:tasks.filter(task=>!!task.pendingVerification).length,
       },
       current: this.next().nextTask?.id ?? null,
       updatedAt: utc(),
@@ -3201,6 +3603,45 @@ export class ProjectTaskLedger {
     return manifest.slice().sort((a,b)=>a.path.localeCompare(b.path));
   }
 
+  /** A claim-time immutable snapshot proves that unrelated local files were
+   * already present before task work. It is never a blanket dirty-file waiver.
+   */
+  private protectedClaimWorktree(id:string,task:Row,baseHead:string):
+    Array<{path:string;kind:"tracked"|"untracked";sha256:string;size:number}>|null {
+    const row=this.db.prepare(
+      "SELECT base_head,snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?",
+    ).get(id);
+    if(!row)return null; // old leases require explicit audited legacy mode
+    if(row.base_head!==baseHead)fail("CLAIM_BASE_CHANGED",
+      "Claim baseline changed; protected local files require reviewed recovery");
+    const snapshot=JSON.parse(String(row.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
+    if(!snapshot.length)return null; // unchanged legacy behavior for clean claims
+    const allowed=JSON.parse(task.allowed_paths) as string[];
+    if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))))
+      fail("DIRTY_SCOPE_VIOLATION","An already dirty file overlaps this task's approved scope");
+    if(JSON.stringify(preservedWorktreeSnapshot(this.root))!==JSON.stringify(snapshot))
+      fail("WORKTREE_CHANGED",
+        "An unrelated pre-existing file changed or an unapproved new file appeared after claim");
+    return snapshot;
+  }
+
+  /** Legacy/in-flight claim recovery: when another project created an
+   * unrelated untracked file after the original claim, capture its bytes as
+   * non-delivery data instead of demanding removal or committing it.
+   * This path never exempts a staged file or a file inside approved scope.
+   */
+  private unrelatedCompletionWorktree(task:Row,baseHead:string):
+    ReturnType<typeof preservedWorktreeSnapshot> {
+    const snapshot=preservedWorktreeSnapshot(this.root);
+    const allowed=JSON.parse(task.allowed_paths) as string[];
+    const committed=committedFilesBetween(this.root,baseHead,git(this.root,['rev-parse','HEAD']));
+    if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))||
+      committed.includes(file.path)))
+      fail('DIRTY_SCOPE_VIOLATION',
+        'Dirty task-scope or already committed task files cannot be exempted');
+    return snapshot;
+  }
+
   complete(id: string, token: string, input: CompletionReport): Row {
     const mandatory = ["summary", "implementation", "verification"] as const;
     for (const field of mandatory) {
@@ -3220,7 +3661,30 @@ export class ProjectTaskLedger {
       if (!["in_progress", "in_review"].includes(task.status)) {
         fail("INVALID_STATE", "Only a claimed task can record completion before verification");
       }
-      const preserved=this.checkPreservedOwnerEdits(task,input.existingDirtyFiles,lease.base_head);
+      if(input.preserveExistingWorktree===true&&input.existingDirtyFiles!==undefined)
+        fail("DIRTY_MODE_CONFLICT","Choose either legacy protected tracked edits or audited worktree snapshot");
+      const protectedAtClaim=this.protectedClaimWorktree(id,task,lease.base_head);
+      const autoCandidate=protectedAtClaim??(
+        input.preserveExistingWorktree===true?preservedWorktreeSnapshot(this.root):
+        input.existingDirtyFiles===undefined?
+          this.unrelatedCompletionWorktree(task,lease.base_head):[]);
+      const autoUntracked=autoCandidate.length>0&&
+        autoCandidate.every(item=>item.kind==='untracked');
+      const protectedSnapshot=!!protectedAtClaim||input.preserveExistingWorktree===true||
+        (input.existingDirtyFiles===undefined&&autoUntracked);
+      const preservedWorktree=protectedSnapshot?autoCandidate:[];
+      const preserved=protectedSnapshot?[]:
+        this.checkPreservedOwnerEdits(task,input.existingDirtyFiles,lease.base_head);
+      // A worktree snapshot cannot stand in for an actual committed task diff.
+      if(protectedSnapshot){
+        const changed=committedFilesBetween(this.root,lease.base_head,head);
+        const allowed=JSON.parse(task.allowed_paths) as string[];
+        if(!changed.length||changed.some(file=>!allowed.some(p=>pathAllowed(file,p))))
+          fail("DELIVERY_SCOPE_INVALID","Only committed, in-scope task work can record completion");
+        if(JSON.stringify(preservedWorktree)!==
+            JSON.stringify(preservedWorktreeSnapshot(this.root)))
+          fail("WORKTREE_CHANGED","Pre-existing uncommitted source changed during completion");
+      }
       if(!this.checkGovernedArtifacts().passed)
         fail("GOVERNED_ARTIFACT_CHANGED","Frozen architecture artifacts cannot be exempted");
       const previous = this.latestCompletion(id);
@@ -3232,17 +3696,20 @@ export class ProjectTaskLedger {
         verification: input.verification.trim(),
         remaining: (input.remaining ?? "").trim(),
         preservedDirtyFiles: preserved,
+        preservedUncommittedFiles:preservedWorktree.length,
         gitHead: head, agent: lease.agent, createdAt: utc(),
       };
       this.db.prepare(`
         INSERT INTO dc_completion_notes
-        (task_id,revision,summary,implementation,verification,remaining,preserved_dirty_json,git_head,agent,created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?)
+        (task_id,revision,summary,implementation,verification,remaining,preserved_dirty_json,preserved_worktree_json,git_head,agent,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
       `).run(id, revision, record.summary, record.implementation,
         record.verification, record.remaining, JSON.stringify(preserved),
+        JSON.stringify(preservedWorktree),
         head, lease.agent, record.createdAt);
       this.audit(id, "completion_recorded", lease.agent, {
         revision, gitHead: head,
+        preservedUncommittedFiles:preservedWorktree.length,
         checksum: createHash("sha256").update(JSON.stringify(record)).digest("hex"),
       });
       return record;
@@ -3345,6 +3812,7 @@ export class ProjectTaskLedger {
       Number(b.status!=="agent_review_required"));
     const ready = tasks.filter((t) =>
       (t.status === "ready" || t.status === "in_progress" || t.status === "in_review") &&
+      !t.pendingVerification &&
       !(t.status === "ready" && (this.taskAwaitsScopeReview(t.id,t.release)||
         this.taskAwaitsIncrementalReview(t.id,t.release))) &&
       this.executable(this.requireTask(t.id)) &&
@@ -3556,12 +4024,20 @@ export class ProjectTaskLedger {
     });
   }
 
-  claim(id: string, agent: string, ttlSeconds = 1800): Row {
+  claim(id: string, agent: string, ttlSeconds = 1800,
+    resumedFrozenBase?:string): Row {
     if (!agent?.trim()) fail("AGENT_REQUIRED", "Agent identity required");
     if (ttlSeconds < 60 || ttlSeconds > 3600) fail("INVALID_TTL", "Lease must be 60–3600 seconds");
     const base = git(this.root, ["rev-parse", "HEAD"]);
     return this.inTransaction(() => {
       const task = this.requireTask(id);
+      if(this.db.prepare(
+        "SELECT task_id FROM dc_verification_deferrals "+
+        "WHERE task_id=? AND resumed_at IS NULL",
+      ).get(id)) {
+        fail("VERIFICATION_DEFERRED",
+          "Task retains its unpassed Gate; use resume-verification to reopen it");
+      }
       if (task.status !== "ready" && task.status !== "in_progress" && task.status !== "in_review") {
         fail("TASK_NOT_READY", `Task ${id} is ${task.status}`);
       }
@@ -3596,7 +4072,15 @@ export class ProjectTaskLedger {
           ["in_progress", "in_review"].includes(this.requireTask(lease.task_id).status)) {
         fail("ABANDONED_TASK", `Expired task ${lease.task_id} must be resumed or reviewed before switching tasks`);
       }
-      const originalBase = lease?.task_id === id ? String(lease.base_head) : base;
+      // Internal resume-verification reclaims the ORIGINAL submitted Git base,
+      // not the current HEAD after unrelated tasks have legitimately committed.
+      // The public claim CLI cannot supply this optional argument.
+      if(resumedFrozenBase&&
+          !run(this.root,"git",["merge-base","--is-ancestor",resumedFrozenBase,base]).passed)
+        fail("GIT_HISTORY_CHANGED",
+          "Original deferred task baseline must remain an ancestor of HEAD");
+      const originalBase=resumedFrozenBase??
+        (lease?.task_id===id?String(lease.base_head):base);
       const paused=this.db.prepare(
         "SELECT * FROM dc_scope_pauses WHERE task_id=? AND resumed_at IS NULL",
       ).get(id);
@@ -3627,6 +4111,21 @@ export class ProjectTaskLedger {
       if(paused && !run(this.root,"git",["merge-base","--is-ancestor",claimBase,base]).passed)
         fail("GIT_HISTORY_CHANGED","Paused task baseline is not an ancestor of HEAD");
       const token = randomUUID();
+      const previousSnapshot=this.db.prepare(
+        "SELECT base_head,snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?",
+      ).get(id);
+      if(!previousSnapshot){
+        const files=preservedWorktreeSnapshot(this.root);
+        const allowed=JSON.parse(task.allowed_paths) as string[];
+        if(!files.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern)))){
+          this.db.prepare(`INSERT INTO dc_task_worktree_baselines
+            (task_id,base_head,snapshot_json,captured_at) VALUES(?,?,?,?)`)
+            .run(id,claimBase,JSON.stringify(files),utc());
+        } // ambiguous in-scope dirty claims retain the original strict checker
+      }else if(previousSnapshot.base_head!==claimBase&&
+        (JSON.parse(String(previousSnapshot.snapshot_json)) as unknown[]).length>0){
+        fail("CLAIM_BASE_CHANGED","Original task worktree baseline must be preserved during reclaim");
+      }
       this.recordLocalDeveloper(id,"claimed");
       this.db.prepare(`
         INSERT OR REPLACE INTO dc_leases(singleton,task_id,agent,token,base_head,expires_at)
@@ -3665,6 +4164,138 @@ export class ProjectTaskLedger {
     });
   }
 
+  /**
+   * A genuinely unavailable external acceptance dependency may postpone
+   * verification, never waive it. The committed task, completion note and
+   * original Git base are immutable while unrelated tasks move forward.
+   * A review task without submitted code must not use this escape hatch.
+   */
+  deferVerification(input: {
+    id:string; leaseToken:string; gate:string; reason:string;
+    preserveExistingWorktree?:boolean;
+  }): Row {
+    if(typeof input.reason!=="string"||input.reason.trim().length<20||
+        input.reason.length>1200) {
+      fail("DEFERRAL_REASON_REQUIRED",
+        "Document the unavailable gate and concrete revalidation condition");
+    }
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(input.id,input.leaseToken);
+      const task=this.requireTask(input.id);
+      if(task.status!=="in_review")
+        fail("NOT_IN_REVIEW","Only completed and reported tasks may defer verification");
+      const gates=JSON.parse(task.required_gates) as string[];
+      if(!gates.includes(input.gate)||
+          !(["ios_device_e2e","v01_release_e2e"].includes(input.gate)||
+            isExternalGate(input.gate))) {
+        fail("GATE_NOT_DEFERRABLE",
+          "Only an actually required external/physical acceptance gate may be deferred");
+      }
+      if(this.db.prepare(
+        "SELECT task_id FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NULL"
+      ).get(input.id)) fail("ALREADY_DEFERRED","Task is already awaiting verification");
+      const note=this.latestCompletion(input.id);
+      if(!note||!this.db.prepare(
+        "SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1"
+      ).get(input.id)) {
+        fail("DELIVERY_NOT_RECORDED",
+          "A committed completion and task evidence must exist before deferral");
+      }
+      const head=git(this.root,["rev-parse","HEAD"]);
+      if(head!==note.git_head||
+          !run(this.root,"git",["merge-base","--is-ancestor",lease.base_head,head]).passed) {
+        fail("DELIVERY_HEAD_CHANGED",
+          "The last completed task revision must be HEAD when freezing verification");
+      }
+      // Ordinary path is strict. The explicit opt-in path only *fingerprints*
+      // already existing later work; it cannot relax any future verify Gate,
+      // change the index or count current changes as this task's delivery.
+      let preserved:Array<{path:string;kind:"tracked"|"untracked";
+        sha256:string;size:number}>=[];
+      if(input.preserveExistingWorktree===true){
+        preserved=preservedWorktreeSnapshot(this.root);
+        const completionWorktree=JSON.parse(
+          String(note.preserved_worktree_json??"[]"),
+        ) as Array<{path:string;kind:string;sha256:string;size:number}>;
+        if(completionWorktree.length>0&&
+            JSON.stringify(preserved)!==JSON.stringify(completionWorktree))
+          fail("WORKTREE_CHANGED",
+            "Later WIP differs from the exact protected completion snapshot");
+      }else{
+        this.checkPreservedOwnerEdits(task,JSON.parse(note.preserved_dirty_json??"[]"),
+          lease.base_head);
+      }
+      const files=committedFilesBetween(this.root,lease.base_head,head);
+      const allowed=JSON.parse(task.allowed_paths) as string[];
+      if(!files.length||files.some(file=>!allowed.some(p=>pathAllowed(file,p)))) {
+        fail("DELIVERY_SCOPE_INVALID",
+          "Only committed, in-scope source can await later physical verification");
+      }
+      if(input.preserveExistingWorktree===true&&
+          JSON.stringify(preserved)!==JSON.stringify(preservedWorktreeSnapshot(this.root)))
+        fail("WORKTREE_CHANGED","Uncommitted source changed during deferral preparation");
+      this.db.prepare(`
+        INSERT INTO dc_verification_deferrals
+          (task_id,gate_name,reason,base_head,completion_head,
+           completion_revision,deferred_by,deferred_at,preserved_worktree_json,resumed_at)
+        VALUES(?,?,?,?,?,?,?,?,?,NULL)
+        ON CONFLICT(task_id) DO UPDATE SET
+          gate_name=excluded.gate_name,reason=excluded.reason,
+          base_head=excluded.base_head,completion_head=excluded.completion_head,
+          completion_revision=excluded.completion_revision,
+          deferred_by=excluded.deferred_by,deferred_at=excluded.deferred_at,
+          preserved_worktree_json=excluded.preserved_worktree_json,
+          resumed_at=NULL
+      `).run(input.id,input.gate,input.reason.trim(),lease.base_head,head,
+        note.revision,lease.agent,utc(),JSON.stringify(preserved));
+      this.db.prepare("DELETE FROM dc_leases WHERE singleton=1").run();
+      this.audit(input.id,"verification_deferred",lease.agent,{
+        gate:input.gate,reason:input.reason.trim(),baseHead:lease.base_head,
+        completionHead:head,completionRevision:note.revision,
+        gatePassed:false,leaseReleased:true,
+        preservedUncommittedFiles:preserved.length,
+      });
+      return {taskId:input.id,status:"in_review",
+        pendingVerification:true,gate:input.gate,gatePassed:false,
+        leaseReleased:true,originalHead:head,
+        preservedUncommittedFiles:preserved.length};
+    });
+  }
+
+  /** Explicitly reclaim a deferred task when the real device/runner exists.
+   * Verify the original Git diff cannot be rewritten by intervening work.
+   */
+  resumeVerification(id:string,agent:string,ttlSeconds=1800):Row {
+    return this.inTransaction(()=>{
+      const pending=this.db.prepare(
+        "SELECT * FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NULL"
+      ).get(id);
+      if(!pending)fail("NOT_DEFERRED","Task has no pending verification");
+      const task=this.requireTask(id);
+      if(task.status!=="in_review")fail("NOT_IN_REVIEW","Task is no longer awaiting review");
+      if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
+        fail("LEASE_CONFLICT","Another task must release its lease before verification resumes");
+      const head=git(this.root,["rev-parse","HEAD"]);
+      if(!run(this.root,"git",["merge-base","--is-ancestor",pending.completion_head,head]).passed)
+        fail("GIT_HISTORY_CHANGED","Deferred completion is no longer an ancestor of HEAD");
+      const originals=committedFilesBetween(this.root,
+        pending.base_head,pending.completion_head);
+      const changed=committedFilesBetween(this.root,pending.completion_head,head);
+      if(changed.some(file=>originals.includes(file)))
+        fail("DEFERRED_CODE_CHANGED",
+          "Another task modified the deferred delivery; independent review and a fresh completion are required");
+      this.db.prepare(
+        "UPDATE dc_verification_deferrals SET resumed_at=? WHERE task_id=?"
+      ).run(utc(),id);
+      const resumed=this.claim(id,agent,ttlSeconds,String(pending.base_head));
+      this.audit(id,"verification_resumed",agent,{
+        originalBaseHead:pending.base_head,originalCompletionHead:pending.completion_head,
+        currentHead:head,originalGate:pending.gate_name,
+      });
+      return {...resumed,baseHead:pending.base_head,
+        resumedVerification:true,originalCompletionHead:pending.completion_head};
+    });
+  }
   release(id: string, token: string): Row {
     return this.inTransaction(() => {
       const current = this.requireLease(id, token);
@@ -4038,6 +4669,20 @@ export class ProjectTaskLedger {
     const lease = this.requireLease(id, token);
     const task = this.requireTask(id);
     if (task.status !== "in_review") fail("NOT_IN_REVIEW", "Submit evidence and request review first");
+    // Plans imported through the v5 approval process cannot be verified by
+    // the developer alone. Older bootstrap tasks remain supported without
+    // retroactively forging a missing historical reviewer decision.
+    const reviewedPlan=String(task.plan_id??'').startsWith('release-work:')||
+      String(task.plan_id??'').startsWith('feature:');
+    if(reviewedPlan){
+      const review=this.db.prepare("SELECT outcome,completion_revision,completion_head FROM dc_task_review_handoffs WHERE task_id=?").get(id);
+      const latest=this.latestCompletion(id);
+      if(!review||review.outcome!=='passed'||!latest||
+        review.completion_revision!==latest.revision||
+        review.completion_head!==latest.git_head)
+        return {taskId:id,passed:false,reason:'INDEPENDENT_REVIEW_REQUIRED',
+          detail:'A separate reviewer must inspect the exact completion revision and evidence before the real Gate runs'};
+    }
     const contract=this.executionContract(id);
     if(!contract.eligible)return {taskId:id,passed:false,
       reason:"Execution contract no longer valid",issues:contract.issues};
@@ -4052,14 +4697,47 @@ export class ProjectTaskLedger {
     if (!note) {
       return { taskId: id, passed: false, reason: "Missing structured completion report" };
     }
-    if (note.git_head !== startHead) {
+    const deferred=this.db.prepare(
+      "SELECT * FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NOT NULL",
+    ).get(id);
+    const frozenReview=deferred&&note.git_head===deferred.completion_head;
+    if (note.git_head !== startHead && !frozenReview) {
       return { taskId: id, passed: false, reason: "Completion report refers to an older Git commit; record a new revision" };
     }
-    // Completion freezes the exact Owner edit manifest. Never accept a fresh
-    // manifest at verify time, and never exempt dirty files inside this task.
+    if(frozenReview){
+      if(!run(this.root,"git",["merge-base","--is-ancestor",deferred.completion_head,startHead]).passed)
+        return {taskId:id,passed:false,reason:"Frozen submitted code is not in Git history"};
+      const previousFiles=committedFilesBetween(this.root,
+        deferred.base_head,deferred.completion_head);
+      const laterFiles=committedFilesBetween(this.root,deferred.completion_head,startHead);
+      if(previousFiles.some(file=>laterFiles.includes(file)))
+        return {taskId:id,passed:false,
+          reason:"Deferred task files changed after the original delivery; new scoped review required"};
+    }
+    // Completion freezes one of two mutually exclusive Owner-edit manifests.
+    // Do not re-apply the legacy tracked-only checker to a valid complete()
+    // SHA-256 snapshot: it would reject every unrelated untracked file, even
+    // though complete() and defer-verification already protected their bytes.
     const preserved=JSON.parse(note.preserved_dirty_json??"[]") as Array<{path:string;sha256:string}>;
+    const preservedWorktree=JSON.parse(note.preserved_worktree_json??"[]") as
+      Array<{path:string;kind:string;sha256:string;size:number}>;
+    const protectedEditsAreStable=():boolean=>{
+      try{
+        if(preservedWorktree.length){
+          const current=preservedWorktreeSnapshot(this.root);
+          if(!frozenReview&&
+              JSON.stringify(current)!==JSON.stringify(preservedWorktree))
+            return false;
+        }else{
+          this.checkPreservedOwnerEdits(task,preserved,lease.base_head);
+        }
+        return true;
+      }catch{return false;}
+    };
     try{
-      this.checkPreservedOwnerEdits(task,preserved,lease.base_head);
+      if(!protectedEditsAreStable())
+        fail("WORKTREE_CHANGED",
+          "Uncommitted source differs from the completion SHA-256 snapshot");
     }catch(error){
       return {taskId:id,passed:false,reason:
         "Uncommitted files differ from the recorded protected Owner edits",error:String(error)};
@@ -4067,7 +4745,9 @@ export class ProjectTaskLedger {
     if (!run(this.root, "git", ["merge-base", "--is-ancestor", lease.base_head, startHead]).passed) {
       return { taskId: id, passed: false, reason: "Claim baseline is not an ancestor of HEAD" };
     }
-    const files = changedFiles(this.root, lease.base_head);
+    const files = frozenReview ?
+      committedFilesBetween(this.root,deferred.base_head,deferred.completion_head) :
+      changedFiles(this.root, lease.base_head);
     const governed=this.checkGovernedArtifacts();
     if(!governed.passed)return {taskId:id,passed:false,
       reason:"Governed architecture artifacts differ from approved revision",
@@ -4098,7 +4778,9 @@ export class ProjectTaskLedger {
       (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
     const denied = files.filter((f) =>
       !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
-    const unapprovedDocs = undocumentedMarkdown(addedFiles(this.root, lease.base_head), allowedPaths);
+    const unapprovedDocs = undocumentedMarkdown(frozenReview ?
+      committedFilesBetween(this.root,deferred.base_head,deferred.completion_head,"A") :
+      addedFiles(this.root, lease.base_head), allowedPaths);
     if ((!files.length&&!sqliteDelivery) || denied.length || unapprovedDocs.length) {
       return {
         taskId: id, passed: false,
@@ -4134,17 +4816,13 @@ export class ProjectTaskLedger {
       return [name,this.gate(name, allowedPaths, id)];
     }));
     const stableHead = git(this.root, ["rev-parse", "HEAD"]);
-    let protectedEditsStable=true;
-    try{this.checkPreservedOwnerEdits(task,preserved,lease.base_head);}
-    catch{protectedEditsStable=false;}
+    const protectedEditsStable=protectedEditsAreStable();
     const stable = startHead === stableHead && protectedEditsStable;
     const passed = stable && Object.values(results).every((r) => r.passed);
     this.inTransaction(() => {
       const current = this.requireLease(id, token);
       if (current.base_head !== lease.base_head) fail("LEASE_CHANGED", "Lease changed during validation");
-      let editsStillMatch=true;
-      try{this.checkPreservedOwnerEdits(task,preserved,lease.base_head);}
-      catch{editsStillMatch=false;}
+      const editsStillMatch=protectedEditsAreStable();
       if (git(this.root, ["rev-parse", "HEAD"]) !== startHead ||
           !editsStillMatch) {
         fail("GIT_CHANGED_DURING_VERIFY", "Git changed after gates; re-run verification");
@@ -4153,6 +4831,14 @@ export class ProjectTaskLedger {
         revision: startHead, completionRevision: note.revision, files, results, gitStable: stable,
       });
       if (passed) {
+        const independentReview=this.db.prepare(`SELECT reviewer,reviewed_at,
+          completion_head,completion_revision FROM dc_task_review_handoffs
+          WHERE task_id=? AND outcome='passed'`).get(id);
+        if(independentReview)this.audit(id,"reviewed_task_verified",
+          String(independentReview.reviewer),{
+            reviewHead:independentReview.completion_head,
+            reviewedAt:independentReview.reviewed_at,
+            completionRevision:independentReview.completion_revision});
         this.db.prepare(
           "UPDATE dc_tasks SET status='verified',verified_at=?,updated_at=? WHERE id=?",
         ).run(utc(), utc(), id);
@@ -4174,6 +4860,12 @@ export class ProjectTaskLedger {
           ancestor = parent.parent_id;
         }
         this.db.prepare("DELETE FROM dc_leases WHERE singleton=1").run();
+        if(frozenReview){
+          this.audit(id,"deferred_verification_passed","devcontrol",{
+            originalHead:deferred.completion_head,verifiedAtHead:startHead,
+            verifiedGateNames:gates,
+          });
+        }
       }
     });
     return { taskId: id, passed, files, results, gitStable: stable };
@@ -4183,6 +4875,11 @@ export class ProjectTaskLedger {
     this.requireTask(id);
     return {
       task: this.get(id),
+      verificationDeferral:this.db.prepare(
+        "SELECT gate_name,reason,base_head,completion_head,completion_revision,"+
+        "deferred_by,deferred_at,resumed_at,preserved_worktree_json "+
+        "FROM dc_verification_deferrals WHERE task_id=?",
+      ).get(id)??null,
       sqliteDecision: this.getDecision(id).decision,
       sqliteDecisionHistory:this.getDecision(id).history,
       evidence: this.db.prepare("SELECT * FROM dc_evidence WHERE task_id=? ORDER BY id").all(id),
@@ -4193,6 +4890,11 @@ export class ProjectTaskLedger {
       completionHistory: this.db.prepare(
         "SELECT * FROM dc_completion_notes WHERE task_id=? ORDER BY revision",
       ).all(id),
+      reviewHandoff:this.db.prepare(`SELECT completion_revision,completion_head,
+        developer,issued_at,expires_at,reviewer,outcome,findings,reviewed_at
+        FROM dc_task_review_handoffs WHERE task_id=?`).get(id)??null,
+      claimWorktreeProtection:this.db.prepare(`SELECT base_head,captured_at
+        FROM dc_task_worktree_baselines WHERE task_id=?`).get(id)??null,
       audit: this.db.prepare("SELECT * FROM dc_audit WHERE task_id=? ORDER BY id").all(id)
         .map((r) => ({ ...r, details: JSON.parse(r.details_json), details_json: undefined })),
     };

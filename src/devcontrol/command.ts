@@ -106,6 +106,8 @@ export function dispatchDevControl(
       String(input.name), input.expectedFeatureRevision, input.plan,
       String(input.actor ?? ""), input.expectedPreviousHash,
     );
+    case "feature-task-second-review": return ledger.recordFeatureSecondReview(
+      String(input.name),String(input.expectedHash),input.review);
     case "feature-task-approve": return ledger.approveFeatureTasks(
       String(input.name), String(input.approvedBy ?? ""), String(input.expectedHash ?? ""),
     );
@@ -176,6 +178,13 @@ export function dispatchDevControl(
     case "complete": return ledger.complete(
       String(input.id), String(input.leaseToken), input as CompletionReport,
     );
+    case "review-handoff": return ledger.handoffReview(String(input.id),{
+      leaseToken:input.leaseToken,ownerRecoveryKey:input.ownerRecoveryKey,
+      actor:String(input.actor??''),reason:String(input.reason??'')});
+    case "review-submit": return ledger.independentTaskReview(
+      String(input.id),String(input.ticket??''),input.review);
+    case "reviewed-verify": return ledger.verifyReviewedTask(
+      String(input.id),String(input.ticket??''));
     case "approve": return ledger.approve(String(input.id), String(input.approvedBy));
     case "claim": return ledger.claim(
       String(input.id), String(input.agent), Number(input.ttlSeconds ?? 1800),
@@ -183,7 +192,18 @@ export function dispatchDevControl(
     case "renew": return ledger.renew(
       String(input.id), String(input.leaseToken), Number(input.ttlSeconds ?? 1800),
     );
+    case "recover-task": return ledger.recoverTaskLease(String(input.id),{
+      actor:String(input.actor??''),ownerRecoveryKey:String(input.ownerRecoveryKey??''),
+      reason:String(input.reason??''),ttlSeconds:Number(input.ttlSeconds??1800),
+    });
     case "release": return ledger.release(String(input.id), String(input.leaseToken));
+    case "defer-verification": return ledger.deferVerification({
+      id:String(input.id),leaseToken:String(input.leaseToken),
+      gate:String(input.gate),reason:String(input.reason??""),
+      preserveExistingWorktree:input.preserveExistingWorktree===true,
+    });
+    case "resume-verification": return ledger.resumeVerification(
+      String(input.id),String(input.agent),Number(input.ttlSeconds??1800));
     case "pause-for-scope": return ledger.pauseForScopeAmendment(
       String(input.id),String(input.leaseToken),String(input.reason??""),
       input.existingDirtyFiles);

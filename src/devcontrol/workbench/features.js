@@ -94,9 +94,15 @@
       const b=n("button",null,"docitem");b.type="button";
       const linked=featureTaskPlans.find(p=>p.featureName===f.name);
       const planning=linked?.status==="needs_revision"?" · 任务规划待完善":
+        linked?.status==="awaiting_second_review"?" · 已拆分 · 待二次 Review":
         linked?.status==="review_pending"?" · 任务待审批":
-          linked?.status==="frozen"?" · 任务已冻结":"";
-      b.append(n("span",(f.status==="specified"?"规格已校验":"草稿待完善")+planning,"taskid"),
+          linked?.status==="frozen"?" · 已拆分任务":"";
+      const related=taskRows().filter(row=>row.item.featureName===f.name);
+      const live=related.some(row=>['in_progress','in_review'].includes(row.current?.status));
+      const verified=related.filter(row=>row.current?.status==='verified').length;
+      const delivery=linked?.status==='frozen'&&related.length&&verified===related.length?
+        ' · 任务已完成（产品另行验收）':live?' · 开发中':'';
+      b.append(n("span",(f.status==="specified"?"规格已校验":"草稿待完善")+planning+delivery,"taskid"),
         n("b",f.name),n("small","SQLite · "+f.layout+" · 版本 "+f.revision));
       b.addEventListener("click",()=>openFeature(f.name));return b;
     }):[n("div","暂无 SQLite 功能提案；使用 DevControl feature-create 建立需求草稿。","docs-empty")]));

@@ -38,7 +38,7 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).not.toContain('__TRANSLATIONS__');
     expect(html).not.toContain('__NONCE__');
     expect(html).toContain('createHashRouter');
-    expect(html).toContain("router.current()==='tasks'");
+    expect(html).toContain("if(view==='overview')reload();else refreshTaskData()");
     expect(html).not.toMatch(/<script[^>]+src=/);
     expect(html).not.toMatch(/<link[^>]+(googleapis|fonts)/);
     // Full eight-menu read-only governance views add roughly 2.3 KB gzip.
@@ -49,11 +49,13 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('id="architecture-changes"');
     expect(html).toContain('id="database-design-sources"');
     expect(html).toContain("fetchJSON('/api/architecture/database')");
-    for(const id of ['overview-insight-metrics','idea-list','task-granularity',
+    for(const id of ['overview-insight-metrics','idea-list',
       'bug-insight-metrics','guide-project-context','settings-diff','history-shortcuts']){
       expect(id==='history-shortcuts'?html.includes('class="history-shortcuts"'):
         html.includes('id="'+id+'"')).toBe(true);
     }
+    expect(html).not.toContain('id="task-granularity"');
+    expect(html).not.toContain('ATOMIC TASK AUDIT');
     expect(html).toContain("fetchJSON('/api/insights')");
     // Feature plans in independent projects must never render the retired dark
     // simple-task cards while whole-release plans use light cards.

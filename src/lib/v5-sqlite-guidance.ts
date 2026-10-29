@@ -48,17 +48,25 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    For Feature planning, use feature-create then feature-save for three
    versioned SQLite chapters (**requirements → design → tasks**) followed by
    feature-validate, feature-task-brief, feature-task-review,
-   feature-task-propose and exact-hash Owner feature-task-approve.
+   feature-task-propose. STOP this planning round after staging the hash.
+   In a later work round re-open the saved plan, perform a real
+   feature-task-second-review (coverage, dependency, failure, file scope and
+   verification) and only then feature-task-approve with that same hash.
+   The same Agent may review in the later round. No second Agent or per-leaf
+   Owner approval is required; material frozen-scope changes still need Owner.
    Unapproved proposals remain visible in planning, never executable.
    Canonical FR-001 links to legacy FR-1 but original text remains intact.
    ONE independently testable outcome per leaf: source requirement, reviewed
    design, parent and dependencies, one responsible role, exact file scope,
    inputs/outputs, positive/negative tests, evidence, exclusions and stop
-   conditions. Split tasks over four hours instead of broadening scope.
+   conditions. New Feature leaves target 0.5–1h, allow reasoned 1–2h
+   exceptions, and reject work above 2h rather than broadening scope.
    Prefer hundreds of well-defined tasks to a handful of vague objectives.
 3. Agent reads real requirements and code, reviews complete plan/Spec and risks.
-   Use \`plan-review\` → \`plan-propose\` → independent review → explicit
-   Owner hash-bound \`plan-approve\`. Proposed work is NOT executable.
+   Use \`plan-review\` → \`plan-propose\`, then a separate evidence-bearing
+   Review round and exact-hash plan confirmation. The same Agent can review;
+   Owner authorization is reserved for material scope changes, not each leaf.
+   Proposed work is NOT executable.
 4. For an approved task, use \`next\` → \`execution-contract\` → \`claim\`
    and, as needed, \`renew\`. Edit only frozen paths. The Agent, not DevControl,
    independently reviews software, runs real tests and commits approved files.
@@ -73,6 +81,26 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    Gate and reason. This frees the task lease but NEVER passes the Gate.
    After the device returns use \`resume-verification\`, then actual \`verify\`.
    Never rewrite SQLite task states or silently discard user files.
+   Pre-existing unrelated tracked/untracked files at claim are protected by
+   automatic SHA-256 snapshots, not by demanding that the user delete them.
+   Old leases can use preserveExistingWorktree:true on complete to capture
+   read-only legacy snapshots, never reset/stash/claiming that work.
+   The matching manifest is required again at defer-verification; verified
+   status still demands the original independently reviewed real Gate.
+   Developer: complete + report, then review-handoff with current lease token.
+   A distinct Reviewer records findings/evidence via review-submit; reject
+   returns to in_progress, pass allows reviewed-verify to run all original Gates.
+   Losing a session does not erase the recorded completion. An expired
+   in_progress task can use recover-task to issue a new short-term lease,
+   preserving the original Git base so the Owner can record complete/report.
+   An already in_review task can use review-handoff directly for review.
+   Both recoveries require the separately configured
+   DEVCONTROL_OWNER_RECOVERY_KEY, not an unverified claimed Owner label.
+   Never give a Reviewer the developer lease or fake independent test results.
+   If later task code is already uncommitted in main, a specifically approved
+   \`preserveExistingWorktree:true\` deferral fingerprints regular changed
+   files including untracked source but refuses a staged index. Never count
+   those files as evidence for the old task or as a passing Gate.
 6. New ideas enter \`idea-capture\` → Agent \`idea-assess\` → independent
    \`idea-review\` → explicit Owner \`idea-decide\`. Scope or dependency
    changes need separately reviewed \`release-work-scope-*\` or
@@ -131,11 +159,12 @@ ${managedRevision}
 - **管理操作**：当前 24 个模型工具，唯一正式研发入口 \`devcontrol\` 提供 ${V5_DEVC_ACTIONS.length} 个 SQLite action，完整分组见 Skill 的 DevControl operation reference；不要将 action 当作独立 MCP 工具。
 - **必须先恢复**：新对话先 \`history_session_bootstrap\`（Git/Node22+ 项目唯一实时 History = SQLite \`hs_*\`），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
 - **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码/正式 PRD/ADR/API/Schema 仍归 Git，业务数据库独立。
-- **逐任务闭环**：Agent 独立审查需求，\`plan-review\` → \`plan-propose\` → 精确 Hash 的 Owner 批准 \`plan-approve\`；然后 \`claim\` → 真正编码、审查、测试与合法 Git 提交 → \`complete\` / \`report\` / \`verify\`。DevControl 只是管控与证据门禁，不替 Agent 编码/跑 SQL/独立审核。
-- **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；再 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\`，最终由独立复审及精确 Hash 的 Owner \`feature-task-approve\`。草稿父子任务应可见但不能执行；FR-1 与 FR-001 统一关联并保留原文。
+- **逐任务闭环**：新版本基线使用 \`plan-review\` / \`plan-propose\` 和精确 Hash 的 \`plan-approve\`；规划与 Review 分轮完成。按冻结合同 \`claim\`、真实编码、运行测试、合法 Git 提交，使用 \`complete\` / \`report\` 登记。随后开发 Agent \`review-handoff\`，独立 Reviewer \`review-submit\`，通过后 \`reviewed-verify\` 执行原有 Gate 和 Verified；失败必须退回返工。MCP 管理状态和证据，不替 Agent 编码、执行 SQL 或复核。
+- **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；第一轮完成 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\` 并结束规划轮次。下一轮重读提案，使用 \`feature-task-second-review\` 单独记录覆盖、依赖、失败场景、文件范围和验收五项审查，再以精确 Hash \`feature-task-approve\` 确认。开发 Agent 可以自行做第二轮 Review，不强制另一名 Agent，也不逐项要求 Owner 批准；重大冻结范围变更仍须 Owner 明确授权。草稿不可领取。
 - **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新 Feature 叶子任务以 30–60 分钟为主，必须填写预计工时；1–2 小时需具体说明无法继续安全拆分的原因，超过 2 小时须拆分。新整版计划可采用 task-detail-v2 执行相同严格规则；旧已冻结计划不得直接重写。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
-- **外部真实测试**：Python/Go/Flutter/gRPC 业务测试由 Agent 实际运行，DevControl 只记录计划要求、证据和独立 Reviewer 的结果。外部 Gate 用 gate-review 留痕，证据存在不代表测试通过，也不能自动 verify。
+- **外部真实测试**：Python/Go/Flutter/gRPC 业务测试由 Agent 实际运行，DevControl 只记录计划要求、证据和独立复核结果，不强制另一个 Agent。外部 Gate 用 gate-review 留痕，证据存在不代表测试通过，也不能自动 verify。
 - **缺少真机或外部验收环境**：代码已提交、完成说明和证据入账的 \`in_review\` 任务可使用 \`defer-verification\`（当前租约、精确Gate、真实原因）登记待验证并释放任务租约。它不减少或放宽原 Gate，不增加 Verified。必须维护 Git/Owner 未提交文件完整性；不能为了延期直接改 SQLite 或 stash/reset。真机回来后使用 \`resume-verification\` 并运行真实 \`verify\`；其间其它任务只能按正常独立冻结范围开发。
+- **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
 - **会话结束**：\`history_session_checkpoint\` 记录用户原话、发现、决策、改动、真实测试、分支/租约、阻碍及下一步。保留用户未提交修改，真机/真实数据库 Gate 缺失就报告未通过。
@@ -163,8 +192,12 @@ ${managedRevision}
   ${V5_DEVC_ACTIONS.length} source-derived SQLite actions. Read the full
   DevControl operation reference in the Skill; never use retired v4 names.
 - Requirements → design → atomic tasks: feature-create, feature-save,
-  feature-validate, feature-task-brief/review/stage/propose, independent
-  review and exact Owner feature-task-approve. Unapproved children remain
+  feature-validate, feature-task-brief/review/stage/propose in the first round.
+  End planning, then re-open the staged proposal in a later work round and
+  submit feature-task-second-review with concrete findings and real leaf IDs.
+  The same Agent may perform second Review; a separate Agent is not required.
+  Confirm the exact hash with feature-task-approve, without per-leaf Owner
+  requests. Unapproved children remain
   visible but are not executable. Each leaf has a single verifiable goal,
   exact files, dependencies, positive/negative tests and stop conditions. New Feature leaves target 0.5–1h, require a specific reason for any 1–2h exception, and reject tasks over 2h; new whole-release planning can opt into task-detail-v2 without invalidating existing frozen tasks.
 - Agents run real Python/Go/Flutter/gRPC project tests; DevControl records

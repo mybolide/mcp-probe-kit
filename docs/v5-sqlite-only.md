@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **74 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **81 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -30,7 +30,7 @@ MCP 每次启动时，若能识别真实 Git 业务项目，就检查
 都会自动同步。启动无法定位项目时，不向 MCP 安装目录写入文件；
 首次 `devcontrol` 调用传入明确的 `project_root` 后补做检查。
 
-Skill 自动生成源码定义的 74 个 DevControl 操作索引（含只读 guide），以及需求→设计→
+Skill 自动生成源码定义的 81 个 DevControl 操作索引（含只读 guide），以及需求→设计→
 原子任务、独立审批、外部 Gate 证据、SQLite History 的执行规范。
 AGENTS.md 提供简短入口，**只更新受管理的 MCP 区块**，保留项目其他
 自定义规则。同版本、同修订内容重复启动不改写文件；旧 MCP 不降级
@@ -87,7 +87,7 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | SQLite History | `history_session_bootstrap`、`history_session_checkpoint`、`history_session_validate`、`history_session_search`、`history_session_read` |
 | 可选跨项目 Memory | `search_memory`、`read_memory_asset`、`memorize_asset`、`update_memory_asset`、`delete_memory_asset`、`scan_and_extract_patterns` |
 
-**`devcontrol` 统一入口：74 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
+**`devcontrol` 统一入口：81 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
 
 | 流程领域 | 可用 `action` |
 |---|---|
@@ -97,12 +97,12 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | 正式工作树 / Frozen release work (4) | `release-work-plan`、`release-work-review`、`release-work-stage`、`release-work-approve` |
 | 范围变更 / Reviewed scope amendments (7) | `release-work-scope-review`、`release-work-scope-stage`、`release-work-scope-get`、`release-work-scope-independent-review`、`release-work-scope-approve`、`release-work-scope-withdraw`、`pause-for-scope` |
 | 增量任务 / Reviewed incremental work (7) | `release-work-incremental-review`、`release-work-incremental-stage`、`release-work-incremental-get`、`release-work-incremental-independent-review`、`release-work-incremental-approve`、`release-work-incremental-withdraw`、`pause-for-reviewed-incremental` |
-| Feature：需求 → 设计 → 任务 / Requirements to design to atomic tasks (13) | `features`、`feature-get`、`feature-create`、`feature-save`、`feature-validate`、`feature-export`、`feature-task-brief`、`feature-task-plan`、`feature-task-plans`、`feature-task-review`、`feature-task-stage`、`feature-task-propose`、`feature-task-approve` |
+| Feature：需求 → 设计 → 任务 / Requirements to design to atomic tasks (14) | `features`、`feature-get`、`feature-create`、`feature-save`、`feature-validate`、`feature-export`、`feature-task-brief`、`feature-task-plan`、`feature-task-plans`、`feature-task-review`、`feature-task-stage`、`feature-task-propose`、`feature-task-second-review`、`feature-task-approve` |
 | 工作项和架构 / Work items and architecture (3) | `work-items`、`work-record`、`architecture-sync` |
 | Bug / Defect management (3) | `bug-get`、`bug-step-save`、`bug-task-link` |
 | Idea / Proposed change governance (6) | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-review`、`idea-decide` |
 | 工件 / Governed artifacts (5) | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-independent-review`、`artifact-approve` |
-| 领取、报告与验收 / Execution and evidence (9) | `claim`、`renew`、`release`、`check`、`report`、`gate-review`、`complete`、`verify`、`trace` |
+| 领取、报告与验收 / Execution and evidence (15) | `claim`、`renew`、`recover-task`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`gate-review`、`complete`、`review-handoff`、`review-submit`、`reviewed-verify`、`verify`、`trace` |
 | 决策 / Decision records (2) | `decision-save`、`decision-get` |
 | 本地工具 / Local developer and hooks (3) | `local-developer`、`hook-status`、`hook-install` |
 

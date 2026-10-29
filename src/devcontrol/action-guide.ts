@@ -12,16 +12,16 @@ const FLOWS = {
     caution: 'Existing tasks take precedence. Do not regenerate a plan on resume.',
   },
   feature: {
-    description: '新需求 → 设计 → 原子任务 → 独立审核 → Owner 精确哈希批准',
-    actions: ['feature-create','feature-save','feature-validate','feature-task-brief','feature-task-review','feature-task-stage','feature-task-propose','feature-task-approve'],
+    description: '新需求 → 设计 → 原子任务规划 → 下一轮二次 Review → 精确哈希确认',
+    actions: ['feature-create','feature-save','feature-validate','feature-task-brief','feature-task-review','feature-task-stage','feature-task-propose','feature-task-second-review','feature-task-approve'],
     example: {action:'feature-create',project_root:'/ABSOLUTE/GIT/PROJECT',input:{name:'short-feature-slug',description:'One explicit user goal',layout:'flat'}},
-    caution: 'Store requirements/design/tasks in three versioned SQLite sections. Draft children are not claimable; one outcome per leaf.',
+    caution: 'The same development Agent may perform the second Review, but ONLY as a new host action and a later work round after the proposal was staged. Record concrete findings tied to the exact plan hash; do not plan and review in one pass. Ordinary leaf tasks need no separate Owner approval. Frozen scope changes still need Owner authorization. Draft children are not claimable.',
   },
   planning: {
     description: '完整版本计划审核与冻结',
     actions: ['release-plan','plan-review','plan-propose','plan-approve','release-work-review','release-work-stage','release-work-approve'],
     example: {action:'release-plan',project_root:'/ABSOLUTE/GIT/PROJECT',input:{}},
-    caution: 'Reviewer must independently assess a concrete proposal; Owner alone authorizes the exact hash.',
+    caution: 'One development Agent can complete a documented self-review tied to the exact plan hash. Owner decides new version scope or material changes, not each ordinary leaf task.',
   },
   task: {
     description: '领取当前已批准任务，按冻结合同逐项开发',
@@ -30,7 +30,7 @@ const FLOWS = {
     caution: 'Inspect exact task ID, dependencies and allowedPaths before claim; no scope expansion.',
   },
   verification: {
-    description: '代码提交、报告证据、独立复审并验证',
+    description: '代码提交、报告真实证据、核查并验证',
     actions: ['check','complete','report','gate-review','verify','trace'],
     example: {action:'trace',project_root:'/ABSOLUTE/GIT/PROJECT',input:{id:'APPROVED-TASK-ID'}},
     caution: 'Agent executes real tests; custom gate-review records independent outcome, not a test executed by MCP. Evidence alone is not Verified.',
