@@ -850,7 +850,7 @@ export class ProjectTaskLedger {
    * separately provisioned secret, never a self-declared "Owner" label.
    */
   handoffReview(id:string,input:{leaseToken?:string;ownerRecoveryKey?:string;
-    actor:string;reason:string}):Row {
+    actor:string;reason:string;rotatePendingTicket?:boolean}):Row {
     if(typeof input?.actor!=="string"||input.actor.trim().length<2||
       typeof input.reason!=="string"||input.reason.trim().length<20)
       fail("HANDOFF_EVIDENCE_REQUIRED","Provide actor and concrete handoff reason");
@@ -875,20 +875,40 @@ export class ProjectTaskLedger {
     const ticketHash=createHash('sha256').update(token).digest('hex');
     const expiresAt=Date.now()+24*60*60*1000;
     return this.inTransaction(()=>{
-      const existing=this.db.prepare("SELECT ticket_hash FROM dc_task_review_handoffs WHERE task_id=?").get(id);
-      if(existing)fail("HANDOFF_EXISTS","Existing review handoff must be completed or explicitly rejected first");
-      this.db.prepare(`INSERT INTO dc_task_review_handoffs
-        (task_id,completion_revision,completion_head,developer,ticket_hash,issued_at,expires_at)
-        VALUES(?,?,?,?,?,?,?)`).run(id,note.revision,note.git_head,lease.agent,ticketHash,utc(),expiresAt);
+      const existing=this.db.prepare(`SELECT developer,completion_revision,completion_head,
+        outcome FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
+      if(existing){
+        // A lost one-time ticket must not strand a completed task for 24h.
+        // Rotation requires the SAME currently authenticated developer lease;
+        // neither an arbitrary reviewer nor Owner recovery may silently
+        // invalidate a ticket that an independent reviewer already holds.
+        if(input.rotatePendingTicket!==true)fail('HANDOFF_EXISTS',
+          'An existing review handoff requires explicit pending-ticket rotation');
+        if(!normal||existing.developer!==lease.agent||existing.outcome||
+          existing.completion_revision!==note.revision||
+          existing.completion_head!==note.git_head)
+          fail('HANDOFF_ROTATION_DENIED',
+            'Only the original active developer may rotate an unreviewed ticket for the identical committed completion');
+        this.db.prepare(`UPDATE dc_task_review_handoffs SET ticket_hash=?,issued_at=?,expires_at=?
+          WHERE task_id=?`).run(ticketHash,utc(),expiresAt,id);
+        this.audit(id,'review_ticket_rotated',input.actor.trim(),{
+          developer:lease.agent,revision:note.revision,head:note.git_head,
+          observedHead:head,reason:input.reason,expiresAt,
+        });
+      }else{
+        this.db.prepare(`INSERT INTO dc_task_review_handoffs
+          (task_id,completion_revision,completion_head,developer,ticket_hash,issued_at,expires_at)
+          VALUES(?,?,?,?,?,?,?)`).run(id,note.revision,note.git_head,lease.agent,ticketHash,utc(),expiresAt);
+      }
       this.db.prepare("UPDATE dc_leases SET expires_at=? WHERE task_id=?")
         .run(expiresAt,id);
-      this.audit(id,"review_handed_off",input.actor.trim(),{
+      if(!existing)this.audit(id,"review_handed_off",input.actor.trim(),{
         developer:lease.agent,revision:note.revision,head:note.git_head,
         observedHead:head,reason:input.reason,
         via:normal?'developer_lease':'authorized_owner_recovery',expiresAt});
       return {taskId:id,status:'awaiting_independent_review',ticket:token,
         completionRevision:note.revision,completionHead:note.git_head,
-        currentHead:head,expiresAt,
+        currentHead:head,expiresAt,rotated:!!existing,
         nextAction:'review-submit: a different Reviewer inspects this delivery and cites its recorded evidence'};
     });
   }

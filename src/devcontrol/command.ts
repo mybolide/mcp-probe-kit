@@ -181,7 +181,8 @@ export function dispatchDevControl(
     );
     case "review-handoff": return ledger.handoffReview(String(input.id),{
       leaseToken:input.leaseToken,ownerRecoveryKey:input.ownerRecoveryKey,
-      actor:String(input.actor??''),reason:String(input.reason??'')});
+      actor:String(input.actor??''),reason:String(input.reason??''),
+      rotatePendingTicket:input.rotatePendingTicket===true});
     case "review-submit": return ledger.independentTaskReview(
       String(input.id),String(input.ticket??''),input.review);
     case "reviewed-verify": return ledger.verifyReviewedTask(

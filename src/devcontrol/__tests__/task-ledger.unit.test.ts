@@ -104,6 +104,53 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it('rotates an unreviewed lost review ticket with the original active developer only',()=>{
+    create({id:'NEYNA-200'});ledger!.approve('NEYNA-200','owner');
+    const claim=ledger!.claim('NEYNA-200','real-developer');
+    save('tests/contracts/ticket-recovery.json','{"scope":"approved"}');
+    commit('submit a scoped test fixture for independent review');
+    ledger!.report('NEYNA-200',claim.leaseToken,{
+      kind:'docs',reference:'real signed review ticket recovery fixture evidence',
+    },true);
+    ledger!.complete('NEYNA-200',claim.leaseToken,{
+      summary:'Submitted committed contract fixture for acceptance',
+      implementation:'Only approved fixture code was committed',
+      verification:'Project evidence was recorded for separate review',
+    });
+    const first=ledger!.handoffReview('NEYNA-200',{
+      leaseToken:claim.leaseToken,actor:'real-developer',
+      reason:'Send exact source and test fixture to a different independent reviewer',
+    });
+    expect(()=>ledger!.handoffReview('NEYNA-200',{
+      leaseToken:claim.leaseToken,actor:'real-developer',
+      reason:'Trying to overwrite the first ticket without an explicit rotation intent',
+    })).toThrow(/pending-ticket rotation/);
+    expect(()=>ledger!.handoffReview('NEYNA-200',{
+      leaseToken:'unauthorized-token',actor:'not-the-developer',rotatePendingTicket:true,
+      reason:'A different actor must not invalidate a valid reviewer ticket',
+    })).toThrow(/credential/);
+    const rotated=ledger!.handoffReview('NEYNA-200',{
+      leaseToken:claim.leaseToken,actor:'real-developer',rotatePendingTicket:true,
+      reason:'The one-time ticket was lost before any reviewer received or used it',
+    });
+    expect(rotated.rotated).toBe(true);
+    expect(rotated.ticket).not.toBe(first.ticket);
+    expect(()=>ledger!.independentTaskReview('NEYNA-200',first.ticket,{
+      reviewer:'different-independent-reviewer',outcome:'passed',
+      findings:'Reviewed the exact source diff and original signed fixture evidence.',
+      evidenceReference:'real signed review ticket recovery fixture evidence',
+    })).toThrow(/ticket/i);
+    ledger!.independentTaskReview('NEYNA-200',rotated.ticket,{
+      reviewer:'different-independent-reviewer',outcome:'passed',
+      findings:'The committed source and test evidence were independently inspected.',
+      evidenceReference:'real signed review ticket recovery fixture evidence',
+    });
+    expect(()=>ledger!.handoffReview('NEYNA-200',{
+      leaseToken:claim.leaseToken,actor:'real-developer',rotatePendingTicket:true,
+      reason:'An approved reviewer decision must not be overwritten by a ticket rotation',
+    })).toThrow(/ROTATION|reviewed|Only the original active developer/i);
+    expect(ledger!.trace('NEYNA-200').audit.map((e:any)=>e.event)).toContain('review_ticket_rotated');
+  });
   it('keeps iOS as an evidence requirement rather than probing devices or launching XCTest',()=>{
     create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
     ledger!.approve('NEYNA-200','owner');
