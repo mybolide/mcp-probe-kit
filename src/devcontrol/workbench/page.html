@@ -50,6 +50,12 @@
       <div class="stat"><strong id="s-total">—</strong><span>任务总数（含待审核）</span></div><div class="stat"><strong id="s-done">—</strong><span>已完成</span></div>
       <div class="stat"><strong id="s-active">—</strong><span>开发中 / 待验证</span></div><div class="stat"><strong id="s-pending">—</strong><span>未开始（含待审核）</span></div>
     </div></div>
+    <section class="panel insight-panel" aria-label="项目研发阻断与待审事项">
+      <div class="panelhead"><div><span class="eyebrow">LIVE GOVERNANCE</span><h2>研发阻断与下一步</h2></div><button class="link" data-go="tasks">核查工作项 ↗</button></div>
+      <p class="sub">从当前项目 SQLite 汇总。待审核、测试待验证和 Bug 未关闭，都不代表发布 Gate 已通过。</p>
+      <div class="insight-metrics" id="overview-insight-metrics" aria-live="polite"></div>
+      <div class="insight-actions" id="overview-insight-actions"></div>
+    </section>
     <section class="panel hide" id="onboarding-panel" aria-label="项目接入状态">
       <details class="baseline-details"><summary><span><span class="eyebrow">PROJECT BASELINE</span><strong id="onboarding-title">项目接入</strong></span><span class="baseline-open">查看核对项 <span aria-hidden="true">⌄</span></span></summary>
         <p class="sub" id="onboarding-next"></p><div id="onboarding-steps"></div>
@@ -76,6 +82,10 @@
       <div class="kpirow"><div class="kpi"><b id="fr-count">—</b><span>功能需求 FR</span></div><div class="kpi"><b id="nfr-count">—</b><span>非功能需求 NFR</span></div></div>
       <button class="link" id="open-requirements">查看完整产品需求 →</button></div>
     <div class="requirements-principles" role="note"><div><span class="eyebrow">CHANGE CONTROL</span><strong>需求变更和候选 Idea</strong></div><p>新想法先进入需求评估，再明确影响、设计和审批；未冻结的想法不能直接进入开发。当前页面只展示已有权威需求与 Feature 记录，不将候选想法虚报为已批准任务。</p><button class="link" data-go="guide">查看研发流程 ↗</button></div>
+    <section class="panel insight-panel"><div class="panelhead"><div><span class="eyebrow">IDEA GOVERNANCE</span><h2>想法与变更决策</h2></div><span class="insight-meta" id="idea-count">读取中…</span></div>
+      <p class="sub">来自项目 SQLite 的 Idea 记录；评估、独立审核、Owner 决策分别展示，没有审批记录的想法不得进入开发。</p>
+      <div id="idea-list" class="insight-list" aria-live="polite"></div>
+    </section>
     <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能需求清单</h2><button class="link" data-doc="docs/product/requirements.md">查看完整 PRD →</button></div>
       <div class="doclist" id="requirement-list"></div></div>
     <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能提案与规格</h2><span class="eyebrow">数据库记录</span></div>
@@ -94,6 +104,7 @@
       </section>
       <section class="panel architecture-change-section"><div class="panelhead"><div><span class="eyebrow">REVIEW QUEUE</span><h2>架构变更与待审决策</h2></div></div>
         <p class="sub">仅展示 DevControl 中有真实记录的架构变更，审批状态以 SQLite 为准。</p>
+        <div class="insight-meta" id="architecture-change-count">读取中…</div>
         <div class="doclist" id="architecture-changes" aria-live="polite"></div>
       </section>
     </div>
@@ -115,6 +126,9 @@
         <select id="task-type-filter" aria-label="按工作项类型筛选"><option value="">全部类型</option></select>
       </div>
       <div id="release-review-summary"></div>
+      <section class="panel insight-panel task-insight"><div class="panelhead"><div><span class="eyebrow">ATOMIC TASK AUDIT</span><h2>任务粒度与审核依据</h2></div><button class="link" data-go="guide">审核规则 ↗</button></div>
+        <div class="insight-metrics" id="task-granularity"></div><p class="sub" id="task-granularity-note"></p>
+      </section>
       <div class="task-results-header"><h2>工作项</h2><p class="issue-count" id="task-list-count">正在读取任务…</p></div>
       <div id="task-rows" class="simple-task-list" aria-live="polite"></div>
     </div>
@@ -123,6 +137,7 @@
     <div class="sectionhead"><div class="eyebrow">缺陷管理</div><h1>Bug 管理</h1>
       <p class="sub">缺陷记录、修复任务与回归结果。需求变更归需求管理，架构变更归技术架构审核。</p></div>
     <div class="section-row"><div><span class="eyebrow">SRC-8 / QUALITY</span><h2>缺陷追踪与回归</h2></div><span class="sub" id="bug-list-count">读取真实 Bug 记录…</span></div>
+    <div class="insight-metrics" id="bug-insight-metrics" aria-live="polite"></div>
     <div class="doclist" id="issues-list"></div>
   </section>
   <section id="view-history" class="view">
@@ -131,6 +146,7 @@
     <div class="documentbar"><input class="search" id="history-search" type="search"
       placeholder="搜索决策、上下文、问题、历史开发记录…" aria-label="搜索项目历史会话">
       <button class="btn" id="history-refresh">检索历史</button></div>
+    <div class="history-shortcuts" aria-label="历史内容快捷检索"><button class="btn" type="button" data-history-query="决策">查找决策</button><button class="btn" type="button" data-history-query="交接">查找交接</button><button class="btn" type="button" data-history-query="阻塞">查找阻塞</button><button class="btn" type="button" data-history-query="">全部记录</button></div>
     <div class="section-row"><div><span class="eyebrow">SOURCE OF TRUTH</span><h2>可追溯的开发记录</h2></div><span class="sub" id="history-list-count">查询项目 History</span></div>
     <div class="doclist" id="history-list"></div>
     <div class="docs-empty hide" id="history-empty">没有匹配的项目历史会话。</div>
@@ -144,6 +160,7 @@
     <div class="sectionhead"><div class="eyebrow">Agent + Developer</div><h1>研发指南</h1>
       <p class="sub">一个 DevControl 工具，按意图选择操作。MCP 管理流程和证据，开发者及 Agent 执行真正的开发和测试。</p></div>
     <div class="guide-intents" id="guide-intents" aria-label="研发阶段导航"></div>
+    <section class="panel insight-panel"><div class="panelhead"><h2>当前项目的合法下一步</h2><span class="eyebrow">PROJECT READINESS</span></div><div id="guide-project-context" class="insight-list"></div></section>
     <div class="panel guide-detail"><div class="panelhead"><h2 id="guide-title">选择一个研发阶段</h2><span class="eyebrow">只读操作引导</span></div>
       <p class="sub" id="guide-description">从需求或当前任务开始，逐步查看操作依据。</p>
       <div id="guide-actions" class="guide-actions"></div><pre class="guide-example" id="guide-example" aria-label="MCP 调用示例"></pre>
@@ -190,6 +207,7 @@
           </div>
         </section>
         <div class="settings-bottom">
+          <div class="panel settings-change-panel"><strong>待保存的配置差异</strong><div id="settings-diff" class="insight-list" role="status" aria-live="polite">尚未加载配置。</div></div>
           <div id="settings-feedback" role="status" aria-live="polite">MCP 客户端 mcpServers.env 优先于项目保存值；保存后需要重连 MCP。</div>
           <button class="settings-save" id="settings-save" type="button">保存 MCP 环境配置</button>
         </div>

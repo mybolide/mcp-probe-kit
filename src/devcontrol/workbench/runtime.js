@@ -65,6 +65,7 @@
     renderReleaseReview();
     renderTaskList();
     renderFeatures();
+    renderInsights();
     $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
   }
   let reloadInProgress=false;
@@ -82,15 +83,17 @@
   async function reload(){
     if(reloadInProgress)return;
     reloadInProgress=true;
-    try{const [nextProject,nextBoard,nextFeatures,nextFeatureTaskPlans,nextReleaseWorkPlan,nextOnboarding,nextReleasePlan,nextDeveloper]=await Promise.all([
+    try{const [nextProject,nextBoard,nextFeatures,nextFeatureTaskPlans,nextReleaseWorkPlan,nextOnboarding,nextReleasePlan,nextDeveloper,nextInsights]=await Promise.all([
       fetchJSON("/api/project"),fetchJSON("/api/board"),fetchJSON("/api/features"),
       fetchJSON("/api/feature-task-plans"),fetchJSON("/api/release-work-plan"),
       fetchJSON("/api/onboarding"),
-      fetchJSON("/api/release-plan"),fetchJSON("/api/local-developer")]);
+      fetchJSON("/api/release-plan"),fetchJSON("/api/local-developer"),
+      fetchJSON('/api/insights').catch(()=>null)]);
       project=nextProject;board=nextBoard;features=nextFeatures.features||[];
       featureTaskPlans=nextFeatureTaskPlans.plans||[];
       releaseWorkPlan=nextReleaseWorkPlan;
-      onboarding=nextOnboarding;releasePlan=nextReleasePlan;localGit=nextDeveloper;render();}
+      onboarding=nextOnboarding;releasePlan=nextReleasePlan;localGit=nextDeveloper;
+      insights=nextInsights;render();}
     catch(e){$("synced").textContent="同步失败："+e.message+"；保留上一次结果";}
     finally{reloadInProgress=false;}
   }
@@ -140,6 +143,10 @@
   $("doc-search").addEventListener("input",renderDocs);
   $("history-refresh").addEventListener("click",loadHistory);
   $("history-search").addEventListener("keydown",e=>{if(e.key==="Enter")loadHistory();});
+  for(const button of document.querySelectorAll('[data-history-query]'))
+    button.addEventListener('click',()=>{
+      $('history-search').value=button.dataset.historyQuery;loadHistory();
+    });
   $("reload").addEventListener("click",reload);
   $("share-lan").addEventListener("click",showLanAccess);
   $("settings-save").addEventListener("click",saveSettings);

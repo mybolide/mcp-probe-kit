@@ -44,9 +44,12 @@ try {
  await send('Page.enable');
  const views=['overview','requirements','architecture','tasks','issues','history','guide','settings'];
  const results=[],files=[];
- for(const width of [1500,1920,2560,1024,768,390]){
+ const requestedWidths=(args.widths||'1500,1920,2560,1024,768,390')
+   .split(',').map(Number).filter(Number.isFinite);
+ for(const width of requestedWidths){
   await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
   for(const view of views){
+   if(args.debug==='true')process.stderr.write('checking '+width+' '+view+'\n');
    await send('Page.navigate',{url:url+'#'+view});
    let v;
    for(let i=0;i<50;i++){
@@ -66,7 +69,33 @@ try {
      }
      v.dataLoaded=loaded;
    }
+   // Check rendered project-derived management facts, not merely DOM shells.
+   // The old visual gate only checked fonts and could miss an empty screen.
+   const insightSelector={overview:'#overview-insight-metrics .insight-metric',
+     requirements:'#idea-list .insight-row',tasks:'#task-granularity .insight-metric',
+     issues:'#bug-insight-metrics .insight-metric',
+     guide:'#guide-project-context .insight-row',
+     settings:'#settings-diff .insight-list,.settings-change-panel .insight-list'}[view];
+   if(insightSelector){
+     let insightsLoaded=false;
+     for(let k=0;k<40;k++){
+       insightsLoaded=await evalJS('document.querySelectorAll('+JSON.stringify(insightSelector)+').length>0');
+       if(insightsLoaded)break;
+       await sleep(120);
+     }
+     v.insightsLoaded=insightsLoaded;
+   }
+   if(view==='architecture'){
+     let reviewLoaded=false;
+     for(let k=0;k<30;k++){
+       reviewLoaded=await evalJS('document.getElementById("architecture-change-count").textContent!=="读取中…"');
+       if(reviewLoaded)break;
+       await sleep(100);
+     }
+     v.reviewLoaded=reviewLoaded;
+   }
    results.push({view,width,...v});
+   if(args.debug==='true')process.stderr.write('checked '+width+' '+view+' loaded='+v.insightsLoaded+'\n');
    if(width===1500||width===2560&&view==='tasks'||width===1920&&view==='overview'||width===390&&['tasks','overview','settings','architecture'].includes(view)){
     const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
     const file=join(out,view+'-'+width+'.png');
@@ -74,7 +103,7 @@ try {
    }
   }
  }
- const failures=results.filter(v=>v.dataLoaded===false||!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3||v.navItems!==8
+ const failures=results.filter(v=>v.dataLoaded===false||v.insightsLoaded===false||v.reviewLoaded===false||!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3||v.navItems!==8
  ||v.mainRight<v.width-3 ||(v.view==='overview'&&!v.hasPlanning)
  ||(v.view==='architecture'&&!v.hasArchChanges)
  ||(v.view==='tasks'&&v.width>=1920&&v.taskCols<2)

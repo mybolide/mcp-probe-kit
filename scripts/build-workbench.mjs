@@ -18,7 +18,7 @@ const css=await transform(style,{loader:'css',minify:true,target:'es2020'});
 const router=readFileSync(resolve(root,'router.js'),'utf8').replace('export function createHashRouter',
   'function createHashRouter');
 const fragments=['app.js','guide.js','state.js','tasks.js','records.js','features.js',
-  'markdown.js','documents.js','runtime.js'];
+  'markdown.js','documents.js','insights.js','runtime.js'];
 const app=fragments.map(name=>readFileSync(resolve(root,name),'utf8')).join('\n')
   .replace("import { createHashRouter } from './router.js';\n",'');
 // Keep the original renderer functions' whitespace intact: executable

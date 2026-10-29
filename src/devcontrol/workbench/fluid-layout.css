@@ -156,6 +156,43 @@
 
 
 /* All legitimate task plan shapes share a single visual language. */
+.insight-panel{margin:18px 0 22px;padding:25px 29px}
+.insight-panel .panelhead{margin-bottom:12px}
+.insight-panel>.sub{margin:0 0 15px}
+.insight-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:15px 0}
+.insight-metric{min-width:0;display:flex;flex-direction:column;gap:3px;
+  background:#f4f7fb;border:1px solid #e3eaf2;border-radius:13px;padding:16px 18px}
+.insight-metric strong{font-size:29px;color:#1e4067;line-height:1.25;font-variant-numeric:tabular-nums}
+.insight-metric span{font-size:13px;font-weight:670;color:#405871}
+.insight-metric small{font-size:12px;color:#657c94;line-height:1.45}
+.insight-list,.insight-actions{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,325px),1fr));gap:10px}
+.insight-actions{margin-top:15px}
+.insight-row{display:flex;flex-direction:column;gap:6px;min-width:0;padding:17px 19px;
+  color:#263d57;background:#fff;border:1px solid #e0e8f1;border-radius:12px;
+  text-align:left;overflow-wrap:anywhere;line-height:1.55}
+.insight-row strong{font-size:15px;color:#203d5b}
+.insight-row span{font-size:13px;color:#506982}
+.insight-row small{font-size:12px;color:#426ca0}
+button.insight-row:hover{background:#f0f7ff;border-color:#9fc4ed}
+.insight-meta{font-size:13px;color:#506680;line-height:1.6}
+.task-insight{margin:15px 0 20px}
+.task-insight .sub{font-size:13px;line-height:1.6}
+.history-shortcuts{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 20px}
+.history-shortcuts .btn{font-size:13px;min-height:36px}
+.settings-change-panel{margin:18px 0;padding:21px 24px}
+.settings-change-panel>strong{display:block;font-size:15px;margin-bottom:10px}
+.settings-change-panel .insight-list{grid-template-columns:1fr}
+.insight-change{padding:11px 14px;background:#eff6ff;border:1px solid #d7e7f9;
+  border-radius:9px;font-size:13px;color:#28537f}
+@media(max-width:1260px){.insight-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){
+  .insight-panel{padding:20px 18px}
+  .insight-metrics{gap:9px}
+  .insight-metric{padding:12px 13px}
+  .insight-metric strong{font-size:25px}
+  .insight-list,.insight-actions{grid-template-columns:1fr}
+  .history-shortcuts{gap:6px}
+}
 .task-phase{background:transparent;border:1px solid #e2e8f0;
   box-shadow:none;border-radius:17px;overflow:hidden;margin:0 0 18px}
 .task-phase-head{display:flex;justify-content:space-between;align-items:center;

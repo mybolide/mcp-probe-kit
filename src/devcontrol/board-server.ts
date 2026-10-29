@@ -6,6 +6,7 @@ import { ProjectTaskLedger, DevControlError } from "./task-ledger.js";
 import { boardHtml } from "./board-html.js";
 import { projectHtml } from "./project-html.js";
 import { devControlGuide } from './action-guide.js';
+import { workbenchInsights } from './workbench-insights.js';
 import { resolveWorkbenchLocale } from "./i18n.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
 import { projectOnboarding } from "./project-onboarding.js";
@@ -125,6 +126,15 @@ export function createDevControlBoardServer(
       } else if (route === '/api/guide') {
         const intent=new URL(req.url??'/', 'http://localhost').searchParams.get('intent')??'';
         respond(res,200,JSON.stringify(devControlGuide({intent})),nonce,
+          'application/json; charset=utf-8');
+      } else if (route === '/api/insights') {
+        respond(res,200,JSON.stringify(workbenchInsights(ledger)),nonce,
+          'application/json; charset=utf-8');
+      } else if (/^\/api\/ideas\/IDEA-[0-9a-f-]{36}$/.test(route)) {
+        // Read-only Idea evidence, including independent assessment/review and
+        // exact revisions. Owner approvals still require the controlled MCP.
+        const id=route.slice('/api/ideas/'.length);
+        respond(res,200,JSON.stringify(ledger.getIdea(id)),nonce,
           'application/json; charset=utf-8');
       } else if (route === "/api/settings") {
         if(!local){respond(res,403,"Local-only settings");return;}
@@ -255,7 +265,7 @@ export function createDevControlBoardServer(
       }
     } catch (error) {
       const notFound = error instanceof DevControlError &&
-        ["TASK_NOT_FOUND", "FEATURE_NOT_FOUND", "BUG_NOT_FOUND"].includes(error.code) ||
+        ["TASK_NOT_FOUND", "FEATURE_NOT_FOUND", "BUG_NOT_FOUND", "IDEA_NOT_FOUND"].includes(error.code) ||
         (error instanceof Error &&
           (error as Error & { code?: string }).code === "HISTORY_READ_NOT_FOUND");
       respond(res, notFound ? 404 : 500, JSON.stringify({ error: notFound ? "Unknown task" : "Server error" }),

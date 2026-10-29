@@ -54,6 +54,8 @@
     try{
       const data=await fetchJSON("/api/work-items");
       const items=(data.items||[]).filter(item=>item.kind!=="bug");
+      $('architecture-change-count').textContent=items.length+' 项实际架构变更 · '+
+        items.filter(item=>item.status!=='completed'&&item.status!=='resolved').length+' 项尚未完成';
       container.replaceChildren(...(items.length?items.map(workItemButton):
         [n("div","当前没有已登记的架构变更提案；Git ADR 仍在左侧架构文档中。","docs-empty")]));
     }catch(e){container.replaceChildren(n("div","读取失败："+e.message,"error"));}
@@ -93,8 +95,14 @@
       const related=n("section",null,"spec-block");
       related.append(n("h3","关联的修复与回归测试任务"));
       if(data.links.length)for(const link of data.links){
-        related.append(n("p",(link.role==="test"?"测试 · ":"修复 · ")+
-          link.taskId+" · "+link.title+" · "+link.status));
+        const row=taskRows().find(t=>t.item.id===link.taskId);
+        if(row){
+          const button=n('button',(link.role==='test'?'测试 · ':'修复 · ')+
+            link.taskId+' · '+link.title+' · '+link.status+' ↗','insight-row');
+          button.type='button';button.addEventListener('click',()=>openPlanTask(row));
+          related.append(button);
+        }else related.append(n('p',(link.role==='test'?'测试 · ':'修复 · ')+
+          link.taskId+' · '+link.title+' · '+link.status+'（当前计划未包含此任务）'));
       }else related.append(n("p","尚无关联的执行任务。SRC-8 取证记录不代表已批准开发。"));
       root.append(related);
     }catch(e){root.replaceChildren(n("p","Bug 详情读取失败："+e.message,"error"));}

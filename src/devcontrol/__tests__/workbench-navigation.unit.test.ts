@@ -41,12 +41,18 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain("router.current()==='tasks'");
     expect(html).not.toMatch(/<script[^>]+src=/);
     expect(html).not.toMatch(/<link[^>]+(googleapis|fonts)/);
-    // Single-file no-runtime framework stays under 48 KB gzip even with full-wide\n    // responsive layout and visible product/architecture governance sections.\n    // A no-framework local page should remain small even with all frozen
-    // task evidence details included. No absolute bundle size handwaving.
+    // Full eight-menu read-only governance views add roughly 2.3 KB gzip.
+    // Keep one CSP-safe offline response under the reviewed 54 KB limit.
     expect(html).toContain('id="vision-title"');
     expect(html).toContain('id="roadmap-title"');
     expect(html).toContain('id="okr-title"');
     expect(html).toContain('id="architecture-changes"');
+    for(const id of ['overview-insight-metrics','idea-list','task-granularity',
+      'bug-insight-metrics','guide-project-context','settings-diff','history-shortcuts']){
+      expect(id==='history-shortcuts'?html.includes('class="history-shortcuts"'):
+        html.includes('id="'+id+'"')).toBe(true);
+    }
+    expect(html).toContain("fetchJSON('/api/insights')");
     // Feature plans in independent projects must never render the retired dark
     // simple-task cards while whole-release plans use light cards.
     expect(html).toContain('function renderTaskCard(row)');
@@ -56,7 +62,7 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind==="bug")');
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind!=="bug")');
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
-    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(48_000);
+    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(54_000);
   });
 
   test('Hash navigation handles deep links and back/forward without reload', () => {

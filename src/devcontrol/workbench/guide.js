@@ -15,6 +15,10 @@
     }
     await selectGuideIntent(guideIntent);
   }
+  for(const control of document.querySelectorAll('#view-settings input,#view-settings select')){
+    control.addEventListener('input',renderSettingsDiff);
+    control.addEventListener('change',renderSettingsDiff);
+  }
   async function selectGuideIntent(intent){
     guideIntent=intent;
     document.querySelectorAll('.guide-intent').forEach(b=>
@@ -31,8 +35,35 @@
       $('guide-caution').textContent='注意：'+flow.caution;
     }catch(error){$('guide-description').textContent='导航暂不可用：'+error.message;}
   }
-  let settingsLoaded=false,settingsToken='';
+  let settingsLoaded=false,settingsToken='',settingsBaseline=null;
   const settingValue=id=>$(id).value.trim();
+  function settingsDraft(){
+    return {
+      MCP_ENABLE_UI_APPS:$('flag-ui-apps').checked,
+      MCP_ENABLE_GITNEXUS_BRIDGE:$('flag-gitnexus').checked,
+      MEMORY_EMBEDDING_PROVIDER:settingValue('setting-provider'),
+      MEMORY_EMBEDDING_MODEL:settingValue('setting-model'),
+      MEMORY_EMBEDDING_URL:settingValue('setting-embedding-url'),
+      MEMORY_QDRANT_URL:settingValue('setting-qdrant-url'),
+      MEMORY_QDRANT_COLLECTION:settingValue('setting-collection'),
+      MEMORY_SEARCH_LIMIT:settingValue('setting-search-limit'),
+      MEMORY_SUMMARY_MAX_CHARS:settingValue('setting-summary-max'),
+    };
+  }
+  function renderSettingsDiff(){
+    if(!settingsBaseline)return;
+    const current=settingsDraft();
+    const changed=Object.keys(current).filter(key=>current[key]!==settingsBaseline[key]);
+    const secrets=[['setting-qdrant-key','MEMORY_QDRANT_API_KEY'],
+      ['setting-embedding-key','MEMORY_EMBEDDING_API_KEY']];
+    for(const [id,key] of secrets)if(settingValue(id))changed.push(key+' · 待替换（不回显）');
+    for(const [id,key] of [['clear-qdrant-key','MEMORY_QDRANT_API_KEY'],
+      ['clear-embedding-key','MEMORY_EMBEDDING_API_KEY']])if($(id).checked)
+      changed.push(key+' · 请求清除');
+    $('settings-diff').replaceChildren(...(changed.length?
+      changed.map(key=>n('div',key,'insight-change')):
+      [n('div','与上次读取的配置一致，尚无待保存变更。','sub')]));
+  }
   function renderSettingStates(data){
     $('flag-ui-apps').checked=!!data.flags.MCP_ENABLE_UI_APPS.effective;
     $('flag-gitnexus').checked=!!data.flags.MCP_ENABLE_GITNEXUS_BRIDGE.effective;
@@ -61,6 +92,8 @@
       ]);
       settingsToken=data.csrfToken;
       renderSettingStates(data);
+      settingsBaseline=settingsDraft();renderSettingsDiff();
+      settingsBaseline=settingsDraft();renderSettingsDiff();
       const overridden=Object.entries(data.ai).filter(([,value])=>value.overridden)
         .map(([name])=>name);
       if(overridden.length) $('settings-feedback').textContent=
