@@ -62,6 +62,14 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('function renderTaskCard(row)');
     expect(html).toContain('for(const row of items)list.append(renderTaskCard(row))');
     expect(html).not.toContain('n("button",null,"simple-task")');
+    // Feature-only plans do not have the release-work summary node. A stale
+    // dereference used to throw after opening the drawer, leaving it blank.
+    expect(html).not.toContain('$("release-review-summary").replaceChildren()');
+    for(const label of ['任务说明','必须完成什么 · 验收目标','对应需求',
+      '已批准的执行步骤','实施步骤的规格状态','文件修改范围',
+      '必须通过的质量门禁','交付验收应保留的真实证据']){
+      expect(html).toContain(label);
+    }
 
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind==="bug")');
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind!=="bug")');

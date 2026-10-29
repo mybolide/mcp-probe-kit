@@ -306,11 +306,20 @@
       showDelivery();
       return;
     }
-    $("release-review-summary").replaceChildren();
     section("当前状态与执行边界",row.pending?
       (task.featureNeedsRevision?"规划仍有缺口，需完善 · ":"规划待 Agent 确认 · ")+"不可领取、执行或计入版本完成率。":
       "状态："+status+"。执行以真实 SQLite 状态、依赖和 Gate 为准。");
     if(task.featureReviewIssues?.length)section("DevControl 规划检查：待修正问题",task.featureReviewIssues);
+    const brief=taskBrief(row);
+    section("任务说明",task.purpose||brief.description||
+      "冻结任务未单独记录实施说明；请核对原始需求、执行步骤与验收条件。");
+    section("必须完成什么 · 验收目标",brief.acceptance||
+      "该任务尚无可独立验收目标，领取前必须按受控流程补齐。");
+    section("对应需求",brief.requirementIds.length?brief.requirementIds:
+      ["未记录对应需求编号；请核对冻结任务合同。"]);
+    if(task.workflow?.length)section("已批准的执行步骤",task.workflow);
+    else section("实施步骤的规格状态",
+      "冻结任务未提供独立执行步骤，不能从标题推断实现方式。");
     const displayOwner=actual?.owner||(row.pending?localGit?.name:null);
     section("负责人 / 开发电脑",[
       translate("负责人")+": "+(displayOwner||
@@ -324,9 +333,7 @@
             "规划预览；创建或领取任务时自动写入本机负责人") :
           (locale==="en"?"Historical attribution unavailable":"历史开发归属未记录")),
     ]);
-    section("需求来源",task.requirementIds||actual?.spec?.requirementIds||[]);
     section("使用场景 / 触发条件 / 用户期望",task.scenario||"尚无独立业务场景说明");
-    section("按顺序执行的业务与系统流程",task.workflow||[]);
     section("业务规则与不可变约束",task.businessRules||[]);
     if(task.inputs||task.outputs||task.preconditions||task.forbiddenChanges||
       task.stateTransitions||task.stopConditions||task.allowedChangedFiles){
@@ -338,7 +345,6 @@
       section(locale==="en"?"Stop and request review when":"停止开发并返回审核的条件",task.stopConditions||[]);
       section(locale==="en"?"Exact Git file allowlist":"精确 Git 变更文件白名单",task.allowedChangedFiles||[]);
     }
-    section("具体工作与完成条件",task.acceptance||actual?.spec?.acceptance||"缺少经审核的详细规格");
     section("技术方案与约束",task.designRef||actual?.spec?.designRef||"无设计链接");
     section("原始需求、Spec 与测试用例依据",task.sourceRefs||[]);
     section("已确认决策、限制和审查备注",task.reviewNotes||[]);
@@ -348,6 +354,10 @@
     section("交付验收应保留的真实证据",task.verificationEvidence||[]);
     section("不在本任务范围",task.outOfScope||actual?.spec?.outOfScope||[]);
     section("交付文件 / 产物",task.deliverables||actual?.spec?.deliverables||[]);
+    section("文件修改范围",brief.paths.length?brief.paths:
+      ["未记录允许文件范围；领取前必须核对 execution-contract。"]);
+    section("必须通过的质量门禁",brief.gates.length?brief.gates:
+      ["未记录质量门禁；必须核对 execution-contract。"]);
     section("依赖、阶段与允许变更",[
       "所属阶段："+row.phase,"父任务："+(task.parentId||"无"),
       "前置依赖："+((task.dependsOn||actual?.dependsOn||[]).join("、")||"无"),
