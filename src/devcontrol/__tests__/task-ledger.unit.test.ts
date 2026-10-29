@@ -2727,6 +2727,42 @@ describe("project ledger and legacy migration", () => {
       .toBe(originalHead);
   });
 
+  it('re-defers a safely resumed physical Gate without changing its original commit or other task files',()=>{
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const claimed=ledger!.claim('NEYNA-200','responsible-agent');
+    save('tests/contracts/frozen-original.json','{"real":"unchanged"}');
+    commit('freeze original delivery for external test');
+    const frozenHead=git('rev-parse','HEAD');
+    ledger!.report('NEYNA-200',claimed.leaseToken,{
+      kind:'local_test',reference:'Real local test passed; physical device required later',
+    },true);
+    ledger!.complete('NEYNA-200',claimed.leaseToken,{
+      summary:'Original task is committed for a later real device test',
+      implementation:'Only the approved in-scope source was committed',
+      verification:'Local tests passed but physical device Gate is pending',
+    });
+    ledger!.deferVerification({id:'NEYNA-200',leaseToken:claimed.leaseToken,
+      gate:'ios_device_e2e',reason:'Physical device not available for acceptance test'});
+    save('other-project/independent.txt','do not delete unrelated files\n');
+    git('add','other-project/independent.txt');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','another scoped task delivered unrelated work');
+    const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent');
+    expect(()=>ledger!.deferVerification({id:'NEYNA-200',leaseToken:'wrong',
+      gate:'ios_device_e2e',reason:'The iPhone still requires actual user permission'}))
+      .toThrow(/lease/i);
+    const again=ledger!.deferVerification({id:'NEYNA-200',leaseToken:resumed.leaseToken,
+      gate:'ios_device_e2e',reason:'A real iPhone test was attempted but OS local network consent was not granted'});
+    expect(again).toMatchObject({redeferred:true,gatePassed:false,leaseReleased:true,
+      originalHead:frozenHead});
+    expect(ledger!.taskClosureStatus('NEYNA-200')).toMatchObject({
+      nextAction:'resume-verification',completionHead:frozenHead});
+    expect(ledger!.next().activeLease).toBeNull();
+    expect(fs.readFileSync(path.join(root,'other-project/independent.txt'),'utf8'))
+      .toContain('do not delete');
+  });
+
   it("cannot defer unfinished code, an unrelated gate or user-dirty files", () => {
     create({id:"NEYNA-200",requiredGates:["ios_device_e2e"]});
     ledger!.approve("NEYNA-200","owner");

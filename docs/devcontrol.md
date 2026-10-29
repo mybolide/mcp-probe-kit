@@ -538,16 +538,21 @@ preservation option also works during `complete`: it records all unrelated
 tracked/untracked WIP byte fingerprints without changing Git or source files.
 The later `defer-verification` must match that exact snapshot. Neither
 completion nor deferral passes the real device Gate.
-Once the real device/runner is available, use `resume-verification` to
-reclaim the old task and check original version-bound evidence with `reviewed-verify`. Later commits
-cannot be counted in the frozen original task diff; later modifications to
-the original delivered files block direct resumption for fresh review.
+Once the project-owned acceptance dependency is available, use
+`resume-verification` to reclaim the old task and inspect original version-bound
+evidence with `self-review`, `gate-review` and `verify` (or the optional
+separate Reviewer flow). If the actual retry still cannot meet the frozen
+Gate, `defer-verification` may safely re-defer that same immutable completion
+under its active original developer lease, with a concrete updated reason;
+it releases the singleton without passing any Gate. Later commits cannot be
+counted as the original frozen diff, and any later modifications to original
+delivery files still block direct resumption until reconciled.
 
 **Device and project-specific acceptance evidence:** `ios_device_e2e`
 is a requirement label, not a DevControl XCTest command. The development
 Agent is responsible for the applicable physical-device tests, CI and
-receipts; the Reviewer evaluates whether those results genuinely cover the
-frozen acceptance condition. DevControl stores who ran and reviewed them,
+receipts and explicitly reviews whether the results cover the frozen
+acceptance; a second Reviewer is optional for ordinary tasks. DevControl stores who ran and reviewed them,
 the evidence reference, Git commit and outcome, and moves state to
 `Verified` only when the workflow is complete. It does not select a device,
 launch Xcode/Flutter/Go, parse XCTest bundles, create tunnels or execute

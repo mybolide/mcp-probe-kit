@@ -1110,8 +1110,8 @@ export class ProjectTaskLedger {
       return {taskId:id,status:task.status,completed:false,leaseActive:false,
         nextAction:'resume-verification',deferredGate:deferred.gate_name,
         completionHead:note?.git_head??null,steps:[{
-          action:'resume-verification',condition:'physical/external Gate pending',
-          instructions:'Wait for the required real runner/device, then resume this frozen delivery. Do not redevelop or mark the Gate passed',
+          action:'resume-verification',condition:'external acceptance evidence pending',
+          instructions:'Run the required project-owned acceptance test; resume this frozen delivery when evidence exists. If the real retry still fails or is unavailable, re-defer with an honest reason. Never mark the Gate passed without proof',
         }],note:'Deferral preserves the original code and evidence; no Verified yet'};
     }
     if(!lease||lease.expires_at<=Date.now()){
@@ -4376,6 +4376,42 @@ export class ProjectTaskLedger {
           "A committed completion and task evidence must exist before deferral");
       }
       const head=git(this.root,["rev-parse","HEAD"]);
+      const resumed=this.db.prepare(`SELECT * FROM dc_verification_deferrals
+        WHERE task_id=? AND resumed_at IS NOT NULL`).get(input.id);
+      if(resumed){
+        // The original submitted delivery stays immutable when a genuinely
+        // unavailable external Gate is deferred again after an actual retry.
+        if(resumed.gate_name!==input.gate||resumed.base_head!==lease.base_head||
+          resumed.completion_head!==note.git_head||
+          resumed.completion_revision!==note.revision||
+          !run(this.root,'git',['merge-base','--is-ancestor',note.git_head,head]).passed)
+          fail('REDEFERRAL_BASE_CHANGED',
+            'The original submitted revision must remain in Git history');
+        const delivered=committedFilesBetween(this.root,
+          resumed.base_head,resumed.completion_head);
+        const later=committedFilesBetween(this.root,resumed.completion_head,head);
+        if(later.some(file=>delivered.includes(file)))
+          fail('DEFERRED_CODE_CHANGED',
+            'Later commits changed the original delivery; record a fresh reviewed completion');
+        const dirty=preservedWorktreeSnapshot(this.root);
+        const allowed=JSON.parse(task.allowed_paths) as string[];
+        if(dirty.some(file=>allowed.some(p=>pathAllowed(file.path,p)))||
+          git(this.root,['diff','--cached','--name-only']).trim())
+          fail('REDEFERRAL_WORKTREE_CHANGED',
+            'Staged or in-scope uncommitted task files cannot be re-deferred');
+        this.db.prepare(`UPDATE dc_verification_deferrals SET
+          reason=?,deferred_by=?,deferred_at=?,preserved_worktree_json=?,resumed_at=NULL
+          WHERE task_id=?`).run(input.reason.trim(),lease.agent,utc(),JSON.stringify(dirty),input.id);
+        this.db.prepare('DELETE FROM dc_leases WHERE singleton=1').run();
+        this.audit(input.id,'verification_redeferred',lease.agent,{
+          gate:input.gate,completionHead:note.git_head,currentHead:head,
+          reason:input.reason,gatePassed:false,leaseReleased:true,
+          preservedUncommittedFiles:dirty.length,
+        });
+        return {taskId:input.id,status:'in_review',pendingVerification:true,
+          gate:input.gate,gatePassed:false,leaseReleased:true,
+          originalHead:note.git_head,redeferred:true};
+      }
       if(head!==note.git_head||
           !run(this.root,"git",["merge-base","--is-ancestor",lease.base_head,head]).passed) {
         fail("DELIVERY_HEAD_CHANGED",
