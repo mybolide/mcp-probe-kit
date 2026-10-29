@@ -177,8 +177,11 @@ All Gate names (including legacy `docs`, `go_contract`,
 `go_http_integration`, `go_postgres_live`, `flutter_test`, `ios_device_e2e`,
 `v01_release_e2e`) identify frozen acceptance conditions, **not programs
 DevControl runs**. The development Agent runs tests using the project's own
-toolchain and records the original run evidence. An independent Reviewer
-submits a version-bound `gate-review` outcome with evidence references.
+toolchain and records the original run evidence. The responsible development
+Agent performs a substantive, version-bound `self-review` and submits a
+`gate-review` outcome with evidence references (`reviewMode=self`). A separate
+reviewer is optional for ordinary task completion, not a blocking dependency.
+DevControl records and enforces the workflow but does not judge business tests.
 `sqlite_decision` is a structured internal DevControl decision record; it
 is not a business test runner. Missing or failed reviews remain blocked.
 

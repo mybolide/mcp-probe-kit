@@ -63,7 +63,7 @@ export const V5_DEVC_ACTION_GROUPS = [
     title: '领取、报告与验收 / Execution and evidence',
     actions: ['claim', 'renew', 'recover-task', 'release', 'defer-verification','resume-verification',
       'check', 'report', 'gate-review', 'complete',
-      'review-handoff','review-submit','reviewed-verify','task-closure-status',
+      'self-review','review-handoff','review-submit','reviewed-verify','task-closure-status',
       'verify', 'trace'],
   },
   {

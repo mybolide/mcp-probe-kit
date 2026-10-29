@@ -956,6 +956,67 @@ export class ProjectTaskLedger {
     });
   }
 
+  /** The responsible developer may inspect and accept their own submitted
+   * work in a separate, explicit, auditable review action. A second Agent is
+   * optional for ordinary tasks, not an implicit dependency of DevControl.
+   * This is NOT an automatic pass: original commit and evidence must match.
+   */
+  reviewOwnTask(id:string,token:string,input:{
+    outcome:'passed'|'failed';findings:string;evidenceReference:string;
+  }):Row {
+    if(!input||!['passed','failed'].includes(input.outcome)||
+      typeof input.findings!=='string'||input.findings.trim().length<60||
+      typeof input.evidenceReference!=='string'||!input.evidenceReference.trim())
+      fail('SELF_REVIEW_EVIDENCE_REQUIRED',
+        'Record a substantive review of actual code and tests, an outcome and the exact evidence reference');
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(id,token);
+      const task=this.requireTask(id);
+      if(task.status!=='in_review')fail('NOT_IN_REVIEW','Complete and report real evidence first');
+      const note=this.latestCompletion(id);
+      if(!note)fail('COMPLETION_REVISION_REQUIRED','Self-review requires a committed delivery');
+      const currentHead=this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
+      const evidence=this.db.prepare(`SELECT id FROM dc_evidence
+        WHERE task_id=? AND reference=? AND git_head=? LIMIT 1`)
+        .get(id,input.evidenceReference.trim(),note.git_head);
+      if(!evidence)fail('REVIEW_EVIDENCE_MISSING',
+        'Self-review must cite actual task evidence at the committed delivery');
+      const previous=this.db.prepare(`SELECT * FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
+      if(previous&&(previous.outcome||previous.developer!==lease.agent||
+        previous.completion_revision!==note.revision||
+        previous.completion_head!==note.git_head))
+        fail('REVIEW_ALREADY_DECIDED',
+          'A decided review or a review for another delivery cannot be overwritten');
+      if(!previous){
+        const randomHash=createHash('sha256').update(randomUUID()+randomUUID()).digest('hex');
+        this.db.prepare(`INSERT INTO dc_task_review_handoffs
+          (task_id,completion_revision,completion_head,developer,ticket_hash,issued_at,expires_at)
+          VALUES(?,?,?,?,?,?,?)`).run(id,note.revision,note.git_head,lease.agent,
+            randomHash,utc(),Date.now()+24*60*60*1000);
+      }
+      // Invalidate an optional pending independent-review ticket, if one was
+      // created before the Owner chose the single-Agent review policy.
+      const invalidatedTicket=createHash('sha256').update(randomUUID()+randomUUID()).digest('hex');
+      this.db.prepare(`UPDATE dc_task_review_handoffs SET
+        ticket_hash=?,reviewer=?,outcome=?,findings=?,reviewed_at=? WHERE task_id=?`)
+        .run(invalidatedTicket,lease.agent,input.outcome,input.findings.trim(),utc(),id);
+      this.audit(id,'developer_task_self_reviewed',lease.agent,{
+        outcome:input.outcome,completionRevision:note.revision,
+        completionHead:note.git_head,observedHead:currentHead,
+        evidenceReference:input.evidenceReference,findings:input.findings.trim(),
+        independentReviewer:false,
+      });
+      if(input.outcome==='failed'){
+        this.db.prepare("UPDATE dc_tasks SET status='in_progress',updated_at=? WHERE id=?")
+          .run(utc(),id);
+        this.db.prepare('DELETE FROM dc_task_review_handoffs WHERE task_id=?').run(id);
+      }
+      return {taskId:id,outcome:input.outcome,reviewMode:'developer_self_review',
+        completionHead:note.git_head,taskStatus:input.outcome==='passed'?'in_review':'in_progress',
+        nextAction:input.outcome==='passed'?'gate-review':'correct findings and record a new completion'};
+    });
+  }
+
   /** Review the submitted commit, not whichever HEAD unrelated developers
    * reached later. An advanced HEAD is allowed ONLY for a resumed, immutable
    * deferral whose original files were never touched by later commits.
@@ -1030,8 +1091,10 @@ export class ProjectTaskLedger {
     const pendingGates=acceptanceGates.filter(name=>{
       const record=this.db.prepare(`SELECT outcome,git_head,evidence_reference,
         reviewer,runner,lease_token_hash FROM dc_external_gate_reviews WHERE task_id=? AND gate_name=?`).get(id,name);
+      const ownGateReview=!!lease&&handoff?.outcome==='passed'&&
+        handoff.reviewer===lease.agent&&record?.reviewer===lease.agent;
       return !record||record.outcome!=='passed'||record.git_head!==reviewHead||
-        record.reviewer===record.runner||record.reviewer===lease?.agent||
+        (!ownGateReview&&(record.reviewer===record.runner||record.reviewer===lease?.agent))||
         !lease||record.lease_token_hash!==createHash('sha256').update(String(lease.token)).digest('hex')||
         !this.db.prepare(
           'SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=?',
@@ -1065,21 +1128,22 @@ export class ProjectTaskLedger {
     }
     if(task.status==='in_progress'&&note&&evidence.length){
       add('report','developer has not requested review yet',
-        'Use report with existing real evidence and readyForReview=true before requesting independent review');
+        'Use report with existing real evidence and readyForReview=true before the Agent review');
     }
     if(note&&evidence.length){
       if(!handoff){
-        if(task.status==='in_review')add('review-handoff','independent task review not requested',
-          'Developer hands off this exact committed completion; Owner recovery requires a configured credential');
+        if(task.status==='in_review')add('self-review','developer review not recorded',
+          'The responsible Agent reviews the exact committed delivery and real project test evidence');
       }else if(!handoff.outcome){
-        add('review-submit','independent reviewer decision missing',
-          'A different Reviewer must inspect the original completion commit and cite a real recorded evidence reference; use the handoff ticket, not the developer lease');
+        add('self-review','developer review not recorded',
+          'A second Reviewer is optional; the original developer may review using the valid lease and the frozen task evidence');
       }else if(handoff.outcome==='passed'){
-        if(pendingGates.length)add('gate-review','required independently reviewed acceptance conditions missing',
+        if(pendingGates.length)add('gate-review','required acceptance evidence review missing',
           'Agent runs project tests and reports evidence for '+pendingGates.join(', ')+
-          '; different Reviewer records pass/fail. DevControl never runs those tests');
-        add('reviewed-verify','task review passed but Verified not recorded',
-          'Validate approved scope, version-bound evidence and independent Gate decisions. No project tests are executed by MCP');
+          '; the responsible Agent records findings with reviewMode=self or an optional separate reviewer');
+        add(handoff.reviewer===lease?.agent?'verify':'reviewed-verify',
+          'task review passed but Verified not recorded',
+          'Validate scope, original commit, bound evidence and explicit Agent Gate review; MCP runs no tests');
       }else{
         add('complete','independent review rejected delivery',
           'Fix the concrete reviewer findings and submit a new completion revision before arranging another handoff');
@@ -1091,7 +1155,7 @@ export class ProjectTaskLedger {
       deferredGate:deferred&&!deferred.resumed_at?deferred.gate_name:null,
       leaseActive:!!lease&&lease.expires_at>Date.now(),
       recordedEvidence:evidence.map(item=>({reference:item.reference,kind:item.kind,head:item.git_head})),
-      reviewStatus:handoff?.outcome??(handoff?'awaiting_reviewer':'not_started'),
+      reviewStatus:handoff?.outcome??(handoff?'awaiting_review':'not_started'),
       reviewCompletionHead:handoff?.completion_head??null,requiredGates:gates,
       note:'This checklist does not assert passing tests or authorization; follow the current action and inspect real Gate results'};
   }
@@ -4678,6 +4742,7 @@ export class ProjectTaskLedger {
   reviewExternalGate(id: string, token: string, input: {
     gate: string; evidenceReference: string; runner: string;
     reviewer: string; outcome: "passed" | "failed"; reviewNotes: string;
+    reviewMode?:'self';
   }): Row {
     const lease = this.requireLease(id, token);
     const task = this.requireTask(id);
@@ -4686,14 +4751,21 @@ export class ProjectTaskLedger {
     if (!isEvidenceGate(input?.gate) || !planned.includes(input.gate)) {
       fail("GATE_NOT_DECLARED", "Gate review must match a frozen acceptance requirement; SQLite decision records use their own internal audit");
     }
+    const completed=this.latestCompletion(id);
+    const selfReview=this.db.prepare(`SELECT reviewer,outcome,completion_head
+      FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
+    const isOwnReview=input.reviewMode==='self'&&input.reviewer===lease.agent&&
+      selfReview?.outcome==='passed'&&selfReview?.reviewer===lease.agent&&
+      selfReview?.completion_head===completed?.git_head;
     if (!["passed", "failed"].includes(input.outcome) ||
         !input.evidenceReference?.trim() ||
         !input.runner?.trim() ||
-        !input.reviewer?.trim() || input.reviewer===input.runner ||
-        input.reviewer===lease.agent ||
-        !input.reviewNotes?.trim() || input.reviewNotes.trim().length < 25) {
-      fail("INDEPENDENT_GATE_REVIEW_REQUIRED",
-        "Require actual runner (Agent or CI), an independent reviewer distinct from runner and reporting Agent, explicit outcome and substantive findings");
+        !input.reviewer?.trim() ||
+        (!isOwnReview&&(input.reviewer===input.runner||input.reviewer===lease.agent))||
+        !input.reviewNotes?.trim() ||
+        input.reviewNotes.trim().length < (isOwnReview?60:25)) {
+      fail('GATE_REVIEW_REQUIRED',
+        'Require an actual runner, an explicit developer self-review or separate reviewer, pass/fail, and substantive findings');
     }
     const completion = this.latestCompletion(id);
     if(!completion)fail('COMPLETION_REVISION_REQUIRED','Register the real completed delivery before Gate review');
@@ -4716,28 +4788,27 @@ export class ProjectTaskLedger {
       ).run(id,input.gate,createHash("sha256").update(token).digest("hex"),head,
         input.evidenceReference.trim(),input.runner,input.reviewer,input.outcome,
         input.reviewNotes.trim(),utc());
-      this.audit(id,"external_gate_reviewed",input.reviewer,{
+      this.audit(id,isOwnReview?'developer_gate_self_reviewed':'external_gate_reviewed',input.reviewer,{
         gate:input.gate,outcome:input.outcome,gitHead:head,observedHead,
         evidenceReference:input.evidenceReference,runner:input.runner,
-        reportedBy:lease.agent,
+        reportedBy:lease.agent,reviewMode:isOwnReview?'developer_self_review':'independent',
       });
       return {taskId:id,gate:input.gate,outcome:input.outcome,gitHead:head,
         reviewer:input.reviewer,evidenceReference:input.evidenceReference,
-        note:"Recorded independent declaration, not a test executed by MCP"};
+        note:'Recorded an auditable project test review; no tests executed by MCP'};
     });
   }
 
   // Gate names are project acceptance requirements. No test executors
   // belong in DevControl; agents and the project's CI run their own tests.
-  // DevControl verifies only version-bound, independently reviewed evidence.
+  // DevControl verifies version-bound, substantively reviewed evidence.
 
   verify(id: string, token: string): Row {
     const lease = this.requireLease(id, token);
     const task = this.requireTask(id);
     if (task.status !== "in_review") fail("NOT_IN_REVIEW", "Submit evidence and request review first");
-    // Plans imported through the v5 approval process cannot be verified by
-    // the developer alone. Older bootstrap tasks remain supported without
-    // retroactively forging a missing historical reviewer decision.
+    // Plans imported through the v5 approval process need explicit substantive
+    // review, but the developer may perform it; a second Agent is optional.
     const reviewedPlan=String(task.plan_id??'').startsWith('release-work:')||
       String(task.plan_id??'').startsWith('feature:');
     if(reviewedPlan){
@@ -4746,8 +4817,8 @@ export class ProjectTaskLedger {
       if(!review||review.outcome!=='passed'||!latest||
         review.completion_revision!==latest.revision||
         review.completion_head!==latest.git_head)
-        return {taskId:id,passed:false,reason:'INDEPENDENT_REVIEW_REQUIRED',
-          detail:'A separate reviewer must inspect the exact completion revision and evidence before the real Gate runs'};
+        return {taskId:id,passed:false,reason:'TASK_REVIEW_REQUIRED',
+          detail:'The responsible Agent must review the exact committed delivery and real test evidence before acceptance'};
     }
     const contract=this.executionContract(id);
     if(!contract.eligible)return {taskId:id,passed:false,
@@ -4869,14 +4940,19 @@ export class ProjectTaskLedger {
           "SELECT * FROM dc_external_gate_reviews WHERE task_id=? AND gate_name=?",
         ).get(id,name);
         const targetHead=frozenReview?note.git_head:startHead;
+        const taskReview=this.db.prepare(`SELECT reviewer,outcome,completion_head
+          FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
+        const ownReview=!!result&&result.reviewer===lease.agent&&
+          taskReview?.reviewer===lease.agent&&taskReview?.outcome==='passed'&&
+          taskReview?.completion_head===targetHead;
         const reviewed=!!result && result.outcome==="passed" &&
           result.git_head===targetHead && result.lease_token_hash===tokenHash &&
-          result.reviewer!==result.runner && result.reviewer!==lease.agent &&
+          (ownReview||(result.reviewer!==result.runner&&result.reviewer!==lease.agent)) &&
           !!this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=?")
             .get(id,result?.evidence_reference??"",targetHead);
         return [name,{passed:reviewed,evidenceBased:true,
-          reason:reviewed?"Agent test evidence and independent review recorded":
-            "Missing passing Agent test evidence and independent revision-bound Gate review; run the project's own tests, call report then gate-review",
+          reason:reviewed?'Version-bound test evidence and substantive Agent review recorded':
+            'Missing passing project test evidence and version-bound Gate review; run project tests, report, then gate-review',
           ...(result?{reviewer:result.reviewer,outcome:result.outcome,
             evidenceReference:result.evidence_reference}:{})}];
       }

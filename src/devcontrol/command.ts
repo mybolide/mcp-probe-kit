@@ -185,6 +185,8 @@ export function dispatchDevControl(
       rotatePendingTicket:input.rotatePendingTicket===true});
     case "review-submit": return ledger.independentTaskReview(
       String(input.id),String(input.ticket??''),input.review);
+    case "self-review": return ledger.reviewOwnTask(
+      String(input.id),String(input.leaseToken),input.review);
     case "reviewed-verify": return ledger.verifyReviewedTask(
       String(input.id),String(input.ticket??''));
     case "approve": return ledger.approve(String(input.id), String(input.approvedBy));
@@ -220,6 +222,7 @@ export function dispatchDevControl(
         gate:input.gate,evidenceReference:input.evidenceReference,
         runner:input.runner,reviewer:input.reviewer,
         outcome:input.outcome,reviewNotes:input.reviewNotes,
+        reviewMode:input.reviewMode,
       },
     );
     case "verify": return ledger.verify(String(input.id), String(input.leaseToken));

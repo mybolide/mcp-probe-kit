@@ -30,10 +30,10 @@ const FLOWS = {
     caution: 'Inspect exact task ID, dependencies and allowedPaths before claim; no scope expansion.',
   },
   verification: {
-    description: '完成提交 → 项目自测 → 独立复审 → Gate 验收记录 → Verified',
-    actions: ['task-closure-status','check','complete','report','review-handoff','review-submit','gate-review','reviewed-verify','trace'],
+    description: '完成提交 → 项目自测 → 开发 Agent 实质复核 → Gate 验收记录 → Verified',
+    actions: ['task-closure-status','check','complete','report','self-review','gate-review','verify','trace'],
     example: {action:'task-closure-status',project_root:'/ABSOLUTE/GIT/PROJECT',input:{id:'APPROVED-TASK-ID'}},
-    caution: 'DevControl NEVER runs project tests (even docs, Go, Flutter or iOS). Agent executes its own test framework and reports version-bound evidence. A different Reviewer records each required acceptance Gate via gate-review, in addition to the mandatory task review. Follow the returned nextAction until Verified; missing evidence is not approval.',
+    caution: 'DevControl NEVER runs project tests. The responsible development Agent performs tests, code review and explicit acceptance self-review with real version-bound evidence. Use self-review, then gate-review with reviewMode=self, then verify; a second reviewer is optional, never required for ordinary tasks. Owner still approves frozen release and material scope changes. Missing evidence is not approval.',
   },
   bug: {
     description: '缺陷记录、调查步骤和关联获批任务',
