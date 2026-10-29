@@ -31,7 +31,7 @@
   <main>
     <p class="lang">Source milestone · Chinese / English quick reference</p>
     <h1>MCP Probe Kit 5.0.0 开发版指南</h1>
-    <section><strong>2026-10-28 v5 架构变更：</strong>本分支研发过程已改为 <strong>SQLite + DevControl 唯一状态源</strong>。旧 start_*、Delegated Plan、Markdown 规格工作流不再可用；本文后续的“v4 保留能力”内容是旧开发阶段资料。请先查看 <a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-sqlite-only.md">v5 SQLite-only 实现及迁移现状</a>。5.0.0 尚未发布。<a href="./v5-action-guide.html">Agent 如何选择 action？</a></section>
+    <section><strong>2026-10-28 v5 架构变更：</strong>本分支研发过程已改为 <strong>SQLite + DevControl 唯一状态源</strong>。旧 start_*、Delegated Plan、Markdown 规格工作流不再可用；本文后续的“v4 保留能力”内容是旧开发阶段资料。请先查看 <a href="https://github.com/mybolide/mcp-probe-kit/blob/v5/docs/v5-sqlite-only.md">v5 SQLite-only 实现及迁移现状</a>。5.0.0 尚未发布。<a href="./v5-action-guide.html">Agent 如何选择 action？</a></section>
     <p><a href="./v5-best-practices.html"><strong>推荐先读：v5 最佳实践 · 来自真实项目的冻结计划、独立复审、真实验收与跨会话恢复</strong></a></p>
     <div class="intro">
       <p class="status">5.0.0 已在开发分支，但尚未发布至 npm / MCP Registry，也没有正式发布 Tag。</p>
@@ -43,7 +43,7 @@
       <p>公开稳定版（旧版功能，仍可用）：</p>
       <pre><code>npx -y mcp-probe-kit@4.1.1 install-agent</code></pre>
       <p>5.0.0 源码开发版（需要 Node.js 22+ 才能启用 DevControl）：</p>
-      <pre><code>git clone --branch feature/devcontrol-project-task-ledger https://github.com/mybolide/mcp-probe-kit.git
+      <pre><code>git clone --branch v5 https://github.com/mybolide/mcp-probe-kit.git
 cd mcp-probe-kit
 npm ci
 npm run build</code></pre>
@@ -70,8 +70,8 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --p
       <p>详细中英文参考：</p>
       <ul>
         <li><a href="./v5-best-practices.html">v5 最佳实践 / Field-tested delivery playbook（可直接阅读的独立页面）</a></li>
-        <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-development-guide.md">5.0.0 完整使用与升级指南 / Full source-development guide</a></li>
-        <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/devcontrol.md">DevControl 命令、计划审核、任务生命周期与安全范围 / Reference</a></li>
+        <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/v5/docs/v5-development-guide.md">5.0.0 完整使用与升级指南 / Full source-development guide</a></li>
+        <li><a href="https://github.com/mybolide/mcp-probe-kit/blob/v5/docs/devcontrol.md">DevControl 命令、计划审核、任务生命周期与安全范围 / Reference</a></li>
         <li><a href="./migration-v4.html">v3 → v4 已发布稳定版迁移说明 / Published-stable migration</a></li>
       </ul>
     </section>
@@ -97,7 +97,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol workspace-status --p
         <li>Agent 自己编码、复审并运行真实测试，Git 只提交允许的文件。冻结范围、架构及计划变更需另外评审。</li>
         <li>以 <code>complete</code>、<code>report</code> 保存实际实现、测试和不足，最后用 <code>verify</code> 运行规定 Gate。Git Commit、任务草稿或口头声称均不能替代 Verified。</li>
       </ol>
-      <p>对应完整 CLI 参数、Feature、Bug、Idea、架构工件、范围审批、History 使用方式和升级注意事项，参见<a href="https://github.com/mybolide/mcp-probe-kit/blob/feature/devcontrol-project-task-ledger/docs/v5-development-guide.md">当前源码分支的完整开发指南</a>。</p>
+      <p>对应完整 CLI 参数、Feature、Bug、Idea、架构工件、范围审批、History 使用方式和升级注意事项，参见<a href="https://github.com/mybolide/mcp-probe-kit/blob/v5/docs/v5-development-guide.md">当前源码分支的完整开发指南</a>。</p>
       <p><strong>尚未具备的验证不能假装通过。</strong> 真机端到端 Gate、部分跨平台 CI 和正式发布需要独立的真实测试证据；本分支不是已发布的 npm 5.0.0。</p>
     </section>
   </main>
