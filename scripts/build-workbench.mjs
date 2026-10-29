@@ -19,8 +19,10 @@ const router=readFileSync(resolve(root,'router.js'),'utf8').replace('export func
   'function createHashRouter');
 const fragments=['app.js','guide.js','state.js','tasks.js','records.js','features.js',
   'markdown.js','documents.js','insights.js','runtime.js'];
+// Git worktrees on Windows may use CRLF. Removing the ESM import must not
+// depend on the checkout line ending or the inline script redeclares router.
 const app=fragments.map(name=>readFileSync(resolve(root,name),'utf8')).join('\n')
-  .replace("import { createHashRouter } from './router.js';\n",'');
+  .replace(/^import \{ createHashRouter \} from '\.\/router\.js';\r?\n/m,'');
 // Keep the original renderer functions' whitespace intact: executable
 // acceptance tests inspect the precise browser functions, not a duplicate.
 // The only cross-module dependency is the native router, which is compiled
