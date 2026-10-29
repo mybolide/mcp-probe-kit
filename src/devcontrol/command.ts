@@ -140,6 +140,7 @@ export function dispatchDevControl(
     case "local-developer": return ledger.localDeveloper();
     case "execution-contract": return ledger.executionContract(String(input.id));
     case "task-detail-audit": return ledger.taskDetailAudit(String(input.id));
+    case "task-closure-status": return ledger.taskClosureStatus(String(input.id));
     case "decision-get": return ledger.getDecision(String(input.id));
     case "idea-capture": return ledger.captureIdea({
       release:input.release,title:input.title,description:input.description,

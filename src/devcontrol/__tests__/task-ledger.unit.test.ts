@@ -22,6 +22,24 @@ let ledger: ProjectTaskLedger | null = null;
 function git(...args: string[]): string {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 }
+
+/** Explicitly simulate two separate, auditable roles in a fixture project.
+ * This helper only records a review decision; it never executes project tests.
+ */
+function recordAcceptanceReview(id:string,token:string,gate='docs',reference?:string):void {
+  const history=ledger!.trace(id);
+  const completionHead=history.completion?.git_head;
+  const evidence=history.evidence.find((row:any)=>row.git_head===completionHead&&
+    (!reference||row.reference===reference));
+  if(!evidence)throw Error('Fixture must report genuine test evidence before independent review');
+  const runner=ledger!.next().activeLease?.agent;
+  if(!runner)throw Error('Fixture must retain its developer lease');
+  ledger!.reviewExternalGate(id,token,{
+    gate,runner,reviewer:'separate-acceptance-reviewer',outcome:'passed',
+    evidenceReference:evidence.reference,
+    reviewNotes:'The independent fixture reviewer checked reported acceptance evidence and bound commit identity.',
+  });
+}
 function save(file: string, content: string): void {
   const absolute = path.join(root, file);
   fs.mkdirSync(path.dirname(absolute), { recursive: true });
@@ -86,6 +104,49 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it('keeps iOS as an evidence requirement rather than probing devices or launching XCTest',()=>{
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const claim=ledger!.claim('NEYNA-200','ios-implementation-agent');
+    save('tests/contracts/ios-scope.json','{"delivery":"frozen"}');
+    commit('bounded iOS acceptance fixture submitted by developer');
+    ledger!.report('NEYNA-200',claim.leaseToken,{
+      kind:'ios_physical_test_receipt',
+      reference:'ci-artifact://project/ios/device-run/validated-by-project-reviewer',
+    },true);
+    ledger!.complete('NEYNA-200',claim.leaseToken,{
+      summary:'Submitted a scoped application change and an external project-device evidence reference',
+      implementation:'The committed contract fixture belongs only to this approved task',
+      verification:'Device tests are performed and reviewed by the project, never by DevControl',
+    });
+    const handoff=ledger!.handoffReview('NEYNA-200',{
+      leaseToken:claim.leaseToken,actor:'ios-implementation-agent',
+      reason:'Deliver the original commit and external run evidence to an independent reviewer',
+    });
+    ledger!.independentTaskReview('NEYNA-200',handoff.ticket,{
+      reviewer:'independent-task-reviewer',outcome:'passed',
+      findings:'Inspected the scoped commit, acceptance conditions and project-provided test artifacts.',
+      evidenceReference:'ci-artifact://project/ios/device-run/validated-by-project-reviewer',
+    });
+    expect(ledger!.verifyReviewedTask('NEYNA-200',handoff.ticket)).toMatchObject({
+      passed:false,results:{ios_device_e2e:{passed:false}},
+    });
+    expect(ledger!.taskClosureStatus('NEYNA-200').nextAction).toBe('gate-review');
+    expect(()=>ledger!.reviewExternalGate('NEYNA-200',claim.leaseToken,{
+      gate:'ios_device_e2e',runner:'project-ci-runner',reviewer:'ios-implementation-agent',
+      outcome:'passed',
+      evidenceReference:'ci-artifact://project/ios/device-run/validated-by-project-reviewer',
+      reviewNotes:'A developer cannot pretend to be the independent reviewer for their own CI run',
+    })).toThrow(/independent reviewer/i);
+    ledger!.reviewExternalGate('NEYNA-200',claim.leaseToken,{
+      gate:'ios_device_e2e',runner:'project-ci-runner',reviewer:'independent-gate-reviewer',
+      outcome:'passed',
+      evidenceReference:'ci-artifact://project/ios/device-run/validated-by-project-reviewer',
+      reviewNotes:'Independent Reviewer inspected the externally executed CI device results against acceptance.',
+    });
+    expect(ledger!.verifyReviewedTask('NEYNA-200',handoff.ticket).passed).toBe(true);
+    expect(ledger!.get('NEYNA-200').status).toBe('verified');
+  });
   it('protects pre-existing unrelated untracked files while an independent reviewer verifies actual committed task work',()=>{
     create({id:'NEYNA-200',requiredGates:['docs']});
     ledger!.approve('NEYNA-200','project-owner');
@@ -121,6 +182,8 @@ describe("project ledger and legacy migration", () => {
       evidenceReference:'docs:verify executed with success in the fixture',
     });
     expect(reviewed.outcome).toBe('passed');
+    recordAcceptanceReview('NEYNA-200',claimed.leaseToken,'docs',
+      'docs:verify executed with success in the fixture');
     expect(ledger!.verifyReviewedTask('NEYNA-200',handoff.ticket)).toMatchObject({
       passed:true,reviewer:'independent-qa',
     });
@@ -131,6 +194,63 @@ describe("project ledger and legacy migration", () => {
     expect(trace.reviewHandoff).toMatchObject({reviewer:'independent-qa',outcome:'passed'});
     expect(trace.audit.map((row:any)=>row.event)).toContain('reviewed_task_verified');
     expect(JSON.stringify(trace)).not.toContain(handoff.ticket);
+  });
+
+  it('completes a resumed external Gate review against immutable original delivery despite later unrelated commits',()=>{
+    create({id:'NEYNA-200',requiredGates:['independent_acceptance']});
+    create({id:'NEYNA-201',requiredGates:['docs']});
+    ledger!.approve('NEYNA-200','owner');ledger!.approve('NEYNA-201','owner');
+    const first=ledger!.claim('NEYNA-200','service-agent');
+    save('tests/contracts/deferred-service.json','{"delivered":true}');
+    commit('scoped original delivery');
+    const original=git('rev-parse','HEAD');
+    ledger!.report('NEYNA-200',first.leaseToken,{
+      kind:'unit_test',reference:'Original unit tests executed for frozen service delivery'},true);
+    ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'Submitted actual service integration code before external acceptance was available',
+      implementation:'Committed an isolated contract fixture with exact frozen file scope',
+      verification:'Local unit tests reported but the separately reviewed acceptance runner is pending',
+    });
+    ledger!.deferVerification({id:'NEYNA-200',leaseToken:first.leaseToken,
+      gate:'independent_acceptance',reason:'External integration runner unavailable until next maintenance window'});
+    const second=ledger!.claim('NEYNA-201','other-agent');
+    save('tests/contracts/unrelated-after-deferral.json','{"otherTask":true}');
+    commit('unrelated later task');
+    ledger!.report('NEYNA-201',second.leaseToken,{kind:'docs',
+      reference:'Documentation check for unrelated task'},true);
+    ledger!.complete('NEYNA-201',second.leaseToken,{
+      summary:'Unrelated task committed its own file',
+      implementation:'Added separate fixture with a non-overlapping path',
+      verification:'Docs Gate can run for the unrelated task',
+    });
+    recordAcceptanceReview('NEYNA-201',second.leaseToken,'docs',
+      'Documentation check for unrelated task');
+    expect(ledger!.verify('NEYNA-201',second.leaseToken).passed).toBe(true);
+    const current=git('rev-parse','HEAD');expect(current).not.toBe(original);
+    const resumed=ledger!.resumeVerification('NEYNA-200','service-agent');
+    ledger!.report('NEYNA-200',resumed.leaseToken,{kind:'external_test',
+      reference:'Independent acceptance fixture output from resumed external runner'},false);
+    const handoff=ledger!.handoffReview('NEYNA-200',{
+      leaseToken:resumed.leaseToken,actor:'service-agent',
+      reason:'Deferred frozen delivery is ready for a different Reviewer after external runner returned',
+    });
+    expect(handoff.completionHead).toBe(original);
+    expect(handoff.currentHead).toBe(current);
+    ledger!.independentTaskReview('NEYNA-200',handoff.ticket,{
+      reviewer:'delivery-reviewer',outcome:'passed',
+      findings:'Checked the immutable original delivery against later unrelated commits and inspected test evidence.',
+      evidenceReference:'Original unit tests executed for frozen service delivery',
+    });
+    ledger!.reviewExternalGate('NEYNA-200',resumed.leaseToken,{
+      gate:'independent_acceptance',
+      evidenceReference:'Independent acceptance fixture output from resumed external runner',
+      runner:'service-agent',reviewer:'gate-reviewer',outcome:'passed',
+      reviewNotes:'Independently inspected the external integration fixture output against the original delivery',
+    });
+    expect(ledger!.verifyReviewedTask('NEYNA-200',handoff.ticket)).toMatchObject({passed:true});
+    expect(ledger!.get('NEYNA-200').status).toBe('verified');
+    expect(ledger!.taskClosureStatus('NEYNA-200')).toMatchObject({completed:true,steps:[]});
+    expect(git('rev-parse','HEAD')).toBe(current);
   });
 
   it('recovers an expired in_progress lease and completes the original Git task through independent review',()=>{
@@ -175,6 +295,8 @@ describe("project ledger and legacy migration", () => {
         findings:'Independently inspected the preserved original Git commit, complete report and real fixture evidence.',
         evidenceReference:'recovered task test evidence tied to committed revision',
       });
+      recordAcceptanceReview('NEYNA-200',takeover.leaseToken,'docs',
+        'recovered task test evidence tied to committed revision');
       expect(ledger!.verifyReviewedTask('NEYNA-200',review.ticket).passed).toBe(true);
       expect(ledger!.get('NEYNA-200').status).toBe('verified');
       expect(fs.readFileSync(path.join(root,'other-project/existing.txt'),'utf8'))
@@ -252,6 +374,8 @@ describe("project ledger and legacy migration", () => {
         findings:'Audited the old completion and scoped commit using recorded evidence; no task file was rewritten.',
         evidenceReference:'original completion evidence from departed agent',
       });
+      recordAcceptanceReview('NEYNA-200',claimed.leaseToken,'docs',
+        'original completion evidence from departed agent');
       expect(ledger!.verifyReviewedTask('NEYNA-200',recovered.ticket).passed).toBe(true);
       expect(ledger!.get('NEYNA-200').status).toBe('verified');
       expect(ledger!.trace('NEYNA-200').audit.some((e:any)=>
@@ -429,6 +553,7 @@ describe("project ledger and legacy migration", () => {
     expect(deferred.preservedUncommittedFiles).toBe(2);
     expect(ledger!.get("NEYNA-200").status).toBe("in_review");
     expect(ledger!.get("NEYNA-200").pendingVerification.gate).toBe("ios_device_e2e");
+    expect(ledger!.taskClosureStatus('NEYNA-200').nextAction).toBe('resume-verification');
     expect(ledger!.next().activeLease).toBeNull();
     expect(git("status","--porcelain=v1")).toBe(statusBefore);
   });
@@ -457,6 +582,8 @@ describe("project ledger and legacy migration", () => {
       .toEqual(manifest);
     ledger!.report("NEYNA-200",claim.leaseToken,
       {kind:"real_gate",reference:"independent approved task gate passed"},true);
+    recordAcceptanceReview('NEYNA-200',claim.leaseToken,'docs',
+      'independent approved task gate passed');
     expect(ledger!.verify("NEYNA-200",claim.leaseToken)).toMatchObject({
       passed:true,taskId:"NEYNA-200",
     });
@@ -751,27 +878,10 @@ describe("project ledger and legacy migration", () => {
     expect(()=>ledger!.assessIdea(captured.id,assessment,4)).toThrow(/Only/);
   });
 
-  it("refuses a Go Core task whose real HTTP Gate cannot be satisfied inside its frozen file scope",()=>{
+  it("treats Go HTTP acceptance as a requirement, not a hardcoded test-file scanner",()=>{
     create({id:"NEYNA-290",allowedPaths:["services/core/cmd/**"],
       requiredGates:["go_http_integration"]});
     ledger!.approve("NEYNA-290","owner");
-    const impossible=ledger!.executionContract("NEYNA-290");
-    expect(impossible.eligible).toBe(false);
-    expect(impossible.issues).toEqual(expect.arrayContaining([
-      expect.stringContaining("services/core/go.mod outside allowedPaths"),
-      expect.stringContaining("services/core/internal/http_integration_test.go outside allowedPaths"),
-    ]));
-    expect(()=>ledger!.claim("NEYNA-290","agent")).toThrow(/outside allowedPaths/);
-    // Pre-existing actual dependencies can legally be consumed by a task
-    // even when creating them was not in that task's approved scope.
-    save("services/core/go.mod","module example.com/core\n\ngo 1.22\n");
-    save("services/core/internal/http_integration_test.go",
-      "package internal\nimport \"testing\"\nfunc TestNotHTTP(t *testing.T) {}\n");
-    expect(ledger!.executionContract("NEYNA-290").issues).toEqual([
-      expect.stringContaining("services/core/internal/http_integration_test.go outside allowedPaths"),
-    ]);
-    save("services/core/internal/http_integration_test.go",
-      "package internal\nimport \"testing\"\nfunc TestHTTPStarts(t *testing.T) {}\n");
     expect(ledger!.executionContract("NEYNA-290")).toMatchObject({eligible:true,issues:[]});
     expect(ledger!.claim("NEYNA-290","agent").task.status).toBe("in_progress");
   });
@@ -784,28 +894,15 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.executionContract("NEYNA-291")).toMatchObject({eligible:true,issues:[]});
   });
 
-  it("will not claim a PostgreSQL acceptance task whose real DB test is outside frozen scope",()=>{
+  it("does not require Go or PostgreSQL test paths to be known to the MCP",()=>{
     create({id:"NEYNA-292",allowedPaths:["services/core/cmd/**"],
       requiredGates:["go_http_integration","go_postgres_live"]});
     ledger!.approve("NEYNA-292","test-owner");
-    const contract=ledger!.executionContract("NEYNA-292");
-    expect(contract.eligible).toBe(false);
-    expect(contract.issues).toEqual(expect.arrayContaining([
-      expect.stringContaining("services/core/integration/postgres_live_test.go outside allowedPaths"),
-    ]));
-    expect(()=>ledger!.claim("NEYNA-292","agent"))
-      .toThrow(/postgres_live_test.go outside allowedPaths/);
-    save("services/core/go.mod","module example.com/core\n\ngo 1.22\n");
-    save("services/core/internal/http_integration_test.go",
-      "package internal\nimport \"testing\"\nfunc TestHTTPBoot(t *testing.T) {}\n");
-    save("services/core/integration/postgres_live_test.go",
-      "//go:build integration && postgres_live\n\npackage integration\n"+
-      "import \"testing\"\nfunc TestPostgresLiveConnection(t *testing.T) {}\n");
     expect(ledger!.executionContract("NEYNA-292")).toMatchObject({eligible:true,issues:[]});
-    const preflight=(ledger! as any).gate("go_postgres_live") as {passed:boolean};
-    // The pre-existing test code is only a fixture. A missing test database
-    // is a hard failure even when a Go test name and HTTP bootstrap exist.
-    expect(preflight.passed).toBe(false);
+    const claimed=ledger!.claim("NEYNA-292","agent");
+    expect(claimed.task.status).toBe("in_progress");
+    // The Agent must later report results and an independent reviewer must
+    // attest to both requirements; DevControl never connects to PostgreSQL.
   });
 
   it("allows only generated Skill and AGENTS.md updates without a task lease",()=>{
@@ -1608,6 +1705,8 @@ describe("project ledger and legacy migration", () => {
       findings:'Validated the original stored Git ancestry, completion revision and the independently retested contract fixture.',
       evidenceReference:'real previously committed in-scope fixture file',
     });
+    recordAcceptanceReview('WORK-102',resumed.leaseToken,'docs',
+      'real previously committed in-scope fixture file');
     expect(ledger!.verifyReviewedTask("WORK-102",recoveredHandoff.ticket)).toMatchObject({
       passed:true,files:["tests/contracts/partial-replay.json"]});
     // Owner-approved new work MUST be its own frozen task, never masquerade
@@ -2466,6 +2565,8 @@ describe("project ledger and legacy migration", () => {
       implementation:"A separate implementation was committed after the deferred task",
       verification:"Real docs gate available and executed successfully",
     });
+    recordAcceptanceReview('NEYNA-201',second.leaseToken,'docs',
+      'Real test of next task succeeded');
     expect(ledger!.verify("NEYNA-201",second.leaseToken).passed).toBe(true);
     const laterHead=git("rev-parse","HEAD");
     expect(laterHead).not.toBe(originalHead);
@@ -2473,10 +2574,28 @@ describe("project ledger and legacy migration", () => {
     expect(resumed.baseHead).toBe(first.baseHead);
     expect(resumed.originalCompletionHead).toBe(originalHead);
     expect(ledger!.get("NEYNA-200").pendingVerification).toBeNull();
+    expect(ledger!.taskClosureStatus('NEYNA-200').nextAction).toBe('review-handoff');
+    const handoff=ledger!.handoffReview('NEYNA-200',{
+      leaseToken:resumed.leaseToken,actor:'audio-agent',
+      reason:'Original deferred audio submission remains unmodified and needs an independent review',
+    });
+    expect(handoff.completionHead).toBe(originalHead);
+    expect(handoff.currentHead).toBe(laterHead);
+    expect(ledger!.taskClosureStatus('NEYNA-200').nextAction).toBe('review-submit');
+    expect(ledger!.independentTaskReview('NEYNA-200',handoff.ticket,{
+      reviewer:'independent-device-reviewer',outcome:'passed',
+      findings:'Inspected the original audio delivery commit and confirmed later commits only changed an unrelated fixture.',
+      evidenceReference:'Actual Flutter local tests pass; device absent',
+    }).outcome).toBe('passed');
+    expect(ledger!.taskClosureStatus('NEYNA-200').nextAction).toBe('gate-review');
     const missingPhysicalGate=ledger!.verify("NEYNA-200",resumed.leaseToken);
     expect(missingPhysicalGate.passed).toBe(false);
     expect(missingPhysicalGate.files).toEqual(["tests/contracts/audio-session.json"]);
     expect(missingPhysicalGate.reason).toBeUndefined(); // not a stale Git head or wrong diff
+    const reviewedGate=ledger!.verifyReviewedTask('NEYNA-200',handoff.ticket);
+    expect(reviewedGate.passed).toBe(false); // No actual iPhone: Gate is not waived.
+    expect(reviewedGate.nextAction).toBe('task-closure-status');
+    expect(reviewedGate.files).toEqual(['tests/contracts/audio-session.json']);
     expect(ledger!.get("NEYNA-200").status).toBe("in_review");
     expect(ledger!.trace("NEYNA-200").verificationDeferral.completion_head)
       .toBe(originalHead);
@@ -2504,7 +2623,7 @@ describe("project ledger and legacy migration", () => {
     expect(() => ledger!.deferVerification({
       id:"NEYNA-200",leaseToken:first.leaseToken,
       gate:"docs",reason,
-    })).toThrow(/external|physical/i);
+    })).toThrow(/declared|cannot be deferred/i);
     save("tests/contracts/dirty.json",'{"uncommitted":true}');
     expect(() => ledger!.deferVerification({
       id:"NEYNA-200",leaseToken:first.leaseToken,
@@ -2639,6 +2758,8 @@ describe("project ledger and legacy migration", () => {
       implementation: "Retained the earlier Git base and included both commits.",
       verification: "Confirmed the full scoped diff and successful validation.",
     });
+    recordAcceptanceReview('NEYNA-200',reclaimed.leaseToken,'docs',
+      'real verified test command');
     const verified = ledger!.verify("NEYNA-200", reclaimed.leaseToken);
     expect(verified.passed).toBe(true);
     expect(verified.files).toContain("tests/contracts/one.json");
@@ -2654,28 +2775,30 @@ describe("project ledger and legacy migration", () => {
     expect(() => ledger!.release("NEYNA-200", claim.leaseToken)).toThrow(/renew or reclaim/i);
   });
 
-  it("fails closed if a validation gate changes working files during verification", () => {
-    // Prepare a hostile gate before claim, so it does not count as an
-    // out-of-scope change made during the claimed task.
+  it("never executes a project-supplied validation script while checking a Gate", () => {
+    // The project's own test command is intentionally hostile; the MCP is
+    // only a ledger and must never execute it, even when the Gate is "docs".
     save("scripts/validate_docs.py",
-      "from pathlib import Path\nPath('README.md').write_text('mutated by gate')\nprint('bad gate success')\n");
-    commit("baseline hostile gate for fixture");
-    create();
-    ledger!.approve("NEYNA-200", "owner");
-    const claim = ledger!.claim("NEYNA-200", "agent");
-    save("tests/contracts/test.json", "{}");
-    commit("task code");
-    ledger!.report("NEYNA-200", claim.leaseToken, {
-      kind: "test", reference: "run actual validation",
-    }, true);
-    ledger!.complete("NEYNA-200", claim.leaseToken, {
-      summary: "Added a valid isolated test file",
-      implementation: "Committed a contract test and isolated check commands.",
-      verification: "Run actual docs acceptance while monitoring Git working state.",
+      "from pathlib import Path\nPath('README.md').write_text('mutated by gate')\n");
+    commit("record hostile project test script");
+    create();ledger!.approve("NEYNA-200","owner");
+    const claim=ledger!.claim("NEYNA-200","agent");
+    save("tests/contracts/test.json","{}");commit("scoped task code");
+    ledger!.report("NEYNA-200",claim.leaseToken,{
+      kind:"test",reference:"project test evidence supplied externally",
+    },true);
+    ledger!.complete("NEYNA-200",claim.leaseToken,{
+      summary:"Reported a scoped implementation and external project acceptance evidence",
+      implementation:"Committed a reviewed contract fixture within the allowed task paths",
+      verification:"The actual test process is the Agent's responsibility, not the DevControl MCP",
     });
-    // The 'docs' gate mutates README.md *during* verification.
-    expect(() => ledger!.verify("NEYNA-200", claim.leaseToken)).toThrow(/Git changed after gates/);
-    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
+    expect(ledger!.verify("NEYNA-200",claim.leaseToken)).toMatchObject({
+      passed:false,results:{docs:{passed:false}},
+    });
+    recordAcceptanceReview("NEYNA-200",claim.leaseToken,"docs",
+      "project test evidence supplied externally");
+    expect(ledger!.verify("NEYNA-200",claim.leaseToken).passed).toBe(true);
+    expect(fs.readFileSync(path.join(root,"README.md"),"utf8")).toBe("fixture\n");
   });
 
   it("blocks parent verification while any child is unverified", () => {
@@ -2735,6 +2858,9 @@ describe("project ledger and legacy migration", () => {
       implementation: "Added a new test contract fixture and verified its Git scope.",
       verification: "Ran Python docs acceptance gate against the committed revision.",
     });
+    expect(ledger!.verify('NEYNA-200',claim.leaseToken)).toMatchObject({passed:false,
+      results:{docs:{passed:false}}});
+    recordAcceptanceReview('NEYNA-200',claim.leaseToken,'docs','unit tests');
     const result = ledger!.verify("NEYNA-200", claim.leaseToken);
     expect(result.passed).toBe(true);
     expect(ledger!.get("NEYNA-200").status).toBe("verified");

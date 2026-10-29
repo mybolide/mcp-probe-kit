@@ -70,16 +70,28 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
 4. For an approved task, use \`next\` → \`execution-contract\` → \`claim\`
    and, as needed, \`renew\`. Edit only frozen paths. The Agent, not DevControl,
    independently reviews software, runs real tests and commits approved files.
-5. Use \`check\` → real Git commit → \`complete\` → \`report\` →
-   \`verify\`. A commit, progress claim or simulated test is never Verified.
-   For custom project tests, Agent runs tests and reports evidence, and a
-   separate reviewer records outcome through gate-review. DevControl
-   never runs arbitrary business-specific Python/gRPC/etc executors.
+5. Use \`check\` → real Git commit → \`complete\` / \`report\`.
+   Then read \`task-closure-status\` and arrange \`review-handoff\` → independent
+   \`review-submit\`. For EACH declared acceptance Gate except the internal
+   \`sqlite_decision\` record, the development Agent executes actual tests
+   using its own project toolchain, reports version-bound evidence and a
+   distinct Reviewer supplies \`gate-review\`. Only then call
+   \`reviewed-verify\` to validate the complete workflow. DevControl NEVER
+   executes project-specific tests, including docs, Go, Flutter, Xcode,
+   PostgreSQL or physical device tests; it never decides business correctness.
+   A commit, progress claim or synthetic test is never Verified.
    Missing actual test evidence or independent review fails closed.
    When a required physical/external Gate is unavailable after a committed
    completion, use \`defer-verification\` with the current lease token, exact
    Gate and reason. This frees the task lease but NEVER passes the Gate.
-   After the device returns use \`resume-verification\`, then actual \`verify\`.
+   After the real runner/device returns use the resume-verification action.
+   Then call read-only task-closure-status to identify the next required
+   operation and missing evidence instead of endlessly waiting for Owner.
+   The independent Reviewer inspects the original immutable delivery
+   Commit; later unrelated HEAD commits may coexist but may never touch
+   the submitted files. Post-resume real Gate evidence can be reported
+   without rewriting the old commit. A distinct gate-review and
+   reviewed-verify still enforce the originally required real Gate.
    Never rewrite SQLite task states or silently discard user files.
    Pre-existing unrelated tracked/untracked files at claim are protected by
    automatic SHA-256 snapshots, not by demanding that the user delete them.

@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **81 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **82 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -173,14 +173,14 @@ fabricated. A historical task without any acceptance Gate is not claimable.
 Once a release is frozen, all subsequent eligible work must occur in the
 frozen tree. A brand-new Git project has no migration exemption.
 
-Product-specific acceptance gates are deliberately distinct from the initial
-document and schema-contract checks. `go_http_integration` requires actual
-Core HTTP integration tests, `flutter_test` requires a real Flutter test
-suite, and `ios_device_e2e` / `v01_release_e2e` currently **fail closed**
-until a genuine physical-device and complete product-flow evidence runner is
-defined. They are valid pending plan-gate IDs, not a claim that platform
-testing or release verification already exists. A passed `go_contract`
-fixture cannot satisfy `go_http_integration`.
+All Gate names (including legacy `docs`, `go_contract`,
+`go_http_integration`, `go_postgres_live`, `flutter_test`, `ios_device_e2e`,
+`v01_release_e2e`) identify frozen acceptance conditions, **not programs
+DevControl runs**. The development Agent runs tests using the project's own
+toolchain and records the original run evidence. An independent Reviewer
+submits a version-bound `gate-review` outcome with evidence references.
+`sqlite_decision` is a structured internal DevControl decision record; it
+is not a business test runner. Missing or failed reviews remain blocked.
 
 ## Work item visibility and substantive task quality
 
@@ -536,30 +536,21 @@ tracked/untracked WIP byte fingerprints without changing Git or source files.
 The later `defer-verification` must match that exact snapshot. Neither
 completion nor deferral passes the real device Gate.
 Once the real device/runner is available, use `resume-verification` to
-explicitly claim the old task and run its full real `verify`. Later commits
+reclaim the old task and check original version-bound evidence with `reviewed-verify`. Later commits
 cannot be counted in the frozen original task diff; later modifications to
 the original delivered files block direct resumption for fresh review.
 
-**Task-scoped iPhone XCTest receipts (existing frozen `ios_device_e2e` Gate):**
-The development Agent must run an actual, scope-appropriate XCTest on a
-paired physical iPhone, then record its Apple `.xcresult` evidence in the
-task. For supported iOS/audio work, provide
-`DEVCONTROL_IOS_DEVICE_UDID` and
-`DEVCONTROL_IOS_DEVICE_GATE_MANIFEST` pointing to a JSON file within
-`.neyna/state/` containing `taskId`, `testSource`,
-`testMethod` (without trailing `()`), `resultBundle` and a full
-`gitHead`. The test case must contain the task ID (e.g. `F415`) and
-the source method must exist in that Git revision. The Gate independently
-checks Apple's real `xcresulttool` summary and test tree: one matching
-unskipped, passing XCTest, no other tests or failures, a recent report, the
-same physical iPhone UDID and a live CoreDevice tunnel. It reacquires an
-idle USB tunnel through the supported Apple interface before rechecking.
-An absent or mismatched receipt fails closed; documentation, fabricated
-timestamps, synthetic PCM unit tests or an installed app alone are not
-proof of the frozen real-device acceptance requirement. Do not interpret
-this machine-check as a separate human review of additional acceptance
-conditions. The legacy F4-03 fresh-permission Gate retains its stricter
-two-screenshot/isolated-test requirements unchanged.
+**Device and project-specific acceptance evidence:** `ios_device_e2e`
+is a requirement label, not a DevControl XCTest command. The development
+Agent is responsible for the applicable physical-device tests, CI and
+receipts; the Reviewer evaluates whether those results genuinely cover the
+frozen acceptance condition. DevControl stores who ran and reviewed them,
+the evidence reference, Git commit and outcome, and moves state to
+`Verified` only when the workflow is complete. It does not select a device,
+launch Xcode/Flutter/Go, parse XCTest bundles, create tunnels or execute
+project-specific validation commands. Use read-only `task-closure-status`
+to identify a missing report, independent review, Gate review or final
+confirmation rather than wait indefinitely.
 
 The `import-spec` operation uses stable manifest subspec IDs rather than array
 positions, and its full task/dependency import is **transactional**. Reordering
@@ -568,7 +559,7 @@ import rolls back without leaving partially created child tasks.
 
 `verify` requires the original claimed Git base to remain an ancestor of
 HEAD and verifies that HEAD and the working tree remain stable throughout the
-actual gate execution. Changing code during checks rejects verification.
+acceptance-record validation. Changing code during checks rejects verification.
 
 The optional standalone MCP server exposes one command per project task action.
 Agents must explicitly register it; installing the main package does **not**

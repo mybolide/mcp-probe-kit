@@ -8,6 +8,7 @@ import { ProjectTaskLedger } from "../task-ledger.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "../release-plan.js";
 import { createDevControlBoardServer } from "../board-server.js";
 import { dispatchDevControl } from "../command.js";
+import { isEvidenceGate } from "../gate-policy.js";
 
 const cleanup: { root: string; ledger: ProjectTaskLedger }[] = [];
 function fixture() {
@@ -385,16 +386,16 @@ describe("DevControl full-version planning", () => {
     }
   });
 
-  it("rejects release claims if product-specific gates are not actually executable", () => {
-    const {ledger}=fixture();
+  it("keeps all legacy platform Gate IDs as independently reviewable acceptance conditions", () => {
+    fixture();
     const candidate=plan();
     candidate.nodes[1].requiredGates=["go_http_integration"];
     candidate.nodes[2].requiredGates=["ios_device_e2e","v01_release_e2e"];
     expect(reviewReleasePlan(candidate).passed).toBe(true);
-    const inspect=ledger as unknown as {gate:(name:string)=>{passed:boolean,error:string}};
-    expect(inspect.gate("go_http_integration")).toMatchObject({passed:false});
-    expect(inspect.gate("flutter_test")).toMatchObject({passed:false});
-    expect(inspect.gate("ios_device_e2e")).toMatchObject({passed:false});
-    expect(inspect.gate("v01_release_e2e")).toMatchObject({passed:false});
+    for(const gate of ["docs","go_contract","go_http_integration","go_postgres_live",
+      "flutter_test","ios_device_e2e","v01_release_e2e"]){
+      expect(isEvidenceGate(gate)).toBe(true);
+    }
+    expect(isEvidenceGate('sqlite_decision')).toBe(false);
   });
 });

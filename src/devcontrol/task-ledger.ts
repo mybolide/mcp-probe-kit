@@ -14,9 +14,6 @@ import { ensureDatabaseIgnored, resolveProjectDatabase } from "./project-storage
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
-import { resolveFlutterTestTarget } from "./flutter-gate.js";
-import { runLivePostgresGate, livePostgresTestFile } from "./go-postgres-gate.js";
-import { runIosDeviceGate } from "./ios-device-gate.js";
 import { makeReviewAgentAction, type ReviewAgentAction } from "./review-actions.js";
 import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } from "./release-plan.js";
 import { localDeveloper } from "./local-developer.js";
@@ -37,7 +34,7 @@ import { releaseReviewSubjectHash, reviewAgentReview, reviewAtomicWorkItems, rev
 import { assessIdeaShape, ideaSubjectHash, reviewIdeaShape,
   type IdeaAssessment, type IdeaIndependentReview } from "./idea-review.js";
 import { extractRequirementRefs } from './requirement-ids.js';
-import { validGateRequirements, isExternalGate } from './gate-policy.js';
+import { validGateRequirements, isEvidenceGate } from './gate-policy.js';
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -102,6 +99,7 @@ function committedFilesBetween(root: string, base: string, end: string,
     fail("GIT_ERROR","Cannot inspect frozen task Git revision");
   }
 
+
   return [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
 }
 
@@ -109,35 +107,10 @@ function committedFilesBetween(root: string, base: string, end: string,
  * Existing fixtures may satisfy a gate; otherwise this task must be allowed
  * to create or repair the actual files used by that gate. Do not weaken it.
  */
-function missingGatePrerequisiteScope(root:string,gates:string[],allowedPaths:string[]):string[] {
-  const requirements:{gate:string;file:string;valid:(absolute:string)=>boolean}[]=[
-    {gate:"go_http_integration",file:"services/core/go.mod",
-      valid:location=>fs.existsSync(location)},
-    {gate:"go_http_integration",file:"services/core/internal/http_integration_test.go",
-      valid:location=>fs.existsSync(location)&&
-        /^func TestHTTP\w*\s*\(/m.test(fs.readFileSync(location,"utf8"))},
-    {gate:"go_postgres_live",file:"services/core/go.mod",
-      valid:location=>fs.existsSync(location)},
-    {gate:"go_postgres_live",file:livePostgresTestFile,
-      valid:location=>fs.existsSync(location)&&
-        /^func TestPostgresLive\w*\s*\(\s*t\s+\*testing\.T\s*\)/m.test(
-          fs.readFileSync(location,"utf8"))},
-  ];
-  const issues:string[]=[];
-  for(const requirement of requirements){
-    if(!gates.includes(requirement.gate))continue;
-    if(requirement.valid(path.join(root,requirement.file)))continue;
-    if(allowedPaths.some(pattern=>pathAllowed(requirement.file,pattern)))continue;
-    issues.push("Gate "+requirement.gate+" requires missing or invalid "+requirement.file+
-      " outside allowedPaths; request a reviewed frozen-scope amendment before claiming");
-  }
-
-  return issues;
-}
 
 // Session memory has its own History Session subsystem. This table must not
 // masquerade as the global Qdrant memory asset system or the session archive.
-type WorkItemKind = "bug" | "architecture_change";
+type WorkItemKind = 'bug' | 'architecture_change';
 
 export interface ProjectWorkItemInput {
   kind: WorkItemKind;
@@ -895,10 +868,7 @@ export class ProjectTaskLedger {
     if(task.status!=="in_review"||!note||!this.db.prepare(
       "SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1").get(id))
       fail("REVIEW_NOT_READY","Completion report and task evidence are required before handoff");
-    const head=git(this.root,["rev-parse","HEAD"]);
-    if(head!==note.git_head||
-      !run(this.root,"git",["merge-base","--is-ancestor",lease.base_head,head]).passed)
-      fail("HANDOFF_HEAD_CHANGED","Review handoff requires exact committed completion HEAD and original Git ancestry");
+    const head=this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
     // Do not move or discard dirty files while changing the workflow actor.
     this.protectedClaimWorktree(id,task,lease.base_head);
     const token=randomUUID()+randomUUID();
@@ -909,14 +879,17 @@ export class ProjectTaskLedger {
       if(existing)fail("HANDOFF_EXISTS","Existing review handoff must be completed or explicitly rejected first");
       this.db.prepare(`INSERT INTO dc_task_review_handoffs
         (task_id,completion_revision,completion_head,developer,ticket_hash,issued_at,expires_at)
-        VALUES(?,?,?,?,?,?,?)`).run(id,note.revision,head,lease.agent,ticketHash,utc(),expiresAt);
+        VALUES(?,?,?,?,?,?,?)`).run(id,note.revision,note.git_head,lease.agent,ticketHash,utc(),expiresAt);
       this.db.prepare("UPDATE dc_leases SET expires_at=? WHERE task_id=?")
         .run(expiresAt,id);
       this.audit(id,"review_handed_off",input.actor.trim(),{
-        developer:lease.agent,revision:note.revision,head,reason:input.reason,
+        developer:lease.agent,revision:note.revision,head:note.git_head,
+        observedHead:head,reason:input.reason,
         via:normal?'developer_lease':'authorized_owner_recovery',expiresAt});
       return {taskId:id,status:'awaiting_independent_review',ticket:token,
-        completionRevision:note.revision,completionHead:head,expiresAt};
+        completionRevision:note.revision,completionHead:note.git_head,
+        currentHead:head,expiresAt,
+        nextAction:'review-submit: a different Reviewer inspects this delivery and cites its recorded evidence'};
     });
   }
 
@@ -934,9 +907,11 @@ export class ProjectTaskLedger {
       if(handoff.outcome)fail("REVIEW_ALREADY_DECIDED","Previous independent review is immutable");
       const note=this.latestCompletion(id);
       if(!note||note.revision!==handoff.completion_revision||
-        note.git_head!==handoff.completion_head||
-        git(this.root,["rev-parse","HEAD"])!==handoff.completion_head)
+        note.git_head!==handoff.completion_head)
         fail("REVIEW_BASE_CHANGED","Completion or Git HEAD changed; begin a new handoff");
+      const lease=this.db.prepare('SELECT base_head FROM dc_leases WHERE task_id=?').get(id);
+      if(!lease)fail('LEASE_REQUIRED','Reviewer needs the retained delivery lease baseline');
+      this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
       const evidence=this.db.prepare(
         "SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=?",
       ).get(id,input.evidenceReference,handoff.completion_head);
@@ -955,8 +930,37 @@ export class ProjectTaskLedger {
           completionRevision:note.revision,reason:input.findings});
       }
       return {taskId:id,outcome:input.outcome,status:input.outcome==='passed'?
-        'reviewed_for_gate_verification':'returned_for_rework',head:note.git_head};
+        'reviewed_for_gate_verification':'returned_for_rework',head:note.git_head,
+        nextAction:input.outcome==='passed'?'reviewed-verify: execute the unchanged real Gate requirements':
+          'correct the reviewed findings, then complete and start a new handoff'};
     });
+  }
+
+  /** Review the submitted commit, not whichever HEAD unrelated developers
+   * reached later. An advanced HEAD is allowed ONLY for a resumed, immutable
+   * deferral whose original files were never touched by later commits.
+   * Never reset/checkout Git to make the old review appear current.
+   */
+  private checkReviewDeliveryHead(id:string,baseHead:string,completionHead:string):string {
+    const current=git(this.root,['rev-parse','HEAD']);
+    if(!run(this.root,'git',['merge-base','--is-ancestor',baseHead,current]).passed)
+      fail('REVIEW_BASE_CHANGED','Original task claim is no longer in Git history');
+    if(current===completionHead)return current;
+    const deferral=this.db.prepare(`SELECT base_head,completion_head,resumed_at
+      FROM dc_verification_deferrals WHERE task_id=?`).get(id);
+    if(!deferral||!deferral.resumed_at||deferral.base_head!==baseHead||
+      deferral.completion_head!==completionHead)
+      fail('REVIEW_BASE_CHANGED',
+        'Completion commit differs from HEAD. Only a safely resumed deferred task may review its original commit');
+    if(!run(this.root,'git',['merge-base','--is-ancestor',completionHead,current]).passed)
+      fail('REVIEW_BASE_CHANGED','Deferred completion commit is no longer in Git history');
+    const delivered=new Set(committedFilesBetween(this.root,baseHead,completionHead));
+    const later=committedFilesBetween(this.root,completionHead,current);
+    const overlaps=later.filter(file=>delivered.has(file));
+    if(overlaps.length)fail('DEFERRED_CODE_CHANGED',
+      'Later commits touched the deferred delivery: '+overlaps.join(', ')+
+      '. Inspect changes and record a new scoped completion before reviewing');
+    return current;
   }
 
   private requireReviewTicket(id:string,ticket:string):Row {
@@ -978,7 +982,98 @@ export class ProjectTaskLedger {
     if(!lease||lease.agent!==row.developer)
       fail("LEASE_CHANGED","Original developer's task lease is no longer available");
     const result=this.verify(id,String(lease.token));
-    return {...result,reviewer:row.reviewer};
+    return {...result,reviewer:row.reviewer,
+      ...(!result.passed?{nextAction:'task-closure-status',
+        nextActionHint:'Read the failed Gate and required evidence; keep the task in review'}:{})};
+  }
+
+  /** Read-only, explicit closeout checklist. Never impersonates a reviewer,
+   * manufactures evidence, or initiates tests on behalf of the host Agent.
+   */
+  taskClosureStatus(id:string):Row {
+    const task=this.requireTask(id);
+    const lease=this.db.prepare('SELECT agent,token,base_head,expires_at FROM dc_leases WHERE task_id=?').get(id);
+    const deferred=this.db.prepare('SELECT gate_name,completion_head,resumed_at FROM dc_verification_deferrals WHERE task_id=?').get(id);
+    const note=this.latestCompletion(id);
+    const evidence=this.db.prepare('SELECT reference,git_head,kind FROM dc_evidence WHERE task_id=? ORDER BY id').all(id);
+    const handoff=this.db.prepare(`SELECT reviewer,outcome,completion_head,completion_revision,
+      issued_at,expires_at FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
+    const gates=JSON.parse(task.required_gates) as string[];
+    const decisionRecord=this.db.prepare('SELECT task_id FROM dc_task_decisions WHERE task_id=?')
+      .get(id);
+    const contract=this.executionContract(id);
+    const internalDecision=gates.length===1&&gates[0]==='sqlite_decision'||
+      (!!decisionRecord&&contract.profile==='atomic-work-item'&&
+        (contract.spec as {type?:string}|null)?.type==='decision');
+    const acceptanceGates=internalDecision?[]:gates.filter(name=>isEvidenceGate(name));
+    const reviewHead=note?.git_head??null;
+    const pendingGates=acceptanceGates.filter(name=>{
+      const record=this.db.prepare(`SELECT outcome,git_head,evidence_reference,
+        reviewer,runner,lease_token_hash FROM dc_external_gate_reviews WHERE task_id=? AND gate_name=?`).get(id,name);
+      return !record||record.outcome!=='passed'||record.git_head!==reviewHead||
+        record.reviewer===record.runner||record.reviewer===lease?.agent||
+        !lease||record.lease_token_hash!==createHash('sha256').update(String(lease.token)).digest('hex')||
+        !this.db.prepare(
+          'SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=?',
+        ).get(id,String(record.evidence_reference),String(reviewHead));
+    });
+    const steps:{action:string;condition:string;instructions:string}[]=[];
+    const add=(action:string,condition:string,instructions:string)=>steps.push({action,condition,instructions});
+    if(task.status==='verified'){
+      return {taskId:id,status:'verified',readyForReview:false,completed:true,
+        nextAction:null,steps:[],completionHead:note?.git_head??null};
+    }
+    if(deferred&&!deferred.resumed_at){
+      return {taskId:id,status:task.status,completed:false,leaseActive:false,
+        nextAction:'resume-verification',deferredGate:deferred.gate_name,
+        completionHead:note?.git_head??null,steps:[{
+          action:'resume-verification',condition:'physical/external Gate pending',
+          instructions:'Wait for the required real runner/device, then resume this frozen delivery. Do not redevelop or mark the Gate passed',
+        }],note:'Deferral preserves the original code and evidence; no Verified yet'};
+    }
+    if(!lease||lease.expires_at<=Date.now()){
+      add('recover-task','no valid developer lease',
+        'Use explicitly authorized Owner recovery for a lost lease; a completed deferred task should first use resume-verification');
+    }
+    if(!note){
+      add('complete','structured delivery missing',
+        'Record the existing Git submission and actual test results under the valid task lease; do not redevelop');
+    }
+    if(!evidence.length){
+      add('report','task evidence missing',
+        'Record actual test output or commit-bound evidence already produced by the Agent');
+    }
+    if(task.status==='in_progress'&&note&&evidence.length){
+      add('report','developer has not requested review yet',
+        'Use report with existing real evidence and readyForReview=true before requesting independent review');
+    }
+    if(note&&evidence.length){
+      if(!handoff){
+        if(task.status==='in_review')add('review-handoff','independent task review not requested',
+          'Developer hands off this exact committed completion; Owner recovery requires a configured credential');
+      }else if(!handoff.outcome){
+        add('review-submit','independent reviewer decision missing',
+          'A different Reviewer must inspect the original completion commit and cite a real recorded evidence reference; use the handoff ticket, not the developer lease');
+      }else if(handoff.outcome==='passed'){
+        if(pendingGates.length)add('gate-review','required independently reviewed acceptance conditions missing',
+          'Agent runs project tests and reports evidence for '+pendingGates.join(', ')+
+          '; different Reviewer records pass/fail. DevControl never runs those tests');
+        add('reviewed-verify','task review passed but Verified not recorded',
+          'Validate approved scope, version-bound evidence and independent Gate decisions. No project tests are executed by MCP');
+      }else{
+        add('complete','independent review rejected delivery',
+          'Fix the concrete reviewer findings and submit a new completion revision before arranging another handoff');
+      }
+    }
+    return {taskId:id,status:task.status,completed:false,
+      nextAction:steps[0]?.action??'trace',steps,
+      completionHead:note?.git_head??null,currentHead:git(this.root,['rev-parse','HEAD']),
+      deferredGate:deferred&&!deferred.resumed_at?deferred.gate_name:null,
+      leaseActive:!!lease&&lease.expires_at>Date.now(),
+      recordedEvidence:evidence.map(item=>({reference:item.reference,kind:item.kind,head:item.git_head})),
+      reviewStatus:handoff?.outcome??(handoff?'awaiting_reviewer':'not_started'),
+      reviewCompletionHead:handoff?.completion_head??null,requiredGates:gates,
+      note:'This checklist does not assert passing tests or authorization; follow the current action and inspect real Gate results'};
   }
 
   /** Persist an engineering decision without generating any ADR/Spec Markdown.
@@ -2361,17 +2456,15 @@ export class ProjectTaskLedger {
   /** A reviewable, frozen execution brief, not an invitation to redesign. */
   executionContract(id:string):Row {
     const task=this.get(id);
-    const gateScopeIssues=missingGatePrerequisiteScope(
-      this.root,task.requiredGates,task.allowedPaths);
+
     if(String(task.planId??"").startsWith("release-work:")) {
       const release=String(task.release);
       const frozen=this.releaseWorkPlan(release);
       const item=frozen.frozen?.plan?.workItems?.find((entry:{id:string})=>entry.id===id);
       const frozenEligible=!!item&&this.isApprovedForExecution(this.requireTask(id));
-      const eligible=frozenEligible&&gateScopeIssues.length===0;
+      const eligible=frozenEligible;
       return {taskId:id,eligible,
-        issues:[...(!frozenEligible?["Whole-release task roster has not been frozen or source changed"]:[]),
-          ...gateScopeIssues],
+        issues:!frozenEligible?["Whole-release task roster has not been frozen or source changed"]:[],
         profile:"atomic-work-item",release,planHash:frozen.frozenHash,
         spec:item??null,owner:task.owner,dependencies:task.dependsOn,
         deliveryModes:item?.type==="decision"?["sqlite-decision","legacy-git"]:["git"],
@@ -2388,8 +2481,7 @@ export class ProjectTaskLedger {
       if(approved.sourceDrift)issues.push("start_feature source revision changed after Owner approval");
       if(node?.openQuestions?.length)issues.push("Unresolved design choices in Feature task");
       if(task.status==="draft"||task.status==="cancelled")issues.push("Task is not approved for development");
-      issues.push(...gateScopeIssues);
-      return {taskId:id,eligible:issues.length===0,issues,
+        return {taskId:id,eligible:issues.length===0,issues,
         profile:"spec-depth-v3",planHash:approved.hash,featureName:name,
         featureRevision:snapshot?.sourceFeature?.revision??null,
         owner:task.owner??this.localDeveloper().name,assignment:task.ownerAssignment,
@@ -2411,7 +2503,6 @@ export class ProjectTaskLedger {
       if(!node?.scenario||!node.workflow?.length||!node.businessRules?.length)
         issues.push("Incomplete frozen trigger, workflow or business invariants");
     }
-    issues.push(...gateScopeIssues);
     return {taskId:id,eligible:issues.length===0,issues,
       profile:plan?.qualityProfile??null,planHash:frozen.frozenHash,
       owner:task.owner??this.localDeveloper().name,
@@ -3318,7 +3409,7 @@ export class ProjectTaskLedger {
       }
       if (row.status === "synced") return { id, status: "synced", reused: true };
       const base = String(row.source_ref ?? "");
-      const head = git(this.root, ["rev-parse", "HEAD"]);
+      const head=git(this.root,['rev-parse','HEAD']);
       if (!base || !run(this.root, "git", ["merge-base", "--is-ancestor", base, head]).passed) {
         fail("ARCHITECTURE_BASE_MISSING", "Architecture change requires original Git base");
       }
@@ -4186,11 +4277,9 @@ export class ProjectTaskLedger {
       if(task.status!=="in_review")
         fail("NOT_IN_REVIEW","Only completed and reported tasks may defer verification");
       const gates=JSON.parse(task.required_gates) as string[];
-      if(!gates.includes(input.gate)||
-          !(["ios_device_e2e","v01_release_e2e"].includes(input.gate)||
-            isExternalGate(input.gate))) {
+      if(!gates.includes(input.gate)||!isEvidenceGate(input.gate)) {
         fail("GATE_NOT_DEFERRABLE",
-          "Only an actually required external/physical acceptance gate may be deferred");
+          "Only a declared, still-unmet project acceptance Gate may be deferred; an internal SQLite decision cannot be deferred");
       }
       if(this.db.prepare(
         "SELECT task_id FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NULL"
@@ -4529,14 +4618,22 @@ export class ProjectTaskLedger {
     return this.inTransaction(() => {
       const lease = this.requireLease(id, token);
       const current = this.requireTask(id);
-      if (current.status !== "in_progress") fail("INVALID_STATE", "Only an in-progress task can report");
+      const deferred=this.db.prepare(`SELECT completion_head,resumed_at FROM dc_verification_deferrals
+        WHERE task_id=?`).get(id);
+      const completion=this.latestCompletion(id);
+      const resumedEvidence=current.status==='in_review'&&!!deferred?.resumed_at&&
+        completion?.git_head===deferred.completion_head;
+      if(current.status!=='in_progress'&&!resumedEvidence)
+        fail('INVALID_STATE','Report during development or after an explicitly resumed verification');
       if (typeof evidence?.kind!=="string"||typeof evidence?.reference!=="string"||
         !evidence.kind.trim()||!evidence.reference.trim()||
         ["undefined","null"].includes(evidence.kind.trim().toLowerCase())||
         ["undefined","null"].includes(evidence.reference.trim().toLowerCase())) {
         fail("EVIDENCE_REQUIRED", "Evidence kind and reference required");
       }
-      const head = git(this.root, ["rev-parse", "HEAD"]);
+      const observedHead=git(this.root,['rev-parse','HEAD']);
+      if(resumedEvidence)this.checkReviewDeliveryHead(id,String(lease.base_head),String(completion!.git_head));
+      const head=resumedEvidence?String(completion!.git_head):observedHead;
       this.db.prepare(
         "INSERT INTO dc_evidence(task_id,kind,reference,git_head,created_at) VALUES(?,?,?,?,?)",
       ).run(id, evidence.kind, evidence.reference, head, utc());
@@ -4546,7 +4643,8 @@ export class ProjectTaskLedger {
         ).run(utc(), id);
       }
       this.audit(id, "evidence_reported", lease.agent, {
-        kind: evidence.kind, reference: evidence.reference, readyForReview, gitHead: head,
+        kind:evidence.kind,reference:evidence.reference,readyForReview,
+        gitHead:head,observedHead,resumedVerification:resumedEvidence,
       });
       return this.get(id);
     });
@@ -4565,21 +4663,22 @@ export class ProjectTaskLedger {
     const task = this.requireTask(id);
     if (task.status !== "in_review") fail("NOT_IN_REVIEW", "Complete and report evidence before external review");
     const planned = JSON.parse(task.required_gates) as string[];
-    if (!isExternalGate(input?.gate) || !planned.includes(input.gate)) {
-      fail("GATE_NOT_DECLARED", "External review must match a frozen project-specific acceptance requirement");
+    if (!isEvidenceGate(input?.gate) || !planned.includes(input.gate)) {
+      fail("GATE_NOT_DECLARED", "Gate review must match a frozen acceptance requirement; SQLite decision records use their own internal audit");
     }
     if (!["passed", "failed"].includes(input.outcome) ||
         !input.evidenceReference?.trim() ||
-        !input.runner?.trim() || input.runner !== lease.agent ||
-        !input.reviewer?.trim() || input.reviewer === input.runner ||
+        !input.runner?.trim() ||
+        !input.reviewer?.trim() || input.reviewer===input.runner ||
+        input.reviewer===lease.agent ||
         !input.reviewNotes?.trim() || input.reviewNotes.trim().length < 25) {
       fail("INDEPENDENT_GATE_REVIEW_REQUIRED",
-        "Require explicit pass/fail, reporter matching lease, a different reviewer and substantive review findings");
+        "Require actual runner (Agent or CI), an independent reviewer distinct from runner and reporting Agent, explicit outcome and substantive findings");
     }
-    const head = git(this.root, ["rev-parse", "HEAD"]);
     const completion = this.latestCompletion(id);
-    if (!completion || completion.git_head !== head)
-      fail("COMPLETION_REVISION_REQUIRED", "Review the current committed task revision after completion");
+    if(!completion)fail('COMPLETION_REVISION_REQUIRED','Register the real completed delivery before Gate review');
+    const observedHead=this.checkReviewDeliveryHead(id,String(lease.base_head),String(completion.git_head));
+    const head=String(completion.git_head);
     const evidence = this.db.prepare(
       "SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=? LIMIT 1",
     ).get(id, input.evidenceReference.trim(), head);
@@ -4598,8 +4697,9 @@ export class ProjectTaskLedger {
         input.evidenceReference.trim(),input.runner,input.reviewer,input.outcome,
         input.reviewNotes.trim(),utc());
       this.audit(id,"external_gate_reviewed",input.reviewer,{
-        gate:input.gate,outcome:input.outcome,gitHead:head,
+        gate:input.gate,outcome:input.outcome,gitHead:head,observedHead,
         evidenceReference:input.evidenceReference,runner:input.runner,
+        reportedBy:lease.agent,
       });
       return {taskId:id,gate:input.gate,outcome:input.outcome,gitHead:head,
         reviewer:input.reviewer,evidenceReference:input.evidenceReference,
@@ -4607,64 +4707,9 @@ export class ProjectTaskLedger {
     });
   }
 
-  private gate(name: string, allowedPaths: string[] = [], taskId = ""): Row {
-    if (name === "docs") return run(this.root, "python3", ["scripts/validate_docs.py"]);
-    if (name === "devcontrol_tests") return run(
-      this.root, "python3", ["-m", "unittest", "discover", "-s", "tests/devcontrol", "-p", "test_*.py", "-q"],
-    );
-    if (name === "go_contract") {
-      const tests = path.join(this.root, "tests/contracts");
-      if (!fs.existsSync(path.join(tests, "go.mod"))) {
-        return { passed: false, error: "Go contract module not found" };
-      }
-      const testFiles = fs.readdirSync(tests).filter((file) => file.endsWith("_test.go"));
-      if (!testFiles.length || !testFiles.some((file) =>
-        /^func Test\w+\s*\(/m.test(fs.readFileSync(path.join(tests, file), "utf8")))) {
-        return { passed: false, error: "No non-vacuous Go contract tests" };
-      }
-      return run(tests, "go", ["test", "./..."]);
-    }
-    if (name === "go_http_integration") {
-      const core = path.join(this.root, "services/core");
-      if (!fs.existsSync(path.join(core, "go.mod"))) {
-        return { passed: false, error: "Real Go Core module missing; contract fixtures do not satisfy this gate" };
-      }
-      const integration = path.join(core, "internal/http_integration_test.go");
-      if (!fs.existsSync(integration) ||
-          !/^func TestHTTP\w*\s*\(/m.test(fs.readFileSync(integration, "utf8"))) {
-        return { passed: false, error: "Executable Go Core HTTP integration tests missing" };
-      }
-      return run(core, "go", ["test", "-tags=integration", "./..."]);
-    }
-    if (name === "go_postgres_live")return runLivePostgresGate(this.root);
-    if (name === "flutter_test") {
-      const target = resolveFlutterTestTarget(this.root, allowedPaths);
-      if (!target.passed) return target;
-      // The host may keep its SDK outside PATH; never fall back to a mocked
-      // Flutter runner. Explicit configuration must be an existing executable.
-      const sdkRoot = process.env.FLUTTER_ROOT?.trim();
-      const configured = process.env.FLUTTER_BIN?.trim() ||
-        (sdkRoot ? path.join(sdkRoot, "bin", "flutter") : "");
-      if (configured && (!path.isAbsolute(configured) || !fs.existsSync(configured))) {
-        return { passed: false, error: "FLUTTER_BIN/FLUTTER_ROOT must resolve to a real absolute Flutter launcher" };
-      }
-      return {
-        ...run(target.appRoot, configured || "flutter", ["test"], 300_000),
-        appRoot: target.relativeRoot,
-        testFiles: target.testFiles,
-      };
-    }
-    if (name === "ios_device_e2e") {
-      const kinds=this.db.prepare(
-        "SELECT kind FROM dc_evidence WHERE task_id=?",
-      ).all(taskId).map(row=>String(row.kind));
-      return runIosDeviceGate(this.root,taskId,kinds);
-    }
-    if (name === "v01_release_e2e") {
-      return { passed: false, error: "Real multi-input iPhone→Core→memory acceptance gate not configured" };
-    }
-    return { passed: false, error: `Unknown gate ${name}` };
-  }
+  // Gate names are project acceptance requirements. No test executors
+  // belong in DevControl; agents and the project's CI run their own tests.
+  // DevControl verifies only version-bound, independently reviewed evidence.
 
   verify(id: string, token: string): Row {
     const lease = this.requireLease(id, token);
@@ -4796,25 +4841,26 @@ export class ProjectTaskLedger {
     const gates = sqliteDelivery?["sqlite_decision"]:plannedGates;
     if (!gates.length) return { taskId: id, passed: false, reason: "Missing gate definition" };
     const tokenHash=createHash("sha256").update(token).digest("hex");
-    const results = Object.fromEntries(gates.map((name) => {
+    const results:Record<string,Row> = Object.fromEntries(gates.map((name) => {
       if (name === "sqlite_decision") return [name,{passed:true,taskId:id,
         revision:recorded!.revision,status:recorded!.status,productApproval:"not_implied"}];
-      if (isExternalGate(name)) {
+      if (isEvidenceGate(name)) {
         const result = this.db.prepare(
           "SELECT * FROM dc_external_gate_reviews WHERE task_id=? AND gate_name=?",
         ).get(id,name);
+        const targetHead=frozenReview?note.git_head:startHead;
         const reviewed=!!result && result.outcome==="passed" &&
-          result.git_head===startHead && result.lease_token_hash===tokenHash &&
-          result.reviewer!==result.runner &&
+          result.git_head===targetHead && result.lease_token_hash===tokenHash &&
+          result.reviewer!==result.runner && result.reviewer!==lease.agent &&
           !!this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=?")
-            .get(id,result?.evidence_reference??"",startHead);
-        return [name,{passed:reviewed,external:true,
-          reason:reviewed?"Agent test result and independent review recorded":
-            "Missing passing Agent test evidence and independent revision-bound review",
+            .get(id,result?.evidence_reference??"",targetHead);
+        return [name,{passed:reviewed,evidenceBased:true,
+          reason:reviewed?"Agent test evidence and independent review recorded":
+            "Missing passing Agent test evidence and independent revision-bound Gate review; run the project's own tests, call report then gate-review",
           ...(result?{reviewer:result.reviewer,outcome:result.outcome,
             evidenceReference:result.evidence_reference}:{})}];
       }
-      return [name,this.gate(name, allowedPaths, id)];
+      return [name,{passed:false,reason:'Unrecognized acceptance requirement; inspect the approved plan and evidence policy'}];
     }));
     const stableHead = git(this.root, ["rev-parse", "HEAD"]);
     const protectedEditsStable=protectedEditsAreStable();

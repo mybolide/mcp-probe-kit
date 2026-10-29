@@ -30,10 +30,10 @@ const FLOWS = {
     caution: 'Inspect exact task ID, dependencies and allowedPaths before claim; no scope expansion.',
   },
   verification: {
-    description: '代码提交、报告真实证据、核查并验证',
-    actions: ['check','complete','report','gate-review','verify','trace'],
-    example: {action:'trace',project_root:'/ABSOLUTE/GIT/PROJECT',input:{id:'APPROVED-TASK-ID'}},
-    caution: 'Agent executes real tests; custom gate-review records independent outcome, not a test executed by MCP. Evidence alone is not Verified.',
+    description: '完成提交 → 项目自测 → 独立复审 → Gate 验收记录 → Verified',
+    actions: ['task-closure-status','check','complete','report','review-handoff','review-submit','gate-review','reviewed-verify','trace'],
+    example: {action:'task-closure-status',project_root:'/ABSOLUTE/GIT/PROJECT',input:{id:'APPROVED-TASK-ID'}},
+    caution: 'DevControl NEVER runs project tests (even docs, Go, Flutter or iOS). Agent executes its own test framework and reports version-bound evidence. A different Reviewer records each required acceptance Gate via gate-review, in addition to the mandatory task review. Follow the returned nextAction until Verified; missing evidence is not approval.',
   },
   bug: {
     description: '缺陷记录、调查步骤和关联获批任务',
