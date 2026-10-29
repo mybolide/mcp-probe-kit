@@ -3897,6 +3897,31 @@ export class ProjectTaskLedger {
     return snapshot;
   }
 
+  /** Separate this task's renewed commit slice from legitimately intervening
+   * tasks. The resume event is immutable and recorded before new work; a
+   * changed Git graph or missing event fails closed to the strict baseline.
+   */
+  private resumedDeliveryBase(id:string,baseHead:string,head:string):string|null {
+    const deferred=this.db.prepare(`SELECT base_head,completion_head,resumed_at
+      FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NOT NULL`).get(id);
+    if(!deferred||deferred.base_head!==baseHead)return null;
+    const record=this.db.prepare(`SELECT details_json FROM dc_audit
+      WHERE task_id=? AND event='verification_resumed' ORDER BY id DESC LIMIT 1`).get(id);
+    if(!record)return null;
+    try{
+      const event=JSON.parse(String(record.details_json));
+      const resume=String(event.currentHead??'');
+      if(event.originalBaseHead!==baseHead||
+          event.originalCompletionHead!==deferred.completion_head||
+          !/^[a-f0-9]{40}$/.test(resume)||
+          !run(this.root,'git',['merge-base','--is-ancestor',
+            deferred.completion_head,resume]).passed||
+          !run(this.root,'git',['merge-base','--is-ancestor',resume,head]).passed)
+        return null;
+      return resume;
+    }catch{return null;}
+  }
+
   /** Legacy/in-flight claim recovery: when another project created an
    * unrelated untracked file after the original claim, capture its bytes as
    * non-delivery data instead of demanding removal or committing it.
@@ -3949,7 +3974,9 @@ export class ProjectTaskLedger {
         this.checkPreservedOwnerEdits(task,input.existingDirtyFiles,lease.base_head);
       // A worktree snapshot cannot stand in for an actual committed task diff.
       if(protectedSnapshot){
-        const changed=committedFilesBetween(this.root,lease.base_head,head);
+        const resumedBase=this.resumedDeliveryBase(id,String(lease.base_head),head);
+        const changed=committedFilesBetween(this.root,
+          resumedBase??lease.base_head,head);
         const allowed=JSON.parse(task.allowed_paths) as string[];
         if(!changed.length||changed.some(file=>!allowed.some(p=>pathAllowed(file,p))))
           fail("DELIVERY_SCOPE_INVALID","Only committed, in-scope task work can record completion");
@@ -3981,6 +4008,7 @@ export class ProjectTaskLedger {
         head, lease.agent, record.createdAt);
       this.audit(id, "completion_recorded", lease.agent, {
         revision, gitHead: head,
+        resumedIncrementalBase:this.resumedDeliveryBase(id,String(lease.base_head),head),
         preservedUncommittedFiles:preservedWorktree.length,
         checksum: createHash("sha256").update(JSON.stringify(record)).digest("hex"),
       });
@@ -4483,7 +4511,11 @@ export class ProjectTaskLedger {
             resumed.gate_name===input.gate&&resumed.base_head===lease.base_head&&
             run(this.root,'git',['merge-base','--is-ancestor',
               resumed.completion_head,head]).passed){
-          const delivered=committedFilesBetween(this.root,lease.base_head,head);
+          const resumeBase=this.resumedDeliveryBase(input.id,
+            String(lease.base_head),head);
+          if(!resumeBase)fail('REDEFERRAL_BASE_CHANGED',
+            'Missing immutable Git resume baseline for revised task completion');
+          const delivered=committedFilesBetween(this.root,resumeBase,head);
           const allowed=JSON.parse(task.allowed_paths) as string[];
           if(!delivered.length||delivered.some(file=>
             !allowed.some(pattern=>pathAllowed(file,pattern))))
@@ -4499,12 +4531,13 @@ export class ProjectTaskLedger {
           this.db.prepare(`UPDATE dc_verification_deferrals SET
             reason=?,base_head=?,completion_head=?,completion_revision=?,
             deferred_by=?,deferred_at=?,preserved_worktree_json=?,resumed_at=NULL
-            WHERE task_id=?`).run(input.reason.trim(),lease.base_head,head,
+            WHERE task_id=?`).run(input.reason.trim(),resumeBase,head,
               note.revision,lease.agent,utc(),JSON.stringify(current),input.id);
           this.db.prepare('DELETE FROM dc_leases WHERE singleton=1').run();
           this.audit(input.id,'verification_redeferred_new_revision',lease.agent,{
             gate:input.gate,previousCompletionHead:resumed.completion_head,
             currentCompletionHead:head,completionRevision:note.revision,
+            originalBaseHead:resumed.base_head,resumedIncrementalBase:resumeBase,
             scopeFiles:delivered,gatePassed:false,leaseReleased:true,
             preservedUncommittedFiles:current.length,
           });
@@ -5100,9 +5133,12 @@ export class ProjectTaskLedger {
     if (!run(this.root, "git", ["merge-base", "--is-ancestor", lease.base_head, startHead]).passed) {
       return { taskId: id, passed: false, reason: "Claim baseline is not an ancestor of HEAD" };
     }
+    const incrementalBase=!frozenReview&&deferred&&
+      note.revision>deferred.completion_revision?
+      this.resumedDeliveryBase(id,String(lease.base_head),startHead):null;
     const files = frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head) :
-      changedFiles(this.root, lease.base_head);
+      changedFiles(this.root, incrementalBase??lease.base_head);
     const governed=this.checkGovernedArtifacts();
     if(!governed.passed)return {taskId:id,passed:false,
       reason:"Governed architecture artifacts differ from approved revision",
@@ -5135,7 +5171,7 @@ export class ProjectTaskLedger {
       !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
     const unapprovedDocs = undocumentedMarkdown(frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head,"A") :
-      addedFiles(this.root, lease.base_head), allowedPaths);
+      addedFiles(this.root, incrementalBase??lease.base_head), allowedPaths);
     if ((!files.length&&!sqliteDelivery) || denied.length || unapprovedDocs.length) {
       return {
         taskId: id, passed: false,

@@ -98,7 +98,9 @@ function create(options: Partial<{
 
   it('revised resumed delivery records new-HEAD evidence and safely re-defers an unpassed Gate',()=>{
     create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    create({id:'NEYNA-201',allowedPaths:['other-project/**'],requiredGates:['docs']});
     ledger!.approve('NEYNA-200','owner');
+    ledger!.approve('NEYNA-201','owner');
     const first=ledger!.claim('NEYNA-200','responsible-agent');
     save('tests/contracts/native.txt','native hardware baseline\n');
     commit('freeze native physical implementation');
@@ -113,6 +115,21 @@ function create(options: Partial<{
     });
     ledger!.deferVerification({id:'NEYNA-200',leaseToken:first.leaseToken,
       gate:'ios_device_e2e',reason:'Real iPhone still missing; originally approved code frozen'});
+    const unrelated=ledger!.claim('NEYNA-201','other-agent');
+    save('other-project/production.txt','unrelated previously approved delivery\n');
+    commit('another task lawfully advanced main before original resumed');
+    const unrelatedHead=git('rev-parse','HEAD');
+    ledger!.report('NEYNA-201',unrelated.leaseToken,{
+      kind:'project_test',reference:'Real other task contract tests succeeded',
+    },true);
+    ledger!.complete('NEYNA-201',unrelated.leaseToken,{
+      summary:'Other independent approved task finished while phone absent',
+      implementation:'Only other-project source was committed',
+      verification:'Other task contract gate passed',
+    });
+    recordAcceptanceReview('NEYNA-201',unrelated.leaseToken,'docs',
+      'Real other task contract tests succeeded');
+    expect(ledger!.verify('NEYNA-201',unrelated.leaseToken).passed).toBe(true);
     const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent');
     save('tests/contracts/ui.txt','real Flutter standby and interruption UI tests\n');
     commit('deliver legally scoped Flutter UI after deferred hardware work');
@@ -130,7 +147,9 @@ function create(options: Partial<{
     ledger!.report('NEYNA-200',resumed.leaseToken,{
       kind:'flutter_test',reference:'Full real Flutter test suite passed on revised HEAD',
     },true);
-    expect(ledger!.verify('NEYNA-200',resumed.leaseToken).passed).toBe(false);
+    const pendingReview=ledger!.verify('NEYNA-200',resumed.leaseToken);
+    expect(pendingReview.passed).toBe(false);
+    expect(pendingReview.files).toEqual(['tests/contracts/ui.txt']);
     const pending=ledger!.deferVerification({id:'NEYNA-200',
       leaseToken:resumed.leaseToken,gate:'ios_device_e2e',
       reason:'Signed iPhone Flutter UI accessibility test still pending; never fake Gate pass',
@@ -139,6 +158,8 @@ function create(options: Partial<{
       redeferred:true,newCompletionRevision:true,originalHead:updatedHead});
     expect(ledger!.trace('NEYNA-200').verificationDeferral.completion_head)
       .toBe(updatedHead);
+    expect(ledger!.trace('NEYNA-200').verificationDeferral.base_head)
+      .toBe(unrelatedHead);
     expect(ledger!.trace('NEYNA-200').audit.map((event:any)=>event.event))
       .toContain('verification_redeferred_new_revision');
     expect(ledger!.trace('NEYNA-200').completion.git_head).toBe(updatedHead);

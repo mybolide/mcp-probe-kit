@@ -571,6 +571,13 @@ retains an immutable audit link to the superseded commit, records the new
 completion revision, releases the lease, and leaves the Gate **not passed**.
 This is permitted only for approved in-scope committed files and the original
 Gate; it neither waives physical acceptance nor rewrites history.
+If other tasks lawfully committed between the original deferral and this task's
+explicit resumption, the new completion is scoped against the immutable Git
+HEAD recorded at **resumption**, not an obsolete original lease base that spans
+those other tasks. The original completion and original base remain in the
+audit trail, and the superseding deferral uses the new increment's base.
+Unreviewed out-of-scope edits made during the resumed lease still block the
+new completion; other agents' earlier commits are not credited to this task.
 For older legacy completion records using a protected Owner-edit manifest,
 `review-worktree` records a separate explicit developer audit after legitimate
 intervening commits: the reviewed current Git HEAD, a substantive explanation,
