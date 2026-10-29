@@ -173,6 +173,16 @@ for (const file of readmes) {
 
 const v5Guide = read('docs/v5-development-guide.md');
 const actionGuide = read('docs/v5-agent-action-guide.md');
+// A local ignored file can make docs:verify look green while a clean clone
+// fails immediately. Check the index, not merely existence on this machine.
+let actionGuideTracked = false;
+try {
+  execFileSync('git', ['ls-files','--error-unmatch','--','docs/v5-agent-action-guide.md'],
+    {cwd:root,encoding:'utf8',windowsHide:true,timeout:3500,stdio:'pipe'});
+  actionGuideTracked=true;
+} catch { /* Fail the release check instead of accepting local-only docs. */ }
+check(actionGuideTracked,
+  'v5 authoritative Agent action guide must be tracked in Git for clean installs');
 const v5Sqlite = read('docs/v5-sqlite-only.md');
 const actionGuidePage = read('docs/pages/v5-action-guide.html');
 const actionCatalogSource = read('src/devcontrol/action-catalog.ts');

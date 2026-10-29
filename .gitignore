@@ -39,6 +39,7 @@ docs/specs/
 docs/verification/
 docs/*.md
 !docs/v5-development-guide.md
+!docs/v5-agent-action-guide.md
 !docs/v5-best-practices.md
 !docs/v5-sqlite-only.md
 !docs/v5-workbench.md
