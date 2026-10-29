@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **83 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **84 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
