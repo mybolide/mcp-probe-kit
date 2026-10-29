@@ -4,7 +4,10 @@ import { VERSION } from "../version.js";
 export const SKILL_VERSION_FRONTMATTER_KEY = "mcp-probe-kit-version";
 
 /** Independently upgrade managed guidance without inventing an npm release. */
-export const SKILL_GUIDANCE_REVISION = "v5-sqlite-devcontrol-20261029-action-guide";
+// Bump whenever the managed Skill / AGENTS contract changes, even if the
+// unpublished package still reads 5.0.0. An old same-version user project
+// must not be considered current after the Gate policy changes.
+export const SKILL_GUIDANCE_REVISION = "v5-sqlite-devcontrol-20261029-evidence-only-gates-r2";
 export const SKILL_GUIDANCE_MARKER = "mcp-probe:guidance-revision";
 
 /** @deprecated 旧版 HTML 版本标记，仍用于解析历史文件 */

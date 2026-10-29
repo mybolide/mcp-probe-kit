@@ -171,11 +171,11 @@ ${managedRevision}
 - **管理操作**：当前 24 个模型工具，唯一正式研发入口 \`devcontrol\` 提供 ${V5_DEVC_ACTIONS.length} 个 SQLite action，完整分组见 Skill 的 DevControl operation reference；不要将 action 当作独立 MCP 工具。
 - **必须先恢复**：新对话先 \`history_session_bootstrap\`（Git/Node22+ 项目唯一实时 History = SQLite \`hs_*\`），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
 - **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码/正式 PRD/ADR/API/Schema 仍归 Git，业务数据库独立。
-- **逐任务闭环**：新版本基线使用 \`plan-review\` / \`plan-propose\` 和精确 Hash 的 \`plan-approve\`；规划与 Review 分轮完成。按冻结合同 \`claim\`、真实编码、运行测试、合法 Git 提交，使用 \`complete\` / \`report\` 登记。随后开发 Agent \`review-handoff\`，独立 Reviewer \`review-submit\`，通过后 \`reviewed-verify\` 执行原有 Gate 和 Verified；失败必须退回返工。MCP 管理状态和证据，不替 Agent 编码、执行 SQL 或复核。
+- **逐任务闭环**：新版本基线使用 \`plan-review\` / \`plan-propose\` 和精确 Hash 的 \`plan-approve\`；规划与 Review 分轮完成。按冻结合同 \`claim\`、真实编码、项目自己的工具执行测试、合法 Git 提交，以 \`complete\` / \`report\` 登记。用 \`task-closure-status\` 逐步确认缺失记录：开发 Agent 发起 \`review-handoff\`，**不同的独立 Reviewer** 用 \`review-submit\` 检查实现和证据，再由独立 Reviewer 按每个冻结验收条件填写 \`gate-review\`，之后才能 \`reviewed-verify\`。DevControl 仅检查证据、审核、审批和 Git 版本，**不执行 Gate 对应的项目测试命令**；失败明确返回下一步，不得伪造 Verified。
 - **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；第一轮完成 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\` 并结束规划轮次。下一轮重读提案，使用 \`feature-task-second-review\` 单独记录覆盖、依赖、失败场景、文件范围和验收五项审查，再以精确 Hash \`feature-task-approve\` 确认。开发 Agent 可以自行做第二轮 Review，不强制另一名 Agent，也不逐项要求 Owner 批准；重大冻结范围变更仍须 Owner 明确授权。草稿不可领取。
 - **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新 Feature 叶子任务以 30–60 分钟为主，必须填写预计工时；1–2 小时需具体说明无法继续安全拆分的原因，超过 2 小时须拆分。新整版计划可采用 task-detail-v2 执行相同严格规则；旧已冻结计划不得直接重写。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
-- **外部真实测试**：Python/Go/Flutter/gRPC 业务测试由 Agent 实际运行，DevControl 只记录计划要求、证据和独立复核结果，不强制另一个 Agent。外部 Gate 用 gate-review 留痕，证据存在不代表测试通过，也不能自动 verify。
-- **缺少真机或外部验收环境**：代码已提交、完成说明和证据入账的 \`in_review\` 任务可使用 \`defer-verification\`（当前租约、精确Gate、真实原因）登记待验证并释放任务租约。它不减少或放宽原 Gate，不增加 Verified。必须维护 Git/Owner 未提交文件完整性；不能为了延期直接改 SQLite 或 stash/reset。真机回来后使用 \`resume-verification\` 并运行真实 \`verify\`；其间其它任务只能按正常独立冻结范围开发。
+- **真实验收 Gate**：\`docs\`、\`go_contract\`、\`flutter_test\`、\`ios_device_e2e\` 等只是验收条件标识，不是 MCP 测试执行器。项目测试由开发 Agent 或项目 CI 执行，开发 Agent 将实际输出与 Git Commit 绑定入账；**不同于开发者和实际测试执行者的独立 Reviewer** 对每项 Gate 使用 \`gate-review\` 审核。Feature 规划的分轮二次 Review 可由原 Agent 完成，但正式任务和验收 Gate 的独立审核不能由开发 Agent 冒充。
+- **延期验收与会话恢复**：代码已提交、完成说明和证据入账的 \`in_review\` 任务，可用 \`defer-verification\`（当前租约、精确 Gate、真实原因）释放租约但绝不通过 Gate；真机/CI 恢复后使用 \`resume-verification\`、\`task-closure-status\`，按提示补录真实 \`report\`、正式 \`review-handoff\` → \`review-submit\`，以及各个必要的独立 \`gate-review\`，最后 \`reviewed-verify\` 核对状态。后续无冲突任务可以推进 Git HEAD，审核仍绑定冻结的原始 Commit；禁止为了验收 reset、stash、删除别人文件或直接改 SQLite。
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
@@ -212,11 +212,19 @@ ${managedRevision}
   requests. Unapproved children remain
   visible but are not executable. Each leaf has a single verifiable goal,
   exact files, dependencies, positive/negative tests and stop conditions. New Feature leaves target 0.5–1h, require a specific reason for any 1–2h exception, and reject tasks over 2h; new whole-release planning can opt into task-detail-v2 without invalidating existing frozen tasks.
-- Agents run real Python/Go/Flutter/gRPC project tests; DevControl records
-  reported evidence and independently reviewed gate-review results only.
-- Plan/review/propose, obtain exact hash-bound Owner approval; claim an
-  approved task, independently implement/review/run genuine tests, commit
-  approved paths, complete/report/verify via the main MCP \`devcontrol\`.
+- Agents or project CI run Python/Go/Flutter/XCTest and other actual project
+  tests. All legacy Gate names are acceptance criteria, not executable MCP
+  test commands. DevControl only checks version-bound evidence and decisions.
+- Plan/review/propose and approve the exact reviewed hash. Claim an approved
+  task, implement, run genuine project tests and commit approved paths.
+  Record complete/report; consult task-closure-status, hand off using
+  review-handoff, have a DIFFERENT reviewer perform review-submit and
+  gate-review for each required acceptance criterion, then reviewed-verify.
+  Never treat a task self-review as a passed independent Gate review.
+- When a task is deferred, resume-verification preserves the original
+  submitted Git Commit while unrelated tasks may advance HEAD. Follow the
+  closure checklist to report later real evidence and complete reviews;
+  do not rerun business tests from DevControl or reset other Agent work.
 - Persist requirements, Features, Bugs, Ideas, approvals, leases and evidence
   only to project-local SQLite \`dc_*\`. Git still owns source and formal
   specs; application data remains separate.

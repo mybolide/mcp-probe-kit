@@ -91,6 +91,60 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(fs.readFileSync(agentsPath, 'utf8')).toBe(updatedAgents);
   });
 
+  test('previous evidence-policy guidance at package 5.0.0 is automatically upgraded on another project', () => {
+    const root=tempGitProject();
+    const skillPath=path.join(root,MCP_PROBE_SKILL_REL_PATH);
+    const agentsPath=path.join(root,'AGENTS.md');
+    fs.mkdirSync(path.dirname(skillPath),{recursive:true});
+    const previousRevision='v5-sqlite-devcontrol-20261029-action-guide';
+    const existingSkill=generateWorkflowSkillContent(VERSION)
+      .replace(SKILL_GUIDANCE_REVISION,previousRevision)
+      .replace('DevControl NEVER\n   executes project-specific tests','DevControl can execute project-specific tests');
+    fs.writeFileSync(skillPath,existingSkill,'utf8');
+    const custom='# Keep user project coding standards intact\nNo secrets in Git.\n';
+    const priorAgents=[
+      '<!-- mcp-probe:context begin -->',
+      formatAgentsContextVersionMarker(VERSION),
+      '<!-- '+SKILL_GUIDANCE_MARKER+': '+previousRevision+' -->',
+      'Old Gate instruction: MCP launches XCTest and Flutter.',
+      '<!-- mcp-probe:context end -->','',custom,
+    ].join('\n');
+    fs.writeFileSync(agentsPath,priorAgents,'utf8');
+    const first=ensureMcpProbeKitBootstrapAtStartup(root);
+    expect(first.error).toBeUndefined();
+    expect(first.bootstrap?.skill.updated).toBe(true);
+    expect(first.bootstrap?.agentsMd.updated).toBe(true);
+    const skill=fs.readFileSync(skillPath,'utf8');
+    const agents=fs.readFileSync(agentsPath,'utf8');
+    expect(skill).toContain(SKILL_GUIDANCE_REVISION);
+    expect(skill).toContain('DevControl NEVER');
+    expect(skill).toContain('`task-closure-status`');
+    expect(agents).toContain(SKILL_GUIDANCE_REVISION);
+    expect(agents).toContain('gate-review');
+    expect(agents).toContain('All legacy Gate names are acceptance criteria');
+    expect(agents).not.toContain('Old Gate instruction');
+    expect(agents).toContain(custom.trim());
+    const second=ensureMcpProbeKitBootstrap(root);
+    expect(second.skill.updated).toBe(false);
+    expect(second.agentsMd.updated).toBe(false);
+    expect(fs.readFileSync(skillPath,'utf8')).toBe(skill);
+    expect(fs.readFileSync(agentsPath,'utf8')).toBe(agents);
+  });
+
+  test('first-time new projects get evidence-only instructions without writing workflow documents', () => {
+    const root=tempGitProject();
+    const result=ensureMcpProbeKitBootstrapAtStartup(root);
+    expect(result.bootstrap?.skill.created).toBe(true);
+    expect(result.bootstrap?.agentsMd.created).toBe(true);
+    const skill=fs.readFileSync(path.join(root,MCP_PROBE_SKILL_REL_PATH),'utf8');
+    const agents=fs.readFileSync(path.join(root,'AGENTS.md'),'utf8');
+    expect(skill).toContain('DevControl NEVER');
+    expect(skill).toContain('`review-submit`');
+    expect(agents).toContain('DIFFERENT reviewer');
+    expect(agents).toContain(SKILL_GUIDANCE_REVISION);
+    expect(fs.existsSync(path.join(root,'docs','requirements.md'))).toBe(false);
+  });
+
   test('first explicit project tool call performs the same revision check when startup could not locate workspace', () => {
     const root = tempGitProject();
     const first = ensureMcpProbeKitBootstrap(root);
