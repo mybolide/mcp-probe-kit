@@ -69,7 +69,9 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('section("文件修改范围",brief.paths.length');
     expect(html).toContain('"正式工作项已验证 "+verifiedTasks');
     expect(html).toContain('const productTasks=currentReleaseRows();');
-    expect(html).toContain('if(row.current?.pendingVerification)return ["待设备/外部验收",""];');
+    expect(html).toContain('gate==="dap_grpc_live"?"待 DAP 数据验收"');
+    expect(html).toContain('gate==="ios_device_e2e"?"待设备验收":"待外部验收"');
+    expect(html).not.toContain('待设备/外部验收');
     expect(html).toContain('待验证 — 未通过正式 Gate');
     expect(html).toContain('row.current.pendingVerification.reason');
     expect(html).toContain('开发中 / 待验证');

@@ -64,7 +64,12 @@
   }
   function taskStatus(row){
     const s=row.status;
-    if(row.current?.pendingVerification)return ["待设备/外部验收",""];
+    if(row.current?.pendingVerification){
+      const gate=row.current.pendingVerification.gate;
+      const reason=gate==="dap_grpc_live"?"待 DAP 数据验收":
+        gate==="ios_device_e2e"?"待设备验收":"待外部验收";
+      return [reason,""];
+    }
     if(s==="pending")return [row.item.featureNeedsRevision?"规划需修订":
       row.item.pendingSecondReview?"待二次 Review":"规划待确认","pending"];
     if(s==="verified")return ["已完成","done"];
