@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import http from "node:http";
 import vm from "node:vm";
@@ -40,6 +41,202 @@ function recordAcceptanceReview(id:string,token:string,gate='docs',reference?:st
     reviewNotes:'The independent fixture reviewer checked reported acceptance evidence and bound commit identity.',
   });
 }
+
+  it('reconciles an old protected Owner-edit manifest only against audited current HEAD and unchanged scope WIP',()=>{
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const first=ledger!.claim('NEYNA-200','responsible-agent');
+    save('README.md','original Owner local edit before external deferral\n');
+    const sha=createHash('sha256').update(fs.readFileSync(path.join(root,'README.md'))).digest('hex');
+    save('tests/contracts/real-implementation.txt','real approved source\n');
+    git('add','tests/contracts/real-implementation.txt');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','only commit the approved task source');
+    ledger!.report('NEYNA-200',first.leaseToken,{
+      kind:'project_test',reference:'Real test report for unchanged first completion',
+    },true);
+    ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'Scoped original implementation accepted for later device testing',
+      implementation:'Source committed without touching Owner local document',
+      verification:'Original tests passed, real device still outstanding',
+      existingDirtyFiles:[{path:'README.md',sha256:sha}],
+    });
+    ledger!.deferVerification({id:'NEYNA-200',leaseToken:first.leaseToken,
+      gate:'ios_device_e2e',preserveExistingWorktree:true,
+      reason:'Physical iPhone unavailable, preserve the real original Owner edit'});
+    git('add','README.md');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','later reviewed unrelated Owner documentation');
+    save('tests/contracts/real-implementation.txt','real approved source\n');
+    const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent');
+    expect(ledger!.verify('NEYNA-200',resumed.leaseToken).passed).toBe(false);
+    const currentHead=git('rev-parse','HEAD');
+    expect(()=>ledger!.reviewDeferredWorktree('NEYNA-200','bad-token',{
+      reviewedHead:currentHead,findings:'This exact worktree was carefully reviewed after later commits; original frozen scope and current protected Owner files were inspected without discarding or changing any data.',
+    })).toThrow(/lease/i);
+    const accepted=ledger!.reviewDeferredWorktree('NEYNA-200',resumed.leaseToken,{
+      reviewedHead:currentHead,
+      findings:'The earlier Owner README edit is now included in a later reviewed, unrelated Git commit. Original task source remains byte-identical, current status is clean, and the accepted device Gate is still separately mandatory. This records only the worktree provenance and never approves the physical test.',
+    });
+    expect(accepted).toMatchObject({gatePassed:false,reviewedHead:currentHead});
+    expect(ledger!.trace('NEYNA-200').audit.map((row:any)=>row.event))
+      .toContain('deferred_protected_worktree_reviewed');
+    expect(ledger!.verify('NEYNA-200',resumed.leaseToken).passed).toBe(false);
+  });
+
+  it('resumes a frozen task after a later change to the same file only when the exact original patch still applies in reverse',()=>{
+    const lines=Array.from({length:30},(_,i)=>`line ${String(i).padStart(2,'0')}`);
+    save('tests/contracts/shared.txt',lines.join('\n')+'\n');
+    commit('freeze a baseline shared text file');
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const first=ledger!.claim('NEYNA-200','responsible-agent');
+    const accepted=[...lines];accepted[4]='original scoped implementation';
+    save('tests/contracts/shared.txt',accepted.join('\n')+'\n');
+    commit('original code accepted for later physical device verification');
+    const originalHead=git('rev-parse','HEAD');
+    ledger!.report('NEYNA-200',first.leaseToken,{
+      kind:'unit_test',reference:'Real project-owned unit test recorded but iPhone is pending',
+    },true);
+    ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'Submitted verified original source change',
+      implementation:'Changed only approved line in shared file',
+      verification:'Unit test passed; external device still required',
+    });
+    ledger!.deferVerification({id:'NEYNA-200',leaseToken:first.leaseToken,
+      gate:'ios_device_e2e',reason:'Real external device not available at submission time'});
+    const later=[...accepted];later[25]='independent later appended feature';
+    save('tests/contracts/shared.txt',later.join('\n')+'\n');
+    commit('legitimate later non-overlapping change in same source file');
+    const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent');
+    expect(resumed.originalCompletionHead).toBe(originalHead);
+    expect(resumed.resumedVerification).toBe(true);
+    expect(ledger!.trace('NEYNA-200').audit.map((a:any)=>a.event))
+      .toContain('verification_resumed');
+    expect(ledger!.verify('NEYNA-200',resumed.leaseToken).passed).toBe(false);
+    const reference='Real project-owned unit test recorded but iPhone is pending';
+    ledger!.reviewOwnTask('NEYNA-200',resumed.leaseToken,{
+      outcome:'passed',evidenceReference:reference,
+      findings:'Verified the original frozen patch still exists exactly, reviewed all intervening same-file edits and inspected the independent physical test receipt for the specific approved acceptance condition.',
+    });
+    expect(ledger!.verify('NEYNA-200',resumed.leaseToken).passed).toBe(false);
+    ledger!.reviewExternalGate('NEYNA-200',resumed.leaseToken,{
+      gate:'ios_device_e2e',runner:'responsible-agent',reviewer:'responsible-agent',
+      reviewMode:'self',outcome:'passed',evidenceReference:reference,
+      reviewNotes:'The fixture reviewer explicitly reviewed the complete physical acceptance evidence and unchanged exact Git patch, rather than crediting later same-file commits as the original task.',
+    });
+    const result=ledger!.verify('NEYNA-200',resumed.leaseToken);
+    expect(result.passed).toBe(true);
+  });
+
+  it('refuses resumption when subsequent edits removed the actual frozen code',()=>{
+    const original=Array.from({length:28},(_,i)=>`line ${i}`);
+    save('tests/contracts/shared.txt',original.join('\n')+'\n');
+    commit('base shared text');
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const first=ledger!.claim('NEYNA-200','responsible-agent');
+    const edited=[...original];edited[4]='scoped accepted behavior';
+    save('tests/contracts/shared.txt',edited.join('\n')+'\n');
+    commit('original approved implementation');
+    ledger!.report('NEYNA-200',first.leaseToken,{
+      kind:'unit_test',reference:'Real unit suite succeeds but external device missing',
+    },true);
+    ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'Committed original scoped feature',
+      implementation:'One reviewed line changed',
+      verification:'Unit test success but iPhone Gate pending',
+    });
+    ledger!.deferVerification({id:'NEYNA-200',leaseToken:first.leaseToken,
+      gate:'ios_device_e2e',reason:'Required actual iPhone unavailable'});
+    save('tests/contracts/shared.txt',original.join('\n')+'\n');
+    commit('later implementation overwrote frozen approved behavior');
+    expect(()=>ledger!.resumeVerification('NEYNA-200','responsible-agent'))
+      .toThrow(/Overlapping committed code requires|DEFERRED_CODE_CHANGED/i);
+    expect(ledger!.taskClosureStatus('NEYNA-200').nextAction).toBe('resume-verification');
+    expect(ledger!.next().activeLease).toBeNull();
+  });
+
+  it('requires exact Agent-reviewed intervening Git diff before resuming intentionally evolved same-file code',()=>{
+    const original=Array.from({length:30},(_,i)=>`baseline line ${i}`);
+    save('tests/contracts/shared.txt',original.join('\n')+'\n');
+    commit('baseline shared file');
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const claimed=ledger!.claim('NEYNA-200','responsible-agent');
+    const edited=[...original];edited[5]='old scoped startSession behavior';
+    save('tests/contracts/shared.txt',edited.join('\n')+'\n');
+    commit('original frozen audio session implementation');
+    ledger!.report('NEYNA-200',claimed.leaseToken,{
+      kind:'unit_test',reference:'Project unit test result prior to unavailable iPhone',
+    },true);
+    ledger!.complete('NEYNA-200',claimed.leaseToken,{
+      summary:'Frozen initial implementation committed',
+      implementation:'Specific audio session source line changed',
+      verification:'Unit test valid, real iPhone acceptance not complete',
+    });
+    ledger!.deferVerification({id:'NEYNA-200',leaseToken:claimed.leaseToken,
+      gate:'ios_device_e2e',reason:'Actual device unavailable for the required test'});
+    const evolved=[...edited];evolved[5]='updated scoped startSession with event reporting';
+    save('tests/contracts/shared.txt',evolved.join('\n')+'\n');
+    commit('later approved session event tracking evolved the same line');
+    const current=git('rev-parse','HEAD');
+    const findings='I compared the original scoped implementation to the exact later committed HEAD and inspected the changed session activation path. The later approved revision preserves the original permission and foreground checks while adding an explicit event marker; the physical acceptance test is still separately required.';
+    const evidenceReference='Original scoped XCTest and current physical session test receipt';
+    expect(()=>ledger!.resumeVerification('NEYNA-200','responsible-agent'))
+      .toThrow(/DEFERRED_CODE_CHANGED|Overlapping committed code/);
+    expect(()=>ledger!.resumeVerification('NEYNA-200','responsible-agent',1800,{
+      reviewedHead:current,overlappingPaths:['tests/contracts/not-the-same.txt'],
+      findings,evidenceReference,
+    })).toThrow(/overlapping/i);
+    const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent',1800,{
+      reviewedHead:current,overlappingPaths:['tests/contracts/shared.txt'],
+      findings,evidenceReference,
+    });
+    expect(resumed.resumedVerification).toBe(true);
+    expect(ledger!.trace('NEYNA-200').audit.map((row:any)=>row.event))
+      .toContain('deferred_overlap_reconciled');
+    expect(ledger!.verify('NEYNA-200',resumed.leaseToken).passed).toBe(false);
+    ledger!.reviewOwnTask('NEYNA-200',resumed.leaseToken,{
+      outcome:'passed',evidenceReference:'Project unit test result prior to unavailable iPhone',
+      findings:'Reviewed source diff and acceptance behavior under the explicit logged current-HEAD reconciliation. Original frozen Git scope and source revision remain auditable without counting later changes as original deliverables.',
+    });
+    expect(ledger!.verify('NEYNA-200',resumed.leaseToken).passed).toBe(false);
+  });
+
+  it('protects pre-fingerprinted same-scope uncommitted WIP during honest repeated deferral',()=>{
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const claimed=ledger!.claim('NEYNA-200','responsible-agent');
+    save('tests/contracts/frozen.txt','verified committed behavior\n');
+    commit('commit original accepted source');
+    ledger!.report('NEYNA-200',claimed.leaseToken,{
+      kind:'unit_test',reference:'Actual project unit test result requiring device follow-up',
+    },true);
+    ledger!.complete('NEYNA-200',claimed.leaseToken,{
+      summary:'Original scoped source delivered and committed',
+      implementation:'Only approved source path touched',
+      verification:'Local suite successful; external iPhone not present',
+    });
+    save('tests/contracts/preserved-future-task.txt','pre-existing next-task WIP must survive\n');
+    const initial=ledger!.deferVerification({id:'NEYNA-200',leaseToken:claimed.leaseToken,
+      gate:'ios_device_e2e',preserveExistingWorktree:true,
+      reason:'Actual device unavailable; preserve unrelated already-present work'});
+    expect(initial.leaseReleased).toBe(true);
+    const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent');
+    const repeated=ledger!.deferVerification({id:'NEYNA-200',leaseToken:resumed.leaseToken,
+      gate:'ios_device_e2e',preserveExistingWorktree:true,
+      reason:'Actual device test was attempted but still cannot satisfy OS permissions'});
+    expect(repeated).toMatchObject({redeferred:true,gatePassed:false,leaseReleased:true});
+    expect(fs.readFileSync(path.join(root,'tests/contracts/preserved-future-task.txt'),'utf8'))
+      .toBe('pre-existing next-task WIP must survive\n');
+    const another=ledger!.resumeVerification('NEYNA-200','responsible-agent');
+    save('tests/contracts/preserved-future-task.txt','new unapproved in-scope task edits\n');
+    expect(()=>ledger!.deferVerification({id:'NEYNA-200',leaseToken:another.leaseToken,
+      gate:'ios_device_e2e',preserveExistingWorktree:true,
+      reason:'Changed uncommitted in-scope work cannot be silently set aside'}))
+      .toThrow(/previously fingerprinted|WORKTREE_CHANGED/i);
+  });
 function save(file: string, content: string): void {
   const absolute = path.join(root, file);
   fs.mkdirSync(path.dirname(absolute), { recursive: true });

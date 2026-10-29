@@ -207,7 +207,10 @@ export function dispatchDevControl(
       preserveExistingWorktree:input.preserveExistingWorktree===true,
     });
     case "resume-verification": return ledger.resumeVerification(
-      String(input.id),String(input.agent),Number(input.ttlSeconds??1800));
+      String(input.id),String(input.agent),Number(input.ttlSeconds??1800),
+      input.reconciliation);
+    case "review-worktree": return ledger.reviewDeferredWorktree(
+      String(input.id),String(input.leaseToken),input.review);
     case "pause-for-scope": return ledger.pauseForScopeAmendment(
       String(input.id),String(input.leaseToken),String(input.reason??""),
       input.existingDirtyFiles);

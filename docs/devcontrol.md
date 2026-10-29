@@ -545,8 +545,29 @@ separate Reviewer flow). If the actual retry still cannot meet the frozen
 Gate, `defer-verification` may safely re-defer that same immutable completion
 under its active original developer lease, with a concrete updated reason;
 it releases the singleton without passing any Gate. Later commits cannot be
-counted as the original frozen diff, and any later modifications to original
-delivery files still block direct resumption until reconciled.
+counted as the original frozen diff. If a later task changes the same file,
+DevControl accepts a resumed original delivery only when Git can reverse-check
+the **exact frozen original patch** against the current committed index
+without changing any bytes. Removed, rewritten, or conflicting original code
+still blocks automatic resumption. For legitimate later same-file evolution
+approved under another task, the responsible Agent may supply an explicit
+`reconciliation` to `resume-verification`: the exact current Git HEAD, the
+complete list of overlapping paths, a substantive code-diff assessment and
+an actual test-evidence reference. DevControl records this reviewed evolution
+against that HEAD, not as a rewritten original completion; it expires as soon
+as the Git HEAD changes. This declaration does not pass the acceptance Gate:
+the Agent must still perform `self-review`, a separate evidence-backed
+`gate-review`, and `verify`. An incomplete or stale reconciliation fails closed.
+If another external test remains unavailable after resumption, `defer-verification`
+may preserve **only byte-identical in-scope WIP** already fingerprinted in
+that task's original deferral. New or edited scoped WIP and staged changes
+still block re-deferral; neither in-progress code nor a snapshot is acceptance.
+For older legacy completion records using a protected Owner-edit manifest,
+`review-worktree` records a separate explicit developer audit after legitimate
+intervening commits: the reviewed current Git HEAD, a substantive explanation,
+and a complete hash-only snapshot. In-scope uncommitted files must match their
+previous deferral fingerprints exactly. A later changed HEAD or WIP invalidates
+this review; it does not alter historical completion or pass any acceptance Gate.
 
 **Device and project-specific acceptance evidence:** `ios_device_e2e`
 is a requirement label, not a DevControl XCTest command. The development

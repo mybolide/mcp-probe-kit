@@ -44,6 +44,23 @@ interface SqlStmt {
   run(...args: Value[]): { changes: number };
 }
 
+/** Prove that the original frozen patch still exists verbatim in HEAD's
+ * tracked files even if a later, unrelated delivery appended to those files.
+ * `--cached` inspects committed index content only, never unrelated WIP.
+ * This is Git integrity checking, NOT a project test or Gate decision.
+ */
+function frozenPatchStillPresent(root:string,base:string,completion:string):boolean {
+  const diff=spawnSync('git',['diff','--no-renames','--binary','--full-index',base,completion],{
+    cwd:root,encoding:'buffer',timeout:12000,maxBuffer:4_000_000,windowsHide:true,
+  });
+  if(diff.status!==0||!Buffer.isBuffer(diff.stdout)||diff.stdout.length===0||
+    diff.stdout.length>4_000_000)return false;
+  const check=spawnSync('git',['apply','--cached','--reverse','--check'],{
+    cwd:root,input:diff.stdout,timeout:12000,maxBuffer:400_000,windowsHide:true,
+  });
+  return check.status===0&&!check.error;
+}
+
 /** For an already committed task, subsequent uncommitted work is not delivery
  * evidence. An explicit Owner-authorized preservation mode fingerprints it
  * without staging, stashing, resetting, overwriting or claiming ownership.
@@ -98,6 +115,7 @@ function committedFilesBetween(root: string, base: string, end: string,
   if (result.status!==0 || !Buffer.isBuffer(result.stdout)) {
     fail("GIT_ERROR","Cannot inspect frozen task Git revision");
   }
+
 
 
   return [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
@@ -1019,7 +1037,7 @@ export class ProjectTaskLedger {
 
   /** Review the submitted commit, not whichever HEAD unrelated developers
    * reached later. An advanced HEAD is allowed ONLY for a resumed, immutable
-   * deferral whose original files were never touched by later commits.
+   * deferral whose original patch is provably still present in committed Git.
    * Never reset/checkout Git to make the old review appear current.
    */
   private checkReviewDeliveryHead(id:string,baseHead:string,completionHead:string):string {
@@ -1038,11 +1056,89 @@ export class ProjectTaskLedger {
     const delivered=new Set(committedFilesBetween(this.root,baseHead,completionHead));
     const later=committedFilesBetween(this.root,completionHead,current);
     const overlaps=later.filter(file=>delivered.has(file));
-    if(overlaps.length)fail('DEFERRED_CODE_CHANGED',
+    if(overlaps.length&&!frozenPatchStillPresent(this.root,baseHead,completionHead)&&
+      !this.hasReviewedDeferredOverlap(id,baseHead,completionHead,current,overlaps))
+      fail('DEFERRED_CODE_CHANGED',
       'Later commits touched the deferred delivery: '+overlaps.join(', ')+
       '. Inspect changes and record a new scoped completion before reviewing');
     return current;
   }
+
+  /** Explicit Agent code-diff reconciliation, recorded against an exact later
+   * Git HEAD. This is an audit/authorization record, NOT a business test.
+   * A subsequent commit or changed overlapping file list invalidates it.
+   */
+  private hasReviewedDeferredOverlap(id:string,base:string,completion:string,
+    current:string,overlaps:string[]):boolean {
+    const rows=this.db.prepare(`SELECT details_json FROM dc_audit WHERE task_id=?
+      AND event='deferred_overlap_reconciled' ORDER BY id DESC LIMIT 3`).all(id);
+    return rows.some(row=>{
+      try{
+        const a=JSON.parse(String(row.details_json));
+        return a.baseHead===base&&a.completionHead===completion&&
+          a.currentHead===current&&
+          JSON.stringify(a.overlappingPaths)===JSON.stringify([...overlaps].sort())&&
+          typeof a.findings==='string'&&a.findings.length>=100&&
+          typeof a.evidenceReference==='string'&&a.evidenceReference.length>=15;
+      }catch{return false;}
+    });
+  }
+
+  /** Rebind old protected worktree provenance to the exact reviewed Git HEAD.
+   * In-scope WIP is eligible ONLY if its prior deferral SHA and byte count
+   * match. Newly staged files or changed original scoped WIP never qualify.
+   * This action is not evidence that any project Gate passed.
+   */
+  reviewDeferredWorktree(id:string,token:string,input:{
+    reviewedHead:string;findings:string;
+  }):Row {
+    if(!input||typeof input.findings!=='string'||input.findings.trim().length<100)
+      fail('WORKTREE_REVIEW_REQUIRED','Explain the originally frozen WIP and subsequent approved changes');
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(id,token);
+      const task=this.requireTask(id);
+      const note=this.latestCompletion(id);
+      const deferred=this.db.prepare(`SELECT * FROM dc_verification_deferrals
+        WHERE task_id=? AND resumed_at IS NOT NULL`).get(id);
+      const currentHead=git(this.root,['rev-parse','HEAD']);
+      if(!deferred||!note||task.status!=='in_review'||
+        note.git_head!==deferred.completion_head||input.reviewedHead!==currentHead)
+        fail('WORKTREE_REVIEW_BASE_CHANGED',
+          'Only an actively resumed original delivery at its exact reviewed HEAD can rebind worktree provenance');
+      this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
+      const original=JSON.parse(String(deferred.preserved_worktree_json??'[]')) as
+        Array<{path:string;kind:string;sha256:string;size:number}>;
+      const baseline=new Map(original.map(row=>[row.path,row]));
+      const current=preservedWorktreeSnapshot(this.root);
+      const allowed=JSON.parse(task.allowed_paths) as string[];
+      const scoped=current.filter(row=>allowed.some(p=>pathAllowed(row.path,p)));
+      if(scoped.some(row=>{
+        const old=baseline.get(row.path);
+        return !old||old.kind!==row.kind||old.sha256!==row.sha256||old.size!==row.size;
+      }))fail('WORKTREE_REVIEW_SCOPE_CHANGED',
+        'Current in-scope uncommitted files must exactly match the earlier captured deferral fingerprints');
+      this.audit(id,'deferred_protected_worktree_reviewed',lease.agent,{
+        originalCompletionHead:note.git_head,currentHead,
+        snapshot:current,scopedUnmodifiedFiles:scoped.map(row=>row.path),
+        findings:input.findings.trim(),gatePassed:false,
+      });
+      return {taskId:id,reviewedHead:currentHead,scopedUnmodifiedFiles:scoped.length,
+        protectedFiles:current.length,gatePassed:false};
+    });
+  }
+
+  private hasReviewedDeferredWorktree(id:string,completion:string,head:string):boolean {
+    const row=this.db.prepare(`SELECT details_json FROM dc_audit WHERE task_id=?
+      AND event='deferred_protected_worktree_reviewed' ORDER BY id DESC LIMIT 1`).get(id);
+    if(!row)return false;
+    try{
+      const recorded=JSON.parse(String(row.details_json));
+      return recorded.originalCompletionHead===completion&&
+        recorded.currentHead===head&&
+        JSON.stringify(recorded.snapshot)===JSON.stringify(preservedWorktreeSnapshot(this.root));
+    }catch{return false;}
+  }
+
 
   private requireReviewTicket(id:string,ticket:string):Row {
     if(typeof ticket!=="string"||ticket.length<50)
@@ -4390,15 +4486,27 @@ export class ProjectTaskLedger {
         const delivered=committedFilesBetween(this.root,
           resumed.base_head,resumed.completion_head);
         const later=committedFilesBetween(this.root,resumed.completion_head,head);
-        if(later.some(file=>delivered.includes(file)))
+        const overlaps=later.filter(file=>delivered.includes(file));
+        if(overlaps.length&&
+          !frozenPatchStillPresent(this.root,resumed.base_head,resumed.completion_head)&&
+          !this.hasReviewedDeferredOverlap(input.id,resumed.base_head,
+            resumed.completion_head,head,overlaps))
           fail('DEFERRED_CODE_CHANGED',
             'Later commits changed the original delivery; record a fresh reviewed completion');
         const dirty=preservedWorktreeSnapshot(this.root);
         const allowed=JSON.parse(task.allowed_paths) as string[];
-        if(dirty.some(file=>allowed.some(p=>pathAllowed(file.path,p)))||
-          git(this.root,['diff','--cached','--name-only']).trim())
+        const oldSnapshot=JSON.parse(String(resumed.preserved_worktree_json??'[]')) as
+          Array<{path:string;kind:string;size:number;sha256:string}>;
+        const protectedWip=new Map(oldSnapshot.map(item=>[item.path,item]));
+        const inScope=dirty.filter(file=>allowed.some(p=>pathAllowed(file.path,p)));
+        const newlyDirty=inScope.filter(file=>{
+          const original=protectedWip.get(file.path);
+          return !original||original.kind!==file.kind||
+            original.size!==file.size||original.sha256!==file.sha256;
+        });
+        if(newlyDirty.length||git(this.root,['diff','--cached','--name-only']).trim())
           fail('REDEFERRAL_WORKTREE_CHANGED',
-            'Staged or in-scope uncommitted task files cannot be re-deferred');
+            'Staged or newly changed in-scope work cannot be re-deferred. Only the exact previously fingerprinted WIP is protected');
         this.db.prepare(`UPDATE dc_verification_deferrals SET
           reason=?,deferred_by=?,deferred_at=?,preserved_worktree_json=?,resumed_at=NULL
           WHERE task_id=?`).run(input.reason.trim(),lease.agent,utc(),JSON.stringify(dirty),input.id);
@@ -4407,6 +4515,7 @@ export class ProjectTaskLedger {
           gate:input.gate,completionHead:note.git_head,currentHead:head,
           reason:input.reason,gatePassed:false,leaseReleased:true,
           preservedUncommittedFiles:dirty.length,
+          byteIdenticalPreexistingScopeWip:inScope.length,
         });
         return {taskId:input.id,status:'in_review',pendingVerification:true,
           gate:input.gate,gatePassed:false,leaseReleased:true,
@@ -4475,7 +4584,9 @@ export class ProjectTaskLedger {
   /** Explicitly reclaim a deferred task when the real device/runner exists.
    * Verify the original Git diff cannot be rewritten by intervening work.
    */
-  resumeVerification(id:string,agent:string,ttlSeconds=1800):Row {
+  resumeVerification(id:string,agent:string,ttlSeconds=1800,
+    reconciliation?:{reviewedHead:string;overlappingPaths:string[];
+      findings:string;evidenceReference:string}):Row {
     return this.inTransaction(()=>{
       const pending=this.db.prepare(
         "SELECT * FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NULL"
@@ -4491,16 +4602,38 @@ export class ProjectTaskLedger {
       const originals=committedFilesBetween(this.root,
         pending.base_head,pending.completion_head);
       const changed=committedFilesBetween(this.root,pending.completion_head,head);
-      if(changed.some(file=>originals.includes(file)))
-        fail("DEFERRED_CODE_CHANGED",
-          "Another task modified the deferred delivery; independent review and a fresh completion are required");
+      const overlaps=changed.filter(file=>originals.includes(file));
+      const preservedPatch=overlaps.length>0&&
+        frozenPatchStillPresent(this.root,pending.base_head,pending.completion_head);
+      const needsReconciliation=overlaps.length>0&&!preservedPatch;
+      if(needsReconciliation){
+        if(!reconciliation||reconciliation.reviewedHead!==head||
+          !Array.isArray(reconciliation.overlappingPaths)||
+          JSON.stringify([...reconciliation.overlappingPaths].sort())!==
+            JSON.stringify([...overlaps].sort())||
+          typeof reconciliation.findings!=='string'||
+          reconciliation.findings.trim().length<100||
+          typeof reconciliation.evidenceReference!=='string'||
+          reconciliation.evidenceReference.trim().length<15)
+          fail('DEFERRED_CODE_CHANGED',
+            'Overlapping committed code requires an exact current-HEAD Agent diff review, actual evidence reference and every affected file; frozen Gate is unchanged');
+      }
       this.db.prepare(
         "UPDATE dc_verification_deferrals SET resumed_at=? WHERE task_id=?"
       ).run(utc(),id);
       const resumed=this.claim(id,agent,ttlSeconds,String(pending.base_head));
+      if(needsReconciliation)this.audit(id,'deferred_overlap_reconciled',agent,{
+        baseHead:pending.base_head,completionHead:pending.completion_head,
+        currentHead:head,overlappingPaths:[...overlaps].sort(),
+        findings:reconciliation!.findings.trim(),
+        evidenceReference:reconciliation!.evidenceReference.trim(),
+        gatePassed:false,
+      });
       this.audit(id,"verification_resumed",agent,{
         originalBaseHead:pending.base_head,originalCompletionHead:pending.completion_head,
         currentHead:head,originalGate:pending.gate_name,
+        originalPatchVerifiedOnSharedFiles:preservedPatch,
+        explicitOverlapReconciliation:needsReconciliation,
       });
       return {...resumed,baseHead:pending.base_head,
         resumedVerification:true,originalCompletionHead:pending.completion_head};
@@ -4883,7 +5016,11 @@ export class ProjectTaskLedger {
       const previousFiles=committedFilesBetween(this.root,
         deferred.base_head,deferred.completion_head);
       const laterFiles=committedFilesBetween(this.root,deferred.completion_head,startHead);
-      if(previousFiles.some(file=>laterFiles.includes(file)))
+      const overlaps=laterFiles.filter(file=>previousFiles.includes(file));
+      if(overlaps.length&&
+        !frozenPatchStillPresent(this.root,deferred.base_head,deferred.completion_head)&&
+        !this.hasReviewedDeferredOverlap(id,deferred.base_head,
+          deferred.completion_head,startHead,overlaps))
         return {taskId:id,passed:false,
           reason:"Deferred task files changed after the original delivery; new scoped review required"};
     }
@@ -4896,6 +5033,8 @@ export class ProjectTaskLedger {
       Array<{path:string;kind:string;sha256:string;size:number}>;
     const protectedEditsAreStable=():boolean=>{
       try{
+        if(frozenReview&&this.hasReviewedDeferredWorktree(id,note.git_head,startHead))
+          return true;
         if(preservedWorktree.length){
           const current=preservedWorktreeSnapshot(this.root);
           if(!frozenReview&&
