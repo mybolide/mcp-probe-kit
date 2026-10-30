@@ -583,10 +583,17 @@ those other tasks. The original completion and original base remain in the
 audit trail, and the superseding deferral uses the new increment's base.
 Unreviewed out-of-scope edits made during the resumed lease still block the
 new completion; other agents' earlier commits are not credited to this task.
+`review-worktree` also handles legitimate unrelated Owner or generated MCP
+files changing **after completion but before the first external-Gate deferral**.
+The responsible developer must review the exact current Git HEAD, explain the
+changes and record a complete hash-only snapshot before deferring; no staged
+files are allowed and all previously fingerprinted in-scope WIP must remain
+byte-identical and present. This never approves an external Gate or changes
+the original completion commit, and any later WIP change invalidates the audit.
 For older legacy completion records using a protected Owner-edit manifest,
-`review-worktree` records a separate explicit developer audit after legitimate
-intervening commits: the reviewed current Git HEAD, a substantive explanation,
-and a complete hash-only snapshot. In-scope uncommitted files must match their
+the same action records a separate explicit developer audit after legitimate
+intervening commits: the reviewed current Git HEAD, substantive explanation,
+and complete hash-only snapshot. In-scope uncommitted files must match their
 previous deferral fingerprints exactly. A later changed HEAD or WIP invalidates
 this review; it does not alter historical completion or pass any acceptance Gate.
 
