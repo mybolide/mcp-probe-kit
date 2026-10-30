@@ -3954,8 +3954,11 @@ export class ProjectTaskLedger {
       "SELECT base_head,snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?",
     ).get(id);
     if(!row)return null; // old leases require explicit audited legacy mode
-    if(row.base_head!==baseHead)fail("CLAIM_BASE_CHANGED",
-      "Claim baseline changed; protected local files require reviewed recovery");
+    if(row.base_head!==baseHead&&
+        !run(this.root,'git',['merge-base','--is-ancestor',
+          String(row.base_head),baseHead]).passed)
+      fail("CLAIM_BASE_CHANGED",
+        "Claim baseline changed; protected local files require reviewed recovery");
     const snapshot=JSON.parse(String(row.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
     if(!snapshot.length)return null; // unchanged legacy behavior for clean claims
     const allowed=JSON.parse(task.allowed_paths) as string[];
@@ -4494,7 +4497,16 @@ export class ProjectTaskLedger {
         } // ambiguous in-scope dirty claims retain the original strict checker
       }else if(previousSnapshot.base_head!==claimBase&&
         (JSON.parse(String(previousSnapshot.snapshot_json)) as unknown[]).length>0){
-        fail("CLAIM_BASE_CHANGED","Original task worktree baseline must be preserved during reclaim");
+        // After a legitimate new deferred delivery revision, its frozen Git
+        // base may advance past the initial claim. Do not reject unchanged
+        // Owner WIP simply because that audited revision advanced the base.
+        // Require both ancestry and byte-identical prior protected worktree.
+        const previousFiles=JSON.parse(String(previousSnapshot.snapshot_json)) as unknown[];
+        if(!run(this.root,'git',['merge-base','--is-ancestor',
+          String(previousSnapshot.base_head),claimBase]).passed||
+          JSON.stringify(previousFiles)!==JSON.stringify(preservedWorktreeSnapshot(this.root)))
+          fail("CLAIM_BASE_CHANGED",
+            "Original task worktree baseline must be preserved during reclaim");
       }
       this.recordLocalDeveloper(id,"claimed");
       this.db.prepare(`

@@ -101,9 +101,12 @@ function create(options: Partial<{
     create({id:'NEYNA-201',allowedPaths:['other-project/**'],requiredGates:['docs']});
     ledger!.approve('NEYNA-200','owner');
     ledger!.approve('NEYNA-201','owner');
+    save('owner-work/unchanged.txt','Owner WIP must remain byte-identical after re-deferral\n');
     const first=ledger!.claim('NEYNA-200','responsible-agent');
     save('tests/contracts/native.txt','native hardware baseline\n');
-    commit('freeze native physical implementation');
+    git('add','tests/contracts/native.txt');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','freeze native physical implementation');
     const frozenHead=git('rev-parse','HEAD');
     ledger!.report('NEYNA-200',first.leaseToken,{
       kind:'unit_test',reference:'Original real local test result without physical UI',
@@ -114,10 +117,13 @@ function create(options: Partial<{
       verification:'Local test valid but real iPhone unavailable',
     });
     ledger!.deferVerification({id:'NEYNA-200',leaseToken:first.leaseToken,
-      gate:'ios_device_e2e',reason:'Real iPhone still missing; originally approved code frozen'});
+      gate:'ios_device_e2e',preserveExistingWorktree:true,
+      reason:'Real iPhone still missing; originally approved code frozen'});
     const unrelated=ledger!.claim('NEYNA-201','other-agent');
     save('other-project/production.txt','unrelated previously approved delivery\n');
-    commit('another task lawfully advanced main before original resumed');
+    git('add','other-project/production.txt');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','another task lawfully advanced main before original resumed');
     const unrelatedHead=git('rev-parse','HEAD');
     ledger!.report('NEYNA-201',unrelated.leaseToken,{
       kind:'project_test',reference:'Real other task contract tests succeeded',
@@ -132,7 +138,9 @@ function create(options: Partial<{
     expect(ledger!.verify('NEYNA-201',unrelated.leaseToken).passed).toBe(true);
     const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent');
     save('tests/contracts/ui.txt','real Flutter standby and interruption UI tests\n');
-    commit('deliver legally scoped Flutter UI after deferred hardware work');
+    git('add','tests/contracts/ui.txt');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','deliver legally scoped Flutter UI after deferred hardware work');
     const updatedHead=git('rev-parse','HEAD');
     ledger!.complete('NEYNA-200',resumed.leaseToken,{
       summary:'Revised task includes committed native and Flutter UI',
@@ -165,6 +173,20 @@ function create(options: Partial<{
     expect(ledger!.trace('NEYNA-200').completion.git_head).toBe(updatedHead);
     expect(frozenHead).not.toBe(updatedHead);
     expect(ledger!.next().activeLease).toBeNull();
+    const twiceResumed=ledger!.resumeVerification('NEYNA-200','responsible-agent');
+    expect(twiceResumed.originalCompletionHead).toBe(updatedHead);
+    expect(fs.readFileSync(path.join(root,'owner-work/unchanged.txt'),'utf8'))
+      .toBe('Owner WIP must remain byte-identical after re-deferral\n');
+    save('tests/contracts/third-revision.txt','revised eligibility evidence without the physical Gate\n');
+    git('add','tests/contracts/third-revision.txt');
+    git('-c','user.name=Fixture','-c','user.email=test@example.invalid',
+      'commit','-qm','another legitimate scoped deferred delivery revision');
+    expect(ledger!.complete('NEYNA-200',twiceResumed.leaseToken,{
+      summary:'Third scoped revision still needs real physical device signoff',
+      implementation:'Commits only the approved contract fixture and preserves original Owner edits',
+      verification:'Real local contract tests passed; physical acceptance remains unavailable',
+      preserveExistingWorktree:true,
+    }).revision).toBeGreaterThan(2);
   });
 
   it('reconciles an old protected Owner-edit manifest only against audited current HEAD and unchanged scope WIP',()=>{
