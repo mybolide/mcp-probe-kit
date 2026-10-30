@@ -43,6 +43,74 @@ function recordAcceptanceReview(id:string,token:string,gate='docs',reference?:st
 
 }
 
+  it('audits unrelated regenerated local MCP guidance after completion without losing original Gate',()=>{
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const lease=ledger!.claim('NEYNA-200','responsible-agent');
+    save('tests/contracts/audio-source.txt','approved implementation\n');
+    commit('real audio task implementation');
+    const committed=git('rev-parse','HEAD');
+    save('owner-private/wip.txt','unrelated Owner work before completion\n');
+    ledger!.report('NEYNA-200',lease.leaseToken,{
+      kind:'flutter_test',reference:'Real Flutter off-state checks passed',
+    },true);
+    ledger!.complete('NEYNA-200',lease.leaseToken,{
+      summary:'Original committed audio task completed with external acceptance pending',
+      implementation:'Approved test fixture and verified source in frozen task scope',
+      verification:'Real Flutter tests passed; iOS external Gate not yet reviewed',
+      preserveExistingWorktree:true,
+    });
+    save('owner-private/wip.txt','Owner WIP continued independently after completion\n');
+    save('agent-guidance/AGENTS.md','Local MCP auto-generated instructions for developers\n');
+    expect(()=>ledger!.deferVerification({
+      id:'NEYNA-200',leaseToken:lease.leaseToken,
+      gate:'ios_device_e2e',preserveExistingWorktree:true,
+      reason:'External device unavailable and unrelated work changed after code completion',
+    })).toThrow(/WORKTREE_CHANGED|protected completion/);
+    expect(()=>ledger!.reviewDeferredWorktree('NEYNA-200',lease.leaseToken,{
+      reviewedHead:committed,
+      findings:'short',
+    })).toThrow(/Explain the originally frozen WIP/);
+    ledger!.reviewDeferredWorktree('NEYNA-200',lease.leaseToken,{
+      reviewedHead:committed,
+      findings:'Inspected all unrelated Owner work and regenerated MCP guidance. The original task commit and its frozen approved files remain intact; only outside-scope WIP bytes evolved and there are no staged edits. This audit does not claim any iOS gate passed.',
+    });
+    const deferred=ledger!.deferVerification({
+      id:'NEYNA-200',leaseToken:lease.leaseToken,
+      gate:'ios_device_e2e',preserveExistingWorktree:true,
+      reason:'Real device Gate not yet reviewed; protect unrelated MCP-generated WIP and release lease',
+    });
+    expect(deferred).toMatchObject({gatePassed:false,leaseReleased:true});
+    expect(ledger!.get('NEYNA-200').status).toBe('in_review');
+    expect(fs.readFileSync(path.join(root,'owner-private/wip.txt'),'utf8'))
+      .toBe('Owner WIP continued independently after completion\n');
+    const reviewed=ledger!.trace('NEYNA-200').audit;
+    expect(reviewed.map((e:any)=>e.event)).toContain('completed_protected_worktree_reviewed');
+  });
+
+  it('rejects original-completion WIP provenance review if in-scope source is edited',()=>{
+    create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
+    ledger!.approve('NEYNA-200','owner');
+    const lease=ledger!.claim('NEYNA-200','responsible-agent');
+    save('tests/contracts/source.txt','frozen approved code\n');
+    commit('approved original code');
+    const head=git('rev-parse','HEAD');
+    ledger!.report('NEYNA-200',lease.leaseToken,{
+      kind:'test',reference:'Original project test evidence actually available',
+    },true);
+    ledger!.complete('NEYNA-200',lease.leaseToken,{
+      summary:'Original approved source completed under frozen task contract',
+      implementation:'Real source committed to approved path',
+      verification:'Project tests passed; physical device acceptance still pending',
+      preserveExistingWorktree:true,
+    });
+    save('tests/contracts/source.txt','malicious unapproved changes to source\n');
+    expect(()=>ledger!.reviewDeferredWorktree('NEYNA-200',lease.leaseToken,{
+      reviewedHead:head,
+      findings:'Audited code and all task files. This text is substantive but must still fail because uncommitted in-scope approved code was modified without a new committed task delivery or proper scope review.',
+    })).toThrow(/Current in-scope uncommitted files/);
+  });
+
   it('protects pre-fingerprinted same-scope uncommitted WIP during honest repeated deferral',()=>{
     create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
     ledger!.approve('NEYNA-200','owner');

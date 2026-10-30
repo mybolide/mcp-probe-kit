@@ -1103,23 +1103,35 @@ export class ProjectTaskLedger {
       const deferred=this.db.prepare(`SELECT * FROM dc_verification_deferrals
         WHERE task_id=? AND resumed_at IS NOT NULL`).get(id);
       const currentHead=git(this.root,['rev-parse','HEAD']);
-      if(!deferred||!note||task.status!=='in_review'||
-        note.git_head!==deferred.completion_head||input.reviewedHead!==currentHead)
+      const resumedOriginal=!!deferred&&note?.git_head===deferred.completion_head;
+      const freshCompletion=!deferred&&note?.git_head===currentHead;
+      if(!note||task.status!=='in_review'||
+        !(resumedOriginal||freshCompletion)||input.reviewedHead!==currentHead)
         fail('WORKTREE_REVIEW_BASE_CHANGED',
-          'Only an actively resumed original delivery at its exact reviewed HEAD can rebind worktree provenance');
+          'Only the original resumed delivery or newly completed task at its exact reviewed HEAD may rebind protected WIP');
       this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
-      const original=JSON.parse(String(deferred.preserved_worktree_json??'[]')) as
+      const original=JSON.parse(String((resumedOriginal?
+        deferred.preserved_worktree_json:note.preserved_worktree_json)??'[]')) as
         Array<{path:string;kind:string;sha256:string;size:number}>;
       const baseline=new Map(original.map(row=>[row.path,row]));
       const current=preservedWorktreeSnapshot(this.root);
       const allowed=JSON.parse(task.allowed_paths) as string[];
+      if(git(this.root,['diff','--cached','--name-only']).trim())
+        fail('WORKTREE_REVIEW_STAGED','A reviewed protected worktree must not contain staged edits');
       const scoped=current.filter(row=>allowed.some(p=>pathAllowed(row.path,p)));
-      if(scoped.some(row=>{
+      const originalScoped=original.filter(row=>allowed.some(p=>pathAllowed(row.path,p)));
+      const scopedByPath=new Map(scoped.map(row=>[row.path,row]));
+      if(originalScoped.some(old=>{
+        const actual=scopedByPath.get(old.path);
+        return !actual||actual.kind!==old.kind||actual.sha256!==old.sha256||
+          actual.size!==old.size;
+      })||scoped.some(row=>{
         const old=baseline.get(row.path);
         return !old||old.kind!==row.kind||old.sha256!==row.sha256||old.size!==row.size;
       }))fail('WORKTREE_REVIEW_SCOPE_CHANGED',
         'Current in-scope uncommitted files must exactly match the earlier captured deferral fingerprints');
-      this.audit(id,'deferred_protected_worktree_reviewed',lease.agent,{
+      this.audit(id,resumedOriginal?'deferred_protected_worktree_reviewed':
+        'completed_protected_worktree_reviewed',lease.agent,{
         originalCompletionHead:note.git_head,currentHead,
         snapshot:current,scopedUnmodifiedFiles:scoped.map(row=>row.path),
         findings:input.findings.trim(),gatePassed:false,
@@ -1141,6 +1153,17 @@ export class ProjectTaskLedger {
     }catch{return false;}
   }
 
+
+  private hasReviewedCompletedWorktree(id:string,completion:string,head:string):boolean {
+    const row=this.db.prepare(`SELECT details_json FROM dc_audit WHERE task_id=?
+      AND event='completed_protected_worktree_reviewed' ORDER BY id DESC LIMIT 1`).get(id);
+    if(!row)return false;
+    try{
+      const review=JSON.parse(String(row.details_json));
+      return review.originalCompletionHead===completion&&review.currentHead===head&&
+        JSON.stringify(review.snapshot)===JSON.stringify(preservedWorktreeSnapshot(this.root));
+    }catch{return false;}
+  }
 
   private requireReviewTicket(id:string,ticket:string):Row {
     if(typeof ticket!=="string"||ticket.length<50)
@@ -4689,9 +4712,10 @@ export class ProjectTaskLedger {
           String(note.preserved_worktree_json??"[]"),
         ) as Array<{path:string;kind:string;sha256:string;size:number}>;
         if(completionWorktree.length>0&&
-            JSON.stringify(preserved)!==JSON.stringify(completionWorktree))
+            JSON.stringify(preserved)!==JSON.stringify(completionWorktree)&&
+            !this.hasReviewedCompletedWorktree(input.id,note.git_head,head))
           fail("WORKTREE_CHANGED",
-            "Later WIP differs from the exact protected completion snapshot");
+            "Later WIP differs from the protected completion snapshot; explicitly review unrelated WIP changes before deferral");
       }else{
         this.checkPreservedOwnerEdits(task,JSON.parse(note.preserved_dirty_json??"[]"),
           lease.base_head);
