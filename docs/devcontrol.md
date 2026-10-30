@@ -410,6 +410,13 @@ continue to support Node 20+. No database server or native npm addon is needed.
 - CLI: mcp-probe-kit devcontrol create --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol approve --project-root /path --json '{...}'
 - CLI: mcp-probe-kit devcontrol claim --project-root /path --json '{...}'
+- Agent-safe concise CLI: `mcp-probe-kit exec devcontrol --stdin --result-only` accepts the
+  same JSON request as regular `exec` and returns `{ok,leaseToken?,tool,version,result,isError}`.
+  For a successful `claim` or `resume-verification`, the **official** returned
+  `leaseToken` appears first so bounded output cannot discard it behind lengthy
+  Skill/bootstrap diagnostics. Bootstrap validation still runs; the default
+  verbose `exec` output remains unchanged. Keep the token private and use it
+  only for the original task's documented lifecycle actions.
 - CLI: mcp-probe-kit devcontrol renew --project-root /path --json '{"id":"TASK-1","leaseToken":"...","ttlSeconds":1800}'
 - CLI: mcp-probe-kit devcontrol release --project-root /path --json '{"id":"TASK-1","leaseToken":"..."}'
 - CLI: mcp-probe-kit devcontrol report --project-root /path --json '{...}'

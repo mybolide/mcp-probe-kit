@@ -44,6 +44,29 @@ describe("mcp-probe-kit CLI", () => {
     await expect(runCommandLine([])).resolves.toBeNull();
   });
 
+  test("exec --result-only omits verbose bootstrap and retains authoritative response", async () => {
+    const root = createGitProject();
+    const output = captureStdout();
+
+    const exitCode = await runCommandLine([
+      "exec", "devcontrol", "--result-only", "--json",
+      JSON.stringify({ action: "next", project_root: root, input: {} }),
+    ]);
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(output());
+    expect(parsed).toMatchObject({
+      ok: true, tool: "devcontrol", version: VERSION,
+      result: { nextTask: null },
+    });
+    expect(parsed).not.toHaveProperty("bootstrap");
+    expect(parsed).not.toHaveProperty("runtime");
+    expect(parsed).not.toHaveProperty("content");
+    expect(output().length).toBeLessThan(4096);
+    expect(fs.existsSync(path.join(root, ".agents/skills/mcp-probe-kit/SKILL.md")))
+      .toBe(true);
+  });
+
   test("exec 复用 Tool Registry 并返回结构化 JSON", async () => {
     const root = createGitProject();
     const output = captureStdout();

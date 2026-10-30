@@ -115,6 +115,26 @@ async function runExec(parsed: ParsedArgv): Promise<number> {
 
   const result = await executeRegisteredTool(toolName, input, { bootstrap });
   const ok = result.isError !== true;
+  // A DevControl claim may return a short-lived lease credential. The default
+  // verbose CLI envelope puts structuredContent after several KB of bootstrap
+  // diagnostics, so bounded command output can drop the only valid token.
+  // Opt-in result-only mode keeps a stable minimal envelope and places any
+  // official returned lease credential first, without granting new authority.
+  if (parsed.flags.has("result-only")) {
+    const structured = result.structuredContent;
+    const lease = structured && typeof structured === "object" &&
+      "leaseToken" in structured && typeof structured.leaseToken === "string"
+      ? structured.leaseToken : undefined;
+    writeJson({
+      ok,
+      ...(lease ? { leaseToken: lease } : {}),
+      tool: toolName,
+      version: VERSION,
+      result: structured ?? null,
+      isError: result.isError ?? false,
+    });
+    return ok ? 0 : 1;
+  }
   writeJson({
     ok,
     tool: toolName,
@@ -519,6 +539,7 @@ function printHelp(): void {
   process.stdout.write("用法:\n");
   process.stdout.write("  mcp-probe-kit                    启动MCP stdio服务\n");
   process.stdout.write("  mcp-probe-kit exec <tool> --stdin\n");
+  process.stdout.write("  mcp-probe-kit exec <tool> --stdin --result-only  # concise response, credentials first\n");
   process.stdout.write("  mcp-probe-kit exec <tool> --input request.json\n");
   process.stdout.write("  mcp-probe-kit exec <tool> --json '{...}'\n");
   process.stdout.write("  mcp-probe-kit tools\n");
