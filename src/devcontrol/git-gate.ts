@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { DevControlError } from "./task-ledger.js";
+import { discoverRepositories } from "./repository-audit.js";
 
 function git(root:string,args:string[]):string {
   const result=spawnSync("git",args,{windowsHide: true, cwd:root,encoding:"utf8",timeout:6_000});
@@ -46,7 +47,7 @@ export function hookStatus(root:string):HookStatus {
       "Existing pre-commit hook preserved; manually chain DevControl check"};
 }
 
-export function installHook(root:string,entry:string):HookStatus {
+export function installHook(root:string,entry:string,projectRoot=root):HookStatus {
   const existing=hookStatus(root);
   if(existing.state==="managed")return existing;
   if(existing.state!=="available")throw new DevControlError(
@@ -56,7 +57,7 @@ export function installHook(root:string,entry:string):HookStatus {
   // POSIX shell quoting is safe for paths with whitespace, apostrophes and $.
   const quote=(value:string)=>"'"+value.replace(/'/g,"'\\''")+"'";
   const script="#!/bin/sh\n"+signature+"\nset -eu\n"+
-    "ROOT=\"$(git rev-parse --show-toplevel)\"\n"+
+    "ROOT="+quote(path.resolve(projectRoot))+"\n"+
     "exec node "+quote(entry)+" devcontrol check --project-root \"$ROOT\"\n";
   fs.mkdirSync(path.dirname(existing.hookPath),{recursive:true});
   // Exclusive create prevents overwriting a hook installed by another process.
@@ -65,4 +66,31 @@ export function installHook(root:string,entry:string):HookStatus {
   finally{fs.closeSync(fd);}
   fs.chmodSync(existing.hookPath,0o755);
   return hookStatus(root);
+}
+
+/** Install each independent Git index's hook against one shared ledger.
+ * Existing team hooks are protected by a full preflight before any writes.
+ */
+export function workspaceHookStatus(root:string):HookStatus & {repositories:Record<string,HookStatus>} {
+  const repos=discoverRepositories(root,[]);
+  const statuses=Object.fromEntries(repos.map(repo=>[repo.prefix||'.',hookStatus(repo.root)]));
+  return {...statuses['.'],repositories:statuses};
+}
+export function installWorkspaceHooks(root:string,entry:string):
+  HookStatus & {repositories:Record<string,HookStatus>} {
+  const repos=discoverRepositories(root,[]);
+  const current=repos.map(repo=>({repo,status:hookStatus(repo.root)}));
+  for(const {repo,status} of current){
+    if(status.state!=='available'&&status.state!=='managed')
+      throw new DevControlError('HOOK_CONFLICT',
+        `Existing team hook in ${repo.prefix||'.'} must be manually integrated; no hooks changed`);
+    if(status.state==='managed'&&repo.prefix){
+      const text=fs.readFileSync(status.hookPath,'utf8');
+      if(!text.includes('ROOT=')||!text.includes(path.resolve(root)))
+        throw new DevControlError('HOOK_CONFLICT',
+          `Existing managed child hook in ${repo.prefix} targets an unverified project root`);
+    }
+  }
+  for(const {repo} of current)installHook(repo.root,entry,root);
+  return workspaceHookStatus(root);
 }

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {spawnSync,execFileSync} from "node:child_process";
-import {hookStatus,installHook} from "../git-gate.js";
+import {hookStatus,installHook,installWorkspaceHooks,workspaceHookStatus} from "../git-gate.js";
 import {localDeveloper} from "../local-developer.js";
 
 const roots:string[]=[];
@@ -18,6 +18,33 @@ function fixture():string{
 afterEach(()=>{for(const r of roots.splice(0))fs.rmSync(r,{recursive:true,force:true});});
 
 describe("Current developer identity and Git pre-commit guard",()=>{
+  it("installs every independent child hook against the same parent ledger root",()=>{
+    const root=fixture();
+    fs.writeFileSync(path.join(root,'.gitignore'),'service/\n');
+    execFileSync('git',['add','.gitignore'],{cwd:root});
+    execFileSync('git',['commit','-qm','ignore nested git'],{cwd:root});
+    const child=path.join(root,'service');
+    fs.mkdirSync(child);
+    execFileSync('git',['init','-q'],{cwd:child});
+    const entry=path.join(root,'fixture-cli.mjs');
+    fs.writeFileSync(entry,'process.exit(31)');
+    const status=installWorkspaceHooks(root,entry);
+    expect(status.repositories['.']).toMatchObject({state:'managed'});
+    expect(status.repositories['service']).toMatchObject({state:'managed'});
+    const childHook=fs.readFileSync(path.join(child,'.git','hooks','pre-commit'),'utf8');
+    expect(childHook).toContain(root);
+    expect(childHook).not.toContain('git rev-parse --show-toplevel');
+    expect(workspaceHookStatus(root).repositories['service'].installed).toBe(true);
+    // An existing hook in any child refuses the operation before mutating
+    // any other repo's free hook slot.
+    const extra=path.join(root,'another');
+    fs.mkdirSync(extra);
+    execFileSync('git',['init','-q'],{cwd:extra});
+    fs.writeFileSync(path.join(extra,'.git','hooks','pre-commit'),'#!/bin/sh\necho team-owned\n');
+    expect(()=>installWorkspaceHooks(root,entry)).toThrow(/Existing team hook/);
+    expect(fs.readFileSync(path.join(extra,'.git','hooks','pre-commit'),'utf8'))
+      .toContain('team-owned');
+  });
   it("resolves current Git configuration instead of any historical author",()=>{
     const root=fixture();
     fs.writeFileSync(path.join(root,"README.md"),"baseline");

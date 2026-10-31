@@ -37,6 +37,9 @@ import { extractRequirementRefs } from './requirement-ids.js';
 import { validGateRequirements, isEvidenceGate } from './gate-policy.js';
 import { normalizeFrozenTaskContract, auditNormalizedTaskContract,
   reviewSharedTaskPlanningFields, type TaskContractSource } from './task-contract.js';
+import { discoverRepositories, currentRevisions, updateRevisions, stagedChanges,
+  committedChanges, revisionDigest, assertRepositoryTopology,
+  type RepositoryRevision } from './repository-audit.js';
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -400,6 +403,26 @@ export class ProjectTaskLedger {
         allowed_paths TEXT NOT NULL, required_gates TEXT NOT NULL,
         spec_id TEXT, plan_id TEXT, approved_by TEXT,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL, verified_at TEXT
+      );
+      -- A workspace can contain independently committed, ignored Git roots.
+      -- Bind every repository identity and its original base at claim time.
+      CREATE TABLE IF NOT EXISTS dc_task_repository_baselines (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        prefix TEXT NOT NULL, git_dir TEXT NOT NULL, base_head TEXT NOT NULL,
+        captured_at TEXT NOT NULL, PRIMARY KEY(task_id,prefix)
+      );
+      CREATE TABLE IF NOT EXISTS dc_completion_repository_revisions (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        revision INTEGER NOT NULL, snapshot_json TEXT NOT NULL,
+        digest TEXT NOT NULL, PRIMARY KEY(task_id,revision)
+      );
+      CREATE TABLE IF NOT EXISTS dc_evidence_repository_digests (
+        evidence_id INTEGER PRIMARY KEY REFERENCES dc_evidence(id), digest TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_external_gate_repository_digests (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        gate_name TEXT NOT NULL, digest TEXT NOT NULL,
+        PRIMARY KEY(task_id,gate_name)
       );
       CREATE TABLE IF NOT EXISTS dc_task_worktree_baselines (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
@@ -992,6 +1015,9 @@ export class ProjectTaskLedger {
     return this.inTransaction(()=>{
       const lease=this.requireLease(id,token);
       const task=this.requireTask(id);
+      if(this.taskRepositories(id,task).some(repo=>!!repo.prefix))
+        fail("MULTI_REPO_PAUSE_UNSUPPORTED",
+          "Cross-repository scope pause requires an independently reviewed version-vector migration; no root-only fallback");
       if(task.status!=='in_review')fail('NOT_IN_REVIEW','Complete and report real evidence first');
       const note=this.latestCompletion(id);
       if(!note)fail('COMPLETION_REVISION_REQUIRED','Self-review requires a committed delivery');
@@ -1765,13 +1791,74 @@ export class ProjectTaskLedger {
         previousHash:old?.hash??"",fileCount:manifest.files.length};
     });
   }
+  /** Frozen repo baselines are immutable for the duration of a task.
+   * Legacy single-repo tasks keep their existing Git and SQLite semantics.
+   */
+  private taskRepositories(id:string,task:Row):RepositoryRevision[] {
+    const rows=this.db.prepare(`SELECT prefix,git_dir,base_head
+      FROM dc_task_repository_baselines WHERE task_id=? ORDER BY prefix`).all(id);
+    const paths=JSON.parse(task.allowed_paths) as string[];
+    const discovered=discoverRepositories(this.root,paths);
+    if(!rows.length){
+      if(discovered.length>1)fail("MULTI_REPO_BASE_UNBOUND",
+        "Task has independent Git repositories without a frozen claim-time baseline; re-review and reclaim it before verification");
+      return [];
+    }
+    const records=rows.map(row=>({
+      prefix:String(row.prefix),gitDir:String(row.git_dir),
+      baseHead:String(row.base_head),head:String(row.base_head),
+    }));
+    try{assertRepositoryTopology(this.root,paths,records);}
+    catch(error){fail("REPOSITORY_TOPOLOGY_CHANGED",String(error));}
+    return records;
+  }
+
+  private captureTaskRepositories(id:string,task:Row,baseHead:string):RepositoryRevision[] {
+    const paths=JSON.parse(task.allowed_paths) as string[];
+    const discovered=discoverRepositories(this.root,paths);
+    const existing=this.db.prepare(`SELECT prefix FROM dc_task_repository_baselines
+      WHERE task_id=? LIMIT 1`).get(id);
+    if(existing)return this.taskRepositories(id,task);
+    // Do not replace any of the mature single-Git recovery and resumption
+    // semantics with a new snapshot. The additional ledger is mandatory only
+    // when multiple independent Git histories actually exist.
+    if(discovered.length===1)return [];
+    // An already active legacy claim cannot retroactively pretend its child
+    // repo HEAD at upgrade time was the original approved baseline.
+    if(task.status!=='ready'&&discovered.length>1)
+      fail("MULTI_REPO_BASE_UNBOUND","Existing active task needs reviewed repository baselines");
+    const snapshots=currentRevisions(discovered);
+    if(snapshots[0]?.baseHead!==baseHead && snapshots.some(r=>r.prefix===''))
+      fail("ROOT_BASE_CHANGED","Root Git HEAD changed while capturing task repositories");
+    for(const revision of snapshots)
+      this.db.prepare(`INSERT INTO dc_task_repository_baselines
+        (task_id,prefix,git_dir,base_head,captured_at) VALUES(?,?,?,?,?)`)
+        .run(id,revision.prefix,revision.gitDir,revision.baseHead,utc());
+    return snapshots;
+  }
+
+  private observedTaskRepositories(id:string,task:Row):RepositoryRevision[] {
+    const originals=this.taskRepositories(id,task);
+    if(!originals.length)return [];
+    try{return updateRevisions(this.root,originals);}
+    catch(error){fail("REPOSITORY_HISTORY_CHANGED",String(error));}
+  }
+
+  private requireChildReposClean(revisions:RepositoryRevision[]):void {
+    for(const revision of revisions.filter(r=>!!r.prefix)){
+      const status=git(path.join(this.root,revision.prefix),
+        ['status','--porcelain=v1','--untracked-files=all']);
+      if(status)fail("CHILD_REPOSITORY_DIRTY",
+        `Commit or reconcile all changes in child repository ${revision.prefix} before task completion or verification`);
+    }
+  }
+
   checkStaged(): Row {
-    const staged=spawnSync(
-      "git",["diff","--cached","--no-renames","--name-only","-z","--diff-filter=ACMRTD"],
-      {windowsHide: true, cwd:this.root,encoding:"buffer",timeout:12_000},
-    );
-    if(staged.status!==0||!Buffer.isBuffer(staged.stdout))fail("GIT_ERROR","Cannot inspect staged files");
-    const files=[...new Set(staged.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
+    const active=this.db.prepare("SELECT * FROM dc_leases WHERE singleton=1").get();
+    const task=active?this.requireTask(active.task_id):null;
+    if(task)this.taskRepositories(task.id,task);
+    const roots=task?discoverRepositories(this.root,JSON.parse(task.allowed_paths)):discoverRepositories(this.root,[]);
+    const files=stagedChanges(roots);
     const artifactGate=this.checkGovernedArtifacts(files,true);
     if(!artifactGate.passed)
       return {passed:false,reason:"Frozen governed artifact changed without reviewed approval",
@@ -1782,39 +1869,40 @@ export class ProjectTaskLedger {
     if(files.length&&guidance.passed)
       return {passed:true,taskId:null,scope:"managed-guidance-sync",
         stagedFiles:files,deniedFiles:[],unapprovedDocs:[],managedFiles:guidance.managedFiles};
-    const lease = this.db.prepare("SELECT * FROM dc_leases WHERE singleton=1").get();
+    const lease = active;
     if (!lease || lease.expires_at <= Date.now()) {
       fail("LEASE_REQUIRED", "No active approved task lease; refusing Git commit"+
         (guidance.issues.length?"; managed guidance validation: "+guidance.issues.join("; "):""));
     }
-    const task = this.requireTask(lease.task_id);
-    if((task.required_gates as string).includes('"sqlite_decision"'))
-      return {passed:false,taskId:task.id,reason:
+    const claimedTask = this.requireTask(lease.task_id);
+    if((claimedTask.required_gates as string).includes('"sqlite_decision"'))
+      return {passed:false,taskId:claimedTask.id,reason:
         "SQLite-only decisions do not create Git commits; use decision-save, complete, report and verify"};
-    if (task.status !== "in_progress" && task.status !== "in_review") {
+    if (claimedTask.status !== "in_progress" && claimedTask.status !== "in_review") {
       fail("TASK_NOT_ACTIVE", "Only active work may be committed");
     }
-    if (this.blockers(task.id).length) fail("TASK_BLOCKED", "A prerequisite is no longer verified");
-    const patterns = JSON.parse(task.allowed_paths) as string[];
-    const contract=this.executionContract(task.id);
+    if (this.blockers(claimedTask.id).length) fail("TASK_BLOCKED", "A prerequisite is no longer verified");
+    const patterns = JSON.parse(claimedTask.allowed_paths) as string[];
+    const contract=this.executionContract(claimedTask.id);
     const spec=contract.profile==="spec-depth-v3"?
       contract.spec as ReleasePlanNode:null;
     const exact=spec?.allowedChangedFiles;
     const denied = files.filter((file) =>
       !patterns.some((pattern) => pathAllowed(file, pattern)) ||
       (exact && !exact.includes(file)));
-    const created = spawnSync(
-      "git", ["diff", "--cached", "--no-renames", "--name-only", "-z", "--diff-filter=A"],
-      { windowsHide: true, cwd: this.root, encoding: "buffer", timeout: 12_000 },
-    );
-    if (created.status !== 0 || !Buffer.isBuffer(created.stdout)) {
-      fail("GIT_ERROR", "Cannot inspect new Markdown documents");
-    }
-    const newFiles = created.stdout.toString("utf8").split("\0").filter(Boolean);
+    const newFiles=[...new Set(roots.flatMap(repo=> {
+      const created=spawnSync("git",
+        ["diff","--cached","--no-renames","--name-only","-z","--diff-filter=A"],
+        {windowsHide:true,cwd:repo.root,encoding:"buffer",timeout:12_000});
+      if(created.status!==0||!Buffer.isBuffer(created.stdout))
+        fail("GIT_ERROR","Cannot inspect newly staged files in "+repo.prefix);
+      return created.stdout.toString("utf8").split("\0").filter(Boolean).map(name=>
+        repo.prefix?repo.prefix+"/"+name:name);
+    }))].sort();
     const unapprovedDocs = undocumentedMarkdown(newFiles, patterns);
     return {
       passed: files.length>0 && denied.length === 0 && unapprovedDocs.length === 0,
-      taskId: task.id, stagedFiles: files, deniedFiles: denied,
+      taskId: claimedTask.id, stagedFiles: files, deniedFiles: denied,
       unapprovedDocs,exactFileScope:exact??null,
       ...(files.length?{}:{reason:"No staged task changes"}),
     };
@@ -4054,6 +4142,19 @@ export class ProjectTaskLedger {
       if (!["in_progress", "in_review"].includes(task.status)) {
         fail("INVALID_STATE", "Only a claimed task can record completion before verification");
       }
+      const repositories=this.observedTaskRepositories(id,task);
+      const multiRepo=repositories.some(repo=>!!repo.prefix);
+      if(multiRepo){
+        this.requireChildReposClean(repositories);
+        const changed=committedChanges(this.root,repositories);
+        const allowed=JSON.parse(task.allowed_paths) as string[];
+        const exact=(this.executionContract(id).profile==='spec-depth-v3'
+          ?(this.executionContract(id).spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
+        if(!changed.length||changed.some(file=>!allowed.some(p=>pathAllowed(file,p))||
+          (exact&&!exact.includes(file))))
+          fail('DELIVERY_SCOPE_INVALID',
+            'Every child repository must have real committed changes within its frozen task scope');
+      }
       if(input.preserveExistingWorktree===true&&input.existingDirtyFiles!==undefined)
         fail("DIRTY_MODE_CONFLICT","Choose either legacy protected tracked edits or audited worktree snapshot");
       const protectedAtClaim=this.protectedClaimWorktree(id,task,lease.base_head);
@@ -4102,6 +4203,11 @@ export class ProjectTaskLedger {
         record.verification, record.remaining, JSON.stringify(preserved),
         JSON.stringify(preservedWorktree),
         head, lease.agent, record.createdAt);
+      if(multiRepo){
+        this.db.prepare(`INSERT INTO dc_completion_repository_revisions
+          (task_id,revision,snapshot_json,digest) VALUES(?,?,?,?)`)
+          .run(id,revision,JSON.stringify(repositories),revisionDigest(repositories));
+      }
       this.audit(id, "completion_recorded", lease.agent, {
         revision, gitHead: head,
         resumedIncrementalBase:this.resumedDeliveryBase(id,String(lease.base_head),head),
@@ -4531,6 +4637,11 @@ export class ProjectTaskLedger {
           fail("CLAIM_BASE_CHANGED",
             "Original task worktree baseline must be preserved during reclaim");
       }
+      const claimedRepositories=this.captureTaskRepositories(id,task,claimBase);
+      // A child index may contain unrelated WIP at claim time. Unlike the
+      // single-root legacy snapshot, it cannot safely be exempted without a
+      // per-repository signed manifest, so stop instead of silently trusting it.
+      this.requireChildReposClean(claimedRepositories);
       this.recordLocalDeveloper(id,"claimed");
       this.db.prepare(`
         INSERT OR REPLACE INTO dc_leases(singleton,task_id,agent,token,base_head,expires_at)
@@ -4587,6 +4698,9 @@ export class ProjectTaskLedger {
     return this.inTransaction(()=>{
       const lease=this.requireLease(input.id,input.leaseToken);
       const task=this.requireTask(input.id);
+      if(this.taskRepositories(input.id,task).some(repo=>!!repo.prefix))
+        fail("MULTI_REPO_DEFERRAL_UNSUPPORTED",
+          "A multi-repository Gate deferral must freeze each repository commit and preserve the full version vector; current deferral is root-only");
       if(task.status!=="in_review")
         fail("NOT_IN_REVIEW","Only completed and reported tasks may defer verification");
       const gates=JSON.parse(task.required_gates) as string[];
@@ -5069,9 +5183,15 @@ export class ProjectTaskLedger {
       }
       if(resumedFrozen)this.checkReviewDeliveryHead(id,String(lease.base_head),String(completion!.git_head));
       const head=resumedFrozen?String(completion!.git_head):observedHead;
+      const repositories=this.observedTaskRepositories(id,current);
       this.db.prepare(
         "INSERT INTO dc_evidence(task_id,kind,reference,git_head,created_at) VALUES(?,?,?,?,?)",
       ).run(id, evidence.kind, evidence.reference, head, utc());
+      if(repositories.some(repo=>!!repo.prefix)){
+        const row=this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? ORDER BY id DESC LIMIT 1").get(id);
+        this.db.prepare(`INSERT INTO dc_evidence_repository_digests(evidence_id,digest)
+          VALUES(?,?)`).run(row!.id,revisionDigest(repositories));
+      }
       if (readyForReview) {
         this.db.prepare(
           "UPDATE dc_tasks SET status='in_review',updated_at=? WHERE id=?",
@@ -5123,9 +5243,21 @@ export class ProjectTaskLedger {
     const observedHead=this.checkReviewDeliveryHead(id,String(lease.base_head),String(completion.git_head));
     const head=String(completion.git_head);
     const evidence = this.db.prepare(
-      "SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=? LIMIT 1",
+      "SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=? ORDER BY id DESC LIMIT 1",
     ).get(id, input.evidenceReference.trim(), head);
     if (!evidence) fail("EVIDENCE_NOT_REPORTED", "Review must cite separately reported evidence for this exact Git revision");
+    const repositories=this.observedTaskRepositories(id,task);
+    const multiRepo=repositories.some(repo=>!!repo.prefix);
+    const snapshot=this.db.prepare(`SELECT digest FROM dc_completion_repository_revisions
+      WHERE task_id=? AND revision=?`).get(id,completion.revision);
+    if(multiRepo){
+      const digest=revisionDigest(repositories);
+      const reported=this.db.prepare(`SELECT digest FROM dc_evidence_repository_digests
+        WHERE evidence_id=?`).get(evidence.id);
+      if(!snapshot||snapshot.digest!==digest||reported?.digest!==digest)
+        fail("REPOSITORY_EVIDENCE_STALE",
+          "Reported Git evidence must match the exact committed HEAD of every scoped repository");
+    }
     return this.inTransaction(() => {
       this.db.prepare(`INSERT INTO dc_external_gate_reviews
         (task_id,gate_name,lease_token_hash,git_head,evidence_reference,
@@ -5139,6 +5271,10 @@ export class ProjectTaskLedger {
       ).run(id,input.gate,createHash("sha256").update(token).digest("hex"),head,
         input.evidenceReference.trim(),input.runner,input.reviewer,input.outcome,
         input.reviewNotes.trim(),utc());
+      if(multiRepo)this.db.prepare(`INSERT INTO dc_external_gate_repository_digests
+        (task_id,gate_name,digest) VALUES(?,?,?)
+        ON CONFLICT(task_id,gate_name) DO UPDATE SET digest=excluded.digest`)
+        .run(id,input.gate,String(snapshot!.digest));
       this.audit(id,isOwnReview?'developer_gate_self_reviewed':'external_gate_reviewed',input.reviewer,{
         gate:input.gate,outcome:input.outcome,gitHead:head,observedHead,
         evidenceReference:input.evidenceReference,runner:input.runner,
@@ -5185,10 +5321,27 @@ export class ProjectTaskLedger {
     if (!note) {
       return { taskId: id, passed: false, reason: "Missing structured completion report" };
     }
+    const repositories=this.observedTaskRepositories(id,task);
+    const multiRepo=repositories.some(repo=>!!repo.prefix);
+    const completedRepos=this.db.prepare(`SELECT snapshot_json,digest
+      FROM dc_completion_repository_revisions WHERE task_id=? AND revision=?`)
+      .get(id,note.revision);
+    const repoDigest=multiRepo?revisionDigest(repositories):'';
+    if(multiRepo){
+      if(!completedRepos||completedRepos.digest!==repoDigest||
+        JSON.stringify(repositories)!==String(completedRepos.snapshot_json))
+        return {taskId:id,passed:false,
+          reason:"Scoped child Git HEAD or repository identity changed since task completion"};
+      try{this.requireChildReposClean(repositories);}
+      catch(error){return {taskId:id,passed:false,
+        reason:"Child Git repository contains uncommitted changes",error:String(error)};}
+    }
     const deferred=this.db.prepare(
       "SELECT * FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NOT NULL",
     ).get(id);
     const frozenReview=deferred&&note.git_head===deferred.completion_head;
+    if(multiRepo&&frozenReview)return {taskId:id,passed:false,
+      reason:"Multi-repository verification deferral requires an independently reviewed version-vector migration"};
     if (note.git_head !== startHead && !frozenReview) {
       return { taskId: id, passed: false, reason: "Completion report refers to an older Git commit; record a new revision" };
     }
@@ -5242,7 +5395,7 @@ export class ProjectTaskLedger {
     const incrementalBase=!frozenReview&&deferred&&
       note.revision>deferred.completion_revision?
       this.resumedDeliveryBase(id,String(lease.base_head),startHead):null;
-    const files = frozenReview ?
+    const files = multiRepo?committedChanges(this.root,repositories):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head) :
       changedFiles(this.root, incrementalBase??lease.base_head);
     const governed=this.checkGovernedArtifacts();
@@ -5275,7 +5428,8 @@ export class ProjectTaskLedger {
       (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
     const denied = files.filter((f) =>
       !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
-    const unapprovedDocs = undocumentedMarkdown(frozenReview ?
+    const unapprovedDocs = undocumentedMarkdown(multiRepo?
+      committedChanges(this.root,repositories,'A'):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head,"A") :
       addedFiles(this.root, incrementalBase??lease.base_head), allowedPaths);
     if ((!files.length&&!sqliteDelivery) || denied.length || unapprovedDocs.length) {
@@ -5305,9 +5459,18 @@ export class ProjectTaskLedger {
         const ownReview=!!result&&result.reviewer===lease.agent&&
           taskReview?.reviewer===lease.agent&&taskReview?.outcome==='passed'&&
           taskReview?.completion_head===targetHead;
+        const repositoryReview=multiRepo?this.db.prepare(`SELECT digest
+          FROM dc_external_gate_repository_digests WHERE task_id=? AND gate_name=?`)
+          .get(id,name):null;
+        const evidenceDigest=multiRepo?this.db.prepare(`SELECT rd.digest FROM dc_evidence e
+          JOIN dc_evidence_repository_digests rd ON rd.evidence_id=e.id
+          WHERE e.task_id=? AND e.reference=? AND e.git_head=?
+          ORDER BY e.id DESC LIMIT 1`).get(id,result?.evidence_reference??"",targetHead):null;
         const reviewed=!!result && result.outcome==="passed" &&
           result.git_head===targetHead && result.lease_token_hash===tokenHash &&
           (ownReview||(result.reviewer!==result.runner&&result.reviewer!==lease.agent)) &&
+          (!multiRepo||(repositoryReview?.digest===repoDigest&&
+            evidenceDigest?.digest===repoDigest)) &&
           !!this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=?")
             .get(id,result?.evidence_reference??"",targetHead);
         return [name,{passed:reviewed,evidenceBased:true,
@@ -5320,14 +5483,22 @@ export class ProjectTaskLedger {
     }));
     const stableHead = git(this.root, ["rev-parse", "HEAD"]);
     const protectedEditsStable=protectedEditsAreStable();
-    const stable = startHead === stableHead && protectedEditsStable;
+    const repoStable=():boolean=>{
+      if(!multiRepo)return true;
+      try{
+        const current=this.observedTaskRepositories(id,task);
+        this.requireChildReposClean(current);
+        return revisionDigest(current)===repoDigest;
+      }catch{return false;}
+    };
+    const stable = startHead === stableHead && protectedEditsStable && repoStable();
     const passed = stable && Object.values(results).every((r) => r.passed);
     this.inTransaction(() => {
       const current = this.requireLease(id, token);
       if (current.base_head !== lease.base_head) fail("LEASE_CHANGED", "Lease changed during validation");
       const editsStillMatch=protectedEditsAreStable();
       if (git(this.root, ["rev-parse", "HEAD"]) !== startHead ||
-          !editsStillMatch) {
+          !editsStillMatch || !repoStable()) {
         fail("GIT_CHANGED_DURING_VERIFY", "Git changed after gates; re-run verification");
       }
       this.audit(id, passed ? "verified" : "verify_failed", "devcontrol", {
