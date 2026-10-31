@@ -4,27 +4,30 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { discoverProjectRootFromLayout } from "./project-context-layout.js";
 
-/** Schema / 文档：project_root 参数说明（自动探测，无需用户配置 MCP_PROJECT_ROOT） */
+/** Schema / 文档：显式 project_root 和 MCP_PROJECT_ROOT 均优先于自动探测。 */
 export const PROJECT_ROOT_SCHEMA_DESCRIPTION =
-  "可选。项目根目录绝对路径；未传时自动从 MCP 客户端工作区解析（如 Cursor 注入 WORKSPACE_FOLDER_PATHS、OpenCode/客户端配置的 cwd 等）。仅边缘场景需手动传入。";
+  "可选。项目根目录绝对路径，优先于环境变量 MCP_PROJECT_ROOT；未传时先采用有效的 MCP_PROJECT_ROOT（必须是已存在、可安全写入的绝对目录），再从客户端工作区（如 WORKSPACE_FOLDER_PATHS）或 cwd 自动解析。显式配置无效时不会静默回退到子目录。";
 
 
 export const INIT_PROJECT_ROOT_SCHEMA_DESCRIPTION =
   `${PROJECT_ROOT_SCHEMA_DESCRIPTION} init_project 是新项目初始化入口：显式传入尚不存在的绝对路径时，会创建该目录并仅写入 MCP 托管的 Skill、AGENTS.md 与 CLI fallback 文件；文件系统根目录、用户家目录和系统目录会被拒绝。`;
 
-/** MCP 客户端注入的工作区路径（最高优先级，信任客户端，不向父级 layout 上爬） */
+/** MCP 客户端注入的工作区路径（仅在未显式配置根目录时采用） */
 const RUNTIME_CWD_ENV_KEYS = ["INIT_CWD", "PWD", "CWD"] as const;
 
-/** 用户可选覆盖（不要求在 MCP 配置里逐个填写） */
+/** 用户定义的其他项目根目录覆盖；MCP_PROJECT_ROOT 单独作为强制显式配置处理。 */
 const OPTIONAL_OVERRIDE_ENV_KEYS = [
-  "MCP_PROJECT_ROOT",
   "MCP_WORKSPACE_ROOT",
   "CURSOR_WORKSPACE_ROOT",
   "WORKSPACE_ROOT",
   "PROJECT_ROOT",
   "OPENCODE_WORKSPACE",
-  "OPENCODE_CWD",
   "OPENCODE_PROJECT_ROOT",
+] as const;
+
+/** 客户端自动提供的工作目录提示，不能覆盖用户配置的根目录。 */
+const CLIENT_CWD_ENV_KEYS = [
+  "OPENCODE_CWD",
   "VSCODE_CWD",
   "CLAUDE_PROJECT_DIR",
   "CODEX_CWD",
@@ -318,6 +321,7 @@ export function buildProjectRootRetryHint(inputPath?: string) {
 export type WorkspaceRootSource =
   | "explicit"
   | "explicit-not-yet-created"
+  | "explicit-env"
   | "workspace-env"
   | "layout"
   | "env"
@@ -329,7 +333,7 @@ export interface WorkspaceRootResolution {
   source: WorkspaceRootSource;
   /** 用户传入的 project_root 原始值 */
   explicitRequested?: string;
-  /** 是否采用了用户显式路径（未回退到 MCP 安装目录等） */
+  /** 是否采用了工具参数或 MCP_PROJECT_ROOT 显式路径 */
   explicitHonored: boolean;
   warning?: string;
 }
@@ -342,7 +346,33 @@ function buildExplicitIgnoredWarning(requested: string, resolved: string): strin
   ].join(" ");
 }
 
+/** An explicitly configured project root must never silently fall back to a child cwd. */
+function resolveConfiguredProjectRoot(packageRoot: string): WorkspaceRootResolution | null {
+  const configured = process.env.MCP_PROJECT_ROOT?.trim();
+  if (!configured) return null;
+
+  if (!path.isAbsolute(configured)) {
+    throw new Error(`MCP_PROJECT_ROOT 必须是绝对路径: ${configured}`);
+  }
+  const root = safeResolve(configured);
+  if (!isExistingDirectory(root)) {
+    throw new Error(`MCP_PROJECT_ROOT 指向的项目目录不存在或不是目录: ${configured}`);
+  }
+  if (!isUsableWorkspaceCandidate(root, packageRoot)) {
+    throw new Error(`MCP_PROJECT_ROOT 不允许作为项目根目录: ${configured}`);
+  }
+  return { root, source: "explicit-env", explicitHonored: true };
+}
+
 function resolveAutoWorkspaceRoot(packageRoot: string): WorkspaceRootResolution {
+  const configuredRoot = resolveConfiguredProjectRoot(packageRoot);
+  if (configuredRoot) return configuredRoot;
+
+  const fromOverride = resolveFromEnvKeys(OPTIONAL_OVERRIDE_ENV_KEYS, packageRoot);
+  if (fromOverride) {
+    return { root: fromOverride, source: "env", explicitHonored: false };
+  }
+
   const fromWorkspaceEnv = resolveFromWorkspaceFolderPathsEnv();
   if (fromWorkspaceEnv) {
     const root = resolveTrustedClientWorkspace(fromWorkspaceEnv, packageRoot);
@@ -369,9 +399,9 @@ function resolveAutoWorkspaceRoot(packageRoot: string): WorkspaceRootResolution 
     return { root: fromRuntimeCwd, source: "env", explicitHonored: false };
   }
 
-  const fromOverride = resolveFromEnvKeys(OPTIONAL_OVERRIDE_ENV_KEYS, packageRoot);
-  if (fromOverride) {
-    return { root: fromOverride, source: "env", explicitHonored: false };
+  const fromClientCwd = resolveFromEnvKeys(CLIENT_CWD_ENV_KEYS, packageRoot);
+  if (fromClientCwd) {
+    return { root: fromClientCwd, source: "env", explicitHonored: false };
   }
 
   if (isExistingDirectory(cwd)) {

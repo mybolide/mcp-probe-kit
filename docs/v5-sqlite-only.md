@@ -30,6 +30,16 @@ MCP 每次启动时，若能识别真实 Git 业务项目，就检查
 都会自动同步。启动无法定位项目时，不向 MCP 安装目录写入文件；
 首次 `devcontrol` 调用传入明确的 `project_root` 后补做检查。
 
+Monorepo 中若 MCP 进程的 cwd 指向子仓库，而希望统一管理父仓库，可在
+MCP 服务配置中设置绝对路径 `MCP_PROJECT_ROOT=/ABSOLUTE/PARENT/REPO`。
+项目根目录选择顺序是工具参数 `project_root`、明确配置的
+`MCP_PROJECT_ROOT`、其他用户工作区覆盖、客户端
+`WORKSPACE_FOLDER_PATHS`、cwd 等自动探测。配置的
+`MCP_PROJECT_ROOT` 无效时启动会报错并拒绝回退写入子目录。
+启动 stderr 会显示 `workspace=...` 和 `source=explicit-env`。
+Cursor、Claude 及其他自动生成的 Harness 规则只提示使用 v5
+`devcontrol`，不建议从当前工作目录再次安装。
+
 Skill 自动生成源码定义的 83 个 DevControl 操作索引（含只读 guide），以及需求→设计→
 原子任务、独立审批、外部 Gate 证据、SQLite History 的执行规范。
 AGENTS.md 提供简短入口，**只更新受管理的 MCP 区块**，保留项目其他

@@ -91,7 +91,9 @@ describe("harness-skill-targets", () => {
       "utf8"
     );
     expect(text).toContain("alwaysApply: true");
-    expect(text).toContain(`mcp-probe-kit@${VERSION}`);
+    expect(text).toContain(`mcp-probe-kit-harness-adapter-version: ${VERSION}`);
+    expect(text).toContain("`devcontrol`");
+    expect(text).not.toContain("install-agent --project-root .");
     expect(text).toContain(".mcp-probe-kit/bin/probe.*");
   });
 

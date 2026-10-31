@@ -656,7 +656,7 @@ No installation needed, use the latest version directly.
 }
 ```
 
-> **Skill & AGENTS auto-bootstrap (v3.6.3+)**: Every MCP tool call writes `.agents/skills/mcp-probe-kit/SKILL.md` and merges the `mcp-probe:context` block into `AGENTS.md`. Workspace root is **auto-detected** (Cursor injects `WORKSPACE_FOLDER_PATHS`; OpenCode project `opencode.json` sets cwd). No per-client `MCP_PROJECT_ROOT` unless global MCP cannot resolve the workspace — then set `MCP_PROJECT_ROOT` or pass `project_root` in tool args.
+> **Skill & AGENTS auto-bootstrap (v5)**: The MCP synchronizes `.agents/skills/mcp-probe-kit/SKILL.md` and the managed `mcp-probe:context` block in `AGENTS.md` at the resolved project root. An explicit tool `project_root` wins first; an absolute, existing `MCP_PROJECT_ROOT` in the MCP server environment wins over injected `WORKSPACE_FOLDER_PATHS` and cwd. This is important when an MCP process runs in a monorepo child but must manage the parent project. An invalid configured `MCP_PROJECT_ROOT` fails closed rather than silently installing guidance in a child. With no explicit root, workspace discovery still works; startup stderr reports the chosen `workspace` and `source`.
 
 > **Multi-harness adapters (v3.6.8+)**: `AGENTS.md` and the canonical Skill stay the **single rule source**. If the project already has `.trae/`, `.lingma/`, `.comate/`, `.codebuddy/`, or `.claude/`, matching thin adapters (skill mirror or rules pointer) are written automatically — **no env vars**.
 

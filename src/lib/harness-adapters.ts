@@ -48,7 +48,7 @@ function generateRulesPointerContent(
 1. 阅读项目根 \`${agentsIndexPath}\` 中 \`<!-- mcp-probe:context -->\` 块（MCP 触发规则）
 2. 需要完整工具表时阅读 \`${skillCanonical}\`
 
-**不要**跳过 MCP 直接改业务代码。拿不准先调 \`workflow\`。
+**不要**跳过 MCP 直接改业务代码。正式研发任务统一通过 \`devcontrol\`，不确定时先调 \`devcontrol\` action=\`guide\`。
 `;
 }
 
@@ -69,11 +69,11 @@ function generateCursorRulesContent(
     "",
     `Before coding, read \`${agentsIndexPath}\` and \`${skillCanonical}\`.`,
     "",
-    "1. Prefer native mcp-probe-kit tools when they are available in the current Agent session.",
-    "2. If native MCP tools are missing, use \`.mcp-probe-kit/bin/probe.* exec <tool> --stdin\` through the terminal.",
-    `3. If the wrapper is missing, run \`npx --yes mcp-probe-kit@${version} install-agent --project-root .\`, then use the wrapper.`,
-    "4. Never use \`@latest\` or \`@next\`, never install globally, and do not ask the user to install it.",
-    "5. Preserve the normal chain: \`workflow\` → returned \`firstTool\` → \`plan_heartbeat\` → verification → \`code_review\` → \`converge\`.",
+    "1. Prefer native mcp-probe-kit tools. Use `devcontrol` as the only formal development workflow.",
+    "2. At conversation start, call `history_session_bootstrap`; then use `devcontrol` actions such as `onboard`, `next`, and `execution-contract` to recover the actual SQLite task state.",
+    "3. Only modify files authorized by an approved task; run real tests and follow the independent review and verification rules in the Skill.",
+    "4. If native MCP tools are unavailable, use an already installed, matching `.mcp-probe-kit/bin/probe.*` wrapper only. If it is missing, report the configuration problem; do not install from the current directory or fetch an unpublished release.",
+    "5. An installation or repair, if separately authorized, must use the verified absolute project root. Never guess a root from the current working directory.",
     "",
   ].join("\n");
 }
@@ -87,7 +87,7 @@ function generateComateRulesContent(
 
 > ${RULES_POINTER_VERSION_KEY}: ${version}
 
-配置 mcp-probe-kit MCP 后，写代码前阅读 ${agentsIndexPath} 的 mcp-probe 块或 ${skillCanonical}。拿不准先调 workflow。
+配置 mcp-probe-kit MCP 后，写代码前阅读 ${agentsIndexPath} 的 mcp-probe 块或 ${skillCanonical}。正式研发流程使用 devcontrol；不确定时调用 devcontrol action=guide。
 `;
 }
 
@@ -101,10 +101,10 @@ function generateClaudePointerBlock(
 
 > ${RULES_POINTER_VERSION_KEY}: ${version}
 
-- If the user says only “continue”, “start”, or “keep going”, call \`resume_plan\` first. Pass \`plan_id\` when known; otherwise pass only \`project_root\` to recover the latest active/blocked Plan.
-- Before confirming there is no resumable Plan, do not inspect the workspace with Bash, call \`workflow\`, or restart with \`start_*\`.
-- When \`resume_plan\` returns \`mustContinue=true\`, do not stop after reporting recovery. Execute \`nextStep/nextTool\` immediately, call \`plan_heartbeat\` after each step, and continue until blocked, cancelled, or converged.
-- For all other work, read the \`mcp-probe:context\` block in \`${agentsPath}\` or Skill \`${skillCanonical}\` before coding.
+- At conversation start, use \`history_session_bootstrap\` and read the \`mcp-probe:context\` block in \`${agentsPath}\` and Skill \`${skillCanonical}\`.
+- When the user says “continue” or “start”, use \`devcontrol\` actions \`onboard\`, \`next\`, and \`execution-contract\` to recover the approved SQLite task state before changing files.
+- Use \`devcontrol\` for formal development work. Follow the Skill for approved file scope, real testing, independent review, and verification.
+- Never install guidance from the current directory. For any separately authorized installation, verify an absolute project root first.
 ${CLAUDE_BLOCK_END}`;
 }
 

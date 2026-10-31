@@ -37,6 +37,42 @@ describe("harness-adapters", () => {
     expect(text).not.toContain("阅读项目根 `AGENTS.md`");
   });
 
+  test("Cursor、Claude、Lingma、Comate 适配规则都只使用 v5 流程", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-adapter-v5-"));
+    tempDirs.push(root);
+    for (const marker of [".cursor", ".claude", ".lingma", ".comate"]) {
+      fs.mkdirSync(path.join(root, marker), { recursive: true });
+    }
+    const originalClaude = "# User-owned Claude instructions\nkeep-my-custom-rules\n";
+    fs.writeFileSync(path.join(root, "CLAUDE.md"), originalClaude, "utf8");
+
+    const first = ensureHarnessAdapters(root, generateWorkflowSkillContent(VERSION), "AGENTS.md", {});
+    const adapterPaths = [
+      ".cursor/rules/mcp-probe-kit.mdc",
+      "CLAUDE.md",
+      ".lingma/rules/mcp-probe-kit-mcp.md",
+      ".comate/rules/mcp-probe-kit-mcp.mdr",
+    ];
+    expect(first.adapters).toHaveLength(adapterPaths.length);
+    const generated = adapterPaths.map((relPath) => fs.readFileSync(path.join(root, relPath), "utf8"));
+    for (const content of generated) {
+      expect(content).toContain("devcontrol");
+      for (const forbidden of [
+        "resume_plan", "plan_heartbeat", "start_feature", "start_bugfix",
+        "start_*", "converge", "firstTool", "install-agent --project-root .",
+      ]) {
+        expect(content).not.toContain(forbidden);
+      }
+    }
+    expect(generated[0]).toContain("history_session_bootstrap");
+    expect(generated[1]).toContain("history_session_bootstrap");
+    expect(generated[1]).toContain(originalClaude.trim());
+
+    const second = ensureHarnessAdapters(root, generateWorkflowSkillContent(VERSION), "AGENTS.md", {});
+    expect(second.adapters.every((adapter) => adapter.skipped)).toBe(true);
+    expect(adapterPaths.map((relPath) => fs.readFileSync(path.join(root, relPath), "utf8"))).toEqual(generated);
+  });
+
   test("第二次 bootstrap 仍记录已存在的 adapters", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-adapter-"));
     tempDirs.push(root);
@@ -51,7 +87,7 @@ describe("harness-adapters", () => {
     expect(second.layoutHarness.adapters).toEqual(first.layoutHarness.adapters);
   });
 
-  test("Claude Code 环境自动创建 CLAUDE.md 恢复规则并保持幂等", () => {
+  test("Claude Code 环境生成 v5 DevControl 规则并保留用户内容及幂等性", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-adapter-claude-env-"));
     tempDirs.push(root);
     fs.writeFileSync(path.join(root, "CLAUDE.md"), "# User Claude rules\nkeep-me\n", "utf8");
@@ -68,9 +104,12 @@ describe("harness-adapters", () => {
 
     expect(claude?.updated).toBe(true);
     expect(content).toContain(`mcp-probe-kit-harness-adapter-version: ${VERSION}`);
-    expect(content).toContain("call `resume_plan` first");
-    expect(content).toContain("pass only `project_root`");
-    expect(content).toContain("do not inspect the workspace with Bash");
+    expect(content).toContain("`history_session_bootstrap`");
+    expect(content).toContain("`devcontrol`");
+    expect(content).toContain("`execution-contract`");
+    for (const forbidden of ["resume_plan", "plan_heartbeat", "start_*", "converge", "--project-root ."]) {
+      expect(content).not.toContain(forbidden);
+    }
     expect(content).toContain("# User Claude rules");
     expect(content).toContain("keep-me");
 

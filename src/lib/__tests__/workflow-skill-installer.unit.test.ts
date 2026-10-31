@@ -443,9 +443,10 @@ describe("workflow-skill-installer", () => {
     expect(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8")).toContain(
       `mcp-probe:context-version: ${higherVersion}`
     );
-    expect(
-      fs.readFileSync(path.join(root, ".cursor/rules/mcp-probe-kit.mdc"), "utf8")
-    ).toContain(`mcp-probe-kit@${higherVersion}`);
+    const cursorRules = fs.readFileSync(path.join(root, ".cursor/rules/mcp-probe-kit.mdc"), "utf8");
+    expect(cursorRules).toContain(`mcp-probe-kit-harness-adapter-version: ${higherVersion}`);
+    expect(cursorRules).toContain("`devcontrol`");
+    expect(cursorRules).not.toContain("install-agent --project-root .");
   });
 
   test("从 tool args 解析 project_root", () => {

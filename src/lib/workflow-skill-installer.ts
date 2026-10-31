@@ -328,6 +328,11 @@ export function ensureMcpProbeKitBootstrapForToolCall(
   args: unknown
 ): McpProbeKitBootstrapResult | null {
   assertExplicitProjectRootExists(toolName, args);
+  // A broken configured root must fail closed even for callers that would
+  // otherwise continue after an optional bootstrap error.
+  if (process.env.MCP_PROJECT_ROOT?.trim() && !extractExplicitProjectRoot(args)) {
+    resolveWorkspaceRootWithMeta();
+  }
   try {
     const projectRoot = resolveProjectRootFromToolArgs(args);
     return ensureMcpProbeKitBootstrap(projectRoot);

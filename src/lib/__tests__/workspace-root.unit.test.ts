@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
   assertManagedWriteRootSafe,
   getManagedWriteRootRejection,
@@ -9,15 +9,38 @@ import {
   resolveWorkspaceRoot,
   resolveWorkspaceRootWithMeta,
 } from "../workspace-root.js";
+import {
+  ensureMcpProbeKitBootstrapAtStartup,
+  ensureMcpProbeKitBootstrapForToolCall,
+} from "../workflow-skill-installer.js";
 
 const original = process.env.WORKSPACE_FOLDER_PATHS;
+const originalConfiguredRoot = process.env.MCP_PROJECT_ROOT;
+const originalWorkspaceRoot = process.env.MCP_WORKSPACE_ROOT;
+const originalCwd = process.cwd();
 const tempDirs: string[] = [];
 
+beforeEach(() => {
+  delete process.env.MCP_PROJECT_ROOT;
+  delete process.env.MCP_WORKSPACE_ROOT;
+});
+
 afterEach(() => {
+  process.chdir(originalCwd);
   if (original === undefined) {
     delete process.env.WORKSPACE_FOLDER_PATHS;
   } else {
     process.env.WORKSPACE_FOLDER_PATHS = original;
+  }
+  if (originalConfiguredRoot === undefined) {
+    delete process.env.MCP_PROJECT_ROOT;
+  } else {
+    process.env.MCP_PROJECT_ROOT = originalConfiguredRoot;
+  }
+  if (originalWorkspaceRoot === undefined) {
+    delete process.env.MCP_WORKSPACE_ROOT;
+  } else {
+    process.env.MCP_WORKSPACE_ROOT = originalWorkspaceRoot;
   }
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -25,6 +48,84 @@ afterEach(() => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   }
+});
+
+describe("workspace-root configured MCP_PROJECT_ROOT", () => {
+  function parentAndChild() {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "ws-explicit-env-"));
+    const child = path.join(parent, "app");
+    tempDirs.push(parent);
+    fs.mkdirSync(child, { recursive: true });
+    fs.writeFileSync(path.join(parent, "package.json"), "{}", "utf8");
+    fs.writeFileSync(path.join(child, "package.json"), "{}", "utf8");
+    return { parent, child };
+  }
+
+  test("parent MCP_PROJECT_ROOT wins over child cwd, with no child bootstrap writes", () => {
+    const { parent, child } = parentAndChild();
+    process.chdir(child);
+    delete process.env.WORKSPACE_FOLDER_PATHS;
+    process.env.MCP_PROJECT_ROOT = parent;
+
+    const resolved = resolveWorkspaceRootWithMeta();
+    expect(resolved).toMatchObject({ root: parent, source: "explicit-env", explicitHonored: true });
+
+    const startup = ensureMcpProbeKitBootstrapAtStartup();
+    expect(startup.error).toBeUndefined();
+    expect(startup.bootstrap?.projectRoot).toBe(parent);
+    expect(fs.existsSync(path.join(parent, ".agents", "skills", "mcp-probe-kit", "SKILL.md"))).toBe(true);
+    expect(fs.existsSync(path.join(child, ".agents"))).toBe(false);
+    expect(fs.existsSync(path.join(child, "AGENTS.md"))).toBe(false);
+    expect(fs.existsSync(path.join(child, ".mcp-probe-kit"))).toBe(false);
+  });
+
+  test("parent MCP_PROJECT_ROOT wins over WORKSPACE_FOLDER_PATHS pointing to child", () => {
+    const { parent, child } = parentAndChild();
+    process.chdir(child);
+    process.env.WORKSPACE_FOLDER_PATHS = JSON.stringify([child]);
+    process.env.MCP_PROJECT_ROOT = parent;
+
+    const resolved = resolveWorkspaceRootWithMeta();
+    expect(resolved.root).toBe(parent);
+    expect(resolved.source).toBe("explicit-env");
+    expect(resolveWorkspaceRoot(child)).toBe(child); // Explicit tool argument remains highest priority.
+  });
+
+  test("MCP_PROJECT_ROOT wins over another configured root and other explicit overrides win over client cwd", () => {
+    const { parent, child } = parentAndChild();
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), "ws-other-root-"));
+    tempDirs.push(other);
+    fs.writeFileSync(path.join(other, "package.json"), "{}", "utf8");
+    process.chdir(child);
+    process.env.WORKSPACE_FOLDER_PATHS = JSON.stringify([child]);
+    process.env.MCP_WORKSPACE_ROOT = other;
+    expect(resolveWorkspaceRootWithMeta().root).toBe(other);
+    process.env.MCP_PROJECT_ROOT = parent;
+    expect(resolveWorkspaceRootWithMeta()).toMatchObject({ root: parent, source: "explicit-env" });
+  });
+
+  test("invalid configured roots fail closed rather than writing to cwd", () => {
+    const { parent, child } = parentAndChild();
+    process.chdir(child);
+    process.env.WORKSPACE_FOLDER_PATHS = JSON.stringify([child]);
+    for (const invalid of [".", path.join(parent, "missing"), os.homedir()]) {
+      process.env.MCP_PROJECT_ROOT = invalid;
+      expect(() => resolveWorkspaceRootWithMeta()).toThrow(/MCP_PROJECT_ROOT/);
+      expect(() => ensureMcpProbeKitBootstrapAtStartup()).toThrow(/MCP_PROJECT_ROOT/);
+      expect(() => ensureMcpProbeKitBootstrapForToolCall("code_insight", {})).toThrow(/MCP_PROJECT_ROOT/);
+      expect(fs.existsSync(path.join(child, "AGENTS.md"))).toBe(false);
+    }
+  });
+
+  test("auto-detection still uses the child workspace when no root is configured", () => {
+    const { child } = parentAndChild();
+    process.chdir(child);
+    delete process.env.MCP_PROJECT_ROOT;
+    process.env.WORKSPACE_FOLDER_PATHS = JSON.stringify([child]);
+    const resolved = resolveWorkspaceRootWithMeta();
+    expect(resolved.root).toBe(child);
+    expect(resolved.source).toBe("workspace-env");
+  });
 });
 
 describe("workspace-root WORKSPACE_FOLDER_PATHS", () => {

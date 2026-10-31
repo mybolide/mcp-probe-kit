@@ -110,9 +110,10 @@ describe("mcp-probe-kit CLI", () => {
     expect(exitCode).toBe(0);
     const payload = JSON.parse(output());
     expect(payload.installed.cliFallback.packageSpec).toBe(`mcp-probe-kit@${VERSION}`);
-    expect(
-      fs.readFileSync(path.join(root, ".cursor/rules/mcp-probe-kit.mdc"), "utf8")
-    ).toContain(`mcp-probe-kit@${VERSION}`);
+    const cursorRules = fs.readFileSync(path.join(root, ".cursor/rules/mcp-probe-kit.mdc"), "utf8");
+    expect(cursorRules).toContain(`mcp-probe-kit-harness-adapter-version: ${VERSION}`);
+    expect(cursorRules).toContain("`devcontrol`");
+    expect(cursorRules).not.toContain("install-agent --project-root .");
   });
 
   test("未知工具返回稳定错误码", async () => {
