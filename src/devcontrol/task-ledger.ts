@@ -429,6 +429,20 @@ export class ProjectTaskLedger {
         base_head TEXT NOT NULL, snapshot_json TEXT NOT NULL,
         captured_at TEXT NOT NULL
       );
+      -- Immutable authorized upgrade record; the claim-time snapshot is not
+      -- overwritten. Child HEADs captured here are migration checkpoints,
+      -- never retroactively described as the original task's Git baseline.
+      CREATE TABLE IF NOT EXISTS dc_legacy_active_migrations (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        original_root_base TEXT NOT NULL,
+        original_worktree_json TEXT NOT NULL,
+        protected_worktree_json TEXT NOT NULL,
+        repositories_json TEXT NOT NULL,
+        repository_digest TEXT NOT NULL,
+        migration_reason TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        migrated_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS dc_task_review_handoffs (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
         completion_revision INTEGER NOT NULL, completion_head TEXT NOT NULL,
@@ -845,7 +859,8 @@ export class ProjectTaskLedger {
    * The original claim HEAD remains the immutable comparison baseline.
    */
   recoverTaskLease(id:string,input:{actor:string;ownerRecoveryKey:string;
-    reason:string;ttlSeconds?:number}):Row {
+    reason:string;ttlSeconds?:number;preserveExistingWorktree?:boolean;
+    rebaselineLegacyRepositories?:boolean}):Row {
     const actor=String(input?.actor??'').trim(),reason=String(input?.reason??'').trim();
     const ttl=input.ttlSeconds??1800;
     if(actor.length<2||reason.length<30||!Number.isSafeInteger(ttl)||ttl<60||ttl>3600)
@@ -865,6 +880,14 @@ export class ProjectTaskLedger {
     const head=git(this.root,['rev-parse','HEAD']);
     if(!run(this.root,'git',['merge-base','--is-ancestor',String(lease.base_head),head]).passed)
       fail('GIT_HISTORY_CHANGED','Original task baseline is no longer an ancestor of HEAD');
+    if(input.preserveExistingWorktree===true||
+      input.rebaselineLegacyRepositories===true){
+      if(input.preserveExistingWorktree!==true||
+        input.rebaselineLegacyRepositories!==true)
+        fail('MIGRATION_FLAGS_REQUIRED',
+          'Legacy migration requires both explicit Owner preservation and repository rebaseline flags');
+      return this.migrateLegacyActiveTask(id,task,lease,input.actor,reason,ttl,head);
+    }
     this.protectedClaimWorktree(id,task,String(lease.base_head));
     const changed=committedFilesBetween(this.root,String(lease.base_head),head);
     const allowed=JSON.parse(task.allowed_paths) as string[];
@@ -885,6 +908,104 @@ export class ProjectTaskLedger {
         originalBaseHead:lease.base_head,currentHead:head,expiresAt,
         nextActions:['complete','report','review-handoff'],
         warning:'Recovery restores processing rights only; no tests, review or Gate passed'};
+    });
+  }
+
+  /** One-time migration for a pre-v5 lease. Child HEADs are explicitly
+   * migration checkpoints; commits before this checkpoint do not qualify as
+   * newly delivered task code. The original root lease base is immutable.
+   */
+  private migrateLegacyActiveTask(id:string,task:Row,lease:Row,actor:string,
+    reason:string,ttl:number,rootHead:string):Row {
+    if(this.db.prepare('SELECT task_id FROM dc_legacy_active_migrations WHERE task_id=?').get(id))
+      fail('MIGRATION_ALREADY_APPLIED','Owner migration has already been recorded for this task');
+    if(this.db.prepare('SELECT task_id FROM dc_task_repository_baselines WHERE task_id=? LIMIT 1').get(id))
+      fail('MIGRATION_ALREADY_BOUND','Task already has immutable repository baselines');
+    const paths=JSON.parse(task.allowed_paths) as string[];
+    const repos=discoverRepositories(this.root,paths);
+    if(repos.length<2)fail('MULTI_REPO_NOT_FOUND','No independent Git repositories to migrate');
+    if(this.db.prepare('SELECT task_id FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NULL').get(id))
+      fail('MIGRATION_DEFERRED','Deferred verification requires separate version-vector review');
+    const prior=this.db.prepare(`SELECT base_head,snapshot_json
+      FROM dc_task_worktree_baselines WHERE task_id=?`).get(id);
+    const original=(prior?JSON.parse(String(prior.snapshot_json)):[]) as ReturnType<typeof preservedWorktreeSnapshot>;
+    if(prior&&prior.base_head!==lease.base_head&&
+      !run(this.root,'git',['merge-base','--is-ancestor',
+        String(prior.base_head),String(lease.base_head)]).passed)
+      fail('CLAIM_BASE_CHANGED','Original worktree baseline cannot be proven');
+    const protectedNow=preservedWorktreeSnapshot(this.root);
+    const currentByPath=new Map(protectedNow.map(file=>[file.path,file]));
+    for(const old of original){
+      const current=currentByPath.get(old.path);
+      if(!current||current.kind!==old.kind||current.sha256!==old.sha256||
+        current.size!==old.size)
+        fail('ORIGINAL_WORKTREE_CHANGED','Protected claim-time file changed; Owner migration cannot overwrite it');
+    }
+    if(protectedNow.some(file=>paths.some(p=>pathAllowed(file.path,p))))
+      fail('MIGRATION_SCOPE_DIRTY','Root task-scope dirty files cannot be protected as unrelated work');
+    const rootCommits=committedFilesBetween(this.root,String(lease.base_head),rootHead);
+    if(rootCommits.some(file=>!paths.some(p=>pathAllowed(file,p))))
+      fail('RECOVERY_SCOPE_CONFLICT','Root commits since claim exceed the task scope');
+    const childWip:Array<{path:string;kind:string;size:number;sha256:string}>=[];
+    for(const repo of repos.filter(r=>!!r.prefix)){
+      for(const item of preservedWorktreeSnapshot(repo.root)){
+        const file=repo.prefix+'/'+item.path;
+        if(!paths.some(p=>pathAllowed(file,p)))
+          fail('MIGRATION_SCOPE_DIRTY','Child uncommitted file outside task scope: '+file);
+        childWip.push({...item,path:file});
+      }
+    }
+    const baselines=currentRevisions(repos).map(repo=>repo.prefix===''?
+      {...repo,baseHead:String(lease.base_head)}:repo);
+    const digest=revisionDigest(baselines);
+    const sha=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
+    const token=randomUUID(),expiresAt=Date.now()+ttl*1000;
+    return this.inTransaction(()=>{
+      if(this.db.prepare('SELECT task_id FROM dc_legacy_active_migrations WHERE task_id=?').get(id))
+        fail('MIGRATION_ALREADY_APPLIED','Concurrent migration already recorded');
+      const observed=currentRevisions(discoverRepositories(this.root,paths));
+      if(observed.length!==baselines.length||observed.some((repo,i)=>
+        repo.prefix!==baselines[i].prefix||repo.gitDir!==baselines[i].gitDir||
+        repo.head!==baselines[i].head)||
+        JSON.stringify(preservedWorktreeSnapshot(this.root))!==JSON.stringify(protectedNow))
+        fail('MIGRATION_STATE_CHANGED','Git identity, HEAD or protected root worktree changed during review');
+      for(const repo of repos.filter(r=>!!r.prefix)){
+        const dirty=preservedWorktreeSnapshot(repo.root).map(file=>({
+          ...file,path:repo.prefix+'/'+file.path,
+        }));
+        if(JSON.stringify(dirty)!==JSON.stringify(childWip.filter(file=>
+          file.path.startsWith(repo.prefix+'/'))))
+          fail('MIGRATION_STATE_CHANGED','Child repository worktree changed during review');
+      }
+      const updated=this.db.prepare(`UPDATE dc_leases SET agent=?,token=?,expires_at=?
+        WHERE task_id=? AND token=? AND expires_at<=?`)
+        .run(actor.trim(),token,expiresAt,id,String(lease.token),Date.now());
+      if(updated.changes!==1)fail('RECOVERY_RACE','Original lease changed during Owner recovery');
+      for(const repo of baselines)this.db.prepare(`INSERT INTO dc_task_repository_baselines
+        (task_id,prefix,git_dir,base_head,captured_at) VALUES(?,?,?,?,?)`)
+        .run(id,repo.prefix,repo.gitDir,repo.baseHead,utc());
+      this.db.prepare(`INSERT INTO dc_legacy_active_migrations
+        (task_id,original_root_base,original_worktree_json,protected_worktree_json,
+         repositories_json,repository_digest,migration_reason,actor,migrated_at)
+        VALUES(?,?,?,?,?,?,?,?,?)`).run(id,String(lease.base_head),
+          JSON.stringify(original),JSON.stringify(protectedNow),
+          JSON.stringify(baselines),digest,reason,actor.trim(),utc());
+      this.audit(id,'owner_legacy_active_repositories_migrated',actor.trim(),{
+        reason,previousAgent:lease.agent,originalRootBase:lease.base_head,
+        currentRootHead:rootHead,originalWorktreeDigest:sha(original),
+        protectedWorktreeDigest:sha(protectedNow),
+        repositoryDigest:digest,repositories:baselines,
+        protectedRootPaths:protectedNow.map(file=>file.path),
+        childTaskScopeWip:childWip.map(file=>file.path),
+        childBaselinesAreMigrationCheckpoints:true,testsOrGatesApproved:false,
+      });
+      return {taskId:id,status:task.status,leaseToken:token,expiresAt,
+        originalBaseHead:lease.base_head,currentHead:rootHead,
+        migration:true,repositories:baselines,repositoryDigest:digest,
+        protectedRootPaths:protectedNow.map(file=>file.path),
+        childTaskScopeWip:childWip.map(file=>file.path),
+        nextActions:['check','commit','report','complete','review-handoff'],
+        warning:'Only commits after migration checkpoints count as new child delivery. No tests, reviews or Gates passed.'};
     });
   }
 
@@ -4061,16 +4182,19 @@ export class ProjectTaskLedger {
    */
   private protectedClaimWorktree(id:string,task:Row,baseHead:string):
     Array<{path:string;kind:"tracked"|"untracked";sha256:string;size:number}>|null {
+    const migration=this.db.prepare(`SELECT original_root_base,protected_worktree_json
+      FROM dc_legacy_active_migrations WHERE task_id=?`).get(id);
     const row=this.db.prepare(
       "SELECT base_head,snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?",
     ).get(id);
-    if(!row)return null; // old leases require explicit audited legacy mode
-    if(row.base_head!==baseHead&&
+    if(!row&&!migration)return null; // old leases require explicit audited legacy mode
+    const snapshotBase=String(migration?.original_root_base??row!.base_head);
+    if(snapshotBase!==baseHead&&
         !run(this.root,'git',['merge-base','--is-ancestor',
-          String(row.base_head),baseHead]).passed)
+          snapshotBase,baseHead]).passed)
       fail("CLAIM_BASE_CHANGED",
         "Claim baseline changed; protected local files require reviewed recovery");
-    const snapshot=JSON.parse(String(row.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
+    const snapshot=JSON.parse(String(migration?.protected_worktree_json??row!.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
     if(!snapshot.length)return null; // unchanged legacy behavior for clean claims
     const allowed=JSON.parse(task.allowed_paths) as string[];
     if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))))
@@ -4172,8 +4296,8 @@ export class ProjectTaskLedger {
       // A worktree snapshot cannot stand in for an actual committed task diff.
       if(protectedSnapshot){
         const resumedBase=this.resumedDeliveryBase(id,String(lease.base_head),head);
-        const changed=committedFilesBetween(this.root,
-          resumedBase??lease.base_head,head);
+        const changed=multiRepo?committedChanges(this.root,repositories):
+          committedFilesBetween(this.root,resumedBase??lease.base_head,head);
         const allowed=JSON.parse(task.allowed_paths) as string[];
         if(!changed.length||changed.some(file=>!allowed.some(p=>pathAllowed(file,p))))
           fail("DELIVERY_SCOPE_INVALID","Only committed, in-scope task work can record completion");

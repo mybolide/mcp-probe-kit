@@ -199,6 +199,8 @@ export function dispatchDevControl(
     case "recover-task": return ledger.recoverTaskLease(String(input.id),{
       actor:String(input.actor??''),ownerRecoveryKey:String(input.ownerRecoveryKey??''),
       reason:String(input.reason??''),ttlSeconds:Number(input.ttlSeconds??1800),
+      preserveExistingWorktree:input.preserveExistingWorktree===true,
+      rebaselineLegacyRepositories:input.rebaselineLegacyRepositories===true,
     });
     case "release": return ledger.release(String(input.id), String(input.leaseToken));
     case "defer-verification": return ledger.deferVerification({
