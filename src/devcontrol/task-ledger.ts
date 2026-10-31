@@ -443,6 +443,18 @@ export class ProjectTaskLedger {
         actor TEXT NOT NULL,
         migrated_at TEXT NOT NULL
       );
+      -- Each child repository may have unrelated, unstaged Owner work. Store
+      -- only its out-of-scope SHA-256 snapshot and preserve the original
+      -- migration record; this is never Git delivery evidence.
+      CREATE TABLE IF NOT EXISTS dc_legacy_child_worktree_snapshots (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        prefix TEXT NOT NULL,
+        git_dir TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        digest TEXT NOT NULL,
+        captured_at TEXT NOT NULL,
+        PRIMARY KEY(task_id,prefix)
+      );
       CREATE TABLE IF NOT EXISTS dc_task_review_handoffs (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
         completion_revision INTEGER NOT NULL, completion_head TEXT NOT NULL,
@@ -947,13 +959,19 @@ export class ProjectTaskLedger {
     if(rootCommits.some(file=>!paths.some(p=>pathAllowed(file,p))))
       fail('RECOVERY_SCOPE_CONFLICT','Root commits since claim exceed the task scope');
     const childWip:Array<{path:string;kind:string;size:number;sha256:string}>=[];
+    const childProtected:Array<{prefix:string;gitDir:string;
+      files:ReturnType<typeof preservedWorktreeSnapshot>}>=[];
     for(const repo of repos.filter(r=>!!r.prefix)){
+      const unrelated:ReturnType<typeof preservedWorktreeSnapshot>=[];
       for(const item of preservedWorktreeSnapshot(repo.root)){
         const file=repo.prefix+'/'+item.path;
-        if(!paths.some(p=>pathAllowed(file,p)))
-          fail('MIGRATION_SCOPE_DIRTY','Child uncommitted file outside task scope: '+file);
-        childWip.push({...item,path:file});
+        if(paths.some(p=>pathAllowed(file,p))){
+          childWip.push({...item,path:file});
+        }else{
+          unrelated.push(item);
+        }
       }
+      childProtected.push({prefix:repo.prefix,gitDir:repo.gitDir,files:unrelated});
     }
     const baselines=currentRevisions(repos).map(repo=>repo.prefix===''?
       {...repo,baseHead:String(lease.base_head)}:repo);
@@ -973,8 +991,13 @@ export class ProjectTaskLedger {
         const dirty=preservedWorktreeSnapshot(repo.root).map(file=>({
           ...file,path:repo.prefix+'/'+file.path,
         }));
-        if(JSON.stringify(dirty)!==JSON.stringify(childWip.filter(file=>
-          file.path.startsWith(repo.prefix+'/'))))
+        const protectedFiles=childProtected.find(entry=>entry.prefix===repo.prefix)!.files
+          .map(file=>({...file,path:repo.prefix+'/'+file.path}));
+        if(JSON.stringify(dirty.slice().sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0))!==
+          JSON.stringify([
+          ...childWip.filter(file=>file.path.startsWith(repo.prefix+'/')),
+          ...protectedFiles,
+        ].sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0)))
           fail('MIGRATION_STATE_CHANGED','Child repository worktree changed during review');
       }
       const updated=this.db.prepare(`UPDATE dc_leases SET agent=?,token=?,expires_at=?
@@ -984,6 +1007,10 @@ export class ProjectTaskLedger {
       for(const repo of baselines)this.db.prepare(`INSERT INTO dc_task_repository_baselines
         (task_id,prefix,git_dir,base_head,captured_at) VALUES(?,?,?,?,?)`)
         .run(id,repo.prefix,repo.gitDir,repo.baseHead,utc());
+      for(const item of childProtected)this.db.prepare(`INSERT INTO dc_legacy_child_worktree_snapshots
+        (task_id,prefix,git_dir,snapshot_json,digest,captured_at)
+        VALUES(?,?,?,?,?,?)`).run(id,item.prefix,item.gitDir,
+        JSON.stringify(item.files),sha(item.files),utc());
       this.db.prepare(`INSERT INTO dc_legacy_active_migrations
         (task_id,original_root_base,original_worktree_json,protected_worktree_json,
          repositories_json,repository_digest,migration_reason,actor,migrated_at)
@@ -996,6 +1023,10 @@ export class ProjectTaskLedger {
         protectedWorktreeDigest:sha(protectedNow),
         repositoryDigest:digest,repositories:baselines,
         protectedRootPaths:protectedNow.map(file=>file.path),
+        protectedChildWorktrees:childProtected.map(item=>({
+          prefix:item.prefix,gitDir:item.gitDir,digest:sha(item.files),
+          files:item.files.map(file=>file.path),
+        })),
         childTaskScopeWip:childWip.map(file=>file.path),
         childBaselinesAreMigrationCheckpoints:true,testsOrGatesApproved:false,
       });
@@ -1003,6 +1034,8 @@ export class ProjectTaskLedger {
         originalBaseHead:lease.base_head,currentHead:rootHead,
         migration:true,repositories:baselines,repositoryDigest:digest,
         protectedRootPaths:protectedNow.map(file=>file.path),
+        protectedChildPaths:childProtected.flatMap(item=>item.files.map(file=>
+          item.prefix+'/'+file.path)),
         childTaskScopeWip:childWip.map(file=>file.path),
         nextActions:['check','commit','report','complete','review-handoff'],
         warning:'Only commits after migration checkpoints count as new child delivery. No tests, reviews or Gates passed.'};
@@ -1965,12 +1998,47 @@ export class ProjectTaskLedger {
     catch(error){fail("REPOSITORY_HISTORY_CHANGED",String(error));}
   }
 
-  private requireChildReposClean(revisions:RepositoryRevision[]):void {
+  /** A legacy Owner migration can protect exact out-of-scope child WIP.
+   * Everything else must be committed, and no staged, changed, or new
+   * unrelated file can be exempted at completion or verification time.
+   * Normal tasks and older migrations still require a clean child tree.
+   */
+  private requireChildReposClean(revisions:RepositoryRevision[],
+    id?:string,task?:Row):void {
+    const scope=id&&task?JSON.parse(task.allowed_paths) as string[]:[];
+    const protectedRows=id?this.db.prepare(`SELECT prefix,git_dir,snapshot_json,digest
+      FROM dc_legacy_child_worktree_snapshots WHERE task_id=?`).all(id):[];
+    const childRepos=revisions.filter(repo=>!!repo.prefix);
+    if(protectedRows.length&&protectedRows.length!==childRepos.length)
+      fail('CHILD_WORKTREE_PROTECTION_INCOMPLETE',
+        'Missing a protected child snapshot; cannot accept unreviewed worktree changes');
     for(const revision of revisions.filter(r=>!!r.prefix)){
-      const status=git(path.join(this.root,revision.prefix),
-        ['status','--porcelain=v1','--untracked-files=all']);
-      if(status)fail("CHILD_REPOSITORY_DIRTY",
-        `Commit or reconcile all changes in child repository ${revision.prefix} before task completion or verification`);
+      const protectedRow=protectedRows.find(row=>row.prefix===revision.prefix);
+      if(protectedRows.length&&!protectedRow)
+        fail('CHILD_WORKTREE_PROTECTION_INCOMPLETE',
+          'Child repository protection record does not match frozen repository identity');
+      if(protectedRow&&protectedRow.git_dir!==revision.gitDir)
+        fail('CHILD_REPOSITORY_IDENTITY_CHANGED','Protected child Git metadata changed');
+      const dirty=preservedWorktreeSnapshot(path.join(this.root,revision.prefix));
+      const allowedDirty=dirty.filter(file=>
+        scope.some(pattern=>pathAllowed(revision.prefix+'/'+file.path,pattern)));
+      if(allowedDirty.length)fail('CHILD_REPOSITORY_DIRTY',
+        'Uncommitted task-scope child files must be committed before completion or verification');
+      const unrelated=dirty.filter(file=>!scope.some(pattern=>
+        pathAllowed(revision.prefix+'/'+file.path,pattern)));
+      if(!protectedRow){
+        if(dirty.length)fail('CHILD_REPOSITORY_DIRTY',
+          `Commit or reconcile all changes in child repository ${revision.prefix} before task completion or verification`);
+        continue;
+      }
+      const recorded=JSON.parse(String(protectedRow.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
+      const digest=createHash('sha256').update(JSON.stringify(recorded)).digest('hex');
+      if(digest!==protectedRow.digest||
+        recorded.some(file=>scope.some(pattern=>
+          pathAllowed(revision.prefix+'/'+file.path,pattern)))||
+        JSON.stringify(unrelated)!==JSON.stringify(recorded))
+        fail('PROTECTED_CHILD_WORKTREE_CHANGED',
+          'Out-of-scope child files differ from the Owner-authorized read-only snapshot');
     }
   }
 
@@ -4269,7 +4337,7 @@ export class ProjectTaskLedger {
       const repositories=this.observedTaskRepositories(id,task);
       const multiRepo=repositories.some(repo=>!!repo.prefix);
       if(multiRepo){
-        this.requireChildReposClean(repositories);
+        this.requireChildReposClean(repositories,id,task);
         const changed=committedChanges(this.root,repositories);
         const allowed=JSON.parse(task.allowed_paths) as string[];
         const exact=(this.executionContract(id).profile==='spec-depth-v3'
@@ -5456,7 +5524,7 @@ export class ProjectTaskLedger {
         JSON.stringify(repositories)!==String(completedRepos.snapshot_json))
         return {taskId:id,passed:false,
           reason:"Scoped child Git HEAD or repository identity changed since task completion"};
-      try{this.requireChildReposClean(repositories);}
+      try{this.requireChildReposClean(repositories,id,task);}
       catch(error){return {taskId:id,passed:false,
         reason:"Child Git repository contains uncommitted changes",error:String(error)};}
     }
@@ -5611,7 +5679,7 @@ export class ProjectTaskLedger {
       if(!multiRepo)return true;
       try{
         const current=this.observedTaskRepositories(id,task);
-        this.requireChildReposClean(current);
+        this.requireChildReposClean(current,id,task);
         return revisionDigest(current)===repoDigest;
       }catch{return false;}
     };

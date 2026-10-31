@@ -84,6 +84,8 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
   it('migrates only under Owner key, protects unrelated dirty files, and still requires real child delivery',()=>{
     const f=oldTask();
     try{
+      fs.writeFileSync(path.join(f.child,'README.md'),'unrelated tracked child WIP');
+      fs.writeFileSync(path.join(f.app,'unrelated-draft.txt'),'unrelated untracked child WIP');
       expect(()=>f.ledger.recoverTaskLease('AUDIT-LEGACY',{
         ...f.request,ownerRecoveryKey:'invalid',
       })).toThrow(/Owner recovery credential required/i);
@@ -91,6 +93,7 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
       expect(migrated).toMatchObject({
         migration:true,status:'in_progress',
         protectedRootPaths:['.cursor/mcp.json','.cursor/rules/mcp-probe-kit.mdc'],
+        protectedChildPaths:['apw-life/README.md','apw-life-app/unrelated-draft.txt'],
         childTaskScopeWip:['apw-life/src/implementation.ts'],
       });
       expect(migrated.repositories.map((r:{prefix:string})=>r.prefix))
@@ -123,9 +126,58 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
         reviewNotes:'Reviewed the new child commit and real task test evidence.',
       });
       expect(f.ledger.verify('AUDIT-LEGACY',migrated.leaseToken).passed).toBe(true);
+      expect(fs.readFileSync(path.join(f.child,'README.md'),'utf8')).toBe('unrelated tracked child WIP');
+      expect(fs.readFileSync(path.join(f.app,'unrelated-draft.txt'),'utf8'))
+        .toBe('unrelated untracked child WIP');
       vi.spyOn(Date,'now').mockReturnValue(Date.now()+3_601_000);
       expect(()=>f.ledger.recoverTaskLease('AUDIT-LEGACY',f.request))
         .toThrow(/No original task lease|Only unfinished|already|active/i);
+    }finally{f.ledger.close();}
+  });
+
+  it('does not let protected unrelated child WIP change, disappear or become staged after recovery',()=>{
+    const f=oldTask();
+    try{
+      fs.writeFileSync(path.join(f.child,'README.md'),'original unrelated tracked change');
+      fs.writeFileSync(path.join(f.app,'owner-draft.txt'),'original unrelated untracked change');
+      const recovered=f.ledger.recoverTaskLease('AUDIT-LEGACY',f.request);
+      cmd(f.child,'add','src/implementation.ts');
+      cmd(f.child,'commit','-qm','scoped delivery after migration');
+      f.ledger.report('AUDIT-LEGACY',recovered.leaseToken,{
+        kind:'unit_test',reference:'real scoped unit tests after recovery',
+      },true);
+      fs.writeFileSync(path.join(f.app,'owner-draft.txt'),'tampered untracked bytes');
+      expect(()=>f.ledger.complete('AUDIT-LEGACY',recovered.leaseToken,{
+        summary:'Scoped real delivery',implementation:'Child source committed',
+        verification:'Project tests completed',
+      })).toThrow(/read-only snapshot/i);
+      fs.writeFileSync(path.join(f.app,'owner-draft.txt'),'original unrelated untracked change');
+      cmd(f.app,'add','owner-draft.txt');
+      expect(()=>f.ledger.complete('AUDIT-LEGACY',recovered.leaseToken,{
+        summary:'Scoped real delivery',implementation:'Child source committed',
+        verification:'Project tests completed',
+      })).toThrow(/staged/i);
+      cmd(f.app,'reset','-q','HEAD','--','owner-draft.txt');
+      fs.writeFileSync(path.join(f.app,'new-unrelated-file.txt'),'not authorized during migration');
+      expect(()=>f.ledger.complete('AUDIT-LEGACY',recovered.leaseToken,{
+        summary:'Scoped real delivery',implementation:'Child source committed',
+        verification:'Project tests completed',
+      })).toThrow(/read-only snapshot/i);
+      fs.unlinkSync(path.join(f.app,'new-unrelated-file.txt'));
+      f.ledger.complete('AUDIT-LEGACY',recovered.leaseToken,{
+        summary:'Scoped real delivery',implementation:'Child source committed',
+        verification:'Project tests completed',
+      });
+      f.ledger.reviewExternalGate('AUDIT-LEGACY',recovered.leaseToken,{
+        gate:'docs',evidenceReference:'real scoped unit tests after recovery',
+        runner:'old-developer',reviewer:'independent-reviewer',outcome:'passed',
+        reviewNotes:'Reviewed child task source at the recorded Git revisions.',
+      });
+      fs.unlinkSync(path.join(f.app,'owner-draft.txt'));
+      expect(f.ledger.verify('AUDIT-LEGACY',recovered.leaseToken)).toMatchObject({
+        passed:false,reason:expect.stringMatching(/uncommitted|child/i),
+      });
+      expect(f.ledger.get('AUDIT-LEGACY').status).toBe('in_review');
     }finally{f.ledger.close();}
   });
 
@@ -142,7 +194,7 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
     }finally{f.ledger.close();}
   });
 
-  it('refuses staged, symlink and out-of-scope child WIP without destroying files',()=>{
+  it('protects out-of-scope child WIP but refuses staged, symlink and unsafe child content',()=>{
     const f=oldTask();
     try{
       cmd(f.child,'add','src/implementation.ts');
@@ -150,9 +202,10 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
         .toThrow(/staged/i);
       cmd(f.child,'reset','-q','HEAD','--','src/implementation.ts');
       fs.writeFileSync(path.join(f.app,'unapproved.txt'),'outside task');
+      cmd(f.app,'add','unapproved.txt');
       expect(()=>f.ledger.recoverTaskLease('AUDIT-LEGACY',f.request))
-        .toThrow(/outside task scope/);
-      fs.unlinkSync(path.join(f.app,'unapproved.txt'));
+        .toThrow(/staged/i);
+      cmd(f.app,'reset','-q','HEAD','--','unapproved.txt');
       fs.symlinkSync(path.join(f.root,'README.md'),path.join(f.app,'lib-link'));
       expect(()=>f.ledger.recoverTaskLease('AUDIT-LEGACY',f.request))
         .toThrow(/non-regular|unsafe/i);
