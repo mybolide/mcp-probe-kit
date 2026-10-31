@@ -455,6 +455,23 @@ export class ProjectTaskLedger {
         captured_at TEXT NOT NULL,
         PRIMARY KEY(task_id,prefix)
       );
+      -- Append-only Owner-authorized reductions of existing protection.
+      -- The claim/migration snapshots are never rewritten. Only a tracked
+      -- file proven byte-identical to the current Git HEAD may disappear.
+      CREATE TABLE IF NOT EXISTS dc_protected_worktree_refreshes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        prefix TEXT NOT NULL,
+        git_dir TEXT NOT NULL,
+        repo_head TEXT NOT NULL,
+        previous_digest TEXT NOT NULL,
+        next_snapshot_json TEXT NOT NULL,
+        next_digest TEXT NOT NULL,
+        removed_paths_json TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS dc_task_review_handoffs (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
         completion_revision INTEGER NOT NULL, completion_head TEXT NOT NULL,
@@ -2017,6 +2034,175 @@ export class ProjectTaskLedger {
     catch(error){fail("REPOSITORY_HISTORY_CHANGED",String(error));}
   }
 
+  private effectiveOwnerSnapshot(id:string,prefix:string,
+    original:ReturnType<typeof preservedWorktreeSnapshot>):
+    ReturnType<typeof preservedWorktreeSnapshot> {
+    const refreshed=this.db.prepare(`SELECT next_snapshot_json,next_digest FROM
+      dc_protected_worktree_refreshes WHERE task_id=? AND prefix=?
+      ORDER BY id DESC LIMIT 1`).get(id,prefix);
+    if(!refreshed)return original;
+    const value=String(refreshed.next_snapshot_json);
+    if(createHash('sha256').update(value).digest('hex')!==refreshed.next_digest)
+      fail('PROTECTED_SNAPSHOT_CORRUPT',
+        'Owner-authorized protected snapshot digest no longer matches');
+    return JSON.parse(value) as ReturnType<typeof preservedWorktreeSnapshot>;
+  }
+
+  /** Never silently rebaseline an Owner file. Only a known tracked file
+   * returned to its exact HEAD bytes can be removed from protection. Every
+   * other protected path must remain byte-identical to the prior snapshot.
+   */
+  refreshProtectedWorktree(id:string,input:{actor:string;ownerRecoveryKey:string;
+    reason:string}):Row {
+    const actor=String(input?.actor??'').trim(),reason=String(input?.reason??'').trim();
+    if(actor.length<2||reason.length<30)
+      fail('REFRESH_EVIDENCE_REQUIRED',
+        'Provide the responsible Owner actor and concrete reconciliation reason');
+    const secret=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??'';
+    const supplied=String(input?.ownerRecoveryKey??'');
+    if(secret.length<24||supplied.length!==secret.length||
+      !timingSafeEqual(Buffer.from(supplied),Buffer.from(secret)))
+      fail('OWNER_AUTH_REQUIRED','Configured Owner recovery credential required');
+    const task=this.requireTask(id);
+    if(!['in_progress','in_review'].includes(task.status)||this.latestCompletion(id))
+      fail('REFRESH_STATE_REQUIRED',
+        'Only unfinished tasks without a committed completion report may refresh protected WIP');
+    const lease=this.db.prepare('SELECT * FROM dc_leases WHERE task_id=?').get(id);
+    if(!lease)fail('LEASE_REQUIRED','Refresh requires the original task lease');
+    const allowed=JSON.parse(task.allowed_paths) as string[];
+    const frozen=this.taskRepositories(id,task);
+    const repos=discoverRepositories(this.root,allowed);
+    const revisions=frozen.length?this.observedTaskRepositories(id,task):
+      currentRevisions(repos);
+    if(repos.length!==revisions.length||repos.some((repo,i)=>
+      repo.prefix!==revisions[i].prefix||repo.gitDir!==revisions[i].gitDir))
+      fail('REPOSITORY_TOPOLOGY_CHANGED','The frozen Git repository layout has changed');
+    if(!run(this.root,'git',['merge-base','--is-ancestor',String(lease.base_head),
+      git(this.root,['rev-parse','HEAD'])]).passed)
+      fail('GIT_HISTORY_CHANGED','The original task root Git baseline was rewritten');
+    const migration=this.db.prepare(`SELECT protected_worktree_json FROM
+      dc_legacy_active_migrations WHERE task_id=?`).get(id);
+    const rootBase=this.db.prepare(`SELECT snapshot_json FROM
+      dc_task_worktree_baselines WHERE task_id=?`).get(id);
+    const childRows=this.db.prepare(`SELECT prefix,git_dir,snapshot_json,digest FROM
+      dc_legacy_child_worktree_snapshots WHERE task_id=?`).all(id);
+    const sha=(value:string)=>createHash('sha256').update(value).digest('hex');
+    const plans:Array<{prefix:string;gitDir:string;head:string;previous:string;
+      next:string;removed:string[]}>= [];
+    for(const repo of repos){
+      const revision=revisions.find(r=>r.prefix===repo.prefix)!;
+      const child=childRows.find(row=>row.prefix===repo.prefix);
+      if(repo.prefix&&child&&child.git_dir!==repo.gitDir)
+        fail('CHILD_REPOSITORY_IDENTITY_CHANGED','Protected child repository was replaced');
+      if(repo.prefix&&child&&sha(String(child.snapshot_json))!==child.digest)
+        fail('PROTECTED_SNAPSHOT_CORRUPT','Stored original child protection was changed');
+      const originalJson=repo.prefix?child?.snapshot_json:
+        (migration?.protected_worktree_json??rootBase?.snapshot_json);
+      const original=(originalJson?JSON.parse(String(originalJson)):[]) as ReturnType<typeof preservedWorktreeSnapshot>;
+      const expected=this.effectiveOwnerSnapshot(id,repo.prefix,original);
+      const current=preservedWorktreeSnapshot(repo.root).filter(file=>
+        !allowed.some(pattern=>pathAllowed(
+          repo.prefix?repo.prefix+'/'+file.path:file.path,pattern)));
+      const byPath=new Map(current.map(file=>[file.path,file]));
+      const expectedPaths=new Set(expected.map(file=>file.path));
+      if(current.some(file=>!expectedPaths.has(file.path)))
+        fail('UNAPPROVED_WORKTREE_ADDED',
+          'New out-of-scope WIP cannot be authorized by restoring another protected file');
+      const committed=committedFilesBetween(repo.root,revision.baseHead,revision.head);
+      const removed:string[]=[];
+      for(const item of expected){
+        const now=byPath.get(item.path);
+        if(now){
+          if(now.kind!==item.kind||now.size!==item.size||now.sha256!==item.sha256)
+            fail('PROTECTED_WORKTREE_CHANGED',
+              'Existing protected WIP changed bytes or type; cannot refresh');
+          continue;
+        }
+        if(item.kind!=='tracked'||committed.includes(item.path))
+          fail('PROTECTED_WORKTREE_CHANGED',
+            'Only tracked files restored to an unchanged Git HEAD may leave protection');
+        const location=path.resolve(repo.root,item.path);
+        const realRoot=fs.realpathSync(repo.root);
+        if(!location.startsWith(realRoot+path.sep)||!fs.existsSync(location))
+          fail('UNSAFE_WORKTREE_ENTRY','Protected tracked file is missing or outside Git root');
+        for(let cursor=path.dirname(location);cursor!==realRoot;
+          cursor=path.dirname(cursor)){
+          if(!cursor.startsWith(realRoot+path.sep)||fs.lstatSync(cursor).isSymbolicLink())
+            fail('UNSAFE_WORKTREE_ENTRY','Symlinked parent of protected file');
+        }
+        if(!fs.lstatSync(location).isFile()||
+          !fs.realpathSync(location).startsWith(realRoot+path.sep))
+          fail('UNSAFE_WORKTREE_ENTRY','Restored protected file must be a regular in-root file');
+        const blob=spawnSync('git',['show','HEAD:'+item.path],{
+          cwd:repo.root,encoding:'buffer',timeout:12_000,maxBuffer:67*1024*1024,
+          windowsHide:true,
+        });
+        if(blob.status!==0||!Buffer.isBuffer(blob.stdout)||
+          !blob.stdout.equals(fs.readFileSync(location)))
+          fail('NOT_RESTORED_TO_HEAD',
+            'Protected tracked file must match exact Git HEAD bytes before refresh');
+        removed.push(item.path);
+      }
+      if(removed.length)
+        plans.push({prefix:repo.prefix,gitDir:repo.gitDir,head:revision.head,
+          previous:sha(JSON.stringify(expected)),
+          next:JSON.stringify(current),removed});
+    }
+    if(!plans.length)fail('NO_RESTORED_PROTECTED_FILES',
+      'No previously protected tracked files were restored to Git HEAD');
+    return this.inTransaction(()=>{
+      const active=this.db.prepare('SELECT token FROM dc_leases WHERE task_id=?').get(id);
+      if(active?.token!==lease.token||
+        !['in_progress','in_review'].includes(this.requireTask(id).status)||
+        this.latestCompletion(id))
+        fail('REFRESH_STATE_CHANGED','Task lease or status changed during Owner review');
+      const currentRepos=frozen.length?this.observedTaskRepositories(id,task):
+        currentRevisions(discoverRepositories(this.root,allowed));
+      if(JSON.stringify(currentRepos)!==JSON.stringify(revisions))
+        fail('REFRESH_STATE_CHANGED','Git revisions or repository identities changed during review');
+      for(const plan of plans){
+        const currentOriginal=plan.prefix?
+          childRows.find(row=>row.prefix===plan.prefix)?.snapshot_json:
+          (migration?.protected_worktree_json??rootBase?.snapshot_json);
+        const before=this.effectiveOwnerSnapshot(id,plan.prefix,currentOriginal?
+          JSON.parse(String(currentOriginal)) as ReturnType<typeof preservedWorktreeSnapshot>:[]);
+        if(sha(JSON.stringify(before))!==plan.previous)
+          fail('REFRESH_STATE_CHANGED','Another Owner refreshed the snapshot first');
+        const files=preservedWorktreeSnapshot(
+          plan.prefix?path.join(this.root,plan.prefix):this.root);
+        const actual=files.filter(file=>!allowed.some(pattern=>pathAllowed(
+          plan.prefix?plan.prefix+'/'+file.path:file.path,pattern)));
+        if(JSON.stringify(actual)!==plan.next)
+          fail('REFRESH_STATE_CHANGED','Protected files changed during Owner review');
+        for(const removed of plan.removed){
+          const file=path.join(this.root,plan.prefix,removed);
+          const blob=spawnSync('git',['show','HEAD:'+removed],{
+            cwd:plan.prefix?path.join(this.root,plan.prefix):this.root,
+            encoding:'buffer',timeout:12_000,maxBuffer:67*1024*1024,windowsHide:true});
+          if(blob.status!==0||!Buffer.isBuffer(blob.stdout)||
+            !fs.lstatSync(file).isFile()||!blob.stdout.equals(fs.readFileSync(file)))
+            fail('REFRESH_STATE_CHANGED','Restored HEAD bytes changed before snapshot write');
+        }
+        const digest=sha(plan.next);
+        this.db.prepare(`INSERT INTO dc_protected_worktree_refreshes
+          (task_id,prefix,git_dir,repo_head,previous_digest,next_snapshot_json,
+            next_digest,removed_paths_json,actor,reason,created_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(id,plan.prefix,plan.gitDir,
+          plan.head,plan.previous,plan.next,digest,
+          JSON.stringify(plan.removed),actor,reason,utc());
+        this.audit(id,'owner_protected_worktree_refreshed',actor,{
+          reason,prefix:plan.prefix,gitDir:plan.gitDir,gitHead:plan.head,
+          previousDigest:plan.previous,nextDigest:digest,removedPaths:plan.removed,
+          noGitOrTaskStateChanges:true,noTestsOrGatesApproved:true});
+      }
+      return {taskId:id,status:task.status,
+        refreshed:plans.map(plan=>({prefix:plan.prefix,gitHead:plan.head,
+          removedPaths:plan.removed,previousDigest:plan.previous,
+          nextDigest:sha(plan.next)})),
+        warning:'Only tracked files restored to the exact Git HEAD were removed from protection; no Git files, Gate results, or task status were modified'};
+    });
+  }
+
   /** A legacy Owner migration can protect exact out-of-scope child WIP.
    * Everything else must be committed, and no staged, changed, or new
    * unrelated file can be exempted at completion or verification time.
@@ -2050,8 +2236,9 @@ export class ProjectTaskLedger {
           `Commit or reconcile all changes in child repository ${revision.prefix} before task completion or verification`);
         continue;
       }
-      const recorded=JSON.parse(String(protectedRow.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
-      const digest=createHash('sha256').update(JSON.stringify(recorded)).digest('hex');
+      const initial=JSON.parse(String(protectedRow.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
+      const recorded=this.effectiveOwnerSnapshot(id!,revision.prefix,initial);
+      const digest=createHash('sha256').update(JSON.stringify(initial)).digest('hex');
       if(digest!==protectedRow.digest||
         recorded.some(file=>scope.some(pattern=>
           pathAllowed(revision.prefix+'/'+file.path,pattern)))||
@@ -4281,8 +4468,11 @@ export class ProjectTaskLedger {
           snapshotBase,baseHead]).passed)
       fail("CLAIM_BASE_CHANGED",
         "Claim baseline changed; protected local files require reviewed recovery");
-    const snapshot=JSON.parse(String(migration?.protected_worktree_json??row!.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
-    if(!snapshot.length)return null; // unchanged legacy behavior for clean claims
+    const original=JSON.parse(String(migration?.protected_worktree_json??row!.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
+    const snapshot=this.effectiveOwnerSnapshot(id,'',original);
+    const refreshed=!!this.db.prepare(`SELECT id FROM dc_protected_worktree_refreshes
+      WHERE task_id=? AND prefix='' LIMIT 1`).get(id);
+    if(!snapshot.length&&!refreshed)return null; // original clean-claim compatibility
     const allowed=JSON.parse(task.allowed_paths) as string[];
     if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))))
       fail("DIRTY_SCOPE_VIOLATION","An already dirty file overlaps this task's approved scope");

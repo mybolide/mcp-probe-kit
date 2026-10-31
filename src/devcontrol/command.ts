@@ -202,6 +202,11 @@ export function dispatchDevControl(
       preserveExistingWorktree:input.preserveExistingWorktree===true,
       rebaselineLegacyRepositories:input.rebaselineLegacyRepositories===true,
     });
+    case "refresh-protected-worktree": return ledger.refreshProtectedWorktree(
+      String(input.id),{
+        actor:String(input.actor??''),ownerRecoveryKey:String(input.ownerRecoveryKey??''),
+        reason:String(input.reason??''),
+      });
     case "release": return ledger.release(String(input.id), String(input.leaseToken));
     case "defer-verification": return ledger.deferVerification({
       id:String(input.id),leaseToken:String(input.leaseToken),

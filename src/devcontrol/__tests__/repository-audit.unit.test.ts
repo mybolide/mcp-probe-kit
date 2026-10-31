@@ -81,6 +81,119 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
     return {root,child,app,ledger,lease,request};
   }
 
+  it('refreshes only HEAD-restored tracked files in root and child, then lets scoped work complete',()=>{
+    const f=oldTask();
+    try{
+      fs.writeFileSync(path.join(f.child,'README.md'),'protected child tracked WIP');
+      fs.writeFileSync(path.join(f.app,'draft.txt'),'protected unrelated untracked WIP');
+      const migrated=f.ledger.recoverTaskLease('AUDIT-LEGACY',f.request);
+      cmd(f.root,'restore','--','.cursor/mcp.json');
+      cmd(f.child,'restore','--','README.md');
+      cmd(f.child,'add','src/implementation.ts');
+      cmd(f.child,'commit','-qm','real child task delivery');
+      f.ledger.report('AUDIT-LEGACY',migrated.leaseToken,{
+        kind:'project_test',reference:'real project verification for committed task code',
+      },true);
+      const submission={
+        summary:'Completed task after restoring unrelated Owner edits',
+        implementation:'Committed only the approved child file',
+        verification:'Project-owned tests executed and report attached to Git commits',
+      };
+      expect(()=>f.ledger.complete('AUDIT-LEGACY',migrated.leaseToken,submission))
+        .toThrow(/read-only snapshot|WORKTREE_CHANGED|unrelated pre-existing/i);
+      const refresh=f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',{
+        actor:'owner',ownerRecoveryKey:key,reason:
+          'Checked that two unrelated original tracked files returned to exact Git HEAD, retain other protected files unchanged',
+      });
+      expect(refresh.refreshed).toEqual(expect.arrayContaining([
+        expect.objectContaining({prefix:'',removedPaths:['.cursor/mcp.json']}),
+        expect.objectContaining({prefix:'apw-life',removedPaths:['README.md']}),
+      ]));
+      expect(refresh.refreshed).toHaveLength(2);
+      expect(fs.readFileSync(path.join(f.root,'.cursor/rules/mcp-probe-kit.mdc'),'utf8'))
+        .toBe('new unrelated guidance');
+      expect(fs.readFileSync(path.join(f.app,'draft.txt'),'utf8')).toBe('protected unrelated untracked WIP');
+      expect(()=>f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',{
+        actor:'owner',ownerRecoveryKey:key,reason:
+          'Repeated review of identical HEAD-restored Owner files cannot create duplicate snapshot records',
+      })).toThrow(/No previously protected tracked files/);
+      f.ledger.complete('AUDIT-LEGACY',migrated.leaseToken,submission);
+      f.ledger.reviewExternalGate('AUDIT-LEGACY',migrated.leaseToken,{
+        gate:'docs',evidenceReference:'real project verification for committed task code',
+        runner:'old-developer',reviewer:'reviewer',outcome:'passed',
+        reviewNotes:'Inspected real project test results and the exact committed task-scope child file.',
+      });
+      expect(f.ledger.verify('AUDIT-LEGACY',migrated.leaseToken)).toMatchObject({passed:true});
+      const trace=JSON.stringify(f.ledger.trace('AUDIT-LEGACY'));
+      expect(trace).toContain('owner_protected_worktree_refreshed');
+      expect(trace).not.toContain(key);
+    }finally{f.ledger.close();}
+  });
+
+  it('cannot mistake a Git assume-unchanged protected file for an actual HEAD restoration',()=>{
+    const f=oldTask();
+    try{
+      fs.writeFileSync(path.join(f.child,'README.md'),'real protected data not at HEAD');
+      f.ledger.recoverTaskLease('AUDIT-LEGACY',f.request);
+      cmd(f.child,'update-index','--assume-unchanged','README.md');
+      expect(()=>f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',{
+        actor:'owner',ownerRecoveryKey:key,
+        reason:'A misleading Git index cannot certify protected worktree bytes as the original HEAD blob',
+      })).toThrow(/exact Git HEAD bytes/i);
+      cmd(f.child,'update-index','--no-assume-unchanged','README.md');
+      expect(f.ledger.get('AUDIT-LEGACY').status).toBe('in_progress');
+    }finally{f.ledger.close();}
+  });
+
+  it('rejects missing Owner key, staged content and missing untracked protection without writes',()=>{
+    const f=oldTask();
+    try{
+      fs.writeFileSync(path.join(f.child,'README.md'),'original tracked WIP');
+      fs.writeFileSync(path.join(f.app,'owner-draft.txt'),'protected untracked data');
+      f.ledger.recoverTaskLease('AUDIT-LEGACY',f.request);
+      cmd(f.child,'restore','--','README.md');
+      const request={actor:'owner',ownerRecoveryKey:key,reason:
+        'Owner reviewed tracked file restoration without allowing unrelated new files or untracked deletion'};
+      expect(()=>f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',{
+        ...request,ownerRecoveryKey:'wrong',
+      })).toThrow(/Owner recovery credential required|Owner recovery credential/i);
+      cmd(f.child,'add','src/implementation.ts');
+      expect(()=>f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',request))
+        .toThrow(/staged/i);
+      cmd(f.child,'reset','-q','HEAD','--','src/implementation.ts');
+      fs.unlinkSync(path.join(f.app,'owner-draft.txt'));
+      expect(()=>f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',request))
+        .toThrow(/Only tracked files restored|Only tracked files/i);
+      fs.writeFileSync(path.join(f.app,'owner-draft.txt'),'protected untracked data');
+      fs.writeFileSync(path.join(f.app,'unauthorized.txt'),'new unrelated data');
+      expect(()=>f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',request))
+        .toThrow(/New out-of-scope WIP/i);
+      expect(f.ledger.get('AUDIT-LEGACY').status).toBe('in_progress');
+      expect(JSON.stringify(f.ledger.trace('AUDIT-LEGACY')))
+        .not.toContain('owner_protected_worktree_refreshed');
+    }finally{f.ledger.close();}
+  });
+
+  it('rejects symlinks and changed HEAD history while reconciling restored files',()=>{
+    const f=oldTask();
+    try{
+      fs.writeFileSync(path.join(f.child,'README.md'),'protected tracked bytes');
+      f.ledger.recoverTaskLease('AUDIT-LEGACY',f.request);
+      cmd(f.child,'restore','--','README.md');
+      fs.symlinkSync(path.join(f.root,'README.md'),path.join(f.child,'invalid-link'));
+      const request={actor:'owner',ownerRecoveryKey:key,reason:
+        'Explicit Owner restoration of protected child Git HEAD file with no unauthorized changes'};
+      expect(()=>f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',request))
+        .toThrow(/non-regular|unsafe/i);
+      fs.unlinkSync(path.join(f.child,'invalid-link'));
+      cmd(f.child,'checkout','--orphan','unexpected');
+      cmd(f.child,'add','-A');
+      cmd(f.child,'commit','-qm','new rewritten history');
+      expect(()=>f.ledger.refreshProtectedWorktree('AUDIT-LEGACY',request))
+        .toThrow(/history changed/i);
+    }finally{f.ledger.close();}
+  });
+
   it('migrates only under Owner key, protects unrelated dirty files, and still requires real child delivery',()=>{
     const f=oldTask();
     try{
@@ -263,6 +376,54 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
 });
 
 describe('multi-repository file identity and source audit',()=>{
+  it('refreshes a single root protected tracked file without accepting any new unrelated dirty file',()=>{
+    const {root}=fixture(false);
+    fs.writeFileSync(path.join(root,'README.md'),'local Owner notes predating the claim');
+    const ledger=new ProjectTaskLedger(root);
+    const key='single-root-refresh-owner-recovery-key-long';
+    process.env.DEVCONTROL_OWNER_RECOVERY_KEY=key;
+    try{
+      ledger.create({id:'AUDIT-ROOT-REFRESH',title:'Audit owner restored root Git file',
+        track:'governance',allowedPaths:['docs/implementation.md'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-ROOT-REFRESH','owner');
+      const lease=ledger.claim('AUDIT-ROOT-REFRESH','developer');
+      fs.mkdirSync(path.join(root,'docs'));
+      fs.writeFileSync(path.join(root,'docs','implementation.md'),'Actual approved task implementation');
+      cmd(root,'add','docs/implementation.md');
+      cmd(root,'commit','-qm','approved task delivery');
+      const evidence='Actual docs acceptance test evidence at task root Git revision';
+      ledger.report('AUDIT-ROOT-REFRESH',lease.leaseToken,{kind:'docs',reference:evidence},true);
+      cmd(root,'restore','--','README.md');
+      const reason='Owner checked original protected README bytes were restored exactly to committed HEAD';
+      expect(ledger.refreshProtectedWorktree('AUDIT-ROOT-REFRESH',{
+        actor:'owner',ownerRecoveryKey:key,reason,
+      })).toMatchObject({refreshed:[
+        {prefix:'',removedPaths:['README.md']},
+      ]});
+      fs.writeFileSync(path.join(root,'new-untracked.txt'),'not previously protected');
+      expect(()=>ledger.complete('AUDIT-ROOT-REFRESH',lease.leaseToken,{
+        summary:'Implement docs task',implementation:'Committed the required docs file',
+        verification:'Real docs test result reported separately',
+      })).toThrow(/unrelated pre-existing file changed|WORKTREE_CHANGED/i);
+      fs.unlinkSync(path.join(root,'new-untracked.txt'));
+      ledger.complete('AUDIT-ROOT-REFRESH',lease.leaseToken,{
+        summary:'Implement docs task',implementation:'Committed the required docs file',
+        verification:'Real docs test result reported separately',
+      });
+      ledger.reviewOwnTask('AUDIT-ROOT-REFRESH',lease.leaseToken,{
+        outcome:'passed',evidenceReference:evidence,
+        findings:'Checked real docs tests, exact source commit, positive and negative cases and frozen scope.',
+      });
+      ledger.reviewExternalGate('AUDIT-ROOT-REFRESH',lease.leaseToken,{
+        gate:'docs',runner:'developer',reviewer:'developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:evidence,
+        reviewNotes:'Reviewed actual docs test receipt, exact code commit and scoped acceptance criteria.',
+      });
+      const verified=ledger.verify('AUDIT-ROOT-REFRESH',lease.leaseToken);
+      expect(verified.passed,JSON.stringify(verified)).toBe(true);
+    }finally{ledger.close();}
+  });
+
   it('lets the same developer self-review actual multi-Git commits and real Gates without an external reviewer',()=>{
     const {root,child}=fixture();
     const ledger=new ProjectTaskLedger(root);
