@@ -263,6 +263,82 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
 });
 
 describe('multi-repository file identity and source audit',()=>{
+  it('lets the same developer self-review actual multi-Git commits and real Gates without an external reviewer',()=>{
+    const {root,child}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-SELF',title:'Multi-repository task with responsible Agent self-review',
+        track:'governance',allowedPaths:['apw-life/src/**'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-SELF','owner');
+      const claimed=ledger.claim('AUDIT-SELF','one-developer');
+      fs.mkdirSync(path.join(child,'src'));
+      fs.writeFileSync(path.join(child,'src','checked.ts'),'export const checked=true;\n');
+      cmd(child,'add','src/checked.ts');
+      cmd(child,'commit','-qm','implement frozen child scope');
+      const reference='Actual multi-repository unit test results, reviewed at the exact child commit';
+      ledger.report('AUDIT-SELF',claimed.leaseToken,{kind:'project_test',reference},true);
+      ledger.complete('AUDIT-SELF',claimed.leaseToken,{
+        summary:'Implemented scoped child delivery',
+        implementation:'Committed apw-life/src/checked.ts with its own Git HEAD',
+        verification:'Actual project-owned unit tests completed and tied to commit',
+      });
+      expect(ledger.taskClosureStatus('AUDIT-SELF').nextAction).toBe('self-review');
+      expect(()=>ledger.reviewOwnTask('AUDIT-SELF',claimed.leaseToken,{
+        outcome:'passed',evidenceReference:'unreported',findings:
+          'Inspected actual unit results and exact child Git HEAD, scoped files, and negative cases.',
+      })).toThrow(/evidence/i);
+      const reviewed=ledger.reviewOwnTask('AUDIT-SELF',claimed.leaseToken,{
+        outcome:'passed',evidenceReference:reference,findings:
+          'Inspected both repository revisions, exact changed source and committed child file, project test evidence, negative paths and the frozen task acceptance criteria.',
+      });
+      expect(reviewed).toMatchObject({reviewMode:'developer_self_review',outcome:'passed'});
+      expect(ledger.taskClosureStatus('AUDIT-SELF').nextAction).toBe('gate-review');
+      expect(()=>ledger.reviewExternalGate('AUDIT-SELF',claimed.leaseToken,{
+        gate:'docs',runner:'one-developer',reviewer:'one-developer',
+        outcome:'passed',evidenceReference:reference,
+        reviewNotes:'I inspected the real tests and source against the frozen acceptance criteria.',
+      })).toThrow(/review/i);
+      ledger.reviewExternalGate('AUDIT-SELF',claimed.leaseToken,{
+        gate:'docs',runner:'one-developer',reviewer:'one-developer',
+        reviewMode:'self',outcome:'passed',evidenceReference:reference,
+        reviewNotes:'I inspected real test receipts and the exact approved multi-Git source, checked failure behavior and acceptance scope.',
+      });
+      expect(ledger.verify('AUDIT-SELF',claimed.leaseToken)).toMatchObject({
+        passed:true,files:['apw-life/src/checked.ts'],
+      });
+      expect(ledger.get('AUDIT-SELF').status).toBe('verified');
+    }finally{ledger.close();}
+  });
+
+  it('rejects developer self-review if child HEAD changes after completed evidence',()=>{
+    const {root,child}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-SELF-STALE',title:'Cannot self-review stale child evidence',
+        track:'governance',allowedPaths:['apw-life/src/**'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-SELF-STALE','owner');
+      const claimed=ledger.claim('AUDIT-SELF-STALE','developer');
+      fs.mkdirSync(path.join(child,'src'));
+      fs.writeFileSync(path.join(child,'src','source.ts'),'export const version=1;');
+      cmd(child,'add','src/source.ts');
+      cmd(child,'commit','-qm','reviewed candidate');
+      const evidence='Actual tests originally collected at child commit v1';
+      ledger.report('AUDIT-SELF-STALE',claimed.leaseToken,{kind:'unit_test',reference:evidence},true);
+      ledger.complete('AUDIT-SELF-STALE',claimed.leaseToken,{
+        summary:'Candidate committed',implementation:'Created child source file',
+        verification:'Collected project test evidence for initial commit',
+      });
+      fs.writeFileSync(path.join(child,'src','source.ts'),'export const version=2;');
+      cmd(child,'add','src/source.ts');
+      cmd(child,'commit','-qm','new child version without new tests');
+      expect(()=>ledger.reviewOwnTask('AUDIT-SELF-STALE',claimed.leaseToken,{
+        outcome:'passed',evidenceReference:evidence,
+        findings:'Reviewed changed source and original testing results, but the latest child commit was not tested again.',
+      })).toThrow(/committed revision|evidence/i);
+      expect(ledger.get('AUDIT-SELF-STALE').status).toBe('in_review');
+    }finally{ledger.close();}
+  });
+
   it('inspects ignored independent child indexes and maps to frozen workspace paths',()=>{
     const {root,child,app}=fixture();
     const scope=['apw-life/src/**','apw-life-app/lib/**'];

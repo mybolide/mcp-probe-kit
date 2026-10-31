@@ -26,8 +26,10 @@ ${rows}
 Read actual versioned requirements → design → tasks before drafting atomic
 leaf work. Each leaf has one independently verifiable outcome, exact approved
 files and dependencies, expected evidence and positive/negative cases.
-For project-specific tests, the Agent runs the test, reports evidence and an
-independent reviewer records the outcome via \`gate-review\`.
+For project-specific tests, the Agent runs the test and reports evidence.
+The responsible Agent may record a substantive \`self-review\` followed by
+\`gate-review\` with \`reviewMode:self\`, then \`verify\`. A different
+Reviewer using \`review-handoff\` and \`review-submit\` is optional.
 The mere existence of evidence cannot pass \`verify\`.
 `;
 }

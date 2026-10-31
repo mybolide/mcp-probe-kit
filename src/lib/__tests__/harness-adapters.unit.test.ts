@@ -65,7 +65,11 @@ describe("harness-adapters", () => {
       }
     }
     expect(generated[0]).toContain("history_session_bootstrap");
+    expect(generated[0]).toContain('`self-review`');
+    expect(generated[0]).toContain('`reviewMode=self`');
     expect(generated[1]).toContain("history_session_bootstrap");
+    expect(generated[1]).toContain('`self-review`');
+    expect(generated[1]).toContain('`reviewMode=self`');
     expect(generated[1]).toContain(originalClaude.trim());
 
     const second = ensureHarnessAdapters(root, generateWorkflowSkillContent(VERSION), "AGENTS.md", {});

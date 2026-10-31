@@ -1169,18 +1169,37 @@ export class ProjectTaskLedger {
     return this.inTransaction(()=>{
       const lease=this.requireLease(id,token);
       const task=this.requireTask(id);
-      if(this.taskRepositories(id,task).some(repo=>!!repo.prefix))
-        fail("MULTI_REPO_PAUSE_UNSUPPORTED",
-          "Cross-repository scope pause requires an independently reviewed version-vector migration; no root-only fallback");
       if(task.status!=='in_review')fail('NOT_IN_REVIEW','Complete and report real evidence first');
       const note=this.latestCompletion(id);
       if(!note)fail('COMPLETION_REVISION_REQUIRED','Self-review requires a committed delivery');
       const currentHead=this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
+      // Self-review is permitted for both single- and multi-repository tasks.
+      // It must bind to the same committed repository version vector as the
+      // completion and its actual evidence; it is not a scope-pause operation.
+      const repositories=this.observedTaskRepositories(id,task);
+      const multiRepo=repositories.some(repo=>!!repo.prefix);
+      if(multiRepo){
+        this.requireChildReposClean(repositories,id,task);
+        const snapshot=this.db.prepare(`SELECT snapshot_json,digest
+          FROM dc_completion_repository_revisions WHERE task_id=? AND revision=?`)
+          .get(id,note.revision);
+        if(!snapshot||snapshot.digest!==revisionDigest(repositories)||
+          snapshot.snapshot_json!==JSON.stringify(repositories))
+          fail('REPOSITORY_EVIDENCE_STALE',
+            'Self-review must inspect the exact committed revision of every Git repository');
+      }
       const evidence=this.db.prepare(`SELECT id FROM dc_evidence
         WHERE task_id=? AND reference=? AND git_head=? LIMIT 1`)
         .get(id,input.evidenceReference.trim(),note.git_head);
       if(!evidence)fail('REVIEW_EVIDENCE_MISSING',
         'Self-review must cite actual task evidence at the committed delivery');
+      if(multiRepo){
+        const bound=this.db.prepare(`SELECT digest FROM dc_evidence_repository_digests
+          WHERE evidence_id=?`).get(evidence.id);
+        if(bound?.digest!==revisionDigest(repositories))
+          fail('REPOSITORY_EVIDENCE_STALE',
+            'Self-review must cite real evidence for the full Git repository version vector');
+      }
       const previous=this.db.prepare(`SELECT * FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
       if(previous&&(previous.outcome||previous.developer!==lease.agent||
         previous.completion_revision!==note.revision||
@@ -1358,8 +1377,8 @@ export class ProjectTaskLedger {
 
   verifyReviewedTask(id:string,ticket:string):Row {
     const row=this.requireReviewTicket(id,ticket);
-    if(row.outcome!=='passed')fail("INDEPENDENT_REVIEW_REQUIRED",
-      "Independent review must pass before running real acceptance Gates");
+    if(row.outcome!=='passed')fail("TASK_REVIEW_REQUIRED",
+      "A recorded developer self-review or optional independent review must pass before acceptance");
     const lease=this.db.prepare("SELECT * FROM dc_leases WHERE task_id=?").get(id);
     if(!lease||lease.agent!==row.developer)
       fail("LEASE_CHANGED","Original developer's task lease is no longer available");

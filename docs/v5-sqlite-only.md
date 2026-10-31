@@ -118,7 +118,9 @@ AGENTS.md 提供简短入口，**只更新受管理的 MCP 区块**，保留项�
 }
 ```
 
-完整研发路径：新会话 `history_session_bootstrap` → 检查 `onboard`、`list`、`next`、`execution-contract` → Agent 独立需求/风险复审 → `plan-review`、`plan-propose`、独立 Review 与精确哈希的 Owner `plan-approve` → `claim`、`renew`、合法编码与真实测试 → `check`、Git commit、`complete`、`report`、`verify` → `history_session_checkpoint`。
+完整研发路径：新会话 `history_session_bootstrap` → 检查 `onboard`、`list`、`next`、`execution-contract` → Agent 需求/风险复审 → `plan-review`、`plan-propose`、分轮 Review 与精确哈希的 `plan-approve` → `claim`、`renew`、合法编码与真实测试 → `check`、Git commit、`complete`、`report` → `task-closure-status`、由当前开发 Agent 执行 `self-review`、每项真实 Gate 使用 `gate-review`（`reviewMode=self`）→ `verify` → `history_session_checkpoint`。另一个 Reviewer 属于可选的加强审核，主动选择时才使用 `review-handoff`、`review-submit`、`reviewed-verify`；不影响真实测试与冻结范围要求。
+
+**生成规则同步检查（每次 MCP 研发修改都必须做）**：检查实际业务流程是否改变，核对 `src/lib/v5-sqlite-guidance.ts`（Skill/AGENTS.md）、`src/lib/v5-agent-action-reference.ts`、`src/lib/harness-adapters.ts`、`src/lib/workflow-skill-installer.ts` 的生成与写入规则；如规则改变，应更新 `SKILL_GUIDANCE_REVISION`。运行 `verify-workflow-skill` 和 Skill/AGENTS bootstrap 回归，确认旧版同版本托管块会被更新，用户自定义 AGENTS.md 内容不会覆盖，第二次启动保持幂等。`prebuild` 自动运行一致性检查及 Skill 同步，但不应自动重写其他开发者正在工作的真实项目文件。
 
 Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcontrol` 工具的对应 `action` 进入项目 SQLite。**DevControl 只管理状态与验证契约，Agent 自己分析需求、写代码、独立审核、执行真正的测试和业务 SQL。** 未实际运行的 Gate 不算通过。
 

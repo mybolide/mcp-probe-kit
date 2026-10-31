@@ -71,44 +71,49 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    and, as needed, \`renew\`. Edit only frozen paths. The Agent, not DevControl,
    independently reviews software, runs real tests and commits approved files.
 5. Use \`check\` → real Git commit → \`complete\` / \`report\`.
-   Then read \`task-closure-status\` and arrange \`review-handoff\` → independent
-   \`review-submit\`. For EACH declared acceptance Gate except the internal
-   \`sqlite_decision\` record, the development Agent executes actual tests
-   using its own project toolchain, reports version-bound evidence and a
-   distinct Reviewer supplies \`gate-review\`. Only then call
-   \`reviewed-verify\` to validate the complete workflow. DevControl NEVER
+   Then read \`task-closure-status\`. By default the responsible Agent
+   performs a separate substantive \`self-review\` of the exact committed
+   code and real test evidence. For EACH real acceptance Gate (except internal
+   \`sqlite_decision\`), run actual project tests, report version-bound
+   evidence, and use \`gate-review\` with \`reviewMode:"self"\` and concrete
+   findings. Finally call \`verify\`. A separate Reviewer is OPTIONAL:
+   choose \`review-handoff\` → \`review-submit\` → \`reviewed-verify\` with
+   reviewed \`gate-review\` evidence only when a separate reviewer is wanted.
+   DevControl NEVER
    executes project-specific tests, including docs, Go, Flutter, Xcode,
    PostgreSQL or physical device tests; it never decides business correctness.
    A commit, progress claim or synthetic test is never Verified.
-   Missing actual test evidence or independent review fails closed.
+   Missing actual test evidence, substantive review or a Gate fails closed.
    When a required physical/external Gate is unavailable after a committed
    completion, use \`defer-verification\` with the current lease token, exact
    Gate and reason. This frees the task lease but NEVER passes the Gate.
    After the real runner/device returns use the resume-verification action.
    Then call read-only task-closure-status to identify the next required
    operation and missing evidence instead of endlessly waiting for Owner.
-   The independent Reviewer inspects the original immutable delivery
+   The reviewer inspects the original immutable delivery
    Commit; later unrelated HEAD commits may coexist but may never touch
    the submitted files. Post-resume real Gate evidence can be reported
-   without rewriting the old commit. A distinct gate-review and
-   reviewed-verify still enforce the originally required real Gate.
+   without rewriting the old commit. A real gate-review and verify (or
+   optional reviewed-verify) still enforce the originally required Gate.
    Never rewrite SQLite task states or silently discard user files.
    Pre-existing unrelated tracked/untracked files at claim are protected by
    automatic SHA-256 snapshots, not by demanding that the user delete them.
    Old leases can use preserveExistingWorktree:true on complete to capture
    read-only legacy snapshots, never reset/stash/claiming that work.
    The matching manifest is required again at defer-verification; verified
-   status still demands the original independently reviewed real Gate.
-   Developer: complete + report, then review-handoff with current lease token.
-   A distinct Reviewer records findings/evidence via review-submit; reject
-   returns to in_progress, pass allows reviewed-verify to run all original Gates.
+   status still demands an evidence-bound real Gate.
+   Developer: complete + report, then self-review with the current lease.
+   Passing self-review enables gate-review reviewMode=self, then verify.
+   An optional separate Reviewer instead uses review-handoff/review-submit;
+   both methods reject unverified claims and failed test evidence.
    Losing a session does not erase the recorded completion. An expired
    in_progress task can use recover-task to issue a new short-term lease,
    preserving the original Git base so the Owner can record complete/report.
-   An already in_review task can use review-handoff directly for review.
+   An already in_review task can self-review with a valid lease, or choose
+   review-handoff for an optional separate Reviewer.
    Both recoveries require the separately configured
    DEVCONTROL_OWNER_RECOVERY_KEY, not an unverified claimed Owner label.
-   Never give a Reviewer the developer lease or fake independent test results.
+   Never give an optional external Reviewer the developer lease or fake test results.
    If later task code is already uncommitted in main, a specifically approved
    \`preserveExistingWorktree:true\` deferral fingerprints regular changed
    files including untracked source but refuses a staged index. Never count
@@ -182,11 +187,11 @@ ${managedRevision}
 - **管理操作**：当前 24 个模型工具，唯一正式研发入口 \`devcontrol\` 提供 ${V5_DEVC_ACTIONS.length} 个 SQLite action，完整分组见 Skill 的 DevControl operation reference；不要将 action 当作独立 MCP 工具。
 - **必须先恢复**：新对话先 \`history_session_bootstrap\`（Git/Node22+ 项目唯一实时 History = SQLite \`hs_*\`），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
 - **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码/正式 PRD/ADR/API/Schema 仍归 Git，业务数据库独立。
-- **逐任务闭环**：新版本基线使用 \`plan-review\` / \`plan-propose\` 和精确 Hash 的 \`plan-approve\`；规划与 Review 分轮完成。按冻结合同 \`claim\`、真实编码、项目自己的工具执行测试、合法 Git 提交，以 \`complete\` / \`report\` 登记。用 \`task-closure-status\` 逐步确认缺失记录：开发 Agent 发起 \`review-handoff\`，**不同的独立 Reviewer** 用 \`review-submit\` 检查实现和证据，再由独立 Reviewer 按每个冻结验收条件填写 \`gate-review\`，之后才能 \`reviewed-verify\`。DevControl 仅检查证据、审核、审批和 Git 版本，**不执行 Gate 对应的项目测试命令**；失败明确返回下一步，不得伪造 Verified。
+- **逐任务闭环**：新版本基线使用 \`plan-review\` / \`plan-propose\` 和精确 Hash 的 \`plan-approve\`；规划与 Review 分轮完成。按冻结合同 \`claim\`、真实编码、项目自己的工具执行测试、合法 Git 提交，以 \`complete\` / \`report\` 登记。先用 \`task-closure-status\` 核对缺失记录。开发 Agent 默认自行执行独立的 \`self-review\` 步骤，审查原始提交、真实测试和冻结范围；再按实际冻结 Gate 使用 \`gate-review\` 的 \`reviewMode=self\` 写入实质审核结论，最后 \`verify\`。另一名 Reviewer 是可选加强审核，明确需要时才使用 \`review-handoff\`、\`review-submit\` 和 \`reviewed-verify\`。DevControl 只检查证据、审核、审批和 Git 版本，**不执行 Gate 对应的项目测试命令**；失败明确返回下一步，不得伪造 Verified。
 - **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；第一轮完成 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\` 并结束规划轮次。下一轮重读提案，使用 \`feature-task-second-review\` 单独记录覆盖、依赖、失败场景、文件范围和验收五项审查，再以精确 Hash \`feature-task-approve\` 确认。开发 Agent 可以自行做第二轮 Review，不强制另一名 Agent，也不逐项要求 Owner 批准；重大冻结范围变更仍须 Owner 明确授权。草稿不可领取。
 - **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新 Feature 叶子任务以 30–60 分钟为主，必须填写预计工时；1–2 小时需具体说明无法继续安全拆分的原因，超过 2 小时须拆分。新整版计划可采用 task-detail-v2 执行相同严格规则；旧已冻结计划不得直接重写。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
-- **真实验收 Gate**：\`docs\`、\`go_contract\`、\`flutter_test\`、\`ios_device_e2e\` 等只是验收条件标识，不是 MCP 测试执行器。项目测试由开发 Agent 或项目 CI 执行，开发 Agent 将实际输出与 Git Commit 绑定入账；**不同于开发者和实际测试执行者的独立 Reviewer** 对每项 Gate 使用 \`gate-review\` 审核。Feature 规划的分轮二次 Review 可由原 Agent 完成，但正式任务和验收 Gate 的独立审核不能由开发 Agent 冒充。
-- **延期验收与会话恢复**：代码已提交、完成说明和证据入账的 \`in_review\` 任务，可用 \`defer-verification\`（当前租约、精确 Gate、真实原因）释放租约但绝不通过 Gate；真机/CI 恢复后使用 \`resume-verification\`、\`task-closure-status\`，按提示补录真实 \`report\`、正式 \`review-handoff\` → \`review-submit\`，以及各个必要的独立 \`gate-review\`，最后 \`reviewed-verify\` 核对状态。后续无冲突任务可以推进 Git HEAD，审核仍绑定冻结的原始 Commit；禁止为了验收 reset、stash、删除别人文件或直接改 SQLite。
+- **真实验收 Gate**：\`docs\`、\`go_contract\`、\`flutter_test\`、\`ios_device_e2e\` 等只是验收条件标识，不是 MCP 测试执行器。项目测试由开发 Agent 或项目 CI 执行，开发 Agent 将实际输出与 Git Commit 绑定入账。开发 Agent 可在通过 \`self-review\` 后使用 \`gate-review\` 的 \`reviewMode=self\` 对每项真实 Gate 自行审核，不能借此伪造测试或自动通过。可选另一个 Reviewer，但不再强制要求不同的人执行正式任务复审。
+- **延期验收与会话恢复**：代码已提交、完成说明和证据入账的 \`in_review\` 任务，可用 \`defer-verification\`（当前租约、精确 Gate、真实原因）释放租约但绝不通过 Gate；真机/CI 恢复后使用 \`resume-verification\`、\`task-closure-status\`，按提示补录真实 \`report\`、\`self-review\`、\`gate-review\`（\`reviewMode=self\`）和 \`verify\`。只有主动选择独立 Reviewer 时才采用 \`review-handoff\` → \`review-submit\` → \`reviewed-verify\`。后续无冲突任务可以推进 Git HEAD，审核仍绑定冻结的原始 Commit；禁止为了验收 reset、stash、删除别人文件或直接改 SQLite。
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
@@ -228,10 +233,12 @@ ${managedRevision}
   test commands. DevControl only checks version-bound evidence and decisions.
 - Plan/review/propose and approve the exact reviewed hash. Claim an approved
   task, implement, run genuine project tests and commit approved paths.
-  Record complete/report; consult task-closure-status, hand off using
-  review-handoff, have a DIFFERENT reviewer perform review-submit and
-  gate-review for each required acceptance criterion, then reviewed-verify.
-  Never treat a task self-review as a passed independent Gate review.
+  Record complete/report; consult task-closure-status, then use self-review
+  to separately examine the committed delivery and actual test evidence.
+  For each real acceptance Gate, call gate-review with reviewMode=self and
+  concrete findings, then verify. A separate Reviewer is OPTIONAL, using
+  review-handoff, review-submit and reviewed-verify when explicitly chosen.
+  Neither review path automatically passes a Gate or replaces actual tests.
 - When a task is deferred, resume-verification preserves the original
   submitted Git Commit while unrelated tasks may advance HEAD. Follow the
   closure checklist to report later real evidence and complete reviews;

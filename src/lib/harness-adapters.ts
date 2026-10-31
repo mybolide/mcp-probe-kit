@@ -71,7 +71,7 @@ function generateCursorRulesContent(
     "",
     "1. Prefer native mcp-probe-kit tools. Use `devcontrol` as the only formal development workflow.",
     "2. At conversation start, call `history_session_bootstrap`; then use `devcontrol` actions such as `onboard`, `next`, and `execution-contract` to recover the actual SQLite task state.",
-    "3. Only modify files authorized by an approved task; run real tests and follow the independent review and verification rules in the Skill.",
+    "3. Only modify approved task files; run real tests, perform a substantive `self-review`, then `gate-review` with `reviewMode=self` and `verify`. A separate Reviewer is optional; follow the Skill.",
     "4. If native MCP tools are unavailable, use an already installed, matching `.mcp-probe-kit/bin/probe.*` wrapper only. If it is missing, report the configuration problem; do not install from the current directory or fetch an unpublished release.",
     "5. An installation or repair, if separately authorized, must use the verified absolute project root. Never guess a root from the current working directory.",
     "",
@@ -103,7 +103,7 @@ function generateClaudePointerBlock(
 
 - At conversation start, use \`history_session_bootstrap\` and read the \`mcp-probe:context\` block in \`${agentsPath}\` and Skill \`${skillCanonical}\`.
 - When the user says “continue” or “start”, use \`devcontrol\` actions \`onboard\`, \`next\`, and \`execution-contract\` to recover the approved SQLite task state before changing files.
-- Use \`devcontrol\` for formal development work. Follow the Skill for approved file scope, real testing, independent review, and verification.
+- Use \`devcontrol\` for formal development work. Review the committed delivery yourself using \`self-review\`, then \`gate-review\` with \`reviewMode=self\` and \`verify\`. A different Reviewer is optional; never fabricate test evidence.
 - Never install guidance from the current directory. For any separately authorized installation, verify an absolute project root first.
 ${CLAUDE_BLOCK_END}`;
 }

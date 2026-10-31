@@ -33,6 +33,10 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('DevControl operation reference');
     expect(skill).toContain('On every MCP startup');
     expect(skill).toContain('guidance');
+    expect(skill).toContain('`self-review`');
+    expect(skill).toContain('`reviewMode:"self"`');
+    expect(skill).toContain('A separate Reviewer is OPTIONAL');
+    expect(skill).not.toContain('arrange `review-handoff` → independent');
     for (const action of all) {
       expect(doc).toContain('`' + action + '`');
       expect(skill).toContain('`' + action + '`');
@@ -50,6 +54,10 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(text).toContain('history_session_bootstrap');
     expect(text).toContain('feature-task-approve');
     expect(text).toContain('gate-review');
+    expect(text).toContain('self-review');
+    expect(text).toMatch(/reviewMode=self|reviewMode:self/);
+    expect(text).not.toContain('DIFFERENT reviewer perform review-submit');
+    expect(text).not.toContain('**不同的独立 Reviewer**');
   });
 
   test('startup upgrades outdated same-version Skill and managed AGENTS, preserves user rules, then stays byte-identical', () => {
@@ -80,6 +88,8 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(updatedSkill).toContain('<!-- ' + SKILL_GUIDANCE_MARKER + ': ' + SKILL_GUIDANCE_REVISION + ' -->');
     expect(updatedSkill).toContain('DevControl operation reference');
     expect(updatedAgents).toContain('DevControl operation reference');
+    expect(updatedSkill).toContain('A separate Reviewer is OPTIONAL');
+    expect(updatedAgents).toContain('self-review');
     expect(updatedAgents).toContain(outside.trim());
     expect(updatedAgents).not.toContain('OUTDATED v4 workflow guidance');
     expect((updatedAgents.match(/mcp-probe:context begin/g) ?? [])).toHaveLength(1);
@@ -140,7 +150,9 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     const agents=fs.readFileSync(path.join(root,'AGENTS.md'),'utf8');
     expect(skill).toContain('DevControl NEVER');
     expect(skill).toContain('`review-submit`');
-    expect(agents).toContain('DIFFERENT reviewer');
+    expect(skill).toContain('`self-review`');
+    expect(agents).toContain('self-review');
+    expect(agents).toContain('OPTIONAL');
     expect(agents).toContain(SKILL_GUIDANCE_REVISION);
     expect(fs.existsSync(path.join(root,'docs','requirements.md'))).toBe(false);
   });
