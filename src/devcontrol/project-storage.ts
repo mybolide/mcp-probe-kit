@@ -21,10 +21,13 @@ export function ensureDatabaseIgnored(root: string, database: string): void {
     throw new Error("DevControl database must remain within its own project");
   }
   try {
+    // Git may exceed two seconds while other agents are committing or
+    // auditing a large repository. Still fail closed on a bounded deadline.
     const gitPath = execFileSync("git", ["rev-parse", "--git-path", "info/exclude"], {
-      windowsHide: true, cwd: project, encoding: "utf8", timeout: 2_000,
+      windowsHide: true, cwd: project, encoding: "utf8", timeout: 8_000,
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
+    if (!gitPath) throw new Error("Git returned an empty info/exclude path");
     const exclude = path.isAbsolute(gitPath) ? gitPath : path.resolve(project, gitPath);
     fs.mkdirSync(path.dirname(exclude), { recursive: true });
     // Exclude the complete local state directory, including SQLite WAL/SHM
@@ -35,8 +38,16 @@ export function ensureDatabaseIgnored(root: string, database: string): void {
       fs.appendFileSync(exclude, (existing && !existing.endsWith("\n") ? "\n" : "") +
         "# DevControl project-local state (never tracked)\n" + rule + "\n");
     }
-  } catch {
-    // If Git is unavailable, do not claim DB has been safely excluded.
-    throw new Error("Cannot configure project-local Git exclude for DevControl SQLite");
+    // Concurrent project initializers may append to this file. Always
+    // validate the actual on-disk rule before considering the database safe.
+    if (!fs.readFileSync(exclude, "utf8").split(/\r?\n/).includes(rule)) {
+      throw new Error("Git info/exclude does not contain the state directory");
+    }
+  } catch (cause) {
+    // Never silently bypass exclusion or swallow the underlying diagnosis.
+    // Preserve the original error for local troubleshooting.
+    throw new Error("Cannot configure project-local Git exclude for DevControl SQLite", {
+      cause,
+    });
   }
 }
