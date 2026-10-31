@@ -19,7 +19,7 @@ import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } fro
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
 import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
-import { checkManagedGuidanceCommit } from "./managed-guidance-gate.js";
+import { checkManagedGuidanceCommit, isManagedGuidancePath, trustedCommittedGuidance } from "./managed-guidance-gate.js";
 import { amendmentSubjectHash, checkAmendmentShape, checkAmendmentReview,
   type ReleaseWorkScopeAmendment, type ReleaseWorkAmendmentReview,
 } from "./release-work-amendment.js";
@@ -38,8 +38,9 @@ import { validGateRequirements, isEvidenceGate } from './gate-policy.js';
 import { normalizeFrozenTaskContract, auditNormalizedTaskContract,
   reviewSharedTaskPlanningFields, type TaskContractSource } from './task-contract.js';
 import { discoverRepositories, currentRevisions, updateRevisions, stagedChanges,
-  committedChanges, revisionDigest, assertRepositoryTopology,
+  committedChanges, revisionDigest, assertRepositoryTopology, assertDeliveryStillPresent,
   type RepositoryRevision } from './repository-audit.js';
+import { auditedUntrackedFiles } from './worktree-ignore.js';
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -70,7 +71,8 @@ function frozenPatchStillPresent(root:string,base:string,completion:string):bool
  * evidence. An explicit Owner-authorized preservation mode fingerprints it
  * without staging, stashing, resetting, overwriting or claiming ownership.
  */
-function preservedWorktreeSnapshot(root:string):Array<{
+function preservedWorktreeSnapshot(root:string,
+  taskPaths:string[]=[],prefix=''):Array<{
   path:string;kind:"tracked"|"untracked";sha256:string;size:number;
 }> {
   const readGitPaths=(args:string[]):string[]=>{
@@ -85,7 +87,8 @@ function preservedWorktreeSnapshot(root:string):Array<{
     fail("STAGED_WORKTREE",
       "Preserving an existing working tree cannot hide staged content; review the index first");
   const tracked=readGitPaths(["diff","--name-only","--no-ext-diff"]);
-  const untracked=readGitPaths(["ls-files","--others","--exclude-standard"]);
+  const untracked=auditedUntrackedFiles(root,file=>taskPaths.some(scope=>
+    pathAllowed(prefix?prefix+'/'+file:file,scope)));
   const paths=[
     ...tracked.map(file=>({path:file,kind:"tracked" as const})),
     ...untracked.map(file=>({path:file,kind:"untracked" as const})),
@@ -120,8 +123,6 @@ function committedFilesBetween(root: string, base: string, end: string,
   if (result.status!==0 || !Buffer.isBuffer(result.stdout)) {
     fail("GIT_ERROR","Cannot inspect frozen task Git revision");
   }
-
-
 
   return [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
 }
@@ -288,6 +289,10 @@ export interface CompletionReport {
    * counts as task delivery, passed Gate, or permission to rewrite any file.
    */
   preserveExistingWorktree?: boolean;
+  /** Exact delivery SHA per Git prefix, root prefix is "". Required for
+   * explicitly freezing a delivery before later unrelated merge commits.
+   */
+  deliveryHeads?:Record<string,string>;
 }
 
 export interface FeatureProposal {
@@ -962,7 +967,7 @@ export class ProjectTaskLedger {
       !run(this.root,'git',['merge-base','--is-ancestor',
         String(prior.base_head),String(lease.base_head)]).passed)
       fail('CLAIM_BASE_CHANGED','Original worktree baseline cannot be proven');
-    const protectedNow=preservedWorktreeSnapshot(this.root);
+    const protectedNow=preservedWorktreeSnapshot(this.root,paths);
     const currentByPath=new Map(protectedNow.map(file=>[file.path,file]));
     for(const old of original){
       const current=currentByPath.get(old.path);
@@ -980,7 +985,7 @@ export class ProjectTaskLedger {
       files:ReturnType<typeof preservedWorktreeSnapshot>}>=[];
     for(const repo of repos.filter(r=>!!r.prefix)){
       const unrelated:ReturnType<typeof preservedWorktreeSnapshot>=[];
-      for(const item of preservedWorktreeSnapshot(repo.root)){
+      for(const item of preservedWorktreeSnapshot(repo.root,paths,repo.prefix)){
         const file=repo.prefix+'/'+item.path;
         if(paths.some(p=>pathAllowed(file,p))){
           childWip.push({...item,path:file});
@@ -1002,10 +1007,10 @@ export class ProjectTaskLedger {
       if(observed.length!==baselines.length||observed.some((repo,i)=>
         repo.prefix!==baselines[i].prefix||repo.gitDir!==baselines[i].gitDir||
         repo.head!==baselines[i].head)||
-        JSON.stringify(preservedWorktreeSnapshot(this.root))!==JSON.stringify(protectedNow))
+        JSON.stringify(preservedWorktreeSnapshot(this.root,paths))!==JSON.stringify(protectedNow))
         fail('MIGRATION_STATE_CHANGED','Git identity, HEAD or protected root worktree changed during review');
       for(const repo of repos.filter(r=>!!r.prefix)){
-        const dirty=preservedWorktreeSnapshot(repo.root).map(file=>({
+        const dirty=preservedWorktreeSnapshot(repo.root,paths,repo.prefix).map(file=>({
           ...file,path:repo.prefix+'/'+file.path,
         }));
         const protectedFiles=childProtected.find(entry=>entry.prefix===repo.prefix)!.files
@@ -1193,10 +1198,11 @@ export class ProjectTaskLedger {
       // Self-review is permitted for both single- and multi-repository tasks.
       // It must bind to the same committed repository version vector as the
       // completion and its actual evidence; it is not a scope-pause operation.
-      const repositories=this.observedTaskRepositories(id,task);
-      const multiRepo=repositories.some(repo=>!!repo.prefix);
+      const observed=this.observedTaskRepositories(id,task);
+      const multiRepo=observed.some(repo=>!!repo.prefix);
+      const repositories=multiRepo?this.frozenDeliveryRepositories(id,task):observed;
       if(multiRepo){
-        this.requireChildReposClean(repositories,id,task);
+        this.requireChildReposClean(observed,id,task);
         const snapshot=this.db.prepare(`SELECT snapshot_json,digest
           FROM dc_completion_repository_revisions WHERE task_id=? AND revision=?`)
           .get(id,note.revision);
@@ -1263,6 +1269,13 @@ export class ProjectTaskLedger {
     if(!run(this.root,'git',['merge-base','--is-ancestor',baseHead,current]).passed)
       fail('REVIEW_BASE_CHANGED','Original task claim is no longer in Git history');
     if(current===completionHead)return current;
+    const task=this.requireTask(id);
+    if(this.taskRepositories(id,task).some(repo=>!!repo.prefix)){
+      const frozen=this.frozenDeliveryRepositories(id,task);
+      if(frozen.find(repo=>repo.prefix==='')?.head!==completionHead)
+        fail('REVIEW_BASE_CHANGED','Root delivery SHA does not match frozen multi-Git delivery');
+      return current;
+    }
     const deferral=this.db.prepare(`SELECT base_head,completion_head,resumed_at
       FROM dc_verification_deferrals WHERE task_id=?`).get(id);
     if(!deferral||!deferral.resumed_at||deferral.base_head!==baseHead||
@@ -1330,7 +1343,7 @@ export class ProjectTaskLedger {
         deferred.preserved_worktree_json:note.preserved_worktree_json)??'[]')) as
         Array<{path:string;kind:string;sha256:string;size:number}>;
       const baseline=new Map(original.map(row=>[row.path,row]));
-      const current=preservedWorktreeSnapshot(this.root);
+      const current=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
       const allowed=JSON.parse(task.allowed_paths) as string[];
       if(git(this.root,['diff','--cached','--name-only']).trim())
         fail('WORKTREE_REVIEW_STAGED','A reviewed protected worktree must not contain staged edits');
@@ -1365,7 +1378,8 @@ export class ProjectTaskLedger {
       const recorded=JSON.parse(String(row.details_json));
       return recorded.originalCompletionHead===completion&&
         recorded.currentHead===head&&
-        JSON.stringify(recorded.snapshot)===JSON.stringify(preservedWorktreeSnapshot(this.root));
+        JSON.stringify(recorded.snapshot)===JSON.stringify(preservedWorktreeSnapshot(this.root,
+          JSON.parse(this.requireTask(id).allowed_paths)));
     }catch{return false;}
   }
 
@@ -1377,7 +1391,8 @@ export class ProjectTaskLedger {
     try{
       const review=JSON.parse(String(row.details_json));
       return review.originalCompletionHead===completion&&review.currentHead===head&&
-        JSON.stringify(review.snapshot)===JSON.stringify(preservedWorktreeSnapshot(this.root));
+        JSON.stringify(review.snapshot)===JSON.stringify(preservedWorktreeSnapshot(this.root,
+          JSON.parse(this.requireTask(id).allowed_paths)));
     }catch{return false;}
   }
 
@@ -2034,6 +2049,51 @@ export class ProjectTaskLedger {
     catch(error){fail("REPOSITORY_HISTORY_CHANGED",String(error));}
   }
 
+  private frozenDeliveryRepositories(id:string,task:Row,revision?:number):
+    RepositoryRevision[] {
+    const note=this.latestCompletion(id);
+    const row=this.db.prepare(`SELECT snapshot_json,digest FROM
+      dc_completion_repository_revisions WHERE task_id=? AND revision=?`)
+      .get(id,revision??note?.revision??-1);
+    if(!row)fail('DELIVERY_REPOSITORIES_REQUIRED',
+      'Multi-repository task requires exact persisted delivery HEADs');
+    const saved=JSON.parse(String(row.snapshot_json)) as RepositoryRevision[];
+    if(revisionDigest(saved)!==row.digest)
+      fail('DELIVERY_REPOSITORIES_TAMPERED','Delivery snapshot digest differs');
+    try{
+      assertDeliveryStillPresent(this.root,saved,
+        this.observedTaskRepositories(id,task),JSON.parse(task.allowed_paths));
+    }catch(error){fail('DELIVERY_HEAD_CHANGED',String(error));}
+    if(note&&revision===undefined&&saved.find(x=>x.prefix==='')?.head!==note.git_head)
+      fail('DELIVERY_HEAD_CHANGED','Root completion and multi-Git delivery SHA differ');
+    return saved;
+  }
+
+  private selectDeliveryRepositories(task:Row,observed:RepositoryRevision[],
+    requested?:Record<string,string>):RepositoryRevision[]{
+    if(requested===undefined)return observed;
+    if(!requested||Array.isArray(requested)||typeof requested!=='object'||
+      Object.keys(requested).length!==observed.length||
+      observed.some(r=>typeof requested[r.prefix]!=='string'||
+        !/^[a-f0-9]{40,64}$/.test(requested[r.prefix])))
+      fail('DELIVERY_HEADS_REQUIRED',
+        'deliveryHeads must specify exact SHA for every Git repository including root prefix ""');
+    const frozen=observed.map(r=>({...r,head:requested[r.prefix]}));
+    try{assertDeliveryStillPresent(this.root,frozen,observed,
+      JSON.parse(task.allowed_paths));}
+    catch(error){fail('DELIVERY_HEAD_CHANGED',String(error));}
+    return frozen;
+  }
+
+  private deliveryTaskFiles(files:string[],base:string,head:string):string[]{
+    if(!files.some(isManagedGuidancePath))return files;
+    const trusted=trustedCommittedGuidance(this.root,base,head);
+    const exempt=new Set(trusted);
+    if(files.some(file=>isManagedGuidancePath(file)&&!exempt.has(file)))
+      fail('MANAGED_GUIDANCE_INTEGRITY','Guidance was modified outside the canonical generator');
+    return files.filter(file=>!exempt.has(file));
+  }
+
   private effectiveOwnerSnapshot(id:string,prefix:string,
     original:ReturnType<typeof preservedWorktreeSnapshot>):
     ReturnType<typeof preservedWorktreeSnapshot> {
@@ -2100,7 +2160,7 @@ export class ProjectTaskLedger {
         (migration?.protected_worktree_json??rootBase?.snapshot_json);
       const original=(originalJson?JSON.parse(String(originalJson)):[]) as ReturnType<typeof preservedWorktreeSnapshot>;
       const expected=this.effectiveOwnerSnapshot(id,repo.prefix,original);
-      const current=preservedWorktreeSnapshot(repo.root).filter(file=>
+      const current=preservedWorktreeSnapshot(repo.root,allowed,repo.prefix).filter(file=>
         !allowed.some(pattern=>pathAllowed(
           repo.prefix?repo.prefix+'/'+file.path:file.path,pattern)));
       const byPath=new Map(current.map(file=>[file.path,file]));
@@ -2169,7 +2229,7 @@ export class ProjectTaskLedger {
         if(sha(JSON.stringify(before))!==plan.previous)
           fail('REFRESH_STATE_CHANGED','Another Owner refreshed the snapshot first');
         const files=preservedWorktreeSnapshot(
-          plan.prefix?path.join(this.root,plan.prefix):this.root);
+          plan.prefix?path.join(this.root,plan.prefix):this.root,allowed,plan.prefix);
         const actual=files.filter(file=>!allowed.some(pattern=>pathAllowed(
           plan.prefix?plan.prefix+'/'+file.path:file.path,pattern)));
         if(JSON.stringify(actual)!==plan.next)
@@ -2224,7 +2284,8 @@ export class ProjectTaskLedger {
           'Child repository protection record does not match frozen repository identity');
       if(protectedRow&&protectedRow.git_dir!==revision.gitDir)
         fail('CHILD_REPOSITORY_IDENTITY_CHANGED','Protected child Git metadata changed');
-      const dirty=preservedWorktreeSnapshot(path.join(this.root,revision.prefix));
+      const dirty=preservedWorktreeSnapshot(path.join(this.root,revision.prefix),
+        scope,revision.prefix);
       const allowedDirty=dirty.filter(file=>
         scope.some(pattern=>pathAllowed(revision.prefix+'/'+file.path,pattern)));
       if(allowedDirty.length)fail('CHILD_REPOSITORY_DIRTY',
@@ -2254,20 +2315,29 @@ export class ProjectTaskLedger {
     if(task)this.taskRepositories(task.id,task);
     const roots=task?discoverRepositories(this.root,JSON.parse(task.allowed_paths)):discoverRepositories(this.root,[]);
     const files=stagedChanges(roots);
+    const managed=files.filter(isManagedGuidancePath);
+    const scopedFiles=files.filter(file=>!isManagedGuidancePath(file));
+    const guidance=managed.length?checkManagedGuidanceCommit(this.root,managed):null;
+    if(guidance&&!guidance.passed){
+      if(!active||active.expires_at<=Date.now())
+        fail('LEASE_REQUIRED','No active approved task lease; managed guidance validation: '+
+          guidance.issues.join('; '));
+      return {passed:false,reason:'Generated Skill/AGENTS content differs from the canonical MCP generator',
+        stagedFiles:files,managedIssues:guidance.issues};
+    }
     const artifactGate=this.checkGovernedArtifacts(files,true);
     if(!artifactGate.passed)
       return {passed:false,reason:"Frozen governed artifact changed without reviewed approval",
         ...artifactGate,stagedFiles:files};
-    const guidance=checkManagedGuidanceCommit(this.root,files);
     // No implicit approval for arbitrary edits to AGENTS.md or the Skill.
     // This exception requires only canonical generator output and no other files.
-    if(files.length&&guidance.passed)
+    if(managed.length&&!scopedFiles.length&&guidance?.passed)
       return {passed:true,taskId:null,scope:"managed-guidance-sync",
         stagedFiles:files,deniedFiles:[],unapprovedDocs:[],managedFiles:guidance.managedFiles};
     const lease = active;
     if (!lease || lease.expires_at <= Date.now()) {
       fail("LEASE_REQUIRED", "No active approved task lease; refusing Git commit"+
-        (guidance.issues.length?"; managed guidance validation: "+guidance.issues.join("; "):""));
+        (guidance?.issues.length?"; managed guidance validation: "+guidance.issues.join("; "):""));
     }
     const claimedTask = this.requireTask(lease.task_id);
     if((claimedTask.required_gates as string).includes('"sqlite_decision"'))
@@ -2282,7 +2352,7 @@ export class ProjectTaskLedger {
     const spec=contract.profile==="spec-depth-v3"?
       contract.spec as ReleasePlanNode:null;
     const exact=spec?.allowedChangedFiles;
-    const denied = files.filter((file) =>
+    const denied = scopedFiles.filter((file) =>
       !patterns.some((pattern) => pathAllowed(file, pattern)) ||
       (exact && !exact.includes(file)));
     const newFiles=[...new Set(roots.flatMap(repo=> {
@@ -2294,10 +2364,12 @@ export class ProjectTaskLedger {
       return created.stdout.toString("utf8").split("\0").filter(Boolean).map(name=>
         repo.prefix?repo.prefix+"/"+name:name);
     }))].sort();
-    const unapprovedDocs = undocumentedMarkdown(newFiles, patterns);
+    const unapprovedDocs = undocumentedMarkdown(newFiles.filter(file=>
+      !isManagedGuidancePath(file)), patterns);
     return {
       passed: files.length>0 && denied.length === 0 && unapprovedDocs.length === 0,
       taskId: claimedTask.id, stagedFiles: files, deniedFiles: denied,
+      managedFiles:managed,
       unapprovedDocs,exactFileScope:exact??null,
       ...(files.length?{}:{reason:"No staged task changes"}),
     };
@@ -4418,7 +4490,8 @@ export class ProjectTaskLedger {
     // Staged or untracked files are NEVER exempted. The only exception is a
     // fully declared, byte-identical set of pre-existing unstaged tracked edits.
     if(git(this.root,["diff","--cached","--name-only"])||
-      git(this.root,["ls-files","--others","--exclude-standard"]))
+      auditedUntrackedFiles(this.root,file=>
+        (JSON.parse(task.allowed_paths) as string[]).some(p=>pathAllowed(file,p))).length)
       fail("DIRTY_WORKTREE","Staged and untracked files must be committed before completion");
     const actual=git(this.root,["diff","--name-only","-z"]).split("\0").filter(Boolean).sort();
     const names=manifest.map(entry=>entry.path).sort();
@@ -4476,7 +4549,7 @@ export class ProjectTaskLedger {
     const allowed=JSON.parse(task.allowed_paths) as string[];
     if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))))
       fail("DIRTY_SCOPE_VIOLATION","An already dirty file overlaps this task's approved scope");
-    if(JSON.stringify(preservedWorktreeSnapshot(this.root))!==JSON.stringify(snapshot))
+    if(JSON.stringify(preservedWorktreeSnapshot(this.root,allowed))!==JSON.stringify(snapshot))
       fail("WORKTREE_CHANGED",
         "An unrelated pre-existing file changed or an unapproved new file appeared after claim");
     return snapshot;
@@ -4514,7 +4587,7 @@ export class ProjectTaskLedger {
    */
   private unrelatedCompletionWorktree(task:Row,baseHead:string):
     ReturnType<typeof preservedWorktreeSnapshot> {
-    const snapshot=preservedWorktreeSnapshot(this.root);
+    const snapshot=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
     const allowed=JSON.parse(task.allowed_paths) as string[];
     const committed=committedFilesBetween(this.root,baseHead,git(this.root,['rev-parse','HEAD']));
     if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))||
@@ -4536,18 +4609,25 @@ export class ProjectTaskLedger {
         (typeof input.remaining !== "string" || input.remaining.length > 12_000)) {
       fail("INVALID_REMAINING", "Remaining work must be text of at most 12000 characters");
     }
-    const head = git(this.root, ["rev-parse", "HEAD"]);
+    let head = git(this.root, ["rev-parse", "HEAD"]);
     return this.inTransaction(() => {
       const lease = this.requireLease(id, token);
       const task = this.requireTask(id);
       if (!["in_progress", "in_review"].includes(task.status)) {
         fail("INVALID_STATE", "Only a claimed task can record completion before verification");
       }
-      const repositories=this.observedTaskRepositories(id,task);
-      const multiRepo=repositories.some(repo=>!!repo.prefix);
+      const observed=this.observedTaskRepositories(id,task);
+      const multiRepo=observed.some(repo=>!!repo.prefix);
+      if(input.deliveryHeads!==undefined&&!multiRepo)
+        fail('DELIVERY_HEADS_INVALID','Explicit deliveryHeads need multiple independent Git repositories');
+      const repositories=multiRepo?
+        this.selectDeliveryRepositories(task,observed,input.deliveryHeads):observed;
+      if(multiRepo)head=repositories.find(repo=>repo.prefix==='')!.head;
       if(multiRepo){
-        this.requireChildReposClean(repositories,id,task);
-        const changed=committedChanges(this.root,repositories);
+        this.requireChildReposClean(observed,id,task);
+        const rootRepo=repositories.find(repo=>repo.prefix==='')!;
+        const changed=this.deliveryTaskFiles(committedChanges(this.root,repositories),
+          rootRepo.baseHead,rootRepo.head);
         const allowed=JSON.parse(task.allowed_paths) as string[];
         const exact=(this.executionContract(id).profile==='spec-depth-v3'
           ?(this.executionContract(id).spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
@@ -4560,7 +4640,8 @@ export class ProjectTaskLedger {
         fail("DIRTY_MODE_CONFLICT","Choose either legacy protected tracked edits or audited worktree snapshot");
       const protectedAtClaim=this.protectedClaimWorktree(id,task,lease.base_head);
       const autoCandidate=protectedAtClaim??(
-        input.preserveExistingWorktree===true?preservedWorktreeSnapshot(this.root):
+        input.preserveExistingWorktree===true?preservedWorktreeSnapshot(this.root,
+          JSON.parse(task.allowed_paths)):
         input.existingDirtyFiles===undefined?
           this.unrelatedCompletionWorktree(task,lease.base_head):[]);
       const autoUntracked=autoCandidate.length>0&&
@@ -4573,13 +4654,15 @@ export class ProjectTaskLedger {
       // A worktree snapshot cannot stand in for an actual committed task diff.
       if(protectedSnapshot){
         const resumedBase=this.resumedDeliveryBase(id,String(lease.base_head),head);
-        const changed=multiRepo?committedChanges(this.root,repositories):
+        const rawChanges=multiRepo?committedChanges(this.root,repositories):
           committedFilesBetween(this.root,resumedBase??lease.base_head,head);
+        const changed=this.deliveryTaskFiles(rawChanges,
+          multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:resumedBase??lease.base_head,head);
         const allowed=JSON.parse(task.allowed_paths) as string[];
         if(!changed.length||changed.some(file=>!allowed.some(p=>pathAllowed(file,p))))
           fail("DELIVERY_SCOPE_INVALID","Only committed, in-scope task work can record completion");
         if(JSON.stringify(preservedWorktree)!==
-            JSON.stringify(preservedWorktreeSnapshot(this.root)))
+            JSON.stringify(preservedWorktreeSnapshot(this.root,allowed)))
           fail("WORKTREE_CHANGED","Pre-existing uncommitted source changed during completion");
       }
       if(!this.checkGovernedArtifacts().passed)
@@ -5018,7 +5101,7 @@ export class ProjectTaskLedger {
         "SELECT base_head,snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?",
       ).get(id);
       if(!previousSnapshot){
-        const files=preservedWorktreeSnapshot(this.root);
+        const files=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
         const allowed=JSON.parse(task.allowed_paths) as string[];
         if(!files.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern)))){
           this.db.prepare(`INSERT INTO dc_task_worktree_baselines
@@ -5034,7 +5117,8 @@ export class ProjectTaskLedger {
         const previousFiles=JSON.parse(String(previousSnapshot.snapshot_json)) as unknown[];
         if(!run(this.root,'git',['merge-base','--is-ancestor',
           String(previousSnapshot.base_head),claimBase]).passed||
-          JSON.stringify(previousFiles)!==JSON.stringify(preservedWorktreeSnapshot(this.root)))
+          JSON.stringify(previousFiles)!==JSON.stringify(preservedWorktreeSnapshot(this.root,
+            JSON.parse(task.allowed_paths))))
           fail("CLAIM_BASE_CHANGED",
             "Original task worktree baseline must be preserved during reclaim");
       }
@@ -5140,7 +5224,7 @@ export class ProjectTaskLedger {
           if(!delivered.length||delivered.some(file=>
             !allowed.some(pattern=>pathAllowed(file,pattern))))
             fail('DELIVERY_SCOPE_INVALID','New deferred revision must contain only approved committed files');
-          const current=preservedWorktreeSnapshot(this.root);
+          const current=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
           if(input.preserveExistingWorktree!==true||
               JSON.stringify(current)!==String(note.preserved_worktree_json??'[]'))
             fail('WORKTREE_CHANGED','Updated completion must preserve its exact existing worktree snapshot');
@@ -5183,7 +5267,7 @@ export class ProjectTaskLedger {
             resumed.completion_head,head,overlaps))
           fail('DEFERRED_CODE_CHANGED',
             'Later commits changed the original delivery; record a fresh reviewed completion');
-        const dirty=preservedWorktreeSnapshot(this.root);
+        const dirty=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
         const allowed=JSON.parse(task.allowed_paths) as string[];
         const oldSnapshot=JSON.parse(String(resumed.preserved_worktree_json??'[]')) as
           Array<{path:string;kind:string;size:number;sha256:string}>;
@@ -5222,7 +5306,7 @@ export class ProjectTaskLedger {
       let preserved:Array<{path:string;kind:"tracked"|"untracked";
         sha256:string;size:number}>=[];
       if(input.preserveExistingWorktree===true){
-        preserved=preservedWorktreeSnapshot(this.root);
+        preserved=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
         const completionWorktree=JSON.parse(
           String(note.preserved_worktree_json??"[]"),
         ) as Array<{path:string;kind:string;sha256:string;size:number}>;
@@ -5242,7 +5326,8 @@ export class ProjectTaskLedger {
           "Only committed, in-scope source can await later physical verification");
       }
       if(input.preserveExistingWorktree===true&&
-          JSON.stringify(preserved)!==JSON.stringify(preservedWorktreeSnapshot(this.root)))
+          JSON.stringify(preserved)!==JSON.stringify(preservedWorktreeSnapshot(this.root,
+            JSON.parse(task.allowed_paths))))
         fail("WORKTREE_CHANGED","Uncommitted source changed during deferral preparation");
       this.db.prepare(`
         INSERT INTO dc_verification_deferrals
@@ -5558,7 +5643,9 @@ export class ProjectTaskLedger {
     return row!;
   }
 
-  report(id: string, token: string, evidence: { kind: string; reference: string }, readyForReview = false): Row {
+  report(id: string, token: string, evidence: {
+    kind:string; reference:string; deliveryHeads?:Record<string,string>;
+  }, readyForReview = false): Row {
     return this.inTransaction(() => {
       const lease = this.requireLease(id, token);
       const current = this.requireTask(id);
@@ -5583,12 +5670,24 @@ export class ProjectTaskLedger {
         fail("EVIDENCE_REQUIRED", "Evidence kind and reference required");
       }
       if(resumedFrozen)this.checkReviewDeliveryHead(id,String(lease.base_head),String(completion!.git_head));
-      const head=resumedFrozen?String(completion!.git_head):observedHead;
-      const repositories=this.observedTaskRepositories(id,current);
+      const observed=this.observedTaskRepositories(id,current);
+      const multiRepo=observed.some(repo=>!!repo.prefix);
+      if(multiRepo&&completion&&evidence.deliveryHeads!==undefined){
+        const selected=this.selectDeliveryRepositories(current,observed,evidence.deliveryHeads);
+        const frozen=this.frozenDeliveryRepositories(id,current);
+        if(revisionDigest(selected)!==revisionDigest(frozen))
+          fail('EVIDENCE_DELIVERY_HEADS_MISMATCH',
+            'Reported deliveryHeads must equal the exact already completed version vector');
+      }
+      const repositories=multiRepo?(completion?
+        this.frozenDeliveryRepositories(id,current):
+        this.selectDeliveryRepositories(current,observed,evidence.deliveryHeads)):observed;
+      const head=multiRepo?repositories.find(repo=>repo.prefix==='')!.head:
+        resumedFrozen?String(completion!.git_head):observedHead;
       this.db.prepare(
         "INSERT INTO dc_evidence(task_id,kind,reference,git_head,created_at) VALUES(?,?,?,?,?)",
       ).run(id, evidence.kind, evidence.reference, head, utc());
-      if(repositories.some(repo=>!!repo.prefix)){
+      if(multiRepo){
         const row=this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? ORDER BY id DESC LIMIT 1").get(id);
         this.db.prepare(`INSERT INTO dc_evidence_repository_digests(evidence_id,digest)
           VALUES(?,?)`).run(row!.id,revisionDigest(repositories));
@@ -5647,8 +5746,9 @@ export class ProjectTaskLedger {
       "SELECT id FROM dc_evidence WHERE task_id=? AND reference=? AND git_head=? ORDER BY id DESC LIMIT 1",
     ).get(id, input.evidenceReference.trim(), head);
     if (!evidence) fail("EVIDENCE_NOT_REPORTED", "Review must cite separately reported evidence for this exact Git revision");
-    const repositories=this.observedTaskRepositories(id,task);
-    const multiRepo=repositories.some(repo=>!!repo.prefix);
+    const observed=this.observedTaskRepositories(id,task);
+    const multiRepo=observed.some(repo=>!!repo.prefix);
+    const repositories=multiRepo?this.frozenDeliveryRepositories(id,task):observed;
     const snapshot=this.db.prepare(`SELECT digest FROM dc_completion_repository_revisions
       WHERE task_id=? AND revision=?`).get(id,completion.revision);
     if(multiRepo){
@@ -5722,8 +5822,14 @@ export class ProjectTaskLedger {
     if (!note) {
       return { taskId: id, passed: false, reason: "Missing structured completion report" };
     }
-    const repositories=this.observedTaskRepositories(id,task);
-    const multiRepo=repositories.some(repo=>!!repo.prefix);
+    const observed=this.observedTaskRepositories(id,task);
+    const multiRepo=observed.some(repo=>!!repo.prefix);
+    let repositories=observed;
+    if(multiRepo){
+      try{repositories=this.frozenDeliveryRepositories(id,task);}
+      catch(error){return {taskId:id,passed:false,
+        reason:'Exact delivered Git versions no longer valid',error:String(error)};}
+    }
     const completedRepos=this.db.prepare(`SELECT snapshot_json,digest
       FROM dc_completion_repository_revisions WHERE task_id=? AND revision=?`)
       .get(id,note.revision);
@@ -5733,7 +5839,7 @@ export class ProjectTaskLedger {
         JSON.stringify(repositories)!==String(completedRepos.snapshot_json))
         return {taskId:id,passed:false,
           reason:"Scoped child Git HEAD or repository identity changed since task completion"};
-      try{this.requireChildReposClean(repositories,id,task);}
+      try{this.requireChildReposClean(observed,id,task);}
       catch(error){return {taskId:id,passed:false,
         reason:"Child Git repository contains uncommitted changes",error:String(error)};}
     }
@@ -5743,7 +5849,7 @@ export class ProjectTaskLedger {
     const frozenReview=deferred&&note.git_head===deferred.completion_head;
     if(multiRepo&&frozenReview)return {taskId:id,passed:false,
       reason:"Multi-repository verification deferral requires an independently reviewed version-vector migration"};
-    if (note.git_head !== startHead && !frozenReview) {
+    if (note.git_head !== startHead && !frozenReview&&!multiRepo) {
       return { taskId: id, passed: false, reason: "Completion report refers to an older Git commit; record a new revision" };
     }
     if(frozenReview){
@@ -5772,7 +5878,7 @@ export class ProjectTaskLedger {
         if(frozenReview&&this.hasReviewedDeferredWorktree(id,note.git_head,startHead))
           return true;
         if(preservedWorktree.length){
-          const current=preservedWorktreeSnapshot(this.root);
+          const current=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
           if(!frozenReview&&
               JSON.stringify(current)!==JSON.stringify(preservedWorktree))
             return false;
@@ -5796,9 +5902,12 @@ export class ProjectTaskLedger {
     const incrementalBase=!frozenReview&&deferred&&
       note.revision>deferred.completion_revision?
       this.resumedDeliveryBase(id,String(lease.base_head),startHead):null;
-    const files = multiRepo?committedChanges(this.root,repositories):frozenReview ?
+    const rawFiles = multiRepo?committedChanges(this.root,repositories):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head) :
       changedFiles(this.root, incrementalBase??lease.base_head);
+    const files=this.deliveryTaskFiles(rawFiles,
+      multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:incrementalBase??lease.base_head,
+      multiRepo?note.git_head:startHead);
     const governed=this.checkGovernedArtifacts();
     if(!governed.passed)return {taskId:id,passed:false,
       reason:"Governed architecture artifacts differ from approved revision",
@@ -5829,10 +5938,10 @@ export class ProjectTaskLedger {
       (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
     const denied = files.filter((f) =>
       !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
-    const unapprovedDocs = undocumentedMarkdown(multiRepo?
-      committedChanges(this.root,repositories,'A'):frozenReview ?
+    const added=multiRepo?committedChanges(this.root,repositories,'A'):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head,"A") :
-      addedFiles(this.root, incrementalBase??lease.base_head), allowedPaths);
+      addedFiles(this.root, incrementalBase??lease.base_head);
+    const unapprovedDocs = undocumentedMarkdown(added.filter(file=>files.includes(file)), allowedPaths);
     if ((!files.length&&!sqliteDelivery) || denied.length || unapprovedDocs.length) {
       return {
         taskId: id, passed: false,
@@ -5854,7 +5963,7 @@ export class ProjectTaskLedger {
         const result = this.db.prepare(
           "SELECT * FROM dc_external_gate_reviews WHERE task_id=? AND gate_name=?",
         ).get(id,name);
-        const targetHead=frozenReview?note.git_head:startHead;
+        const targetHead=multiRepo?note.git_head:frozenReview?note.git_head:startHead;
         const taskReview=this.db.prepare(`SELECT reviewer,outcome,completion_head
           FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
         const ownReview=!!result&&result.reviewer===lease.agent&&
@@ -5889,7 +5998,9 @@ export class ProjectTaskLedger {
       try{
         const current=this.observedTaskRepositories(id,task);
         this.requireChildReposClean(current,id,task);
-        return revisionDigest(current)===repoDigest;
+        assertDeliveryStillPresent(this.root,repositories,current,
+          JSON.parse(task.allowed_paths));
+        return revisionDigest(repositories)===repoDigest;
       }catch{return false;}
     };
     const stable = startHead === stableHead && protectedEditsStable && repoStable();

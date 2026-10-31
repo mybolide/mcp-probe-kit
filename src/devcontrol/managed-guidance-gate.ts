@@ -9,12 +9,41 @@ import { previewManagedGuidanceSync } from "../lib/workflow-skill-installer.js";
 import { MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
 
 const managedPaths=new Set([MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"]);
+export function isManagedGuidancePath(path:string):boolean{return managedPaths.has(path);}
 
 function gitRead(root:string,args:string[]):{ok:boolean;text:string} {
   const result=spawnSync("git",args,{
     windowsHide: true, cwd:root,encoding:"utf8",timeout:10_000,maxBuffer:2_000_000,
   });
   return {ok:result.status===0&&!result.error,text:result.stdout??""};
+}
+
+/** Only canonical generator output is exempt from a task's committed file
+ * scope. Validate each intermediate commit against its own first parent,
+ * never bless a path merely because it is named AGENTS.md or SKILL.md.
+ */
+export function trustedCommittedGuidance(root:string,base:string,delivery:string):string[]{
+  const commits=gitRead(root,['rev-list','--reverse',base+'..'+delivery]);
+  if(!commits.ok)throw Error('Cannot inspect generator commit history');
+  const trusted=new Set<string>();
+  for(const commit of commits.text.trim().split('\n').filter(Boolean)){
+    const parent=gitRead(root,['rev-parse',commit+'^']);
+    if(!parent.ok)throw Error('Generator commit must have a traceable parent');
+    const changed=gitRead(root,['diff','--name-only',parent.text.trim(),commit]);
+    if(!changed.ok)throw Error('Cannot inspect generator changes');
+    const managed=changed.text.trim().split('\n').filter(isManagedGuidancePath);
+    if(!managed.length)continue;
+    const old=gitRead(root,['show',parent.text.trim()+':AGENTS.md']);
+    const generated=previewManagedGuidanceSync(root,old.ok?old.text:null);
+    for(const file of managed){
+      const candidate=gitRead(root,['show',commit+':'+file]);
+      const expected=file==='AGENTS.md'?generated.agents:generated.skill;
+      if(!candidate.ok||candidate.text!==expected)
+        throw Error('Committed managed guidance does not match its canonical generator: '+file);
+      trusted.add(file);
+    }
+  }
+  return [...trusted];
 }
 
 export function checkManagedGuidanceCommit(root:string,stagedFiles:readonly string[]):{

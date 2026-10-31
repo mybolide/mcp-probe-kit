@@ -104,6 +104,16 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    appends an audited reduction of active protection, never overwrites
    the original snapshot and never edits Git files or passes a real Gate.
    Missing untracked files, symlinks, staged or new unrelated WIP never qualify.
+   An optional local worktree-ignore file is stored in each repository's real
+   Git directory at info/devcontrol-worktree-ignore. Its patterns add to Git's
+   standard ignore layers and only exempt unrelated untracked regular files.
+   It cannot hide staged or tracked files, frozen task paths or symlinks.
+   Multi-repository report and complete can accept deliveryHeads, a map from
+   every Git prefix to the exact tested commit SHA (root prefix is "").
+   Gate reviews and verify bind to this immutable delivery rather than later
+   unrelated merges. A later commit touching frozen scope invalidates review.
+   MCP-generated Skill and AGENTS.md changes are exempt only when their staged
+   and committed bytes match the trusted canonical generator.
    Old leases can use preserveExistingWorktree:true on complete to capture
    read-only legacy snapshots, never reset/stash/claiming that work.
    The matching manifest is required again at defer-verification; verified
@@ -200,6 +210,7 @@ ${managedRevision}
 - **延期验收与会话恢复**：代码已提交、完成说明和证据入账的 \`in_review\` 任务，可用 \`defer-verification\`（当前租约、精确 Gate、真实原因）释放租约但绝不通过 Gate；真机/CI 恢复后使用 \`resume-verification\`、\`task-closure-status\`，按提示补录真实 \`report\`、\`self-review\`、\`gate-review\`（\`reviewMode=self\`）和 \`verify\`。只有主动选择独立 Reviewer 时才采用 \`review-handoff\` → \`review-submit\` → \`reviewed-verify\`。后续无冲突任务可以推进 Git HEAD，审核仍绑定冻结的原始 Commit；禁止为了验收 reset、stash、删除别人文件或直接改 SQLite。
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
 - **受保护文件恢复 Git HEAD**：已跟踪的保护文件若恢复为所在仓库 HEAD 原始字节，Owner 可使用 \`refresh-protected-worktree\`，提供任务 \`id\`、\`actor\`、\`ownerRecoveryKey\` 和具体 \`reason\`，追加只读审计刷新，再继续完成登记。旧快照保持不变；不允许 staged、软链、越界、未跟踪保护文件丢失及其他保护文件改动，不提供测试和 Gate 通过资格。
+- **本地 Git 忽略与精确交付**：每个独立仓库可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
 - **会话结束**：\`history_session_checkpoint\` 记录用户原话、发现、决策、改动、真实测试、分支/租约、阻碍及下一步。保留用户未提交修改，真机/真实数据库 Gate 缺失就报告未通过。
@@ -250,6 +261,14 @@ ${managedRevision}
   submitted Git Commit while unrelated tasks may advance HEAD. Follow the
   closure checklist to report later real evidence and complete reviews;
   do not rerun business tests from DevControl or reset other Agent work.
+- Optional local-only info/devcontrol-worktree-ignore in each real Git-dir
+  adds to standard Git ignore. It only exempts unrelated untracked regular
+  files; never hide staged/tracked edits, frozen scope or symlinks.
+- Multi-Git report and complete can specify deliveryHeads for every Git
+  prefix (root key is ""), to bind test evidence and Gates to the original
+  commits. Later unrelated merges never enlarge the frozen delivery diff.
+- Canonical generator-produced Skill and AGENTS.md upgrades can accompany
+  legitimate task changes; manually altered guidance is not exempt.
 - If protected tracked Owner WIP was restored to exact Git HEAD bytes, use
   Owner-key-authorized \`refresh-protected-worktree\` with task id, actor and
   concrete reason before completion. This only appends an audited snapshot

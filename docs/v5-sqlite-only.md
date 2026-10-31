@@ -100,7 +100,7 @@ check 或直接修改 SQLite 绕过。未满足真实验收条件的任务始终
 
 **合法恢复受保护文件到 Git HEAD。** 当受保护的已跟踪本地文件恢复为所在
 Git 仓库 HEAD 的原始字节后，旧保护清单不应永久阻断任务完成登记。
-Owner 可以在任务尚未产生完成报告时，使用 \`refresh-protected-worktree\`，
+Owner 可以在任务尚未产生完成报告时，使用 `refresh-protected-worktree`，
 提交 \`id\`、\`actor\`、\`ownerRecoveryKey\` 和至少 30 字符的具体
 \`reason\`。DevControl 只读检查原始 Git 身份、提交版本及剩余
 受保护文件指纹。只有确实恢复到 HEAD 的 tracked 文件允许从当前有效
@@ -112,6 +112,34 @@ Owner 可以在任务尚未产生完成报告时，使用 \`refresh-protected-wo
 新出现的无关修改、受保护的其他文件漂移、未跟踪文件丢失、Git 历史
 不可信，以及已有完成报告，均会拒绝刷新。清空后的有效保护清单
 仍必须在后续完成和验收中接受核验。
+
+### 本地 worktree-ignore 与 Git ignore
+
+每个独立 Git 仓库的真实 Git 目录下可选建
+`info/devcontrol-worktree-ignore`，语法沿用 Git exclude patterns，
+包括 Git worktree 使用 `.git` 文件的情况。该本地文件不加入 Git
+提交，也不会更改标准 `.gitignore`、`.git/info/exclude` 或全局忽略。
+DevControl 先执行 Git 标准忽略，再读取本机附加规则，只从未跟踪
+普通文件的工作树快照中移除符合条件的无关文件；已暂存、已跟踪、
+软链、逃逸路径及冻结任务范围内的文件禁止借此隐藏。后续规则文件
+的改动不追溯修改原先的只读 SHA-256 保护快照。
+
+### 多仓库精确 delivery HEAD
+
+一个工作区包含多个独立 Git 仓库时，`complete` 和 `report` 的
+`input.deliveryHeads` 可以显式传入各仓库**实际交付提交**的完整映射。
+例如 `{"": "ROOT_DELIVERY_SHA", "service": "CHILD_DELIVERY_SHA"}`，
+键必须覆盖所有发现的仓库，其中空字符串是根仓库。这是说明结构，
+实际 SHA 必须是合法提交值。完成报告保存交付版本向量和摘要，
+证据、`self-review`、`gate-review` 和 `verify` 只核对这些版本。
+后续无关合并可以前进 HEAD，但不能追加进原交付文件列表；后来
+任何提交触及冻结范围，或者交付提交不再是当前 HEAD 的祖先，
+旧证据都必须拒绝。不能把当前合并后的 HEAD 默认为过去交付的版本。
+
+MCP 自动生成的 Skill 和 AGENTS.md 若内容与生成器在对应提交
+的预期完全一致，属于受管理的规则维护，可以和合法业务文件一起
+暂存与提交，不作为业务交付文件计入验收范围。同名的手工修改、
+生成器版本不匹配或其他目录文件仍按正常冻结范围拒绝。
 
 Skill 自动生成源码定义的 DevControl 操作索引（含只读 guide），以及需求→设计→
 原子任务、独立审批、外部 Gate 证据、SQLite History 的执行规范。
@@ -172,7 +200,7 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | SQLite History | `history_session_bootstrap`、`history_session_checkpoint`、`history_session_validate`、`history_session_search`、`history_session_read` |
 | 可选跨项目 Memory | `search_memory`、`read_memory_asset`、`memorize_asset`、`update_memory_asset`、`delete_memory_asset`、`scan_and_extract_patterns` |
 
-**`devcontrol` 统一入口：84 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
+**`devcontrol` 统一入口：85 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
 
 | 流程领域 | 可用 `action` |
 |---|---|

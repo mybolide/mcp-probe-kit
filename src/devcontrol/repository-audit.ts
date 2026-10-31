@@ -25,6 +25,40 @@ function git(cwd:string,args:string[],binary=false):Buffer {
     throw Error(`Git audit unavailable in ${cwd}: ${result.stderr?.toString('utf8').slice(0,500)||result.error?.message||'unknown error'}`);
   return result.stdout;
 }
+
+/** Keep the exact delivered commit vector, not a subsequent merge's HEAD.
+ * Later commits are acceptable only when they touch NO frozen task path.
+ * Inspect per-commit changes (including merge parents), not just a net diff.
+ */
+export function assertDeliveryStillPresent(root:string,delivery:RepositoryRevision[],
+  current:RepositoryRevision[],allowedPaths:string[]):void{
+  const workspace=fs.realpathSync(root);
+  if(current.length!==delivery.length)throw Error('Delivery repository topology changed');
+  for(let i=0;i<delivery.length;i++){
+    const saved=delivery[i],observed=current[i];
+    if(saved.prefix!==observed.prefix||saved.gitDir!==observed.gitDir||
+      saved.baseHead!==observed.baseHead)
+      throw Error('Delivery repository identity or base changed: '+saved.prefix);
+    const repo=identity(workspace,saved.prefix);
+    if(repo.gitDir!==saved.gitDir)
+      throw Error('Delivery Git directory was replaced: '+saved.prefix);
+    for(const ancestor of [saved.baseHead,saved.head]){
+      const ok=spawnSync('git',['merge-base','--is-ancestor',ancestor,observed.head],{
+        cwd:repo.root,windowsHide:true,timeout:12000,
+      });
+      if(ok.status!==0)throw Error('Delivery commit not an ancestor of HEAD: '+saved.prefix);
+    }
+    if(saved.head===observed.head)continue;
+    const later=names(repo,['log','-m','--format=','--name-only','-z',
+      '--diff-filter=ACMRTD',saved.head+'..'+observed.head]);
+    const overlaps=later.filter(name=>allowedPaths.some(pattern=>
+      name===pattern||pattern.endsWith('/**')&&
+      name.startsWith(pattern.slice(0,-3)+'/')));
+    if(overlaps.length)
+      throw Error('Later commit touched frozen task scope in '+(saved.prefix||'.')+
+        ': '+[...new Set(overlaps)].join(', '));
+  }
+}
 function output(cwd:string,args:string[]):string{return git(cwd,args).toString('utf8').trim();}
 function contained(workspace:string,location:string):boolean{
   return location===workspace||location.startsWith(workspace+path.sep);

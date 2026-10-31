@@ -37,6 +37,8 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('`reviewMode:"self"`');
     expect(skill).toContain('A separate Reviewer is OPTIONAL');
     expect(skill).toContain('refresh-protected-worktree');
+    expect(skill).toContain('devcontrol-worktree-ignore');
+    expect(skill).toContain('deliveryHeads');
     expect(skill).not.toContain('arrange `review-handoff` → independent');
     for (const action of all) {
       expect(doc).toContain('`' + action + '`');
@@ -57,6 +59,8 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(text).toContain('gate-review');
     expect(text).toContain('self-review');
     expect(text).toContain('refresh-protected-worktree');
+    expect(text).toContain('devcontrol-worktree-ignore');
+    expect(text).toContain('deliveryHeads');
     expect(text).toMatch(/reviewMode=self|reviewMode:self/);
     expect(text).not.toContain('DIFFERENT reviewer perform review-submit');
     expect(text).not.toContain('**不同的独立 Reviewer**');

@@ -6,6 +6,9 @@ import {execFileSync} from 'node:child_process';
 import {ProjectTaskLedger} from '../task-ledger.js';
 import {discoverRepositories,currentRevisions,updateRevisions,revisionDigest,
   stagedChanges,committedChanges,assertRepositoryTopology} from '../repository-audit.js';
+import {auditedUntrackedFiles,localWorktreeIgnoreFile} from '../worktree-ignore.js';
+import {previewManagedGuidanceSync} from '../../lib/workflow-skill-installer.js';
+import {MCP_PROBE_SKILL_REL_PATH} from '../../lib/workflow-skill-template.js';
 
 const cleanups:string[]=[];
 function cmd(root:string,...args:string[]):string {
@@ -45,6 +48,174 @@ afterEach(()=>{
   vi.restoreAllMocks();
   delete process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
   for(const root of cleanups.splice(0))fs.rmSync(root,{force:true,recursive:true});
+});
+
+describe('canonical generated Skill and AGENTS are not task delivery',()=>{
+  it('accepts mixed generated guidance and task changes, but excludes maintenance files from completion',()=>{
+    const {root,child}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-GUIDANCE',title:'Task files with auto-upgraded managed guidance',
+        track:'governance',allowedPaths:['apw-life/src/**'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-GUIDANCE','owner');
+      const lease=ledger.claim('AUDIT-GUIDANCE','developer');
+      const canonical=previewManagedGuidanceSync(root,null);
+      fs.mkdirSync(path.dirname(path.join(root,MCP_PROBE_SKILL_REL_PATH)),{recursive:true});
+      fs.writeFileSync(path.join(root,MCP_PROBE_SKILL_REL_PATH),canonical.skill);
+      fs.writeFileSync(path.join(root,'AGENTS.md'),canonical.agents);
+      fs.mkdirSync(path.join(child,'src'));
+      fs.writeFileSync(path.join(child,'src','task.ts'),'export const task=true;');
+      cmd(root,'add',MCP_PROBE_SKILL_REL_PATH,'AGENTS.md');
+      cmd(child,'add','src/task.ts');
+      expect(ledger.checkStaged()).toMatchObject({
+        passed:true,managedFiles:expect.arrayContaining([MCP_PROBE_SKILL_REL_PATH,'AGENTS.md']),
+        deniedFiles:[],
+      });
+      cmd(root,'commit','-qm','canonical generated MCP guidance');
+      cmd(child,'commit','-qm','approved task implementation');
+      const reference='Actual task tests for the exact source commit and canonical guidance upgrade';
+      ledger.report('AUDIT-GUIDANCE',lease.leaseToken,{kind:'project_test',reference},true);
+      ledger.complete('AUDIT-GUIDANCE',lease.leaseToken,{
+        summary:'Task implementation without generated guidance ownership',
+        implementation:'Only frozen child scope is task delivery',
+        verification:'Actual tests executed against the committed child source',
+      });
+      ledger.reviewOwnTask('AUDIT-GUIDANCE',lease.leaseToken,{
+        outcome:'passed',evidenceReference:reference,
+        findings:'Checked source changes, canonical generator output, independent repository Git versions and real project test evidence.',
+      });
+      ledger.reviewExternalGate('AUDIT-GUIDANCE',lease.leaseToken,{
+        gate:'docs',runner:'developer',reviewer:'developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:reference,
+        reviewNotes:'Reviewed actual project test receipts and exact child delivery, with canonical tool guidance omitted from task files.',
+      });
+      expect(ledger.verify('AUDIT-GUIDANCE',lease.leaseToken)).toMatchObject({
+        passed:true,files:['apw-life/src/task.ts'],
+      });
+    }finally{ledger.close();}
+  });
+
+  it('rejects staged manual changes posing as generated Skill or AGENTS',()=>{
+    const {root}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      fs.writeFileSync(path.join(root,'AGENTS.md'),'user-authored content pretending to be MCP guidance');
+      cmd(root,'add','AGENTS.md');
+      expect(()=>ledger.checkStaged()).toThrow(/managed guidance validation/);
+    }finally{ledger.close();}
+  });
+});
+
+describe('layered local worktree-ignore protection',()=>{
+  it('adds Git-local untracked exceptions after standard ignores, without modifying Git ignore',()=>{
+    const {root,child}=fixture();
+    fs.writeFileSync(path.join(root,'.git','info','exclude'),'*.from-git\n');
+    fs.writeFileSync(path.join(root,'normal.txt'),'must protect');
+    fs.writeFileSync(path.join(root,'notes.from-git'),'standard Git exclusion');
+    fs.writeFileSync(path.join(root,'local.tmp'),'local-only exemption');
+    fs.writeFileSync(localWorktreeIgnoreFile(root),'/local.tmp\n');
+    expect(auditedUntrackedFiles(root)).toContain('normal.txt');
+    expect(auditedUntrackedFiles(root)).not.toContain('local.tmp');
+    expect(auditedUntrackedFiles(root)).not.toContain('notes.from-git');
+    expect(cmd(root,'ls-files','--others','--exclude-standard')).toContain('local.tmp');
+    const childIgnore=localWorktreeIgnoreFile(child);
+    fs.writeFileSync(path.join(child,'draft.tmp'),'child local-only');
+    fs.writeFileSync(childIgnore,'/draft.tmp\n');
+    expect(auditedUntrackedFiles(child)).not.toContain('draft.tmp');
+    expect(cmd(child,'ls-files','--others','--exclude-standard')).toContain('draft.tmp');
+    fs.mkdirSync(path.join(root,'docs'));
+    fs.writeFileSync(path.join(root,'docs','scoped.ts'),'do not hide');
+    fs.appendFileSync(localWorktreeIgnoreFile(root),'/docs/scoped.ts\n');
+    expect(()=>auditedUntrackedFiles(root,name=>name==='docs/scoped.ts'))
+      .toThrow(/frozen task file/);
+  });
+
+  it('rejects local worktree-ignore exceptions that hide symlinks',()=>{
+    const {root}=fixture(false);
+    fs.symlinkSync(path.join(root,'README.md'),path.join(root,'hidden-link'));
+    fs.writeFileSync(localWorktreeIgnoreFile(root),'/hidden-link\n');
+    expect(()=>auditedUntrackedFiles(root)).toThrow(/symlink|non-regular|linked/);
+  });
+});
+
+describe('immutable multi-repository delivery commits',()=>{
+  it('reviews exact root+child delivery after unrelated merge commits, without counting later files',()=>{
+    const {root,child}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-EXACT',title:'Freeze actual multi-repo delivery revisions',
+        track:'governance',allowedPaths:['apw-life/src/**'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-EXACT','owner');
+      const lease=ledger.claim('AUDIT-EXACT','developer');
+      const rootDelivery=cmd(root,'rev-parse','HEAD');
+      fs.mkdirSync(path.join(child,'src'));
+      fs.writeFileSync(path.join(child,'src','task.ts'),'export const task=1;');
+      cmd(child,'add','src/task.ts');cmd(child,'commit','-qm','original approved delivery');
+      const childDelivery=cmd(child,'rev-parse','HEAD');
+      // A genuine non-fast-forward merge lands after the tested delivery.
+      const main=cmd(root,'branch','--show-current');
+      cmd(root,'checkout','-qb','unrelated-work');
+      fs.writeFileSync(path.join(root,'README.md'),'another team changed README after delivery');
+      cmd(root,'add','README.md');cmd(root,'commit','-qm','unrelated branch delivery');
+      cmd(root,'checkout','-q',main);cmd(root,'merge','-q','--no-ff','unrelated-work','-m','merge unrelated work');
+      fs.writeFileSync(path.join(child,'README.md'),'unrelated child follow-up');
+      cmd(child,'add','README.md');cmd(child,'commit','-qm','unrelated child merge follow-up');
+      const deliveryHeads={'':rootDelivery,'apw-life':childDelivery,
+        'apw-life-app':cmd(path.join(root,'apw-life-app'),'rev-parse','HEAD')};
+      const receipt='Actual project test results recorded against exact original delivery HEADs';
+      ledger.report('AUDIT-EXACT',lease.leaseToken,{
+        kind:'project_test',reference:receipt,deliveryHeads,
+      },true);
+      expect(()=>ledger.complete('AUDIT-EXACT',lease.leaseToken,{
+        summary:'Should not use latest merges',implementation:'Task file was committed',
+        verification:'Real test receipt uses frozen versions',
+      })).toThrow(/scope/i);
+      const completed=ledger.complete('AUDIT-EXACT',lease.leaseToken,{
+        summary:'Original task file only',implementation:'One child Git source file',
+        verification:'Test receipt bound exact Git versions',deliveryHeads,
+      });
+      expect(completed.gitHead).toBe(rootDelivery);
+      ledger.reviewOwnTask('AUDIT-EXACT',lease.leaseToken,{
+        outcome:'passed',evidenceReference:receipt,
+        findings:'Reviewed original per-repository delivery commits, actual tests, approved scope and later unrelated merge without claiming its files.',
+      });
+      ledger.reviewExternalGate('AUDIT-EXACT',lease.leaseToken,{
+        gate:'docs',runner:'developer',reviewer:'developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:receipt,
+        reviewNotes:'Verified the actual task test receipt at frozen commits and excluded unrelated later root merge and child follow-up.',
+      });
+      expect(ledger.verify('AUDIT-EXACT',lease.leaseToken)).toMatchObject({
+        passed:true,files:['apw-life/src/task.ts'],
+      });
+    }finally{ledger.close();}
+  });
+
+  it('cannot reuse reviewed delivery if a later merge touches the frozen scope',()=>{
+    const {root,child}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-LATER-SCOPE',title:'Reject later child changes in frozen scope',
+        track:'governance',allowedPaths:['apw-life/src/**'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-LATER-SCOPE','owner');
+      const lease=ledger.claim('AUDIT-LATER-SCOPE','developer');
+      fs.mkdirSync(path.join(child,'src'));
+      fs.writeFileSync(path.join(child,'src','task.ts'),'export const task=1;');
+      cmd(child,'add','src/task.ts');cmd(child,'commit','-qm','delivery');
+      const receipt='Actual test evidence at original scoped child delivery';
+      ledger.report('AUDIT-LATER-SCOPE',lease.leaseToken,{kind:'unit_test',reference:receipt},true);
+      ledger.complete('AUDIT-LATER-SCOPE',lease.leaseToken,{
+        summary:'Original child commit',implementation:'Scoped source committed',
+        verification:'Actual project unit tests completed',
+      });
+      fs.writeFileSync(path.join(child,'src','task.ts'),'export const task=2;');
+      cmd(child,'add','src/task.ts');cmd(child,'commit','-qm','unreviewed later scoped change');
+      expect(()=>ledger.reviewOwnTask('AUDIT-LATER-SCOPE',lease.leaseToken,{
+        outcome:'passed',evidenceReference:receipt,
+        findings:'Attempted to reuse old receipt after a later source commit touched approved scope without test updates.',
+      })).toThrow(/DELIVERY_HEAD_CHANGED|Later commit touched|evidence/i);
+      expect(ledger.get('AUDIT-LATER-SCOPE').status).toBe('in_review');
+    }finally{ledger.close();}
+  });
 });
 
 describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
@@ -495,7 +666,7 @@ describe('multi-repository file identity and source audit',()=>{
       expect(()=>ledger.reviewOwnTask('AUDIT-SELF-STALE',claimed.leaseToken,{
         outcome:'passed',evidenceReference:evidence,
         findings:'Reviewed changed source and original testing results, but the latest child commit was not tested again.',
-      })).toThrow(/committed revision|evidence/i);
+      })).toThrow(/committed revision|evidence|Later commit touched frozen task scope/i);
       expect(ledger.get('AUDIT-SELF-STALE').status).toBe('in_review');
     }finally{ledger.close();}
   });
@@ -610,7 +781,7 @@ describe('multi-repository file identity and source audit',()=>{
       cmd(child,'add','src/code.ts');
       cmd(child,'commit','-qm','unreviewed later child revision');
       expect(ledger.verify('AUDIT-102',lease.leaseToken)).toMatchObject({
-        passed:false,reason:expect.stringMatching(/child Git HEAD.*changed/i),
+        passed:false,reason:expect.stringMatching(/Exact delivered Git versions no longer valid|child Git HEAD.*changed/i),
       });
       expect(ledger.get('AUDIT-102').status).not.toBe('verified');
     }finally{ledger.close();}
