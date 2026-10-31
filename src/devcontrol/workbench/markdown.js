@@ -76,7 +76,7 @@
     $("doc-content").replaceChildren(n("p","读取规范性源文档中…"));
     try{
       const data=await fetchJSON("/api/docs?path="+encodeURIComponent(source));
-      $("doc-title").textContent=data.title;$("doc-source").textContent=data.path+"  ·  最后修改 "+new Date(data.modifiedAt).toLocaleDateString();
+      $("doc-title").textContent=data.title;$("doc-source").textContent=data.path+"  ·  最后修改 "+beijingDateTime(data.modifiedAt);
       markdown($("doc-content"),data.markdown);
     }catch(e){$("doc-content").replaceChildren(n("p","文档无法打开："+e.message,"error"));}
   }

@@ -66,7 +66,7 @@
     renderTaskList();
     renderFeatures();
     renderInsights();
-    $("synced").textContent="同步于 "+new Date().toLocaleTimeString();
+    $("synced").textContent="同步于 "+beijingClock();
   }
   let reloadInProgress=false;
   const refreshChoices=new Set([5,10,30,60]);
@@ -148,7 +148,7 @@
         '（'+(rows.length?(passed*100/rows.length).toFixed(1):'0.0')+
         '%）。仅表示工作项 Verified，不代表产品发布 Gate 已通过。';
       if(document.scrollingElement)document.scrollingElement.scrollTop=scroll;
-      $('synced').textContent='任务同步于 '+new Date().toLocaleTimeString();
+      $('synced').textContent='任务同步于 '+beijingClock();
     }catch(error){$('synced').textContent='任务同步失败：'+error.message+'（原数据保留）';}
     finally{taskRefreshInProgress=false;resetRefreshClock();}
   }

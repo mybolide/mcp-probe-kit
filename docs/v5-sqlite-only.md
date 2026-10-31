@@ -22,6 +22,12 @@
 
 **Node.js 22+ 与 Git 项目根目录是 v5 的强制前提。** 新项目数据库位于 `.mcp-probe-kit/state/devcontrol.sqlite3`；已有 Neyna 项目保留 `.neyna/state/devcontrol.sqlite3`。数据库、WAL、SHM、活跃租约与机密不能提交 Git。
 
+**时间显示约定。** DevControl 工作台、任务看板、History、Bug/Feature 详情、
+审核事件和同步时间统一按北京时间（`Asia/Shanghai`，UTC+8）展示，
+与浏览器或运行主机时区无关。SQLite 与 API 继续保留带时区的 UTC
+原始时刻，保证审计先后顺序、Gate、任务租约及跨机器比较正确；
+原始 JSON 导出和日志不会为了页面展示而篡改时间戳。
+
 ## 启动检查与 Agent 指引自动同步
 
 MCP 每次启动时，若能识别真实 Git 业务项目，就检查

@@ -5,7 +5,7 @@
     try{
       const f=await fetchJSON("/api/features/"+encodeURIComponent(name));
       $("doc-title").textContent=f.name;
-      $("doc-source").textContent="版本 "+f.revision+" · "+f.layout+" · "+f.status+" · "+f.updatedAt;
+      $("doc-source").textContent="版本 "+f.revision+" · "+f.layout+" · "+f.status+" · "+beijingDateTime(f.updatedAt);
       const root=$("doc-content");
       root.replaceChildren();
       const sections=[

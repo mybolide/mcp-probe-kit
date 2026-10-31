@@ -84,6 +84,25 @@ body.embedded .lane{background:#101b2b}
   const el = id => document.getElementById(id);
   let board = null;
   const labels = {draft:"待审批",ready:"待开发",in_progress:"开发中",in_review:"待验收",verified:"已完成"};
+  const beijingDateFormatter=new Intl.DateTimeFormat("zh-CN",{
+    timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit",
+  });
+  const beijingTimeFormatter=new Intl.DateTimeFormat("zh-CN",{
+    timeZone:"Asia/Shanghai",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23",
+  });
+  function beijingStamp(value){
+    if(value===undefined||value===null||value==="")return "—";
+    const text=String(value).trim();
+    const normalized=/^[0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9]{2}:[0-9]{2}(:[0-9]{2})?(\\.[0-9]+)?$/.test(text)
+      ?text.replace(" ","T")+"Z":text;
+    const instant=new Date(normalized);
+    return Number.isFinite(instant.getTime())
+      ?beijingDateFormatter.format(instant)+" "+beijingTimeFormatter.format(instant)+" 北京时间"
+      :text;
+  }
+  function beijingClock(){
+    return beijingTimeFormatter.format(new Date())+" 北京时间";
+  }
   function node(tag, text, className) {
     const e = document.createElement(tag);
     if (text !== undefined && text !== null) e.textContent = String(text);
@@ -106,7 +125,7 @@ body.embedded .lane{background:#101b2b}
       const summary = node("div", "", "details-meta");
       for (const [key, value] of [["编号",task.id],["状态",labels[task.status] || task.status],
         ["版本",task.release],["父任务",task.parentId || "无"],["优先级",task.priority],
-        ["上次更新",task.updatedAt || "—"]]) {
+        ["上次更新",beijingStamp(task.updatedAt)]]) {
         const item = node("div");
         item.appendChild(node("small", key)); item.appendChild(node("span", value));
         summary.appendChild(item);
@@ -134,12 +153,12 @@ body.embedded .lane{background:#101b2b}
         field(root, "验收结果", completion.verification);
         field(root, "遗留问题", completion.remaining || "无");
         field(root, "提交基线", completion.git_head);
-        field(root, "记录版本", "第 " + completion.revision + " 版 · " + completion.created_at);
+        field(root, "记录版本", "第 " + completion.revision + " 版 · " + beijingStamp(completion.created_at));
       } else root.appendChild(node("div", "当前没有结构化完成报告。历史任务不会自动编造验收说明。", "notice"));
       const refs = (data.evidence || []).map(x => x.kind + ": " + x.reference);
       field(root, "证据索引", refs.join("\\n") || "无");
       field(root, "审计事件", (data.audit || []).slice(-12).map(x =>
-        x.created_at + " · " + x.event + " · " + x.actor).join("\\n") || "无");
+        beijingStamp(x.created_at) + " · " + x.event + " · " + x.actor).join("\\n") || "无");
     } catch (error) {
       el("details").replaceChildren(node("p", error.message || "加载失败", "notice"));
     }
@@ -199,7 +218,7 @@ body.embedded .lane{background:#101b2b}
       }
       if (releases.includes(prior)) el("release").value = prior;
       render();
-      el("updated").textContent = "上次同步：" + new Date().toLocaleTimeString() +
+      el("updated").textContent = "上次同步：" + beijingClock() +
         " · 当前建议任务：" + (board.current || "无") +
         " · 本地只读，不允许拖拽改状态（归档任务 " + board.counts.archived + "）";
     } catch (e) {

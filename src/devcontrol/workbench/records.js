@@ -127,7 +127,7 @@
           "进行中":step.status==="blocked"?"已阻塞":"未开始";
         const meta=n("p",label+" · 修订 "+step.revision+
           (step.updatedBy?" · "+step.updatedBy:"")+
-          (step.updatedAt?" · "+step.updatedAt:""),"sub");
+          (step.updatedAt?" · "+beijingDateTime(step.updatedAt):""),"sub");
         panel.append(header,meta);
         const details=n("details");
         if(step.status==="in_progress"||step.status==="blocked")details.open=true;
@@ -162,7 +162,7 @@
       container.replaceChildren(...(data.results.length?data.results.map(hit=>{
         const b=n("button",null,"docitem");b.type="button";
         b.append(n("span","SESSION #"+hit.number,"taskid"),n("b",hit.title),
-          n("small",hit.path+" · "+(hit.updated_at||"") ));
+          n("small",hit.path+" · "+(hit.updated_at?beijingDateTime(hit.updated_at):"时间未知") ));
         b.addEventListener("click",()=>openHistory(hit.number,hit.title));
         return b;
       }):[n("div","暂无项目历史会话或搜索无结果。","docs-empty")]));

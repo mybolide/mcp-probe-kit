@@ -74,7 +74,7 @@
       const card=n('button',null,'insight-row');card.type='button';
       card.append(n('strong',i.title),
         n('span',i.id+' · '+i.release+' · '+status+' · 修订 '+i.revision),
-        n('small','依据 '+(i.sourceRef||'未提供来源')+' · '+(i.updatedAt||'时间未知')));
+        n('small','依据 '+(i.sourceRef||'未提供来源')+' · '+(i.updatedAt?beijingDateTime(i.updatedAt):'时间未知')));
       card.addEventListener('click',()=>openIdea(i.id));
       return card;
     }):[guidanceRow('当前无 Idea 记录',
