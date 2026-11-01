@@ -30,6 +30,66 @@
     return [...releaseNodes.filter(item=>!nativeIds.has(item.id)),...native];
   }
   let readabilityLoaded=false,readabilityLoading=false;
+  let reviewQueueLoaded=false,reviewQueueLoading=false;
+  async function loadTaskSpecReviewQueue(){
+    if(reviewQueueLoading)return;
+    reviewQueueLoading=true;
+    $("task-spec-review-count").textContent="读取中…";
+    try{
+      const queue=await fetchJSON("/api/task-spec-review");
+      const items=queue.items||[];
+      $("task-spec-review-count").textContent=
+        "未开始候选 "+queue.totalCandidates+" 项 · 本批 "+items.length+" 项";
+      const host=$("task-spec-review-results");
+      host.replaceChildren();
+      if(queue.policy!=="review-draft-no-mutation")
+        throw Error("评审内容的只读来源无法核实");
+      const roster=new Map(taskRows().map(row=>[row.item.id,row]));
+      for(const item of items){
+        const details=n("details",null,"task-spec-review-item");
+        const readiness=item.approvalHold==="scope_amendment"?
+          "范围变更待审批":item.approvalHold==="incremental_review"?
+          "新增工作待评审":item.readiness==="dependencies_verified"?
+          "前置依赖已验证 · 仍需检查范围审批":item.readiness==="dependencies_unknown"?
+          "依赖来源待核对":"前置任务尚未全部验证";
+        details.append(n("summary",item.id+" · "+item.title+" · "+readiness));
+        const add=(heading,content)=>{
+          if(!content)return;
+          const row=n("div",null,"task-spec-review-fact");
+          row.append(n("strong",heading),n("p",content));
+          details.append(row);
+        };
+        add("现有冻结验收条件",item.frozenFacts?.acceptance||"未记录");
+        add("关联需求",(item.frozenFacts?.requirements||[])
+          .map(ref=>ref.id+" "+ref.title).join("；")||"未记录");
+        add("冻结来源",[
+          item.approval?.planId||"未记录计划ID",
+          "修订 "+(item.approval?.revision??"未记录"),
+          "审批 Hash "+(item.approval?.planHash||"未记录"),
+        ].join(" · "));
+        add("前置任务",(item.dependencies||[])
+          .map(ref=>ref.id+" "+ref.status).join("；")||"无前置依赖");
+        add("允许修改文件",(item.frozenFacts?.allowedPaths||[]).join("；")||"未记录");
+        add("需要的 Gate",(item.frozenFacts?.gates||[]).join("、")||"未记录");
+        add("需要补充或核对的问题",(item.reviewQuestions||[])
+          .map((ref,i)=>(i+1)+". "+ref.question).join("\n"));
+        add("建议的下一步",item.recommendation);
+        const open=n("button","打开任务详情 · 查看正式执行合同","task-spec-review-open");
+        open.type="button";
+        const destination=roster.get(item.id);
+        open.disabled=!destination;
+        if(destination)open.addEventListener("click",()=>openPlanTask(destination));
+        details.append(open);
+        host.append(details);
+      }
+      if(!items.length)host.append(n("p","当前没有符合范围的未开始任务。"));
+      reviewQueueLoaded=true;
+    }catch(error){
+      $("task-spec-review-count").textContent="暂时无法整理";
+      $("task-spec-review-results").replaceChildren(n("p",
+        "无法核实本批任务："+error.message));
+    }finally{reviewQueueLoading=false;}
+  }
   async function loadTaskReadability(){
     if(readabilityLoading)return;
     readabilityLoading=true;
@@ -87,6 +147,10 @@
       if($("task-readability-audit").open&&!readabilityLoaded)loadTaskReadability();
     });
     $("task-readability-refresh").addEventListener("click",loadTaskReadability);
+    $("task-spec-review-queue").addEventListener("toggle",()=>{
+      if($("task-spec-review-queue").open&&!reviewQueueLoaded)loadTaskSpecReviewQueue();
+    });
+    $("task-spec-review-refresh").addEventListener("click",loadTaskSpecReviewQueue);
   }
   function taskRows(){
     const nodes=taskPlanNodes();

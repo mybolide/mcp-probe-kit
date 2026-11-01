@@ -79,10 +79,25 @@ try{
     const audited=await evaluate('document.querySelector("#task-readability-count").textContent');
     if(!audited.includes(String(inventory.total)+' 项'))
       throw Error('Task audit displayed a different project count: '+audited);
+    const queue=await(await fetch(new URL('api/task-spec-review',base))).json();
+    await evaluate('document.querySelector("#task-spec-review-queue").open=true');
+    await until('document.querySelector("#task-spec-review-count")?.textContent?.includes("本批")',
+      '12 independent frozen task review candidates');
+    const selection=await evaluate('({count:document.querySelectorAll(".task-spec-review-item").length,visible:document.querySelector("#task-spec-review-count").textContent})');
+    if(queue.policy!=='review-draft-no-mutation'||
+      selection.count!==queue.items.length||queue.items.length>12||
+      !selection.visible.includes('本批 '+queue.items.length+' 项'))
+      throw Error('Task spec review queue not grounded in read-only API: '+JSON.stringify({queue,selection}));
     if(width===1400){
       const auditShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
       writeFileSync(join(out,'task-readability-audit-1400.png'),
         Buffer.from(auditShot.data,'base64'));
+      if(queue.items.length){
+        await evaluate('document.querySelector(".task-spec-review-item").open=true');
+        const reviewShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+        writeFileSync(join(out,'task-spec-review-1400.png'),
+          Buffer.from(reviewShot.data,'base64'));
+      }
     }
     await evaluate('document.querySelector("#task-rows .task-card").click()');
     await until('document.querySelector(".task-contract-raw pre")?.textContent?.length>30',
@@ -142,6 +157,7 @@ try{
     }
     report.push({width,task:id,overview:overview.tab,contract:raw.active,
       readability:actual.readability?.status,projectScan:inventory.counts,
+      specReviewCandidates:queue.totalCandidates,reviewBatchSize:queue.items.length,
       grouped:raw.grouped,exactExecutionContract:exact,sharedRelations:true,
       responsive:overview.drawerWidth<=width+1,screenshot:file});
   }

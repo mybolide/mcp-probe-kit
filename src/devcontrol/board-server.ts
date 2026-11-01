@@ -11,6 +11,7 @@ import { projectDatabaseDesign } from './project-database-design.js';
 import { resolveWorkbenchLocale } from "./i18n.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
 import { taskReadability } from "./task-readability.js";
+import { taskSpecReviewQueue } from "./task-spec-review.js";
 import { projectOnboarding } from "./project-onboarding.js";
 import { publicProjectSettings, saveProjectSettings } from "./project-settings.js";
 import { searchHistorySession, readHistorySession } from "../lib/history-session/index.js";
@@ -290,6 +291,33 @@ export function createDevControlBoardServer(
         for(const record of records)counts[record.readability]++;
         respond(res,200,JSON.stringify({policy:"read-only-advisory",total:records.length,
           counts,records}),nonce,"application/json; charset=utf-8");
+      } else if(route==="/api/task-spec-review"){
+        // Preparation for Owner-led changes, not a plan proposal or approval.
+        // Never rewrite the historical frozen snapshots as a side effect.
+        const requirements=projectContext(ledger.root).requirements.items;
+        const tasks=ledger.list().filter(task=>task.status!=="cancelled");
+        const blocked=ledger.next().blocked as Array<{
+          id:string;pendingScopeReview?:boolean;pendingIncrementalReview?:boolean
+        }>;
+        const holds=new Map(blocked.map(t=>[t.id,t]));
+        const statusById=new Map<string,string>(
+          tasks.map(task=>[String(task.id),String(task.status)]));
+        const candidateTasks=tasks.filter(task=>['ready','draft'].includes(task.status));
+        const candidates=candidateTasks.map(task=>{
+          const contract=ledger.frozenTaskContract(String(task.id));
+          return {
+            id:String(task.id),title:String(task.title),status:String(task.status),
+            dependencies:Array.isArray(task.dependsOn)?task.dependsOn:[],
+            priority:typeof task.priority==='number'?task.priority:null,
+            approvalHold:holds.get(String(task.id))?.pendingScopeReview?
+              'scope_amendment' as const:
+              holds.get(String(task.id))?.pendingIncrementalReview?
+                'incremental_review' as const:null,
+            contract,readability:taskReadability(contract,requirements),
+          };
+        });
+        const queue=taskSpecReviewQueue(candidates,statusById,12);
+        respond(res,200,JSON.stringify(queue),nonce,"application/json; charset=utf-8");
       } else {
         respond(res, 404, "Not found");
       }

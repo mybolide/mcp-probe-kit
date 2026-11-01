@@ -131,6 +131,12 @@
       <summary>任务说明完整性检查 <span id="task-readability-count">按需查看 · 只读检查</span></summary>
       <p class="sub">识别文字不清楚与正式合同缺项，两类问题分开处理。检查结果不改变审批、测试或 Verified 状态。</p>
       <div id="task-readability-results" aria-live="polite">展开后读取当前项目任务说明。</div>
+      <details class="task-spec-review-queue" id="task-spec-review-queue">
+        <summary>下一批 12 项规格补充评审 <span id="task-spec-review-count">按需查看 · 非正式变更</span></summary>
+        <p class="sub">只列已有冻结来源且尚未开始的任务。根据依赖验证情况排序，展示真实交付条件与待补问题，不自动批准或修改合同。</p>
+        <div id="task-spec-review-results">展开后读取待评估工作项。</div>
+        <button type="button" class="link" id="task-spec-review-refresh">重新整理本批</button>
+      </details>
       <button type="button" class="link" id="task-readability-refresh">重新检查</button>
     </details>
     <div class="task-tabs" role="tablist" aria-label="任务状态">

@@ -50,9 +50,17 @@ describe('DevControl v5 browser guide and settings API',()=>{
         records:[{id:taskId,readability:'source_missing'}],
       });
       expect(ledger.get(taskId).status).toBe('ready');
+      const plannedReview=await fetch(base+'/api/task-spec-review');
+      expect(plannedReview.status).toBe(200);
+      const review=await plannedReview.json() as Record<string,any>;
+      expect(review).toMatchObject({
+        policy:'review-draft-no-mutation',totalCandidates:0,batchSize:0,items:[],
+      });
+      expect(ledger.get(taskId).status).toBe('ready');
       expect(JSON.stringify(data)).not.toContain('leaseToken');
       expect((await fetch(base+'/api/tasks/'+taskId,{method:'POST'})).status).toBe(405);
       expect((await fetch(base+'/api/task-readability',{method:'POST'})).status).toBe(405);
+      expect((await fetch(base+'/api/task-spec-review',{method:'POST'})).status).toBe(405);
       expect((await fetch(base+'/api/tasks/../../settings')).status).not.toBe(200);
     }finally{
       await new Promise<void>(resolve=>server.close(()=>resolve()));
