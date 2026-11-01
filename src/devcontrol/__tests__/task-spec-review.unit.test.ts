@@ -26,6 +26,25 @@ describe('read-only prioritized frozen task specification review queue',()=>{
     expect(queue.totalCandidates).toBe(2);
     expect(queue.policy).toBe('review-draft-no-mutation');
   });
+  it('shows only exact staged source-backed prose to human reviewers, never as approved or frozen',()=>{
+    const item=candidate('F4-08');
+    item.supplement={pending:{proposalHash:'review-this-exact-version',review:null,
+      proposal:{fields:{purpose:'与冻结验收相符的受控静音采集测试说明。',
+        scenario:'用户已经授权iPhone前台感知时检测静音。',
+        workflow:['用指定静音样本核对实际设备状态并保留日志。'],
+        testCases:['确认静音没有产生任何虚假的有效音频片段。'],
+        negativeCases:['干扰样本下不能将误触发当成真实语音。'],
+        sourceRefs:['docs/product/requirements.md#FR-011']}},
+    }};
+    const queue=taskSpecReviewQueue([item],new Map());
+    expect(queue.items[0].supplement).toMatchObject({
+      status:'awaiting_independent_review',proposalHash:'review-this-exact-version',
+      draftFields:{purpose:'与冻结验收相符的受控静音采集测试说明。'},
+    });
+    expect(queue.items[0].frozenFacts.acceptance).toBe('保存片段；失败必须报告');
+    expect(queue.items[0].supplement.draftFields?.workflow).toHaveLength(1);
+    expect(JSON.stringify(item.contract)).not.toContain('静音采集测试说明');
+  });
   it('separates frozen source, staged proposal and owner-authorized supplement status',()=>{
     const staged=candidate('F4-08');
     staged.supplement={pending:{proposalHash:'exact-proposal-hash',review:null}};
@@ -35,9 +54,9 @@ describe('read-only prioritized frozen task specification review queue',()=>{
     rejected.supplement={pending:{proposalHash:'rejected-hash',review:{outcome:'rejected'}}};
     const queue=taskSpecReviewQueue([staged,reviewed,rejected],new Map());
     expect(queue.items.map(x=>x.supplement)).toEqual([
-      {status:'awaiting_independent_review',proposalHash:'exact-proposal-hash'},
-      {status:'awaiting_owner_approval',proposalHash:'reviewed-hash'},
-      {status:'review_rejected',proposalHash:'rejected-hash'},
+      {status:'awaiting_independent_review',proposalHash:'exact-proposal-hash',draftFields:{}},
+      {status:'awaiting_owner_approval',proposalHash:'reviewed-hash',draftFields:{}},
+      {status:'review_rejected',proposalHash:'rejected-hash',draftFields:{}},
     ]);
     expect(queue.items[0].approval.planHash).toBe('approved-hash');
     expect(queue.items[0].supplement.proposalHash).not.toBe(queue.items[0].approval.planHash);

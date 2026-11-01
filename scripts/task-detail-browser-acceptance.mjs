@@ -96,6 +96,20 @@ try{
       if(visiblePending!==pendingCount)
         throw Error('Live staged proposal statuses differ from SQLite: '+
           JSON.stringify({pendingCount,visiblePending}));
+      const stagedWithText=queue.items.filter(item=>
+        item.supplement?.status==='awaiting_independent_review'&&
+        Object.keys(item.supplement.draftFields||{}).length>0);
+      const visibleDrafts=await evaluate(
+        'document.querySelectorAll(".task-spec-review-draft").length');
+      if(visibleDrafts!==stagedWithText.length)
+        throw Error('Real pending draft count differs from read-only API');
+      if(stagedWithText.length){
+        const displayed=await evaluate('(()=>{const node=document.querySelector(".task-spec-review-draft");node.open=true;return node.textContent;})()');
+        const first=stagedWithText[0].supplement.draftFields;
+        if(!displayed.includes(first.workflow?.[0]||first.purpose)||
+          !displayed.includes('未批准，不进入 AI 正式合同'))
+          throw Error('Real staged proposal content missing or falsely approved');
+      }
     }
     if(width===1400){
       const auditShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});

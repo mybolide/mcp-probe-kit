@@ -78,6 +78,26 @@
         if(item.supplement?.proposalHash)
           add("独立补充提案 Hash（不是冻结任务审批）",item.supplement.proposalHash);
         add("补充审批状态",progress);
+        const draft=item.supplement?.draftFields;
+        if(draft&&Object.keys(draft).length){
+          const names={purpose:"为什么做",scenario:"什么情况下发生",
+            workflow:"实施和核对步骤",testCases:"正向测试方案",
+            negativeCases:"异常与失败验证",sourceRefs:"核对来源"};
+          const container=n("details",null,"task-spec-review-draft");
+          container.append(n("summary","查看本次补充草案 · 共 "+
+            Object.keys(draft).length+" 类说明（未批准，不进入 AI 正式合同）"));
+          for(const field of ["purpose","scenario","workflow",
+            "testCases","negativeCases","sourceRefs"]){
+            const value=draft[field];
+            if(value===undefined)continue;
+            const content=Array.isArray(value)?value.map((x,i)=>
+              (i+1)+". "+x).join("\n"):String(value);
+            const block=n("div",null,"task-spec-review-fact");
+            block.append(n("strong",names[field]),n("p",content));
+            container.append(block);
+          }
+          details.append(container);
+        }
         add("前置任务",(item.dependencies||[])
           .map(ref=>ref.id+" "+ref.status).join("；")||"无前置依赖");
         add("允许修改文件",(item.frozenFacts?.allowedPaths||[]).join("；")||"未记录");

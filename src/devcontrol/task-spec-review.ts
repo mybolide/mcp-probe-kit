@@ -5,6 +5,7 @@
  * project requirements. Unknown answers remain review questions.
  */
 import type {TaskReadability,RequirementReference} from './task-readability.js';
+import {SUPPLEMENT_FIELDS,type SupplementFields} from './task-spec-supplement.js';
 
 export interface ReviewCandidate {
   id:string;title:string;status:string;
@@ -12,7 +13,11 @@ export interface ReviewCandidate {
   priority?:number|null;
   approvalHold?:'scope_amendment'|'incremental_review'|null;
   supplement?:{
-    pending?:{proposalHash:string;review?:{outcome?:string}|null}|null;
+    pending?:{
+      proposalHash:string;
+      review?:{outcome?:string}|null;
+      proposal?:{fields?:SupplementFields}|null;
+    }|null;
     approved?:{proposalHash:string}|null;
   };
   contract:Record<string,unknown>;
@@ -26,6 +31,7 @@ export interface ReviewItem {
     status:'not_submitted'|'awaiting_independent_review'|
       'awaiting_owner_approval'|'review_rejected'|'approved';
     proposalHash:string|null;
+    draftFields:SupplementFields|null;
   };
   approval:{planId:string|null;revision:number|null;planHash:string|null};
   readiness:'dependencies_verified'|'dependencies_pending'|'dependencies_unknown';
@@ -93,9 +99,14 @@ export function taskSpecReviewQueue(candidates:ReviewCandidate[],
           candidate.supplement.pending.review?.outcome==='approved'?
             'awaiting_owner_approval' as const:'awaiting_independent_review' as const,
         proposalHash:candidate.supplement.pending.proposalHash,
+        draftFields:Object.fromEntries(SUPPLEMENT_FIELDS.filter(field=>
+          Object.prototype.hasOwnProperty.call(
+            candidate.supplement?.pending?.proposal?.fields??{},field))
+          .map(field=>[field,candidate.supplement?.pending?.proposal?.fields?.[field]])),
       }:candidate.supplement?.approved?{
         status:'approved' as const,proposalHash:candidate.supplement.approved.proposalHash,
-      }:{status:'not_submitted' as const,proposalHash:null},
+        draftFields:null,
+      }:{status:'not_submitted' as const,proposalHash:null,draftFields:null},
       approval:{planId:source?.planId??null,revision:source?.revision??null,
         planHash:source?.planHash??null},
       readiness,dependencies,

@@ -179,6 +179,11 @@
   border-radius:10px;padding:12px 15px}
 .task-spec-review-item>summary{cursor:pointer;font-size:13px;line-height:1.6;
   font-weight:650;color:#315e88;overflow-wrap:anywhere}
+.task-spec-review-draft{background:#f6f9fd;border:1px solid #dce7f3;
+  padding:11px 13px;border-radius:9px;margin:12px 0}
+.task-spec-review-draft>summary{font-weight:650;font-size:13px;line-height:1.6;
+  color:#285a8b;cursor:pointer}
+.task-spec-review-draft[open]>summary{margin-bottom:10px}
 .task-spec-review-fact{border-top:1px solid #e9eef6;padding:10px 0}
 .task-spec-review-fact:first-of-type{margin-top:10px}
 .task-spec-review-fact strong{font-size:12px;color:#5d7289}
