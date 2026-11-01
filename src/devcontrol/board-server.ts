@@ -266,7 +266,11 @@ export function createDevControlBoardServer(
         const decision = ledger.getDecision(id).decision;
         const detailAudit = ledger.taskDetailAudit(id);
         const contract = ledger.frozenTaskContract(id);
-        respond(res, 200, JSON.stringify({ task, contract, evidence, completion, audit: events, decision, detailAudit }),
+        // Exact read-only MCP execution contract for Owner inspection.
+        // It contains task requirements, not lease credentials or Gate grants.
+        const executionContract = ledger.executionContract(id);
+        respond(res, 200, JSON.stringify({ task, contract, executionContract,
+          evidence, completion, audit: events, decision, detailAudit }),
           nonce, "application/json; charset=utf-8");
       } else {
         respond(res, 404, "Not found");

@@ -194,6 +194,7 @@
   // server knows the authoritative plan snapshot and its approved revision.
   function openPlanTask(row){
     $("overlay").classList.add("open");
+    $("overlay").classList.add("task-detail-view");
     const item=row.item,actual=row.current,status=taskStatus(row)[0];
     $("doc-title").textContent=item.id+" · "+displayTaskTitle(item);
     $("doc-source").textContent=(row.pending?"规划预览 · 尚未批准":"SQLite 任务台账")+
@@ -212,58 +213,219 @@
       host.append(block);
       return block;
     };
-    const taskHost=n("div",null,"task-contract-details");content.append(taskHost);
-    const evidenceHost=n("div",null,"task-delivery-details");content.append(evidenceHost);
+    const tabs=n("div",null,"task-detail-tabs");
+    tabs.setAttribute("role","tablist");
+    tabs.setAttribute("aria-label","任务阅读方式");
+    const overviewTab=n("button","任务概览"),contractTab=n("button","执行合同");
+    overviewTab.type=contractTab.type="button";
+    overviewTab.id="task-detail-tab-overview";
+    contractTab.id="task-detail-tab-contract";
+    const overviewHost=n("div",null,"task-overview-details");
+    const taskHost=n("div",null,"task-contract-details");
+    const relationsHost=n("div",null,"task-relations-details");
+    const relationJump=n("button","查看任务关联","task-detail-jump");
+    relationJump.type="button";
+    relationJump.addEventListener("click",()=>relationsHost.scrollIntoView({block:"nearest",behavior:"smooth"}));
+    const evidenceHost=n("div",null,"task-delivery-details");
+    overviewHost.id="task-detail-overview";
+    taskHost.id="task-detail-contract";
+    overviewHost.setAttribute("role","tabpanel");
+    taskHost.setAttribute("role","tabpanel");
+    overviewHost.setAttribute("aria-labelledby",overviewTab.id);
+    taskHost.setAttribute("aria-labelledby",contractTab.id);
+    const activateTab=tab=>{
+      const overview=tab==="overview";
+      overviewHost.hidden=!overview;taskHost.hidden=overview;
+      for(const [button,selected,panel] of [[overviewTab,overview,overviewHost],
+        [contractTab,!overview,taskHost]]){
+        button.setAttribute("role","tab");
+        button.setAttribute("aria-selected",String(selected));
+        button.setAttribute("aria-controls",panel.id);
+        button.tabIndex=selected?0:-1;
+      }
+    };
+    overviewTab.addEventListener("click",()=>activateTab("overview"));
+    contractTab.addEventListener("click",()=>activateTab("contract"));
+    tabs.addEventListener("keydown",event=>{
+      if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;
+      if(![overviewTab,contractTab].includes(document.activeElement))return;
+      event.preventDefault();
+      const target=event.key==="Home"?overviewTab:event.key==="End"?contractTab:
+        document.activeElement===overviewTab?contractTab:overviewTab;
+      target.click();target.focus();
+    });
+    tabs.append(overviewTab,contractTab,relationJump);
+    content.append(tabs,overviewHost,taskHost,relationsHost);
+    const contractSections=n("div",null,"task-contract-sections");
+    taskHost.append(contractSections,evidenceHost);
+    activateTab("overview");
+    // Relationships are shared by both views, never another version of the
+    // contract. Only link IDs already present in the authoritative task roster.
+    const roster=taskRows(),known=new Map(roster.map(entry=>[entry.item.id,entry]));
+    const link=(id,role)=>{
+      const destination=known.get(id);
+      const label=destination?displayTaskTitle(destination.item):"未在当前任务清单找到";
+      const button=n("button",id+" · "+label,"task-relation-link");
+      button.type="button";
+      button.disabled=!destination;
+      if(destination)button.addEventListener("click",()=>openPlanTask(destination));
+      const wrap=n("div",null,"task-relation-row");
+      wrap.append(n("small",role),button);
+      return wrap;
+    };
+    function renderRelationships(contract){
+      relationsHost.replaceChildren(n("h3","任务关联"));
+      const parent=contract?.parentId||item.parentId||actual?.parentId;
+      if(parent)relationsHost.append(link(parent,"所属任务"));
+      const dependencies=contract?.dependsOn||item.dependsOn||actual?.dependsOn||[];
+      for(const id of Array.isArray(dependencies)?dependencies:[])
+        relationsHost.append(link(id,"前置依赖"));
+      const children=roster.filter(entry=>(entry.item.parentId||entry.current?.parentId)===item.id);
+      for(const child of children)relationsHost.append(link(child.item.id,"子任务"));
+      const downstream=roster.filter(entry=>
+        (entry.item.dependsOn||entry.current?.dependsOn||[]).includes(item.id));
+      for(const child of downstream)relationsHost.append(link(child.item.id,"后续依赖"));
+      if(!parent&&!(Array.isArray(dependencies)&&dependencies.length)&&
+        !children.length&&!downstream.length)
+        relationsHost.append(n("p","当前没有已记录的直接任务关系。","task-detail-muted"));
+      const requirements=contract?.requirementIds||item.requirementIds||[];
+      if(Array.isArray(requirements)&&requirements.length)
+        relationsHost.append(n("p","关联需求 "+requirements.join("、"),"task-detail-muted"));
+    }
+    function renderOverview(contract,completion){
+      overviewHost.replaceChildren();
+      const usable=contract&&contract.authoritative===true;
+      const preview=contract&&!usable;
+      const hero=n("section",null,"task-overview-hero");
+      hero.append(n("small",row.pending?"规划未批准 · 不可执行":
+        usable?"已关联正式冻结任务合同":"未找到可核实的冻结合同"),
+        n("h3",status+" · "+(item.release||actual?.release||"当前版本")));
+      if(preview)hero.append(n("p","以下为规划或台账摘要，不是已经批准的 AI 执行合同。"));
+      overviewHost.append(hero);
+      const text=value=>Array.isArray(value)?value.filter(Boolean).join("；"):String(value||"").trim();
+      const purpose=usable?text(contract.purpose||contract.description||contract.scenario):
+        row.pending?text(item.purpose||item.description||item.scenario):
+        preview?text(contract.purpose||contract.description||contract.scenario):"";
+      const scope=usable?text(contract.acceptance):
+        row.pending?text(item.acceptance):preview?text(contract.acceptance):"";
+      const requirements=Array.isArray(contract?.requirementIds)?
+        contract.requirementIds:[];
+      section(overviewHost,"为什么做",purpose||
+        (requirements.length?"原始规格未单独记录背景；关联需求 "+requirements.join("、"):
+          "原始规格未单独记录背景，需核对需求来源。"));
+      section(overviewHost,"本次要完成什么",scope||"未记录明确验收目标，不根据标题猜测任务内容。");
+      if(completion){
+        section(overviewHost,"已经完成的工作",[completion.summary,completion.implementation]);
+      }else section(overviewHost,"当前进展",row.pending?"规划待审批，尚未进入研发。":
+        actual?.status==="verified"?"台账显示 Verified，具体交付与证据请查看执行记录。":
+        actual?.status==="in_review"?"已进入验收阶段，不代表正式 Gate 已通过。":
+        actual?.status==="in_progress"?"正在开发，尚未登记正式完成报告。":
+        "尚未开始执行；任务状态以 SQLite 为准。");
+      const pending=actual?.pendingVerification;
+      section(overviewHost,"当前阻塞与下一步",pending?
+        ["待验证 Gate "+pending.gate,"原因："+pending.reason,
+          "下一步：执行真实验收并登记对应证据。"]:
+        row.pending?"下一步：完成规划审核，批准前不能领取任务。":
+        actual?.status==="verified"?"已正式验证；无待处理 Gate 信息。":
+        actual?.status==="in_review"?"下一步：核对真实测试证据及未通过的 Gate。":
+        actual?.status==="in_progress"?"下一步：按冻结合同继续实施并登记真实测试结果。":
+        "下一步：检查依赖和审批状态，符合条件后领取任务。");
+      if(usable)section(overviewHost,"怎样算完成",
+        contract.acceptance||"合同未记录独立验收标准。");
+      const action=n("button","查看完整执行合同和验收记录","task-overview-action");
+      action.type="button";action.addEventListener("click",()=>{
+        activateTab("contract");tabs.scrollIntoView({block:"nearest"});
+      });
+      overviewHost.append(action);
+    }
+    renderRelationships(null);
+    renderOverview(null,null);
     function renderTaskContract(contract){
-      taskHost.replaceChildren();
+      contractSections.replaceChildren();
       if(!contract){
-        section(taskHost,"任务合同","未找到冻结合同，不能依据任务标题推断实施内容。");
+        section(contractSections,"任务合同","正在读取原始冻结合同，不根据标题推断实施内容。");
         return;
       }
+      contractSections.append(n("p","以下为正式任务规格的只读分组展示。展开原始合同可核对 MCP 实际返回的数据。","task-detail-muted"));
+      const group=(title,entries,opened=true)=>{
+        const disclosure=n("details",null,"task-contract-group");
+        disclosure.open=opened;
+        disclosure.append(n("summary",title));
+        for(const [heading,value] of entries)section(disclosure,heading,value);
+        contractSections.append(disclosure);
+      };
       const source=contract.source;
       if(source){
-        section(taskHost,"冻结合同版本",[
+        group("基本信息与冻结版本",[["冻结合同版本",[
           "来源："+(source.kind||"未知"),
           "计划："+(source.planId||"未记录"),
           "审批修订："+(source.revision??"未记录"),
           "审批 Hash："+(source.planHash||"未记录"),
           "批准者："+(source.approvedBy||"未记录"),
           "冻结状态："+(contract.authoritative?"已定位原始冻结节点":"缺失权威冻结节点"),
-        ]);
-      }else section(taskHost,"规划预览","以下内容尚未冻结，不构成可执行任务合同。");
-      const pairs=[
+        ]]],true);
+      }else group("规划预览",[["来源","以下内容尚未冻结，不构成可执行任务合同。"]],true);
+      group("需求与设计",[
         ["任务说明",contract.purpose||contract.description],
         ["使用场景 / 触发条件",contract.scenario],
-        ["必须完成什么 · 验收目标",contract.acceptance],
         ["对应需求",contract.requirementIds],
+        ["技术方案与约束",contract.designRef],
+        ["原始需求及设计参考",contract.sourceRefs],
+        ["业务规则与不可变约束",contract.businessRules],
+      ]);
+      group("执行范围和依赖",[
+        ["文件修改范围",contract.allowedPaths],
+        ["精确文件白名单",contract.allowedChangedFiles],
+        ["前置依赖",contract.dependsOn],
+        ["不在本任务范围",contract.outOfScope],
+      ]);
+      group("实施步骤与输入输出",[
         ["已批准的执行步骤",contract.workflow],
         ["输入与前置条件",contract.inputs],
         ["交付输出",contract.outputs],
-        ["业务规则与不可变约束",contract.businessRules],
+        ["前置检查",contract.preconditions],
+        ["状态变化",contract.stateTransitions],
+        ["具体交付物",contract.deliverables],
+        ["预计工作量",contract.estimatedHours],
+      ]);
+      group("验收标准与测试",[
+        ["必须完成什么 · 验收目标",contract.acceptance],
         ["正向测试场景",contract.testCases],
         ["异常 / 边界测试",contract.negativeCases],
         ["交付与验收证据要求",contract.verificationEvidence],
-        ["文件修改范围",contract.allowedPaths],
-        ["精确文件白名单",contract.allowedChangedFiles],
         ["必须通过的质量门禁",contract.requiredGates],
-        ["前置依赖",contract.dependsOn],
-        ["技术方案与约束",contract.designRef],
-        ["原始需求及设计参考",contract.sourceRefs],
-        ["不在本任务范围",contract.outOfScope],
+      ]);
+      group("执行约束与停止条件",[
         ["停止条件",contract.stopConditions],
         ["禁止变更",contract.forbiddenChanges],
-      ];
-      for(const [heading,value] of pairs) section(taskHost,heading,value);
+        ["任务归属角色",contract.ownerRole],
+        ["任务类型",contract.type||contract.kind],
+        ["平台",contract.platform],
+        ["任务粒度说明",contract.granularityJustification],
+      ],false);
       const audit=contract.audit;
       if(audit&&Array.isArray(audit.missing))
-        section(taskHost,"任务规格完整性检查",audit.passed?
+        section(contractSections,"任务规格完整性检查",audit.passed?
           "详细任务规格已完成检查；真实交付与验收仍须独立审核。":
           ["当前任务按所属工作类型缺少 "+audit.missing.length+
             " 项关键说明："+audit.missing.join("、"),
             "此为只读审核，不改变既有审批和 Verified 状态。",
             ...(audit.issues||[])]);
       if(!source&&!contract.workflow?.length)
-        section(taskHost,"实施步骤的规格状态","尚未冻结具体流程，不得从任务标题推断。");
+        section(contractSections,"实施步骤的规格状态","尚未冻结具体流程，不得从任务标题推断。");
+    }
+    function renderRawContract(execution,contract){
+      const raw=n("details",null,"task-contract-raw");
+      raw.append(n("summary","查看原始合同 · MCP execution-contract"));
+      raw.append(n("p","下方 JSON 与执行时 MCP 的 execution-contract 数据结构一致。冻结来源单独展示，不根据摘要补齐缺失字段。","task-detail-muted"));
+      raw.append(n("pre",execution?JSON.stringify(execution,null,2):
+        "未取得正式 execution-contract，不能用界面摘要替代。"));
+      contractSections.append(raw);
+      const frozen=n("details",null,"task-contract-raw");
+      frozen.append(n("summary","查看原始冻结任务规格及版本"));
+      frozen.append(n("pre",contract?JSON.stringify(contract,null,2):
+        "未找到原始冻结任务规格。"));
+      contractSections.append(frozen);
     }
     section(evidenceHost,"当前状态与执行边界",row.pending?
       "规划尚未批准，不能领取、开发或计入 Verified。":
@@ -274,7 +436,12 @@
       "冻结提交："+row.current.pendingVerification.completionHead,
     ]);
     if(row.pending){
-      renderTaskContract({...item,dependsOn:item.dependsOn||[],source:null});
+      const proposal={...item,dependsOn:item.dependsOn||[],
+        source:null,authoritative:false};
+      renderTaskContract(proposal);
+      renderOverview(proposal,null);
+      renderRelationships(proposal);
+      renderRawContract(null,null);
       return;
     }
     section(evidenceHost,"负责人 / 开发电脑",[
@@ -298,13 +465,21 @@
         target.replaceChildren(n("h3",title),...values.map(value=>n("p",value)));
       };
       const note=data.completion;
+      renderOverview(safeSummary,note);
+      renderRelationships(safeSummary);
+      renderRawContract(data.executionContract,data.contract);
       fill(completionBox,"执行和完成说明",note?[
         "完成总结："+note.summary,"实际交付："+note.implementation,
         "验证结果："+note.verification,"遗留工作："+(note.remaining||"无"),
+        "交付 Git HEAD："+(note.git_head||"未记录"),
+        "完成记录版本："+(note.revision??"未记录"),
       ]:["尚无完成记录；不能将开发进度视为 Verified。"]);
       fill(evidenceBox,"提交及审计证据",(data.evidence||[]).length?
-        data.evidence.map(v=>v.kind+" · "+v.reference):
+        data.evidence.map(v=>v.kind+" · "+v.reference+" · Git "+(v.git_head||"未记录")):
         ["尚无正式验收证据记录。"]);
+      section(evidenceHost,"审计事件（最近记录）",
+        (data.audit||[]).slice(-15).map(v=>
+          [v.created_at,v.event,v.actor].filter(Boolean).join(" · ")));
       if(data.decision)section(evidenceHost,"工程决策详情",[
         "决策状态："+data.decision.status,
         "具体决定："+data.decision.decision,
@@ -314,6 +489,7 @@
     }).catch(error=>{
       if(!content.isConnected)return;
       renderTaskContract(null);
+      renderOverview(null,null);
       completionBox.replaceChildren(n("h3","任务合同读取失败"),
         n("p","无法读取冻结合同："+error.message));
     });

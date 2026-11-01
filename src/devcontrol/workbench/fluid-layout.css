@@ -70,6 +70,74 @@
 #view-tasks .task-progress progress{width:min(38%,420px);flex:none;margin:0}
 .task-tabs{max-width:none}
 .task-collection{display:grid;gap:16px;min-width:0}
+/* The task drawer is a read-only human view of the same SQLite contract the
+ * AI receives. It is not a duplicate editable specification. */
+.overlay.task-detail-view .drawer{width:min(1050px,100%);background:#fff}
+.task-detail-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  border-bottom:1px solid #dce5f0;padding:0 0 11px;margin-bottom:18px}
+.task-detail-tabs button{border:1px solid transparent;background:transparent;color:#4a6078;
+  font:inherit;font-weight:650;font-size:14px;line-height:1.4;
+  border-radius:10px;padding:10px 16px;cursor:pointer}
+.task-detail-tabs button[aria-selected="true"]{color:#005ebc;background:#eaf3ff;
+  border-color:#bfdbff}
+.task-detail-tabs .task-detail-jump{margin-left:auto;border-color:#d6e1ed;
+  background:#fff;color:#245d93}
+.task-detail-tabs button:focus-visible,.task-relation-link:focus-visible,
+.task-overview-action:focus-visible{outline:2px solid #007aff;outline-offset:2px}
+.task-detail-view [hidden]{display:none!important}
+.task-detail-view .issue-details{gap:16px}
+.task-detail-view .issue-details>div{min-width:0}
+.task-detail-view .issue-details section{background:#fff;border:1px solid #e1e8f0;
+  padding:18px 21px;border-radius:13px}
+.task-detail-view .issue-details h3{color:#203e61;font-size:16px;
+  line-height:1.4;margin:0 0 8px}
+.task-detail-view .issue-details p{color:#3e536b;line-height:1.7;
+  white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0;font-size:14px}
+.task-detail-view .task-overview-hero{background:#f0f6ff!important;
+  border-color:#dae8f9!important;padding:23px!important}
+.task-overview-hero small{display:block;color:#406b95;font-size:12px;font-weight:650}
+.task-overview-hero h3{font-size:19px!important;margin:8px 0 0!important}
+.task-overview-details,.task-contract-sections{display:grid;gap:12px}
+.task-detail-view .task-detail-muted{color:#65788c;font-size:12px;line-height:1.65}
+.task-overview-action{background:#007aff;color:#fff;border:none;border-radius:10px;
+  font-size:14px;font-weight:680;padding:13px 17px;text-align:center;cursor:pointer}
+.task-overview-action:hover{background:#006adb}
+.task-contract-group,.task-contract-raw{border:1px solid #dbe5f1;border-radius:12px;
+  background:#fff;padding:0 17px;overflow:hidden}
+.task-contract-group>summary,.task-contract-raw>summary{font-size:15px;font-weight:700;
+  color:#254566;cursor:pointer;list-style-position:inside;padding:16px 2px}
+.task-contract-group[open]>summary,.task-contract-raw[open]>summary{
+  border-bottom:1px solid #e6edf5;margin-bottom:12px}
+.task-detail-view .task-contract-group section{background:#f8fafc;
+  border-color:#edf1f6;margin:10px 0;padding:13px 15px}
+.task-detail-view .task-contract-group h3{font-size:13px;color:#536a83}
+.task-contract-raw pre{font:12px/1.6 ui-monospace,SFMono-Regular,monospace;
+  max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;
+  color:#35516b;background:#f3f7fc;border:1px solid #e1e9f2;border-radius:9px;
+  padding:16px}
+.task-delivery-details{display:grid;gap:12px;border-top:1px solid #dbe5ef;
+  margin-top:24px;padding-top:20px}
+.task-delivery-details:before{content:"执行记录 · Git、测试与审计";color:#284563;
+  font-size:17px;font-weight:750;margin-bottom:2px}
+.task-relations-details{border-top:1px solid #dbe5ef;margin-top:14px;
+  padding-top:24px;display:grid;gap:9px}
+.task-relations-details h3{margin:0 0 7px!important}
+.task-relation-row{display:grid;grid-template-columns:90px minmax(0,1fr);
+  align-items:center;gap:12px;border:1px solid #e0e8f2;background:#f8fafc;
+  border-radius:10px;padding:11px 13px}
+.task-relation-row small{font-size:12px;color:#59738d}
+.task-relation-link{border:0;background:transparent;text-align:left;color:#1263b3;
+  font-size:13px;line-height:1.55;font-weight:620;cursor:pointer;overflow-wrap:anywhere}
+.task-relation-link:hover{text-decoration:underline}
+.task-relation-link:disabled{color:#75889c;cursor:default}
+@media(max-width:650px){
+  .overlay.task-detail-view .drawer{padding:20px 15px}
+  .task-detail-tabs{gap:5px}
+  .task-detail-tabs button{font-size:13px;padding:10px}
+  .task-detail-tabs .task-detail-jump{margin-left:0}
+  .task-relation-row{grid-template-columns:1fr;gap:4px}
+  .task-detail-view .issue-details section{padding:15px}
+}
 @media(min-width:1660px){
   .task-collection{grid-template-columns:repeat(2,minmax(0,1fr))}
   .task-card{grid-template-columns:minmax(0,1fr);

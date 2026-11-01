@@ -5,7 +5,14 @@ import { projectHtml } from "../project-html.js";
 class TestNode {
   readonly children: TestNode[] = [];
   readonly style: Record<string, string> = {};
+  readonly attributes: Record<string, string> = {};
+  readonly listeners: Record<string, Array<() => void>> = {};
   className = "";
+  id = "";
+  hidden = false;
+  open = false;
+  disabled = false;
+  tabIndex = 0;
   scope = "";
   textContent = "";
   isConnected = true;
@@ -17,6 +24,13 @@ class TestNode {
     this.children.splice(0, this.children.length,
       ...nodes.flatMap(node => node.tagName === "#fragment" ? node.children : [node]));
   }
+  setAttribute(name: string, value: string): void { this.attributes[name] = value; }
+  addEventListener(name: string, callback: () => void): void {
+    (this.listeners[name] ??= []).push(callback);
+  }
+  click(): void { for (const callback of this.listeners.click ?? []) callback(); }
+  focus(): void {}
+  scrollIntoView(): void {}
 }
 
 function nodes(root: TestNode, tag: string): TestNode[] {
@@ -198,6 +212,7 @@ describe("DevControl documentation Markdown tables", () => {
     const calls: string[] = [];
     const openPlanTask = vm.runInNewContext(source, {
       n, $: (id: string) => elements[id],
+      taskRows: () => [],
       fetchJSON: async (url: string) => {
         calls.push(url);
         return {

@@ -182,9 +182,9 @@
   });
   $("share-lan").addEventListener("click",showLanAccess);
   $("settings-save").addEventListener("click",saveSettings);
-  $("close").addEventListener("click",()=>$("overlay").classList.remove("open"));
-  $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))$("overlay").classList.remove("open");});
-  document.addEventListener("keydown",e=>{if(e.key==="Escape")$("overlay").classList.remove("open");});
+  $("close").addEventListener("click",()=>$("overlay").classList.remove("open","task-detail-view"));
+  $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))$("overlay").classList.remove("open","task-detail-view");});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")$("overlay").classList.remove("open","task-detail-view");});
   localizeChrome();
   router.sync();
   loadBrandVersion();

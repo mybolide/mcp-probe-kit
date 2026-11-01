@@ -41,8 +41,8 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain("if(view==='overview')reload();else refreshTaskData()");
     expect(html).not.toMatch(/<script[^>]+src=/);
     expect(html).not.toMatch(/<link[^>]+(googleapis|fonts)/);
-    // Full eight-menu read-only governance views add roughly 2.3 KB gzip.
-    // Keep one CSP-safe offline response under the reviewed 54 KB limit.
+    // Detailed human overview, frozen contract and shared task relations add
+    // about 2.4 KB gzip, while preserving the single-request CSP-safe UI.
     expect(html).toContain('id="vision-title"');
     expect(html).toContain('id="roadmap-title"');
     expect(html).toContain('id="okr-title"');
@@ -69,6 +69,17 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('.settings-switch-row>.switch');
     expect(html).toContain('function renderTaskContract(contract)');
     expect(html).toContain('renderTaskContract(safeSummary)');
+    expect(html).toContain('function renderOverview(contract,completion)');
+    expect(html).toContain('function renderRelationships(contract)');
+    expect(html).toContain('renderRawContract(data.executionContract,data.contract)');
+    expect(html).toContain('aria-label","任务阅读方式');
+    for(const label of ['任务概览','执行合同','查看任务关联',
+      '查看原始合同 · MCP execution-contract','查看原始冻结任务规格及版本',
+      '当前阻塞与下一步']){
+      expect(html).toContain(label);
+    }
+    expect(html).toContain('task-delivery-details:before');
+    expect(html).toContain('.task-detail-view [hidden]');
     for(const label of ['任务说明','必须完成什么 · 验收目标','对应需求',
       '已批准的执行步骤','实施步骤的规格状态','文件修改范围',
       '必须通过的质量门禁','交付验收应保留的真实证据']){
@@ -78,7 +89,7 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind==="bug")');
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind!=="bug")');
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
-    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(54_000);
+    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(58_000);
   });
 
   test('Hash navigation handles deep links and back/forward without reload', () => {

@@ -1,15 +1,51 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createDevControlBoardServer } from '../board-server.js';
+import { ProjectTaskLedger } from '../task-ledger.js';
 import { VERSION } from '../../version.js';
 
 const tempRoots:string[]=[];
 afterEach(()=>{for(const p of tempRoots.splice(0))rmSync(p,{recursive:true,force:true});});
 
 describe('DevControl v5 browser guide and settings API',()=>{
+  test('human task API exposes the exact read-only MCP execution contract and real frozen provenance',async()=>{
+    const root=mkdtempSync(join(tmpdir(),'dc-task-views-'));
+    tempRoots.push(root);
+    execFileSync('git',['init','-q',root],{timeout:3000});
+    execFileSync('git',['-C',root,'config','user.name','Task View Fixture']);
+    execFileSync('git',['-C',root,'config','user.email','fixture@example.invalid']);
+    writeFileSync(join(root,'README.md'),'fixture');
+    execFileSync('git',['-C',root,'add','README.md']);
+    execFileSync('git',['-C',root,'commit','-qm','initial']);
+    const ledger=new ProjectTaskLedger(root);
+    const taskId='UX-CONTRACT';
+    ledger.create({id:taskId,title:'Readable frozen execution contract',
+      track:'governance',allowedPaths:['src/work.ts'],requiredGates:['docs']},'agent');
+    ledger.approve(taskId,'owner');
+    const server=createDevControlBoardServer(ledger,{lanEnabled:false});
+    await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+    try{
+      const address=server.address();
+      if(!address||typeof address==='string')throw Error('Missing server port');
+      const base='http://127.0.0.1:'+address.port;
+      const response=await fetch(base+'/api/tasks/'+taskId);
+      expect(response.status).toBe(200);
+      const data=await response.json() as Record<string,any>;
+      expect(data.executionContract).toEqual(ledger.executionContract(taskId));
+      expect(data.contract).toEqual(ledger.frozenTaskContract(taskId));
+      expect(data.contract.authoritative).toBe(false);
+      expect(data.executionContract.allowedPaths).toEqual(['src/work.ts']);
+      expect(JSON.stringify(data)).not.toContain('leaseToken');
+      expect((await fetch(base+'/api/tasks/'+taskId,{method:'POST'})).status).toBe(405);
+      expect((await fetch(base+'/api/tasks/../../settings')).status).not.toBe(200);
+    }finally{
+      await new Promise<void>(resolve=>server.close(()=>resolve()));
+      ledger.close();
+    }
+  });
   test('GET guide is read-only, phase-specific and never needs a project selector',async()=>{
     const root=mkdtempSync(join(tmpdir(),'dc-workbench-guide-'));
     tempRoots.push(root);
