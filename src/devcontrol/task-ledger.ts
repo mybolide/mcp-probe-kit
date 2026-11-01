@@ -2109,6 +2109,39 @@ export class ProjectTaskLedger {
     return saved;
   }
 
+  /** A nested Git repository is not automatically part of a task delivery.
+   * Root-only external Gate deferrals may use the existing immutable root
+   * completion when every child repository is demonstrably out of scope,
+   * unchanged since claim and still byte-identical to its protected WIP.
+   * Actual multi-Git deliveries still require their own deferral protocol.
+   */
+  private requireRootOnlyDeferral(id:string,task:Row):void {
+    const baselines=this.taskRepositories(id,task);
+    const children=baselines.filter(repo=>repo.prefix);
+    if(!children.length)return;
+    const denied=()=>fail('MULTI_REPO_DEFERRAL_UNSUPPORTED',
+      'A task delivering or permitting child Git source needs an immutable multi-repository deferral version vector');
+    const scope=JSON.parse(task.allowed_paths) as string[];
+    if(children.some(repo=>scope.some(pattern=>
+      pattern===repo.prefix||pattern.startsWith(repo.prefix+'/')||
+      (pattern.endsWith('/**')&&(
+        repo.prefix===pattern.slice(0,-3)||
+        repo.prefix.startsWith(pattern.slice(0,-3)+'/'))))))denied();
+    const observed=this.observedTaskRepositories(id,task);
+    this.requireChildReposClean(observed,id,task);
+    const frozen=this.frozenDeliveryRepositories(id,task);
+    const original=this.latestCompletion(id);
+    if(!original||frozen.find(repo=>repo.prefix==='')?.head!==original.git_head||
+      children.some(child=>{
+        const saved=frozen.find(repo=>repo.prefix===child.prefix);
+        const current=observed.find(repo=>repo.prefix===child.prefix);
+        return !saved||!current||saved.baseHead!==child.baseHead||
+          saved.head!==child.baseHead||current.head!==saved.head;
+      }))denied();
+    const changed=committedChanges(this.root,frozen);
+    if(!changed.length||changed.some(file=>!scope.some(p=>pathAllowed(file,p))))denied();
+  }
+
   private selectDeliveryRepositories(task:Row,observed:RepositoryRevision[],
     requested?:Record<string,string>):RepositoryRevision[]{
     if(requested===undefined)return observed;
@@ -5396,9 +5429,7 @@ export class ProjectTaskLedger {
     return this.inTransaction(()=>{
       const lease=this.requireLease(input.id,input.leaseToken);
       const task=this.requireTask(input.id);
-      if(this.taskRepositories(input.id,task).some(repo=>!!repo.prefix))
-        fail("MULTI_REPO_DEFERRAL_UNSUPPORTED",
-          "A multi-repository Gate deferral must freeze each repository commit and preserve the full version vector; current deferral is root-only");
+      this.requireRootOnlyDeferral(input.id,task);
       if(task.status!=="in_review")
         fail("NOT_IN_REVIEW","Only completed and reported tasks may defer verification");
       const gates=JSON.parse(task.required_gates) as string[];
@@ -5583,6 +5614,7 @@ export class ProjectTaskLedger {
       if(!pending)fail("NOT_DEFERRED","Task has no pending verification");
       const task=this.requireTask(id);
       if(task.status!=="in_review")fail("NOT_IN_REVIEW","Task is no longer awaiting review");
+      this.requireRootOnlyDeferral(id,task);
       if(this.db.prepare("SELECT task_id FROM dc_leases WHERE singleton=1").get())
         fail("LEASE_CONFLICT","Another task must release its lease before verification resumes");
       const head=git(this.root,["rev-parse","HEAD"]);
@@ -6060,8 +6092,11 @@ export class ProjectTaskLedger {
       "SELECT * FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NOT NULL",
     ).get(id);
     const frozenReview=deferred&&note.git_head===deferred.completion_head;
-    if(multiRepo&&frozenReview)return {taskId:id,passed:false,
-      reason:"Multi-repository verification deferral requires an independently reviewed version-vector migration"};
+    if(multiRepo&&frozenReview){
+      try{this.requireRootOnlyDeferral(id,task);}
+      catch(error){return {taskId:id,passed:false,
+        reason:'Deferred delivery repository safety check failed',error:String(error)};}
+    }
     if (note.git_head !== startHead && !frozenReview&&!multiRepo) {
       return { taskId: id, passed: false, reason: "Completion report refers to an older Git commit; record a new revision" };
     }

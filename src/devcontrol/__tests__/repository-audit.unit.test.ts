@@ -139,6 +139,188 @@ describe('layered local worktree-ignore protection',()=>{
 });
 
 describe('immutable multi-repository delivery commits',()=>{
+  it('defers a failed root-only external Gate with unrelated child WIP, frees the lease and resumes the original commit',()=>{
+    const {root,child}=fixture();
+    const tracked='Other Agent existing tracked changes — do not touch\n';
+    const untracked='Other Agent existing untracked changes — do not touch\n';
+    fs.writeFileSync(path.join(child,'README.md'),tracked);
+    fs.writeFileSync(path.join(child,'draft.txt'),untracked);
+    const childHead=cmd(child,'rev-parse','HEAD');
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      for(const id of ['AUDIT-ROOT-DEFER','AUDIT-AFTER-DEFER']){
+        ledger.create({id,title:'Independent root-only delivery '+id,
+          track:'governance',allowedPaths:['docs/'+id+'.md'],
+          requiredGates:[id==='AUDIT-ROOT-DEFER'?'python_pytest':'docs']},'agent');
+        ledger.approve(id,'owner');
+      }
+      const first=ledger.claim('AUDIT-ROOT-DEFER','developer');
+      fs.mkdirSync(path.join(root,'docs'));
+      fs.writeFileSync(path.join(root,'docs/AUDIT-ROOT-DEFER.md'),'Actual root-only schema code');
+      cmd(root,'add','docs/AUDIT-ROOT-DEFER.md');
+      cmd(root,'commit','-qm','root-only submitted code');
+      const submitted=cmd(root,'rev-parse','HEAD');
+      const failedEvidence='Real isolated postgres unavailable; three external pytest assertions remain failing';
+      ledger.report('AUDIT-ROOT-DEFER',first.leaseToken,
+        {kind:'python_pytest',reference:failedEvidence},true);
+      ledger.complete('AUDIT-ROOT-DEFER',first.leaseToken,{
+        summary:'Committed exact root-only database migration and its four scoped tests',
+        implementation:'Only approved root files changed; child repositories untouched',
+        verification:'Pytest external Gate failed and must be rerun against real Postgres',
+        remaining:'Three genuine failures require separately reviewed source changes',
+      });
+      const deferred=ledger.deferVerification({id:'AUDIT-ROOT-DEFER',
+        leaseToken:first.leaseToken,gate:'python_pytest',preserveExistingWorktree:true,
+        reason:'Isolated PostgreSQL unavailable and three out-of-scope assertions still fail; rerun the actual full suite',
+      });
+      expect(deferred).toMatchObject({leaseReleased:true,gatePassed:false,
+        pendingVerification:true,originalHead:submitted});
+      expect(ledger.get('AUDIT-ROOT-DEFER').status).toBe('in_review');
+      expect(ledger.next().activeLease).toBeNull();
+      expect(cmd(child,'rev-parse','HEAD')).toBe(childHead);
+      expect(fs.readFileSync(path.join(child,'README.md'),'utf8')).toBe(tracked);
+      expect(fs.readFileSync(path.join(child,'draft.txt'),'utf8')).toBe(untracked);
+      const second=ledger.claim('AUDIT-AFTER-DEFER','next-developer');
+      fs.writeFileSync(path.join(root,'docs/AUDIT-AFTER-DEFER.md'),'Legitimately separate task');
+      cmd(root,'add','docs/AUDIT-AFTER-DEFER.md');
+      cmd(root,'commit','-qm','new approved root-only task');
+      const current=cmd(root,'rev-parse','HEAD');
+      ledger.report('AUDIT-AFTER-DEFER',second.leaseToken,
+        {kind:'unit_test',reference:'Actual unit tests for subsequent independent task passed'},true);
+      ledger.complete('AUDIT-AFTER-DEFER',second.leaseToken,{
+        summary:'Separate committed root task',implementation:'Only second task file committed',
+        verification:'Actual tests run and results reviewed against new Git SHA',
+      });
+      ledger.reviewOwnTask('AUDIT-AFTER-DEFER',second.leaseToken,{
+        outcome:'passed',evidenceReference:'Actual unit tests for subsequent independent task passed',
+        findings:'Inspected second approved source commit, required test coverage and unchanged child repository WIP.',
+      });
+      ledger.reviewExternalGate('AUDIT-AFTER-DEFER',second.leaseToken,{
+        gate:'docs',runner:'next-developer',reviewer:'next-developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:'Actual unit tests for subsequent independent task passed',
+        reviewNotes:'Reviewed exact submitted source, real project test evidence, failure conditions and untouched child histories.',
+      });
+      expect(ledger.verify('AUDIT-AFTER-DEFER',second.leaseToken).passed).toBe(true);
+      const resumed=ledger.resumeVerification('AUDIT-ROOT-DEFER','developer');
+      expect(resumed).toMatchObject({resumedVerification:true,
+        originalCompletionHead:submitted,baseHead:first.baseHead});
+      expect(cmd(root,'rev-parse','HEAD')).toBe(current);
+      const notAccepted=ledger.verify('AUDIT-ROOT-DEFER',resumed.leaseToken);
+      expect(notAccepted.passed).toBe(false);
+      expect(JSON.stringify(notAccepted)).not.toContain('Multi-repository verification deferral requires');
+      expect(fs.readFileSync(path.join(child,'README.md'),'utf8')).toBe(tracked);
+      expect(fs.readFileSync(path.join(child,'draft.txt'),'utf8')).toBe(untracked);
+      expect(ledger.get('AUDIT-ROOT-DEFER').status).toBe('in_review');
+    }finally{ledger.close();}
+  });
+
+  it('rejects modified, new or staged child WIP before root-only deferral and after resume',()=>{
+    const {root,child}=fixture();
+    const original='Frozen unrelated child WIP\n';
+    fs.writeFileSync(path.join(child,'README.md'),original);
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-DEFERRAL-TAMPER',title:'Deferral retains child identity',
+        track:'governance',allowedPaths:['docs/approved.txt'],requiredGates:['python_pytest']},'agent');
+      ledger.approve('AUDIT-DEFERRAL-TAMPER','owner');
+      const first=ledger.claim('AUDIT-DEFERRAL-TAMPER','developer');
+      fs.mkdirSync(path.join(root,'docs'));
+      fs.writeFileSync(path.join(root,'docs/approved.txt'),'Exact delivered source\n');
+      cmd(root,'add','docs/approved.txt');cmd(root,'commit','-qm','frozen root source');
+      ledger.report('AUDIT-DEFERRAL-TAMPER',first.leaseToken,
+        {kind:'python_pytest',reference:'Real external tests not available in local environment'},true);
+      ledger.complete('AUDIT-DEFERRAL-TAMPER',first.leaseToken,{
+        summary:'Original root source complete',implementation:'Exact allowed file committed',
+        verification:'External PostgreSQL tests unavailable',
+      });
+      const defer=()=>ledger.deferVerification({id:'AUDIT-DEFERRAL-TAMPER',
+        leaseToken:first.leaseToken,gate:'python_pytest',preserveExistingWorktree:true,
+        reason:'External PostgreSQL unavailable, run actual tests after restoring the test service',
+      });
+      fs.writeFileSync(path.join(child,'README.md'),'Tampered child file\n');
+      expect(defer).toThrow(/protected child|PROTECTED_CHILD_WORKTREE_CHANGED|differ/i);
+      fs.writeFileSync(path.join(child,'README.md'),original);
+      fs.writeFileSync(path.join(child,'new.txt'),'Unapproved new child WIP\n');
+      expect(defer).toThrow(/protected child|PROTECTED_CHILD_WORKTREE_CHANGED|differ/i);
+      fs.rmSync(path.join(child,'new.txt'));
+      cmd(child,'add','README.md');
+      expect(defer).toThrow(/staged|index/i);
+      cmd(child,'reset','-q','--','README.md');
+      expect(defer().leaseReleased).toBe(true);
+      const resumed=ledger.resumeVerification('AUDIT-DEFERRAL-TAMPER','developer');
+      fs.writeFileSync(path.join(child,'new.txt'),'Unexpected WIP after resume\n');
+      expect(()=>ledger.deferVerification({id:'AUDIT-DEFERRAL-TAMPER',
+        leaseToken:resumed.leaseToken,gate:'python_pytest',preserveExistingWorktree:true,
+        reason:'External PostgreSQL is still down, and new child WIP must fail closed',
+      })).toThrow(/protected child|PROTECTED_CHILD_WORKTREE_CHANGED|differ/i);
+      fs.rmSync(path.join(child,'new.txt'));
+      fs.writeFileSync(path.join(child,'unrelated-commit.txt'),'Another repository revision\n');
+      cmd(child,'add','unrelated-commit.txt');
+      cmd(child,'commit','-qm','unrelated child HEAD moved after freeze');
+      expect(()=>ledger.deferVerification({id:'AUDIT-DEFERRAL-TAMPER',
+        leaseToken:resumed.leaseToken,gate:'python_pytest',preserveExistingWorktree:true,
+        reason:'Changed child commit identity cannot be silently rebased into the frozen deferral',
+      })).toThrow(/multi-repository|multi-Git|version vector/i);
+      expect(ledger.next().activeLease?.taskId).toBe('AUDIT-DEFERRAL-TAMPER');
+    }finally{ledger.close();}
+  });
+
+  it('does not resume root-only deferral after an unreviewed child repository HEAD change',()=>{
+    const {root,child}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-HEAD-FREEZE',title:'Original child Git HEAD remains frozen',
+        track:'governance',allowedPaths:['docs/frozen.txt'],requiredGates:['python_pytest']},'agent');
+      ledger.approve('AUDIT-HEAD-FREEZE','owner');
+      const claimed=ledger.claim('AUDIT-HEAD-FREEZE','developer');
+      fs.mkdirSync(path.join(root,'docs'));
+      fs.writeFileSync(path.join(root,'docs/frozen.txt'),'Committed root change');
+      cmd(root,'add','docs/frozen.txt');cmd(root,'commit','-qm','approved root Git delivery');
+      ledger.report('AUDIT-HEAD-FREEZE',claimed.leaseToken,
+        {kind:'python_pytest',reference:'Fixture confirms external database is unavailable'},true);
+      ledger.complete('AUDIT-HEAD-FREEZE',claimed.leaseToken,{
+        summary:'Original root-only delivery committed',implementation:'Child HEAD unchanged',
+        verification:'External PostgreSQL Gate remains unpassed',
+      });
+      ledger.deferVerification({id:'AUDIT-HEAD-FREEZE',leaseToken:claimed.leaseToken,
+        gate:'python_pytest',preserveExistingWorktree:true,
+        reason:'Postgres test runner unavailable; hold the actual external acceptance requirement',
+      });
+      fs.writeFileSync(path.join(child,'unrelated.txt'),'Unapproved newer child commit');
+      cmd(child,'add','unrelated.txt');cmd(child,'commit','-qm','other child history advanced');
+      expect(()=>ledger.resumeVerification('AUDIT-HEAD-FREEZE','developer'))
+        .toThrow(/multi-repository|multi-Git|version vector/i);
+      expect(ledger.next().activeLease).toBeNull();
+      expect(ledger.get('AUDIT-HEAD-FREEZE').pendingVerification).not.toBeNull();
+    }finally{ledger.close();}
+  });
+
+  it('refuses to treat a genuinely scoped child Git delivery as a root-only deferral',()=>{
+    const {root,child}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-CHILD-DEFER',title:'Actual multi-Git source delivery',
+        track:'governance',allowedPaths:['apw-life/src/**'],requiredGates:['python_pytest']},'agent');
+      ledger.approve('AUDIT-CHILD-DEFER','owner');
+      const claim=ledger.claim('AUDIT-CHILD-DEFER','developer');
+      fs.mkdirSync(path.join(child,'src'));
+      fs.writeFileSync(path.join(child,'src','actual.ts'),'export const real = 1;\n');
+      cmd(child,'add','src/actual.ts');cmd(child,'commit','-qm','actual nested delivery');
+      ledger.report('AUDIT-CHILD-DEFER',claim.leaseToken,
+        {kind:'python_pytest',reference:'Actual scoped child tests still fail'},true);
+      ledger.complete('AUDIT-CHILD-DEFER',claim.leaseToken,{
+        summary:'Genuine child source committed',implementation:'Approved nested Git delivery',
+        verification:'External test failure remains unresolved',
+      });
+      expect(()=>ledger.deferVerification({id:'AUDIT-CHILD-DEFER',
+        leaseToken:claim.leaseToken,gate:'python_pytest',preserveExistingWorktree:true,
+        reason:'Multi-repository delivery requires immutable version-vector deferral review',
+      })).toThrow(/multi-repository|multi-Git|version vector/i);
+      expect(ledger.get('AUDIT-CHILD-DEFER').pendingVerification).toBeNull();
+      expect(ledger.next().activeLease?.taskId).toBe('AUDIT-CHILD-DEFER');
+    }finally{ledger.close();}
+  });
+
   it('claims and verifies root-only delivery while preserving another Agent child WIP byte-for-byte',()=>{
     const {root,child}=fixture();
     const original='other Agent live work, never touched by the root-only task\n';
