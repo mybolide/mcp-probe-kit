@@ -63,7 +63,7 @@ describe('approved additive task specification, never an in-place rewrite',()=>{
         .toMatchObject({passed:true,proposalHash:proposalHash(proposal)});
       const staged=dispatchDevControl(ledger,'task-spec-supplement-stage',{
         proposal,actor:'proposal-author'}) as {status:string;proposalHash:string};
-      expect(staged.status).toBe('awaiting_independent_review');
+      expect(staged.status).toBe('awaiting_review');
       expect(ledger.executionContract('SPEC-01').approvedSupplement).toBeNull();
       expect(()=>ledger.approveTaskSpecSupplement({
         id:'SPEC-01',expectedProposalHash:staged.proposalHash,
@@ -105,6 +105,33 @@ describe('approved additive task specification, never an in-place rewrite',()=>{
       expect(taskReadability(ledger.frozenTaskContract('SPEC-01'),[],
         after.approvedSupplement.proposal.fields).purpose.source).toBe('approved-supplement');
       expect(ledger.taskSpecSupplement('SPEC-01').history).toHaveLength(1);
+    }finally{ledger.close();}
+  });
+  it('permits substantive developer self-review, but never forges independent review',()=>{
+    const {ledger,hash}=fixture();
+    try{
+      const staged=ledger.stageTaskSpecSupplement(makeProposal(hash),'same-real-developer');
+      expect(()=>ledger.reviewStagedTaskSpecSupplement('SPEC-01',staged.proposalHash,
+        {...review,reviewer:'different-person'},'developer'))
+        .toThrow(/proposer identity/);
+      const reviewed=ledger.reviewStagedTaskSpecSupplement('SPEC-01',
+        staged.proposalHash,{...review,reviewer:'same-real-developer'},'developer');
+      expect(reviewed.status).toBe('awaiting_owner_approval');
+      expect(ledger.taskSpecSupplement('SPEC-01').pending.review).toMatchObject({
+        reviewer:'same-real-developer',reviewMode:'developer',
+      });
+      expect(ledger.executionContract('SPEC-01').approvedSupplement).toBeNull();
+      const approved=ledger.approveTaskSpecSupplement({
+        id:'SPEC-01',expectedProposalHash:staged.proposalHash,
+        expectedReviewHash:reviewed.reviewHash,approvedBy:'test-owner',
+        reason:'Explicitly authorise the exact developer-reviewed clarification',
+        explicitAuthorization:true,
+      });
+      expect(approved.status).toBe('approved');
+      expect(ledger.executionContract('SPEC-01').approvedSupplement.review)
+        .toMatchObject({reviewMode:'developer'});
+      expect(ledger.frozenTaskContract('SPEC-01').acceptance)
+        .toBe('Persist timestamp metadata');
     }finally{ledger.close();}
   });
   it('rejects scope/Gate/acceptance replacement, preexisting text, stale hash and withdrawn drafts',()=>{

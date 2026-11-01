@@ -40,6 +40,7 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('devcontrol-worktree-ignore');
     expect(skill).toContain('deliveryHeads');
     expect(skill).toContain('task-spec-supplement-stage');
+    expect(skill).toContain('task-spec-supplement-self-review');
     expect(skill).toContain('task-spec-supplement-independent-review');
     expect(skill).toContain('task-spec-supplement-approve');
     expect(skill).not.toContain('arrange `review-handoff` → independent');
@@ -65,6 +66,7 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(text).toContain('devcontrol-worktree-ignore');
     expect(text).toContain('deliveryHeads');
     expect(text).toContain('task-spec-supplement-stage');
+    expect(text).toContain('task-spec-supplement-self-review');
     expect(text).toContain('task-spec-supplement-independent-review');
     expect(text).toContain('task-spec-supplement-approve');
     expect(text).toMatch(/reviewMode=self|reviewMode:self/);

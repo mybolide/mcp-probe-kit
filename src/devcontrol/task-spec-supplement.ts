@@ -20,6 +20,7 @@ export interface TaskSpecSupplementReview {
   sourceRefs:string[];
   outcome:'approved'|'rejected';
 }
+export type SupplementReviewMode='developer'|'independent';
 export function proposalHash(proposal:TaskSpecSupplementProposal):string {
   return createHash('sha256').update(JSON.stringify({
     taskId:proposal.taskId,expectedPlanHash:proposal.expectedPlanHash,
@@ -28,8 +29,9 @@ export function proposalHash(proposal:TaskSpecSupplementProposal):string {
       .map(f=>[f,proposal.fields[f]])),reason:proposal.reason,
   })).digest('hex');
 }
-export function reviewHash(review:TaskSpecSupplementReview,hash:string):string {
-  return createHash('sha256').update(JSON.stringify({hash,review})).digest('hex');
+export function reviewHash(review:TaskSpecSupplementReview,hash:string,
+  mode:SupplementReviewMode='independent'):string {
+  return createHash('sha256').update(JSON.stringify({hash,mode,review})).digest('hex');
 }
 export function validateProposal(proposal:unknown,
   original:Record<string,unknown>):string[] {
@@ -72,12 +74,15 @@ export function validateProposal(proposal:unknown,
   return issues;
 }
 export function validateReview(review:unknown,proposer:string,
-  originalRefs:string[]):string[] {
+  originalRefs:string[],mode:SupplementReviewMode='independent'):string[] {
   if(!review||typeof review!=='object'||Array.isArray(review))return ['Invalid review'];
   const r=review as Record<string,any>,issues:string[]=[];
-  if(typeof r.reviewer!=='string'||r.reviewer.trim().length<2||
-    r.reviewer.trim()===proposer)
-    issues.push('Independent named reviewer must differ from proposal author');
+  if(typeof r.reviewer!=='string'||r.reviewer.trim().length<2)
+    issues.push('Named reviewer is required');
+  else if(mode==='independent'&&r.reviewer.trim()===proposer)
+    issues.push('Independent reviewer must differ from proposal author');
+  else if(mode==='developer'&&r.reviewer.trim()!==proposer)
+    issues.push('Developer self-review must use the actual proposer identity');
   if(r.outcome!=='approved'&&r.outcome!=='rejected')issues.push('Review outcome required');
   if(typeof r.findings!=='string'||r.findings.trim().length<60)
     issues.push('Substantive review findings must be at least 60 characters');

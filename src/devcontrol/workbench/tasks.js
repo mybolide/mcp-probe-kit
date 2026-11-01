@@ -52,8 +52,8 @@
           "新增工作待评审":item.readiness==="dependencies_verified"?
           "前置依赖已验证 · 仍需检查范围审批":item.readiness==="dependencies_unknown"?
           "依赖来源待核对":"前置任务尚未全部验证";
-        const progress=item.supplement?.status==="awaiting_independent_review"?
-          "补充提案已登记 · 待独立审核":
+        const progress=item.supplement?.status==="awaiting_developer_review"?
+          "补充提案已登记 · 待开发者自审（可选独立复审）":
           item.supplement?.status==="awaiting_owner_approval"?
           "补充已复审 · 待 Owner 授权":
           item.supplement?.status==="review_rejected"?
@@ -76,7 +76,10 @@
           "审批 Hash "+(item.approval?.planHash||"未记录"),
         ].join(" · "));
         if(item.supplement?.proposalHash)
-          add("独立补充提案 Hash（不是冻结任务审批）",item.supplement.proposalHash);
+          add("补充提案 Hash（不同于原冻结审批）",item.supplement.proposalHash);
+        if(item.supplement?.reviewHash)
+          add("实际审查 Hash（"+(item.supplement.reviewMode==="developer"?
+            "开发者自审":"额外独立复审")+"）",item.supplement.reviewHash);
         add("补充审批状态",progress);
         const draft=item.supplement?.draftFields;
         if(draft&&Object.keys(draft).length){

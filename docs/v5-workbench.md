@@ -82,11 +82,13 @@ Hash 页面路由例子：`/#overview`、`/#requirements`、`/#architecture`、`
 
 待审核项还可以在原冻结验收条件下面展开**本次补充草案**，逐字段阅读业务目的、场景、实际步骤、正反测试和来源。展示内容直接读取正式 SQLite 里的 \`task-spec-supplement-stage\` 草案，所有文字均明确标为未批准，并且只读取既定六种允许补充的字段，不把未审草案合并进入 AI 正式 \`execution-contract\`。
 
-### 带独立审核的任务附加规格
+真实审核者可通过任务管理中的**下载本批审核核对材料**获取只读 GET \`/api/task-spec-review-packet?format=markdown\`。亦可指定 \`format=json\` 获取同源数据。导出含每项原批准计划与验收、范围、Gate、真实前置状态、待审六字段、独立提案 Hash，并有不预填结论的审核者核对清单。整个导出不触发 stage、review 或 approve，也不能代替开发者实质自审，独立复审按风险选用。 Markdown 只是一份阅读及交接导出，SQLite 仍是唯一任务与审批事实源。
+
+### 开发者实质自审的任务附加规格（独立复审可选）
 
 正式任务原先确实缺少业务目的、场景、实施步骤、正向或异常测试及来源时，Agent 可提出严格限定在**原来空字段**的补充。该操作不会改变冻结验收、文件范围、依赖或 Gate，也不得用于已有租约、待完成验证、已 Verified 或范围变更待审批的任务。
 
-按顺序使用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 查看精确原批准 Hash 及版本并检查草案，随后 \`task-spec-supplement-stage\`，再由不同的 Reviewer 使用 \`task-spec-supplement-independent-review\` 记录有来源的实质审核。最后只有在 Owner 明确授权**提案及复审两个精确 Hash** 后才能调用 \`task-spec-supplement-approve\`。未批准的草案不改变 AI 执行要求。过期或被拒草案可由 \`task-spec-supplement-withdraw\` 撤回。
+按顺序使用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 查看精确原批准 Hash 及版本并检查草案，随后 \`task-spec-supplement-stage\`，由开发者本人通过 `task-spec-supplement-self-review` 实质自审；必要时才由不同 Reviewer 使用 \`task-spec-supplement-independent-review\` 记录有来源的额外复审，并非强制前置。 最后只有在 Owner 明确授权**提案及复审两个精确 Hash** 后才能调用 \`task-spec-supplement-approve\`。未批准的草案不改变 AI 执行要求。过期或被拒草案可由 \`task-spec-supplement-withdraw\` 撤回。
 
 SQLite \`dc_task_spec_supplement_proposals\` 只保存当前待审批记录，\`dc_task_spec_supplements\` 追加保存每次批准历史。原冻结任务快照保持原样，批准附加规格在 AI \`execution-contract.approvedSupplement\` 和人类执行合同的单独区域可见，且带提案、复审 Hash 和批准修订。正文说明会明确区分原始冻结内容和后来批准的补充，不能把补充冒充原合同。涉及验收、范围或 Gate 实质变化必须走原有正式 Release Amendment。
 

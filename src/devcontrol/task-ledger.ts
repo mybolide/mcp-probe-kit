@@ -3290,13 +3290,13 @@ export class ProjectTaskLedger {
         .run(proposal.taskId,check.proposalHash,JSON.stringify(proposal),actor.trim(),utc());
       this.audit(proposal.taskId,'task_spec_supplement_proposed',actor.trim(),{
         proposalHash:check.proposalHash,fields:Object.keys(proposal.fields)});
-      return {taskId:proposal.taskId,status:'awaiting_independent_review',
+      return {taskId:proposal.taskId,status:'awaiting_review',
         proposalHash:check.proposalHash,executableContractChanged:false};
     });
   }
 
   reviewStagedTaskSpecSupplement(id:string,expectedProposalHash:string,
-    review:TaskSpecSupplementReview):Row {
+    review:TaskSpecSupplementReview,mode:'developer'|'independent'='independent'):Row {
     return this.inTransaction(()=>{
       const row=this.db.prepare(
         'SELECT * FROM dc_task_spec_supplement_proposals WHERE task_id=?').get(id);
@@ -3308,14 +3308,15 @@ export class ProjectTaskLedger {
         fail('STALE_TASK_SPEC_SUPPLEMENT','Original frozen contract changed');
       const sources=proposal.fields.sourceRefs??this.frozenTaskContract(id).sourceRefs;
       const issues=validateSupplementReview(review,row.proposed_by,
-        Array.isArray(sources)?sources:[]);
-      if(issues.length)fail('INDEPENDENT_REVIEW_REQUIRED',issues.join('; '));
-      const hash=supplementReviewHash(review,expectedProposalHash);
+        Array.isArray(sources)?sources:[],mode);
+      if(issues.length)fail('SUBSTANTIVE_REVIEW_REQUIRED',issues.join('; '));
+      const hash=supplementReviewHash(review,expectedProposalHash,mode);
       this.db.prepare('UPDATE dc_task_spec_supplement_proposals '+
         'SET reviewed_json=?,review_hash=?,reviewed_at=? WHERE task_id=?')
-        .run(JSON.stringify(review),hash,utc(),id);
+        .run(JSON.stringify({...review,reviewMode:mode}),hash,utc(),id);
       this.audit(id,'task_spec_supplement_reviewed',review.reviewer,{
-        proposalHash:expectedProposalHash,reviewHash:hash,outcome:review.outcome});
+        proposalHash:expectedProposalHash,reviewHash:hash,
+        reviewMode:mode,outcome:review.outcome});
       return {taskId:id,proposalHash:expectedProposalHash,reviewHash:hash,
         status:review.outcome==='approved'?'awaiting_owner_approval':'rejected',
         executableContractChanged:false};
@@ -3337,7 +3338,15 @@ export class ProjectTaskLedger {
         fail('TASK_SPEC_SUPPLEMENT_REVIEW_REQUIRED','Exact proposal and review hashes required');
       const review=JSON.parse(row.reviewed_json) as TaskSpecSupplementReview;
       if(review.outcome!=='approved')fail('REVIEW_REJECTED','Review rejected the supplement');
-      if(supplementReviewHash(review,row.proposal_hash)!==row.review_hash)
+      const reviewMode=(review as TaskSpecSupplementReview&{reviewMode?:string}).reviewMode;
+      const {reviewMode:_,...reviewBody}=review as TaskSpecSupplementReview&{reviewMode?:string};
+      if(supplementReviewHash(reviewBody,row.proposal_hash,
+        reviewMode==='developer'?'developer':'independent')!==row.review_hash &&
+        // Keep old independently reviewed records readable and approvable.
+        !(reviewMode===undefined&&
+          createHash('sha256').update(JSON.stringify({
+            hash:row.proposal_hash,review,
+          })).digest('hex')===row.review_hash))
         fail('REVIEW_HASH_MISMATCH','Recorded independent review digest was changed');
       const proposal=JSON.parse(row.proposal_json) as TaskSpecSupplementProposal;
       const check=this.checkTaskSpecSupplement(proposal);

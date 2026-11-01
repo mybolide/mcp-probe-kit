@@ -12,6 +12,8 @@ import { resolveWorkbenchLocale } from "./i18n.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
 import { taskReadability } from "./task-readability.js";
 import { taskSpecReviewQueue } from "./task-spec-review.js";
+import {makeIndependentReviewPacket,independentReviewPacketMarkdown}
+  from "./task-spec-review-packet.js";
 import { projectOnboarding } from "./project-onboarding.js";
 import { publicProjectSettings, saveProjectSettings } from "./project-settings.js";
 import { searchHistorySession, readHistorySession } from "../lib/history-session/index.js";
@@ -295,7 +297,8 @@ export function createDevControlBoardServer(
         for(const record of records)counts[record.readability]++;
         respond(res,200,JSON.stringify({policy:"read-only-advisory",total:records.length,
           counts,records}),nonce,"application/json; charset=utf-8");
-      } else if(route==="/api/task-spec-review"){
+      } else if(route==="/api/task-spec-review"||
+        route==="/api/task-spec-review-packet"){
         // Preparation for Owner-led changes, not a plan proposal or approval.
         // Never rewrite the historical frozen snapshots as a side effect.
         const requirements=projectContext(ledger.root).requirements.items;
@@ -322,7 +325,26 @@ export function createDevControlBoardServer(
           };
         });
         const queue=taskSpecReviewQueue(candidates,statusById,12);
-        respond(res,200,JSON.stringify(queue),nonce,"application/json; charset=utf-8");
+        if(route==="/api/task-spec-review-packet"){
+          const format=new URL(req.url??"/","http://localhost").searchParams.get("format")??"markdown";
+          if(format!=="markdown"&&format!=="json"){
+            respond(res,400,JSON.stringify({error:"Choose markdown or json"}),
+              nonce,"application/json; charset=utf-8");return;
+          }
+          const packet=makeIndependentReviewPacket(queue);
+          const body=format==="json"?JSON.stringify(packet,null,2):
+            independentReviewPacketMarkdown(packet);
+          res.writeHead(200,{
+            "Content-Type":format==="json"?
+              "application/json; charset=utf-8":"text/markdown; charset=utf-8",
+            "Content-Disposition":"attachment; filename=\"task-spec-independent-review."+
+              (format==="json"?"json":"md")+"\"",
+            "Cache-Control":"no-store",
+            "X-Content-Type-Options":"nosniff",
+            "Referrer-Policy":"no-referrer",
+          });
+          res.end(body);
+        }else respond(res,200,JSON.stringify(queue),nonce,"application/json; charset=utf-8");
       } else {
         respond(res, 404, "Not found");
       }

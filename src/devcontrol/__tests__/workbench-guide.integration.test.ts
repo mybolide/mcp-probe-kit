@@ -56,6 +56,22 @@ describe('DevControl v5 browser guide and settings API',()=>{
       expect(review).toMatchObject({
         policy:'review-draft-no-mutation',totalCandidates:0,batchSize:0,items:[],
       });
+      const packetResponse=await fetch(base+'/api/task-spec-review-packet?format=json');
+      expect(packetResponse.status).toBe(200);
+      expect(packetResponse.headers.get('content-type')).toContain('application/json');
+      expect(packetResponse.headers.get('cache-control')).toBe('no-store');
+      const packet=await packetResponse.json() as Record<string,any>;
+      expect(packet).toMatchObject({
+        policy:'read-only-not-owner-approved',count:0,items:[],
+      });
+      expect(packet.packetHash).toMatch(/^[0-9a-f]{64}$/);
+      const markdownResponse=await fetch(
+        base+'/api/task-spec-review-packet?format=markdown');
+      expect(markdownResponse.status).toBe(200);
+      expect(markdownResponse.headers.get('content-disposition')).toContain('attachment');
+      expect(await markdownResponse.text()).toContain('未获得 Owner 批准');
+      expect((await fetch(base+'/api/task-spec-review-packet?format=csv')).status).toBe(400);
+      expect((await fetch(base+'/api/task-spec-review-packet',{method:'POST'})).status).toBe(405);
       expect(ledger.get(taskId).status).toBe('ready');
       expect(JSON.stringify(data)).not.toContain('leaseToken');
       expect((await fetch(base+'/api/tasks/'+taskId,{method:'POST'})).status).toBe(405);

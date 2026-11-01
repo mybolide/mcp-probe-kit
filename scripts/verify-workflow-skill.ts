@@ -46,6 +46,7 @@ for(const [name,source] of guidance){
   if(!source.includes('devcontrol-worktree-ignore')||!source.includes('deliveryHeads'))
     errors.push(name+' omits local worktree-ignore or immutable multi-repository delivery HEAD guidance');
   if(!source.includes('task-spec-supplement-stage')||
+    !source.includes('task-spec-supplement-self-review')||
     !source.includes('task-spec-supplement-independent-review')||
     !source.includes('task-spec-supplement-approve')||
     !source.includes('task-spec-supplement-withdraw'))

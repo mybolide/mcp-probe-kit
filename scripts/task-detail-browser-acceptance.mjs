@@ -89,15 +89,26 @@ try{
       !selection.visible.includes('本批 '+queue.items.length+' 项'))
       throw Error('Task spec review queue not grounded in read-only API: '+JSON.stringify({queue,selection}));
     const pendingCount=queue.items.filter(item=>
-      item.supplement?.status==='awaiting_independent_review').length;
+      item.supplement?.status==='awaiting_developer_review').length;
+    const ownerReview=queue.items.filter(item=>
+      item.supplement?.status==='awaiting_owner_approval');
+    if(ownerReview.length){
+      const text=await evaluate('[...document.querySelectorAll(".task-spec-review-item")].map(x=>x.textContent).join("\\n")');
+      for(const item of ownerReview){
+        if(!item.supplement.reviewHash||item.supplement.reviewMode!=='developer'||
+          !text.includes(item.supplement.reviewHash)||
+          !text.includes('补充已复审 · 待 Owner 授权'))
+          throw Error('Real self-reviewed task lacks source-bound review Hash or correct Owner state');
+      }
+    }
     if(pendingCount){
       const summaries=await evaluate('[...document.querySelectorAll(".task-spec-review-item summary")].map(x=>x.textContent)');
-      const visiblePending=summaries.filter(s=>s.includes('补充提案已登记 · 待独立审核')).length;
+      const visiblePending=summaries.filter(s=>s.includes('补充提案已登记 · 待开发者自审')).length;
       if(visiblePending!==pendingCount)
         throw Error('Live staged proposal statuses differ from SQLite: '+
           JSON.stringify({pendingCount,visiblePending}));
       const stagedWithText=queue.items.filter(item=>
-        item.supplement?.status==='awaiting_independent_review'&&
+        item.supplement?.status==='awaiting_developer_review'&&
         Object.keys(item.supplement.draftFields||{}).length>0);
       const visibleDrafts=await evaluate(
         'document.querySelectorAll(".task-spec-review-draft").length');
@@ -181,7 +192,7 @@ try{
     report.push({width,task:id,overview:overview.tab,contract:raw.active,
       readability:actual.readability?.status,projectScan:inventory.counts,
       specReviewCandidates:queue.totalCandidates,reviewBatchSize:queue.items.length,
-      stagedReviewCandidates:pendingCount,
+      stagedReviewCandidates:pendingCount,awaitingOwnerAfterSelfReview:ownerReview.length,
       grouped:raw.grouped,exactExecutionContract:exact,sharedRelations:true,
       responsive:overview.drawerWidth<=width+1,screenshot:file});
   }

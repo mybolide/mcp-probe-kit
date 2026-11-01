@@ -15,7 +15,8 @@ export interface ReviewCandidate {
   supplement?:{
     pending?:{
       proposalHash:string;
-      review?:{outcome?:string}|null;
+      reviewHash?:string|null;
+      review?:{outcome?:string;reviewMode?:string}|null;
       proposal?:{fields?:SupplementFields}|null;
     }|null;
     approved?:{proposalHash:string}|null;
@@ -28,9 +29,11 @@ export interface ReviewItem {
   priority:number|null;
   approvalHold:'scope_amendment'|'incremental_review'|null;
   supplement:{
-    status:'not_submitted'|'awaiting_independent_review'|
+    status:'not_submitted'|'awaiting_developer_review'|
       'awaiting_owner_approval'|'review_rejected'|'approved';
     proposalHash:string|null;
+    reviewHash:string|null;
+    reviewMode:string|null;
     draftFields:SupplementFields|null;
   };
   approval:{planId:string|null;revision:number|null;planHash:string|null};
@@ -97,16 +100,19 @@ export function taskSpecReviewQueue(candidates:ReviewCandidate[],
         status:candidate.supplement.pending.review?.outcome==='rejected'?
           'review_rejected' as const:
           candidate.supplement.pending.review?.outcome==='approved'?
-            'awaiting_owner_approval' as const:'awaiting_independent_review' as const,
+            'awaiting_owner_approval' as const:'awaiting_developer_review' as const,
         proposalHash:candidate.supplement.pending.proposalHash,
+        reviewHash:candidate.supplement.pending.reviewHash??null,
+        reviewMode:candidate.supplement.pending.review?.reviewMode??null,
         draftFields:Object.fromEntries(SUPPLEMENT_FIELDS.filter(field=>
           Object.prototype.hasOwnProperty.call(
             candidate.supplement?.pending?.proposal?.fields??{},field))
           .map(field=>[field,candidate.supplement?.pending?.proposal?.fields?.[field]])),
       }:candidate.supplement?.approved?{
         status:'approved' as const,proposalHash:candidate.supplement.approved.proposalHash,
-        draftFields:null,
-      }:{status:'not_submitted' as const,proposalHash:null,draftFields:null},
+        reviewHash:null,reviewMode:null,draftFields:null,
+      }:{status:'not_submitted' as const,proposalHash:null,reviewHash:null,
+        reviewMode:null,draftFields:null},
       approval:{planId:source?.planId??null,revision:source?.revision??null,
         planHash:source?.planHash??null},
       readiness,dependencies,

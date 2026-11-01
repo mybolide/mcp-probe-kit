@@ -17,7 +17,8 @@ export const V5_DEVC_ACTION_GROUPS = [
   {
     title: '冻结任务说明补充 / Reviewed additive task specification',
     actions: ['task-spec-supplement-get','task-spec-supplement-review',
-      'task-spec-supplement-stage','task-spec-supplement-independent-review',
+      'task-spec-supplement-stage','task-spec-supplement-self-review',
+      'task-spec-supplement-independent-review',
       'task-spec-supplement-approve','task-spec-supplement-withdraw'],
   },
   {

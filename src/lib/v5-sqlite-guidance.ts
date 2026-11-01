@@ -119,8 +119,10 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    task-spec-supplement-review. Only previously empty purpose, scenario,
    workflow, testCases, negativeCases and sourceRefs may be appended.
    Bind the original exact frozen plan hash and revision, stage using
-   task-spec-supplement-stage, require a different substantive Reviewer via
-   task-spec-supplement-independent-review, then explicit Owner approval via
+   task-spec-supplement-stage and complete a substantive developer review via
+   task-spec-supplement-self-review with cited evidence. Independent review via
+   task-spec-supplement-independent-review is optional when risks justify it.
+   Never claim an external review occurred unless it truly did. Then Owner approval via
    task-spec-supplement-approve with both exact proposal and review hashes.
    The approved addendum appears separately in execution-contract and the
    human task view. It NEVER replaces frozen acceptance, file scope, Gates,
@@ -224,7 +226,7 @@ ${managedRevision}
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
 - **受保护文件恢复 Git HEAD**：已跟踪的保护文件若恢复为所在仓库 HEAD 原始字节，Owner 可使用 \`refresh-protected-worktree\`，提供任务 \`id\`、\`actor\`、\`ownerRecoveryKey\` 和具体 \`reason\`，追加只读审计刷新，再继续完成登记。旧快照保持不变；不允许 staged、软链、越界、未跟踪保护文件丢失及其他保护文件改动，不提供测试和 Gate 通过资格。
 - **本地 Git 忽略与精确交付**：每个独立仓库可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
-- **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再由不同于提案人的独立 Reviewer 通过 \`task-spec-supplement-independent-review\` 实质复核，最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
+- **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再通过 \`task-spec-supplement-self-review\` 完成有来源的实质开发者自审（可选 \`task-spec-supplement-independent-review\`，不强制第二人），最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
 - **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
 - **会话结束**：\`history_session_checkpoint\` 记录用户原话、发现、决策、改动、真实测试、分支/租约、阻碍及下一步。保留用户未提交修改，真机/真实数据库 Gate 缺失就报告未通过。
@@ -286,8 +288,11 @@ ${managedRevision}
 - To clarify an approved frozen task, first use task-spec-supplement-get and
   task-spec-supplement-review. Only missing purpose, scenario, workflow,
   testCases, negativeCases and sourceRefs can be appended. Stage against the
-  precise frozen plan SHA/revision via task-spec-supplement-stage; obtain a substantive separate-reviewer
-  task-spec-supplement-independent-review, then explicit Owner
+  precise frozen plan SHA/revision via task-spec-supplement-stage. Perform
+  substantive task-spec-supplement-self-review as the actual developer with
+  cited sources and findings. Optional task-spec-supplement-independent-review
+  is available when risks demand a separate reviewer; never mandatory.
+  Then explicit Owner
   task-spec-supplement-approve with BOTH hashes. Use
   task-spec-supplement-withdraw for stale drafts. An approved addendum is separately visible in
   execution-contract and the human view, never rewrites the original

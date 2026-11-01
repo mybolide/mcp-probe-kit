@@ -1,6 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {taskSpecReviewQueue,type ReviewCandidate} from '../task-spec-review.js';
 import {taskReadability} from '../task-readability.js';
+import {makeIndependentReviewPacket,independentReviewPacketMarkdown}
+  from '../task-spec-review-packet.js';
 
 const requirements=[{id:'FR-011',title:'实际录音需求',acceptance:'保持有声片段'}];
 function candidate(id:string,status='ready',dependsOn:string[]=[],
@@ -26,6 +28,33 @@ describe('read-only prioritized frozen task specification review queue',()=>{
     expect(queue.totalCandidates).toBe(2);
     expect(queue.policy).toBe('review-draft-no-mutation');
   });
+  it('produces a stable complete independent review packet, with no fabricated approval',()=>{
+    const staged=candidate('F4-08');
+    staged.supplement={pending:{proposalHash:'staged-exact-digest',review:null,
+      proposal:{fields:{
+        purpose:'读取已经批准的真实采集需求',
+        workflow:['核对实际静音样本与设备日志，不制造通过结果'],
+        sourceRefs:['docs/product/requirements.md#FR-011'],
+      }},
+    }};
+    const unstaged=candidate('F4-09');
+    const queue=taskSpecReviewQueue([staged,unstaged],new Map());
+    const first=makeIndependentReviewPacket(queue);
+    const second=makeIndependentReviewPacket(queue);
+    expect(first).toEqual(second);
+    expect(first).toMatchObject({
+      policy:'read-only-not-owner-approved',count:1,
+      items:[{id:'F4-08',proposalHash:'staged-exact-digest',
+        original:{planHash:'approved-hash',acceptance:'保存片段；失败必须报告'}}],
+    });
+    expect(first.packetHash).toMatch(/^[0-9a-f]{64}$/);
+    const markdown=independentReviewPacketMarkdown(first);
+    expect(markdown).toContain('待审提案 Hash：staged-exact-digest');
+    expect(markdown).toContain('docs/product/requirements.md#FR-011');
+    expect(markdown).toContain('审核者填写（留空，不代表已审）');
+    expect(markdown).not.toContain('审核结论：通过');
+    expect(queue.items[0].supplement.status).toBe('awaiting_developer_review');
+  });
   it('shows only exact staged source-backed prose to human reviewers, never as approved or frozen',()=>{
     const item=candidate('F4-08');
     item.supplement={pending:{proposalHash:'review-this-exact-version',review:null,
@@ -38,7 +67,7 @@ describe('read-only prioritized frozen task specification review queue',()=>{
     }};
     const queue=taskSpecReviewQueue([item],new Map());
     expect(queue.items[0].supplement).toMatchObject({
-      status:'awaiting_independent_review',proposalHash:'review-this-exact-version',
+      status:'awaiting_developer_review',proposalHash:'review-this-exact-version',
       draftFields:{purpose:'与冻结验收相符的受控静音采集测试说明。'},
     });
     expect(queue.items[0].frozenFacts.acceptance).toBe('保存片段；失败必须报告');
@@ -54,9 +83,9 @@ describe('read-only prioritized frozen task specification review queue',()=>{
     rejected.supplement={pending:{proposalHash:'rejected-hash',review:{outcome:'rejected'}}};
     const queue=taskSpecReviewQueue([staged,reviewed,rejected],new Map());
     expect(queue.items.map(x=>x.supplement)).toEqual([
-      {status:'awaiting_independent_review',proposalHash:'exact-proposal-hash',draftFields:{}},
-      {status:'awaiting_owner_approval',proposalHash:'reviewed-hash',draftFields:{}},
-      {status:'review_rejected',proposalHash:'rejected-hash',draftFields:{}},
+      {status:'awaiting_developer_review',proposalHash:'exact-proposal-hash',draftFields:{},reviewHash:null,reviewMode:null},
+      {status:'awaiting_owner_approval',proposalHash:'reviewed-hash',draftFields:{},reviewHash:null,reviewMode:null},
+      {status:'review_rejected',proposalHash:'rejected-hash',draftFields:{},reviewHash:null,reviewMode:null},
     ]);
     expect(queue.items[0].approval.planHash).toBe('approved-hash');
     expect(queue.items[0].supplement.proposalHash).not.toBe(queue.items[0].approval.planHash);

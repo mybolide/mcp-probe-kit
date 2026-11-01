@@ -40,8 +40,10 @@ export function dispatchDevControl(
     case 'task-spec-supplement-review': return ledger.reviewTaskSpecSupplement(input.proposal);
     case 'task-spec-supplement-stage': return ledger.stageTaskSpecSupplement(
       input.proposal,String(input.actor??''));
+    case 'task-spec-supplement-self-review':return ledger.reviewStagedTaskSpecSupplement(
+      String(input.id),String(input.expectedProposalHash),input.review,'developer');
     case 'task-spec-supplement-independent-review':return ledger.reviewStagedTaskSpecSupplement(
-      String(input.id),String(input.expectedProposalHash),input.review);
+      String(input.id),String(input.expectedProposalHash),input.review,'independent');
     case 'task-spec-supplement-approve':return ledger.approveTaskSpecSupplement(input as never);
     case 'task-spec-supplement-withdraw':return ledger.withdrawTaskSpecSupplement(input as never);
     case "release-work-plan": return ledger.releaseWorkPlan(String(input.release ?? ledger.primaryRelease()));
