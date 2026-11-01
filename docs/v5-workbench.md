@@ -62,6 +62,14 @@ Hash 页面路由例子：`/#overview`、`/#requirements`、`/#architecture`、`
 
 实际浏览器验收可使用 \`node scripts/task-detail-browser-acceptance.mjs --url=http://127.0.0.1:38182/\`，直接读取 Neyna 正式项目任务，验证桌面和手机 Tab，逐字段比对原始 MCP 执行合同 JSON 并保存本机截图。界面改造不修改任务生命周期、任务规格或 Skill/AGENTS.md 自动生成规则。
 
+### 人类任务说明与信息完整性审计
+
+任务概览会优先使用已批准合同中的明确业务目的；如果没有该字段，则尝试从任务明确关联的需求 ID 读取项目原始 PRD 中的需求名称，**标记为关联需求参考**，不能冒充已批准的任务目的。验收目标只拆分明确的句子，不自行增加业务动作。关联需求的标题来自已有 Git PRD 的只读索引，不是新 Markdown 任务管理来源；SQLite 仍负责正式任务状态、合同、审批与 Gate。
+
+只读 GET \`/api/tasks/:id\` 新增 \`readability\`，包括来源、现有验收要点、关联需求说明，以及面向当前任务类型的规格缺项。任务管理顶部提供可展开的**任务说明完整性检查**，按需 GET \`/api/task-readability\` 对 SQLite 正式任务进行一次非破坏性盘点，按业务说明待补充、合同字段需评估、原始冻结来源缺失、现有说明较完整四类展示数量和代表性任务。该检查不产生或修改审批、任务冻结快照、Verified 或测试证据；不自动补写原始合同。
+
+如果只缺少业务表达，应从现有批准需求和合同整理可核对说明；如果确实缺少实施、正反测试或证据要求，则通过正常的规划变更与 Owner 审批补充，不能直接覆盖历史冻结版本，也不能追溯撤销已通过的真实验收。
+
 ## 安全与验收
 
 除单独的 `POST /api/settings`（仅本机同源、CSRF Token、白名单 env 字段及严格格式校验）外，所有 DevControl 治理 / 需求 / 任务 / 验证 API 仍然只读。原 Host/LAN、CSP nonce、No-store 和 Source of Truth 门禁均保留。敏感凭据从不写入 DevControl SQLite、History、Git 或浏览器回显。`/api/guide` 只返回支持动作的规范说明，没有数据库写入副作用；服务工作台协议版本提升后不允许复用旧前端进程。禁用对任务结论的猜测；缺真实 Gate 不会展示为 Verified。

@@ -38,8 +38,21 @@ describe('DevControl v5 browser guide and settings API',()=>{
       expect(data.contract).toEqual(ledger.frozenTaskContract(taskId));
       expect(data.contract.authoritative).toBe(false);
       expect(data.executionContract.allowedPaths).toEqual(['src/work.ts']);
+      expect(data.readability).toMatchObject({
+        policy:'read-only-advisory',status:'source_missing',authoritative:false,
+      });
+      const scan=await fetch(base+'/api/task-readability');
+      expect(scan.status).toBe(200);
+      const inventory=await scan.json() as Record<string,any>;
+      expect(inventory).toMatchObject({
+        policy:'read-only-advisory',total:1,
+        counts:{complete:0,needs_explanation:0,needs_contract_review:0,source_missing:1},
+        records:[{id:taskId,readability:'source_missing'}],
+      });
+      expect(ledger.get(taskId).status).toBe('ready');
       expect(JSON.stringify(data)).not.toContain('leaseToken');
       expect((await fetch(base+'/api/tasks/'+taskId,{method:'POST'})).status).toBe(405);
+      expect((await fetch(base+'/api/task-readability',{method:'POST'})).status).toBe(405);
       expect((await fetch(base+'/api/tasks/../../settings')).status).not.toBe(200);
     }finally{
       await new Promise<void>(resolve=>server.close(()=>resolve()));

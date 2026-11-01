@@ -29,6 +29,65 @@
     // separate whole-release plan is already frozen in the same project.
     return [...releaseNodes.filter(item=>!nativeIds.has(item.id)),...native];
   }
+  let readabilityLoaded=false,readabilityLoading=false;
+  async function loadTaskReadability(){
+    if(readabilityLoading)return;
+    readabilityLoading=true;
+    $("task-readability-count").textContent="检查中…";
+    try{
+      const data=await fetchJSON("/api/task-readability");
+      const counts=data.counts||{};
+      $("task-readability-count").textContent=
+        (data.total||0)+" 项 · 需补业务说明 "+(counts.needs_explanation||0)+
+        " · 待复审合同缺项 "+(counts.needs_contract_review||0)+
+        " · 来源缺失 "+(counts.source_missing||0);
+      const content=$("task-readability-results");content.replaceChildren();
+      const message=n("p","本次检查只评价文字和规格信息完整性，不影响原有任务的已完成或审批状态。","task-detail-muted");
+      content.append(message);
+      const groups=[
+        ["needs_explanation","只需补充业务说明"],
+        ["needs_contract_review","执行合同需评估缺项"],
+        ["source_missing","原始冻结来源待核对"],
+        ["complete","已有较完整说明"],
+      ];
+      for(const [key,title] of groups){
+        const matches=(data.records||[]).filter(record=>record.readability===key);
+        if(!matches.length)continue;
+        const details=n("details",null,"task-readability-group");
+        details.append(n("summary",title+" · "+matches.length+" 项"));
+        // Large projects must not render hundreds of offscreen cards.
+        for(const record of matches.slice(0,12)){
+          const button=n("button",record.id+" · "+record.title,"task-relation-link");
+          button.type="button";
+          button.addEventListener("click",()=>{
+            const row=taskRows().find(entry=>entry.item.id===record.id);
+            if(row)openPlanTask(row);
+          });
+          if(!taskRows().some(entry=>entry.item.id===record.id))button.disabled=true;
+          const item=n("div",null,"task-readability-row");
+          item.append(button,n("small",(record.missing||[]).length?
+            "需核对字段 "+record.missing.join("、"):"现有文字较完整"));
+          details.append(item);
+        }
+        if(matches.length>12)details.append(n("p",
+          "仅展示前 12 项。完整结果可通过只读任务完整性 API 查看。","task-detail-muted"));
+        content.append(details);
+      }
+      readabilityLoaded=true;
+    }catch(error){
+      $("task-readability-count").textContent="暂时无法检查";
+      $("task-readability-results").replaceChildren(n("p",
+        "读取说明完整性失败："+error.message));
+    }finally{readabilityLoading=false;}
+  }
+  function setupTaskReadability(){
+    if($("task-readability-audit").dataset.initialized)return;
+    $("task-readability-audit").dataset.initialized="true";
+    $("task-readability-audit").addEventListener("toggle",()=>{
+      if($("task-readability-audit").open&&!readabilityLoaded)loadTaskReadability();
+    });
+    $("task-readability-refresh").addEventListener("click",loadTaskReadability);
+  }
   function taskRows(){
     const nodes=taskPlanNodes();
     const real=Object.values(board?.columns||{}).flat().filter(t=>t.track==="product");
@@ -292,7 +351,7 @@
       if(Array.isArray(requirements)&&requirements.length)
         relationsHost.append(n("p","关联需求 "+requirements.join("、"),"task-detail-muted"));
     }
-    function renderOverview(contract,completion){
+    function renderOverview(contract,completion,readability){
       overviewHost.replaceChildren();
       const usable=contract&&contract.authoritative===true;
       const preview=contract&&!usable;
@@ -303,17 +362,26 @@
       if(preview)hero.append(n("p","以下为规划或台账摘要，不是已经批准的 AI 执行合同。"));
       overviewHost.append(hero);
       const text=value=>Array.isArray(value)?value.filter(Boolean).join("；"):String(value||"").trim();
-      const purpose=usable?text(contract.purpose||contract.description||contract.scenario):
+      const purpose=usable?text(contract.purpose||contract.description):
         row.pending?text(item.purpose||item.description||item.scenario):
         preview?text(contract.purpose||contract.description||contract.scenario):"";
       const scope=usable?text(contract.acceptance):
         row.pending?text(item.acceptance):preview?text(contract.acceptance):"";
       const requirements=Array.isArray(contract?.requirementIds)?
         contract.requirementIds:[];
-      section(overviewHost,"为什么做",purpose||
-        (requirements.length?"原始规格未单独记录背景；关联需求 "+requirements.join("、"):
-          "原始规格未单独记录背景，需核对需求来源。"));
-      section(overviewHost,"本次要完成什么",scope||"未记录明确验收目标，不根据标题猜测任务内容。");
+      const why=readability?.purpose;
+      const whyContent=why?.source==="frozen-task"?why.text:
+        why?.source==="requirement-reference"?
+          [why.text,"以上来自关联产品需求，并非独立批准的任务目的说明。"]:
+        purpose||(requirements.length?"未单独记录业务背景；关联需求 "+requirements.join("、"):
+          "原始规格未单独记录背景，需核对需求来源。");
+      section(overviewHost,"为什么做",whyContent);
+      const outcomes=readability?.outcomes;
+      section(overviewHost,"本次要完成什么",
+        outcomes?.length?outcomes:scope||"未记录明确验收目标，不根据标题猜测任务内容。");
+      if(readability?.requirementRefs?.length)
+        section(overviewHost,"对应的产品需求",readability.requirementRefs.map(ref=>
+          ref.id+" · "+ref.title));
       if(completion){
         section(overviewHost,"已经完成的工作",[completion.summary,completion.implementation]);
       }else section(overviewHost,"当前进展",row.pending?"规划待审批，尚未进入研发。":
@@ -332,6 +400,21 @@
         "下一步：检查依赖和审批状态，符合条件后领取任务。");
       if(usable)section(overviewHost,"怎样算完成",
         contract.acceptance||"合同未记录独立验收标准。");
+      if(readability){
+        const label={
+          complete:"说明与执行依据较完整",
+          needs_explanation:"执行依据已有，业务背景需要补充",
+          needs_contract_review:"部分正式执行或测试要求尚未写明",
+          source_missing:"未找到原始冻结合同",
+        }[readability.status]||"尚未评估";
+        section(overviewHost,"任务说明完整性",[
+          label,
+          ...(readability.issues?.length?[
+            "建议核对："+readability.issues.map(issue=>issue.label).join("、")]:[]),
+          readability.nextAction,
+          "这是只读提示，不改变任务批准、Verified 或 Gate 状态。",
+        ]);
+      }
       const action=n("button","查看完整执行合同和验收记录","task-overview-action");
       action.type="button";action.addEventListener("click",()=>{
         activateTab("contract");tabs.scrollIntoView({block:"nearest"});
@@ -465,7 +548,7 @@
         target.replaceChildren(n("h3",title),...values.map(value=>n("p",value)));
       };
       const note=data.completion;
-      renderOverview(safeSummary,note);
+      renderOverview(safeSummary,note,data.readability);
       renderRelationships(safeSummary);
       renderRawContract(data.executionContract,data.contract);
       fill(completionBox,"执行和完成说明",note?[
@@ -539,6 +622,7 @@
         return button;
   }
   function renderTaskList(){
+    setupTaskReadability();
     const rows=currentReleaseRows();
     for(const [name,key,choices] of [
       ["task-stage-filter","stageId",[...new Set(rows.map(r=>r.item.stageId||r.phase).filter(Boolean))].sort()],

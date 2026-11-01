@@ -72,6 +72,18 @@ try{
     await send('Page.navigate',{url:base+'#tasks'});
     await until('document.querySelectorAll("#task-rows .task-card").length>0',
       'real SQLite task cards');
+    const inventory=await(await fetch(new URL('api/task-readability',base))).json();
+    await evaluate('document.querySelector("#task-readability-audit").open=true');
+    await until('document.querySelector("#task-readability-count")?.textContent?.includes("项 ·")',
+      'read-only project task completeness audit');
+    const audited=await evaluate('document.querySelector("#task-readability-count").textContent');
+    if(!audited.includes(String(inventory.total)+' 项'))
+      throw Error('Task audit displayed a different project count: '+audited);
+    if(width===1400){
+      const auditShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+      writeFileSync(join(out,'task-readability-audit-1400.png'),
+        Buffer.from(auditShot.data,'base64'));
+    }
     await evaluate('document.querySelector("#task-rows .task-card").click()');
     await until('document.querySelector(".task-contract-raw pre")?.textContent?.length>30',
       'original execution-contract JSON');
@@ -92,6 +104,10 @@ try{
     if(!match)throw Error('Cannot identify real task from '+overview.title);
     const id=match[1];
     const actual=await(await fetch(new URL('api/tasks/'+id,base))).json();
+    const human=await evaluate('document.querySelector("#task-detail-overview").textContent');
+    if(!human.includes('任务说明完整性')||
+      actual.readability?.requirementRefs?.length&&!human.includes('对应的产品需求'))
+      throw Error('Task overview missing verified source or review guidance');
     await evaluate(`[...document.querySelectorAll('.task-detail-tabs [role=tab]')]
       .find(el=>el.textContent==='执行合同').click()`);
     const raw=await evaluate(`(()=>{
@@ -125,6 +141,7 @@ try{
         Buffer.from(picture.data,'base64'));
     }
     report.push({width,task:id,overview:overview.tab,contract:raw.active,
+      readability:actual.readability?.status,projectScan:inventory.counts,
       grouped:raw.grouped,exactExecutionContract:exact,sharedRelations:true,
       responsive:overview.drawerWidth<=width+1,screenshot:file});
   }

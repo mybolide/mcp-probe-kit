@@ -10,6 +10,7 @@ import { workbenchInsights } from './workbench-insights.js';
 import { projectDatabaseDesign } from './project-database-design.js';
 import { resolveWorkbenchLocale } from "./i18n.js";
 import { projectContext, readProjectDoc } from "./project-catalog.js";
+import { taskReadability } from "./task-readability.js";
 import { projectOnboarding } from "./project-onboarding.js";
 import { publicProjectSettings, saveProjectSettings } from "./project-settings.js";
 import { searchHistorySession, readHistorySession } from "../lib/history-session/index.js";
@@ -266,12 +267,29 @@ export function createDevControlBoardServer(
         const decision = ledger.getDecision(id).decision;
         const detailAudit = ledger.taskDetailAudit(id);
         const contract = ledger.frozenTaskContract(id);
+        const requirementRefs=projectContext(ledger.root).requirements.items;
+        const readability=taskReadability(contract,requirementRefs);
         // Exact read-only MCP execution contract for Owner inspection.
         // It contains task requirements, not lease credentials or Gate grants.
         const executionContract = ledger.executionContract(id);
-        respond(res, 200, JSON.stringify({ task, contract, executionContract,
+        respond(res, 200, JSON.stringify({ task, contract, executionContract, readability,
           evidence, completion, audit: events, decision, detailAudit }),
           nonce, "application/json; charset=utf-8");
+      } else if(route==="/api/task-readability"){
+        // Advisory-only scan of approved/historical SQLite tasks. Missing
+        // detail never alters Gate, approval, or existing Verified records.
+        const requirementRefs=projectContext(ledger.root).requirements.items;
+        const rows=ledger.list().filter(task=>task.status!=="cancelled");
+        const records=rows.map(task=>{
+          const summary=taskReadability(ledger.frozenTaskContract(task.id),requirementRefs);
+          return {id:task.id,title:task.title,status:task.status,
+            readability:summary.status,missing:summary.issues.map(issue=>issue.field)};
+        });
+        const counts={complete:0,needs_explanation:0,
+          needs_contract_review:0,source_missing:0};
+        for(const record of records)counts[record.readability]++;
+        respond(res,200,JSON.stringify({policy:"read-only-advisory",total:records.length,
+          counts,records}),nonce,"application/json; charset=utf-8");
       } else {
         respond(res, 404, "Not found");
       }

@@ -127,6 +127,12 @@
     <div class="task-section-heading"><strong>任务管理</strong><span>待审核任务不可领取</span></div>
     <div class="task-progress"><span id="task-progress-label">正在读取已验证的工作项进度…</span>
       <progress id="task-progress-bar" value="0" max="1" aria-label="正式版本已验证工作项进度"></progress></div>
+    <details class="panel task-readability-audit" id="task-readability-audit">
+      <summary>任务说明完整性检查 <span id="task-readability-count">按需查看 · 只读检查</span></summary>
+      <p class="sub">识别文字不清楚与正式合同缺项，两类问题分开处理。检查结果不改变审批、测试或 Verified 状态。</p>
+      <div id="task-readability-results" aria-live="polite">展开后读取当前项目任务说明。</div>
+      <button type="button" class="link" id="task-readability-refresh">重新检查</button>
+    </details>
     <div class="task-tabs" role="tablist" aria-label="任务状态">
       <button type="button" role="tab" data-tasktab="not_started" aria-selected="true" aria-controls="task-list-panel">未开始 <span id="count-not_started" class="count">0</span></button>
       <button type="button" role="tab" data-tasktab="in_progress" aria-selected="false" aria-controls="task-list-panel">开发中 / 待验证 <span id="count-in_progress" class="count">0</span></button>

@@ -69,7 +69,9 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('.settings-switch-row>.switch');
     expect(html).toContain('function renderTaskContract(contract)');
     expect(html).toContain('renderTaskContract(safeSummary)');
-    expect(html).toContain('function renderOverview(contract,completion)');
+    expect(html).toContain('function renderOverview(contract,completion,readability)');
+    expect(html).toContain('id="task-readability-audit"');
+    expect(html).toContain('fetchJSON("/api/task-readability")');
     expect(html).toContain('function renderRelationships(contract)');
     expect(html).toContain('renderRawContract(data.executionContract,data.contract)');
     expect(html).toContain('aria-label","任务阅读方式');
@@ -89,7 +91,7 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind==="bug")');
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind!=="bug")');
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
-    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(58_000);
+    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(60_000);
   });
 
   test('Hash navigation handles deep links and back/forward without reload', () => {
