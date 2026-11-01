@@ -2581,9 +2581,37 @@ describe("project ledger and legacy migration", () => {
     save("docs/architecture/overview.md",
       "# Overview\nWatch collector is a separate module owned by Core ingestion contracts.\n");
     commit("sync approved top-level architecture");
+    // A different Agent's uncommitted notes are not the reviewed design.
+    save("other-agent-notes.txt", "Unrelated WIP must be preserved");
+    save("README.md", "Unrelated tracked Owner WIP");
     expect(ledger!.syncArchitecture(outstanding[0].id, "reviewer").status).toBe("synced");
+    expect(fs.readFileSync(path.join(root,"other-agent-notes.txt"),"utf8"))
+      .toBe("Unrelated WIP must be preserved");
     expect(ledger!.validateFeature("watch-sensors").passed).toBe(true);
     expect(ledger!.getFeature("watch-sensors").status).toBe("specified");
+  });
+
+  it("refuses to synchronize a committed design with newer unstaged or staged edits to that document", () => {
+    save("docs/architecture/overview.md", "# Original reviewed architecture\n");
+    commit("architecture baseline");
+    ledger!.saveFeature({name:"reviewed-contract",description:"An additive verified architecture change",
+      layout:"flat",plan:{},draft:null});
+    ledger!.reviseFeature("reviewed-contract",{
+      requirements:"FR-1: Preserve exact source identity and provenance on published records.",
+      design:"A new storage boundary provides immutable provenance and a public consumer contract.",
+      tasks:"Review and implement storage boundaries and negative contract tests.",
+    },"developer",true,"docs/architecture/overview.md");
+    const item=ledger!.listWorkItems("architecture_change")[0];
+    save("docs/architecture/overview.md","# Committed architectural design\n");
+    commit("reviewed architecture change");
+    save("docs/architecture/overview.md","# Uncommitted extra change\n");
+    expect(()=>ledger!.syncArchitecture(item.id,"reviewer"))
+      .toThrow(/Commit architecture documents/i);
+    execFileSync("git",["add","--","docs/architecture/overview.md"],{cwd:root});
+    expect(()=>ledger!.syncArchitecture(item.id,"reviewer"))
+      .toThrow(/Commit architecture documents/i);
+    expect(ledger!.listWorkItems("architecture_change")[0].status)
+      .toBe("requires_top_level_sync");
   });
 
   it("isolates a new project's database inside its own Git root without adding tracked files", () => {

@@ -139,6 +139,90 @@ describe('layered local worktree-ignore protection',()=>{
 });
 
 describe('immutable multi-repository delivery commits',()=>{
+  it('claims and verifies root-only delivery while preserving another Agent child WIP byte-for-byte',()=>{
+    const {root,child}=fixture();
+    const original='other Agent live work, never touched by the root-only task\n';
+    fs.writeFileSync(path.join(child,'README.md'),original);
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-UNRELATED-WIP',title:'Independent root-only DAP safety patch',
+        track:'governance',allowedPaths:['docs/safe.md'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-UNRELATED-WIP','owner');
+      const lease=ledger.claim('AUDIT-UNRELATED-WIP','dap-developer');
+      expect(fs.readFileSync(path.join(child,'README.md'),'utf8')).toBe(original);
+      fs.mkdirSync(path.join(root,'docs'));
+      fs.writeFileSync(path.join(root,'docs/safe.md'),'Genuine root-only change');
+      cmd(root,'add','docs/safe.md');
+      cmd(root,'commit','-qm','root-only scope delivery');
+      const evidence='Real root-only test verified preserved child SHA and approved scoped source';
+      ledger.report('AUDIT-UNRELATED-WIP',lease.leaseToken,
+        {kind:'project_test',reference:evidence},true);
+      ledger.complete('AUDIT-UNRELATED-WIP',lease.leaseToken,{
+        summary:'Implemented approved root-only source',
+        implementation:'Committed docs/safe.md without modifying other Agent files',
+        verification:'Validated root-only file and child byte-identity',});
+      ledger.reviewOwnTask('AUDIT-UNRELATED-WIP',lease.leaseToken,{
+        outcome:'passed',evidenceReference:evidence,
+        findings:'Checked root-only delivery commit, source tests, exact child SHA preservation and negative child modification cases.',
+      });
+      ledger.reviewExternalGate('AUDIT-UNRELATED-WIP',lease.leaseToken,{
+        gate:'docs',runner:'dap-developer',reviewer:'dap-developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:evidence,
+        reviewNotes:'Reviewed actual root task tests and unchanged child WIP at the immutable delivery commit.',
+      });
+      expect(ledger.verify('AUDIT-UNRELATED-WIP',lease.leaseToken))
+        .toMatchObject({passed:true,files:['docs/safe.md']});
+      expect(fs.readFileSync(path.join(child,'README.md'),'utf8')).toBe(original);
+    }finally{ledger.close();}
+  });
+
+  it('rejects new child changes after a protected claim and staged child work at claim',()=>{
+    const {root,child}=fixture();
+    const original='unrelated existing uncommitted child work\n';
+    fs.writeFileSync(path.join(child,'README.md'),original);
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-CHILD-IMMUTABLE',title:'Preserve child SHA while editing root',
+        track:'governance',allowedPaths:['docs/approved.md'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-CHILD-IMMUTABLE','owner');
+      const lease=ledger.claim('AUDIT-CHILD-IMMUTABLE','developer');
+      fs.mkdirSync(path.join(root,'docs'));
+      fs.writeFileSync(path.join(root,'docs/approved.md'),'legitimate approved root change');
+      cmd(root,'add','docs/approved.md');cmd(root,'commit','-qm','approved root change');
+      fs.writeFileSync(path.join(child,'README.md'),'changed by an unrelated Agent\n');
+      expect(()=>ledger.complete('AUDIT-CHILD-IMMUTABLE',lease.leaseToken,{
+        summary:'Root change',implementation:'Scoped code committed',
+        verification:'Attempted validation with changed child WIP',
+      })).toThrow(/PROTECTED_CHILD_WORKTREE_CHANGED|child files differ/i);
+      fs.writeFileSync(path.join(child,'README.md'),original);
+      fs.writeFileSync(path.join(child,'untracked.txt'),'new unapproved WIP');
+      expect(()=>ledger.complete('AUDIT-CHILD-IMMUTABLE',lease.leaseToken,{
+        summary:'Root change',implementation:'Scoped code committed',
+        verification:'Attempted validation with new child untracked file',
+      })).toThrow(/PROTECTED_CHILD_WORKTREE_CHANGED|child files differ/i);
+    }finally{ledger.close();}
+  });
+
+  it('refuses staged unrelated child changes at task claim and ignores invalid uv cache git markers',()=>{
+    const {root,child}=fixture();
+    const cached=path.join(root,'.uv_cache','sdists-v9');
+    fs.mkdirSync(cached,{recursive:true});
+    fs.writeFileSync(path.join(cached,'.git'),'');
+    expect(discoverRepositories(root,['docs/approved.md']).map(r=>r.prefix))
+      .toEqual(['','apw-life','apw-life-app']);
+    fs.writeFileSync(path.join(child,'README.md'),'unrelated staged work');
+    cmd(child,'add','README.md');
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-NO-STAGED-CHILD',title:'Staged child changes are not protected',
+        track:'governance',allowedPaths:['docs/approved.md'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-NO-STAGED-CHILD','owner');
+      expect(()=>ledger.claim('AUDIT-NO-STAGED-CHILD','developer'))
+        .toThrow(/staged content|STAGED_WORKTREE/i);
+      expect(ledger.get('AUDIT-NO-STAGED-CHILD').status).toBe('ready');
+    }finally{ledger.close();}
+  });
+
   it('reviews exact root+child delivery after unrelated merge commits, without counting later files',()=>{
     const {root,child}=fixture();
     const ledger=new ProjectTaskLedger(root);

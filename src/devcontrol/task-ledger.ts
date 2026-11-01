@@ -2055,10 +2055,30 @@ export class ProjectTaskLedger {
     const snapshots=currentRevisions(discovered);
     if(snapshots[0]?.baseHead!==baseHead && snapshots.some(r=>r.prefix===''))
       fail("ROOT_BASE_CHANGED","Root Git HEAD changed while capturing task repositories");
+    // Unrelated child repositories may already contain another Agent's
+    // unstaged work. Freeze its exact bytes at claim instead of requiring the
+    // other Agent to stash/commit/reset. The same immutable child snapshots
+    // must be checked again during report, completion and verification.
+    const childSnapshots=snapshots.filter(repo=>!!repo.prefix).map(repo=>{
+      const files=preservedWorktreeSnapshot(path.join(this.root,repo.prefix),
+        paths,repo.prefix);
+      if(files.some(file=>paths.some(pattern=>pathAllowed(
+        repo.prefix+'/'+file.path,pattern))))
+        fail('CHILD_REPOSITORY_DIRTY',
+          'Uncommitted frozen task files in a child repository cannot be protected');
+      const snapshot=JSON.stringify(files);
+      return {prefix:repo.prefix,gitDir:repo.gitDir,snapshot,
+        digest:createHash('sha256').update(snapshot).digest('hex')};
+    });
     for(const revision of snapshots)
       this.db.prepare(`INSERT INTO dc_task_repository_baselines
         (task_id,prefix,git_dir,base_head,captured_at) VALUES(?,?,?,?,?)`)
         .run(id,revision.prefix,revision.gitDir,revision.baseHead,utc());
+    for(const item of childSnapshots)
+      this.db.prepare(`INSERT INTO dc_legacy_child_worktree_snapshots
+        (task_id,prefix,git_dir,snapshot_json,digest,captured_at)
+        VALUES(?,?,?,?,?,?)`).run(id,item.prefix,item.gitDir,
+        item.snapshot,item.digest,utc());
     return snapshots;
   }
 
@@ -2283,10 +2303,9 @@ export class ProjectTaskLedger {
     });
   }
 
-  /** A legacy Owner migration can protect exact out-of-scope child WIP.
-   * Everything else must be committed, and no staged, changed, or new
-   * unrelated file can be exempted at completion or verification time.
-   * Normal tasks and older migrations still require a clean child tree.
+  /** A claim or legacy Owner migration may preserve exact out-of-scope child
+   * WIP. No staged, changed or newly untracked file is exempt after claim;
+   * a clean child is also snapshotted so later dirty work cannot slip through.
    */
   private requireChildReposClean(revisions:RepositoryRevision[],
     id?:string,task?:Row):void {
@@ -4431,7 +4450,11 @@ export class ProjectTaskLedger {
       if (!base || !run(this.root, "git", ["merge-base", "--is-ancestor", base, head]).passed) {
         fail("ARCHITECTURE_BASE_MISSING", "Architecture change requires original Git base");
       }
-      if (git(this.root, ["status", "--porcelain"])) {
+      // Other Agents' existing WIP is not the architecture artifact. Inspect
+      // the exact document in BOTH index and worktree; a staged or unstaged
+      // change of the document still blocks sync even if HEAD was updated.
+      if (git(this.root, ["status", "--porcelain", "--",
+        String(row.top_level_document)])) {
         fail("DIRTY_WORKTREE", "Commit architecture documents before synchronizing");
       }
       if (!changedFiles(this.root, base).includes(String(row.top_level_document))) {
@@ -5316,7 +5339,7 @@ export class ProjectTaskLedger {
       // A child index may contain unrelated WIP at claim time. Unlike the
       // single-root legacy snapshot, it cannot safely be exempted without a
       // per-repository signed manifest, so stop instead of silently trusting it.
-      this.requireChildReposClean(claimedRepositories);
+      this.requireChildReposClean(claimedRepositories,id,task);
       this.recordLocalDeveloper(id,"claimed");
       this.db.prepare(`
         INSERT OR REPLACE INTO dc_leases(singleton,task_id,agent,token,base_head,expires_at)
