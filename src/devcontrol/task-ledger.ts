@@ -41,6 +41,10 @@ import { discoverRepositories, currentRevisions, updateRevisions, stagedChanges,
   committedChanges, revisionDigest, assertRepositoryTopology, assertDeliveryStillPresent,
   type RepositoryRevision } from './repository-audit.js';
 import { auditedUntrackedFiles } from './worktree-ignore.js';
+import {proposalHash as supplementHash, reviewHash as supplementReviewHash,
+  validateProposal as validateTaskSupplement,validateReview as validateSupplementReview,
+  type TaskSpecSupplementProposal,type TaskSpecSupplementReview,
+} from './task-spec-supplement.js';
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -408,6 +412,21 @@ export class ProjectTaskLedger {
         allowed_paths TEXT NOT NULL, required_gates TEXT NOT NULL,
         spec_id TEXT, plan_id TEXT, approved_by TEXT,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL, verified_at TEXT
+      );
+      -- Additive clarification is append-only. It NEVER edits the original
+      -- frozen plan or dc_task_specs, and cannot add paths/Gates/acceptance.
+      CREATE TABLE IF NOT EXISTS dc_task_spec_supplement_proposals (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        proposal_hash TEXT NOT NULL,proposal_json TEXT NOT NULL,
+        proposed_by TEXT NOT NULL,proposed_at TEXT NOT NULL,
+        reviewed_json TEXT,review_hash TEXT,reviewed_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_spec_supplements (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        revision INTEGER NOT NULL,proposal_hash TEXT NOT NULL,
+        review_hash TEXT NOT NULL,proposal_json TEXT NOT NULL,
+        reviewed_json TEXT NOT NULL,approved_by TEXT NOT NULL,
+        approved_at TEXT NOT NULL,PRIMARY KEY(task_id,revision)
       );
       -- A workspace can contain independently committed, ignored Git roots.
       -- Bind every repository identity and its original base at claim time.
@@ -3202,6 +3221,164 @@ export class ProjectTaskLedger {
     });
   }
 
+  /** The original approved plan is immutable; approved clarifications only
+   * append and are separately identifiable to both human and AI readers.
+   */
+  taskSpecSupplement(id:string):Row {
+    this.requireTask(id);
+    const staged=this.db.prepare(
+      'SELECT * FROM dc_task_spec_supplement_proposals WHERE task_id=?').get(id);
+    const history=this.db.prepare(
+      'SELECT * FROM dc_task_spec_supplements WHERE task_id=? ORDER BY revision').all(id);
+    const convert=(r:Row|undefined)=>r?{
+      proposalHash:r.proposal_hash,reviewHash:r.review_hash??null,
+      proposal:JSON.parse(r.proposal_json),review:r.reviewed_json?
+        JSON.parse(r.reviewed_json):null,
+      proposedBy:r.proposed_by??null,approvedBy:r.approved_by??null,
+      revision:r.revision??null,
+    }:null;
+    return {taskId:id,pending:convert(staged),
+      approved:convert(history[history.length-1]),
+      history:history.map(r=>({revision:r.revision,proposalHash:r.proposal_hash,
+        reviewHash:r.review_hash,approvedBy:r.approved_by,approvedAt:r.approved_at}))};
+  }
+
+  private checkTaskSpecSupplement(proposal:TaskSpecSupplementProposal):Row {
+    const task=this.get(proposal.taskId);
+    const original=this.frozenTaskContract(proposal.taskId);
+    const history=this.db.prepare(
+      'SELECT proposal_json FROM dc_task_spec_supplements WHERE task_id=? ORDER BY revision')
+      .all(proposal.taskId);
+    const previous:Record<string,unknown>={};
+    for(const row of history)
+      Object.assign(previous,(JSON.parse(row.proposal_json) as TaskSpecSupplementProposal).fields);
+    const issues=validateTaskSupplement(proposal,{...original,...previous});
+    if(!original.authoritative||original.source?.frozen!==true)
+      issues.push('Original approved source must be frozen');
+    if(original.source?.planHash!==proposal.expectedPlanHash||
+      original.source?.revision!==proposal.expectedPlanRevision)
+      issues.push('Exact original approved hash/revision mismatch');
+    if(JSON.stringify(task.allowedPaths)!==JSON.stringify(original.allowedPaths)||
+      JSON.stringify(task.requiredGates)!==JSON.stringify(original.requiredGates))
+      issues.push('Effective task file scope or Gates drifted from the referenced frozen revision');
+    if(task.status!=='ready')issues.push('Only Ready tasks can receive new addenda');
+    if(this.db.prepare('SELECT task_id FROM dc_leases WHERE task_id=?').get(proposal.taskId))
+      issues.push('Existing task lease prevents amendment');
+    if(this.taskAwaitsScopeReview(proposal.taskId,task.release)||
+      this.taskAwaitsIncrementalReview(proposal.taskId,task.release))
+      issues.push('Pending scope or incremental work amendment must be resolved first');
+    return {passed:issues.length===0,issues,
+      proposalHash:supplementHash(proposal),source:original.source,
+      executableContractChanged:false};
+  }
+
+  reviewTaskSpecSupplement(proposal:TaskSpecSupplementProposal):Row {
+    return this.checkTaskSpecSupplement(proposal);
+  }
+
+  stageTaskSpecSupplement(proposal:TaskSpecSupplementProposal,actor:string):Row {
+    if(typeof actor!=='string'||actor.trim().length<2)
+      fail('ACTOR_REQUIRED','Real proposer label required');
+    return this.inTransaction(()=>{
+      const check=this.checkTaskSpecSupplement(proposal);
+      if(!check.passed)fail('TASK_SPEC_SUPPLEMENT_INVALID',check.issues.join('; '));
+      if(this.db.prepare('SELECT task_id FROM dc_task_spec_supplement_proposals WHERE task_id=?')
+        .get(proposal.taskId))
+        fail('TASK_SPEC_SUPPLEMENT_PENDING','Resolve existing proposal before another');
+      this.db.prepare('INSERT INTO dc_task_spec_supplement_proposals '+
+        '(task_id,proposal_hash,proposal_json,proposed_by,proposed_at) VALUES (?,?,?,?,?)')
+        .run(proposal.taskId,check.proposalHash,JSON.stringify(proposal),actor.trim(),utc());
+      this.audit(proposal.taskId,'task_spec_supplement_proposed',actor.trim(),{
+        proposalHash:check.proposalHash,fields:Object.keys(proposal.fields)});
+      return {taskId:proposal.taskId,status:'awaiting_independent_review',
+        proposalHash:check.proposalHash,executableContractChanged:false};
+    });
+  }
+
+  reviewStagedTaskSpecSupplement(id:string,expectedProposalHash:string,
+    review:TaskSpecSupplementReview):Row {
+    return this.inTransaction(()=>{
+      const row=this.db.prepare(
+        'SELECT * FROM dc_task_spec_supplement_proposals WHERE task_id=?').get(id);
+      if(!row||row.proposal_hash!==expectedProposalHash||row.reviewed_json)
+        fail('TASK_SPEC_SUPPLEMENT_REVIEW_REQUIRED','Exact unreviewed staged proposal required');
+      const proposal=JSON.parse(row.proposal_json) as TaskSpecSupplementProposal;
+      const check=this.checkTaskSpecSupplement(proposal);
+      if(!check.passed||check.proposalHash!==expectedProposalHash)
+        fail('STALE_TASK_SPEC_SUPPLEMENT','Original frozen contract changed');
+      const sources=proposal.fields.sourceRefs??this.frozenTaskContract(id).sourceRefs;
+      const issues=validateSupplementReview(review,row.proposed_by,
+        Array.isArray(sources)?sources:[]);
+      if(issues.length)fail('INDEPENDENT_REVIEW_REQUIRED',issues.join('; '));
+      const hash=supplementReviewHash(review,expectedProposalHash);
+      this.db.prepare('UPDATE dc_task_spec_supplement_proposals '+
+        'SET reviewed_json=?,review_hash=?,reviewed_at=? WHERE task_id=?')
+        .run(JSON.stringify(review),hash,utc(),id);
+      this.audit(id,'task_spec_supplement_reviewed',review.reviewer,{
+        proposalHash:expectedProposalHash,reviewHash:hash,outcome:review.outcome});
+      return {taskId:id,proposalHash:expectedProposalHash,reviewHash:hash,
+        status:review.outcome==='approved'?'awaiting_owner_approval':'rejected',
+        executableContractChanged:false};
+    });
+  }
+
+  approveTaskSpecSupplement(input:{id:string;expectedProposalHash:string;
+    expectedReviewHash:string;approvedBy:string;reason:string;
+    explicitAuthorization:boolean}):Row {
+    if(input?.explicitAuthorization!==true||
+      typeof input.approvedBy!=='string'||input.approvedBy.trim().length<2||
+      typeof input.reason!=='string'||input.reason.trim().length<20)
+      fail('OWNER_AUTHORIZATION_REQUIRED','Explicit Owner authorization and specific reason required');
+    return this.inTransaction(()=>{
+      const row=this.db.prepare(
+        'SELECT * FROM dc_task_spec_supplement_proposals WHERE task_id=?').get(input.id);
+      if(!row||row.proposal_hash!==input.expectedProposalHash||
+        !row.reviewed_json||row.review_hash!==input.expectedReviewHash)
+        fail('TASK_SPEC_SUPPLEMENT_REVIEW_REQUIRED','Exact proposal and review hashes required');
+      const review=JSON.parse(row.reviewed_json) as TaskSpecSupplementReview;
+      if(review.outcome!=='approved')fail('REVIEW_REJECTED','Review rejected the supplement');
+      if(supplementReviewHash(review,row.proposal_hash)!==row.review_hash)
+        fail('REVIEW_HASH_MISMATCH','Recorded independent review digest was changed');
+      const proposal=JSON.parse(row.proposal_json) as TaskSpecSupplementProposal;
+      const check=this.checkTaskSpecSupplement(proposal);
+      if(!check.passed||check.proposalHash!==row.proposal_hash)
+        fail('STALE_TASK_SPEC_SUPPLEMENT','Original task is no longer eligible');
+      const last=this.db.prepare(
+        'SELECT MAX(revision) AS n FROM dc_task_spec_supplements WHERE task_id=?').get(input.id);
+      const revision=Number(last?.n??0)+1;
+      this.db.prepare('INSERT INTO dc_task_spec_supplements '+
+        '(task_id,revision,proposal_hash,review_hash,proposal_json,reviewed_json,'+
+        'approved_by,approved_at) VALUES(?,?,?,?,?,?,?,?)').run(input.id,revision,
+          row.proposal_hash,row.review_hash,row.proposal_json,row.reviewed_json,
+          input.approvedBy.trim(),utc());
+      this.db.prepare('DELETE FROM dc_task_spec_supplement_proposals WHERE task_id=?')
+        .run(input.id);
+      this.audit(input.id,'task_spec_supplement_approved',input.approvedBy.trim(),{
+        proposalHash:row.proposal_hash,reviewHash:row.review_hash,revision,
+        reason:input.reason,originalFrozenPlanUnchanged:true});
+      return {taskId:input.id,status:'approved',revision,proposalHash:row.proposal_hash,
+        reviewHash:row.review_hash,frozenPlanUnchanged:true,scopeAndGatesUnchanged:true};
+    });
+  }
+
+  withdrawTaskSpecSupplement(input:{id:string;expectedProposalHash:string;
+    actor:string;reason:string}):Row {
+    if(typeof input?.actor!=='string'||input.actor.trim().length<2||
+      typeof input.reason!=='string'||input.reason.trim().length<20)
+      fail('WITHDRAWAL_REASON_REQUIRED','Named actor and concrete reason required');
+    return this.inTransaction(()=>{
+      const row=this.db.prepare(
+        'SELECT * FROM dc_task_spec_supplement_proposals WHERE task_id=?').get(input.id);
+      if(!row||row.proposal_hash!==input.expectedProposalHash)
+        fail('TASK_SPEC_SUPPLEMENT_NOT_FOUND','Exact pending proposal required');
+      this.db.prepare('DELETE FROM dc_task_spec_supplement_proposals WHERE task_id=?')
+        .run(input.id);
+      this.audit(input.id,'task_spec_supplement_withdrawn',input.actor.trim(),{
+        proposalHash:row.proposal_hash,reason:input.reason});
+      return {taskId:input.id,withdrawn:true,frozenPlanUnchanged:true};
+    });
+  }
+
   /** Resolve the approved snapshot revision that introduced this task.
    * Later plan revisions may add work but cannot redefine frozen ancestors.
    */
@@ -3284,6 +3461,7 @@ export class ProjectTaskLedger {
   /** A reviewable, frozen execution brief, not an invitation to redesign. */
   executionContract(id:string):Row {
     const task=this.get(id);
+    const approvedSupplement=this.taskSpecSupplement(id).approved;
 
     if(String(task.planId??"").startsWith("release-work:")) {
       const release=String(task.release);
@@ -3291,7 +3469,7 @@ export class ProjectTaskLedger {
       const item=frozen.frozen?.plan?.workItems?.find((entry:{id:string})=>entry.id===id);
       const frozenEligible=!!item&&this.isApprovedForExecution(this.requireTask(id));
       const eligible=frozenEligible;
-      return {taskId:id,eligible,
+      return {taskId:id,eligible,approvedSupplement,
         issues:!frozenEligible?["Whole-release task roster has not been frozen or source changed"]:[],
         profile:"atomic-work-item",release,planHash:frozen.frozenHash,
         spec:item??null,owner:task.owner,dependencies:task.dependsOn,
@@ -3309,7 +3487,7 @@ export class ProjectTaskLedger {
       if(approved.sourceDrift)issues.push("start_feature source revision changed after Owner approval");
       if(node?.openQuestions?.length)issues.push("Unresolved design choices in Feature task");
       if(task.status==="draft"||task.status==="cancelled")issues.push("Task is not approved for development");
-        return {taskId:id,eligible:issues.length===0,issues,
+        return {taskId:id,eligible:issues.length===0,issues,approvedSupplement,
         profile:"spec-depth-v3",planHash:approved.hash,featureName:name,
         featureRevision:snapshot?.sourceFeature?.revision??null,
         owner:task.owner??this.localDeveloper().name,assignment:task.ownerAssignment,
@@ -3331,7 +3509,7 @@ export class ProjectTaskLedger {
       if(!node?.scenario||!node.workflow?.length||!node.businessRules?.length)
         issues.push("Incomplete frozen trigger, workflow or business invariants");
     }
-    return {taskId:id,eligible:issues.length===0,issues,
+    return {taskId:id,eligible:issues.length===0,issues,approvedSupplement,
       profile:plan?.qualityProfile??null,planHash:frozen.frozenHash,
       owner:task.owner??this.localDeveloper().name,
       assignment:task.ownerAssignment,

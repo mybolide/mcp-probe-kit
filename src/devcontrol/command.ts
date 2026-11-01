@@ -36,6 +36,14 @@ export function dispatchDevControl(
   ledger: ProjectTaskLedger, operation: string, input: Record<string, any> = {},
 ): Record<string, unknown> {
   switch (operation) {
+    case 'task-spec-supplement-get': return ledger.taskSpecSupplement(String(input.id));
+    case 'task-spec-supplement-review': return ledger.reviewTaskSpecSupplement(input.proposal);
+    case 'task-spec-supplement-stage': return ledger.stageTaskSpecSupplement(
+      input.proposal,String(input.actor??''));
+    case 'task-spec-supplement-independent-review':return ledger.reviewStagedTaskSpecSupplement(
+      String(input.id),String(input.expectedProposalHash),input.review);
+    case 'task-spec-supplement-approve':return ledger.approveTaskSpecSupplement(input as never);
+    case 'task-spec-supplement-withdraw':return ledger.withdrawTaskSpecSupplement(input as never);
     case "release-work-plan": return ledger.releaseWorkPlan(String(input.release ?? ledger.primaryRelease()));
     case "release-work-review": return ledger.reviewReleaseWork(input.plan);
     case "release-work-stage": return ledger.stageReleaseWork(input.plan,String(input.actor??""),

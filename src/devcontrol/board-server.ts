@@ -268,12 +268,14 @@ export function createDevControlBoardServer(
         const decision = ledger.getDecision(id).decision;
         const detailAudit = ledger.taskDetailAudit(id);
         const contract = ledger.frozenTaskContract(id);
+        const supplement=ledger.taskSpecSupplement(id);
         const requirementRefs=projectContext(ledger.root).requirements.items;
-        const readability=taskReadability(contract,requirementRefs);
+        const readability=taskReadability(contract,requirementRefs,
+          supplement.approved?.proposal?.fields??{});
         // Exact read-only MCP execution contract for Owner inspection.
         // It contains task requirements, not lease credentials or Gate grants.
         const executionContract = ledger.executionContract(id);
-        respond(res, 200, JSON.stringify({ task, contract, executionContract, readability,
+        respond(res, 200, JSON.stringify({ task, contract, executionContract, supplement,readability,
           evidence, completion, audit: events, decision, detailAudit }),
           nonce, "application/json; charset=utf-8");
       } else if(route==="/api/task-readability"){
@@ -282,7 +284,9 @@ export function createDevControlBoardServer(
         const requirementRefs=projectContext(ledger.root).requirements.items;
         const rows=ledger.list().filter(task=>task.status!=="cancelled");
         const records=rows.map(task=>{
-          const summary=taskReadability(ledger.frozenTaskContract(task.id),requirementRefs);
+          const approved=ledger.taskSpecSupplement(task.id).approved;
+          const summary=taskReadability(ledger.frozenTaskContract(task.id),requirementRefs,
+            approved?.proposal?.fields??{});
           return {id:task.id,title:task.title,status:task.status,
             readability:summary.status,missing:summary.issues.map(issue=>issue.field)};
         });

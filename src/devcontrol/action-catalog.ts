@@ -15,6 +15,12 @@ export const V5_DEVC_ACTION_GROUPS = [
     actions: ['onboard', 'next', 'list', 'get', 'execution-contract', 'task-detail-audit'],
   },
   {
+    title: '冻结任务说明补充 / Reviewed additive task specification',
+    actions: ['task-spec-supplement-get','task-spec-supplement-review',
+      'task-spec-supplement-stage','task-spec-supplement-independent-review',
+      'task-spec-supplement-approve','task-spec-supplement-withdraw'],
+  },
+  {
     title: '版本计划 / Release plan approval',
     actions: ['release-plan', 'plan-review', 'plan-propose', 'plan-revise', 'plan-approve'],
   },

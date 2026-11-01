@@ -17,7 +17,7 @@ export interface ReadabilityIssue {
 export interface TaskReadability {
   status:'complete'|'needs_explanation'|'needs_contract_review'|'source_missing';
   authoritative:boolean;
-  purpose:{text:string;source:'frozen-task'|'requirement-reference'|'missing'};
+  purpose:{text:string;source:'frozen-task'|'approved-supplement'|'requirement-reference'|'missing'};
   outcomes:string[];
   requirementRefs:RequirementReference[];
   issues:ReadabilityIssue[];
@@ -44,7 +44,7 @@ function values(value:unknown):string[]{
  * Splitting only at unambiguous sentence boundaries preserves the semantics.
  */
 export function taskReadability(contract:Record<string,unknown>,
-  requirements:RequirementReference[]=[]):TaskReadability {
+  requirements:RequirementReference[]=[],approvedFields:Record<string,unknown>={}):TaskReadability {
   const authoritative=contract.authoritative===true;
   const ids=values(contract.requirementIds);
   const refs=ids.map(id=>{
@@ -53,9 +53,11 @@ export function taskReadability(contract:Record<string,unknown>,
       {id,title:'未找到对应的需求说明'};
   });
   // A trigger/scenario is not a reason for the task to exist.
-  const explicitPurpose=text(contract.purpose)||text(contract.description);
+  const approvedPurpose=text(approvedFields.purpose);
+  const explicitPurpose=text(contract.purpose)||text(contract.description)||approvedPurpose;
   const purpose:TaskReadability['purpose']=explicitPurpose?
-    {text:explicitPurpose,source:'frozen-task'}:
+    {text:explicitPurpose,source:approvedPurpose&&!text(contract.purpose)&&
+      !text(contract.description)?'approved-supplement':'frozen-task'}:
     refs.some(ref=>ref.title!=='未找到对应的需求说明')?
       {text:'对应产品需求：'+refs.filter(ref=>ref.title!=='未找到对应的需求说明')
         .map(ref=>ref.id+' '+ref.title).join('；'),source:'requirement-reference'}:
@@ -69,7 +71,8 @@ export function taskReadability(contract:Record<string,unknown>,
   const detailed=['development','integration','bugfix','testing'].includes(String(type));
   for(const field of ['acceptance','requirementIds','allowedPaths','requiredGates',
     ...(detailed?['scenario','workflow','testCases','negativeCases','sourceRefs']:[])]){
-    if(!has(contract[field]))issues.push({field,label:labels[field],severity:'contract'});
+    if(!has(contract[field])&&!has(approvedFields[field]))
+      issues.push({field,label:labels[field],severity:'contract'});
   }
   const contractGaps=issues.some(issue=>issue.severity==='contract');
   const status=!authoritative?'source_missing':

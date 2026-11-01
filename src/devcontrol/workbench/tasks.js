@@ -435,6 +435,8 @@
         contract.requirementIds:[];
       const why=readability?.purpose;
       const whyContent=why?.source==="frozen-task"?why.text:
+        why?.source==="approved-supplement"?
+          [why.text,"以上为通过独立审核及 Owner 授权的任务补充说明，不覆盖原冻结合同。"]:
         why?.source==="requirement-reference"?
           [why.text,"以上来自关联产品需求，并非独立批准的任务目的说明。"]:
         purpose||(requirements.length?"未单独记录业务背景；关联需求 "+requirements.join("、"):
@@ -615,6 +617,22 @@
       renderOverview(safeSummary,note,data.readability);
       renderRelationships(safeSummary);
       renderRawContract(data.executionContract,data.contract);
+      if(data.supplement?.approved){
+        const addendum=data.supplement.approved;
+        section(contractSections,"已批准的任务附加规格（原冻结合同不变）",[
+          "版本："+addendum.revision,
+          "补充提案 Hash："+addendum.proposalHash,
+          "独立审核 Hash："+addendum.reviewHash,
+          "补充内容："+JSON.stringify(addendum.proposal?.fields??{},null,2),
+        ]);
+      }
+      if(data.supplement?.pending){
+        section(contractSections,"待审核的任务补充（不生效）",[
+          "提案 Hash："+data.supplement.pending.proposalHash,
+          "当前状态："+(data.supplement.pending.review?.outcome||"待独立审核"),
+          "该补充尚未获得 Owner 授权，不能作为 AI 执行要求。",
+        ]);
+      }
       fill(completionBox,"执行和完成说明",note?[
         "完成总结："+note.summary,"实际交付："+note.implementation,
         "验证结果："+note.verification,"遗留工作："+(note.remaining||"无"),
