@@ -1488,7 +1488,7 @@ describe("project ledger and legacy migration", () => {
       expectedReviewHash:"f".repeat(64),expectedRevision:reviewed.revision,
       reason:"Owner approved this change for a later separate version planning pass.",
       explicitAuthorization:true,
-    })).toThrow(/Exact independent review hash/);
+    })).toThrow(/Exact substantive review hash/);
     const authorized=ledger!.decideIdea(candidate.id,{
       disposition:"adopt",approvedBy:"owner-audit-label",
       expectedReviewHash:reviewed.reviewHash,expectedRevision:reviewed.revision,
@@ -2268,7 +2268,7 @@ describe("project ledger and legacy migration", () => {
     expect(()=>ledger!.approveReleaseWorkIncremental({...approveArgs,
       explicitAuthorization:false})).toThrow(/Owner must explicitly approve/);
     expect(()=>ledger!.approveReleaseWorkIncremental({...approveArgs,
-      expectedReviewHash:"a".repeat(64)})).toThrow(/Exact independently reviewed/);
+      expectedReviewHash:"a".repeat(64)})).toThrow(/Exact reviewed amendment hashes/);
     const approvedIncrement=ledger!.approveReleaseWorkIncremental(approveArgs);
     expect(approvedIncrement).toMatchObject({revision:3,previousHash:amended.hash,
       added:["WORK-CORE-NEW"],blockedByNewPrerequisite:["WORK-103"]});
