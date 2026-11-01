@@ -52,7 +52,15 @@
           "新增工作待评审":item.readiness==="dependencies_verified"?
           "前置依赖已验证 · 仍需检查范围审批":item.readiness==="dependencies_unknown"?
           "依赖来源待核对":"前置任务尚未全部验证";
-        details.append(n("summary",item.id+" · "+item.title+" · "+readiness));
+        const progress=item.supplement?.status==="awaiting_independent_review"?
+          "补充提案已登记 · 待独立审核":
+          item.supplement?.status==="awaiting_owner_approval"?
+          "补充已复审 · 待 Owner 授权":
+          item.supplement?.status==="review_rejected"?
+          "补充复审未通过":
+          item.supplement?.status==="approved"?
+          "补充已批准":"补充尚未登记";
+        details.append(n("summary",item.id+" · "+item.title+" · "+progress+" · "+readiness));
         const add=(heading,content)=>{
           if(!content)return;
           const row=n("div",null,"task-spec-review-fact");
@@ -67,6 +75,9 @@
           "修订 "+(item.approval?.revision??"未记录"),
           "审批 Hash "+(item.approval?.planHash||"未记录"),
         ].join(" · "));
+        if(item.supplement?.proposalHash)
+          add("独立补充提案 Hash（不是冻结任务审批）",item.supplement.proposalHash);
+        add("补充审批状态",progress);
         add("前置任务",(item.dependencies||[])
           .map(ref=>ref.id+" "+ref.status).join("；")||"无前置依赖");
         add("允许修改文件",(item.frozenFacts?.allowedPaths||[]).join("；")||"未记录");

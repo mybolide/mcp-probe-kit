@@ -317,6 +317,7 @@ export function createDevControlBoardServer(
               'scope_amendment' as const:
               holds.get(String(task.id))?.pendingIncrementalReview?
                 'incremental_review' as const:null,
+            supplement:ledger.taskSpecSupplement(String(task.id)),
             contract,readability:taskReadability(contract,requirements),
           };
         });

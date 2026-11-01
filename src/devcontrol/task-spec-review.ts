@@ -11,6 +11,10 @@ export interface ReviewCandidate {
   dependencies?:string[];
   priority?:number|null;
   approvalHold?:'scope_amendment'|'incremental_review'|null;
+  supplement?:{
+    pending?:{proposalHash:string;review?:{outcome?:string}|null}|null;
+    approved?:{proposalHash:string}|null;
+  };
   contract:Record<string,unknown>;
   readability:TaskReadability;
 }
@@ -18,6 +22,11 @@ export interface ReviewItem {
   id:string;title:string;taskStatus:string;
   priority:number|null;
   approvalHold:'scope_amendment'|'incremental_review'|null;
+  supplement:{
+    status:'not_submitted'|'awaiting_independent_review'|
+      'awaiting_owner_approval'|'review_rejected'|'approved';
+    proposalHash:string|null;
+  };
   approval:{planId:string|null;revision:number|null;planHash:string|null};
   readiness:'dependencies_verified'|'dependencies_pending'|'dependencies_unknown';
   dependencies:Array<{id:string;status:string}>;
@@ -78,6 +87,15 @@ export function taskSpecReviewQueue(candidates:ReviewCandidate[],
       id:candidate.id,title:candidate.title,taskStatus:candidate.status,
       priority:safePriority(candidate.priority),
       approvalHold:candidate.approvalHold??null,
+      supplement:candidate.supplement?.pending?{
+        status:candidate.supplement.pending.review?.outcome==='rejected'?
+          'review_rejected' as const:
+          candidate.supplement.pending.review?.outcome==='approved'?
+            'awaiting_owner_approval' as const:'awaiting_independent_review' as const,
+        proposalHash:candidate.supplement.pending.proposalHash,
+      }:candidate.supplement?.approved?{
+        status:'approved' as const,proposalHash:candidate.supplement.approved.proposalHash,
+      }:{status:'not_submitted' as const,proposalHash:null},
       approval:{planId:source?.planId??null,revision:source?.revision??null,
         planHash:source?.planHash??null},
       readiness,dependencies,

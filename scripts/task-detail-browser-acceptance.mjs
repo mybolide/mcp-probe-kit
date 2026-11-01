@@ -88,6 +88,15 @@ try{
       selection.count!==queue.items.length||queue.items.length>12||
       !selection.visible.includes('本批 '+queue.items.length+' 项'))
       throw Error('Task spec review queue not grounded in read-only API: '+JSON.stringify({queue,selection}));
+    const pendingCount=queue.items.filter(item=>
+      item.supplement?.status==='awaiting_independent_review').length;
+    if(pendingCount){
+      const summaries=await evaluate('[...document.querySelectorAll(".task-spec-review-item summary")].map(x=>x.textContent)');
+      const visiblePending=summaries.filter(s=>s.includes('补充提案已登记 · 待独立审核')).length;
+      if(visiblePending!==pendingCount)
+        throw Error('Live staged proposal statuses differ from SQLite: '+
+          JSON.stringify({pendingCount,visiblePending}));
+    }
     if(width===1400){
       const auditShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
       writeFileSync(join(out,'task-readability-audit-1400.png'),
@@ -158,6 +167,7 @@ try{
     report.push({width,task:id,overview:overview.tab,contract:raw.active,
       readability:actual.readability?.status,projectScan:inventory.counts,
       specReviewCandidates:queue.totalCandidates,reviewBatchSize:queue.items.length,
+      stagedReviewCandidates:pendingCount,
       grouped:raw.grouped,exactExecutionContract:exact,sharedRelations:true,
       responsive:overview.drawerWidth<=width+1,screenshot:file});
   }

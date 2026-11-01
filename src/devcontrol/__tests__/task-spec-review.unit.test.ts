@@ -26,6 +26,22 @@ describe('read-only prioritized frozen task specification review queue',()=>{
     expect(queue.totalCandidates).toBe(2);
     expect(queue.policy).toBe('review-draft-no-mutation');
   });
+  it('separates frozen source, staged proposal and owner-authorized supplement status',()=>{
+    const staged=candidate('F4-08');
+    staged.supplement={pending:{proposalHash:'exact-proposal-hash',review:null}};
+    const reviewed=candidate('F4-09');
+    reviewed.supplement={pending:{proposalHash:'reviewed-hash',review:{outcome:'approved'}}};
+    const rejected=candidate('F4-27');
+    rejected.supplement={pending:{proposalHash:'rejected-hash',review:{outcome:'rejected'}}};
+    const queue=taskSpecReviewQueue([staged,reviewed,rejected],new Map());
+    expect(queue.items.map(x=>x.supplement)).toEqual([
+      {status:'awaiting_independent_review',proposalHash:'exact-proposal-hash'},
+      {status:'awaiting_owner_approval',proposalHash:'reviewed-hash'},
+      {status:'review_rejected',proposalHash:'rejected-hash'},
+    ]);
+    expect(queue.items[0].approval.planHash).toBe('approved-hash');
+    expect(queue.items[0].supplement.proposalHash).not.toBe(queue.items[0].approval.planHash);
+  });
   it('does not mistake verified dependencies for approval when an owner scope review is pending',()=>{
     const hold=candidate('F5-16','ready',['V-01']);
     hold.approvalHold='scope_amendment';
