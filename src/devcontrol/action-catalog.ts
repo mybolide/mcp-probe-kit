@@ -32,13 +32,13 @@ export const V5_DEVC_ACTION_GROUPS = [
   {
     title: '范围变更 / Reviewed scope amendments',
     actions: ['release-work-scope-review', 'release-work-scope-stage', 'release-work-scope-get',
-      'release-work-scope-independent-review', 'release-work-scope-approve',
+      'release-work-scope-self-review', 'release-work-scope-independent-review', 'release-work-scope-approve',
       'release-work-scope-withdraw', 'pause-for-scope'],
   },
   {
     title: '增量任务 / Reviewed incremental work',
     actions: ['release-work-incremental-review', 'release-work-incremental-stage',
-      'release-work-incremental-get', 'release-work-incremental-independent-review',
+      'release-work-incremental-get', 'release-work-incremental-self-review', 'release-work-incremental-independent-review',
       'release-work-incremental-approve', 'release-work-incremental-withdraw',
       'pause-for-reviewed-incremental'],
   },
@@ -59,11 +59,11 @@ export const V5_DEVC_ACTION_GROUPS = [
   },
   {
     title: 'Idea / Proposed change governance',
-    actions: ['idea-capture', 'idea-list', 'idea-get', 'idea-assess', 'idea-review', 'idea-decide'],
+    actions: ['idea-capture', 'idea-list', 'idea-get', 'idea-assess', 'idea-self-review', 'idea-review', 'idea-decide'],
   },
   {
     title: '工件 / Governed artifacts',
-    actions: ['artifact-get', 'artifact-check', 'artifact-stage', 'artifact-independent-review',
+    actions: ['artifact-get', 'artifact-check', 'artifact-stage', 'artifact-self-review', 'artifact-independent-review',
       'artifact-approve'],
   },
   {

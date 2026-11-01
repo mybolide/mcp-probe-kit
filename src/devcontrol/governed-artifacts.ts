@@ -15,7 +15,7 @@ export interface GovernedArtifactManifest {
 
 export interface GovernedArtifactReview {
   reviewer: string;
-  method: "independent-agent-pass";
+  method: "independent-agent-pass" | "developer-self-review";
   subjectHash: string;
   scopeAssessment: string;
   dependencyAssessment: string;
@@ -75,11 +75,15 @@ export function manifestSubjectHash(input: GovernedArtifactManifest,
 }
 
 export function reviewArtifactChange(review: GovernedArtifactReview,
-  proposedBy: string, subjectHash: string, refs: string[]): string[] {
+  proposedBy: string, subjectHash: string, refs: string[],
+  mode: 'developer' | 'independent' = 'independent'): string[] {
   const issues: string[] = [];
-  if (!review || review.method !== "independent-agent-pass" ||
-    !explanation(review.reviewer, 3) || review.reviewer === proposedBy)
-    issues.push("A different independent reviewer label is required");
+  if (!review || review.method !== (mode === 'developer' ?
+    'developer-self-review' : 'independent-agent-pass') ||
+    !explanation(review.reviewer, 3) ||
+    (mode === 'developer' ? review.reviewer !== proposedBy : review.reviewer === proposedBy))
+    issues.push(mode === 'developer' ? 'Developer review must use the proposer identity' :
+      'A different independent reviewer label is required');
   if (review?.subjectHash !== subjectHash)
     issues.push("Review must bind the exact proposed baseline/change hash");
   for (const field of ["scopeAssessment","dependencyAssessment","securityAndTestAssessment"] as const) {
@@ -88,7 +92,7 @@ export function reviewArtifactChange(review: GovernedArtifactReview,
   }
   if (!Array.isArray(review?.sourceRefs) ||
     !review.sourceRefs.some(ref => refs.includes(ref)))
-    issues.push("Independent review must cite at least one underlying proposal source");
+    issues.push("Review must cite at least one underlying proposal source");
   return issues;
 }
 

@@ -51,6 +51,10 @@ for(const [name,source] of guidance){
     !source.includes('task-spec-supplement-approve')||
     !source.includes('task-spec-supplement-withdraw'))
     errors.push(name+' omits the reviewed, Owner-authorized additive task specification contract');
+  if(!source.includes('release-work-scope-self-review')||
+    !source.includes('release-work-incremental-self-review')||
+    !source.includes('artifact-self-review')||!source.includes('idea-self-review'))
+    errors.push(name+' omits developer self-review for frozen changes and governed artifacts');
   if(/have a DIFFERENT reviewer perform review-submit|不同的独立 Reviewer.{0,18}review-submit|distinct Reviewer supplies/.test(source))
     errors.push(name+' still mandates an external Reviewer for every delivery');
 }

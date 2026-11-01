@@ -92,6 +92,10 @@ Hash 页面路由例子：`/#overview`、`/#requirements`、`/#architecture`、`
 
 SQLite \`dc_task_spec_supplement_proposals\` 只保存当前待审批记录，\`dc_task_spec_supplements\` 追加保存每次批准历史。原冻结任务快照保持原样，批准附加规格在 AI \`execution-contract.approvedSupplement\` 和人类执行合同的单独区域可见，且带提案、复审 Hash 和批准修订。正文说明会明确区分原始冻结内容和后来批准的补充，不能把补充冒充原合同。涉及验收、范围或 Gate 实质变化必须走原有正式 Release Amendment。
 
+### 重大冻结变更不默认引入第三名审核人
+
+正式范围变更、新增依赖任务和受控架构工件依次经过提案、开发者实质自审、Owner 精确 Hash 授权。分别使用 `release-work-scope-self-review`、`release-work-incremental-self-review`、`artifact-self-review`，审核内容必须覆盖原始来源、实际文件范围、前置依赖、权限安全和正反测试。普通想法评估也用 `idea-self-review`，不必额外找独立审核员。原来的独立审核动作保留为可选加强审核，但不再是所有任务的强制条件。没有 Owner 批准时绝不改变已冻结的正式合同；测试 Gate 未通过时绝不记为 Verified。
+
 ## 安全与验收
 
 除单独的 `POST /api/settings`（仅本机同源、CSRF Token、白名单 env 字段及严格格式校验）外，所有 DevControl 治理 / 需求 / 任务 / 验证 API 仍然只读。原 Host/LAN、CSP nonce、No-store 和 Source of Truth 门禁均保留。敏感凭据从不写入 DevControl SQLite、History、Git 或浏览器回显。`/api/guide` 只返回支持动作的规范说明，没有数据库写入副作用；服务工作台协议版本提升后不允许复用旧前端进程。禁用对任务结论的猜测；缺真实 Gate 不会展示为 Verified。

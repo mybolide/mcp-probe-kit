@@ -1157,7 +1157,7 @@ describe("project ledger and legacy migration", () => {
       originalBaseHead:originalBase,pausedHead:originalPartialHead,
       changedFiles:["services/core/internal/permission-bridge.txt"]});
     expect(()=>ledger!.claim("WORK-PERM","premature-agent"))
-      .toThrow(/Scope amendment.*awaits independent review/);
+      .toThrow(/Scope amendment.*awaits substantive developer self-review/);
     const review={reviewer:"independent-quality-agent",method:"independent-agent-pass" as const,
       subjectHash:pending.proposalHash,affectedTaskIds:["WORK-PERM"],
       scopeAssessment:"Only the specific AppDelegate Swift registration file is newly allowed and the original implementation file remains within the frozen scope.",
@@ -1950,8 +1950,8 @@ describe("project ledger and legacy migration", () => {
     expect(()=>ledger!.claim("F1","agent")).toThrow();
     const approved=ledger!.approveReleaseWork("V0.1",pending.hash);
     expect(approved.added).toEqual(items.map(item=>item.id));
-    // General frozen-scope amendments preserve completed work and old plan
-    // history. A proposer cannot self-review or self-approve by staging.
+    // Frozen-scope amendments preserve completed work and plan history.
+    // Staging never approves a proposal; developer review is substantive.
     const amendment={release:"V0.1",baseRevision:1,baseHash:approved.hash,
       changes:[{taskId:"WORK-102",addAllowedPaths:["services/core/go.mod",
         "services/core/internal/http_integration_test.go"]}],
@@ -1967,23 +1967,23 @@ describe("project ledger and legacy migration", () => {
       .toMatchObject({passed:false});
     expect(ledger!.reviewReleaseWorkScopeAmendment(amendment)).toMatchObject({passed:true});
     const stagedScope=ledger!.stageReleaseWorkScopeAmendment(amendment,"planning-agent");
-    expect(stagedScope).toMatchObject({status:"awaiting_independent_review",
+    expect(stagedScope).toMatchObject({status:"awaiting_review",
       executableScopeChanged:false,
       requiredAgentAction:{
         responsible:"host_development_agent",kind:"scope_amendment",
         status:"agent_review_required",
-        nextTool:"release-work-scope-independent-review",
+        nextTool:"release-work-scope-self-review",
         proposalHash:stagedScope.proposalHash,
         reviewHash:null,affectedTaskIds:["WORK-102"],
       }});
     expect(ledger!.releaseWorkScopeAmendment("V0.1")).toMatchObject({
       requiredAgentAction:{kind:"scope_amendment",
-        nextTool:"release-work-scope-independent-review"},
+        nextTool:"release-work-scope-self-review"},
     });
     expect(ledger!.next().pendingAgentActions).toContainEqual(
       expect.objectContaining({kind:"scope_amendment",status:"agent_review_required"}));
     expect(()=>ledger!.claim("WORK-102","coding-agent"))
-      .toThrow(/Scope amendment.*awaits independent review/);
+      .toThrow(/Scope amendment.*awaits substantive developer self-review/);
     expect(ledger!.next().blocked).toContainEqual(expect.objectContaining({
       id:"WORK-102",pendingScopeReview:true,
     }));
@@ -2035,14 +2035,14 @@ describe("project ledger and legacy migration", () => {
     expect(fs.readFileSync(path.join(root,"README.md"))).toEqual(ownedBytes);
     expect(ledger!.get("WORK-102").status).toBe("ready");
     expect(()=>ledger!.claim("WORK-102","coding-agent"))
-      .toThrow(/Scope amendment.*awaits independent review/);
+      .toThrow(/Scope amendment.*awaits substantive developer self-review/);
     expect(()=>ledger!.pauseForScopeAmendment("WORK-102",brokenToken,
       "Attempt to replay an already exhausted original task lease"))
       .toThrow(/Active task lease token required/);
     expect(git("rev-parse","HEAD")).not.toBe(beforePartial);
     expect(ledger!.get("WORK-102").allowedPaths).toEqual(["tests/contracts/**"]);
     expect(ledger!.releaseWorkPlan("V0.1").scopeAmendment?.status)
-      .toBe("awaiting_independent_review");
+      .toBe("awaiting_review");
     const amendReview={reviewer:"second-agent",method:"independent-agent-pass" as const,
       subjectHash:stagedScope.proposalHash,affectedTaskIds:["WORK-102"],
       scopeAssessment:"The extra files are necessary only for creating real Core integration evidence and do not change product acceptance.",
@@ -2053,7 +2053,8 @@ describe("project ledger and legacy migration", () => {
       {...amendReview,reviewer:"planning-agent"},stagedScope.proposalHash))
       .toThrow(/Distinct independent reviewer/);
     const reviewed=ledger!.reviewStagedReleaseWorkScopeAmendment("V0.1",
-      amendReview,stagedScope.proposalHash);
+      {...amendReview,reviewer:"planning-agent",method:"developer-self-review"},
+      stagedScope.proposalHash,'developer');
     expect(reviewed.status).toBe("reviewed");
     expect(reviewed.requiredAgentAction).toMatchObject({
       kind:"scope_amendment",status:"owner_authorization_required",
@@ -2114,7 +2115,7 @@ describe("project ledger and legacy migration", () => {
     // impossible ordering for legitimate in-scope partial commits.
     expect(ledger!.reviewReleaseWorkScopeAmendment(underway)).toMatchObject({passed:true});
     const ongoingScope=ledger!.stageReleaseWorkScopeAmendment(underway,"planner");
-    expect(ongoingScope).toMatchObject({status:"awaiting_independent_review",
+    expect(ongoingScope).toMatchObject({status:"awaiting_review",
       executableScopeChanged:false});
     expect(ledger!.get("WORK-101").allowedPaths).toEqual(["services/core/**"]);
     expect(()=>ledger!.approveReleaseWorkScopeAmendment({
@@ -2189,31 +2190,31 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.reviewReleaseWorkIncremental(increment)).toMatchObject({passed:true,
       affectedTaskIds:["WORK-CORE-NEW","WORK-103"]});
     let stagedIncrement=ledger!.stageReleaseWorkIncremental(increment,"incremental-planner");
-    expect(stagedIncrement).toMatchObject({status:"awaiting_independent_review",
+    expect(stagedIncrement).toMatchObject({status:"awaiting_review",
       executableTasksChanged:false,
       requiredAgentAction:{
         responsible:"host_development_agent",status:"agent_review_required",
-        nextTool:"release-work-incremental-independent-review",
+        nextTool:"release-work-incremental-self-review",
         kind:"incremental_work",reviewHash:null,
         affectedTaskIds:["WORK-CORE-NEW","WORK-103"],
         ownerAuthorizationRequired:true,executableTasksChanged:false,
       }});
-    expect(stagedIncrement.requiredAgentAction.action).toContain("不要等待 DevControl 自己进行审查");
+    expect(stagedIncrement.requiredAgentAction.action).toContain("不要等待第三方或 MCP 自行审核");
     expect(ledger!.releaseWorkIncrementalAmendment("V0.1")).toMatchObject({
-      status:"awaiting_independent_review",
+      status:"awaiting_review",
       requiredAgentAction:{responsible:"host_development_agent",
-        nextTool:"release-work-incremental-independent-review",
+        nextTool:"release-work-incremental-self-review",
         proposalHash:stagedIncrement.proposalHash},
     });
     expect(()=>ledger!.get("WORK-CORE-NEW")).toThrow();
     expect(()=>ledger!.claim("WORK-103","premature-qa"))
-      .toThrow(/awaits independent review and Owner hash approval/);
+      .toThrow(/awaits substantive developer review and Owner hash approval/);
     expect(ledger!.next()).toMatchObject({
       nextAgentAction:{responsible:"host_development_agent",
         kind:"incremental_work",proposalHash:stagedIncrement.proposalHash,
         status:"agent_review_required"},
       pendingAgentActions:[{kind:"incremental_work",
-        nextTool:"release-work-incremental-independent-review"}],
+        nextTool:"release-work-incremental-self-review"}],
     });
     expect(ledger!.next().blocked).toContainEqual(expect.objectContaining({
       id:"WORK-103",pendingIncrementalReview:true,
@@ -2247,7 +2248,8 @@ describe("project ledger and legacy migration", () => {
       {...incrementalReview,reviewer:"incremental-planner"},
       stagedIncrement.proposalHash)).toThrow(/distinct independent reviewer/i);
     const checkedIncrement=ledger!.reviewStagedReleaseWorkIncremental("V0.1",
-      incrementalReview,stagedIncrement.proposalHash);
+      {...incrementalReview,reviewer:"incremental-planner",method:"developer-self-review"},
+      stagedIncrement.proposalHash,'developer');
     expect(checkedIncrement.status).toBe("reviewed");
     expect(checkedIncrement.requiredAgentAction).toMatchObject({
       status:"owner_authorization_required",

@@ -200,7 +200,7 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | SQLite History | `history_session_bootstrap`、`history_session_checkpoint`、`history_session_validate`、`history_session_search`、`history_session_read` |
 | 可选跨项目 Memory | `search_memory`、`read_memory_asset`、`memorize_asset`、`update_memory_asset`、`delete_memory_asset`、`scan_and_extract_patterns` |
 
-**`devcontrol` 统一入口：92 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
+**`devcontrol` 统一入口：96 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
 
 | 流程领域 | 可用 `action` |
 |---|---|
@@ -209,18 +209,18 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | 项目与当前任务 / Project and task discovery (6) | `onboard`、`next`、`list`、`get`、`execution-contract`、`task-detail-audit` |
 | 版本计划 / Release plan approval (5) | `release-plan`、`plan-review`、`plan-propose`、`plan-revise`、`plan-approve` |
 | 正式工作树 / Frozen release work (4) | `release-work-plan`、`release-work-review`、`release-work-stage`、`release-work-approve` |
-| 范围变更 / Reviewed scope amendments (7) | `release-work-scope-review`、`release-work-scope-stage`、`release-work-scope-get`、`release-work-scope-independent-review`、`release-work-scope-approve`、`release-work-scope-withdraw`、`pause-for-scope` |
-| 增量任务 / Reviewed incremental work (7) | `release-work-incremental-review`、`release-work-incremental-stage`、`release-work-incremental-get`、`release-work-incremental-independent-review`、`release-work-incremental-approve`、`release-work-incremental-withdraw`、`pause-for-reviewed-incremental` |
+| 范围变更 / Reviewed scope amendments (8) | `release-work-scope-review`、`release-work-scope-stage`、`release-work-scope-get`、`release-work-scope-self-review`、`release-work-scope-independent-review`、`release-work-scope-approve`、`release-work-scope-withdraw`、`pause-for-scope` |
+| 增量任务 / Reviewed incremental work (8) | `release-work-incremental-review`、`release-work-incremental-stage`、`release-work-incremental-get`、`release-work-incremental-self-review`、`release-work-incremental-independent-review`、`release-work-incremental-approve`、`release-work-incremental-withdraw`、`pause-for-reviewed-incremental` |
 | Feature：需求 → 设计 → 任务 / Requirements to design to atomic tasks (14) | `features`、`feature-get`、`feature-create`、`feature-save`、`feature-validate`、`feature-export`、`feature-task-brief`、`feature-task-plan`、`feature-task-plans`、`feature-task-review`、`feature-task-stage`、`feature-task-propose`、`feature-task-second-review`、`feature-task-approve` |
 | 工作项和架构 / Work items and architecture (3) | `work-items`、`work-record`、`architecture-sync` |
 | Bug / Defect management (3) | `bug-get`、`bug-step-save`、`bug-task-link` |
-| Idea / Proposed change governance (6) | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-review`、`idea-decide` |
-| 工件 / Governed artifacts (5) | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-independent-review`、`artifact-approve` |
-| 领取、报告与验收 / Execution and evidence (18) | `claim`、`renew`、`recover-task`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
+| Idea / Proposed change governance (7) | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-self-review`、`idea-review`、`idea-decide` |
+| 工件 / Governed artifacts (6) | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-self-review`、`artifact-independent-review`、`artifact-approve` |
+| 领取、报告与验收 / Execution and evidence (19) | `claim`、`renew`、`recover-task`、`refresh-protected-worktree`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
 | 决策 / Decision records (2) | `decision-save`、`decision-get` |
 | 本地工具 / Local developer and hooks (3) | `local-developer`、`hook-status`、`hook-install` |
 
-以上分组中的数字仅用于阅读，不影响正式任务批准。DevControl 管理过程和证据，不运行 Python/Go/gRPC/Flutter 等项目业务测试；外部测试结论必须由 Agent 真实执行并独立复审记录。**原子任务只允许一个可独立验收结果**，宽泛目标必须先拆解。
+以上分组中的数字仅用于阅读，不影响正式任务批准。DevControl 管理过程和证据，不运行 Python/Go/gRPC/Flutter 等项目业务测试；外部测试结论必须由 Agent 真实执行并实质自审（独立复审可选）记录。**原子任务只允许一个可独立验收结果**，宽泛目标必须先拆解。
 
 ## GitNexus 代码图谱的项目初始化
 

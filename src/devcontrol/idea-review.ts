@@ -28,7 +28,7 @@ export const IDEA_REVIEW_DIMENSIONS:readonly IdeaReviewDimension[]=[
 ];
 export interface IdeaIndependentReview {
   reviewer:string;
-  method:"independent-agent-pass";
+  method:"independent-agent-pass"|"developer-self-review";
   subjectHash:string;
   checks:{dimension:IdeaReviewDimension;conclusion:string;taskIds:string[]}[];
 }
@@ -83,13 +83,16 @@ export function assessIdeaShape(
   return issues;
 }
 export function reviewIdeaShape(review:IdeaIndependentReview,assessor:string,
-  subjectHash:string,knownTasks:ReadonlySet<string>):string[]{
+  subjectHash:string,knownTasks:ReadonlySet<string>,
+  mode:'developer'|'independent'='independent'):string[]{
   const issues:string[]=[];
-  if(!review||review.method!=="independent-agent-pass"||
-    !sufficient(review.reviewer,2,120)||review.reviewer===assessor)
-    issues.push("separate independent Agent review label required");
+  if(!review||review.method!==(mode==='developer'?'developer-self-review':'independent-agent-pass')||
+    !sufficient(review.reviewer,2,120)||
+    (mode==='developer'?review.reviewer!==assessor:review.reviewer===assessor))
+    issues.push(mode==='developer'?"Developer idea review must use the actual assessor identity":
+      "separate independent Agent review label required");
   if(review?.subjectHash!==subjectHash)issues.push("stale idea impact assessment hash");
-  if(!Array.isArray(review?.checks))return [...issues,"four independent review checks required"];
+  if(!Array.isArray(review?.checks))return [...issues,"four substantive review checks required"];
   if(review.checks.length!==IDEA_REVIEW_DIMENSIONS.length)
     issues.push("exactly four separate review dimensions required");
   for(const dimension of IDEA_REVIEW_DIMENSIONS){

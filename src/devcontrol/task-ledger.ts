@@ -1712,10 +1712,11 @@ export class ProjectTaskLedger {
     });
   }
 
-  reviewIdea(id:string,review:IdeaIndependentReview,expectedRevision:number):Row {
+  reviewIdea(id:string,review:IdeaIndependentReview,expectedRevision:number,
+    mode:'developer'|'independent'='independent'):Row {
     return this.inTransaction(()=>{
       const row=this.ideaRow(id);
-      if(row.status!=="assessed")fail("IDEA_NOT_ASSESSED","Assess before independent review");
+      if(row.status!=="assessed")fail("IDEA_NOT_ASSESSED","Assess before substantive review");
       if(row.revision!==expectedRevision)fail("STALE_IDEA","Idea revision changed");
       const context=this.ideaContext(row.release);
       if(row.baseline_hash!==context.hash)
@@ -1726,7 +1727,7 @@ export class ProjectTaskLedger {
         baselineHash:row.baseline_hash,assessment});
       if(expected!==row.assessment_hash)
         fail("STALE_IDEA","Stored assessment was changed");
-      const issues=reviewIdeaShape(review,assessment.assessedBy,expected,context.tasks);
+      const issues=reviewIdeaShape(review,assessment.assessedBy,expected,context.tasks,mode);
       if(assessment.targetTaskId){
         const task=this.db.prepare("SELECT status,plan_id FROM dc_tasks WHERE id=?")
           .get(assessment.targetTaskId);
@@ -1736,7 +1737,7 @@ export class ProjectTaskLedger {
         if(task?.status!=="ready"&&!inScopeCurrentTask)
           issues.push("Insertion anchor changed; re-assess placement or use an authorized current task");
         if(review.checks?.some(check=>!check.taskIds?.includes(assessment.targetTaskId!)))
-          issues.push("Every independent dimension must consider the insertion anchor");
+          issues.push("Every review dimension must consider the insertion anchor");
       }
       if(issues.length)fail("IDEA_REVIEW_INVALID",issues.join("; "));
       const reviewHash=createHash("sha256").update(JSON.stringify(review)).digest("hex");
@@ -1745,7 +1746,7 @@ export class ProjectTaskLedger {
         review_hash=?,updated_at=? WHERE id=?`)
         .run(revision,JSON.stringify(review),reviewHash,utc(),id);
       this.appendIdeaRevision(id,revision,"reviewed",
-        {review,reviewHash,actor:review.reviewer});
+        {review,reviewHash,reviewMode:mode,actor:review.reviewer});
       return {...this.getIdea(id),executableTaskCreated:false};
     });
   }
@@ -1761,7 +1762,7 @@ export class ProjectTaskLedger {
       if(row.revision!==input.expectedRevision)
         fail("STALE_IDEA","Idea revision changed");
       if(row.review_hash!==input.expectedReviewHash)
-        fail("IDEA_REVIEW_MISMATCH","Exact independent review hash required");
+        fail("IDEA_REVIEW_MISMATCH","Exact substantive review hash required");
       if(input.explicitAuthorization!==true)
         fail("EXPLICIT_AUTHORIZATION_REQUIRED",
           "The Owner must explicitly authorize the reviewed disposition");
@@ -1915,13 +1916,13 @@ export class ProjectTaskLedger {
         JSON.stringify(manifest),actor.trim(),utc());
       this.audit(null,"governed_artifact_staged",actor,{id:manifest.id,
         baseRevision,baseHash,hash,files:manifest.files.map(file=>file.path)});
-      return {id:manifest.id,status:"awaiting_independent_review",proposalHash:hash,
+      return {id:manifest.id,status:"awaiting_review",proposalHash:hash,
         baselineChanged:false};
     });
   }
 
   independentlyReviewGovernedArtifact(id:string,review:GovernedArtifactReview,
-    expectedProposalHash:string):Row {
+    expectedProposalHash:string,mode:'developer'|'independent'='independent'):Row {
     return this.inTransaction(()=>{
       const row=this.db.prepare("SELECT * FROM dc_governed_artifact_proposals WHERE id=?").get(id);
       if(!row||row.proposal_hash!==expectedProposalHash)
@@ -1932,13 +1933,13 @@ export class ProjectTaskLedger {
         fail("STALE_ARTIFACT","Frozen artifact changed during review");
       const manifest=JSON.parse(row.manifest_json) as GovernedArtifactManifest;
       const issues=reviewArtifactChange(review,row.proposed_by,row.proposal_hash,
-        manifest.sourceRefs);
-      if(issues.length)fail("ARTIFACT_INDEPENDENT_REVIEW_REQUIRED",issues.join("; "));
+        manifest.sourceRefs,mode);
+      if(issues.length)fail("ARTIFACT_REVIEW_REQUIRED",issues.join("; "));
       const hash=createHash("sha256").update(JSON.stringify(review)).digest("hex");
       this.db.prepare(`UPDATE dc_governed_artifact_proposals
         SET review_json=?,review_hash=? WHERE id=?`).run(JSON.stringify(review),hash,id);
       this.audit(null,"governed_artifact_reviewed",review.reviewer,
-        {id,proposalHash:expectedProposalHash,reviewHash:hash});
+        {id,proposalHash:expectedProposalHash,reviewHash:hash,reviewMode:mode});
       return {id,status:"reviewed",proposalHash:expectedProposalHash,reviewHash:hash,
         baselineChanged:false};
     });
@@ -2486,7 +2487,7 @@ export class ProjectTaskLedger {
       proposal,proposedBy:row.proposed_by,
       review:row.reviewed_json?JSON.parse(row.reviewed_json):null,
       reviewHash:row.review_hash??null,
-      status:row.reviewed_json?"reviewed":"awaiting_independent_review",
+      status:row.reviewed_json?"reviewed":"awaiting_review",
       requiredAgentAction:makeReviewAgentAction({kind:"scope_amendment",release,
         proposalHash:row.proposal_hash,reviewHash:row.review_hash??null,
         affectedTaskIds:proposal.changes.map(change=>change.taskId)})};
@@ -2592,7 +2593,7 @@ export class ProjectTaskLedger {
       this.audit(null,"release_scope_amendment_proposed",actor.trim(),{
         release:input.release,proposalHash:review.subjectHash,taskIds:review.affectedTaskIds,
         baseHash:input.baseHash});
-      return {release:input.release,status:"awaiting_independent_review",
+      return {release:input.release,status:"awaiting_review",
         proposalHash:review.subjectHash,review,executableScopeChanged:false,
         requiredAgentAction:makeReviewAgentAction({kind:"scope_amendment",
           release:input.release,proposalHash:review.subjectHash,reviewHash:null,
@@ -2601,7 +2602,8 @@ export class ProjectTaskLedger {
   }
 
   reviewStagedReleaseWorkScopeAmendment(release:string,
-    review:ReleaseWorkAmendmentReview,expectedProposalHash:string):Row {
+    review:ReleaseWorkAmendmentReview,expectedProposalHash:string,
+    mode:'developer'|'independent'='independent'):Row {
     return this.inTransaction(()=>{
       const row=this.db.prepare("SELECT * FROM dc_release_work_amendments WHERE release=?").get(release);
       if(!row||row.proposal_hash!==expectedProposalHash)
@@ -2612,15 +2614,16 @@ export class ProjectTaskLedger {
       if(!current.passed||current.subjectHash!==row.proposal_hash)
         fail("STALE_AMENDMENT","Frozen plan or task state changed since the proposal");
       const issues=checkAmendmentReview(review,row.proposed_by,row.proposal_hash,
-        proposal.changes.map(c=>c.taskId));
-      if(!review.sourceRefs?.some(ref=>proposal.sourceRefs.includes(ref)))
-        issues.push("Independent reviewer must cite a source from the staged amendment");
-      if(issues.length)fail("INDEPENDENT_REVIEW_REQUIRED",issues.join("; "));
+        proposal.changes.map(c=>c.taskId),mode);
+      if(!review?.sourceRefs?.some(ref=>proposal.sourceRefs.includes(ref)))
+        issues.push("Reviewer must cite a source from the staged amendment");
+      if(issues.length)fail("SUBSTANTIVE_REVIEW_REQUIRED",issues.join("; "));
       const reviewHash=createHash("sha256").update(JSON.stringify(review)).digest("hex");
       this.db.prepare(`UPDATE dc_release_work_amendments SET reviewed_json=?,review_hash=?,
         reviewed_at=? WHERE release=?`).run(JSON.stringify(review),reviewHash,utc(),release);
       this.audit(null,"release_scope_amendment_reviewed",review.reviewer,{release,
-        proposalHash:row.proposal_hash,reviewHash,taskIds:proposal.changes.map(c=>c.taskId)});
+        proposalHash:row.proposal_hash,reviewHash,reviewMode:mode,
+        taskIds:proposal.changes.map(c=>c.taskId)});
       return {release,status:"reviewed",proposalHash:row.proposal_hash,
         reviewHash,executableScopeChanged:false,
         requiredAgentAction:makeReviewAgentAction({kind:"scope_amendment",release,
@@ -2642,7 +2645,7 @@ export class ProjectTaskLedger {
         .get(input.release);
       if(!row||row.proposal_hash!==input.expectedProposalHash||!row.reviewed_json||
         row.review_hash!==input.expectedReviewHash)
-        fail("AMENDMENT_REVIEW_REQUIRED","Exact staged proposal and independent review hashes required");
+        fail("AMENDMENT_REVIEW_REQUIRED","Exact staged proposal and substantive review hashes required");
       const proposal=JSON.parse(row.snapshot_json) as ReleaseWorkScopeAmendment;
       const review=this.reviewReleaseWorkScopeAmendment(proposal);
       if(!review.passed||review.subjectHash!==row.proposal_hash)
@@ -2694,7 +2697,7 @@ export class ProjectTaskLedger {
     return {release,proposalHash:row.proposal_hash,proposal,
       proposedBy:row.proposed_by,review:row.reviewed_json?JSON.parse(row.reviewed_json):null,
       reviewHash:row.review_hash??null,
-      status:row.reviewed_json?"reviewed":"awaiting_independent_review",
+      status:row.reviewed_json?"reviewed":"awaiting_review",
       requiredAgentAction:makeReviewAgentAction({kind:"incremental_work",release,
         proposalHash:row.proposal_hash,reviewHash:row.review_hash??null,
         affectedTaskIds:affected})};
@@ -2834,7 +2837,7 @@ export class ProjectTaskLedger {
         VALUES(?,?,?,?,?)`).run(input.release,review.subjectHash,JSON.stringify(input),actor.trim(),utc());
       this.audit(null,"release_incremental_proposed",actor.trim(),{
         release:input.release,proposalHash:review.subjectHash,affectedTaskIds:review.affectedTaskIds});
-      return {release:input.release,status:"awaiting_independent_review",
+      return {release:input.release,status:"awaiting_review",
         proposalHash:review.subjectHash,review,executableTasksChanged:false,
         requiredAgentAction:makeReviewAgentAction({kind:"incremental_work",
           release:input.release,proposalHash:review.subjectHash,reviewHash:null,
@@ -2843,7 +2846,7 @@ export class ProjectTaskLedger {
   }
 
   reviewStagedReleaseWorkIncremental(release:string,review:ReleaseWorkIncrementalReview,
-    expectedProposalHash:string):Row {
+    expectedProposalHash:string,mode:'developer'|'independent'='independent'):Row {
     return this.inTransaction(()=>{
       const row=this.db.prepare("SELECT * FROM dc_release_work_incrementals WHERE release=?")
         .get(release);
@@ -2854,13 +2857,13 @@ export class ProjectTaskLedger {
       if(!checked.passed||checked.subjectHash!==row.proposal_hash)
         fail("STALE_INCREMENTAL","Frozen release changed during independent review");
       const issues=checkIncrementalIndependentReview(review,row.proposed_by,row.proposal_hash,
-        checked.affectedTaskIds,input.sourceRefs);
-      if(issues.length)fail("INDEPENDENT_REVIEW_REQUIRED",issues.join("; "));
+        checked.affectedTaskIds,input.sourceRefs,mode);
+      if(issues.length)fail("SUBSTANTIVE_REVIEW_REQUIRED",issues.join("; "));
       const reviewHash=createHash("sha256").update(JSON.stringify(review)).digest("hex");
       this.db.prepare(`UPDATE dc_release_work_incrementals SET reviewed_json=?,review_hash=?,
         reviewed_at=? WHERE release=?`).run(JSON.stringify(review),reviewHash,utc(),release);
       this.audit(null,"release_incremental_reviewed",review.reviewer,{release,
-        proposalHash:row.proposal_hash,reviewHash});
+        proposalHash:row.proposal_hash,reviewHash,reviewMode:mode});
       return {release,status:"reviewed",proposalHash:row.proposal_hash,
         reviewHash,executableTasksChanged:false,
         requiredAgentAction:makeReviewAgentAction({kind:"incremental_work",release,
@@ -2881,7 +2884,7 @@ export class ProjectTaskLedger {
         .get(input.release);
       if(!pending||pending.proposal_hash!==input.expectedProposalHash||
         !pending.reviewed_json||pending.review_hash!==input.expectedReviewHash)
-        fail("INCREMENTAL_REVIEW_REQUIRED","Exact independently reviewed amendment hashes required");
+        fail("INCREMENTAL_REVIEW_REQUIRED","Exact reviewed amendment hashes required");
       const proposal=JSON.parse(pending.snapshot_json) as ReleaseWorkIncrementalAmendment;
       const checked=this.reviewReleaseWorkIncremental(proposal);
       if(!checked.passed||checked.subjectHash!==pending.proposal_hash)
@@ -5217,10 +5220,10 @@ export class ProjectTaskLedger {
       const pending=this.taskAwaitsScopeReview(id,task.release);
       if(task.status==="ready"&&pending)
         fail("SCOPE_AMENDMENT_PENDING",
-          "Scope amendment for this task awaits independent review and exact Owner approval; do not claim it");
+          "Scope amendment for this task awaits substantive developer self-review (independent review optional) and exact Owner approval; do not claim it");
       if(task.status==="ready"&&this.taskAwaitsIncrementalReview(id,task.release))
         fail("INCREMENTAL_REVIEW_PENDING",
-          "New prerequisite for this task awaits independent review and Owner hash approval; host development Agent must actively inspect the original code, arrange an actual independent reviewer, submit evidence through release-work-incremental-independent-review, then obtain Owner authorization. Do not wait for MCP to review.");
+          "New prerequisite for this task awaits substantive developer review and Owner hash approval; host development Agent must inspect the original code and submit real evidence through release-work-incremental-self-review (independent review optional), then obtain Owner authorization. Do not wait for MCP to review.");
       if (this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(id) &&
           (String(task.plan_id??"").startsWith("feature:") ||
             !!this.db.prepare("SELECT release FROM dc_release_plans WHERE release=?").get(task.release))) {

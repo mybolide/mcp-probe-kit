@@ -18,7 +18,7 @@ export interface ReleaseWorkScopeAmendment {
 
 export interface ReleaseWorkAmendmentReview {
   reviewer:string;
-  method:"independent-agent-pass";
+  method:"independent-agent-pass"|"developer-self-review";
   subjectHash:string;
   affectedTaskIds:string[];
   scopeAssessment:string;
@@ -67,22 +67,24 @@ export function checkAmendmentShape(input:ReleaseWorkScopeAmendment):string[] {
 }
 
 export function checkAmendmentReview(review:ReleaseWorkAmendmentReview,
-  proposer:string,subjectHash:string,affectedTaskIds:string[]):string[]{
+  proposer:string,subjectHash:string,affectedTaskIds:string[],
+  mode:'developer'|'independent'='independent'):string[]{
   const issues:string[]=[];
-  if(!review||review.method!=="independent-agent-pass"||
+  if(!review||review.method!==(mode==='developer'?'developer-self-review':'independent-agent-pass')||
     typeof review.reviewer!=="string"||review.reviewer.trim().length<3||
-    review.reviewer===proposer)
-    issues.push("Distinct independent reviewer label required");
-  if(review?.subjectHash!==subjectHash)issues.push("Independent review refers to a stale amendment");
+    (mode==='developer'?review.reviewer!==proposer:review.reviewer===proposer))
+    issues.push(mode==='developer'?"Developer review must use the actual proposer identity":
+      "Distinct independent reviewer label required");
+  if(review?.subjectHash!==subjectHash)issues.push("Review refers to a stale amendment");
   if(!Array.isArray(review?.affectedTaskIds)||
     review.affectedTaskIds.length!==affectedTaskIds.length||
     !affectedTaskIds.every(id=>review.affectedTaskIds.includes(id)))
-    issues.push("Independent review must consider every affected task");
+    issues.push("Review must consider every affected task");
   for(const field of ["scopeAssessment","dependencyAssessment","securityAndTestAssessment"] as const)
     if(typeof review?.[field]!=="string"||review[field].trim().length<40)
-      issues.push(field+" needs concrete independent reasoning");
+      issues.push(field+" needs concrete review reasoning");
   if(!Array.isArray(review?.sourceRefs)||!review.sourceRefs.length||
     review.sourceRefs.some(ref=>typeof ref!=="string"||ref.trim().length<5))
-    issues.push("Independent review must cite actual source references");
+    issues.push("Review must cite actual source references");
   return issues;
 }

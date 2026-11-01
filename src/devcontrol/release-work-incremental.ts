@@ -18,7 +18,7 @@ export interface ReleaseWorkIncrementalAmendment {
 
 export interface ReleaseWorkIncrementalReview {
   reviewer:string;
-  method:"independent-agent-pass";
+  method:"independent-agent-pass"|"developer-self-review";
   subjectHash:string;
   affectedTaskIds:string[];
   scopeAssessment:string;
@@ -54,21 +54,24 @@ export function checkIncrementalShape(input:ReleaseWorkIncrementalAmendment):str
 }
 
 export function checkIncrementalIndependentReview(review:ReleaseWorkIncrementalReview,
-  proposer:string,subjectHash:string,taskIds:string[],refs:string[]):string[] {
+  proposer:string,subjectHash:string,taskIds:string[],refs:string[],
+  mode:'developer'|'independent'='independent'):string[] {
   const issues:string[]=[];
-  if(!review||review.method!=="independent-agent-pass"||
-    !clean(review.reviewer,3,120)||review.reviewer===proposer)
-    issues.push("A distinct independent reviewer is required");
+  if(!review||review.method!==(mode==='developer'?'developer-self-review':'independent-agent-pass')||
+    !clean(review.reviewer,3,120)||
+    (mode==='developer'?review.reviewer!==proposer:review.reviewer===proposer))
+    issues.push(mode==='developer'?"Developer review must use the actual proposer identity":
+      "A distinct independent reviewer is required");
   if(review?.subjectHash!==subjectHash)
-    issues.push("Independent review hash does not match the staged proposal");
+    issues.push("Review hash does not match the staged proposal");
   if(!Array.isArray(review?.affectedTaskIds)||
     review.affectedTaskIds.length!==taskIds.length||
     new Set(review.affectedTaskIds).size!==taskIds.length||
     !taskIds.every(id=>review.affectedTaskIds.includes(id)))
-    issues.push("Independent review must cover each new and affected task");
+    issues.push("Review must cover each new and affected task");
   for(const key of ["scopeAssessment","dependencyAssessment","securityAndTestAssessment"] as const)
-    if(!clean(review?.[key],40))issues.push(key+" requires specific independent reasoning");
+    if(!clean(review?.[key],40))issues.push(key+" requires specific review reasoning");
   if(!Array.isArray(review?.sourceRefs)||!review.sourceRefs.some(ref=>refs.includes(ref)))
-    issues.push("Independent reviewer must cite a staged source reference");
+    issues.push("Review must cite a staged source reference");
   return issues;
 }

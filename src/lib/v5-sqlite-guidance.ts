@@ -129,6 +129,13 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    dependencies or original history and is not executable before approval.
    Withdraw stale proposals with task-spec-supplement-withdraw. Material
    scope or acceptance changes require the usual reviewed release amendment.
+   For frozen scope, incremental tasks or governed artifacts use real developer
+   self-review with sources and concrete safety, dependency and test findings:
+   release-work-scope-self-review, release-work-incremental-self-review or
+   artifact-self-review. Separate independent review remains optional.
+   For new ideas use idea-self-review after idea-assess; idea-review is available
+   only when a separate reviewer is actually used. Material changes still
+   need Owner approval of exact proposal/review hashes.
    Old leases can use preserveExistingWorktree:true on complete to capture
    read-only legacy snapshots, never reset/stash/claiming that work.
    The matching manifest is required again at defer-verification; verified
@@ -227,7 +234,8 @@ ${managedRevision}
 - **受保护文件恢复 Git HEAD**：已跟踪的保护文件若恢复为所在仓库 HEAD 原始字节，Owner 可使用 \`refresh-protected-worktree\`，提供任务 \`id\`、\`actor\`、\`ownerRecoveryKey\` 和具体 \`reason\`，追加只读审计刷新，再继续完成登记。旧快照保持不变；不允许 staged、软链、越界、未跟踪保护文件丢失及其他保护文件改动，不提供测试和 Gate 通过资格。
 - **本地 Git 忽略与精确交付**：每个独立仓库可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
 - **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再通过 \`task-spec-supplement-self-review\` 完成有来源的实质开发者自审（可选 \`task-spec-supplement-independent-review\`，不强制第二人），最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
-- **变更评估**：新想法先 \`idea-capture\` / \`idea-assess\` / \`idea-review\` / \`idea-decide\`，冻结范围、架构与新增依赖需独立复审并由 Owner 明确批准。
+- **冻结变更与架构评审**：不强制第三名审核人。范围变更使用 \`release-work-scope-self-review\`，新增任务使用 \`release-work-incremental-self-review\`，受控工件使用 \`artifact-self-review\`，并提交真实来源、范围、依赖和安全测试审查。独立复审按风险选用。涉及冻结范围或受控工件变更时，仍须 Owner 明确批准精确 proposalHash/reviewHash，未批准不得执行。
+- **变更评估**：新想法依次使用 \`idea-capture\` / \`idea-assess\` / \`idea-self-review\` / \`idea-decide\` 进行真实自审与决策，\`idea-review\` 保留为可选独立复审；不得擅自修改冻结范围、架构与依赖；重大改变由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
 - **会话结束**：\`history_session_checkpoint\` 记录用户原话、发现、决策、改动、真实测试、分支/租约、阻碍及下一步。保留用户未提交修改，真机/真实数据库 Gate 缺失就报告未通过。
 - MCP 工具不可见时可用本地已锁版本 \`probe exec devcontrol --stdin\` 或 \`probe devcontrol ...\`；v5 未发布，禁止自动退回 v4 npm 或发布 5.0.0。
@@ -298,6 +306,13 @@ ${managedRevision}
   execution-contract and the human view, never rewrites the original
   acceptance, allowedPaths, requiredGates or dependencies. Unapproved
   additions are not actionable; material changes use a reviewed amendment.
+- For frozen scope, incremental work or governed artifacts, the actual
+  developer performs substantive release-work-scope-self-review,
+  release-work-incremental-self-review or artifact-self-review with source-backed
+  findings. A separate independent reviewer is optional, not a universal gate.
+  For new ideas, use idea-self-review after idea-assess. Optional idea-review
+  records a real separate assessment. Material changes still require Owner
+  authorization of both exact hashes.
 - If protected tracked Owner WIP was restored to exact Git HEAD bytes, use
   Owner-key-authorized \`refresh-protected-worktree\` with task id, actor and
   concrete reason before completion. This only appends an audited snapshot

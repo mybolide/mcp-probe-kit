@@ -57,6 +57,8 @@ export function dispatchDevControl(
       input.proposal,String(input.actor??""));
     case "release-work-scope-get": return {
       release:String(input.release),proposal:ledger.releaseWorkScopeAmendment(String(input.release))};
+    case "release-work-scope-self-review": return ledger.reviewStagedReleaseWorkScopeAmendment(
+      String(input.release),input.review,String(input.expectedProposalHash),'developer');
     case "release-work-scope-independent-review": return ledger.reviewStagedReleaseWorkScopeAmendment(
       String(input.release),input.review,String(input.expectedProposalHash));
     case "release-work-scope-approve": return ledger.approveReleaseWorkScopeAmendment(input as never);
@@ -67,6 +69,8 @@ export function dispatchDevControl(
     case "release-work-incremental-get": return {
       release:String(input.release),
       proposal:ledger.releaseWorkIncrementalAmendment(String(input.release))};
+    case "release-work-incremental-self-review": return ledger.reviewStagedReleaseWorkIncremental(
+      String(input.release),input.review,String(input.expectedProposalHash),'developer');
     case "release-work-incremental-independent-review": return ledger.reviewStagedReleaseWorkIncremental(
       String(input.release),input.review,String(input.expectedProposalHash));
     case "release-work-incremental-approve": return ledger.approveReleaseWorkIncremental(input as never);
@@ -76,6 +80,8 @@ export function dispatchDevControl(
     case "artifact-check": return ledger.checkGovernedArtifacts();
     case "artifact-stage": return ledger.stageGovernedArtifact(input.manifest,
       Number(input.baseRevision),String(input.baseHash??""),String(input.actor??""));
+    case "artifact-self-review": return ledger.independentlyReviewGovernedArtifact(
+      String(input.id),input.review,String(input.expectedProposalHash),'developer');
     case "artifact-independent-review": return ledger.independentlyReviewGovernedArtifact(
       String(input.id),input.review,String(input.expectedProposalHash));
     case "artifact-approve": return ledger.approveGovernedArtifact(input as never);
@@ -160,6 +166,8 @@ export function dispatchDevControl(
     case "idea-get": return ledger.getIdea(String(input.id));
     case "idea-assess": return ledger.assessIdea(
       String(input.id),input.assessment,input.expectedRevision);
+    case "idea-self-review": return ledger.reviewIdea(
+      String(input.id),input.review,input.expectedRevision,'developer');
     case "idea-review": return ledger.reviewIdea(
       String(input.id),input.review,input.expectedRevision);
     case "idea-decide": return ledger.decideIdea(String(input.id),{

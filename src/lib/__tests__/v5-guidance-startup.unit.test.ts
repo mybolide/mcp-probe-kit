@@ -43,6 +43,10 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('task-spec-supplement-self-review');
     expect(skill).toContain('task-spec-supplement-independent-review');
     expect(skill).toContain('task-spec-supplement-approve');
+    expect(skill).toContain('release-work-scope-self-review');
+    expect(skill).toContain('release-work-incremental-self-review');
+    expect(skill).toContain('artifact-self-review');
+    expect(skill).toContain('idea-self-review');
     expect(skill).not.toContain('arrange `review-handoff` → independent');
     for (const action of all) {
       expect(doc).toContain('`' + action + '`');
@@ -69,6 +73,10 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(text).toContain('task-spec-supplement-self-review');
     expect(text).toContain('task-spec-supplement-independent-review');
     expect(text).toContain('task-spec-supplement-approve');
+    expect(text).toContain('release-work-scope-self-review');
+    expect(text).toContain('release-work-incremental-self-review');
+    expect(text).toContain('artifact-self-review');
+    expect(text).toContain('idea-self-review');
     expect(text).toMatch(/reviewMode=self|reviewMode:self/);
     expect(text).not.toContain('DIFFERENT reviewer perform review-submit');
     expect(text).not.toContain('**不同的独立 Reviewer**');
