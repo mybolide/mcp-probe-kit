@@ -89,7 +89,7 @@ export function discoverRepositories(root:string,allowedPaths:string[]):Reposito
   const ignoredGenerated=new Set([
     '.git','.neyna','.mcp-probe','.mcp-probe-kit','node_modules',
     '.dart_tool','.next','.build','build','dist','target','vendor',
-    '.venv','venv','coverage','.gradle','Pods',
+    '.venv','venv','.uv_cache','coverage','.gradle','Pods',
   ]);
   const pending:[string,number][]=[[workspace,0]];
   let visited=0;
