@@ -19,7 +19,7 @@ import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } fro
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
 import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
-import { checkManagedGuidanceCommit, isManagedGuidancePath, trustedCommittedGuidance } from "./managed-guidance-gate.js";
+import { checkManagedGuidanceCommit, isManagedGuidancePath, trustedCommittedGuidance, trustedUncommittedGuidance } from "./managed-guidance-gate.js";
 import { amendmentSubjectHash, checkAmendmentShape, checkAmendmentReview,
   type ReleaseWorkScopeAmendment, type ReleaseWorkAmendmentReview,
 } from "./release-work-amendment.js";
@@ -124,7 +124,7 @@ function preservedWorktreeSnapshot(root:string,
   if(paths.length>256)fail("WORKTREE_TOO_LARGE",
     "More than 256 uncommitted files; reconcile their provenance before deferring");
   const realRoot=fs.realpathSync(root);
-  return paths.map(item=>{
+  const entries=paths.map(item=>{
     if(!item.path||path.isAbsolute(item.path)||item.path.split("/").includes(".."))
       fail("INVALID_WORKTREE_PATH","Cannot protect non-project working files");
     const target=path.join(root,item.path);
@@ -138,6 +138,15 @@ function preservedWorktreeSnapshot(root:string,
     return {...item,size:meta.size,
       sha256:createHash("sha256").update(fs.readFileSync(target)).digest("hex")};
   });
+  // Only the tool's EXACT generator output is maintenance, not unrelated
+  // developer work. A forged marker, custom AGENTS user-rule change, or a
+  // modified Skill stays in the protected snapshot. Child repositories and
+  // task-scoped files never receive this exception.
+  if(prefix)return entries;
+  const trusted=new Set(trustedUncommittedGuidance(root,
+    entries.filter(entry=>!taskPaths.some(pattern=>pathAllowed(entry.path,pattern)))
+      .map(entry=>entry.path)));
+  return entries.filter(entry=>!trusted.has(entry.path));
 }
 
 /** An immutable task submission must retain its own diff after other tasks
@@ -4995,11 +5004,17 @@ export class ProjectTaskLedger {
       fail("DIRTY_MANIFEST_INVALID","Exact relative tracked paths and SHA-256 are required");
     // Staged or untracked files are NEVER exempted. The only exception is a
     // fully declared, byte-identical set of pre-existing unstaged tracked edits.
+    const trusted=new Set(trustedUncommittedGuidance(this.root,
+      ["AGENTS.md",".agents/skills/mcp-probe-kit/SKILL.md"]
+        .filter(file=>!(JSON.parse(task.allowed_paths) as string[])
+          .some(pattern=>pathAllowed(file,pattern)))));
     if(git(this.root,["diff","--cached","--name-only"])||
       auditedUntrackedFiles(this.root,file=>
-        (JSON.parse(task.allowed_paths) as string[]).some(p=>pathAllowed(file,p))).length)
+        (JSON.parse(task.allowed_paths) as string[]).some(p=>pathAllowed(file,p)))
+        .some(file=>!trusted.has(file)))
       fail("DIRTY_WORKTREE","Staged and untracked files must be committed before completion");
-    const actual=git(this.root,["diff","--name-only","-z"]).split("\0").filter(Boolean).sort();
+    const actual=git(this.root,["diff","--name-only","-z"]).split("\0")
+      .filter(file=>file&&!trusted.has(file)).sort();
     const names=manifest.map(entry=>entry.path).sort();
     if(JSON.stringify(actual)!==JSON.stringify(names))
       fail("DIRTY_MANIFEST_MISMATCH","Unstaged edits differ from the explicitly protected Owner manifest");
@@ -5007,12 +5022,16 @@ export class ProjectTaskLedger {
     // Only ordinary unstaged tracked file modifications are exemptible.
     // The generic git() wrapper trims output, which would remove the first
     // porcelain entry's leading index-space. Read the raw NUL stream instead.
-    const status=spawnSync("git",["status","--porcelain=v1","-z"],{
+    // Without -uall Git collapses an untracked Skill into "?? .agents/".
+    // The scope checker needs exact individual file identities to match
+    // only canonical generator bytes, not an uninspected directory.
+    const status=spawnSync("git",["status","--porcelain=v1","--untracked-files=all","-z"],{
       windowsHide: true, cwd:this.root,encoding:"utf8",timeout:12_000,
     });
     if(status.status!==0||typeof status.stdout!=="string")
       fail("GIT_ERROR","Cannot read Git index and worktree status");
-    const porcelain=status.stdout.split("\0").filter(Boolean);
+    const porcelain=status.stdout.split("\0").filter(line=>
+      line&&!trusted.has(line.slice(3)));
     if(porcelain.length!==actual.length||porcelain.some(line=>
       !line.startsWith(" M ")||!actual.includes(line.slice(3))))
       fail("DIRTY_WORKTREE","Only unchanged-index tracked file edits may be preserved");
@@ -5094,6 +5113,9 @@ export class ProjectTaskLedger {
   private unrelatedCompletionWorktree(task:Row,baseHead:string):
     ReturnType<typeof preservedWorktreeSnapshot> {
     const snapshot=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
+    if(snapshot.some(file=>isManagedGuidancePath(file.path)))
+      fail('MANAGED_GUIDANCE_INTEGRITY',
+        'A post-claim Skill or AGENTS change does not match the exact MCP generator; do not treat it as unrelated Owner WIP');
     const allowed=JSON.parse(task.allowed_paths) as string[];
     const committed=committedFilesBetween(this.root,baseHead,git(this.root,['rev-parse','HEAD']));
     if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))||

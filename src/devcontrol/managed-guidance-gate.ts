@@ -5,6 +5,8 @@
  * and the previous committed AGENTS.md are exempt from a task lease.
  */
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { previewManagedGuidanceSync } from "../lib/workflow-skill-installer.js";
 import { MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
 
@@ -16,6 +18,34 @@ function gitRead(root:string,args:string[]):{ok:boolean;text:string} {
     windowsHide: true, cwd:root,encoding:"utf8",timeout:10_000,maxBuffer:2_000_000,
   });
   return {ok:result.status===0&&!result.error,text:result.stdout??""};
+}
+
+/** Working-tree counterpart of the committed guidance gate.
+ * A bootstrapped Skill / AGENTS.md is maintenance performed by MCP, not
+ * developer source. Exempt ONLY exact current generator bytes derived from
+ * the committed user-owned AGENTS.md content. Never derive the expected
+ * user-owned text from the already modified worktree, which would silently
+ * approve arbitrary changes to custom instructions.
+ *
+ * This is a read-only check. Staged changes are still rejected by the
+ * original worktree/index checker before this function is reached.
+ */
+export function trustedUncommittedGuidance(root:string,files:readonly string[]):string[] {
+  const candidates=files.filter(isManagedGuidancePath);
+  if(!candidates.length)return [];
+  const committed=gitRead(root,["show","HEAD:AGENTS.md"]);
+  let generated:{skill:string;agents:string};
+  try{generated=previewManagedGuidanceSync(root,committed.ok?committed.text:null);}
+  catch{return [];}
+  return candidates.filter(file=>{
+    try {
+      const location=path.resolve(root,file);
+      const stat=fs.lstatSync(location);
+      if(!stat.isFile()||stat.isSymbolicLink())return false;
+      const expected=file==="AGENTS.md"?generated.agents:generated.skill;
+      return fs.readFileSync(location,"utf8")===expected;
+    }catch{return false;}
+  });
 }
 
 /** Only canonical generator output is exempt from a task's committed file

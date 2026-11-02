@@ -103,6 +103,12 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    Never rewrite SQLite task states or silently discard user files.
    Pre-existing unrelated tracked/untracked files at claim are protected by
    automatic SHA-256 snapshots, not by demanding that the user delete them.
+   MCP itself may regenerate AGENTS.md and its managed SKILL.md after a task
+   was claimed. Only bytes exactly matching the current MCP generator and
+   the committed user-owned AGENTS instructions are tool maintenance, not
+   post-claim foreign work. Never request a new lease, ask the user to delete
+   those canonical files, or blindly ignore the .agents directory. A staged
+   file, changed user rule or noncanonical Skill still fails the normal checks.
    If a protected tracked file has been restored to exact Git HEAD bytes,
    the Owner may call \`refresh-protected-worktree\` with id, actor,
    explicitAuthorization:true and concrete reason before a completion report.
@@ -281,6 +287,7 @@ ${managedRevision}
 - **质量与责任边界**：DevControl 只是项目管理工具，保存需求、架构、原子任务、依赖、进度和当前 AI 上报的测试及完成记录，不是测试或验收 Agent。当前研发 AI 自己完成设计、开发、测试、技术自审和逐项验收，不引入任何第三方 Agent。每项叶子任务只有一个独立可验收成果；正向、异常和恢复测试可以是同一任务的多条验收标准。前置任务必须已真实验收并记录 Verified，才能领取依赖任务；其他无依赖任务不应被全局阻塞。
 - **正式任务一次验收**：正式版本规划仍必须完成 plan-review、plan-propose 和精确 Hash 的 plan-approve；按冻结合同领取任务，当前 AI 负责真实开发、项目测试和技术自审。提交 Git 后通过 complete/report 保存测试证据，处于 in_review 时只需一次 verify，提交 acceptance 中的真实证据引用、具体检查结论、每项冻结 Gate 的证据和结论。DevControl 原子检查原始提交、全部测试条件、依赖和验收记录，只有通过才记为 Verified。旧 self-review/gate-review/reviewed-verify 仅为历史兼容，不再强制三次登记；无需额外 Agent，不新增逐项 Owner 审批。
 - **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；第一轮完成 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\` 并结束规划轮次。下一轮重读提案，使用 \`feature-task-second-review\` 单独记录覆盖、依赖、失败场景、文件范围和验收五项审查，再以精确 Hash \`feature-task-approve\` 确认。开发 Agent 可以自行做第二轮 Review，不强制另一名 Agent，也不逐项要求 Owner 批准；重大冻结范围变更仍须 Owner 明确授权。草稿不可领取。
+- **MCP 自动更新文件不阻断研发**：领取任务以后 MCP 可自动同步 AGENTS.md 和 .agents/skills/mcp-probe-kit/SKILL.md。只有内容完全符合正式生成器，而且 AGENTS.md 中用户原有规则没有变化时，这两份文件才属于 MCP 自身维护，不算作领取后新增的外部业务改动。不能放行被手工修改的 Skill、用户自定义 AGENTS 内容、已暂存内容或整个 .agents 目录。无须因此恢复租约、删除文件或重做验收。
 - **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新 Feature 叶子任务以 30–60 分钟为主，必须填写预计工时；1–2 小时需具体说明无法继续安全拆分的原因，超过 2 小时须拆分。新整版计划可采用 task-detail-v2 执行相同严格规则；旧已冻结计划不得直接重写。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
 - **真实验收 Gate**：docs、go_contract、flutter_test、ios_device_e2e 等只是产品测试条件标识，不是 MCP 测试执行器。开发 AI 必须实际运行或检查项目测试及原始输出，verify 的 acceptance.gates 必须逐项绑定准确 Git 交付和已登记测试报告；缺失或版本变化不能自动通过。
 - **延期验收与会话恢复**：真机或外部 Gate 不可用时使用 defer-verification 释放任务写入权，但不能标记通过。恢复后通过 resume-verification，补充实际测试报告，再用一次带 acceptance 的 verify 完成登记；其他无依赖任务继续开发，Git 证据、冻结 Gate 与 Verified 前置任务始终严格。
