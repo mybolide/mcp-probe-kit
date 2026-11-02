@@ -206,6 +206,8 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 
 **`devcontrol` 统一入口：97 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
 
+**独立 Git Worktree 开发（单根 Git 仓库）**：当前 AI 可通过普通 Git 命令创建独立工作树，在领取任务时把其路径作为 project-root。工作树各有自己的 Git 暂存区，但共享主仓库原有的同一份 DevControl SQLite。只有全部前置任务 Verified、不同未验收任务的冻结文件范围不重叠，才允许独立领取。测试记录与技术自审绑定执行任务的工作树，独立交付的准确 Git 提交必须先被 AI 集成进主仓库，才可把任务记为 Verified。DevControl 不运行测试、不替 AI 合并 Git，也不要求其他 Agent。含独立子 Git 仓库的组合项目暂不支持此模式；这里的共享 SQLite 仅限同一台机器，不等于跨电脑同步。
+
 | 流程领域 | 可用 `action` |
 |---|---|
 | 冻结任务说明补充 / Reviewed additive task specification (7) | `task-spec-supplement-get`、`task-spec-supplement-review`、`task-spec-supplement-stage`、`task-spec-supplement-self-review`、`task-spec-supplement-independent-review`、`task-spec-supplement-approve`、`task-spec-supplement-withdraw` |

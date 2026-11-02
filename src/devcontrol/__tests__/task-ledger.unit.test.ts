@@ -599,6 +599,77 @@ afterEach(() => {
 });
 
 describe("project ledger and legacy migration", () => {
+  it('shares one project ledger across registered Git worktrees without sharing writers or bypassing integration',()=>{
+    create({id:'NEYNA-200',title:'Original checkout scope',
+      allowedPaths:['tests/contracts/**']});
+    create({id:'NEYNA-201',title:'Independent linked checkout scope',
+      allowedPaths:['independent/**']});
+    create({id:'NEYNA-202',title:'Conflicting original scope',
+      allowedPaths:['tests/contracts/**']});
+    for(const id of ['NEYNA-200','NEYNA-201','NEYNA-202'])
+      ledger!.approve(id,'owner');
+    const linkedRoot=fs.mkdtempSync(path.join(os.tmpdir(),'probe-linked-'));
+    execFileSync('git',['worktree','add','--detach',linkedRoot,'HEAD'],{cwd:root});
+    let linked:ProjectTaskLedger|undefined;
+    try{
+      linked=new ProjectTaskLedger(linkedRoot);
+      expect(linked.projectRoot).toBe(fs.realpathSync(root));
+      expect(fs.realpathSync(linked.databasePath)).toBe(
+        fs.realpathSync(ledger!.databasePath));
+      const first=ledger!.claim('NEYNA-200','original-ai');
+      expect(()=>linked!.claim('NEYNA-202','parallel-ai'))
+        .toThrow(/overlapping/);
+      const second=linked.claim('NEYNA-201','linked-ai');
+      expect(()=>ledger!.report('NEYNA-201',second.leaseToken,
+        {kind:'test',reference:'Not produced in the original worktree'},true))
+        .toThrow(/original registered Git checkout/);
+      expect(ledger!.next().activeLease?.taskId).toBe('NEYNA-200');
+      expect(linked.next().activeLease?.taskId).toBe('NEYNA-201');
+      const independent=path.join(linkedRoot,'independent','feature.json');
+      fs.mkdirSync(path.dirname(independent),{recursive:true});
+      fs.writeFileSync(independent,'{"working":true}\n');
+      execFileSync('git',['add','independent/feature.json'],{cwd:linkedRoot});
+      expect(linked.checkStaged()).toMatchObject({
+        passed:true,taskId:'NEYNA-201',
+      });
+      execFileSync('git',['-c','user.name=Fixture','-c','user.email=test@example.invalid',
+        'commit','-qm','isolated atomic task commit'],{cwd:linkedRoot});
+      const committed=execFileSync('git',['rev-parse','HEAD'],{
+        cwd:linkedRoot,encoding:'utf8',
+      }).trim();
+      const ref='Actual isolated task test execution recorded by responsible AI';
+      linked.report('NEYNA-201',second.leaseToken,{kind:'test',reference:ref},true);
+      linked.complete('NEYNA-201',second.leaseToken,{
+        summary:'Only the approved linked-worktree outcome was delivered',
+        implementation:'Committed exact independent file in isolated checkout',
+        verification:'Development AI executed and inspected real project tests',
+      });
+      expect(linked.verify('NEYNA-201',second.leaseToken))
+        .toMatchObject({passed:false,reason:'WORKTREE_DELIVERY_NOT_INTEGRATED'});
+      // Preserve the ordinary writer's real lease; do not let a separate
+      // worktree alter it, then safely release its untouched checkout.
+      expect(ledger!.next().activeLease?.taskId).toBe('NEYNA-200');
+      expect(ledger!.release('NEYNA-200',first.leaseToken).released).toBe(true);
+      execFileSync('git',['merge','--ff-only',committed],{cwd:root});
+      linked.reviewOwnTask('NEYNA-201',second.leaseToken,{
+        outcome:'passed',evidenceReference:ref,
+        findings:'Responsible AI checked the original linked-worktree delivery and actual test output, then confirmed its exact commit is integrated in canonical Git.',
+      });
+      linked.reviewExternalGate('NEYNA-201',second.leaseToken,{
+        gate:'docs',runner:'linked-ai',reviewer:'linked-ai',reviewMode:'self',
+        outcome:'passed',evidenceReference:ref,
+        reviewNotes:'Developer checked task-scoped source, exact integrated commit and actual test evidence.',
+      });
+      expect(linked.verify('NEYNA-201',second.leaseToken).passed).toBe(true);
+      expect(ledger!.get('NEYNA-201').status).toBe('verified');
+      expect(ledger!.next().activeLease).toBeNull();
+    }finally{
+      linked?.close();
+      execFileSync('git',['worktree','remove','--force',linkedRoot],{cwd:root});
+      fs.rmSync(linkedRoot,{recursive:true,force:true});
+    }
+  });
+
   it('allows one responsible Agent to review its own actual tests without a second Agent',()=>{
     create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
     ledger!.approve('NEYNA-200','owner');

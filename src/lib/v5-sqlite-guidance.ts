@@ -134,6 +134,16 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    AI's technical review. They are NOT Verified until genuine acceptance is
    recorded. A failed review must reclaim the Git writer before coding.
    No extra Agent or Owner key is needed for normal non-overlapping work.
+   Registered linked Git worktrees share one canonical project SQLite ledger
+   while keeping separate Git indexes. The current development AI creates
+   and integrates worktrees using ordinary Git commands, passing the exact
+   linked checkout as project-root when claiming an independent Ready task.
+   Prerequisites must be Verified, unverified task scopes must not overlap,
+   and task evidence must stay bound to its original checkout. A linked
+   delivery MUST be integrated into canonical Git history before its task
+   can become Verified. DevControl never merges Git or tests code.
+   Root worktrees do not contain independent child Git repositories; those
+   multi-repository projects retain their stricter existing workflow.
    Only exceptional forensic physical-location audit correction needs the
    Owner-key-authorized relocate-repository-baselines operation.
    MCP-generated Skill and AGENTS.md changes are exempt only when their staged
@@ -245,6 +255,8 @@ ${skillRef}
 
 ${managedRevision}
 
+- **独立 Git Worktree 开发**：Git 正式注册的不同工作树拥有各自的 Git 暂存区，同时共享主仓库的同一份 DevControl SQLite 项目数据。当前 AI 使用普通 Git 创建、合并工作树；领取任务时把对应工作树路径传为 project-root。前置依赖仍必须 Verified，未验收任务的冻结文件范围不得重叠。任务报告、测试与技术自审绑定原工作树；独立工作树的准确提交被合并进主 Git 历史后，才允许记为 Verified。DevControl 不执行代码测试、Git 合并，也不引入第三方 Agent。独立子仓库组合暂不支持根 Worktree 并行。
+
 - **启动文档自检**：MCP 每次启动检查目标 Git 项目的 Skill、AGENTS.md 托管区；即使版本仍是 5.0.0，指导修订过期也必须同步。若启动时无法找到项目，首次调用显式传入正确的 \`project_root\`；不得写入 MCP 安装目录。Agent 每轮先阅读最新 Skill 与项目自定义规则，可用本地 \`probe status\` / \`probe install-agent --project-root /ABSOLUTE/GIT/PROJECT\` 核对。
 - **管理操作**：当前 24 个模型工具，唯一正式研发入口 \`devcontrol\` 提供 ${V5_DEVC_ACTIONS.length} 个 SQLite action，完整分组见 Skill 的 DevControl operation reference；不要将 action 当作独立 MCP 工具。
 - **必须先恢复**：新对话先 \`history_session_bootstrap\`（Git/Node22+ 项目唯一实时 History = SQLite \`hs_*\`），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
@@ -331,6 +343,15 @@ ${managedRevision}
   next.parkedReviews lists such work for the current development AI. After
   failed review, reclaim the single writer before editing new code; never
   demand an Owner key or another Agent for normal disjoint collaboration.
+- Registered linked Git worktrees keep separate Git indexes but share the
+  canonical main project's SQLite. The current development AI uses ordinary
+  Git to create worktrees and integrate exact commits; claim in that checkout
+  with project-root pointing to it. Existing atomic task prerequisites
+  must be Verified, and unverified tasks must never have overlapping scopes.
+  The original checkout owns its submitted test evidence and technical
+  review. An isolated delivery cannot be Verified before main Git contains
+  its exact commit. Multi-Git child repository projects require the existing
+  stricter workflow. DevControl runs neither Git merges nor tests.
 - DevControl is project management only, not a testing or acceptance Agent.
   The current development AI owns requirements analysis, architecture,
   implementation, real project tests and technical self-review. Never

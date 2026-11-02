@@ -11,6 +11,7 @@ import { randomUUID, createHash } from "node:crypto";
 import { timingSafeEqual } from "node:crypto";
 import { createRequire } from "node:module";
 import { ensureDatabaseIgnored, resolveProjectDatabase } from "./project-storage.js";
+import { resolveGitWorktreeContext } from './git-worktree-context.js';
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { parseParentChildManifest } from "../lib/parent-child-spec.js";
@@ -139,7 +140,6 @@ function committedFilesBetween(root: string, base: string, end: string,
   if (result.status!==0 || !Buffer.isBuffer(result.stdout)) {
     fail("GIT_ERROR","Cannot inspect frozen task Git revision");
   }
-
   return [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
 }
 
@@ -328,15 +328,20 @@ export class ProjectTaskLedger {
   root: string;
   readonly projectRoot: string;
   readonly databasePath: string;
+  private readonly linkedWorktree:boolean;
 
   constructor(root: string, dbPath?: string) {
     this.root = path.resolve(root);
-    this.projectRoot = this.root;
     if (!fs.existsSync(path.join(this.root, ".git"))) {
       fail("NOT_GIT_PROJECT", "DevControl requires a Git project root");
     }
-    this.databasePath = dbPath ?? resolveProjectDatabase(this.root);
-    ensureDatabaseIgnored(this.root, this.databasePath);
+    const gitContext=resolveGitWorktreeContext(this.root);
+    this.linkedWorktree=gitContext.isLinked;
+    // Keep legacy project-visible paths byte-for-byte unchanged. Only linked
+    // checkouts resolve their shared DB through the canonical main checkout.
+    this.projectRoot = this.linkedWorktree?gitContext.mainRoot:this.root;
+    this.databasePath = dbPath ?? resolveProjectDatabase(this.projectRoot);
+    ensureDatabaseIgnored(this.projectRoot, this.databasePath);
     fs.mkdirSync(path.dirname(this.databasePath), { recursive: true });
     const firstDatabase = !fs.existsSync(this.databasePath);
     if (Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10) < 22) {
@@ -2617,7 +2622,7 @@ export class ProjectTaskLedger {
   }
 
   checkStaged(): Row {
-    const active=this.db.prepare("SELECT * FROM dc_leases WHERE singleton=1").get();
+    const active=this.checkoutWriter();
     const task=active?this.requireTask(active.task_id):null;
     if(task)this.taskRepositories(task.id,task);
     const roots=task?discoverRepositories(this.root,JSON.parse(task.allowed_paths)):discoverRepositories(this.root,[]);
@@ -5220,6 +5225,45 @@ export class ProjectTaskLedger {
       return true;
     }catch{return false;}
   }
+  /** The current Git index belongs to exactly one writable task per
+   * checkout. Linked worktrees share the project SQLite, NOT its index.
+   */
+  private checkoutWriter():Row|undefined{
+    if(!this.linkedWorktree)
+      return this.db.prepare('SELECT * FROM dc_leases WHERE singleton=1').get();
+    return this.db.prepare(`SELECT l.* FROM dc_task_leases l
+      JOIN dc_tasks t ON t.id=l.task_id
+      WHERE l.worktree_path=? AND t.status IN ('in_progress','in_review')
+      ORDER BY l.expires_at DESC LIMIT 1`).get(fs.realpathSync(this.root));
+  }
+
+  /** Separate Git indexes cannot safely overlap an unverified task's
+   * approved file scope, even if they use different worktree branches.
+   */
+  private checkOtherCheckoutScopes(task:Row):void{
+    const scope=JSON.parse(task.allowed_paths) as string[];
+    const ownPath=this.linkedWorktree?fs.realpathSync(this.root):'';
+    const others=this.db.prepare(`SELECT l.task_id,l.worktree_path
+      FROM dc_task_leases l JOIN dc_tasks t ON t.id=l.task_id
+      WHERE l.task_id!=? AND t.status IN ('in_progress','in_review')`)
+      .all(task.id).filter(row=>row.worktree_path!==ownPath);
+    for(const other of others){
+      if(taskScopesOverlap(scope,JSON.parse(this.requireTask(String(other.task_id)).allowed_paths)))
+        fail('PARALLEL_SCOPE_CONFLICT',
+          'Unverified task '+String(other.task_id)+
+          ' owns overlapping files. Finish its real acceptance before claiming this task');
+    }
+    const legacy=this.db.prepare('SELECT task_id FROM dc_leases WHERE singleton=1').get();
+    if(this.linkedWorktree&&legacy&&legacy.task_id!==task.id&&
+      !others.some(r=>r.task_id===legacy.task_id)){
+      const old=this.requireTask(String(legacy.task_id));
+      if(['in_progress','in_review'].includes(old.status)&&
+        taskScopesOverlap(scope,JSON.parse(old.allowed_paths)))
+        fail('PARALLEL_SCOPE_CONFLICT',
+          'The original Git writer has overlapping unverified task scope');
+    }
+  }
+
   private isApprovedForExecution(task: Row): boolean {
     if(task.track==="product"){
       const pending=this.db.prepare("SELECT release FROM dc_release_work_proposals WHERE release=?")
@@ -5287,7 +5331,7 @@ export class ProjectTaskLedger {
 
   next(): Row {
     const tasks = this.list();
-    const active = this.db.prepare("SELECT task_id,agent,base_head,expires_at FROM dc_leases WHERE singleton=1").get();
+    const active = this.checkoutWriter();
     const activeLease = active && active.expires_at > Date.now()
       ? { taskId: active.task_id, agent: active.agent, expiresAt: active.expires_at } : null;
     // Review tasks retain their own lease but must not masquerade as current
@@ -5575,8 +5619,22 @@ export class ProjectTaskLedger {
         fail("GATE_REQUIRED", "Acceptance Gates must be defined before execution");
       }
       if (this.blockers(id).length) fail("TASK_BLOCKED", `Task ${id} depends on ${this.blockers(id).join(", ")}`);
-      const lease = this.db.prepare("SELECT * FROM dc_leases WHERE singleton=1").get();
+      this.checkOtherCheckoutScopes(task);
+      if(this.linkedWorktree){
+        // Multi-repo deliveries require an independent repository checkout
+        // vector. A root-only worktree cannot magically include child .git
+        // histories, so keep that case fail-closed pending full support.
+        const mainRepos=discoverRepositories(this.projectRoot,
+          JSON.parse(task.allowed_paths));
+        if(mainRepos.length!==1)fail('MULTI_REPO_WORKTREE_UNSUPPORTED',
+          'Use the canonical checkout for tasks touching a multi-Git workspace');
+      }
+      const lease = this.checkoutWriter();
       const parked=this.db.prepare('SELECT * FROM dc_task_leases WHERE task_id=?').get(id);
+      if(parked&&parked.worktree_path!==(this.linkedWorktree?fs.realpathSync(this.root):'')&&
+        ['in_progress','in_review'].includes(task.status))
+        fail('TASK_CHECKOUT_CONFLICT',
+          'A task with existing work must be resumed in its original checkout; never replace its Git delivery from another worktree');
       const restoringParkedWork=!!parked&&task.status==='in_progress'&&
         (!lease||lease.task_id!==id);
       if(parked&&(!lease||lease.task_id!==id)&&parked.expires_at>Date.now()&&
@@ -5678,17 +5736,18 @@ export class ProjectTaskLedger {
             writerLeaseRetainedForReview:true,originalTestEvidenceUnchanged:true,
           });
       }
-      this.db.prepare(`
+      if(!this.linkedWorktree)this.db.prepare(`
         INSERT OR REPLACE INTO dc_leases(singleton,task_id,agent,token,base_head,expires_at)
         VALUES(1,?,?,?,?,?)
       `).run(id, agent.trim(), token, claimBase, Date.now() + ttlSeconds * 1000);
       this.db.prepare(`INSERT INTO dc_task_leases
         (task_id,agent,token,base_head,expires_at,worktree_path)
-        VALUES(?,?,?,?,?,'')
+        VALUES(?,?,?,?,?,?)
         ON CONFLICT(task_id) DO UPDATE SET agent=excluded.agent,
         token=excluded.token,base_head=excluded.base_head,
-        expires_at=excluded.expires_at`)
-        .run(id,agent.trim(),token,claimBase,Date.now()+ttlSeconds*1000);
+        expires_at=excluded.expires_at,worktree_path=excluded.worktree_path`)
+        .run(id,agent.trim(),token,claimBase,Date.now()+ttlSeconds*1000,
+          this.linkedWorktree?fs.realpathSync(this.root):'');
       if(paused){
         this.db.prepare("UPDATE dc_scope_pauses SET resumed_at=? WHERE task_id=?")
           .run(utc(),id);
@@ -6204,7 +6263,7 @@ export class ProjectTaskLedger {
   }
 
   private requireGitWriter(id:string):void{
-    const writer=this.db.prepare('SELECT task_id FROM dc_leases WHERE singleton=1').get();
+    const writer=this.checkoutWriter();
     if(writer?.task_id!==id)fail('GIT_WRITER_REQUIRED',
       'This task retains a review lease while another task owns the shared Git checkout; reclaim the writer before submitting a new code revision');
   }
@@ -6215,6 +6274,10 @@ export class ProjectTaskLedger {
     if (!row || row.token !== token || row.expires_at <= Date.now()) {
       fail("LEASE_REQUIRED", "Active task lease token required");
     }
+    if(String(row.worktree_path??'')!==
+      (this.linkedWorktree?fs.realpathSync(this.root):''))
+      fail('LEASE_WORKTREE_MISMATCH',
+        'Manage the task in the original registered Git checkout that owns its committed evidence, not another worktree');
     return row!;
   }
 
@@ -6398,6 +6461,11 @@ export class ProjectTaskLedger {
     if (!note) {
       return { taskId: id, passed: false, reason: "Missing structured completion report" };
     }
+    if(this.linkedWorktree&&
+      !run(this.projectRoot,'git',['merge-base','--is-ancestor',
+        String(note.git_head),'HEAD']).passed)
+      return {taskId:id,passed:false,reason:'WORKTREE_DELIVERY_NOT_INTEGRATED',
+        detail:'The current AI must integrate this exact committed task delivery into the canonical Git branch before DevControl can record Verified. This does not pass project tests.'};
     const observed=this.observedTaskRepositories(id,task);
     const multiRepo=observed.some(repo=>!!repo.prefix);
     let repositories=observed;
