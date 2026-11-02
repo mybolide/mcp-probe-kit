@@ -17,7 +17,7 @@ function git(root:string,args:string[]):string {
 }
 
 export interface HookStatus {
-  state:"available"|"existing"|"managed"|"custom-path";
+  state:"available"|"existing"|"managed"|"custom-path"|"not-applicable";
   hookPath:string;
   installed:boolean;
   details:string;
@@ -74,7 +74,10 @@ export function installHook(root:string,entry:string,projectRoot=root):HookStatu
 export function workspaceHookStatus(root:string):HookStatus & {repositories:Record<string,HookStatus>} {
   const repos=discoverRepositories(root,[]);
   const statuses=Object.fromEntries(repos.map(repo=>[repo.prefix||'.',hookStatus(repo.root)]));
-  return {...statuses['.'],repositories:statuses};
+  return {...(statuses['.']??{
+    state:'not-applicable',hookPath:'',installed:false,
+    details:'MCP workspace has no root Git repository; hooks apply only to optional child Git repositories',
+  }),repositories:statuses};
 }
 export function installWorkspaceHooks(root:string,entry:string):
   HookStatus & {repositories:Record<string,HookStatus>} {

@@ -41,6 +41,8 @@ import { discoverRepositories, currentRevisions, updateRevisions, stagedChanges,
   committedChanges, revisionDigest, assertRepositoryTopology, assertDeliveryStillPresent,
   portableGitDir, type RepositoryRevision } from './repository-audit.js';
 import { auditedUntrackedFiles } from './worktree-ignore.js';
+import {captureFileEvidence,compareFileEvidence,
+  type FileEvidenceSnapshot} from './file-evidence.js';
 import {proposalHash as supplementHash, reviewHash as supplementReviewHash,
   validateProposal as validateTaskSupplement,validateReview as validateSupplementReview,
   type TaskSpecSupplementProposal,type TaskSpecSupplementReview,
@@ -349,17 +351,16 @@ export class ProjectTaskLedger {
   readonly projectRoot: string;
   readonly databasePath: string;
   private readonly linkedWorktree:boolean;
+  private readonly hasRootGit:boolean;
 
   constructor(root: string, dbPath?: string) {
     this.root = path.resolve(root);
-    if (!fs.existsSync(path.join(this.root, ".git"))) {
-      fail("NOT_GIT_PROJECT", "DevControl requires a Git project root");
-    }
-    const gitContext=resolveGitWorktreeContext(this.root);
-    this.linkedWorktree=gitContext.isLinked;
+    this.hasRootGit=fs.existsSync(path.join(this.root,'.git'));
+    const gitContext=this.hasRootGit?resolveGitWorktreeContext(this.root):null;
+    this.linkedWorktree=gitContext?.isLinked??false;
     // Keep legacy project-visible paths byte-for-byte unchanged. Only linked
     // checkouts resolve their shared DB through the canonical main checkout.
-    this.projectRoot = this.linkedWorktree?gitContext.mainRoot:this.root;
+    this.projectRoot=this.linkedWorktree?gitContext!.mainRoot:this.root;
     this.databasePath = dbPath ?? resolveProjectDatabase(this.projectRoot);
     ensureDatabaseIgnored(this.projectRoot, this.databasePath);
     fs.mkdirSync(path.dirname(this.databasePath), { recursive: true });
@@ -385,6 +386,232 @@ export class ProjectTaskLedger {
   }
 
   close(): void { this.db.close(); }
+
+  /** File snapshots are a distinct, Git-free delivery format, not fake commits. */
+  private fileDelivery(id:string):{
+    baseline:FileEvidenceSnapshot;submitted:FileEvidenceSnapshot|null;
+    revision:number|null;
+  }|null{
+    const row=this.db.prepare("SELECT baseline_json,submitted_json,completion_revision FROM dc_file_deliveries WHERE task_id=?").get(id);
+    return row?{
+      baseline:JSON.parse(String(row.baseline_json)) as FileEvidenceSnapshot,
+      submitted:row.submitted_json?
+        JSON.parse(String(row.submitted_json)) as FileEvidenceSnapshot:null,
+      revision:row.completion_revision===null?null:Number(row.completion_revision),
+    }:null;
+  }
+
+  private claimFileTask(id:string,agent:string,ttlSeconds:number,
+    resumedFrozenBase?:string):Row{
+    if(resumedFrozenBase)fail('FILE_DELIVERY_RESUME_UNSUPPORTED',
+      'File-backed task recovery cannot accept a Git baseline override');
+    const observed=captureFileEvidence(this.root);
+    return this.inTransaction(()=>{
+      const task=this.requireTask(id);
+      if(!['ready','in_progress'].includes(task.status))
+        fail('TASK_NOT_READY','Only a Ready or already developing file-backed task can be claimed');
+      if(!this.isApprovedForExecution(task)||!this.executionContract(id).eligible)
+        fail('EXECUTION_CONTRACT_BLOCKED','Task needs an approved frozen execution contract');
+      if(this.blockers(id).length)
+        fail('TASK_BLOCKED','Unverified prerequisites prevent claiming this task');
+      if(this.db.prepare('SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1').get(id))
+        fail('PARENT_NOT_EXECUTABLE','Only atomic leaf tasks can be claimed');
+      if(this.db.prepare('SELECT task_id FROM dc_verification_deferrals WHERE task_id=? AND resumed_at IS NULL').get(id))
+        fail('VERIFICATION_DEFERRED','Finish the deferred review before claiming again');
+      const previous=this.checkoutWriter();
+      if(previous?.task_id!==id&&previous?.expires_at>Date.now())
+        fail('LEASE_CONFLICT','Another task owns this file workspace');
+      if(previous?.task_id!==id&&previous&&
+          ['in_progress','in_review'].includes(this.requireTask(String(previous.task_id)).status))
+        fail('ABANDONED_TASK','Review or recover the previous task before switching the writer');
+      this.checkOtherCheckoutScopes(task);
+      const record=this.fileDelivery(id);
+      if(task.status==='in_progress'&&!record)
+        fail('FILE_BASELINE_MISSING','Cannot resume a file-backed task without its original baseline');
+      if(record?.submitted)
+        fail('FILE_DELIVERY_ALREADY_SUBMITTED','Cannot silently replace completed source evidence');
+      const baseline=record?.baseline??observed;
+      if(captureFileEvidence(this.root).digest!==observed.digest)
+        fail('FILE_SOURCE_CHANGED','Source changed while acquiring a file-backed task');
+      if(!record)this.db.prepare("INSERT INTO dc_file_deliveries (task_id,baseline_json,captured_at) VALUES(?,?,?)")
+        .run(id,JSON.stringify(baseline),utc());
+      const token=randomUUID(),source='files-sha256:'+baseline.digest;
+      const expiry=Date.now()+ttlSeconds*1000;
+      this.db.prepare("INSERT OR REPLACE INTO dc_leases (singleton,task_id,agent,token,base_head,expires_at) VALUES(1,?,?,?,?,?)")
+        .run(id,agent.trim(),token,source,expiry);
+      this.db.prepare("INSERT INTO dc_task_leases (task_id,agent,token,base_head,expires_at,worktree_path) VALUES(?,?,?,?,?,'') ON CONFLICT(task_id) DO UPDATE SET agent=excluded.agent,token=excluded.token,base_head=excluded.base_head,expires_at=excluded.expires_at,worktree_path=''")
+        .run(id,agent.trim(),token,source,expiry);
+      this.recordLocalDeveloper(id,'claimed');
+      this.db.prepare("UPDATE dc_tasks SET status='in_progress',updated_at=? WHERE id=?")
+        .run(utc(),id);
+      this.audit(id,record?'file_task_reclaimed':'file_task_claimed',agent,{
+        evidenceKind:'files-sha256-v1',baselineDigest:baseline.digest,
+        noGitRequired:true,ttlSeconds,
+      });
+      return {task:this.get(id),executionContract:this.executionContract(id),
+        leaseToken:token,baseHead:source,evidenceKind:'files-sha256-v1'};
+    });
+  }
+
+  private completeFileTask(id:string,token:string,input:CompletionReport):Row{
+    if(input.deliveryHeads!==undefined||input.existingDirtyFiles!==undefined||
+        input.preserveExistingWorktree===true)
+      fail('FILE_DELIVERY_MODE','File-backed delivery uses immutable manifests, not Git options');
+    const after=captureFileEvidence(this.root);
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(id,token);
+      this.requireGitWriter(id); // The shared writer is also enforced without Git.
+      const task=this.requireTask(id);
+      if(task.status!=='in_progress')fail('INVALID_STATE','Task is not developing');
+      const record=this.fileDelivery(id);
+      if(!record||record.submitted)
+        fail('FILE_BASELINE_MISSING','A file delivery needs its original claim snapshot');
+      const diff=compareFileEvidence(record.baseline,after);
+      const allowed=JSON.parse(task.allowed_paths) as string[];
+      const contract=this.executionContract(id);
+      const exact=contract.profile==='spec-depth-v3'?
+        (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined;
+      const denied=diff.changed.filter(file=>!allowed.some(pattern=>pathAllowed(file,pattern))||
+        (exact&&!exact.includes(file)));
+      const unexpectedDocs=undocumentedMarkdown(diff.added,allowed);
+      if(!diff.changed.length||denied.length||unexpectedDocs.length)
+        fail('FILE_DELIVERY_SCOPE_INVALID',
+          !diff.changed.length?'No changed source files were observed':
+          denied.length?'Changes outside approved scope: '+denied.join(', '):
+          'Unapproved Markdown files: '+unexpectedDocs.join(', '));
+      if(captureFileEvidence(this.root).digest!==after.digest)
+        fail('FILE_SOURCE_CHANGED','Files changed while recording completion');
+      const previous=this.latestCompletion(id);
+      const revision=(previous?.revision??0)+1;
+      const source='files-sha256:'+after.digest;
+      this.db.prepare("UPDATE dc_file_deliveries SET submitted_json=?,completion_revision=?,submitted_at=? WHERE task_id=?")
+        .run(JSON.stringify(after),revision,utc(),id);
+      this.db.prepare("INSERT INTO dc_completion_notes (task_id,revision,summary,implementation,verification,remaining,preserved_dirty_json,preserved_worktree_json,git_head,agent,created_at) VALUES(?,?,?,?,?,?,'[]','[]',?,?,?)")
+        .run(id,revision,input.summary.trim(),input.implementation.trim(),
+          input.verification.trim(),(input.remaining??'').trim(),source,lease.agent,utc());
+      this.audit(id,'file_completion_recorded',lease.agent,{
+        evidenceKind:'files-sha256-v1',sourceDigest:after.digest,
+        baselineDigest:record.baseline.digest,revision,files:diff.changed,
+      });
+      return {taskId:id,revision,summary:input.summary.trim(),
+        implementation:input.implementation.trim(),
+        verification:input.verification.trim(),
+        remaining:(input.remaining??'').trim(),evidenceKind:'files-sha256-v1',
+        sourceDigest:after.digest,files:diff.changed,agent:lease.agent};
+    });
+  }
+
+  private reportFileTask(id:string,token:string,evidence:{
+    kind:string;reference:string;deliveryHeads?:Record<string,string>;
+  },readyForReview:boolean):Row{
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(id,token);
+      const task=this.requireTask(id);
+      const completion=this.latestCompletion(id);
+      const delivery=this.fileDelivery(id);
+      if(task.status!=='in_progress'||!completion||!delivery?.submitted)
+        fail('FILE_DELIVERY_REQUIRED','Complete the scoped file delivery before reporting test evidence');
+      this.requireGitWriter(id);
+      if(evidence.deliveryHeads!==undefined)
+        fail('FILE_DELIVERY_MODE','File evidence has no Git deliveryHeads');
+      if(typeof evidence.kind!=='string'||!evidence.kind.trim()||
+          typeof evidence.reference!=='string'||!evidence.reference.trim())
+        fail('EVIDENCE_REQUIRED','Actual test evidence kind and reference are required');
+      if(captureFileEvidence(this.root).digest!==delivery.submitted.digest)
+        fail('FILE_SOURCE_CHANGED','Test evidence must match the completed source snapshot');
+      this.db.prepare("INSERT INTO dc_evidence (task_id,kind,reference,git_head,created_at) VALUES(?,?,?,?,?)")
+        .run(id,evidence.kind.trim(),evidence.reference.trim(),
+          'files-sha256:'+delivery.submitted.digest,utc());
+      if(readyForReview)this.db.prepare("UPDATE dc_tasks SET status='in_review',updated_at=? WHERE id=?")
+        .run(utc(),id);
+      this.audit(id,'file_evidence_reported',lease.agent,{
+        evidenceKind:'files-sha256-v1',sourceDigest:delivery.submitted.digest,
+        kind:evidence.kind,reference:evidence.reference,readyForReview,
+      });
+      return this.get(id);
+    });
+  }
+
+  private verifyFileTask(id:string,token:string,acceptance?:TaskAcceptance):Row{
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(id,token);
+      const task=this.requireTask(id);
+      if(task.status!=='in_review')fail('NOT_IN_REVIEW','Report real test evidence before verification');
+      const completed=this.latestCompletion(id);
+      const delivery=this.fileDelivery(id);
+      if(!completed||!delivery?.submitted||delivery.revision!==completed.revision)
+        return {taskId:id,passed:false,reason:'FILE_DELIVERY_REQUIRED'};
+      const frozen=delivery.submitted;
+      const current=captureFileEvidence(this.root);
+      if(current.digest!==frozen.digest)
+        return {taskId:id,passed:false,reason:'FILE_SOURCE_CHANGED',
+          detail:'Completed source differs from the tested file manifest'};
+      const diff=compareFileEvidence(delivery.baseline,frozen);
+      const allowed=JSON.parse(task.allowed_paths) as string[];
+      const contract=this.executionContract(id);
+      if(!contract.eligible)
+        return {taskId:id,passed:false,reason:'EXECUTION_CONTRACT_BLOCKED'};
+      const exact=contract.profile==='spec-depth-v3'?
+        (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined;
+      if(!diff.changed.length||diff.changed.some(file=>
+          !allowed.some(pattern=>pathAllowed(file,pattern))||
+          (exact&&!exact.includes(file))))
+        return {taskId:id,passed:false,reason:'FILE_DELIVERY_SCOPE_INVALID'};
+      if(this.blockers(id).length)
+        return {taskId:id,passed:false,reason:'TASK_BLOCKED'};
+      if(this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? AND status!='verified' LIMIT 1").get(id))
+        return {taskId:id,passed:false,reason:'CHILDREN_NOT_VERIFIED'};
+      const gates=JSON.parse(task.required_gates) as string[];
+      if(!acceptance||typeof acceptance.findings!=='string'||
+          acceptance.findings.trim().length<60||
+          typeof acceptance.evidenceReference!=='string'||
+          !Array.isArray(acceptance.gates)||!gates.length||
+          gates.some(g=>!isEvidenceGate(g))||
+          acceptance.gates.length!==gates.length||
+          acceptance.gates.some(item=>!item||typeof item.gate!=='string')||
+          gates.some(g=>acceptance.gates.filter(item=>item.gate===g).length!==1))
+        return {taskId:id,passed:false,reason:'TASK_ACCEPTANCE_REQUIRED',
+          detail:'A substantive developer review of every frozen real Gate is required'};
+      const source='files-sha256:'+frozen.digest;
+      const reported=this.db.prepare("SELECT reference FROM dc_evidence WHERE task_id=? AND git_head=?").all(id,source);
+      const references=new Set(reported.map(row=>String(row.reference)));
+      if(!references.has(acceptance.evidenceReference.trim())||
+          acceptance.gates.some(item=>!item||typeof item.findings!=='string'||
+            item.findings.trim().length<30||typeof item.evidenceReference!=='string'||
+            !references.has(item.evidenceReference.trim())))
+        return {taskId:id,passed:false,reason:'TASK_ACCEPTANCE_EVIDENCE_MISSING',
+          detail:'Each project Gate needs actual reported test evidence for this exact snapshot'};
+      const tokenHash=createHash('sha256').update(token).digest('hex');
+      this.db.prepare("INSERT INTO dc_task_acceptances (task_id,completion_revision,completion_head,lease_token_hash,reviewer,findings,evidence_reference,gates_json,accepted_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(task_id) DO UPDATE SET completion_revision=excluded.completion_revision,completion_head=excluded.completion_head,lease_token_hash=excluded.lease_token_hash,reviewer=excluded.reviewer,findings=excluded.findings,evidence_reference=excluded.evidence_reference,gates_json=excluded.gates_json,accepted_at=excluded.accepted_at")
+        .run(id,completed.revision,source,tokenHash,lease.agent,
+          acceptance.findings.trim(),acceptance.evidenceReference.trim(),
+          JSON.stringify(acceptance.gates),utc());
+      if(captureFileEvidence(this.root).digest!==frozen.digest)
+        fail('FILE_SOURCE_CHANGED','Files changed during verification');
+      this.db.prepare("UPDATE dc_tasks SET status='verified',verified_at=?,updated_at=? WHERE id=?")
+        .run(utc(),utc(),id);
+      this.audit(id,'file_task_verified',lease.agent,{
+        evidenceKind:'files-sha256-v1',sourceDigest:frozen.digest,
+        changedFiles:diff.changed,testsReviewed:gates,
+        independentGitHistory:false,
+      });
+      let ancestor=task.parent_id as string|null;
+      while(ancestor){
+        const parent=this.requireTask(ancestor);
+        const incomplete=this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? AND status!='verified' LIMIT 1")
+          .get(ancestor);
+        if(incomplete||parent.status==='verified')break;
+        this.db.prepare("UPDATE dc_tasks SET status='verified',verified_at=?,updated_at=? WHERE id=?")
+          .run(utc(),utc(),ancestor);
+        this.audit(ancestor,'group_verified_by_children','devcontrol',{lastVerifiedChild:id});
+        ancestor=parent.parent_id;
+      }
+      this.clearTaskLease(id);
+      return {taskId:id,passed:true,files:diff.changed,
+        evidenceKind:'files-sha256-v1',sourceDigest:frozen.digest,
+        gatesReviewed:gates};
+    });
+  }
 
   hasReviewedProductPlan(): boolean {
     const tasks=this.db.prepare(
@@ -503,6 +730,17 @@ export class ProjectTaskLedger {
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
         base_head TEXT NOT NULL, snapshot_json TEXT NOT NULL,
         captured_at TEXT NOT NULL
+      );
+      -- Non-Git projects have first-class source evidence. This is NOT a
+      -- synthetic Git commit. Capture both the immutable claim baseline and
+      -- the exact completed source manifest, bound to reported tests.
+      CREATE TABLE IF NOT EXISTS dc_file_deliveries (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        baseline_json TEXT NOT NULL,
+        submitted_json TEXT,
+        completion_revision INTEGER,
+        captured_at TEXT NOT NULL,
+        submitted_at TEXT
       );
       -- Immutable authorized upgrade record; the claim-time snapshot is not
       -- overwritten. Child HEADs captured here are migration checkpoints,
@@ -2651,6 +2889,31 @@ export class ProjectTaskLedger {
   }
 
   checkStaged(): Row {
+    if(!this.hasRootGit){
+      const active=this.checkoutWriter();
+      if(!active||active.expires_at<=Date.now())
+        return {passed:false,reason:'No active approved file-backed task',
+          evidenceKind:'files-sha256-v1',gitIndex:'not_applicable'};
+      const task=this.requireTask(String(active.task_id));
+      const delivery=this.fileDelivery(task.id);
+      if(!delivery)return {passed:false,taskId:task.id,
+        reason:'Missing claim-time file baseline',evidenceKind:'files-sha256-v1'};
+      const current=captureFileEvidence(this.root);
+      const changes=compareFileEvidence(delivery.baseline,current);
+      const allowed=JSON.parse(task.allowed_paths) as string[];
+      const contract=this.executionContract(task.id);
+      const exact=contract.profile==='spec-depth-v3'?
+        (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined;
+      const denied=changes.changed.filter(file=>
+        !allowed.some(pattern=>pathAllowed(file,pattern))||
+        (exact&&!exact.includes(file)));
+      const unapprovedDocs=undocumentedMarkdown(changes.added,allowed);
+      return {passed:changes.changed.length>0&&!denied.length&&!unapprovedDocs.length,
+        taskId:task.id,evidenceKind:'files-sha256-v1',gitIndex:'not_applicable',
+        changedFiles:changes.changed,deniedFiles:denied,
+        unapprovedDocs,sourceDigest:current.digest,
+        ...(changes.changed.length?{}:{reason:'No source changes since claim'})};
+    }
     const active=this.checkoutWriter();
     const task=active?this.requireTask(active.task_id):null;
     if(task)this.taskRepositories(task.id,task);
@@ -3910,12 +4173,12 @@ export class ProjectTaskLedger {
       fail("UNSAFE_SCOPE", "Scope document must be inside this Git project");
     }
     const sourceText = fs.readFileSync(real, "utf8");
-    // Scope must be an actual committed Git source, not a transient local
-    // rewrite presented to the reviewer as the approved baseline.
-    if (!run(this.root,"git",["ls-files","--error-unmatch","--",input.scopeSource],12_000).passed ||
-        !run(this.root,"git",["diff","--quiet","HEAD","--",input.scopeSource],12_000).passed) {
+    // Without Git the same approved scope is content-hashed in SQLite.
+    // For Git workspaces also require a tracked, clean source as before.
+    if(this.hasRootGit&&
+        (!run(this.root,"git",["ls-files","--error-unmatch","--",input.scopeSource],12_000).passed ||
+         !run(this.root,"git",["diff","--quiet","HEAD","--",input.scopeSource],12_000).passed))
       fail("UNCOMMITTED_SCOPE", "Commit the canonical requirements source before plan review");
-    }
     for (const id of input.requirementIds) {
       if (!new RegExp(`\\b${id}\\b`).test(sourceText)) {
         fail("UNKNOWN_REQUIREMENT", `${id} not present in actual ${input.scopeSource}`);
@@ -3949,8 +4212,9 @@ export class ProjectTaskLedger {
           designFile.split("/").includes("..") ||
           !within || within === ".." || within.startsWith(".." + path.sep) ||
           path.isAbsolute(within) || !fs.statSync(resolved).isFile() ||
-          !run(this.root,"git",["ls-files","--error-unmatch","--",designFile],12_000).passed ||
-          !run(this.root,"git",["diff","--quiet","HEAD","--",designFile],12_000).passed) {
+          (this.hasRootGit&&
+            (!run(this.root,"git",["ls-files","--error-unmatch","--",designFile],12_000).passed ||
+             !run(this.root,"git",["diff","--quiet","HEAD","--",designFile],12_000).passed))) {
         fail("MISSING_DESIGN_SOURCE", `Design reference not found in tracked project docs: ${reference}`);
       }
     }
@@ -4074,7 +4338,8 @@ export class ProjectTaskLedger {
       const source = path.resolve(this.root,plan.scopeSource);
       const sourceHash = createHash("sha256").update(fs.readFileSync(source)).digest("hex");
       if (sourceHash !== (plan as ReleasePlanProposal & { sourceHash:string }).sourceHash ||
-          !run(this.root,"git",["diff","--quiet","HEAD","--",plan.scopeSource],12_000).passed) {
+          (this.hasRootGit&&
+            !run(this.root,"git",["diff","--quiet","HEAD","--",plan.scopeSource],12_000).passed)) {
         fail("SCOPE_DRIFT", "Reviewed requirements changed since proposal; re-review before approval");
       }
       const result = reviewReleasePlan(plan);
@@ -5151,6 +5416,7 @@ export class ProjectTaskLedger {
         (typeof input.remaining !== "string" || input.remaining.length > 12_000)) {
       fail("INVALID_REMAINING", "Remaining work must be text of at most 12000 characters");
     }
+    if(!this.hasRootGit)return this.completeFileTask(id,token,input);
     let head = git(this.root, ["rev-parse", "HEAD"]);
     return this.inTransaction(() => {
       const lease = this.requireLease(id, token);
@@ -5641,6 +5907,7 @@ export class ProjectTaskLedger {
     resumedFrozenBase?:string): Row {
     if (!agent?.trim()) fail("AGENT_REQUIRED", "Agent identity required");
     if (ttlSeconds < 60 || ttlSeconds > 3600) fail("INVALID_TTL", "Lease must be 60–3600 seconds");
+    if(!this.hasRootGit)return this.claimFileTask(id,agent,ttlSeconds,resumedFrozenBase);
     const base = git(this.root, ["rev-parse", "HEAD"]);
     return this.inTransaction(() => {
       const task = this.requireTask(id);
@@ -6340,6 +6607,7 @@ export class ProjectTaskLedger {
   report(id: string, token: string, evidence: {
     kind:string; reference:string; deliveryHeads?:Record<string,string>;
   }, readyForReview = false): Row {
+    if(!this.hasRootGit)return this.reportFileTask(id,token,evidence,readyForReview);
     return this.inTransaction(() => {
       const lease = this.requireLease(id, token);
       const current = this.requireTask(id);
@@ -6572,6 +6840,7 @@ export class ProjectTaskLedger {
   }
 
   verify(id: string, token: string, acceptance?:TaskAcceptance): Row {
+    if(!this.hasRootGit)return this.verifyFileTask(id,token,acceptance);
     if(acceptance!==undefined){
       try{
         return this.inTransaction(()=>{

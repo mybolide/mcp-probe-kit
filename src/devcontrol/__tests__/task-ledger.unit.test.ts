@@ -10,6 +10,7 @@ import vm from "node:vm";
 import { ProjectTaskLedger, DevControlError } from "../task-ledger.js";
 import { ensureMcpProbeSkill, ensureAgentsMdSkillReference } from "../../lib/workflow-skill-installer.js";
 import { MCP_PROBE_SKILL_REL_PATH } from "../../lib/workflow-skill-template.js";
+import { SKILL_GUIDANCE_REVISION } from "../../lib/workflow-skill-version.js";
 import { trustedUncommittedGuidance } from "../managed-guidance-gate.js";
 import { releaseReviewSubjectHash, REVIEW_DIMENSIONS } from "../release-work.js";
 import { IDEA_REVIEW_DIMENSIONS } from "../idea-review.js";
@@ -1711,7 +1712,7 @@ describe("project ledger and legacy migration", () => {
     commit("track user governance and bootstrap before task claim");
     ensureMcpProbeSkill(root);
     ensureAgentsMdSkillReference(root);
-    const revision="v5-sqlite-devcontrol-20261102-owned-guidance-r19";
+    const revision=SKILL_GUIDANCE_REVISION;
     const previous="v5-sqlite-devcontrol-20261102-unified-task-acceptance-r17";
     for(const file of [MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"]){
       const canonical=fs.readFileSync(path.join(root,file),"utf8");

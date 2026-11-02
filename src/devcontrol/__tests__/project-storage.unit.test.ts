@@ -25,6 +25,31 @@ afterEach(() => {
 });
 
 describe("DevControl's Git-local SQLite exclusion", () => {
+  it("stores SQLite safely in a parent workspace without Git or a Git executable", () => {
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),"mcp-gitless-state-"));
+    roots.push(root);
+    const source=path.join(root,"client");
+    fs.mkdirSync(source);
+    const originalPath=process.env.PATH;
+    try{
+      process.env.PATH=path.join(root,"no-such-git");
+      const database=resolveProjectDatabase(root);
+      expect(()=>ensureDatabaseIgnored(root,database)).not.toThrow();
+      expect(fs.statSync(path.dirname(database)).isDirectory()).toBe(true);
+      expect(fs.existsSync(path.join(root,".git"))).toBe(false);
+      expect(()=>ensureDatabaseIgnored(root,database)).not.toThrow();
+    }finally{process.env.PATH=originalPath;}
+  });
+
+  it("rejects symlinked SQLite directories even if no Git is present",()=>{
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),"mcp-gitless-state-"));
+    const outside=fs.mkdtempSync(path.join(os.tmpdir(),"mcp-gitless-external-"));
+    roots.push(root,outside);
+    fs.symlinkSync(outside,path.join(root,".mcp-probe-kit"));
+    expect(()=>ensureDatabaseIgnored(root,resolveProjectDatabase(root)))
+      .toThrow(/Unsafe DevControl local state directory/);
+  });
+
   it("keeps SQLite WAL and SHM local and idempotently excluded", () => {
     const root = repo();
     const database = resolveProjectDatabase(root);

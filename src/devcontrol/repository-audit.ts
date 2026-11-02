@@ -92,7 +92,11 @@ function identity(workspace:string,prefix:string):RepositoryIdentity{
 export function discoverRepositories(root:string,allowedPaths:string[]):RepositoryIdentity[]{
   const workspace=fs.realpathSync(root);
   const found=new Map<string,RepositoryIdentity>();
-  found.set('',identity(workspace,''));
+  // A project workspace is not inherently a Git repository. Child Git
+  // projects remain discoverable independently; an entirely Git-free
+  // workspace correctly has an empty Git repository list.
+  if(fs.existsSync(path.join(workspace,'.git')))
+    found.set('',identity(workspace,''));
   // Also inspect independent sibling repositories that were not mentioned in
   // this task. Otherwise a task targeting service A could silently ignore a
   // staged/committed change in service B. The search is bounded, never follows

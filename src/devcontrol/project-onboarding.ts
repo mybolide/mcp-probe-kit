@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { captureFileEvidence } from "./file-evidence.js";
 
 export interface OnboardingStep {
   id: "purpose" | "governance" | "requirements" | "architecture" | "plan";
@@ -75,11 +76,19 @@ function validSource(root: string, relative: string): boolean {
 }
 
 function hasExistingWork(root: string): boolean {
+  const sourceDirectory=/^(?:src|app|apps|lib|services|tests|packages|cmd)\//;
+  if(!fs.existsSync(path.join(root,'.git'))){
+    // Non-Git projects are not new just because git ls-files cannot run.
+    // Preserve the same read-only safety limit as the file delivery engine.
+    try{return captureFileEvidence(root).entries.some(entry=>
+      sourceDirectory.test(entry.path));}
+    catch{return false;}
+  }
   try {
     const tracked = execFileSync("git", ["ls-files", "-z"], {
       windowsHide: true, cwd: root, timeout: 2_000, maxBuffer: 1_000_000,
     }).toString("utf8").split("\0");
-    return tracked.some(file => /^(?:src|app|apps|lib|services|tests|packages|cmd)\//.test(file));
+    return tracked.some(file => sourceDirectory.test(file));
   } catch {
     // When Git inspection is unavailable, do not infer existing work.
     return false;
