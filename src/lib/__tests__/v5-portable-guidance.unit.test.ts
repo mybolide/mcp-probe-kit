@@ -48,7 +48,8 @@ describe('portable generated v5 project guidance',()=>{
     const skill=generateWorkflowSkillContent(VERSION);
     const actions=renderV5DevControlActionReference();
     const agents=renderV5AgentsMd('zh-CN','@.agents/skills/mcp-probe-kit/SKILL.md');
-    for(const generated of [skill,actions,agents]){
+    const english=renderV5AgentsMd('en','@.agents/skills/mcp-probe-kit/SKILL.md');
+    for(const generated of [skill,actions,agents,english]){
       expect(generated).not.toContain('/ABSOLUTE/');
       expect(generated).not.toContain('/Users/');
       expect(generated).not.toContain('/home/');
@@ -61,6 +62,12 @@ describe('portable generated v5 project guidance',()=>{
     expect(actions).toContain('{"action":"next","input":{}}');
     expect(skill).toContain('real absolute');
     expect(agents).toContain('绝对');
+    expect(english).toContain('Git-free workspace');
+    expect(skill).toContain('Git is OPTIONAL');
+    for(const generated of [skill,actions,agents]){
+      expect(generated).not.toContain('/ABSOLUTE/GIT/PROJECT');
+      expect(generated).not.toContain("target Git project's managed Skill");
+    }
   });
 
   it('upgrades old same-version managed guidance without rewriting user-owned rules',()=>{

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { devControlGuide } from '../action-guide.js';
 import { V5_DEVC_ACTIONS } from '../action-catalog.js';
 import { runV5DevControlTool } from '../model-tool.js';
+import {devcontrolToolSchemas} from '../../schemas/devcontrol-tools.js';
 
 describe('v5 agent action routing', () => {
   it('gives simple phase examples without opening a Git project or changing SQLite', async () => {
@@ -12,6 +13,12 @@ describe('v5 agent action routing', () => {
       flow:{example:{action:'feature-create'},caution:expect.stringContaining('not claimable')},
     });
   });
+  it('the published tool schema describes Git-optional project discovery instead of a required Git root',()=>{
+    const schema=devcontrolToolSchemas[0];
+    expect(schema.description).toContain('Git-free');
+    expect(schema.inputSchema.properties.project_root.description).toContain('Optional');
+    expect(JSON.stringify(schema)).not.toContain('Absolute Git root');
+  });
   it('all grouped actions are unique and flow names refer only to registered actions', () => {
     expect(V5_DEVC_ACTIONS.length).toBeGreaterThanOrEqual(74);
     expect(new Set(V5_DEVC_ACTIONS).size).toBe(V5_DEVC_ACTIONS.length);
@@ -19,6 +26,9 @@ describe('v5 agent action routing', () => {
     expect(guide.actionCount).toBe(V5_DEVC_ACTIONS.length);
     for (const entry of guide.intents as Array<{intent:string}>) {
       const group=devControlGuide({intent:entry.intent});
+      const example=(group.flow as {example:{project_root?:string}}).example;
+      expect(example.project_root).toBe('/ABSOLUTE/PROJECT');
+      expect(JSON.stringify(group)).not.toContain('/ABSOLUTE/GIT/PROJECT');
       for (const action of (group.flow as {actions:string[]}).actions)
         expect(V5_DEVC_ACTIONS).toContain(action);
     }

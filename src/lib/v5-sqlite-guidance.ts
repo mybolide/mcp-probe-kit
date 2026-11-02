@@ -343,7 +343,7 @@ ${managedRevision}
 
 - Bootstrap project SQLite History (\`hs_*\`) and inspect Git/DevControl
   \`onboard\`, \`next\`, \`execution-contract\` before work.
-- On every MCP startup, check the target Git project's managed Skill and
+- On every MCP startup, check the target Git or Git-free workspace's managed Skill and
   AGENTS.md block for package version AND guidance revision; auto-sync
   stale guidance even when the installed version is still 5.0.0.
   When project root is unknown, pass explicit project_root on the first
@@ -365,14 +365,15 @@ ${managedRevision}
   tests. All legacy Gate names are acceptance criteria, not executable MCP
   test commands. DevControl only checks version-bound evidence and decisions.
 - Plan/review/propose and approve the exact reviewed hash. Claim an approved
-  task, implement, run genuine project tests and commit approved paths.
+  task, implement and run genuine project tests. Git projects commit approved
+  paths; Git-free projects submit their scoped SHA-256 file manifest.
   Record complete/report; consult task-closure-status, then use ONE verify
   with acceptance evidenceReference, findings and a gate record for every
   frozen real acceptance test. Current AI runs tests and examines code,
   DevControl only validates and records one atomic outcome. Old separate
   self-review/gate-review actions remain optional for legacy sessions.
 - When a task is deferred, resume-verification preserves the original
-  submitted Git Commit while unrelated tasks may advance HEAD. Follow the
+  submitted Git commit or immutable file delivery snapshot. Follow the
   closure checklist to report later real evidence and complete reviews;
   do not rerun business tests from DevControl or reset other Agent work.
 - Optional local-only info/devcontrol-worktree-ignore in each real Git-dir

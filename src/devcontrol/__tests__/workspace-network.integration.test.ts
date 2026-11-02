@@ -8,22 +8,79 @@ import { createDevControlBoardServer } from "../board-server.js";
 import { configureWorkspaceAccess } from "../workspace-access.js";
 import { ensureProjectWorkspaceRunning } from "../workspace-process.js";
 import { readWorkspaceRuntime, writeWorkspaceRuntime } from "../workspace-runtime.js";
+import { localWorkspaceRuntimePath } from "../workspace-runtime.js";
+import { ensureProjectWorkspaceAtMcpStartup } from "../startup.js";
 import { WORKSPACE_SCHEMA_VERSION } from "../board-server.js";
 import net from "node:net";
 import http from "node:http";
+import {createRequire} from "node:module";
 
 const directories: string[] = [];
-function project(): string {
+function project(git=true): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "devcontrol-auth-"));
-  execFileSync("git", ["init", "-q"], { cwd: dir });
+  if(git)execFileSync("git", ["init", "-q"], { cwd: dir });
   directories.push(dir);
   return dir;
 }
 afterEach(() => {
-  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of directories.splice(0)){
+    fs.rmSync(localWorkspaceRuntimePath(dir),{force:true});
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 describe("project workbench HTTP LAN access", () => {
+  it('auto-starts an actual Git-free MCP workspace, never creates .git or a project PID table',async()=>{
+    const root=project(false);
+    const ledger=new ProjectTaskLedger(root);
+    const dbFile=ledger.databasePath;
+    ledger.close();
+    const portProbe=net.createServer();
+    await new Promise<void>(resolve=>portProbe.listen(0,'127.0.0.1',resolve));
+    const address=portProbe.address();
+    const port=typeof address==='object'&&address?address.port:0;
+    await new Promise<void>(resolve=>portProbe.close(()=>resolve()));
+    configureWorkspaceAccess(root,{lanEnabled:false});
+    const config=path.join(root,'.mcp-probe-kit/state/workspace-server.json');
+    fs.writeFileSync(config,JSON.stringify({lanEnabled:false,basePort:port}));
+    const cli=path.join(root,'local-fake-cli.cjs');
+    fs.writeFileSync(cli,[
+      'const http=require("node:http");',
+      'const args=process.argv.slice(2);',
+      'const root=args[args.indexOf("--project-root")+1];',
+      'const port=Number(args[args.indexOf("--port")+1]);',
+      'const server=http.createServer((req,res)=>{',
+      'if(req.url!=="/api/meta"){res.statusCode=404;return res.end();}',
+      'res.setHeader("Content-Type","application/json");',
+      'res.end(JSON.stringify({schema:"devcontrol-project-workspace",',
+      'root,version:'+JSON.stringify(WORKSPACE_SCHEMA_VERSION)+',lanEnabled:false,',
+      'pid:process.pid,instanceId:process.env.DEVCONTROL_WORKSPACE_INSTANCE_ID,',
+      'startedAt:process.env.DEVCONTROL_WORKSPACE_STARTED_AT}));',
+      '});server.listen(port,"127.0.0.1");',
+      'process.on("SIGTERM",()=>server.close(()=>process.exit(0)));',
+    ].join('\n'));
+    let pid:number|null=null;
+    try{
+      const started=await ensureProjectWorkspaceAtMcpStartup(root,{cliEntry:cli});
+      expect(started).toMatchObject({started:true,url:'http://127.0.0.1:'+port+'/'});
+      const runtime=readWorkspaceRuntime(root);
+      expect(runtime).toMatchObject({port,version:WORKSPACE_SCHEMA_VERSION});
+      pid=runtime?.pid??null;
+      expect(fs.existsSync(path.join(root,'.git'))).toBe(false);
+      const sqlite=createRequire(import.meta.url)('node:sqlite') as {
+        DatabaseSync:new(file:string,opts?:{readOnly?:boolean})=>{
+          prepare(query:string):{all():Array<Record<string,unknown>>};close():void;
+        };
+      };
+      const projectDb=new sqlite.DatabaseSync(dbFile,{readOnly:true});
+      try{
+        expect(projectDb.prepare("SELECT name FROM sqlite_master WHERE name='dc_workspace_runtime'").all())
+          .toEqual([]);
+      }finally{projectDb.close();}
+    }finally{
+      if(pid)try{process.kill(pid,'SIGTERM');}catch{}
+    }
+  },20000);
   it("allows trusted private LAN readers without login and revokes access on lan-disable", async () => {
     const root = project();
     configureWorkspaceAccess(root, { lanEnabled: true });
@@ -124,6 +181,7 @@ process.on("SIGTERM",()=>server.close(()=>process.exit(0)));
       version: WORKSPACE_SCHEMA_VERSION, lanEnabled: false,
     });
     const config = path.join(root, ".mcp-probe-kit/state/workspace-server.json");
+    fs.mkdirSync(path.dirname(config),{recursive:true});
     fs.writeFileSync(config, JSON.stringify({ lanEnabled: false, basePort: busyPort }));
     const fakeCli = path.join(root, "test-workspace-server.cjs");
     fs.writeFileSync(fakeCli, `

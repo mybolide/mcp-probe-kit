@@ -14,6 +14,7 @@ import { DevControlError } from "./task-ledger.js";
 import { WORKSPACE_SCHEMA_VERSION } from "./board-server.js";
 import { readWorkspaceRuntime, writeWorkspaceRuntime, type WorkspaceRuntime } from "./workspace-runtime.js";
 import { resolveProjectDatabase } from "./project-storage.js";
+import { getManagedWriteRootRejection } from "../lib/workspace-root.js";
 import {
   WORKSPACE_PORT_ATTEMPTS, WORKSPACE_START_PORT, workspaceAccess,
 } from "./workspace-access.js";
@@ -156,9 +157,13 @@ export async function ensureProjectWorkspaceRunning(
   root: string, options: { cliEntry?: string } = {},
 ): Promise<ProjectWorkspaceProcess> {
   const project = path.resolve(root);
-  if (!fs.existsSync(path.join(project, ".git"))) {
-    throw new DevControlError("NOT_GIT_PROJECT", "DevControl requires the project Git root");
-  }
+  // The MCP workspace is not necessarily a Git repository. Never silently
+  // create or reparent it, and never launch a workbench against an install,
+  // missing directory, or a protected account/system root.
+  if(!fs.existsSync(project)||!fs.statSync(project).isDirectory()||
+    fs.lstatSync(project).isSymbolicLink()||getManagedWriteRootRejection(project))
+    throw new DevControlError("INVALID_WORKSPACE_ROOT",
+      "DevControl workbench requires an existing safe MCP project directory; Git is optional");
   const entry = path.resolve(options.cliEntry ?? process.argv[1]);
   if (!fs.existsSync(entry)) {
     throw new DevControlError("CLI_NOT_FOUND", "The installed MCP CLI entry was not found");

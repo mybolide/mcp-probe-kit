@@ -62,7 +62,10 @@ const excluded=new Set(['dc_leases','dc_task_leases',
   'dc_legacy_active_migrations','dc_task_integration_ready',
   'dc_task_repository_baselines','dc_task_repository_baseline_relocations',
   'dc_task_worktree_baselines','dc_legacy_child_worktree_snapshots',
-  'dc_protected_worktree_refreshes']);
+  'dc_protected_worktree_refreshes',
+  // Older releases kept a machine-specific PID/port registry inside the
+  // project SQLite. It must never influence cross-machine schema or rows.
+  'dc_workspace_runtime']);
 const maxPreviewConflicts=40;
 const module=createRequire(import.meta.url)('node:sqlite') as {
   DatabaseSync:new(path:string,options?:{readOnly?:boolean})=>Database;
@@ -89,12 +92,18 @@ function safeDraft(...rows:RecordRow[]):boolean{
     (!('verified_at' in r)||r.verified_at===null));
 }
 
-function tables(db:Database):Map<string,TableShape>{
-  const result=new Map<string,TableShape>();
+function tableNames(db:Database):string[]{
   const names=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'dc_%' ORDER BY name")
     .all().map(r=>String(r.name));
-  for(const name of names){
-    if(!safeName(name))throw Error('Unsafe SQLite schema table name');
+  if(names.some(name=>!safeName(name)))throw Error('Unsafe SQLite schema table name');
+  return names;
+}
+function tables(db:Database):Map<string,TableShape>{
+  const result=new Map<string,TableShape>();
+  // Machine-local tables must be excluded BEFORE introspecting columns and
+  // comparing schemas, even if one side or the common base lacks the table.
+  for(const name of tableNames(db)){
+    if(excluded.has(name))continue;
     const columns=db.prepare('PRAGMA table_info('+quoted(name)+')').all()
       .map(r=>({
         name:String(r.name),type:String(r.type),notnull:Number(r.notnull),
@@ -196,6 +205,9 @@ function taskDependencyIssues(target:Database,shapes:Map<string,TableShape>,
 function analyze(target:Database,source:Database,base?:Database,
   decisions:MergeDecision[]=[]):InternalPlan{
   const lhs=tables(target),rhs=tables(source),ancestor=base?tables(base):undefined;
+  const localNames=[...new Set([
+    ...tableNames(target),...tableNames(source),...(base?tableNames(base):[]),
+  ])].filter(name=>excluded.has(name)).sort();
   const names=[...new Set([...lhs.keys(),...rhs.keys(),...(ancestor?.keys()??[])])].sort();
   const schemaErrors:string[]=[];
   for(const name of names)
@@ -204,7 +216,8 @@ function analyze(target:Database,source:Database,base?:Database,
       schemaErrors.push('Incompatible table schema: '+name);
   if(!lhs.has('dc_tasks')||!lhs.has('dc_meta'))
     schemaErrors.push('Not a supported DevControl project ledger');
-  const warnings:string[]=[];
+  const warnings=localNames.map(name=>
+    name+' is machine-local and will remain from the target if present');
   if(!schemaErrors.length&&(!projectAnchor(target,source)||
     (base&&(!projectAnchor(base,target)||!projectAnchor(base,source)))))
     schemaErrors.push('No shared project ancestry. Do not merge unrelated DevControl SQLite databases');
@@ -244,10 +257,6 @@ function analyze(target:Database,source:Database,base?:Database,
   for(const name of names){
     if(schemaErrors.some(e=>e.includes('table schema: '+name))||
       !lhs.has(name)||!rhs.has(name))continue;
-    if(excluded.has(name)){
-      warnings.push(name+' is checkout-local and will remain from the target');
-      continue;
-    }
     const shape=lhs.get(name)!;
     if(!shape.keys.length){
       schemaErrors.push('Missing stable primary key: '+name);continue;

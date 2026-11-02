@@ -2,73 +2,73 @@ import { V5_DEVC_ACTIONS, V5_DEVC_ACTION_GROUPS } from './action-catalog.js';
 
 /**
  * Zero-side-effect discovery. Project root is intentionally unnecessary here:
- * agents can orient themselves before choosing a target Git repository.
+ * agents can orient themselves before choosing a target MCP workspace.
  */
 const FLOWS = {
   start: {
     description: '恢复项目：先读 SQLite History，再确认已有任务和审批',
     actions: ['onboard','next','list','execution-contract'],
-    example: {action:'onboard',project_root:'/ABSOLUTE/GIT/PROJECT',input:{}},
+    example: {action:'onboard',project_root:'/ABSOLUTE/PROJECT',input:{}},
     caution: 'Existing tasks take precedence. Do not regenerate a plan on resume.',
   },
   database: {
     description:'本机两份 DevControl SQLite 预检、冲突报告和安全合并候选库',
     actions:['sqlite-merge-preview','sqlite-merge-candidate'],
-    example:{action:'sqlite-merge-preview',project_root:'/ABSOLUTE/GIT/PROJECT',
+    example:{action:'sqlite-merge-preview',project_root:'/ABSOLUTE/PROJECT',
       input:{sourcePath:'/ABSOLUTE/OTHER-COMPUTER/devcontrol.sqlite3'}},
     caution:'Only merge candidates with shared project ancestry, zero conflicts and the matching preview fingerprint. Candidate output requires a new outputPath and is NOT activated automatically; never overwrite either source DB or claim global offline exclusivity.',
   },
   feature: {
     description: '新需求 → 设计 → 原子任务规划 → 下一轮二次 Review → 精确哈希确认',
     actions: ['feature-create','feature-save','feature-validate','feature-task-brief','feature-task-review','feature-task-stage','feature-task-propose','feature-task-second-review','feature-task-approve'],
-    example: {action:'feature-create',project_root:'/ABSOLUTE/GIT/PROJECT',input:{name:'short-feature-slug',description:'One explicit user goal',layout:'flat'}},
+    example: {action:'feature-create',project_root:'/ABSOLUTE/PROJECT',input:{name:'short-feature-slug',description:'One explicit user goal',layout:'flat'}},
     caution: 'The same development Agent may perform the second Review, but ONLY as a new host action and a later work round after the proposal was staged. Record concrete findings tied to the exact plan hash; do not plan and review in one pass. Ordinary leaf tasks need no separate Owner approval. Frozen scope changes still need Owner authorization. Draft children are not claimable.',
   },
   planning: {
     description: '完整版本计划审核与冻结',
     actions: ['release-plan','plan-review','plan-propose','plan-approve','release-work-review','release-work-stage','release-work-approve'],
-    example: {action:'release-plan',project_root:'/ABSOLUTE/GIT/PROJECT',input:{}},
+    example: {action:'release-plan',project_root:'/ABSOLUTE/PROJECT',input:{}},
     caution: 'One development Agent can complete a documented self-review tied to the exact plan hash. Owner decides new version scope or material changes, not each ordinary leaf task.',
   },
   task: {
     description: '领取当前已批准任务，按冻结合同逐项开发',
     actions: ['next','execution-contract','claim','check','renew','release'],
-    example: {action:'next',project_root:'/ABSOLUTE/GIT/PROJECT',input:{}},
+    example: {action:'next',project_root:'/ABSOLUTE/PROJECT',input:{}},
     caution: 'Inspect exact task ID, dependencies and allowedPaths before claim; no scope expansion.',
   },
   verification: {
     description: '提交代码和真实测试 → 当前 AI 一次完成正式验收登记 → Verified',
     actions: ['task-closure-status','check','complete','report','verify','trace'],
-    example: {action:'verify',project_root:'/ABSOLUTE/GIT/PROJECT',
+    example: {action:'verify',project_root:'/ABSOLUTE/PROJECT',
       input:{id:'APPROVED-TASK-ID',leaseToken:'CURRENT-LEASE',
         acceptance:{evidenceReference:'ACTUAL-TEST-REPORT',
-          findings:'Current AI inspected the exact committed source, negative cases and genuine test output against the frozen acceptance criteria.',
+          findings:'Current AI inspected the exact Git commit or immutable file snapshot, negative cases and genuine test output against frozen acceptance.',
           gates:[{gate:'docs',evidenceReference:'ACTUAL-TEST-REPORT',
-            findings:'Actual project-owned docs tests passed for the original committed task revision.'}]}}},
+            findings:'Actual project-owned docs tests passed for the original source delivery (Git or SHA-256 files).'}]}}},
     caution: 'DevControl is project management, NEVER a test runner or independent reviewing Agent. Current AI runs real tests, reports their original revision-bound evidence, and uses ONE verify with an acceptance object to record findings for each frozen Gate. The required tests and dependency checks remain strict. Old self-review and gate-review actions remain only for existing in-flight task compatibility. Missing evidence never means approval.',
   },
   bug: {
     description: '缺陷记录、调查步骤和关联获批任务',
     actions: ['work-record','bug-get','bug-step-save','bug-task-link'],
-    example: {action:'work-items',project_root:'/ABSOLUTE/GIT/PROJECT',input:{kind:'bug'}},
+    example: {action:'work-items',project_root:'/ABSOLUTE/PROJECT',input:{kind:'bug'}},
     caution: 'Do not modify an active frozen task to accommodate an unrelated bug without review.',
   },
   idea: {
     description: '新想法评估 → 开发者实质审核 → 按需 Owner 决定',
     actions: ['idea-capture','idea-assess','idea-self-review','idea-review','idea-decide'],
-    example: {action:'idea-list',project_root:'/ABSOLUTE/GIT/PROJECT',input:{}},
+    example: {action:'idea-list',project_root:'/ABSOLUTE/PROJECT',input:{}},
     caution: 'An idea never automatically modifies a frozen execution contract.',
   },
   scope: {
     description: '冻结范围变更或新增任务的实质自审及 Owner 审批',
     actions: ['release-work-scope-review','release-work-scope-stage','release-work-scope-self-review','release-work-scope-independent-review','release-work-scope-approve','release-work-incremental-review','release-work-incremental-stage','release-work-incremental-self-review','release-work-incremental-independent-review','release-work-incremental-approve'],
-    example: {action:'release-work-scope-get',project_root:'/ABSOLUTE/GIT/PROJECT',input:{release:'V0.1'}},
+    example: {action:'release-work-scope-get',project_root:'/ABSOLUTE/PROJECT',input:{release:'V0.1'}},
     caution: 'Developer performs source-backed self-review; a distinct reviewer is optional. Owner must explicitly approve exact hashes before frozen scope changes. No unapproved added files, dependencies or extra objectives.',
   },
   architecture: {
     description: '架构文档/契约变更及不可变工件审批',
     actions: ['architecture-sync','artifact-get','artifact-check','artifact-stage','artifact-self-review','artifact-independent-review','artifact-approve'],
-    example: {action:'artifact-check',project_root:'/ABSOLUTE/GIT/PROJECT',input:{}},
+    example: {action:'artifact-check',project_root:'/ABSOLUTE/PROJECT',input:{}},
     caution: 'Never invent approval or overwrite an Owner-controlled ADR.',
   },
 } as const;

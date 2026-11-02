@@ -8,7 +8,7 @@ import {
   lanAddresses, workspaceAccess, WORKSPACE_START_PORT,
 } from "../workspace-access.js";
 import { ensureProjectWorkspaceAtMcpStartup } from "../startup.js";
-import { readWorkspaceRuntime, writeWorkspaceRuntime } from "../workspace-runtime.js";
+import { readWorkspaceRuntime, writeWorkspaceRuntime, localWorkspaceRuntimePath } from "../workspace-runtime.js";
 
 const roots: string[] = [];
 function project(): string {
@@ -18,7 +18,10 @@ function project(): string {
   return dir;
 }
 afterEach(() => {
-  for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)){
+    fs.rmSync(localWorkspaceRuntimePath(root),{force:true});
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 describe("project workbench LAN access", () => {
@@ -73,7 +76,7 @@ describe("project workbench LAN access", () => {
     });
   });
 
-  it("persists runtime port and identity independently in each Git project's SQLite", () => {
+  it("persists runtime identity in private machine-local SQLite, never project SQLite", () => {
     const first = project(), second = project();
     expect(readWorkspaceRuntime(first)).toBeNull();
     const runtime = {
@@ -83,6 +86,11 @@ describe("project workbench LAN access", () => {
     writeWorkspaceRuntime(first, runtime);
     expect(readWorkspaceRuntime(first)).toEqual(runtime);
     expect(readWorkspaceRuntime(second)).toBeNull();
+    expect(fs.existsSync(localWorkspaceRuntimePath(first))).toBe(true);
+    expect(localWorkspaceRuntimePath(first)).not.toContain(first);
+    expect(fs.existsSync(path.join(first,'.mcp-probe-kit/state/devcontrol.sqlite3'))).toBe(false);
+    if(process.platform!=='win32')
+      expect(fs.statSync(localWorkspaceRuntimePath(first)).mode&0o077).toBe(0);
     writeWorkspaceRuntime(first, { ...runtime, port: 39101, pid: 12346 });
     expect(readWorkspaceRuntime(first)).toMatchObject({ port: 39101, pid: 12346 });
     expect(execFileSync("git", ["status", "--porcelain"], {

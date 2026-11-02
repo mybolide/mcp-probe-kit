@@ -6,9 +6,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ensureProjectWorkspaceRunning } from "./workspace-process.js";
+import { getMcpPackageInstallRoot, getManagedWriteRootRejection } from "../lib/workspace-root.js";
 
 export async function ensureProjectWorkspaceAtMcpStartup(
   workspaceRoot: string,
+  options: {cliEntry?:string} = {},
 ): Promise<{ started: boolean; url?: string; reason?: string }> {
   if (process.env.MCP_DEVCONTROL_AUTOSTART === "0") {
     return { started: false, reason: "Disabled by MCP_DEVCONTROL_AUTOSTART=0" };
@@ -17,9 +19,11 @@ export async function ensureProjectWorkspaceAtMcpStartup(
     return { started: false, reason: "Project workbench requires Node.js 22+" };
   }
   const project = path.resolve(workspaceRoot);
-  if (!fs.existsSync(path.join(project, ".git"))) {
-    return { started: false, reason: "No Git project was resolved" };
+  if(project===getMcpPackageInstallRoot()||
+    !fs.existsSync(project)||!fs.statSync(project).isDirectory()||
+    fs.lstatSync(project).isSymbolicLink()||getManagedWriteRootRejection(project)){
+    return {started:false,reason:"No valid MCP project workspace was resolved"};
   }
-  const result = await ensureProjectWorkspaceRunning(project);
+  const result = await ensureProjectWorkspaceRunning(project,options);
   return { started: true, url: result.url };
 }

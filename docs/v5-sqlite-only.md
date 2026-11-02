@@ -213,6 +213,10 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 
 **项目不以 Git 为前提（v5 Git 可选）**：项目根目录是 MCP 工作区，不需要 `.git`。可以完全没有 Git，也可以由普通父目录统一管理多个独立 Git 子项目。Skill、AGENTS.md、SQLite 任务与 History 均存放于工作区。任务、批准的范围、需求版本、真实测试与验收前置不变。Git 项目继续以原始提交审计；无 Git 项目在 claim 时保留 SHA-256 文件基线，在 complete 时冻结交付文件清单，report 与 verify 必须绑定同一份文件内容和实际测试记录，不能把哈希冒充 Git 提交。真实生成器同步的 Skill 与 AGENTS.md，只有在用户原有规则未改变、内容字节级匹配时才作为工具维护，不属于业务交付。无 Git 项目同样支持延期验收、租约恢复和基于 SQLite 的历史恢复。MCP 从已确认的项目工作区解析 `project_root`，找不到时才由调用者传入本机实际目录，不得回退到 MCP 安装目录。无需安装 Git 或执行 git init。
 
+**跨设备 SQLite 与工作台运行态隔离**：工作台进程的 PID、端口、实例身份和启动时间属于当前机器，不是可合并的业务项目状态。新版本将其写入当前用户目录的 `.mcp-probe-kit-runtime/workspaces/` 私有 SQLite 文件，项目 SQLite 不再新建 `dc_workspace_runtime`。历史数据库中已存在的同名表只保留，不读取为当前机器进程，也不执行跨机导入。两方或三方合并在比较业务表结构之前排除所有已登记的机器本地表，所以表缺失、结构差异、两端不同 PID 都不会阻断真实项目任务数据合并；候选数据库仅保留目标端原有机器本地数据。其它实际业务表的不兼容结构仍严格拒绝。非 Git 项目可由 MCP 自动启动本地 HTTP 工作台，不创建 Git 仓库。
+
+**合并能力边界**：当前 `sqlite-merge-preview/candidate` 只处理 `dc_*` 项目管理业务表。History Session 的 `hs_archive`、`hs_derived` 和 `hs_meta` 不会从源库复制进候选库，仍保留目标端版本；不能将本次机器本地表的兼容修复描述为跨电脑 History 已经完成同步。History 的独立编号冲突与真实内容合并仍需专门审核后设计。
+
 | 流程领域 | 可用 `action` |
 |---|---|
 | 冻结任务说明补充 / Reviewed additive task specification (7) | `task-spec-supplement-get`、`task-spec-supplement-review`、`task-spec-supplement-stage`、`task-spec-supplement-self-review`、`task-spec-supplement-independent-review`、`task-spec-supplement-approve`、`task-spec-supplement-withdraw` |

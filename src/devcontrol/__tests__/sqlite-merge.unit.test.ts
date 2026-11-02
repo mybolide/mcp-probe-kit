@@ -102,6 +102,62 @@ describe('AI-assisted SQLite project state merge',()=>{
     expect(f.query(f.source,'SELECT id FROM dc_tasks ORDER BY id').map(r=>r.id))
       .toEqual(['API','ROOT']);
   });
+  it('ignores absent, divergent and differently shaped machine-local runtime tables before schema comparison',()=>{
+    const versions=[
+      {target:true,source:false,sourceShape:false},
+      {target:false,source:true,sourceShape:false},
+      {target:true,source:true,sourceShape:false},
+      {target:true,source:true,sourceShape:true},
+    ];
+    for(const mode of versions){
+      const f=fixtures();
+      const oldSchema=(version:string)=>`CREATE TABLE dc_workspace_runtime(
+        project_root TEXT PRIMARY KEY, pid INTEGER NOT NULL, port INTEGER NOT NULL);
+        INSERT INTO dc_workspace_runtime VALUES('/${version}/project',${version==='target'?1234:5678},39100)`;
+      const newSchema=`CREATE TABLE dc_workspace_runtime(
+        project_root TEXT PRIMARY KEY, instance_id TEXT NOT NULL,
+        started_at TEXT NOT NULL, port INTEGER NOT NULL);
+        INSERT INTO dc_workspace_runtime VALUES('/source/project','remote-id','2026-11-02',39110)`;
+      if(mode.target)f.run(f.target,oldSchema('target'));
+      if(mode.source)f.run(f.source,mode.sourceShape?newSchema:oldSchema('source'));
+      // The business task and real evidence still reconcile without importing
+      // any process identity from the source machine.
+      f.run(f.source,`INSERT INTO dc_tasks(id,title,status)
+        VALUES('REMOTE-DOC','Approved requirements draft','ready');
+        INSERT INTO dc_evidence(id,task_id,reference)
+        VALUES(92,'REMOTE-DOC','real-requirements-source')`);
+      const preview=f.preview();
+      expect(preview.blockingIssues).toEqual([]);
+      expect(preview).toMatchObject({candidatePossible:true,counts:{sourceOnly:2}});
+      expect(preview.warnings.some(x=>x.includes('dc_workspace_runtime'))).toBe(true);
+      const out=path.join(f.folder,`candidate-${Number(mode.target)}-${Number(mode.source)}-${Number(mode.sourceShape)}.sqlite3`);
+      mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,mode:'candidate',
+        expectedFingerprint:preview.fingerprint,outputPath:out});
+      expect(f.query(out,"SELECT id FROM dc_tasks WHERE id='REMOTE-DOC'"))
+        .toEqual([{id:'REMOTE-DOC'}]);
+      const actual=mode.target?
+        f.query(out,'SELECT project_root,pid,port FROM dc_workspace_runtime'):[];
+      expect(actual).toEqual(mode.target?
+        [{project_root:'/target/project',pid:1234,port:39100}]:[]);
+      if(!mode.target)expect(f.query(out,
+        "SELECT name FROM sqlite_master WHERE name='dc_workspace_runtime'")).toEqual([]);
+    }
+  });
+  it('also skips all other excluded checkout tables before schema comparison',()=>{
+    const f=fixtures();
+    // In one old installation this lease table was never created. In the
+    // other it has an incompatible experimental schema. Neither is a reason
+    // to reject otherwise compatible project history.
+    f.run(f.source,'DROP TABLE dc_task_leases');
+    f.run(f.source,"CREATE TABLE dc_task_leases(device TEXT PRIMARY KEY,local_pid INTEGER)");
+    const preview=f.preview();
+    expect(preview.candidatePossible).toBe(true);
+    expect(preview.blockingIssues).toEqual([]);
+    const result=path.join(f.folder,'local-lease.sqlite3');
+    mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      mode:'candidate',outputPath:result,expectedFingerprint:preview.fingerprint});
+    expect(f.query(result,'PRAGMA foreign_key_check')).toEqual([]);
+  });
   it('rejects AI conflict preference when no genuine common-ancestor snapshot was provided',()=>{
     const f=fixtures();
     f.run(f.target,"INSERT INTO dc_tasks(id,title,status) VALUES('DRAFT','Computer A version','draft')");

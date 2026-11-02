@@ -1,8 +1,9 @@
-/** Local, per-project workbench process registry. Never share it across repos. */
+/** Machine-only workbench PID/port registry. Never serialize into project SQLite. */
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
-import { ensureDatabaseIgnored, resolveProjectDatabase } from "./project-storage.js";
 
 interface DatabaseSync {
   exec(query: string): void;
@@ -22,16 +23,38 @@ export interface WorkspaceRuntime {
   lanEnabled: boolean;
 }
 
+/** Stable for the same workspace on the same account, but not transferable
+ * between computers. A moved project deliberately gets a new local record.
+ */
+export function localWorkspaceRuntimePath(root:string):string{
+  const project=fs.realpathSync(path.resolve(root));
+  if(!fs.statSync(project).isDirectory())throw Error("Invalid workspace runtime root");
+  const directory=path.join(os.homedir(),".mcp-probe-kit-runtime","workspaces");
+  return path.join(directory,createHash("sha256").update(project).digest("hex")+".sqlite3");
+}
+function ensurePrivateDirectory(directory:string):void{
+  const parent=path.dirname(directory);
+  for(const candidate of [parent,directory]){
+    if(fs.existsSync(candidate)){
+      const stat=fs.lstatSync(candidate);
+      if(!stat.isDirectory()||stat.isSymbolicLink()||
+        (process.platform!=="win32"&&(stat.mode&0o077)!==0))
+        throw Error("Unsafe machine-local runtime directory permissions");
+    }else fs.mkdirSync(candidate,{mode:0o700});
+  }
+}
 function withDatabase<T>(root: string, action: (db: DatabaseSync) => T): T {
-  const project = path.resolve(root);
-  const database = resolveProjectDatabase(project);
-  ensureDatabaseIgnored(project, database);
-  fs.mkdirSync(path.dirname(database), { recursive: true });
+  const database = localWorkspaceRuntimePath(root);
+  ensurePrivateDirectory(path.dirname(database));
+  if(fs.existsSync(database)&&
+    (!fs.lstatSync(database).isFile()||fs.lstatSync(database).isSymbolicLink()))
+    throw Error("Unsafe machine-local runtime SQLite file");
   const sqlite = createRequire(import.meta.url)("node:sqlite") as {
     DatabaseSync: new (file: string) => DatabaseSync;
   };
   const db = new sqlite.DatabaseSync(database);
   try {
+    if(process.platform!=="win32")fs.chmodSync(database,0o600);
     db.exec("PRAGMA busy_timeout = 5000");
     db.exec(`CREATE TABLE IF NOT EXISTS dc_workspace_runtime (
       project_root TEXT PRIMARY KEY,
