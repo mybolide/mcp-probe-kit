@@ -435,6 +435,20 @@ export class ProjectTaskLedger {
         prefix TEXT NOT NULL, git_dir TEXT NOT NULL, base_head TEXT NOT NULL,
         captured_at TEXT NOT NULL, PRIMARY KEY(task_id,prefix)
       );
+      -- The original claim-time Git location is immutable. An Owner-approved
+      -- workspace move appends location changes instead of rewriting it.
+      CREATE TABLE IF NOT EXISTS dc_task_repository_baseline_relocations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id TEXT NOT NULL,
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        prefix TEXT NOT NULL,
+        from_git_dir TEXT NOT NULL,
+        to_git_dir TEXT NOT NULL,
+        base_head TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        relocated_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS dc_completion_repository_revisions (
         task_id TEXT NOT NULL REFERENCES dc_tasks(id),
         revision INTEGER NOT NULL, snapshot_json TEXT NOT NULL,
@@ -1225,8 +1239,9 @@ export class ProjectTaskLedger {
         const snapshot=this.db.prepare(`SELECT snapshot_json,digest
           FROM dc_completion_repository_revisions WHERE task_id=? AND revision=?`)
           .get(id,note.revision);
-        if(!snapshot||snapshot.digest!==revisionDigest(repositories)||
-          snapshot.snapshot_json!==JSON.stringify(repositories))
+        if(!snapshot||snapshot.digest!==this.repositoryEvidenceDigest(id,repositories)||
+          JSON.stringify(this.relocatedRepositories(id,JSON.parse(String(snapshot.snapshot_json))))
+            !==JSON.stringify(repositories))
           fail('REPOSITORY_EVIDENCE_STALE',
             'Self-review must inspect the exact committed revision of every Git repository');
       }
@@ -1238,7 +1253,7 @@ export class ProjectTaskLedger {
       if(multiRepo){
         const bound=this.db.prepare(`SELECT digest FROM dc_evidence_repository_digests
           WHERE evidence_id=?`).get(evidence.id);
-        if(bound?.digest!==revisionDigest(repositories))
+        if(bound?.digest!==this.repositoryEvidenceDigest(id,repositories))
           fail('REPOSITORY_EVIDENCE_STALE',
             'Self-review must cite real evidence for the full Git repository version vector');
       }
@@ -2016,6 +2031,183 @@ export class ProjectTaskLedger {
         previousHash:old?.hash??"",fileCount:manifest.files.length};
     });
   }
+  /** The claim-time location never changes. Every later physical location
+   * must be linked by an unbroken, Owner-authorized append-only history.
+   * Old completion/evidence hashes continue to bind the ORIGINAL locations.
+   */
+  private repositoryLocations(id:string):Map<string,{
+    original:string;current:string;baseHead:string;known:Set<string>;
+  }> {
+    const originals=this.db.prepare(`SELECT prefix,git_dir,base_head FROM
+      dc_task_repository_baselines WHERE task_id=? ORDER BY prefix`).all(id);
+    const locations=new Map(originals.map(row=>{
+      const original=String(row.git_dir);
+      return [String(row.prefix),{original,current:original,
+        baseHead:String(row.base_head),known:new Set([original])}] as const;
+    }));
+    const history=this.db.prepare(`SELECT prefix,from_git_dir,to_git_dir,base_head
+      FROM dc_task_repository_baseline_relocations WHERE task_id=? ORDER BY id`).all(id);
+    for(const row of history){
+      const location=locations.get(String(row.prefix));
+      if(!location||location.baseHead!==row.base_head||
+        location.current!==row.from_git_dir||
+        typeof row.to_git_dir!=='string'||!path.isAbsolute(row.to_git_dir)||
+        row.to_git_dir===row.from_git_dir||location.known.has(row.to_git_dir))
+        fail('REPOSITORY_RELOCATION_HISTORY_INVALID',
+          'Owner relocation history does not match immutable claim-time repository identities');
+      const next=String(row.to_git_dir);
+      location.known.add(next);
+      locations.set(String(row.prefix),{...location,current:next});
+    }
+    return locations;
+  }
+
+  private relocatedRepositories(id:string,revisions:RepositoryRevision[]):RepositoryRevision[]{
+    const locations=this.repositoryLocations(id);
+    return revisions.map(repo=>{
+      const location=locations.get(repo.prefix);
+      if(!location||!location.known.has(repo.gitDir)||
+        repo.baseHead!==location.baseHead)
+        fail('REPOSITORY_RELOCATION_MISMATCH',
+          'Frozen repository version references an unknown location or original base');
+      return {...repo,gitDir:location.current};
+    });
+  }
+
+  private repositoryEvidenceDigest(id:string,revisions:RepositoryRevision[]):string{
+    const locations=this.repositoryLocations(id);
+    return revisionDigest(revisions.map(repo=>{
+      const location=locations.get(repo.prefix);
+      if(!location||!location.known.has(repo.gitDir)||
+        repo.baseHead!==location.baseHead)
+        fail('REPOSITORY_RELOCATION_MISMATCH',
+          'Evidence cannot be rebound to an unknown repository location or base');
+      return {...repo,gitDir:location.original};
+    }));
+  }
+
+  /** Rebind only the machine-local Git directory location. This does not
+   * change frozen task scope, commit baselines, completion snapshots, evidence,
+   * review/Gate results or previously Verified tasks. All supplied mappings
+   * are checked as one atomic, authenticated Owner decision.
+   */
+  relocateRepositoryBaselines(input:{
+    actor:string;ownerRecoveryKey:string;reason:string;taskIds:string[];
+    mappings:Array<{taskId:string;prefix:string;fromGitDir:string;
+      toGitDir:string;expectedBaseHead:string}>;
+  }):Row {
+    const actor=typeof input?.actor==='string'?input.actor.trim():'';
+    const reason=typeof input?.reason==='string'?input.reason.trim():'';
+    if(actor.length<2||reason.length<30||reason.length>1200)
+      fail('RELOCATION_EVIDENCE_REQUIRED',
+        'Provide an Owner actor and a concrete workspace relocation reason');
+    const secret=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??'';
+    const supplied=typeof input.ownerRecoveryKey==='string'?input.ownerRecoveryKey:'';
+    if(secret.length<24||secret.length!==supplied.length||
+      !timingSafeEqual(Buffer.from(supplied),Buffer.from(secret)))
+      fail('OWNER_AUTH_REQUIRED','Configured Owner recovery credential required');
+    const ids=input.taskIds, mappings=input.mappings;
+    if(!Array.isArray(ids)||!ids.length||ids.length>10000||
+      ids.some(id=>typeof id!=='string'||!id.trim())||
+      new Set(ids).size!==ids.length||!Array.isArray(mappings)||
+      mappings.length<ids.length||mappings.length>30000)
+      fail('RELOCATION_BATCH_INVALID','Provide unique taskIds and complete repository mappings');
+    return this.inTransaction(()=>{
+      const submitted=new Map<string,typeof mappings>();
+      for(const item of mappings){
+        if(!item||typeof item.taskId!=='string'||
+          typeof item.prefix!=='string'||typeof item.fromGitDir!=='string'||
+          typeof item.toGitDir!=='string'||typeof item.expectedBaseHead!=='string'||
+          !ids.includes(item.taskId)||!path.isAbsolute(item.fromGitDir)||
+          !path.isAbsolute(item.toGitDir)||
+          !/^[0-9a-f]{40,64}$/.test(item.expectedBaseHead))
+          fail('RELOCATION_MAPPING_INVALID','Every mapping needs exact old/new absolute Git directories and original base SHA');
+        const entries=submitted.get(item.taskId)??[];
+        if(entries.some(entry=>entry.prefix===item.prefix))
+          fail('RELOCATION_MAPPING_DUPLICATE','Duplicate repository prefix in Owner relocation request');
+        entries.push(item);
+        submitted.set(item.taskId,entries);
+      }
+      const plans:Array<{taskId:string;prefix:string;fromGitDir:string;
+        toGitDir:string;baseHead:string}>=[];
+      for(const id of ids){
+        const task=this.requireTask(id);
+        const baselines=this.db.prepare(`SELECT prefix,git_dir,base_head FROM
+          dc_task_repository_baselines WHERE task_id=? ORDER BY prefix`).all(id);
+        const expected=submitted.get(id)??[];
+        if(!baselines.length||expected.length!==baselines.length)
+          fail('RELOCATION_MAPPING_INCOMPLETE',
+            'Owner must supply every root/child repository baseline for each selected task');
+        const locations=this.repositoryLocations(id);
+        const repos=discoverRepositories(this.root,JSON.parse(task.allowed_paths));
+        if(repos.length!==baselines.length||repos.some((repo,i)=>repo.prefix!==baselines[i].prefix))
+          fail('REPOSITORY_TOPOLOGY_CHANGED','Frozen repository prefixes are missing or have changed');
+        if(stagedChanges(repos).length)
+          fail('RELOCATION_STAGED_WORKTREE','No Git index may contain staged changes during Owner relocation');
+        for(const row of baselines){
+          const prefix=String(row.prefix);
+          const found=expected.find(item=>item.prefix===prefix);
+          const location=locations.get(prefix)!;
+          const repo=repos.find(item=>item.prefix===prefix)!;
+          if(!found||found.expectedBaseHead!==row.base_head||
+            found.fromGitDir!==location.current||found.toGitDir!==repo.gitDir||
+            found.fromGitDir===found.toGitDir||
+            location.known.has(found.toGitDir))
+            fail('RELOCATION_MAPPING_MISMATCH',
+              'Owner mapping is stale, repeated, ambiguous or differs from the verified Git root');
+          if(!run(repo.root,'git',['merge-base','--is-ancestor',
+            String(row.base_head),git(repo.root,['rev-parse','HEAD'])]).passed)
+            fail('RELOCATION_BASE_CHANGED','Original immutable Git commit is not an ancestor of the relocated repository HEAD');
+          plans.push({taskId:id,prefix,fromGitDir:found.fromGitDir,
+            toGitDir:found.toGitDir,baseHead:found.expectedBaseHead});
+        }
+        if(task.status==='in_progress'||task.status==='in_review'){
+          const childRows=this.db.prepare(`SELECT prefix,git_dir,snapshot_json,digest
+            FROM dc_legacy_child_worktree_snapshots WHERE task_id=?`).all(id);
+          for(const repo of repos.filter(repo=>repo.prefix)){
+            const protectedRow=childRows.find(row=>row.prefix===repo.prefix);
+            if(!protectedRow||!locations.get(repo.prefix)?.known.has(String(protectedRow.git_dir))||
+              createHash('sha256').update(String(protectedRow.snapshot_json)).digest('hex')!==protectedRow.digest)
+              fail('RELOCATION_CHILD_PROTECTION_INVALID',
+                'Active task child protection is missing or its original SHA-256 snapshot was altered');
+            const scoped=JSON.parse(task.allowed_paths) as string[];
+            const current=preservedWorktreeSnapshot(repo.root,scoped,repo.prefix);
+            const expectedWip=this.effectiveOwnerSnapshot(id,repo.prefix,
+              JSON.parse(String(protectedRow.snapshot_json)));
+            if(JSON.stringify(current)!==JSON.stringify(expectedWip))
+              fail('PROTECTED_CHILD_WORKTREE_CHANGED',
+                'Protected child worktree bytes have changed during workspace relocation');
+          }
+        }
+      }
+      // Revalidate the exact original baseline and current relocation path
+      // inside this single BEGIN IMMEDIATE transaction before any insert.
+      for(const plan of plans){
+        const row=this.db.prepare(`SELECT git_dir,base_head FROM
+          dc_task_repository_baselines WHERE task_id=? AND prefix=?`)
+          .get(plan.taskId,plan.prefix);
+        if(!row||row.base_head!==plan.baseHead||
+          this.repositoryLocations(plan.taskId).get(plan.prefix)?.current!==plan.fromGitDir)
+          fail('RELOCATION_RACE','Repository baseline changed during Owner relocation');
+      }
+      const batchId=randomUUID(),at=utc();
+      for(const plan of plans)this.db.prepare(`INSERT INTO
+        dc_task_repository_baseline_relocations
+        (batch_id,task_id,prefix,from_git_dir,to_git_dir,base_head,actor,reason,relocated_at)
+        VALUES(?,?,?,?,?,?,?,?,?)`).run(batchId,plan.taskId,plan.prefix,
+          plan.fromGitDir,plan.toGitDir,plan.baseHead,actor,reason,at);
+      for(const id of ids)this.audit(id,'owner_repository_baselines_relocated',actor,{
+        batchId,reason,repositoryMappings:plans.filter(p=>p.taskId===id),
+        taskStatusUnchanged:true,originalBaseHeadsUnchanged:true,
+        completionAndEvidenceUnchanged:true,gatePassed:false,
+      });
+      return {relocated:true,batchId,taskCount:ids.length,
+        repositoryCount:plans.length,taskIds:[...ids],
+        originalBaselinesPreserved:true,completionAndEvidencePreserved:true,
+        gatesUnchanged:true,warning:'Only approved machine-local Git locations were rebound; no Gate or verification was granted'};
+    });
+  }
+
   /** Frozen repo baselines are immutable for the duration of a task.
    * Legacy single-repo tasks keep their existing Git and SQLite semantics.
    */
@@ -2029,8 +2221,9 @@ export class ProjectTaskLedger {
         "Task has independent Git repositories without a frozen claim-time baseline; re-review and reclaim it before verification");
       return [];
     }
+    const locations=this.repositoryLocations(id);
     const records=rows.map(row=>({
-      prefix:String(row.prefix),gitDir:String(row.git_dir),
+      prefix:String(row.prefix),gitDir:locations.get(String(row.prefix))!.current,
       baseHead:String(row.base_head),head:String(row.base_head),
     }));
     try{assertRepositoryTopology(this.root,paths,records);}
@@ -2098,15 +2291,16 @@ export class ProjectTaskLedger {
     if(!row)fail('DELIVERY_REPOSITORIES_REQUIRED',
       'Multi-repository task requires exact persisted delivery HEADs');
     const saved=JSON.parse(String(row.snapshot_json)) as RepositoryRevision[];
-    if(revisionDigest(saved)!==row.digest)
+    if(this.repositoryEvidenceDigest(id,saved)!==row.digest)
       fail('DELIVERY_REPOSITORIES_TAMPERED','Delivery snapshot digest differs');
+    const relocated=this.relocatedRepositories(id,saved);
     try{
-      assertDeliveryStillPresent(this.root,saved,
+      assertDeliveryStillPresent(this.root,relocated,
         this.observedTaskRepositories(id,task),JSON.parse(task.allowed_paths));
     }catch(error){fail('DELIVERY_HEAD_CHANGED',String(error));}
-    if(note&&revision===undefined&&saved.find(x=>x.prefix==='')?.head!==note.git_head)
+    if(note&&revision===undefined&&relocated.find(x=>x.prefix==='')?.head!==note.git_head)
       fail('DELIVERY_HEAD_CHANGED','Root completion and multi-Git delivery SHA differ');
-    return saved;
+    return relocated;
   }
 
   /** A nested Git repository is not automatically part of a task delivery.
@@ -2225,7 +2419,9 @@ export class ProjectTaskLedger {
     for(const repo of repos){
       const revision=revisions.find(r=>r.prefix===repo.prefix)!;
       const child=childRows.find(row=>row.prefix===repo.prefix);
-      if(repo.prefix&&child&&child.git_dir!==repo.gitDir)
+      if(repo.prefix&&child&&
+        (!this.repositoryLocations(id).get(repo.prefix)?.known.has(String(child.git_dir))||
+          this.repositoryLocations(id).get(repo.prefix)?.current!==repo.gitDir))
         fail('CHILD_REPOSITORY_IDENTITY_CHANGED','Protected child repository was replaced');
       if(repo.prefix&&child&&sha(String(child.snapshot_json))!==child.digest)
         fail('PROTECTED_SNAPSHOT_CORRUPT','Stored original child protection was changed');
@@ -2354,7 +2550,9 @@ export class ProjectTaskLedger {
       if(protectedRows.length&&!protectedRow)
         fail('CHILD_WORKTREE_PROTECTION_INCOMPLETE',
           'Child repository protection record does not match frozen repository identity');
-      if(protectedRow&&protectedRow.git_dir!==revision.gitDir)
+      if(protectedRow&&
+        (!this.repositoryLocations(id!).get(revision.prefix)?.known.has(String(protectedRow.git_dir))||
+          this.repositoryLocations(id!).get(revision.prefix)?.current!==revision.gitDir))
         fail('CHILD_REPOSITORY_IDENTITY_CHANGED','Protected child Git metadata changed');
       const dirty=preservedWorktreeSnapshot(path.join(this.root,revision.prefix),
         scope,revision.prefix);
@@ -4936,7 +5134,7 @@ export class ProjectTaskLedger {
       if(multiRepo){
         this.db.prepare(`INSERT INTO dc_completion_repository_revisions
           (task_id,revision,snapshot_json,digest) VALUES(?,?,?,?)`)
-          .run(id,revision,JSON.stringify(repositories),revisionDigest(repositories));
+          .run(id,revision,JSON.stringify(repositories),this.repositoryEvidenceDigest(id,repositories));
       }
       this.audit(id, "completion_recorded", lease.agent, {
         revision, gitHead: head,
@@ -5920,7 +6118,7 @@ export class ProjectTaskLedger {
       if(multiRepo&&completion&&evidence.deliveryHeads!==undefined){
         const selected=this.selectDeliveryRepositories(current,observed,evidence.deliveryHeads);
         const frozen=this.frozenDeliveryRepositories(id,current);
-        if(revisionDigest(selected)!==revisionDigest(frozen))
+        if(this.repositoryEvidenceDigest(id,selected)!==this.repositoryEvidenceDigest(id,frozen))
           fail('EVIDENCE_DELIVERY_HEADS_MISMATCH',
             'Reported deliveryHeads must equal the exact already completed version vector');
       }
@@ -5935,7 +6133,7 @@ export class ProjectTaskLedger {
       if(multiRepo){
         const row=this.db.prepare("SELECT id FROM dc_evidence WHERE task_id=? ORDER BY id DESC LIMIT 1").get(id);
         this.db.prepare(`INSERT INTO dc_evidence_repository_digests(evidence_id,digest)
-          VALUES(?,?)`).run(row!.id,revisionDigest(repositories));
+          VALUES(?,?)`).run(row!.id,this.repositoryEvidenceDigest(id,repositories));
       }
       if (readyForReview) {
         this.db.prepare(
@@ -5997,7 +6195,7 @@ export class ProjectTaskLedger {
     const snapshot=this.db.prepare(`SELECT digest FROM dc_completion_repository_revisions
       WHERE task_id=? AND revision=?`).get(id,completion.revision);
     if(multiRepo){
-      const digest=revisionDigest(repositories);
+      const digest=this.repositoryEvidenceDigest(id,repositories);
       const reported=this.db.prepare(`SELECT digest FROM dc_evidence_repository_digests
         WHERE evidence_id=?`).get(evidence.id);
       if(!snapshot||snapshot.digest!==digest||reported?.digest!==digest)
@@ -6078,10 +6276,11 @@ export class ProjectTaskLedger {
     const completedRepos=this.db.prepare(`SELECT snapshot_json,digest
       FROM dc_completion_repository_revisions WHERE task_id=? AND revision=?`)
       .get(id,note.revision);
-    const repoDigest=multiRepo?revisionDigest(repositories):'';
+    const repoDigest=multiRepo?this.repositoryEvidenceDigest(id,repositories):'';
     if(multiRepo){
       if(!completedRepos||completedRepos.digest!==repoDigest||
-        JSON.stringify(repositories)!==String(completedRepos.snapshot_json))
+        JSON.stringify(repositories)!==JSON.stringify(this.relocatedRepositories(id,
+          JSON.parse(String(completedRepos.snapshot_json)))))
         return {taskId:id,passed:false,
           reason:"Scoped child Git HEAD or repository identity changed since task completion"};
       try{this.requireChildReposClean(observed,id,task);}
@@ -6248,7 +6447,7 @@ export class ProjectTaskLedger {
         this.requireChildReposClean(current,id,task);
         assertDeliveryStillPresent(this.root,repositories,current,
           JSON.parse(task.allowed_paths));
-        return revisionDigest(repositories)===repoDigest;
+        return this.repositoryEvidenceDigest(id,repositories)===repoDigest;
       }catch{return false;}
     };
     const stable = startHead === stableHead && protectedEditsStable && repoStable();
@@ -6329,6 +6528,11 @@ export class ProjectTaskLedger {
         FROM dc_task_review_handoffs WHERE task_id=?`).get(id)??null,
       claimWorktreeProtection:this.db.prepare(`SELECT base_head,captured_at
         FROM dc_task_worktree_baselines WHERE task_id=?`).get(id)??null,
+      repositoryBaselines:this.db.prepare(`SELECT prefix,git_dir,base_head,captured_at
+        FROM dc_task_repository_baselines WHERE task_id=? ORDER BY prefix`).all(id),
+      repositoryBaselineRelocations:this.db.prepare(`SELECT batch_id,prefix,
+        from_git_dir,to_git_dir,base_head,actor,reason,relocated_at
+        FROM dc_task_repository_baseline_relocations WHERE task_id=? ORDER BY id`).all(id),
       audit: this.db.prepare("SELECT * FROM dc_audit WHERE task_id=? ORDER BY id").all(id)
         .map((r) => ({ ...r, details: JSON.parse(r.details_json), details_json: undefined })),
     };

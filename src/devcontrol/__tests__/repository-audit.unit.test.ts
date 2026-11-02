@@ -95,6 +95,52 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
     }finally{ledger.close();}
   });
 
+  it('Owner relocation rejects staged Git indexes and a substituted child repository without any audit changes',()=>{
+    const {root}=fixture();
+    const secret='fixture-owner-key-for-safe-workspace-moves';
+    process.env.DEVCONTROL_OWNER_RECOVERY_KEY=secret;
+    const id='AUDIT-RELOCATED-REJECT';
+    const original=new ProjectTaskLedger(root);
+    let baselines:any[]=[];
+    try{
+      original.create({id,title:'Original frozen three-Git identity',track:'governance',
+        allowedPaths:['docs/approved.txt'],requiredGates:['docs']},'agent');
+      original.approve(id,'owner');
+      const claimed=original.claim(id,'developer');
+      baselines=original.trace(id).repositoryBaselines;
+      original.release(id,claimed.leaseToken);
+    }finally{original.close();}
+    const relocated=root+'-reject-move';fs.renameSync(root,relocated);cleanups.push(relocated);
+    const child=path.join(relocated,'apw-life');
+    const ledger=new ProjectTaskLedger(relocated);
+    try{
+      const request={actor:'owner',ownerRecoveryKey:secret,
+        reason:'Move to an owner-authorized new machine with independent child repositories',
+        taskIds:[id],mappings:baselines.map(row=>({
+          taskId:id,prefix:row.prefix,fromGitDir:row.git_dir,
+          toGitDir:fs.realpathSync(path.join(relocated,row.prefix,'.git')),
+          expectedBaseHead:row.base_head,
+        }))};
+      fs.writeFileSync(path.join(child,'unreviewed.txt'),'staged changes not permitted\n');
+      cmd(child,'add','unreviewed.txt');
+      expect(()=>ledger.relocateRepositoryBaselines(request)).toThrow(/staged/i);
+      expect(ledger.trace(id).repositoryBaselineRelocations).toEqual([]);
+      cmd(child,'reset','-q','--','unreviewed.txt');
+      fs.rmSync(path.join(child,'unreviewed.txt'));
+      fs.rmSync(child,{recursive:true,force:true});
+      fs.mkdirSync(child);
+      cmd(child,'init','-q');
+      cmd(child,'config','user.name','Other Git');
+      cmd(child,'config','user.email','other@example.invalid');
+      fs.writeFileSync(path.join(child,'README.md'),'Different repository with no ancestor relation\n');
+      cmd(child,'add','README.md');cmd(child,'commit','-qm','unrelated independent history');
+      expect(()=>ledger.relocateRepositoryBaselines(request))
+        .toThrow(/Original immutable Git commit|ancestor|BASE_CHANGED/i);
+      expect(ledger.trace(id).repositoryBaselineRelocations).toEqual([]);
+      expect(ledger.get(id).status).toBe('ready');
+    }finally{ledger.close();}
+  });
+
   it('rejects staged manual changes posing as generated Skill or AGENTS',()=>{
     const {root}=fixture();
     const ledger=new ProjectTaskLedger(root);
@@ -139,6 +185,114 @@ describe('layered local worktree-ignore protection',()=>{
 });
 
 describe('immutable multi-repository delivery commits',()=>{
+  it('Owner relocates two-task three-repository SQLite ledger without rewriting original Git or verified evidence',()=>{
+    const {root,child}=fixture();
+    fs.writeFileSync(path.join(child,'README.md'),'Original child Owner WIP preserved across copy\n');
+    const secret='fixture-owner-recovery-key-is-long-enough';
+    process.env.DEVCONTROL_OWNER_RECOVERY_KEY=secret;
+    const ledger=new ProjectTaskLedger(root);
+    const ids=['AUDIT-RELOCATED-VERIFIED','AUDIT-RELOCATED-PENDING'];
+    let original:ReturnType<typeof ledger.trace>[]=[];
+    let pendingToken='';
+    try{
+      for(const id of ids){
+        ledger.create({id,title:'Frozen source from original location '+id,
+          track:'governance',allowedPaths:['docs/'+id+'.txt'],
+          requiredGates:[id===ids[0]?'docs':'python_pytest']},'agent');
+        ledger.approve(id,'owner');
+      }
+      const first=ledger.claim(ids[0],'developer');
+      fs.mkdirSync(path.join(root,'docs'));
+      fs.writeFileSync(path.join(root,'docs/'+ids[0]+'.txt'),'First committed revision\n');
+      cmd(root,'add','docs/'+ids[0]+'.txt');cmd(root,'commit','-qm','first frozen task');
+      const receipt='Fixture actual first task project file verification receipt';
+      ledger.report(ids[0],first.leaseToken,{kind:'docs',reference:receipt},true);
+      ledger.complete(ids[0],first.leaseToken,{
+        summary:'Original verified source committed',implementation:'Root-only files committed',
+        verification:'Fixture test receipt recorded',
+      });
+      ledger.reviewOwnTask(ids[0],first.leaseToken,{
+        outcome:'passed',evidenceReference:receipt,
+        findings:'Inspected exact first Git commit, preserved child Owner source and actual fixture test evidence.',
+      });
+      ledger.reviewExternalGate(ids[0],first.leaseToken,{
+        gate:'docs',runner:'fixture-runner',reviewer:'developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:receipt,
+        reviewNotes:'Checked the frozen approved root source, real fixture receipt and unchanged child snapshots.',
+      });
+      expect(ledger.verify(ids[0],first.leaseToken).passed).toBe(true);
+      const second=ledger.claim(ids[1],'developer');
+      pendingToken=second.leaseToken;
+      fs.writeFileSync(path.join(root,'docs/'+ids[1]+'.txt'),'Pending original delivery\n');
+      cmd(root,'add','docs/'+ids[1]+'.txt');cmd(root,'commit','-qm','second frozen task');
+      ledger.report(ids[1],pendingToken,{
+        kind:'python_pytest',reference:'Fixture external PostgreSQL Gate still not available',
+      },true);
+      ledger.complete(ids[1],pendingToken,{
+        summary:'Pending root-only test',implementation:'Original committed Git SHA',
+        verification:'External Gate not yet passed',
+      });
+      original=ids.map(id=>ledger.trace(id));
+    }finally{ledger.close();}
+    const relocated=root+'-relocated';
+    fs.renameSync(root,relocated);cleanups.push(relocated);
+    const moved=new ProjectTaskLedger(relocated);
+    try{
+      const baselines=ids.flatMap((id,i)=>original[i].repositoryBaselines.map((row:any)=>({
+        taskId:id,prefix:row.prefix,fromGitDir:row.git_dir,
+        toGitDir:fs.realpathSync(path.join(relocated,row.prefix,'.git')),
+        expectedBaseHead:row.base_head,
+      })));
+      const request={actor:'verified-owner',ownerRecoveryKey:secret,
+        reason:'Workspace moved with unchanged root and two independent child repositories',
+        taskIds:ids,mappings:baselines};
+      expect(()=>moved.checkStaged()).toThrow(/topology|repository/i);
+      expect(()=>moved.relocateRepositoryBaselines({...request,ownerRecoveryKey:'wrong'}))
+        .toThrow(/Owner recovery credential/i);
+      expect(()=>moved.relocateRepositoryBaselines({...request,mappings:baselines.slice(0,-1)}))
+        .toThrow(/every root\/child|complete/i);
+      expect(()=>moved.relocateRepositoryBaselines({...request,mappings:[...baselines,baselines[0]]}))
+        .toThrow(/Duplicate|duplicate/i);
+      expect(()=>moved.relocateRepositoryBaselines({...request,
+        mappings:baselines.map((row,i)=>i===1?{...row,expectedBaseHead:'a'.repeat(40)}:row)}))
+        .toThrow(/stale|mapping/i);
+      expect(()=>moved.relocateRepositoryBaselines({...request,
+        mappings:baselines.map((row,i)=>i===1?{...row,toGitDir:path.join(relocated,'apw-life-app','.git')}:row)}))
+        .toThrow(/mapping/i);
+      expect(moved.trace(ids[0]).repositoryBaselineRelocations).toEqual([]);
+      const result=moved.relocateRepositoryBaselines(request);
+      expect(result).toMatchObject({relocated:true,taskCount:2,repositoryCount:6,
+        originalBaselinesPreserved:true,completionAndEvidencePreserved:true});
+      // checkStaged is a pre-commit Gate: with no index changes it correctly
+      // reports false, but must no longer reject repository topology.
+      expect(moved.checkStaged()).toMatchObject({
+        passed:false,reason:'No staged task changes',deniedFiles:[],
+      });
+      for(const [i,id] of ids.entries()){
+        const after=moved.trace(id);
+        expect(after.repositoryBaselines).toEqual(original[i].repositoryBaselines);
+        expect(after.evidence).toEqual(original[i].evidence);
+        expect(after.completion).toEqual(original[i].completion);
+        expect(after.externalGateReviews).toEqual(original[i].externalGateReviews);
+        expect(after.task.status).toBe(original[i].task.status);
+        expect(after.task.requiredGates).toEqual(original[i].task.requiredGates);
+        expect(after.repositoryBaselineRelocations).toHaveLength(3);
+        expect(after.repositoryBaselineRelocations[0].from_git_dir)
+          .toBe(original[i].repositoryBaselines[0].git_dir);
+      }
+      expect(moved.get(ids[0]).status).toBe('verified');
+      expect(moved.get(ids[1]).status).toBe('in_review');
+      const notPassed=moved.verify(ids[1],pendingToken);
+      expect(notPassed.passed).toBe(false);
+      expect(String(notPassed.reason??'')).not.toMatch(/repository/i);
+      expect(()=>moved.relocateRepositoryBaselines(request))
+        .toThrow(/mapping|repeated|stale/i);
+      expect(moved.trace(ids[0]).repositoryBaselineRelocations).toHaveLength(3);
+      expect(fs.readFileSync(path.join(relocated,'apw-life','README.md'),'utf8'))
+        .toBe('Original child Owner WIP preserved across copy\n');
+    }finally{moved.close();}
+  });
+
   it('defers a failed root-only external Gate with unrelated child WIP, frees the lease and resumes the original commit',()=>{
     const {root,child}=fixture();
     const tracked='Other Agent existing tracked changes — do not touch\n';

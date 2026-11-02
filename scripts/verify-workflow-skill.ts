@@ -43,6 +43,8 @@ for(const [name,source] of guidance){
     errors.push(name+' omits the actual self-review / self Gate review / verify contract');
   if(!source.includes('refresh-protected-worktree'))
     errors.push(name+' omits the Owner-authorized HEAD-restored protected snapshot refresh action');
+  if(!source.includes('relocate-repository-baselines'))
+    errors.push(name+' omits the Owner-authorized append-only multi-Git workspace relocation operation');
   if(!source.includes('devcontrol-worktree-ignore')||!source.includes('deliveryHeads'))
     errors.push(name+' omits local worktree-ignore or immutable multi-repository delivery HEAD guidance');
   if(!source.includes('task-spec-supplement-stage')||

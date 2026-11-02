@@ -225,6 +225,7 @@ export function dispatchDevControl(
         actor:String(input.actor??''),ownerRecoveryKey:String(input.ownerRecoveryKey??''),
         reason:String(input.reason??''),
       });
+    case 'relocate-repository-baselines': return ledger.relocateRepositoryBaselines(input as never);
     case "release": return ledger.release(String(input.id), String(input.leaseToken));
     case "defer-verification": return ledger.deferVerification({
       id:String(input.id),leaseToken:String(input.leaseToken),

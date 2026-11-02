@@ -112,6 +112,17 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    every Git prefix to the exact tested commit SHA (root prefix is "").
    Gate reviews and verify bind to this immutable delivery rather than later
    unrelated merges. A later commit touching frozen scope invalidates review.
+   When a whole workspace moves to another filesystem path or workstation,
+   NEVER edit SQLite baselines directly or use recover-task to overwrite them.
+   The Owner may run devcontrol action=relocate-repository-baselines with a
+   configured DEVCONTROL_OWNER_RECOVERY_KEY, actor, concrete reason, unique
+   taskIds and exact complete mappings (taskId, prefix, fromGitDir, toGitDir,
+   expectedBaseHead). Include root prefix "" and every child for each task;
+   batch historical Verified tasks and unfinished tasks together. The action
+   verifies actual independent Git roots, frozen base ancestry and no staged
+   changes; it appends audited physical-location aliases without altering
+   original baselines, delivery snapshots, evidence, Gates or Verified state.
+   Read trace.repositoryBaselineRelocations to audit the old/new paths.
    MCP-generated Skill and AGENTS.md changes are exempt only when their staged
    and committed bytes match the trusted canonical generator.
    For an unstarted, Ready task whose frozen contract is missing human or
@@ -232,6 +243,7 @@ ${managedRevision}
 - **延期验收与会话恢复**：代码已提交、完成说明和证据入账的 \`in_review\` 任务，可用 \`defer-verification\`（当前租约、精确 Gate、真实原因）释放租约但绝不通过 Gate；真机/CI 恢复后使用 \`resume-verification\`、\`task-closure-status\`，按提示补录真实 \`report\`、\`self-review\`、\`gate-review\`（\`reviewMode=self\`）和 \`verify\`。只有主动选择独立 Reviewer 时才采用 \`review-handoff\` → \`review-submit\` → \`reviewed-verify\`。后续无冲突任务可以推进 Git HEAD，审核仍绑定冻结的原始 Commit；禁止为了验收 reset、stash、删除别人文件或直接改 SQLite。
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
 - **受保护文件恢复 Git HEAD**：已跟踪的保护文件若恢复为所在仓库 HEAD 原始字节，Owner 可使用 \`refresh-protected-worktree\`，提供任务 \`id\`、\`actor\`、\`ownerRecoveryKey\` 和具体 \`reason\`，追加只读审计刷新，再继续完成登记。旧快照保持不变；不允许 staged、软链、越界、未跟踪保护文件丢失及其他保护文件改动，不提供测试和 Gate 通过资格。
+- **跨设备工作区搬迁**：根仓库和独立子仓库整体移动后，旧绝对 \`git_dir\` 只代表历史位置，不允许直接 UPDATE SQLite，也不得用 \`recover-task\` 改写冻结基线。使用 \`relocate-repository-baselines\`，要求 Owner 预先配置 \`DEVCONTROL_OWNER_RECOVERY_KEY\`，提交 \`actor\`、完整原因、\`taskIds\` 和每个任务全部仓库的精确 \`mappings\`（\`taskId\`、\`prefix\`、\`fromGitDir\`、\`toGitDir\`、\`expectedBaseHead\`）。根仓库 \`prefix\` 为空字符串；支持历史 Verified 与未完成任务同批迁移。先核对独立 Git 根、原始提交祖先关系及暂存区，再追加不可覆盖的搬迁审计；原始基线、完成证据、审核、Gate、任务状态完全不变。使用 \`trace\` 查看原路径和迁移历史。
 - **本地 Git 忽略与精确交付**：每个独立仓库可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
 - **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再通过 \`task-spec-supplement-self-review\` 完成有来源的实质开发者自审（可选 \`task-spec-supplement-independent-review\`，不强制第二人），最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
 - **冻结变更与架构评审**：不强制第三名审核人。范围变更使用 \`release-work-scope-self-review\`，新增任务使用 \`release-work-incremental-self-review\`，受控工件使用 \`artifact-self-review\`，并提交真实来源、范围、依赖和安全测试审查。独立复审按风险选用。涉及冻结范围或受控工件变更时，仍须 Owner 明确批准精确 proposalHash/reviewHash，未批准不得执行。
@@ -291,6 +303,11 @@ ${managedRevision}
 - Multi-Git report and complete can specify deliveryHeads for every Git
   prefix (root key is ""), to bind test evidence and Gates to the original
   commits. Later unrelated merges never enlarge the frozen delivery diff.
+- When moving an entire multi-Git workspace, never rewrite SQLite baselines.
+  Use Owner-key-authorized \`relocate-repository-baselines\` with a concrete
+  actor/reason, taskIds and complete per-task original/new Git directory and
+  exact base commit mappings. This appends auditable physical path changes,
+  not modifications to task delivery, evidence, reviews, Gates or status.
 - Canonical generator-produced Skill and AGENTS.md upgrades can accompany
   legitimate task changes; manually altered guidance is not exempt.
 - To clarify an approved frozen task, first use task-spec-supplement-get and
