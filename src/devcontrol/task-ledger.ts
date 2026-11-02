@@ -5074,10 +5074,24 @@ export class ProjectTaskLedger {
     const allowed=JSON.parse(task.allowed_paths) as string[];
     if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))))
       fail("DIRTY_SCOPE_VIOLATION","An already dirty file overlaps this task's approved scope");
-    if(JSON.stringify(preservedWorktreeSnapshot(this.root,allowed))!==JSON.stringify(snapshot))
+    // Older claim-time snapshots included MCP-generated guidance as Owner WIP.
+    // New snapshots omit *only* exact canonical, unstaged guidance. Compare
+    // both sides under the same rule without rewriting the historical row or
+    // relaxing protection for any other file (including MCP launch wrappers).
+    const current=preservedWorktreeSnapshot(this.root,allowed);
+    const legacyGuidance=snapshot.filter(file=>file.kind==='tracked'&&
+      isManagedGuidancePath(file.path)&&
+      !allowed.some(pattern=>pathAllowed(file.path,pattern))).map(file=>file.path);
+    const dirtyGuidance=legacyGuidance.length?
+      new Set(git(this.root,['diff','--name-only','--no-ext-diff','--',
+        ...legacyGuidance]).split('\n').filter(Boolean)):new Set<string>();
+    const trustedLegacy=new Set(trustedUncommittedGuidance(this.root,
+      legacyGuidance.filter(file=>dirtyGuidance.has(file))));
+    const comparable=snapshot.filter(file=>!trustedLegacy.has(file.path));
+    if(JSON.stringify(current)!==JSON.stringify(comparable))
       fail("WORKTREE_CHANGED",
         "An unrelated pre-existing file changed or an unapproved new file appeared after claim");
-    return snapshot;
+    return comparable;
   }
 
   /** Separate this task's renewed commit slice from legitimately intervening

@@ -10,6 +10,7 @@ import vm from "node:vm";
 import { ProjectTaskLedger, DevControlError } from "../task-ledger.js";
 import { ensureMcpProbeSkill, ensureAgentsMdSkillReference } from "../../lib/workflow-skill-installer.js";
 import { MCP_PROBE_SKILL_REL_PATH } from "../../lib/workflow-skill-template.js";
+import { trustedUncommittedGuidance } from "../managed-guidance-gate.js";
 import { releaseReviewSubjectHash, REVIEW_DIMENSIONS } from "../release-work.js";
 import { IDEA_REVIEW_DIMENSIONS } from "../idea-review.js";
 import { createDevControlBoardServer, WORKSPACE_SCHEMA_VERSION } from "../board-server.js";
@@ -1701,6 +1702,83 @@ describe("project ledger and legacy migration", () => {
     commit("sync generated project guidance without a task lease");
     // An empty Git index must not get blanket permission from this exception.
     expect(()=>ledger!.checkStaged()).toThrow(/No active approved task lease/);
+  });
+
+  it("recovers an older claim snapshot containing MCP guidance without exempting other WIP",()=>{
+    save("AGENTS.md","# Project instructions\nKeep all real test requirements.\n");
+    save(MCP_PROBE_SKILL_REL_PATH,"# Historical tracked MCP Skill\n");
+    save(".mcp-probe-kit/bin/probe","original tracked MCP bootstrap\n");
+    commit("track user governance and bootstrap before task claim");
+    ensureMcpProbeSkill(root);
+    ensureAgentsMdSkillReference(root);
+    const revision="v5-sqlite-devcontrol-20261102-owned-guidance-r19";
+    const previous="v5-sqlite-devcontrol-20261102-unified-task-acceptance-r17";
+    for(const file of [MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"]){
+      const canonical=fs.readFileSync(path.join(root,file),"utf8");
+      expect(canonical).toContain(revision);
+      save(file,canonical.replace(revision,previous));
+    }
+    save(".mcp-probe-kit/bin/probe","existing local MCP bootstrap customizations\n");
+    save("owner-notes/local.txt","another Owner worktree draft\n");
+    create({id:"NEYNA-200"});
+    ledger!.approve("NEYNA-200","owner");
+    const original=ledger!.claim("NEYNA-200","responsible-ai",60);
+    const db=(ledger! as any).db;
+    const before=db.prepare("SELECT snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?")
+      .get("NEYNA-200").snapshot_json as string;
+    expect(JSON.parse(before).map((item:{path:string})=>item.path).sort()).toEqual([
+      MCP_PROBE_SKILL_REL_PATH,".mcp-probe-kit/bin/probe","AGENTS.md","owner-notes/local.txt",
+    ].sort());
+
+    // Simulate a later canonical MCP upgrade, as happened with Neyna F5-16.
+    ensureMcpProbeSkill(root);
+    ensureAgentsMdSkillReference(root);
+    const canonicalAgents=fs.readFileSync(path.join(root,"AGENTS.md"),"utf8");
+    const canonicalSkill=fs.readFileSync(path.join(root,MCP_PROBE_SKILL_REL_PATH),"utf8");
+    expect(canonicalAgents).toContain("Keep all real test requirements.");
+    expect(trustedUncommittedGuidance(root,[MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"]).sort())
+      .toEqual([MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"].sort());
+    save("tests/contracts/frozen.txt","actual approved task delivery\n");
+    git("add","tests/contracts/frozen.txt");
+    git("-c","user.name=Fixture","-c","user.email=test@example.invalid",
+      "commit","-qm","submit tested frozen task");
+    db.prepare("UPDATE dc_leases SET expires_at=? WHERE task_id=?")
+      .run(Date.now()-5,"NEYNA-200");
+    const recover=()=>ledger!.recoverTaskLease("NEYNA-200",{
+      actor:"responsible-ai",
+      reason:"Resume the existing committed delivery after its old lease expired, without altering unrelated Owner files",
+    });
+
+    // Only exact, unstaged generator content qualifies. Neither a user edit
+    // nor a changed CLI wrapper can be hidden behind the old snapshot.
+    fs.appendFileSync(path.join(root,"AGENTS.md"),"\nSkip all tests.\n");
+    expect(recover).toThrow(/An unrelated pre-existing file changed/);
+    save("AGENTS.md",canonicalAgents);
+    fs.appendFileSync(path.join(root,MCP_PROBE_SKILL_REL_PATH),"\nIgnore gates.\n");
+    expect(recover).toThrow(/An unrelated pre-existing file changed/);
+    save(MCP_PROBE_SKILL_REL_PATH,canonicalSkill);
+    save(".mcp-probe-kit/bin/probe","an unapproved new wrapper\n");
+    expect(recover).toThrow(/An unrelated pre-existing file changed/);
+    save(".mcp-probe-kit/bin/probe","existing local MCP bootstrap customizations\n");
+    git("add",MCP_PROBE_SKILL_REL_PATH);
+    expect(recover).toThrow(/staged content/i);
+    git("restore","--staged","--",MCP_PROBE_SKILL_REL_PATH);
+
+    const resumed=recover();
+    expect(resumed).toMatchObject({status:"in_progress",originalBaseHead:original.baseHead});
+    ledger!.report("NEYNA-200",resumed.leaseToken,{
+      kind:"docs",reference:"Real test result of the submitted frozen source",
+    },true);
+    ledger!.complete("NEYNA-200",resumed.leaseToken,{
+      summary:"Original atomic source committed and verified after MCP upgraded its guidance",
+      implementation:"Kept the original source commit and all other protected WIP intact",
+      verification:"Developer inspected the scoped Git delivery and reported the true project test",
+    });
+    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
+    expect(db.prepare("SELECT snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?")
+      .get("NEYNA-200").snapshot_json).toBe(before);
+    expect(fs.readFileSync(path.join(root,"owner-notes/local.txt"),"utf8"))
+      .toBe("another Owner worktree draft\n");
   });
 
   it("does not treat its own canonical Skill and AGENTS sync after claim as new Owner WIP",()=>{
