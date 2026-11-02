@@ -2823,7 +2823,7 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.board().columns.inProgress.some((t: any) => t.id === "NEYNA-200")).toBe(true);
   });
 
-  it("rejects stale completion notes when later commits change the code", () => {
+  it("rejects stale completion notes when later commits add in-scope code", () => {
     create();
     ledger!.approve("NEYNA-200", "owner");
     const claim = ledger!.claim("NEYNA-200", "agent");
@@ -2839,7 +2839,7 @@ describe("project ledger and legacy migration", () => {
     commit("second delivery");
     const stale = ledger!.verify("NEYNA-200", claim.leaseToken);
     expect(stale.passed).toBe(false);
-    expect(stale.reason).toMatch(/older Git commit/);
+    expect(stale.reason).toMatch(/Delivered task files changed/);
     expect(ledger!.get("NEYNA-200").status).toBe("in_review");
   });
 
@@ -3345,6 +3345,65 @@ describe("project ledger and legacy migration", () => {
       "project test evidence supplied externally");
     expect(ledger!.verify("NEYNA-200",claim.leaseToken).passed).toBe(true);
     expect(fs.readFileSync(path.join(root,"README.md"),"utf8")).toBe("fixture\n");
+  });
+
+  it("keeps a single-repository atomic delivery accepted after unrelated teammate commits",()=>{
+    create();
+    ledger!.approve("NEYNA-200","owner");
+    const claimed=ledger!.claim("NEYNA-200","current-ai");
+    save("tests/contracts/atom.json",'{"accepted":true}\n');
+    commit("one atomic task delivery");
+    const deliveryHead=git("rev-parse","HEAD");
+    const evidence="AI ran actual contract checks against the submitted atomic delivery";
+    ledger!.report("NEYNA-200",claimed.leaseToken,{kind:"test",reference:evidence},true);
+    ledger!.complete("NEYNA-200",claimed.leaseToken,{
+      summary:"One task delivered with its original commit",
+      implementation:"Implemented one approved contract in the frozen task scope",
+      verification:"Developer checked the exact contract and preserved the test receipt",
+    });
+    // Git commits are not a DevControl task claim and must not mutate the
+    // already-submitted delivery evidence or demand a new Owner approval.
+    save("unrelated-team/feature.ts","export const otherWork=true;\n");
+    commit("other developer independently merged another feature");
+    expect(git("rev-parse","HEAD")).not.toBe(deliveryHead);
+    ledger!.reviewOwnTask("NEYNA-200",claimed.leaseToken,{
+      outcome:"passed",evidenceReference:evidence,
+      findings:"Current AI inspected the submitted contract commit and its test receipt. The other developer touched only unrelated code and did not alter the atomic task's delivery.",
+    });
+    ledger!.reviewExternalGate("NEYNA-200",claimed.leaseToken,{
+      gate:"docs",runner:"current-ai",reviewer:"current-ai",reviewMode:"self",
+      outcome:"passed",evidenceReference:evidence,
+      reviewNotes:"Original test output, contract behavior and submitted commit are unchanged by later unrelated Git commits.",
+    });
+    const outcome=ledger!.verify("NEYNA-200",claimed.leaseToken);
+    expect(outcome).toMatchObject({passed:true,files:["tests/contracts/atom.json"]});
+    expect(ledger!.get("NEYNA-200").status).toBe("verified");
+    expect(ledger!.trace("NEYNA-200").completion?.git_head).toBe(deliveryHead);
+  });
+
+  it("does not mark an old single-repository test accepted after its delivered file changed",()=>{
+    create();
+    ledger!.approve("NEYNA-200","owner");
+    const claimed=ledger!.claim("NEYNA-200","current-ai");
+    save("tests/contracts/atom.json",'{"accepted":true}\n');
+    commit("one original task delivery");
+    const evidence="Actual project test performed against initial atomic submission";
+    ledger!.report("NEYNA-200",claimed.leaseToken,{kind:"test",reference:evidence},true);
+    ledger!.complete("NEYNA-200",claimed.leaseToken,{
+      summary:"Original atomic task implementation",
+      implementation:"Committed original contract behavior in the task scope",
+      verification:"Checked the actual initial contract before later source changes",
+    });
+    save("tests/contracts/atom.json",'{"accepted":false}\n');
+    commit("subsequent developer changes the submitted contract");
+    expect(()=>ledger!.reviewOwnTask("NEYNA-200",claimed.leaseToken,{
+      outcome:"passed",evidenceReference:evidence,
+      findings:"This review must fail because a later commit changed the exact file that the original task delivered and was tested against.",
+    })).toThrow(/Later commits changed files/);
+    const outcome=ledger!.verify("NEYNA-200",claimed.leaseToken);
+    expect(outcome.passed).toBe(false);
+    expect(String(outcome.reason)).toContain("Delivered task files changed");
+    expect(ledger!.get("NEYNA-200").status).toBe("in_review");
   });
 
   it("blocks parent verification while any child is unverified", () => {

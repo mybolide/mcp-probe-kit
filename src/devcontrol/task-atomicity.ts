@@ -1,7 +1,8 @@
 /**
  * Enforce one independently verifiable leaf outcome. Development + testing of
  * that SAME outcome is fine; unrelated objectives require separate tasks.
- * Structural checks complement, but never replace, independent Agent review.
+ * Structural checks advise the responsible development AI; they do not
+ * require an external reviewing Agent or treat acceptance checklists as work.
  */
 export function reviewAtomicOutcome(input: {
   id:string; title?:string; acceptance?:string;
@@ -19,8 +20,9 @@ export function reviewAtomicOutcome(input: {
   const compound=title+" "+acceptance;
   if (/(?:资格校验|数据资格|资格审查|接入资格).*(?:业务实现|业务逻辑实现|业务处理).*(?:验收材料|验收证据|测试报告)/.test(compound))
     issues.push(input.id+": eligibility, business implementation and evidence are bundled; split separately verifiable responsibilities");
-  if (/\r?\n\s*(?:[-*]|\d+[.)]|[一二三四][、.])/.test(acceptance) ||
-      /[；;]\s*(?:并(?:且|完成|实现)|同时(?:完成|实现)|另(?:外|需)|再(?:实现|开发))/.test(acceptance))
+  // Acceptance should describe positive, negative and recovery tests.
+  // Numbered/bulleted criteria do not by themselves mean multiple tasks.
+  if (/[；;]\s*(?:并(?:且|完成|实现)|同时(?:完成|实现)|另(?:外|需)|再(?:实现|开发))/.test(acceptance))
     issues.push(input.id+": acceptance bundles independent objectives; split into separate leaf tasks");
   if(input.requireEstimate&&input.estimatedHours===undefined)
     issues.push(input.id+": micro-task plan requires estimatedHours; target 0.5–1h");

@@ -47,6 +47,10 @@ for(const [name,source] of guidance){
     errors.push(name+' omits the Owner-authorized append-only multi-Git workspace relocation operation');
   if(!source.includes('relative')&&!source.includes('相对'))
     errors.push(name+' omits project-root-relative Git identity for normal cross-machine work');
+  if(!source.includes('project management')&&!source.includes('项目管理'))
+    errors.push(name+' omits PM-only DevControl responsibility');
+  if(!source.includes('third-party Agents')&&!source.includes('第三方 Agent'))
+    errors.push(name+' omits no-third-party-Agent development responsibility');
   if(!source.includes('devcontrol-worktree-ignore')||!source.includes('deliveryHeads'))
     errors.push(name+' omits local worktree-ignore or immutable multi-repository delivery HEAD guidance');
   if(!source.includes('task-spec-supplement-stage')||

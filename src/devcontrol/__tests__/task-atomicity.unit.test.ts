@@ -12,6 +12,19 @@ describe('v5 atomic task boundaries', () => {
     })).toEqual([]);
   });
 
+  it('does not mistake positive, negative and recovery acceptance checklists for separate tasks',()=>{
+    expect(reviewAtomicOutcome({
+      id:'AUTH-01',title:'实现单一登录接口的会话建立',
+      acceptance:'1. 正确密码返回有效会话\n2. 错误密码拒绝登录\n3. 请求超时可安全重试',
+      estimatedHours:1,maxHours:2,
+    })).toEqual([]);
+    expect(reviewAtomicOutcome({
+      id:'STORAGE-01',title:'保持一项数据库写入操作的一致性',
+      acceptance:'- 成功时写入一条记录\n- 数据库异常时回滚\n- 重试时不会生成重复记录',
+      estimatedHours:1,maxHours:2,
+    })).toEqual([]);
+  });
+
   it('micro policy targets 30–60 minutes and requires reasoning for 1–2 hour exceptions', () => {
     const base={id:'P-01',title:'校验单笔订单幂等键',
       acceptance:'同一订单重试只保存一笔交易记录',

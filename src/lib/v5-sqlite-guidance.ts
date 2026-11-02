@@ -82,6 +82,13 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    DevControl NEVER
    executes project-specific tests, including docs, Go, Flutter, Xcode,
    PostgreSQL or physical device tests; it never decides business correctness.
+   DevControl is project management, not an acceptance or testing Agent.
+   The current development AI runs real tests and reviews its own technical
+   delivery; never introduce or require third-party Agents for routine tasks.
+   Requirements analysis, architecture, one independently verifiable outcome
+   per leaf and prerequisite Verified status BEFORE dependent claim remain
+   mandatory. Positive, negative and recovery acceptance lists for the same
+   outcome must not be mistaken for several tasks.
    A commit, progress claim or synthetic test is never Verified.
    Missing actual test evidence, substantive review or a Gate fails closed.
    When a required physical/external Gate is unavailable after a committed
@@ -235,6 +242,7 @@ ${managedRevision}
 - **管理操作**：当前 24 个模型工具，唯一正式研发入口 \`devcontrol\` 提供 ${V5_DEVC_ACTIONS.length} 个 SQLite action，完整分组见 Skill 的 DevControl operation reference；不要将 action 当作独立 MCP 工具。
 - **必须先恢复**：新对话先 \`history_session_bootstrap\`（Git/Node22+ 项目唯一实时 History = SQLite \`hs_*\`），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
 - **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码/正式 PRD/ADR/API/Schema 仍归 Git，业务数据库独立。
+- **质量与责任边界**：DevControl 只是项目管理工具，保存需求、架构、原子任务、依赖、进度和当前 AI 上报的测试及完成记录，不是测试或验收 Agent。当前研发 AI 自己完成设计、开发、测试、技术自审和逐项验收，不引入任何第三方 Agent。每项叶子任务只有一个独立可验收成果；正向、异常和恢复测试可以是同一任务的多条验收标准。前置任务必须已真实验收并记录 Verified，才能领取依赖任务；其他无依赖任务不应被全局阻塞。
 - **逐任务闭环**：新版本基线使用 \`plan-review\` / \`plan-propose\` 和精确 Hash 的 \`plan-approve\`；规划与 Review 分轮完成。按冻结合同 \`claim\`、真实编码、项目自己的工具执行测试、合法 Git 提交，以 \`complete\` / \`report\` 登记。先用 \`task-closure-status\` 核对缺失记录。开发 Agent 默认自行执行独立的 \`self-review\` 步骤，审查原始提交、真实测试和冻结范围；再按实际冻结 Gate 使用 \`gate-review\` 的 \`reviewMode=self\` 写入实质审核结论，最后 \`verify\`。另一名 Reviewer 是可选加强审核，明确需要时才使用 \`review-handoff\`、\`review-submit\` 和 \`reviewed-verify\`。DevControl 只检查证据、审核、审批和 Git 版本，**不执行 Gate 对应的项目测试命令**；失败明确返回下一步，不得伪造 Verified。
 - **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；第一轮完成 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\` 并结束规划轮次。下一轮重读提案，使用 \`feature-task-second-review\` 单独记录覆盖、依赖、失败场景、文件范围和验收五项审查，再以精确 Hash \`feature-task-approve\` 确认。开发 Agent 可以自行做第二轮 Review，不强制另一名 Agent，也不逐项要求 Owner 批准；重大冻结范围变更仍须 Owner 明确授权。草稿不可领取。
 - **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新 Feature 叶子任务以 30–60 分钟为主，必须填写预计工时；1–2 小时需具体说明无法继续安全拆分的原因，超过 2 小时须拆分。新整版计划可采用 task-detail-v2 执行相同严格规则；旧已冻结计划不得直接重写。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
@@ -308,6 +316,13 @@ ${managedRevision}
   compatibly and retain their original evidence hashes and tested commits.
   Only exceptional historical audit correction uses Owner-key-authorized
   \`relocate-repository-baselines\`.
+- DevControl is project management only, not a testing or acceptance Agent.
+  The current development AI owns requirements analysis, architecture,
+  implementation, real project tests and technical self-review. Never
+  introduce or require third-party Agents for routine development. Each
+  approved leaf delivers ONE independently testable outcome and may have
+  positive, negative and recovery criteria. All prerequisites must be
+  Verified before claiming a dependent task; unrelated work remains available.
 - Canonical generator-produced Skill and AGENTS.md upgrades can accompany
   legitimate task changes; manually altered guidance is not exempt.
 - To clarify an approved frozen task, first use task-spec-supplement-get and
@@ -339,8 +354,9 @@ ${managedRevision}
   specs; application data remains separate.
 - Evaluate ideas before modifying frozen scope; require reviewed amendments
   and explicit Owner authorization. Keep user dirty files and never fake gates.
-- New ideas use idea-capture, idea-assess, independent idea-review and
-  exact Owner idea-decide; never expand a frozen scope without review.
+- New ideas use idea-capture, idea-assess, the current AI's idea-self-review
+  and exact Owner idea-decide for material changes. Another Agent is not
+  required, and frozen scope must not expand without authorization.
 - No v4 file-backed Specs, start_* workflows, plan_heartbeat, resume_plan,
   converge or Markdown History. Old archives are read-imported only.
 - On every new session call history_session_bootstrap and before handoff call

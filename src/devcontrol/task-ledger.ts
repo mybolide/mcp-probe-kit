@@ -1294,9 +1294,9 @@ export class ProjectTaskLedger {
   }
 
   /** Review the submitted commit, not whichever HEAD unrelated developers
-   * reached later. An advanced HEAD is allowed ONLY for a resumed, immutable
-   * deferral whose original patch is provably still present in committed Git.
-   * Never reset/checkout Git to make the old review appear current.
+   * reached later. An advanced HEAD may not replace the submitted delivery.
+   * Ordinary descendant commits that do not touch its delivered files are
+   * project collaboration, NOT an amendment to this task or its evidence.
    */
   private checkReviewDeliveryHead(id:string,baseHead:string,completionHead:string):string {
     const current=git(this.root,['rev-parse','HEAD']);
@@ -1310,21 +1310,24 @@ export class ProjectTaskLedger {
         fail('REVIEW_BASE_CHANGED','Root delivery SHA does not match frozen multi-Git delivery');
       return current;
     }
+    if(!run(this.root,'git',['merge-base','--is-ancestor',completionHead,current]).passed)
+      fail('REVIEW_BASE_CHANGED','The submitted task commit is no longer in Git history');
+    const submitted=new Set(committedFilesBetween(this.root,baseHead,completionHead));
+    const allowed=JSON.parse(task.allowed_paths) as string[];
+    const intervening=committedFilesBetween(this.root,completionHead,current);
+    const collisions=intervening.filter(file=>submitted.has(file)||
+      allowed.some(pattern=>pathAllowed(file,pattern)));
+    if(!collisions.length)return current;
     const deferral=this.db.prepare(`SELECT base_head,completion_head,resumed_at
       FROM dc_verification_deferrals WHERE task_id=?`).get(id);
     if(!deferral||!deferral.resumed_at||deferral.base_head!==baseHead||
       deferral.completion_head!==completionHead)
-      fail('REVIEW_BASE_CHANGED',
-        'Completion commit differs from HEAD. Only a safely resumed deferred task may review its original commit');
-    if(!run(this.root,'git',['merge-base','--is-ancestor',completionHead,current]).passed)
-      fail('REVIEW_BASE_CHANGED','Deferred completion commit is no longer in Git history');
-    const delivered=new Set(committedFilesBetween(this.root,baseHead,completionHead));
-    const later=committedFilesBetween(this.root,completionHead,current);
-    const overlaps=later.filter(file=>delivered.has(file));
-    if(overlaps.length&&!frozenPatchStillPresent(this.root,baseHead,completionHead)&&
-      !this.hasReviewedDeferredOverlap(id,baseHead,completionHead,current,overlaps))
+      fail('DELIVERY_SCOPE_CHANGED',
+        'Later commits changed files in the submitted task. Recheck and record a new scoped delivery before marking it accepted: '+collisions.join(', '));
+    if(!frozenPatchStillPresent(this.root,baseHead,completionHead)&&
+      !this.hasReviewedDeferredOverlap(id,baseHead,completionHead,current,collisions))
       fail('DEFERRED_CODE_CHANGED',
-      'Later commits touched the deferred delivery: '+overlaps.join(', ')+
+      'Later commits touched the deferred delivery: '+collisions.join(', ')+
       '. Inspect changes and record a new scoped completion before reviewing');
     return current;
   }
@@ -6302,7 +6305,10 @@ export class ProjectTaskLedger {
         reason:'Deferred delivery repository safety check failed',error:String(error)};}
     }
     if (note.git_head !== startHead && !frozenReview&&!multiRepo) {
-      return { taskId: id, passed: false, reason: "Completion report refers to an older Git commit; record a new revision" };
+      try{this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));}
+      catch(error){return {taskId:id,passed:false,
+        reason:"Delivered task files changed or original commit is unavailable",
+        error:String(error)};}
     }
     if(frozenReview){
       if(!run(this.root,"git",["merge-base","--is-ancestor",deferred.completion_head,startHead]).passed)
@@ -6356,10 +6362,12 @@ export class ProjectTaskLedger {
       this.resumedDeliveryBase(id,String(lease.base_head),startHead):null;
     const rawFiles = multiRepo?committedChanges(this.root,repositories):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head) :
-      changedFiles(this.root, incrementalBase??lease.base_head);
+      note.git_head!==startHead ?
+        committedFilesBetween(this.root,incrementalBase??lease.base_head,String(note.git_head)):
+        changedFiles(this.root,incrementalBase??lease.base_head);
     const files=this.deliveryTaskFiles(rawFiles,
       multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:incrementalBase??lease.base_head,
-      multiRepo?note.git_head:startHead);
+      multiRepo?note.git_head:note.git_head!==startHead?String(note.git_head):startHead);
     const governed=this.checkGovernedArtifacts();
     if(!governed.passed)return {taskId:id,passed:false,
       reason:"Governed architecture artifacts differ from approved revision",
@@ -6392,7 +6400,9 @@ export class ProjectTaskLedger {
       !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
     const added=multiRepo?committedChanges(this.root,repositories,'A'):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head,"A") :
-      addedFiles(this.root, incrementalBase??lease.base_head);
+      note.git_head!==startHead ?
+        committedFilesBetween(this.root,incrementalBase??lease.base_head,String(note.git_head),"A"):
+        addedFiles(this.root, incrementalBase??lease.base_head);
     const unapprovedDocs = undocumentedMarkdown(added.filter(file=>files.includes(file)), allowedPaths);
     if ((!files.length&&!sqliteDelivery) || denied.length || unapprovedDocs.length) {
       return {
@@ -6415,7 +6425,7 @@ export class ProjectTaskLedger {
         const result = this.db.prepare(
           "SELECT * FROM dc_external_gate_reviews WHERE task_id=? AND gate_name=?",
         ).get(id,name);
-        const targetHead=multiRepo?note.git_head:frozenReview?note.git_head:startHead;
+        const targetHead=String(note.git_head);
         const taskReview=this.db.prepare(`SELECT reviewer,outcome,completion_head
           FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
         const ownReview=!!result&&result.reviewer===lease.agent&&
