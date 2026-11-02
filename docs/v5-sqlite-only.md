@@ -69,9 +69,8 @@ Git Hook 仅为本地提示，CI 与最终 DevControl 验收仍需独立检查�
 **旧活动任务的 Owner 授权迁移。** 旧的单仓库任务继续沿用原格式。
 如果升级前的任务已处于 `in_progress` 或 `in_review`，原租约已过期，
 并且已有多个独立 Git 仓库，可使用带显式审核开关的
-`devcontrol recover-task`。必须配置至少 24 字符的
-`DEVCONTROL_OWNER_RECOVERY_KEY`，并提供正确的
-`ownerRecoveryKey`、具体 `reason` 和
+`devcontrol recover-task`。异常迁移需要
+`explicitAuthorization: true`、负责人的 `actor`、具体 `reason` 和
 `preserveExistingWorktree: true`、
 `rebaselineLegacyRepositories: true`。这不是普通任务领取流程。
 缺少授权、缺少任一开关、租约尚未过期或者重复迁移都会被拒绝。
@@ -101,7 +100,7 @@ check 或直接修改 SQLite 绕过。未满足真实验收条件的任务始终
 **合法恢复受保护文件到 Git HEAD。** 当受保护的已跟踪本地文件恢复为所在
 Git 仓库 HEAD 的原始字节后，旧保护清单不应永久阻断任务完成登记。
 Owner 可以在任务尚未产生完成报告时，使用 `refresh-protected-worktree`，
-提交 \`id\`、\`actor\`、\`ownerRecoveryKey\` 和至少 30 字符的具体
+提交 \`id\`、\`actor\`、\`explicitAuthorization: true\` 和至少 30 字符的具体
 \`reason\`。DevControl 只读检查原始 Git 身份、提交版本及剩余
 受保护文件指纹。只有确实恢复到 HEAD 的 tracked 文件允许从当前有效
 保护清单移出，原始领取和迁移快照保持不变；每次操作追加 SQLite

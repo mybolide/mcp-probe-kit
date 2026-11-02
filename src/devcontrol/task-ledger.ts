@@ -8,7 +8,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID, createHash } from "node:crypto";
-import { timingSafeEqual } from "node:crypto";
 import { createRequire } from "node:module";
 import { ensureDatabaseIgnored, resolveProjectDatabase } from "./project-storage.js";
 import { resolveGitWorktreeContext } from './git-worktree-context.js';
@@ -964,18 +963,13 @@ export class ProjectTaskLedger {
    * authorization. Does NOT mark complete, approve tests, or modify Git.
    * The original claim HEAD remains the immutable comparison baseline.
    */
-  recoverTaskLease(id:string,input:{actor:string;ownerRecoveryKey:string;
+  recoverTaskLease(id:string,input:{actor:string;
     reason:string;ttlSeconds?:number;preserveExistingWorktree?:boolean;
-    rebaselineLegacyRepositories?:boolean}):Row {
+    rebaselineLegacyRepositories?:boolean;explicitAuthorization?:boolean}):Row {
     const actor=String(input?.actor??'').trim(),reason=String(input?.reason??'').trim();
     const ttl=input.ttlSeconds??1800;
     if(actor.length<2||reason.length<30||!Number.isSafeInteger(ttl)||ttl<60||ttl>3600)
       fail('RECOVERY_EVIDENCE_REQUIRED','Provide responsible actor, concrete reason, and 60–3600s TTL');
-    const secret=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??'';
-    const supplied=String(input.ownerRecoveryKey??'');
-    if(secret.length<24||supplied.length!==secret.length||
-      !timingSafeEqual(Buffer.from(supplied),Buffer.from(secret)))
-      fail('OWNER_AUTH_REQUIRED','Explicit configured Owner recovery credential required');
     const writer=this.db.prepare('SELECT * FROM dc_leases WHERE task_id=?').get(id);
     const lease=writer??this.db.prepare('SELECT * FROM dc_task_leases WHERE task_id=?').get(id);
     if(!lease)fail('LEASE_REQUIRED','No original task lease to restore');
@@ -993,6 +987,9 @@ export class ProjectTaskLedger {
         input.rebaselineLegacyRepositories!==true)
         fail('MIGRATION_FLAGS_REQUIRED',
           'Legacy migration requires both explicit Owner preservation and repository rebaseline flags');
+      if(input.explicitAuthorization!==true)
+        fail('OWNER_AUTHORIZATION_REQUIRED',
+          'Legacy repository migration requires an explicit Owner decision, actor, and concrete reason; no credential is required');
       return this.migrateLegacyActiveTask(id,task,lease,input.actor,reason,ttl,head);
     }
     this.protectedClaimWorktree(id,task,String(lease.base_head));
@@ -1147,12 +1144,13 @@ export class ProjectTaskLedger {
     });
   }
 
-  /** Controlled delivery handoff. A reviewer does not receive the developer's
-   * lease token or gain permission to edit source. Owner recovery requires a
-   * separately provisioned secret, never a self-declared "Owner" label.
+  /** Optional legacy reviewer handoff. A reviewer never receives the
+   * developer lease or gains permission to edit source. An expired lease
+   * can be recovered by an explicit, audited decision without a password.
    */
-  handoffReview(id:string,input:{leaseToken?:string;ownerRecoveryKey?:string;
-    actor:string;reason:string;rotatePendingTicket?:boolean}):Row {
+  handoffReview(id:string,input:{leaseToken?:string;
+    actor:string;reason:string;rotatePendingTicket?:boolean;
+    explicitAuthorization?:boolean}):Row {
     if(typeof input?.actor!=="string"||input.actor.trim().length<2||
       typeof input.reason!=="string"||input.reason.trim().length<20)
       fail("HANDOFF_EVIDENCE_REQUIRED","Provide actor and concrete handoff reason");
@@ -1164,12 +1162,11 @@ export class ProjectTaskLedger {
       input.leaseToken===lease.token&&
       (writer?writer.token===lease.token&&writer.expires_at>Date.now():
         lease.expires_at>Date.now());
-    const expected=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??"";
-    const supplied=String(input.ownerRecoveryKey??"");
-    const authorizedRecovery=expected.length>=24&&supplied.length===expected.length&&
-      timingSafeEqual(Buffer.from(supplied),Buffer.from(expected));
+    const authorizedRecovery=!!input.explicitAuthorization&&
+      lease.expires_at<=Date.now()&&(!writer||writer.expires_at<=Date.now());
     if(!normal&&!authorizedRecovery)
-      fail("HANDOFF_AUTH_REQUIRED","Provide current lease token or configured Owner recovery credential");
+      fail("HANDOFF_AUTH_REQUIRED",
+        "Use the active developer lease, or explicitly approve recovery after the original lease expires; no secret is required");
     const task=this.requireTask(id),note=this.latestCompletion(id);
     if(task.status!=="in_review"||!note||!this.db.prepare(
       "SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1").get(id))
@@ -1213,7 +1210,7 @@ export class ProjectTaskLedger {
       if(!existing)this.audit(id,"review_handed_off",input.actor.trim(),{
         developer:lease.agent,revision:note.revision,head:note.git_head,
         observedHead:head,reason:input.reason,
-        via:normal?'developer_lease':'authorized_owner_recovery',expiresAt});
+        via:normal?'developer_lease':'explicit_expired_lease_recovery',expiresAt});
       return {taskId:id,status:'awaiting_independent_review',ticket:token,
         completionRevision:note.revision,completionHead:note.git_head,
         currentHead:head,expiresAt,rotated:!!existing,
@@ -2153,10 +2150,12 @@ export class ProjectTaskLedger {
   /** Rebind only the machine-local Git directory location. This does not
    * change frozen task scope, commit baselines, completion snapshots, evidence,
    * review/Gate results or previously Verified tasks. All supplied mappings
-   * are checked as one atomic, authenticated Owner decision.
+   * are checked as one atomic, explicitly recorded Owner decision. The
+   * project manager does not require or authenticate any recovery password.
    */
   relocateRepositoryBaselines(input:{
-    actor:string;ownerRecoveryKey:string;reason:string;taskIds:string[];
+    actor:string;explicitAuthorization?:boolean;
+    reason:string;taskIds:string[];
     mappings:Array<{taskId:string;prefix:string;fromGitDir:string;
       toGitDir:string;expectedBaseHead:string}>;
   }):Row {
@@ -2165,11 +2164,9 @@ export class ProjectTaskLedger {
     if(actor.length<2||reason.length<30||reason.length>1200)
       fail('RELOCATION_EVIDENCE_REQUIRED',
         'Provide an Owner actor and a concrete workspace relocation reason');
-    const secret=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??'';
-    const supplied=typeof input.ownerRecoveryKey==='string'?input.ownerRecoveryKey:'';
-    if(secret.length<24||secret.length!==supplied.length||
-      !timingSafeEqual(Buffer.from(supplied),Buffer.from(secret)))
-      fail('OWNER_AUTH_REQUIRED','Configured Owner recovery credential required');
+    if(input.explicitAuthorization!==true)
+      fail('OWNER_AUTHORIZATION_REQUIRED',
+        'Repository baseline relocation requires an explicit Owner decision and audited reason, not a recovery credential');
     const ids=input.taskIds, mappings=input.mappings;
     if(!Array.isArray(ids)||!ids.length||ids.length>10000||
       ids.some(id=>typeof id!=='string'||!id.trim())||
@@ -2448,17 +2445,15 @@ export class ProjectTaskLedger {
    * returned to its exact HEAD bytes can be removed from protection. Every
    * other protected path must remain byte-identical to the prior snapshot.
    */
-  refreshProtectedWorktree(id:string,input:{actor:string;ownerRecoveryKey:string;
-    reason:string}):Row {
+  refreshProtectedWorktree(id:string,input:{actor:string;
+    explicitAuthorization?:boolean;reason:string}):Row {
     const actor=String(input?.actor??'').trim(),reason=String(input?.reason??'').trim();
     if(actor.length<2||reason.length<30)
       fail('REFRESH_EVIDENCE_REQUIRED',
         'Provide the responsible Owner actor and concrete reconciliation reason');
-    const secret=process.env.DEVCONTROL_OWNER_RECOVERY_KEY??'';
-    const supplied=String(input?.ownerRecoveryKey??'');
-    if(secret.length<24||supplied.length!==secret.length||
-      !timingSafeEqual(Buffer.from(supplied),Buffer.from(secret)))
-      fail('OWNER_AUTH_REQUIRED','Configured Owner recovery credential required');
+    if(input.explicitAuthorization!==true)
+      fail('OWNER_AUTHORIZATION_REQUIRED',
+        'Protected file reconciliation requires an explicit Owner decision, actor and reason; no key is needed');
     const task=this.requireTask(id);
     if(!['in_progress','in_review'].includes(task.status)||this.latestCompletion(id))
       fail('REFRESH_STATE_REQUIRED',

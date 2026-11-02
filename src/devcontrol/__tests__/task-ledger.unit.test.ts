@@ -871,7 +871,7 @@ describe("project ledger and legacy migration", () => {
     expect(()=>ledger!.handoffReview('NEYNA-200',{
       leaseToken:'unauthorized-token',actor:'not-the-developer',rotatePendingTicket:true,
       reason:'A different actor must not invalidate a valid reviewer ticket',
-    })).toThrow(/credential/);
+    })).toThrow(/active developer lease/);
     const rotated=ledger!.handoffReview('NEYNA-200',{
       leaseToken:claim.leaseToken,actor:'real-developer',rotatePendingTicket:true,
       reason:'The one-time ticket was lost before any reviewer received or used it',
@@ -1055,15 +1055,12 @@ describe("project ledger and legacy migration", () => {
     const db=(ledger! as any).db;
     db.prepare("UPDATE dc_leases SET expires_at=? WHERE task_id='NEYNA-200'")
       .run(Date.now()-5);
-    const prior=process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
-    process.env.DEVCONTROL_OWNER_RECOVERY_KEY='test-only-expired-lease-recovery-password';
     try{
       expect(()=>ledger!.recoverTaskLease('NEYNA-200',{
-        actor:'owner-coordinator',ownerRecoveryKey:'invalid',
-        reason:'Recover a stranded scoped delivery after the original Agent session disappeared',
-      })).toThrow(/Owner recovery credential/);
+        actor:'',reason:'Recover a stranded scoped delivery after the original Agent session disappeared',
+      })).toThrow(/responsible actor/);
       const takeover=ledger!.recoverTaskLease('NEYNA-200',{
-        actor:'owner-coordinator',ownerRecoveryKey:process.env.DEVCONTROL_OWNER_RECOVERY_KEY!,
+        actor:'owner-coordinator',
         reason:'The original developer session was lost after the reviewed Git commit and cannot return',
       });
       expect(takeover).toMatchObject({originalBaseHead:initial.baseHead,currentHead:committed,
@@ -1094,8 +1091,6 @@ describe("project ledger and legacy migration", () => {
       expect(ledger!.trace('NEYNA-200').audit.map((e:any)=>e.event))
         .toContain('owner_task_lease_recovered');
     }finally{
-      if(prior===undefined)delete process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
-      else process.env.DEVCONTROL_OWNER_RECOVERY_KEY=prior;
     }
   });
 
@@ -1125,7 +1120,7 @@ describe("project ledger and legacy migration", () => {
     expect(()=>ledger!.verifyReviewedTask('NEYNA-200',handoff.ticket)).toThrow(/ticket/i);
   });
 
-  it('restores review authority after a lost developer session using an explicit Owner credential',()=>{
+  it('restores review authority after an expired developer lease without any Owner credential',()=>{
     create({id:'NEYNA-200'});ledger!.approve('NEYNA-200','owner');
     const claimed=ledger!.claim('NEYNA-200','departed-implementer',60);
     save('tests/contracts/session-handoff.json','{"safe":true}');
@@ -1142,21 +1137,20 @@ describe("project ledger and legacy migration", () => {
     const database=(ledger! as any).db;
     database.prepare("UPDATE dc_leases SET expires_at=? WHERE task_id='NEYNA-200'")
       .run(Date.now()-1);
-    const original=process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
-    process.env.DEVCONTROL_OWNER_RECOVERY_KEY='test-only-owner-secret-at-least-24-characters';
+    database.prepare("UPDATE dc_task_leases SET expires_at=? WHERE task_id='NEYNA-200'")
+      .run(Date.now()-1);
     try{
       expect(()=>ledger!.handoffReview('NEYNA-200',{
         leaseToken:claimed.leaseToken,actor:'departed-implementer',
         reason:'Attempting to use a previously expired developer lease is prohibited',
-      })).toThrow(/credential/);
+      })).toThrow(/lease/);
       expect(()=>ledger!.handoffReview('NEYNA-200',{
         actor:'project-owner',reason:'Recovered after original Agent session was lost',
-        ownerRecoveryKey:'wrong-secret',
-      })).toThrow(/credential/);
+      })).toThrow(/explicitly approve recovery/);
       const recovered=ledger!.handoffReview('NEYNA-200',{
         actor:'project-owner',
         reason:'Authorized recovery of a stranded completed task without modifying its Git commits',
-        ownerRecoveryKey:process.env.DEVCONTROL_OWNER_RECOVERY_KEY,
+        explicitAuthorization:true,
       });
       expect(recovered.completionHead).toBe(git('rev-parse','HEAD'));
       ledger!.independentTaskReview('NEYNA-200',recovered.ticket,{
@@ -1169,10 +1163,8 @@ describe("project ledger and legacy migration", () => {
       expect(ledger!.verifyReviewedTask('NEYNA-200',recovered.ticket).passed).toBe(true);
       expect(ledger!.get('NEYNA-200').status).toBe('verified');
       expect(ledger!.trace('NEYNA-200').audit.some((e:any)=>
-        e.event==='review_handed_off'&&e.details.via==='authorized_owner_recovery')).toBe(true);
+        e.event==='review_handed_off'&&e.details.via==='explicit_expired_lease_recovery')).toBe(true);
     }finally{
-      if(original===undefined)delete process.env.DEVCONTROL_OWNER_RECOVERY_KEY;
-      else process.env.DEVCONTROL_OWNER_RECOVERY_KEY=original;
     }
   });
   it("preserves leased WIP and exact owner-dirty bytes through reviewed incremental approval", () => {

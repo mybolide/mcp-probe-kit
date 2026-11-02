@@ -210,7 +210,7 @@ export function dispatchDevControl(
       String(input.id), String(input.leaseToken), input as CompletionReport,
     );
     case "review-handoff": return ledger.handoffReview(String(input.id),{
-      leaseToken:input.leaseToken,ownerRecoveryKey:input.ownerRecoveryKey,
+      leaseToken:input.leaseToken,explicitAuthorization:input.explicitAuthorization===true,
       actor:String(input.actor??''),reason:String(input.reason??''),
       rotatePendingTicket:input.rotatePendingTicket===true});
     case "review-submit": return ledger.independentTaskReview(
@@ -227,14 +227,14 @@ export function dispatchDevControl(
       String(input.id), String(input.leaseToken), Number(input.ttlSeconds ?? 1800),
     );
     case "recover-task": return ledger.recoverTaskLease(String(input.id),{
-      actor:String(input.actor??''),ownerRecoveryKey:String(input.ownerRecoveryKey??''),
+      actor:String(input.actor??''),explicitAuthorization:input.explicitAuthorization===true,
       reason:String(input.reason??''),ttlSeconds:Number(input.ttlSeconds??1800),
       preserveExistingWorktree:input.preserveExistingWorktree===true,
       rebaselineLegacyRepositories:input.rebaselineLegacyRepositories===true,
     });
     case "refresh-protected-worktree": return ledger.refreshProtectedWorktree(
       String(input.id),{
-        actor:String(input.actor??''),ownerRecoveryKey:String(input.ownerRecoveryKey??''),
+        actor:String(input.actor??''),explicitAuthorization:input.explicitAuthorization===true,
         reason:String(input.reason??''),
       });
     case 'relocate-repository-baselines': return ledger.relocateRepositoryBaselines(input as never);

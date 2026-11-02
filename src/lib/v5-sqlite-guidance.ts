@@ -104,9 +104,10 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    Pre-existing unrelated tracked/untracked files at claim are protected by
    automatic SHA-256 snapshots, not by demanding that the user delete them.
    If a protected tracked file has been restored to exact Git HEAD bytes,
-   the Owner may call \`refresh-protected-worktree\` with id, actor, configured
-   ownerRecoveryKey and concrete reason before a completion report. This
-   appends an audited reduction of active protection, never overwrites
+   the Owner may call \`refresh-protected-worktree\` with id, actor,
+   explicitAuthorization:true and concrete reason before a completion report.
+   This no longer requires a secret or configured Owner recovery password.
+   The operation appends an audited reduction of active protection, never overwrites
    the original snapshot and never edits Git files or passes a real Gate.
    Missing untracked files, symlinks, staged or new unrelated WIP never qualify.
    An optional local worktree-ignore file is stored in each repository's real
@@ -193,8 +194,12 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    preserving the original Git base so the Owner can record complete/report.
    An already in_review task uses one verify with existing genuine test
    receipts and current AI findings; do not require another Agent.
-   Both recoveries require the separately configured
-   DEVCONTROL_OWNER_RECOVERY_KEY, not an unverified claimed Owner label.
+   Ordinary expired task leases can be recovered using recover-task with
+   a responsible actor and detailed reason. Optional legacy review handoffs
+   from expired leases use explicitAuthorization:true, with no password.
+   Neither recovery requires an Owner secret or environment variable.
+   An active lease may not be seized; the original Git and test evidence
+   checks remain strict.
    Never give an optional external Reviewer the developer lease or fake test results.
    If later task code is already uncommitted in main, a specifically approved
    \`preserveExistingWorktree:true\` deferral fingerprints regular changed
@@ -280,7 +285,7 @@ ${managedRevision}
 - **真实验收 Gate**：docs、go_contract、flutter_test、ios_device_e2e 等只是产品测试条件标识，不是 MCP 测试执行器。开发 AI 必须实际运行或检查项目测试及原始输出，verify 的 acceptance.gates 必须逐项绑定准确 Git 交付和已登记测试报告；缺失或版本变化不能自动通过。
 - **延期验收与会话恢复**：真机或外部 Gate 不可用时使用 defer-verification 释放任务写入权，但不能标记通过。恢复后通过 resume-verification，补充实际测试报告，再用一次带 acceptance 的 verify 完成登记；其他无依赖任务继续开发，Git 证据、冻结 Gate 与 Verified 前置任务始终严格。
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
-- **受保护文件恢复 Git HEAD**：已跟踪的保护文件若恢复为所在仓库 HEAD 原始字节，Owner 可使用 \`refresh-protected-worktree\`，提供任务 \`id\`、\`actor\`、\`ownerRecoveryKey\` 和具体 \`reason\`，追加只读审计刷新，再继续完成登记。旧快照保持不变；不允许 staged、软链、越界、未跟踪保护文件丢失及其他保护文件改动，不提供测试和 Gate 通过资格。
+- **无密钥任务恢复与工作树保护**：普通任务租约到期后，当前 AI 用 \`recover-task\` 提供 \`actor\` 和具体 \`reason\` 即可恢复原任务，不再要求 Owner 密钥或环境变量，必须严格检查 Git 历史、代码范围与本地工作树保护。旧多仓特殊迁移只有明确 \`explicitAuthorization:true\` 和原有双开关才能继续；受保护文件回到 Git HEAD 后，\`refresh-protected-worktree\` 需要 \`id\`、\`actor\`、\`reason\` 与 \`explicitAuthorization:true\`；异常仓库位置迁移还需精确映射和明确授权。原保护快照与操作审计保留，绝不因此自动通过测试和验收。
 - **多开发者与跨设备工作区**：仓库身份以项目根目录下的相对路径识别，根仓库为 \`.git\`，独立子仓库如 \`apw-life/.git\`。正常 git pull、merge、clone 和移动目录无需 Owner 密钥、无需每台机器手动搬迁，也无需改 SQLite。旧 v5 的绝对 git_dir 冻结记录及历史完成证据保留原值，读取时自动解析成相对位置。后续正常提交不会修改历史基线，安全检查仅要求真正独立的 Git 仓库保有原始基线提交，旧测试证据仍绑定旧任务的交付 SHA。只有异常历史位置审计纠正才使用 Owner 授权 relocate-repository-baselines。
 - **已交付任务让出 Git 写入权**：一个任务已经提交代码和真实测试记录，处于 in_review 待审核时，可保留自己的管理租约，让没有前置依赖、文件范围不重叠的 Ready 任务使用同一个 Git 工作区继续开发。任何时候最多一个实际写入任务，暂存代码、未提交工作或范围重叠时不得切换。用 \`next.parkedReviews\` 查看待审任务；当前 AI 继续负责真实自审和结果登记，绝不能因让出写入权就把任务当作 Verified。若自审失败，要先重新领取 Git 写入权才能修改代码。正常切换无需 Owner 密钥和其他 Agent。
 - **本地 Git 忽略与精确交付**：每个独立仓库可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
