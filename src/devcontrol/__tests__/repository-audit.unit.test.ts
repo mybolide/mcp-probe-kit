@@ -1046,7 +1046,7 @@ describe('multi-repository file identity and source audit',()=>{
         implementation:'Committed apw-life/src/checked.ts with its own Git HEAD',
         verification:'Actual project-owned unit tests completed and tied to commit',
       });
-      expect(ledger.taskClosureStatus('AUDIT-SELF').nextAction).toBe('self-review');
+      expect(ledger.taskClosureStatus('AUDIT-SELF').nextAction).toBe('verify');
       expect(()=>ledger.reviewOwnTask('AUDIT-SELF',claimed.leaseToken,{
         outcome:'passed',evidenceReference:'unreported',findings:
           'Inspected actual unit results and exact child Git HEAD, scoped files, and negative cases.',

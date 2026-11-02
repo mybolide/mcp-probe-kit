@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { ProjectTaskLedger, DevControlError, type CreateWorkItem, type CompletionReport } from "./task-ledger.js";
+import { ProjectTaskLedger, DevControlError, type CreateWorkItem, type CompletionReport, type TaskAcceptance } from "./task-ledger.js";
 import { serveDevControlStdio } from "./mcp-stdio.js";
 import { serveDevControlBoard } from "./board-server.js";
 import { ensureProjectWorkspaceRunning } from "./workspace-process.js";
@@ -266,7 +266,8 @@ export function dispatchDevControl(
         reviewMode:input.reviewMode,
       },
     );
-    case "verify": return ledger.verify(String(input.id), String(input.leaseToken));
+    case "verify": return ledger.verify(String(input.id), String(input.leaseToken),
+      input.acceptance as TaskAcceptance|undefined);
     case "trace": return ledger.trace(String(input.id));
     default: throw new DevControlError("UNKNOWN_ACTION", `Unsupported DevControl operation: ${operation}`);
   }

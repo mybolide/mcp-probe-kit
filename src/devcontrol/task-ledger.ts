@@ -49,6 +49,18 @@ import {proposalHash as supplementHash, reviewHash as supplementReviewHash,
 
 type Value = string | number | null;
 type Row = Record<string, any>;
+/** One responsible developer decision for one immutable task delivery.
+ * The developer runs the project tests; DevControl only validates and stores
+ * the declared evidence against the original committed Git revision.
+ */
+export type TaskAcceptance = {
+  evidenceReference:string;
+  findings:string;
+  gates:Array<{gate:string;evidenceReference:string;findings:string}>;
+};
+class AcceptanceRejected extends Error{
+  constructor(readonly result:Row){super('Task acceptance did not pass');}
+}
 interface SqlStmt {
   get(...args: Value[]): Row | undefined;
   all(...args: Value[]): Row[];
@@ -533,6 +545,16 @@ export class ProjectTaskLedger {
         developer TEXT NOT NULL, ticket_hash TEXT NOT NULL UNIQUE,
         issued_at TEXT NOT NULL, expires_at INTEGER NOT NULL,
         reviewer TEXT, outcome TEXT, findings TEXT, reviewed_at TEXT
+      );
+      -- Current single-AI acceptance contract. Unlike the legacy multi-step
+      -- reviewer/Gate workflow, this is ONE version-bound atomic declaration.
+      -- Existing review and gate rows remain readable without migrations.
+      CREATE TABLE IF NOT EXISTS dc_task_acceptances (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        completion_revision INTEGER NOT NULL, completion_head TEXT NOT NULL,
+        lease_token_hash TEXT NOT NULL, reviewer TEXT NOT NULL,
+        findings TEXT NOT NULL, evidence_reference TEXT NOT NULL,
+        gates_json TEXT NOT NULL, accepted_at TEXT NOT NULL
       );
       CREATE TABLE IF NOT EXISTS dc_release_plans (
         release TEXT PRIMARY KEY,
@@ -1553,7 +1575,10 @@ export class ProjectTaskLedger {
       add('report','developer has not requested review yet',
         'Use report with existing real evidence and readyForReview=true before the Agent review');
     }
-    if(note&&evidence.length){
+    if(note&&evidence.length&&task.status==='in_review'&&!internalDecision){
+      add('verify','ready for one developer acceptance',
+        'Use verify with acceptance={evidenceReference,findings,gates:[{gate,evidenceReference,findings}]} referencing existing real project test receipts for EVERY frozen Gate. The current AI reviews the original Git delivery; DevControl validates and records ONE atomic acceptance. No separate self-review/gate-review sequence or external Agent.');
+    }else if(note&&evidence.length){
       if(!handoff){
         if(task.status==='in_review')add('self-review','developer review not recorded',
           'The responsible Agent reviews the exact committed delivery and real project test evidence');
@@ -6430,7 +6455,112 @@ export class ProjectTaskLedger {
   // belong in DevControl; agents and the project's CI run their own tests.
   // DevControl verifies version-bound, substantively reviewed evidence.
 
-  verify(id: string, token: string): Row {
+  /** Validate one real, substantive developer acceptance against the exact
+   * submitted delivery. This is the canonical new workflow; the old
+   * self-review/gate-review records are backward-compatible input only.
+   * Must be called within the same transaction as verify() so no partial
+   * three-step review states can trap a different project.
+   */
+  private recordTaskAcceptance(id:string,token:string,input:TaskAcceptance):void{
+    const lease=this.requireLease(id,token);
+    const task=this.requireTask(id);
+    const note=this.latestCompletion(id);
+    if(task.status!=='in_review'||!note)
+      fail('TASK_DELIVERY_REQUIRED',
+        'An atomic task needs its committed completion and real reported tests before acceptance');
+    if(!input||typeof input.findings!=='string'||input.findings.trim().length<60||
+      typeof input.evidenceReference!=='string'||!input.evidenceReference.trim()||
+      !Array.isArray(input.gates))
+      fail('TASK_ACCEPTANCE_REQUIRED',
+        'Current developer must provide substantive technical findings, reported test reference and each declared Gate result');
+    this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
+    const planned=JSON.parse(task.required_gates) as string[];
+    if(!planned.length||planned.some(g=>!isEvidenceGate(g))||
+      input.gates.length!==planned.length||
+      new Set(input.gates.map(g=>g.gate)).size!==planned.length||
+      planned.some(g=>!input.gates.some(review=>review.gate===g)))
+      fail('TASK_ACCEPTANCE_GATES_REQUIRED',
+        'One acceptance report must account for every frozen project test Gate; internal decision tasks keep their existing contract');
+    const observed=this.observedTaskRepositories(id,task);
+    const multiRepo=observed.some(repo=>!!repo.prefix);
+    const repositories=multiRepo?this.frozenDeliveryRepositories(id,task):observed;
+    const expectedDigest=multiRepo?this.repositoryEvidenceDigest(id,repositories):null;
+    if(multiRepo){
+      this.requireChildReposClean(observed,id,task);
+      const frozen=this.db.prepare(`SELECT digest FROM dc_completion_repository_revisions
+        WHERE task_id=? AND revision=?`).get(id,note.revision);
+      if(!frozen||frozen.digest!==expectedDigest)
+        fail('REPOSITORY_EVIDENCE_STALE','Acceptance needs the exact committed child Git repository versions');
+    }
+    const requireEvidence=(reference:string)=>{
+      if(typeof reference!=='string'||!reference.trim())
+        fail('TASK_ACCEPTANCE_EVIDENCE_REQUIRED','Every test Gate needs a real reported evidence reference');
+      const evidence=this.db.prepare(`SELECT id FROM dc_evidence
+        WHERE task_id=? AND reference=? AND git_head=? ORDER BY id DESC LIMIT 1`)
+        .get(id,reference.trim(),note.git_head);
+      if(!evidence)fail('TASK_ACCEPTANCE_EVIDENCE_MISSING',
+        'Run the real project tests and report evidence for the exact committed delivery before acceptance');
+      if(multiRepo){
+        const reported=this.db.prepare(`SELECT digest FROM dc_evidence_repository_digests
+          WHERE evidence_id=?`).get(evidence.id);
+        if(reported?.digest!==expectedDigest)
+          fail('REPOSITORY_EVIDENCE_STALE',
+            'The test receipt must cover every frozen Git repository in this atomic task');
+      }
+    };
+    requireEvidence(input.evidenceReference);
+    for(const review of input.gates){
+      if(!review||typeof review.findings!=='string'||review.findings.trim().length<30)
+        fail('TASK_ACCEPTANCE_FINDINGS_REQUIRED',
+          'Each frozen Gate needs the developer\'s concrete findings about actual project test results');
+      requireEvidence(review.evidenceReference);
+    }
+    const old=this.db.prepare('SELECT completion_revision,completion_head FROM dc_task_acceptances WHERE task_id=?')
+      .get(id);
+    if(old&&(old.completion_revision!==note.revision||old.completion_head!==note.git_head))
+      fail('TASK_ACCEPTANCE_REVISION_CHANGED',
+        'The original delivery was amended; its previous acceptance cannot be reused');
+    const reviewed={
+      evidenceReference:input.evidenceReference.trim(),findings:input.findings.trim(),
+      gates:input.gates.map(g=>({
+        gate:g.gate,evidenceReference:g.evidenceReference.trim(),findings:g.findings.trim(),
+      })),
+    };
+    this.db.prepare(`INSERT INTO dc_task_acceptances
+      (task_id,completion_revision,completion_head,lease_token_hash,reviewer,
+        findings,evidence_reference,gates_json,accepted_at)
+      VALUES(?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(task_id) DO UPDATE SET
+        completion_revision=excluded.completion_revision,completion_head=excluded.completion_head,
+        lease_token_hash=excluded.lease_token_hash,reviewer=excluded.reviewer,
+        findings=excluded.findings,evidence_reference=excluded.evidence_reference,
+        gates_json=excluded.gates_json,accepted_at=excluded.accepted_at`)
+      .run(id,note.revision,note.git_head,createHash('sha256').update(token).digest('hex'),
+        lease.agent,reviewed.findings,reviewed.evidenceReference,
+        JSON.stringify(reviewed.gates),utc());
+  }
+
+  verify(id: string, token: string, acceptance?:TaskAcceptance): Row {
+    if(acceptance!==undefined){
+      try{
+        return this.inTransaction(()=>{
+          const actor=this.requireLease(id,token).agent;
+          this.recordTaskAcceptance(id,token,acceptance);
+          const result=this.verify(id,token);
+          if(!result.passed)throw new AcceptanceRejected(result);
+          this.audit(id,'developer_atomic_acceptance',actor,{
+            // Reviewer and exact version live in dc_task_acceptances. A
+            // single acceptance does not pretend that MCP executed tests.
+            reviewMode:'responsible_developer',passed:true,
+          });
+          return {...result,acceptanceMode:'single_developer_atomic',
+            acceptanceRecorded:true};
+        });
+      }catch(error){
+        if(error instanceof AcceptanceRejected)return error.result;
+        throw error;
+      }
+    }
     const lease = this.requireLease(id, token);
     const task = this.requireTask(id);
     if (task.status !== "in_review") fail("NOT_IN_REVIEW", "Submit evidence and request review first");
@@ -6438,7 +6568,15 @@ export class ProjectTaskLedger {
     // review, but the developer may perform it; a second Agent is optional.
     const reviewedPlan=String(task.plan_id??'').startsWith('release-work:')||
       String(task.plan_id??'').startsWith('feature:');
-    if(reviewedPlan){
+    const noteForAcceptance=this.latestCompletion(id);
+    const unified=this.db.prepare(`SELECT * FROM dc_task_acceptances
+      WHERE task_id=?`).get(id);
+    const tokenHash=createHash('sha256').update(token).digest('hex');
+    const unifiedValid=!!unified&&!!noteForAcceptance&&
+      unified.completion_revision===noteForAcceptance.revision&&
+      unified.completion_head===noteForAcceptance.git_head&&
+      unified.lease_token_hash===tokenHash&&unified.reviewer===lease.agent;
+    if(reviewedPlan&&!unifiedValid){
       const review=this.db.prepare("SELECT outcome,completion_revision,completion_head FROM dc_task_review_handoffs WHERE task_id=?").get(id);
       const latest=this.latestCompletion(id);
       if(!review||review.outcome!=='passed'||!latest||
@@ -6610,11 +6748,27 @@ export class ProjectTaskLedger {
     // must declare sqlite_decision and zero allowedPaths from the start.
     const gates = sqliteDelivery?["sqlite_decision"]:plannedGates;
     if (!gates.length) return { taskId: id, passed: false, reason: "Missing gate definition" };
-    const tokenHash=createHash("sha256").update(token).digest("hex");
     const results:Record<string,Row> = Object.fromEntries(gates.map((name) => {
       if (name === "sqlite_decision") return [name,{passed:true,taskId:id,
         revision:recorded!.revision,status:recorded!.status,productApproval:"not_implied"}];
       if (isEvidenceGate(name)) {
+        if(unifiedValid){
+          const reviewedGates=JSON.parse(String(unified.gates_json)) as Array<{
+            gate:string;evidenceReference:string;findings:string}>;
+          const found=reviewedGates.find(g=>g.gate===name);
+          const valid=!!found&&found.findings.length>=30&&
+            !!this.db.prepare(`SELECT id FROM dc_evidence
+              WHERE task_id=? AND reference=? AND git_head=? LIMIT 1`)
+              .get(id,found?.evidenceReference??'',note.git_head)&&
+            (!multiRepo||!!this.db.prepare(`SELECT 1 FROM dc_evidence e
+              JOIN dc_evidence_repository_digests rd ON rd.evidence_id=e.id
+              WHERE e.task_id=? AND e.reference=? AND e.git_head=?
+                AND rd.digest=? LIMIT 1`)
+              .get(id,found?.evidenceReference??'',note.git_head,repoDigest));
+          return [name,{passed:valid,evidenceBased:true,
+            reason:valid?'Developer reviewed actual project evidence against frozen Gate and delivery':
+              'Acceptance does not match the exact Gate test evidence'}];
+        }
         const result = this.db.prepare(
           "SELECT * FROM dc_external_gate_reviews WHERE task_id=? AND gate_name=?",
         ).get(id,name);
@@ -6727,6 +6881,13 @@ export class ProjectTaskLedger {
       externalGateReviews: this.db.prepare(
         "SELECT gate_name,evidence_reference,runner,reviewer,outcome,review_notes,git_head,created_at FROM dc_external_gate_reviews WHERE task_id=? ORDER BY gate_name",
       ).all(id),
+      unifiedAcceptance:(()=>{
+        const record=this.db.prepare(`SELECT completion_revision,completion_head,
+          reviewer,findings,evidence_reference,gates_json,accepted_at
+          FROM dc_task_acceptances WHERE task_id=?`).get(id);
+        return record?{...record,gates:JSON.parse(String(record.gates_json)),
+          gates_json:undefined}:null;
+      })(),
       completion: this.latestCompletion(id),
       completionHistory: this.db.prepare(
         "SELECT * FROM dc_completion_notes WHERE task_id=? ORDER BY revision",

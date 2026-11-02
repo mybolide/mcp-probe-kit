@@ -37,10 +37,10 @@ const errors:string[]=[];
 for(const [name,source] of guidance){
   if(!source.includes('mcp-probe:guidance-revision: '+SKILL_GUIDANCE_REVISION))
     errors.push(name+' is missing the current managed guidance revision');
-  if(!source.includes('self-review')||
-    !/reviewMode[=:]?"?self"?/.test(source)||
-    !source.includes('gate-review')||!source.includes('verify'))
-    errors.push(name+' omits the actual self-review / self Gate review / verify contract');
+  if(!source.includes('verify')||!source.includes('acceptance')||
+    !source.includes('Gate')||
+    !source.includes('self-review'))
+    errors.push(name+' omits the unified developer acceptance contract and legacy review compatibility');
   if(!source.includes('refresh-protected-worktree'))
     errors.push(name+' omits the Owner-authorized HEAD-restored protected snapshot refresh action');
   if(!source.includes('relocate-repository-baselines'))

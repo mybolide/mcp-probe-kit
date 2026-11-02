@@ -34,8 +34,9 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('On every MCP startup');
     expect(skill).toContain('guidance');
     expect(skill).toContain('`self-review`');
-    expect(skill).toContain('`reviewMode:"self"`');
-    expect(skill).toContain('A separate Reviewer is OPTIONAL');
+    expect(skill).toContain('ONE verify');
+    expect(skill).toContain('acceptance');
+    expect(skill).toContain('optional');
     expect(skill).toContain('refresh-protected-worktree');
     expect(skill).toContain('devcontrol-worktree-ignore');
     expect(skill).toContain('deliveryHeads');
@@ -77,7 +78,8 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(text).toContain('release-work-incremental-self-review');
     expect(text).toContain('artifact-self-review');
     expect(text).toContain('idea-self-review');
-    expect(text).toMatch(/reviewMode=self|reviewMode:self/);
+    expect(text).toContain('verify');
+    expect(text).toContain('acceptance');
     expect(text).not.toContain('DIFFERENT reviewer perform review-submit');
     expect(text).not.toContain('**不同的独立 Reviewer**');
   });
