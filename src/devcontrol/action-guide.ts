@@ -11,6 +11,13 @@ const FLOWS = {
     example: {action:'onboard',project_root:'/ABSOLUTE/GIT/PROJECT',input:{}},
     caution: 'Existing tasks take precedence. Do not regenerate a plan on resume.',
   },
+  database: {
+    description:'本机两份 DevControl SQLite 预检、冲突报告和安全合并候选库',
+    actions:['sqlite-merge-preview','sqlite-merge-candidate'],
+    example:{action:'sqlite-merge-preview',project_root:'/ABSOLUTE/GIT/PROJECT',
+      input:{sourcePath:'/ABSOLUTE/OTHER-COMPUTER/devcontrol.sqlite3'}},
+    caution:'Only merge candidates with shared project ancestry, zero conflicts and the matching preview fingerprint. Candidate output requires a new outputPath and is NOT activated automatically; never overwrite either source DB or claim global offline exclusivity.',
+  },
   feature: {
     description: '新需求 → 设计 → 原子任务规划 → 下一轮二次 Review → 精确哈希确认',
     actions: ['feature-create','feature-save','feature-validate','feature-task-brief','feature-task-review','feature-task-stage','feature-task-propose','feature-task-second-review','feature-task-approve'],
@@ -68,6 +75,7 @@ export function devControlGuide(input: Record<string, unknown> = {}): Record<str
     '设计':'feature','任务':'task','开发':'task','测试':'verification','验收':'verification',
     '缺陷':'bug','新想法':'idea','评估':'idea','变更':'scope','架构':'architecture',
     '计划':'planning',
+    '数据库':'database','合并':'database','sqlite':'database',
   };
   const key = (requested in FLOWS ? requested : alias[requested]) as keyof typeof FLOWS | undefined;
   return {

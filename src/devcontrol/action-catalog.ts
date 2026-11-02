@@ -15,6 +15,10 @@ export const V5_DEVC_ACTION_GROUPS = [
     actions: ['onboard', 'next', 'list', 'get', 'execution-contract', 'task-detail-audit'],
   },
   {
+    title: 'SQLite 项目状态差异及安全候选合并 / Local database merge',
+    actions: ['sqlite-merge-preview','sqlite-merge-candidate'],
+  },
+  {
     title: '冻结任务说明补充 / Reviewed additive task specification',
     actions: ['task-spec-supplement-get','task-spec-supplement-review',
       'task-spec-supplement-stage','task-spec-supplement-self-review',

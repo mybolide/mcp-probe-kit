@@ -144,6 +144,19 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    can become Verified. DevControl never merges Git or tests code.
    Root worktrees do not contain independent child Git repositories; those
    multi-repository projects retain their stricter existing workflow.
+   Cross-computer SQLite files cannot be safely combined by copying bytes
+   or INSERT OR REPLACE. Use sqlite-merge-preview with the explicitly
+   transferred sourcePath to inspect semantic row conflicts. For a clean
+   shared-ancestry preview, sqlite-merge-candidate requires the unchanged
+   fingerprint and a NEW outputPath, and never overwrites the local or
+   imported SQLite. Transient leases and machine-specific Git baseline
+   paths never come from the other machine. Conflicting task states,
+   evidence identities and source-only Verified deliveries must be
+   investigated by the current AI against the original Git commits and
+   real tests; do NOT invent an acceptance result or silently select
+   the later timestamp. A candidate is NOT automatically active, and this
+   is NOT yet automatic multi-computer state synchronization or a global
+   offline-exclusive claim service. No central host or third-party Agent.
    Only exceptional forensic physical-location audit correction needs the
    Owner-key-authorized relocate-repository-baselines operation.
    MCP-generated Skill and AGENTS.md changes are exempt only when their staged
@@ -255,6 +268,8 @@ ${skillRef}
 
 ${managedRevision}
 
+- **跨电脑 SQLite 安全合并**：当前 AI 使用 sqlite-merge-preview 对比两份本地 SQLite，按任务状态、依赖、测试证据和历史记录识别冲突，不按时间戳自动覆盖。只有同项目来源、表结构兼容、无冲突且预检指纹未变化，才用 sqlite-merge-candidate 生成新的候选 SQLite，两份原文件均不修改。租约和另一台电脑的 Git 工作树路径不合并，已执行或已验收的外部任务需要当前 AI 审核原始 Git 提交与真实测试。候选文件不会自动成为正式项目状态，也不代表已经完成跨电脑自动同步或离线独占领取。不要求权威主机，不引入其他 Agent。
+
 - **独立 Git Worktree 开发**：Git 正式注册的不同工作树拥有各自的 Git 暂存区，同时共享主仓库的同一份 DevControl SQLite 项目数据。当前 AI 使用普通 Git 创建、合并工作树；领取任务时把对应工作树路径传为 project-root。前置依赖仍必须 Verified，未验收任务的冻结文件范围不得重叠。任务报告、测试与技术自审绑定原工作树；独立工作树的准确提交被合并进主 Git 历史后，才允许记为 Verified。DevControl 不执行代码测试、Git 合并，也不引入第三方 Agent。独立子仓库组合暂不支持根 Worktree 并行。
 
 - **启动文档自检**：MCP 每次启动检查目标 Git 项目的 Skill、AGENTS.md 托管区；即使版本仍是 5.0.0，指导修订过期也必须同步。若启动时无法找到项目，首次调用显式传入正确的 \`project_root\`；不得写入 MCP 安装目录。Agent 每轮先阅读最新 Skill 与项目自定义规则，可用本地 \`probe status\` / \`probe install-agent --project-root /ABSOLUTE/GIT/PROJECT\` 核对。
@@ -352,6 +367,16 @@ ${managedRevision}
   review. An isolated delivery cannot be Verified before main Git contains
   its exact commit. Multi-Git child repository projects require the existing
   stricter workflow. DevControl runs neither Git merges nor tests.
+- For two independently modified SQLite files, the responsible AI uses
+  sqlite-merge-preview to inspect task, dependency, evidence and history
+  conflicts. Only if both files have shared project ancestry, compatible
+  schemas and no conflicting rows can sqlite-merge-candidate create a NEW
+  candidate after the exact preview fingerprint is confirmed. Never
+  overwrite either original DB or copy local leases/device Git paths.
+  Source-only running or Verified task states require real Git and test
+  evidence review, not timestamp-based promotion. Candidate is not active
+  project state and not a global cross-computer synchronization service.
+  No always-on host and no third-party Agent is required.
 - DevControl is project management only, not a testing or acceptance Agent.
   The current development AI owns requirements analysis, architecture,
   implementation, real project tests and technical self-review. Never

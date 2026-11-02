@@ -8,6 +8,7 @@ import { lanAddresses } from "./workspace-access.js";
 import { resolveWorkbenchLocale } from "./i18n.js";
 
 const previousOperations = [
+  "sqlite-merge-preview","sqlite-merge-candidate",
   "idea-capture", "idea-list", "idea-get", "idea-assess", "idea-self-review", "idea-review", "idea-decide",
   "release-work-plan", "release-work-review", "release-work-stage", "release-work-approve",
   "release-work-scope-review", "release-work-scope-stage", "release-work-scope-get",
@@ -36,6 +37,8 @@ const previousOperations = [
 const obsoleteFileActions = new Set(['import-spec', 'create', 'subtask', 'dependency', 'approve']);
 const operations = previousOperations.filter((operation) => !obsoleteFileActions.has(operation));
 const requiredFields: Record<string, string[]> = {
+  "sqlite-merge-preview":["sourcePath"],
+  "sqlite-merge-candidate":["sourcePath","outputPath","expectedFingerprint"],
   "idea-capture":["release","title","description","sourceRef","submittedBy"],
   "idea-list":[],
   "idea-get":["id"],
@@ -164,7 +167,8 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                     "plan", "expectedHash", "expectedPreviousHash",
                     "step", "status", "evidence", "expectedRevision", "expectedFeatureRevision", "taskId", "role",
                     "language","submittedBy","assessment","review","disposition",
-                    "expectedReviewHash","reason","explicitAuthorization"])]
+                    "expectedReviewHash","reason","explicitAuthorization",
+                    "sourcePath","outputPath","expectedFingerprint"])]
                     .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn", "evidence"].includes(field)
                       ? { type: "array", items: { type: "string" } }
                       : ["priority", "ttlSeconds", "step", "expectedRevision", "expectedFeatureRevision"].includes(field) ? { type: "integer" }

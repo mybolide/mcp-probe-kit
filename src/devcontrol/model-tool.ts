@@ -8,6 +8,9 @@ import { dispatchDevControl } from './command.js';
 import { DevControlError, ProjectTaskLedger } from './task-ledger.js';
 import { V5_DEVC_ACTIONS } from './action-catalog.js';
 import { devControlGuide } from './action-guide.js';
+import {mergeDevControlSqlite} from './sqlite-merge.js';
+import {resolveGitWorktreeContext} from './git-worktree-context.js';
+import {resolveProjectDatabase} from './project-storage.js';
 import type { RegisteredToolResult } from '../server/tool-definition.js';
 
 export { V5_DEVC_ACTIONS } from './action-catalog.js';
@@ -36,6 +39,20 @@ export async function runV5DevControlTool(args: unknown): Promise<RegisteredTool
   }
   let ledger: ProjectTaskLedger | undefined;
   try {
+    if(action==='sqlite-merge-preview'||action==='sqlite-merge-candidate'){
+      const parsed=input as Record<string,unknown>;
+      const canonical=resolveGitWorktreeContext(resolve(projectRoot)).mainRoot;
+      const result=mergeDevControlSqlite({
+        targetPath:resolveProjectDatabase(canonical),
+        sourcePath:String(parsed.sourcePath??''),
+        mode:action==='sqlite-merge-preview'?'preview':'candidate',
+        outputPath:typeof parsed.outputPath==='string'?parsed.outputPath:undefined,
+        expectedFingerprint:typeof parsed.expectedFingerprint==='string'?
+          parsed.expectedFingerprint:undefined,
+      });
+      return {content:[{type:'text',text:JSON.stringify(result)}],
+        structuredContent:result,isError:false};
+    }
     ledger = new ProjectTaskLedger(resolve(projectRoot));
     const result = dispatchDevControl(ledger, action, input as Record<string, any>);
     return {

@@ -12,6 +12,9 @@ import {
   configureWorkspaceAccess, lanAddresses, workspaceAccess, WORKSPACE_START_PORT,
 } from "./workspace-access.js";
 import { V5_DEVC_ACTIONS } from './model-tool.js';
+import {mergeDevControlSqlite} from './sqlite-merge.js';
+import {resolveGitWorktreeContext} from './git-worktree-context.js';
+import {resolveProjectDatabase} from './project-storage.js';
 
 type FlagMap = Map<string, string | boolean>;
 
@@ -36,6 +39,15 @@ export function dispatchDevControl(
   ledger: ProjectTaskLedger, operation: string, input: Record<string, any> = {},
 ): Record<string, unknown> {
   switch (operation) {
+    case 'sqlite-merge-preview':return mergeDevControlSqlite({
+      targetPath:ledger.databasePath,sourcePath:String(input.sourcePath??''),
+      mode:'preview',
+    });
+    case 'sqlite-merge-candidate':return mergeDevControlSqlite({
+      targetPath:ledger.databasePath,sourcePath:String(input.sourcePath??''),
+      mode:'candidate',outputPath:String(input.outputPath??''),
+      expectedFingerprint:String(input.expectedFingerprint??''),
+    });
     case 'task-spec-supplement-get': return ledger.taskSpecSupplement(String(input.id));
     case 'task-spec-supplement-review': return ledger.reviewTaskSpecSupplement(input.proposal);
     case 'task-spec-supplement-stage': return ledger.stageTaskSpecSupplement(
@@ -263,6 +275,18 @@ export function dispatchDevControl(
 export async function runDevControlCli(positionals: string[], flags: FlagMap): Promise<number> {
   const root = path.resolve(stringFlag(flags, "project-root") ?? process.cwd());
   const operation = positionals[0]?.trim() ?? "next";
+  if(operation==='sqlite-merge-preview'||operation==='sqlite-merge-candidate'){
+    const args=jsonInput(flags);
+    const project=resolveGitWorktreeContext(root).mainRoot;
+    const result=mergeDevControlSqlite({
+      targetPath:resolveProjectDatabase(project),
+      sourcePath:String(args.sourcePath??''),
+      mode:operation==='sqlite-merge-preview'?'preview':'candidate',
+      outputPath:args.outputPath,expectedFingerprint:args.expectedFingerprint,
+    });
+    process.stdout.write(JSON.stringify({ok:true,operation,result},null,2)+'\n');
+    return 0;
+  }
   if (!([...V5_DEVC_ACTIONS, 'serve', 'board', 'workspace-status', 'workspace-link',
     'lan-enable', 'lan-disable', 'lan-access'].includes(operation))) {
     throw new DevControlError('V5_SQLITE_ONLY',

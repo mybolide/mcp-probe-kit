@@ -204,15 +204,18 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 
 **单工作区的独立任务继续开发**：DevControl 仍保持同一 Git 暂存区同时只有一个写入任务。如果当前任务已经提交原子交付和测试记录、正在等待 AI 自审，且没有暂存修改，领取一个不存在前置依赖且文件范围不重叠的 Ready 任务时，可自动保留前者的独立任务租约并让出 Git 写入权。旧任务保持 `in_review`，`next.parkedReviews` 显示待审核任务；只有当前 AI 依据真实测试与既定验收条件完成后才可记为 Verified。自审失败要先重新领取写入权才能修改该任务代码。依赖未验收、范围重叠、未提交或暂存的场景继续拒绝切换。该功能不启动项目测试，也不需要独立第三方 Agent。
 
-**`devcontrol` 统一入口：97 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
+**`devcontrol` 统一入口：99 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
 
 **独立 Git Worktree 开发（单根 Git 仓库）**：当前 AI 可通过普通 Git 命令创建独立工作树，在领取任务时把其路径作为 project-root。工作树各有自己的 Git 暂存区，但共享主仓库原有的同一份 DevControl SQLite。只有全部前置任务 Verified、不同未验收任务的冻结文件范围不重叠，才允许独立领取。测试记录与技术自审绑定执行任务的工作树，独立交付的准确 Git 提交必须先被 AI 集成进主仓库，才可把任务记为 Verified。DevControl 不运行测试、不替 AI 合并 Git，也不要求其他 Agent。含独立子 Git 仓库的组合项目暂不支持此模式；这里的共享 SQLite 仅限同一台机器，不等于跨电脑同步。
+
+**两份 SQLite 的安全合并（第一阶段）**：当前 AI 调用 `devcontrol` 的 `sqlite-merge-preview`，输入 `sourcePath` 为明确传入的另一份 SQLite 文件，读取本地项目库和源库，生成结构、记录数量、任务状态及测试证据冲突报告。无共享项目来源、结构不一致、行内容冲突、另一台电脑新增已执行或 Verified 的任务时，不允许自动合并。只有预检全部通过，才能用 `sqlite-merge-candidate` 输入相同 `sourcePath`、预检返回的 `expectedFingerprint` 以及全新 `outputPath` 生成候选数据库。两个原始 SQLite 保持不变，本机租约和设备相关 Git 路径不复制。候选结果必须由当前研发 AI 检查、完成真实 Git 及验收核对后才能正式使用。**这不是自动同步、在线冲突协调或可直接替换项目数据库的功能**，后续还需要完成同步协议和冲突解决机制。无需常在线权威主机或其他 Agent。
 
 | 流程领域 | 可用 `action` |
 |---|---|
 | 冻结任务说明补充 / Reviewed additive task specification (7) | `task-spec-supplement-get`、`task-spec-supplement-review`、`task-spec-supplement-stage`、`task-spec-supplement-self-review`、`task-spec-supplement-independent-review`、`task-spec-supplement-approve`、`task-spec-supplement-withdraw` |
 | 操作导航 / Read-only agent navigation (1) | `guide` |
 | 项目与当前任务 / Project and task discovery (6) | `onboard`、`next`、`list`、`get`、`execution-contract`、`task-detail-audit` |
+| SQLite 项目状态差异及安全候选合并 / Local database merge (2) | `sqlite-merge-preview`、`sqlite-merge-candidate` |
 | 版本计划 / Release plan approval (5) | `release-plan`、`plan-review`、`plan-propose`、`plan-revise`、`plan-approve` |
 | 正式工作树 / Frozen release work (4) | `release-work-plan`、`release-work-review`、`release-work-stage`、`release-work-approve` |
 | 范围变更 / Reviewed scope amendments (8) | `release-work-scope-review`、`release-work-scope-stage`、`release-work-scope-get`、`release-work-scope-self-review`、`release-work-scope-independent-review`、`release-work-scope-approve`、`release-work-scope-withdraw`、`pause-for-scope` |
