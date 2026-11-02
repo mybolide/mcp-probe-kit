@@ -14,6 +14,24 @@
       return row;
     }));
   }
+  function renderTaskProgress(){
+    const rows=currentReleaseProgressRows();
+    const verified=rows.filter(row=>taskBucket(row)==="completed").length;
+    $("s-total").textContent=String(rows.length);
+    $("s-done").textContent=String(verified);
+    $("s-active").textContent=String(rows.filter(row=>taskBucket(row)==="in_progress").length);
+    $("s-pending").textContent=String(rows.filter(row=>taskBucket(row)==="not_started").length);
+    $("task-progress-bar").max=Math.max(1,rows.length);
+    $("task-progress-bar").value=verified;
+    const isFrozen=releaseWorkPlan?.status==="frozen";
+    const extra=isFrozen?Math.max(0,currentReleaseRows().length-rows.length):0;
+    $("task-progress-label").textContent=
+      (isFrozen?(releaseWorkPlan.release+" 冻结工作项已验证 "):"正式工作项已验证 ")+
+      verified+" / "+rows.length+"（"+
+      (rows.length?(100*verified/rows.length).toFixed(1):"0.0")+"%）。"+
+      (extra?"另有 "+extra+" 项待审批规划，未计入正式进度。":"")+
+      "仅表示工作项 Verified，不代表产品发布 Gate 已通过。";
+  }
   function render(){
     $("projectcrumb").textContent=project.name;
     $("projectname").textContent=project.name.toUpperCase();
@@ -37,18 +55,8 @@
     $("architecture-diagram").classList.toggle("hide",!project.architecture.diagram);
     // Governance tasks must not inflate the perceived product delivery rate.
     const all=Object.values(board.columns).flat();
-    const productTasks=currentReleaseRows();
-    const verifiedTasks=productTasks.filter(row=>taskBucket(row)==="completed").length;
     const governance=all.filter(t=>t.track==="governance");
-    $("s-total").textContent=String(productTasks.length);
-    $("s-done").textContent=String(verifiedTasks);
-    $("s-active").textContent=String(productTasks.filter(t=>taskBucket(t)==="in_progress").length);
-    $("s-pending").textContent=String(productTasks.filter(t=>taskBucket(t)==="not_started").length);
-    $("task-progress-bar").max=Math.max(1,productTasks.length);
-    $("task-progress-bar").value=verifiedTasks;
-    $("task-progress-label").textContent="正式工作项已验证 "+verifiedTasks+" / "+productTasks.length+
-      "（"+(productTasks.length?(100*verifiedTasks/productTasks.length).toFixed(1):"0.0")+
-      "%）。仅表示工作项 Verified，不代表产品发布 Gate 已通过。";
+    renderTaskProgress();
     $("governance-count").textContent="工程治理 · "+governance.filter(t=>t.status==="verified").length+"/"+governance.length+" 完成";
     $("next-id").textContent=board.current||"暂无可领取任务";
     const candidate=all.find(t=>t.id===board.current);
@@ -141,12 +149,7 @@
       // route, filters, current task tab and any open details drawer survive.
       const scroll=document.scrollingElement?.scrollTop||0;
       renderTaskList();
-      const rows=currentReleaseRows(),passed=rows.filter(row=>taskBucket(row)==='completed').length;
-      $('task-progress-bar').max=Math.max(1,rows.length);
-      $('task-progress-bar').value=passed;
-      $('task-progress-label').textContent='正式工作项已验证 '+passed+' / '+rows.length+
-        '（'+(rows.length?(passed*100/rows.length).toFixed(1):'0.0')+
-        '%）。仅表示工作项 Verified，不代表产品发布 Gate 已通过。';
+      renderTaskProgress();
       if(document.scrollingElement)document.scrollingElement.scrollTop=scroll;
       $('synced').textContent='任务同步于 '+beijingClock();
     }catch(error){$('synced').textContent='任务同步失败：'+error.message+'（原数据保留）';}

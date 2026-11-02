@@ -244,12 +244,20 @@
   function currentReleaseRows(){
     const rows=taskRows().filter(row=>taskBucket(row)!==null);
     if(releaseWorkPlan?.status!=="frozen")return rows;
-    // F0/F1 historical records are still available in SQLite, but a frozen
-    // release's progress and task tabs must count only its 403 approved items.
+    // Preserve proposed work in the task list so it can be reviewed, while
+    // keeping frozen-release progress independent of unapproved proposals.
     const frozenIds=new Set((releaseWorkPlan.frozen?.plan?.workItems||[]).map(item=>item.id));
-    // Keep pending Feature plans visible without inflating frozen-release
-    // progress or allowing their proposed tasks to be claimed.
     return rows.filter(row=>frozenIds.has(row.item.id)||row.pending);
+  }
+  function currentReleaseProgressRows(){
+    const rows=currentReleaseRows();
+    if(releaseWorkPlan?.status!=="frozen")return rows.filter(row=>!row.pending);
+    const frozenIds=new Set((releaseWorkPlan.frozen?.plan?.workItems||[]).map(item=>item.id));
+    // A pending Feature proposal can override a frozen item's display status.
+    // Progress must always use the actual SQLite task status and frozen IDs.
+    return rows.filter(row=>frozenIds.has(row.item.id)).map(row=>({
+      ...row,status:row.current?.status||"unplanned",pending:false,
+    }));
   }
   function displayTaskTitle(task){
     // Historical task IDs/titles in SQLite must remain unchanged.
