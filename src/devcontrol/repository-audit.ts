@@ -14,7 +14,16 @@ import { createHash } from 'node:crypto';
 export type RepositoryRevision = {
   prefix:string; gitDir:string; baseHead:string; head:string;
 };
-export type RepositoryIdentity = {prefix:string; gitDir:string; root:string};
+export type RepositoryIdentity = {
+  prefix:string; gitDir:string; root:string; absoluteGitDir:string;
+};
+
+/** Portable repository metadata location, relative to the workspace root.
+ * An absolute Git directory belongs to the current machine, not the project.
+ */
+export function portableGitDir(prefix:string):string{
+  return prefix?prefix+'/.git':'.git';
+}
 
 function git(cwd:string,args:string[],binary=false):Buffer {
   const result=spawnSync('git',args,{
@@ -74,8 +83,11 @@ function identity(workspace:string,prefix:string):RepositoryIdentity{
   // misidentified worktree, or arbitrary subdirectory of a parent repository.
   const top=fs.realpathSync(output(real,['rev-parse','--show-toplevel']));
   if(top!==candidate)throw Error(`Not an independent Git root: ${prefix}`);
-  const gitDir=fs.realpathSync(output(real,['rev-parse','--absolute-git-dir']));
-  return {prefix,root:candidate,gitDir};
+  const absoluteGitDir=fs.realpathSync(output(real,['rev-parse','--absolute-git-dir']));
+  if(fs.lstatSync(path.join(candidate,'.git')).isDirectory()&&
+    absoluteGitDir!==fs.realpathSync(path.join(candidate,'.git')))
+    throw Error('Git metadata differs from the independent repository root: '+prefix);
+  return {prefix,root:candidate,gitDir:portableGitDir(prefix),absoluteGitDir};
 }
 export function discoverRepositories(root:string,allowedPaths:string[]):RepositoryIdentity[]{
   const workspace=fs.realpathSync(root);

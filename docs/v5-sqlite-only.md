@@ -200,7 +200,9 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | SQLite History | `history_session_bootstrap`、`history_session_checkpoint`、`history_session_validate`、`history_session_search`、`history_session_read` |
 | 可选跨项目 Memory | `search_memory`、`read_memory_asset`、`memorize_asset`、`update_memory_asset`、`delete_memory_asset`、`scan_and_extract_patterns` |
 
-**`devcontrol` 统一入口：96 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
+**多仓库与跨设备开发**：每个仓库用项目根目录下的相对 Git 元数据路径标识，例如 `.git`、`apw-life/.git`。正常拉取、合并、克隆、移动整个项目都不要求 Owner 密钥，也不要求修改 SQLite。旧 v5 中保存的绝对路径和完成证据哈希保持原样，在读取时自动按相对位置解析。后续新的 Git 提交不会更改历史任务的原始交付 SHA。只有确实需要纠正历史审计记录时，才使用需要 Owner 密钥的 `relocate-repository-baselines`。
+
+**`devcontrol` 统一入口：97 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
 
 | 流程领域 | 可用 `action` |
 |---|---|
@@ -216,7 +218,7 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | Bug / Defect management (3) | `bug-get`、`bug-step-save`、`bug-task-link` |
 | Idea / Proposed change governance (7) | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-self-review`、`idea-review`、`idea-decide` |
 | 工件 / Governed artifacts (6) | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-self-review`、`artifact-independent-review`、`artifact-approve` |
-| 领取、报告与验收 / Execution and evidence (19) | `claim`、`renew`、`recover-task`、`refresh-protected-worktree`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
+| 领取、报告与验收 / Execution and evidence (20) | `claim`、`renew`、`recover-task`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
 | 决策 / Decision records (2) | `decision-save`、`decision-get` |
 | 本地工具 / Local developer and hooks (3) | `local-developer`、`hook-status`、`hook-install` |
 

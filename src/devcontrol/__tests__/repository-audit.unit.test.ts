@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
+import {createRequire} from 'node:module';
 import {ProjectTaskLedger} from '../task-ledger.js';
 import {discoverRepositories,currentRevisions,updateRevisions,revisionDigest,
   stagedChanges,committedChanges,assertRepositoryTopology} from '../repository-audit.js';
@@ -95,10 +96,8 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
     }finally{ledger.close();}
   });
 
-  it('Owner relocation rejects staged Git indexes and a substituted child repository without any audit changes',()=>{
+  it('portable baselines allow a workspace move without a key, but reject another Git history',()=>{
     const {root}=fixture();
-    const secret='fixture-owner-key-for-safe-workspace-moves';
-    process.env.DEVCONTROL_OWNER_RECOVERY_KEY=secret;
     const id='AUDIT-RELOCATED-REJECT';
     const original=new ProjectTaskLedger(root);
     let baselines:any[]=[];
@@ -114,16 +113,18 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
     const child=path.join(relocated,'apw-life');
     const ledger=new ProjectTaskLedger(relocated);
     try{
-      const request={actor:'owner',ownerRecoveryKey:secret,
-        reason:'Move to an owner-authorized new machine with independent child repositories',
-        taskIds:[id],mappings:baselines.map(row=>({
-          taskId:id,prefix:row.prefix,fromGitDir:row.git_dir,
-          toGitDir:fs.realpathSync(path.join(relocated,row.prefix,'.git')),
-          expectedBaseHead:row.base_head,
-        }))};
+      expect(baselines.map(row=>row.git_dir)).toEqual([
+        '.git','apw-life/.git','apw-life-app/.git']);
+      expect(ledger.trace(id).repositoryBaselineRelocations).toEqual([]);
+      expect(ledger.get(id).status).toBe('ready');
+      expect(()=>updateRevisions(relocated,baselines.map(row=>({
+        prefix:row.prefix,gitDir:row.git_dir,baseHead:row.base_head,
+        head:row.base_head,
+      })))).not.toThrow();
       fs.writeFileSync(path.join(child,'unreviewed.txt'),'staged changes not permitted\n');
       cmd(child,'add','unreviewed.txt');
-      expect(()=>ledger.relocateRepositoryBaselines(request)).toThrow(/staged/i);
+      expect(stagedChanges(discoverRepositories(relocated,[])))
+        .toContain('apw-life/unreviewed.txt');
       expect(ledger.trace(id).repositoryBaselineRelocations).toEqual([]);
       cmd(child,'reset','-q','--','unreviewed.txt');
       fs.rmSync(path.join(child,'unreviewed.txt'));
@@ -134,8 +135,10 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
       cmd(child,'config','user.email','other@example.invalid');
       fs.writeFileSync(path.join(child,'README.md'),'Different repository with no ancestor relation\n');
       cmd(child,'add','README.md');cmd(child,'commit','-qm','unrelated independent history');
-      expect(()=>ledger.relocateRepositoryBaselines(request))
-        .toThrow(/Original immutable Git commit|ancestor|BASE_CHANGED/i);
+      expect(()=>updateRevisions(relocated,baselines.map(row=>({
+        prefix:row.prefix,gitDir:row.git_dir,baseHead:row.base_head,
+        head:row.base_head,
+      })))).toThrow(/history changed/i);
       expect(ledger.trace(id).repositoryBaselineRelocations).toEqual([]);
       expect(ledger.get(id).status).toBe('ready');
     }finally{ledger.close();}
@@ -185,13 +188,12 @@ describe('layered local worktree-ignore protection',()=>{
 });
 
 describe('immutable multi-repository delivery commits',()=>{
-  it('Owner relocates two-task three-repository SQLite ledger without rewriting original Git or verified evidence',()=>{
+  it('legacy absolute three-repository SQLite records survive a workspace move without Owner key or rewritten evidence',()=>{
     const {root,child}=fixture();
     fs.writeFileSync(path.join(child,'README.md'),'Original child Owner WIP preserved across copy\n');
-    const secret='fixture-owner-recovery-key-is-long-enough';
-    process.env.DEVCONTROL_OWNER_RECOVERY_KEY=secret;
     const ledger=new ProjectTaskLedger(root);
     const ids=['AUDIT-RELOCATED-VERIFIED','AUDIT-RELOCATED-PENDING'];
+    const databasePath=ledger.databasePath;
     let original:ReturnType<typeof ledger.trace>[]=[];
     let pendingToken='';
     try{
@@ -234,37 +236,51 @@ describe('immutable multi-repository delivery commits',()=>{
       });
       original=ids.map(id=>ledger.trace(id));
     }finally{ledger.close();}
+    // Simulate the actual pre-relative v5 SQLite schema: every original
+    // Git location AND frozen delivery/evidence digest used absolute paths.
+    // This direct mutation is confined to a disposable TEST fixture, never
+    // a real DevControl project database or its governance entrypoint.
+    const sqlite=createRequire(import.meta.url)('node:sqlite') as {
+      DatabaseSync:new(filename:string)=>any;
+    };
+    const db=new sqlite.DatabaseSync(databasePath);
+    try{
+      for(const id of ids){
+        const baseline=db.prepare('SELECT prefix FROM dc_task_repository_baselines WHERE task_id=?')
+          .all(id) as Array<{prefix:string}>;
+        const oldDir=(prefix:string)=>fs.realpathSync(path.join(root,prefix,'.git'));
+        for(const row of baseline){
+          db.prepare('UPDATE dc_task_repository_baselines SET git_dir=? WHERE task_id=? AND prefix=?')
+            .run(oldDir(row.prefix),id,row.prefix);
+          db.prepare('UPDATE dc_legacy_child_worktree_snapshots SET git_dir=? WHERE task_id=? AND prefix=?')
+            .run(oldDir(row.prefix),id,row.prefix);
+        }
+        const completions=db.prepare('SELECT revision,snapshot_json FROM dc_completion_repository_revisions WHERE task_id=?')
+          .all(id) as Array<{revision:number;snapshot_json:string}>;
+        for(const completion of completions){
+          const previous=JSON.parse(completion.snapshot_json) as Array<{
+            prefix:string;gitDir:string;baseHead:string;head:string;
+          }>;
+          const absolute=previous.map(repo=>({...repo,gitDir:oldDir(repo.prefix)}));
+          const digest=revisionDigest(absolute);
+          db.prepare('UPDATE dc_completion_repository_revisions SET snapshot_json=?,digest=? WHERE task_id=? AND revision=?')
+            .run(JSON.stringify(absolute),digest,id,completion.revision);
+          db.prepare('UPDATE dc_evidence_repository_digests SET digest=? WHERE evidence_id IN (SELECT id FROM dc_evidence WHERE task_id=?)')
+            .run(digest,id);
+          db.prepare('UPDATE dc_external_gate_repository_digests SET digest=? WHERE task_id=?')
+            .run(digest,id);
+        }
+      }
+    }finally{db.close();}
+    const historical=new ProjectTaskLedger(root);
+    try{original=ids.map(id=>historical.trace(id));}finally{historical.close();}
     const relocated=root+'-relocated';
     fs.renameSync(root,relocated);cleanups.push(relocated);
     const moved=new ProjectTaskLedger(relocated);
     try{
-      const baselines=ids.flatMap((id,i)=>original[i].repositoryBaselines.map((row:any)=>({
-        taskId:id,prefix:row.prefix,fromGitDir:row.git_dir,
-        toGitDir:fs.realpathSync(path.join(relocated,row.prefix,'.git')),
-        expectedBaseHead:row.base_head,
-      })));
-      const request={actor:'verified-owner',ownerRecoveryKey:secret,
-        reason:'Workspace moved with unchanged root and two independent child repositories',
-        taskIds:ids,mappings:baselines};
-      expect(()=>moved.checkStaged()).toThrow(/topology|repository/i);
-      expect(()=>moved.relocateRepositoryBaselines({...request,ownerRecoveryKey:'wrong'}))
-        .toThrow(/Owner recovery credential/i);
-      expect(()=>moved.relocateRepositoryBaselines({...request,mappings:baselines.slice(0,-1)}))
-        .toThrow(/every root\/child|complete/i);
-      expect(()=>moved.relocateRepositoryBaselines({...request,mappings:[...baselines,baselines[0]]}))
-        .toThrow(/Duplicate|duplicate/i);
-      expect(()=>moved.relocateRepositoryBaselines({...request,
-        mappings:baselines.map((row,i)=>i===1?{...row,expectedBaseHead:'a'.repeat(40)}:row)}))
-        .toThrow(/stale|mapping/i);
-      expect(()=>moved.relocateRepositoryBaselines({...request,
-        mappings:baselines.map((row,i)=>i===1?{...row,toGitDir:path.join(relocated,'apw-life-app','.git')}:row)}))
-        .toThrow(/mapping/i);
       expect(moved.trace(ids[0]).repositoryBaselineRelocations).toEqual([]);
-      const result=moved.relocateRepositoryBaselines(request);
-      expect(result).toMatchObject({relocated:true,taskCount:2,repositoryCount:6,
-        originalBaselinesPreserved:true,completionAndEvidencePreserved:true});
-      // checkStaged is a pre-commit Gate: with no index changes it correctly
-      // reports false, but must no longer reject repository topology.
+      expect(original[0].repositoryBaselines.every((row:any)=>
+        path.isAbsolute(row.git_dir))).toBe(true);
       expect(moved.checkStaged()).toMatchObject({
         passed:false,reason:'No staged task changes',deniedFiles:[],
       });
@@ -276,18 +292,14 @@ describe('immutable multi-repository delivery commits',()=>{
         expect(after.externalGateReviews).toEqual(original[i].externalGateReviews);
         expect(after.task.status).toBe(original[i].task.status);
         expect(after.task.requiredGates).toEqual(original[i].task.requiredGates);
-        expect(after.repositoryBaselineRelocations).toHaveLength(3);
-        expect(after.repositoryBaselineRelocations[0].from_git_dir)
-          .toBe(original[i].repositoryBaselines[0].git_dir);
+        expect(after.repositoryBaselineRelocations).toHaveLength(0);
       }
       expect(moved.get(ids[0]).status).toBe('verified');
       expect(moved.get(ids[1]).status).toBe('in_review');
       const notPassed=moved.verify(ids[1],pendingToken);
       expect(notPassed.passed).toBe(false);
       expect(String(notPassed.reason??'')).not.toMatch(/repository/i);
-      expect(()=>moved.relocateRepositoryBaselines(request))
-        .toThrow(/mapping|repeated|stale/i);
-      expect(moved.trace(ids[0]).repositoryBaselineRelocations).toHaveLength(3);
+      expect(moved.trace(ids[0]).repositoryBaselineRelocations).toHaveLength(0);
       expect(fs.readFileSync(path.join(relocated,'apw-life','README.md'),'utf8'))
         .toBe('Original child Owner WIP preserved across copy\n');
     }finally{moved.close();}

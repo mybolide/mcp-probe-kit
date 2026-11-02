@@ -39,7 +39,7 @@ import { normalizeFrozenTaskContract, auditNormalizedTaskContract,
   reviewSharedTaskPlanningFields, type TaskContractSource } from './task-contract.js';
 import { discoverRepositories, currentRevisions, updateRevisions, stagedChanges,
   committedChanges, revisionDigest, assertRepositoryTopology, assertDeliveryStillPresent,
-  type RepositoryRevision } from './repository-audit.js';
+  portableGitDir, type RepositoryRevision } from './repository-audit.js';
 import { auditedUntrackedFiles } from './worktree-ignore.js';
 import {proposalHash as supplementHash, reviewHash as supplementReviewHash,
   validateProposal as validateTaskSupplement,validateReview as validateSupplementReview,
@@ -2066,11 +2066,12 @@ export class ProjectTaskLedger {
     const locations=this.repositoryLocations(id);
     return revisions.map(repo=>{
       const location=locations.get(repo.prefix);
-      if(!location||!location.known.has(repo.gitDir)||
+      if(!location||!(location.known.has(repo.gitDir)||
+        repo.gitDir===portableGitDir(repo.prefix))||
         repo.baseHead!==location.baseHead)
         fail('REPOSITORY_RELOCATION_MISMATCH',
           'Frozen repository version references an unknown location or original base');
-      return {...repo,gitDir:location.current};
+      return {...repo,gitDir:portableGitDir(repo.prefix)};
     });
   }
 
@@ -2078,7 +2079,8 @@ export class ProjectTaskLedger {
     const locations=this.repositoryLocations(id);
     return revisionDigest(revisions.map(repo=>{
       const location=locations.get(repo.prefix);
-      if(!location||!location.known.has(repo.gitDir)||
+      if(!location||!(location.known.has(repo.gitDir)||
+        repo.gitDir===portableGitDir(repo.prefix))||
         repo.baseHead!==location.baseHead)
         fail('REPOSITORY_RELOCATION_MISMATCH',
           'Evidence cannot be rebound to an unknown repository location or base');
@@ -2150,7 +2152,7 @@ export class ProjectTaskLedger {
           const location=locations.get(prefix)!;
           const repo=repos.find(item=>item.prefix===prefix)!;
           if(!found||found.expectedBaseHead!==row.base_head||
-            found.fromGitDir!==location.current||found.toGitDir!==repo.gitDir||
+            found.fromGitDir!==location.current||found.toGitDir!==repo.absoluteGitDir||
             found.fromGitDir===found.toGitDir||
             location.known.has(found.toGitDir))
             fail('RELOCATION_MAPPING_MISMATCH',
@@ -2221,12 +2223,17 @@ export class ProjectTaskLedger {
         "Task has independent Git repositories without a frozen claim-time baseline; re-review and reclaim it before verification");
       return [];
     }
-    const locations=this.repositoryLocations(id);
+    this.repositoryLocations(id); // Validate the entire append-only historical audit.
     const records=rows.map(row=>({
-      prefix:String(row.prefix),gitDir:locations.get(String(row.prefix))!.current,
+      prefix:String(row.prefix),gitDir:portableGitDir(String(row.prefix)),
       baseHead:String(row.base_head),head:String(row.base_head),
     }));
-    try{assertRepositoryTopology(this.root,paths,records);}
+    try{
+      assertRepositoryTopology(this.root,paths,records);
+      // A new machine and later normal merges are fine, but the actual
+      // repository must still contain the original immutable base commit.
+      updateRevisions(this.root,records);
+    }
     catch(error){fail("REPOSITORY_TOPOLOGY_CHANGED",String(error));}
     return records;
   }
@@ -2420,8 +2427,7 @@ export class ProjectTaskLedger {
       const revision=revisions.find(r=>r.prefix===repo.prefix)!;
       const child=childRows.find(row=>row.prefix===repo.prefix);
       if(repo.prefix&&child&&
-        (!this.repositoryLocations(id).get(repo.prefix)?.known.has(String(child.git_dir))||
-          this.repositoryLocations(id).get(repo.prefix)?.current!==repo.gitDir))
+        !this.repositoryLocations(id).get(repo.prefix)?.known.has(String(child.git_dir)))
         fail('CHILD_REPOSITORY_IDENTITY_CHANGED','Protected child repository was replaced');
       if(repo.prefix&&child&&sha(String(child.snapshot_json))!==child.digest)
         fail('PROTECTED_SNAPSHOT_CORRUPT','Stored original child protection was changed');
@@ -2551,8 +2557,7 @@ export class ProjectTaskLedger {
         fail('CHILD_WORKTREE_PROTECTION_INCOMPLETE',
           'Child repository protection record does not match frozen repository identity');
       if(protectedRow&&
-        (!this.repositoryLocations(id!).get(revision.prefix)?.known.has(String(protectedRow.git_dir))||
-          this.repositoryLocations(id!).get(revision.prefix)?.current!==revision.gitDir))
+        !this.repositoryLocations(id!).get(revision.prefix)?.known.has(String(protectedRow.git_dir)))
         fail('CHILD_REPOSITORY_IDENTITY_CHANGED','Protected child Git metadata changed');
       const dirty=preservedWorktreeSnapshot(path.join(this.root,revision.prefix),
         scope,revision.prefix);
