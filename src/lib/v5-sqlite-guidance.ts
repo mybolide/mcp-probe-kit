@@ -127,6 +127,13 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    relative Git locations when read. An independent repository must retain
    the original frozen base commit in its ancestry. Subsequent commits and
    normal collaborator merges never rewrite earlier tested delivery SHAs.
+   A completed, evidenced in_review task may retain its own management lease
+   while next/claim let a Ready task with no dependency or frozen-scope
+   overlap take the one shared Git writer. Unsubmitted or staged work cannot
+   yield. Read next.parkedReviews for older tasks awaiting the responsible
+   AI's technical review. They are NOT Verified until genuine acceptance is
+   recorded. A failed review must reclaim the Git writer before coding.
+   No extra Agent or Owner key is needed for normal non-overlapping work.
    Only exceptional forensic physical-location audit correction needs the
    Owner-key-authorized relocate-repository-baselines operation.
    MCP-generated Skill and AGENTS.md changes are exempt only when their staged
@@ -251,6 +258,7 @@ ${managedRevision}
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
 - **受保护文件恢复 Git HEAD**：已跟踪的保护文件若恢复为所在仓库 HEAD 原始字节，Owner 可使用 \`refresh-protected-worktree\`，提供任务 \`id\`、\`actor\`、\`ownerRecoveryKey\` 和具体 \`reason\`，追加只读审计刷新，再继续完成登记。旧快照保持不变；不允许 staged、软链、越界、未跟踪保护文件丢失及其他保护文件改动，不提供测试和 Gate 通过资格。
 - **多开发者与跨设备工作区**：仓库身份以项目根目录下的相对路径识别，根仓库为 \`.git\`，独立子仓库如 \`apw-life/.git\`。正常 git pull、merge、clone 和移动目录无需 Owner 密钥、无需每台机器手动搬迁，也无需改 SQLite。旧 v5 的绝对 git_dir 冻结记录及历史完成证据保留原值，读取时自动解析成相对位置。后续正常提交不会修改历史基线，安全检查仅要求真正独立的 Git 仓库保有原始基线提交，旧测试证据仍绑定旧任务的交付 SHA。只有异常历史位置审计纠正才使用 Owner 授权 relocate-repository-baselines。
+- **已交付任务让出 Git 写入权**：一个任务已经提交代码和真实测试记录，处于 in_review 待审核时，可保留自己的管理租约，让没有前置依赖、文件范围不重叠的 Ready 任务使用同一个 Git 工作区继续开发。任何时候最多一个实际写入任务，暂存代码、未提交工作或范围重叠时不得切换。用 \`next.parkedReviews\` 查看待审任务；当前 AI 继续负责真实自审和结果登记，绝不能因让出写入权就把任务当作 Verified。若自审失败，要先重新领取 Git 写入权才能修改代码。正常切换无需 Owner 密钥和其他 Agent。
 - **本地 Git 忽略与精确交付**：每个独立仓库可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
 - **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再通过 \`task-spec-supplement-self-review\` 完成有来源的实质开发者自审（可选 \`task-spec-supplement-independent-review\`，不强制第二人），最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
 - **冻结变更与架构评审**：不强制第三名审核人。范围变更使用 \`release-work-scope-self-review\`，新增任务使用 \`release-work-incremental-self-review\`，受控工件使用 \`artifact-self-review\`，并提交真实来源、范围、依赖和安全测试审查。独立复审按风险选用。涉及冻结范围或受控工件变更时，仍须 Owner 明确批准精确 proposalHash/reviewHash，未批准不得执行。
@@ -316,6 +324,13 @@ ${managedRevision}
   compatibly and retain their original evidence hashes and tested commits.
   Only exceptional historical audit correction uses Owner-key-authorized
   \`relocate-repository-baselines\`.
+- A completed and evidenced in_review task can yield the one shared Git writer
+  to a Ready task only if all prerequisites are Verified, the frozen scopes
+  do not overlap and no Git index changes are staged. Review retains its
+  own task lease, original commit and evidence without being marked Verified.
+  next.parkedReviews lists such work for the current development AI. After
+  failed review, reclaim the single writer before editing new code; never
+  demand an Owner key or another Agent for normal disjoint collaboration.
 - DevControl is project management only, not a testing or acceptance Agent.
   The current development AI owns requirements analysis, architecture,
   implementation, real project tests and technical self-review. Never

@@ -372,6 +372,177 @@ function create(options: Partial<{
     expect(ledger!.next().activeLease).toBeNull();
   });
 
+  it('retains an atomic task review while a disjoint task uses the shared Git writer',()=>{
+    create({id:'NEYNA-200',title:'Original contract outcome',allowedPaths:['tests/contracts/**']});
+    create({id:'NEYNA-201',title:'Independent scoped outcome',allowedPaths:['independent/**']});
+    create({id:'NEYNA-202',title:'Dependent post-acceptance outcome',allowedPaths:['after-first/**'],
+      dependsOn:['NEYNA-200']});
+    for(const id of ['NEYNA-200','NEYNA-201','NEYNA-202'])
+      ledger!.approve(id,'owner');
+    const first=ledger!.claim('NEYNA-200','original-ai');
+    save('tests/contracts/first.json','{"checked":true}\n');
+    commit('first atomic task submitted');
+    const originalHead=git('rev-parse','HEAD');
+    const firstEvidence='Actual original developer tests for first atomic task';
+    ledger!.report('NEYNA-200',first.leaseToken,
+      {kind:'project-test',reference:firstEvidence},true);
+    ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'First single outcome submitted',
+      implementation:'One contract in original frozen scope',
+      verification:'Actual project tests were performed by the development AI',
+    });
+    expect(ledger!.next()).toMatchObject({
+      nextTask:{id:'NEYNA-201'},reviewWriterCanYield:true,
+    });
+    expect(()=>ledger!.claim('NEYNA-202','premature-ai'))
+      .toThrow(/depends on/);
+    const second=ledger!.claim('NEYNA-201','second-ai');
+    expect(ledger!.get('NEYNA-200').status).toBe('in_review');
+    expect(ledger!.trace('NEYNA-200').completion?.git_head).toBe(originalHead);
+    expect(ledger!.next().parkedReviews).toContainEqual({
+      taskId:'NEYNA-200',agent:'original-ai',
+      expiresAt:expect.any(Number),completionHead:originalHead,
+    });
+    expect(ledger!.renew('NEYNA-200',first.leaseToken,1200)).toMatchObject({
+      taskId:'NEYNA-200',
+    });
+    save('independent/second.json','{"independent":true}\n');
+    git('add','independent/second.json');
+    expect(ledger!.checkStaged()).toMatchObject({
+      passed:true,taskId:'NEYNA-201',
+    });
+    commit('second independently accepted task');
+    const secondEvidence='Second task actually tested with the project tooling';
+    ledger!.report('NEYNA-201',second.leaseToken,
+      {kind:'project-test',reference:secondEvidence},true);
+    ledger!.complete('NEYNA-201',second.leaseToken,{
+      summary:'Second independent atomic task delivered',
+      implementation:'Only second task approved files were changed',
+      verification:'Ran actual test and inspected the second task output',
+    });
+    ledger!.reviewOwnTask('NEYNA-201',second.leaseToken,{
+      outcome:'passed',evidenceReference:secondEvidence,
+      findings:'Current development AI reviewed this independent submission and its actual project test results without altering the first task evidence.',
+    });
+    ledger!.reviewExternalGate('NEYNA-201',second.leaseToken,{
+      gate:'docs',runner:'second-ai',reviewer:'second-ai',reviewMode:'self',
+      outcome:'passed',evidenceReference:secondEvidence,
+      reviewNotes:'Test output and delivery commit match the independent scoped implementation.',
+    });
+    expect(ledger!.verify('NEYNA-201',second.leaseToken).passed).toBe(true);
+    ledger!.reviewOwnTask('NEYNA-200',first.leaseToken,{
+      outcome:'passed',evidenceReference:firstEvidence,
+      findings:'Original developer AI reviewed the preserved exact initial contract and its test evidence after another task was completed; no overlapping code was changed.',
+    });
+    ledger!.reviewExternalGate('NEYNA-200',first.leaseToken,{
+      gate:'docs',runner:'original-ai',reviewer:'original-ai',reviewMode:'self',
+      outcome:'passed',evidenceReference:firstEvidence,
+      reviewNotes:'Original commit and project test evidence remain valid despite unrelated subsequent commits.',
+    });
+    expect(ledger!.verify('NEYNA-200',first.leaseToken).passed).toBe(true);
+    expect(ledger!.claim('NEYNA-202','dependent-ai').task.id).toBe('NEYNA-202');
+  });
+
+  it('does not yield unsubmitted, overlapping or staged shared Git work to another task',()=>{
+    create({id:'NEYNA-200',title:'Submitted reviewed contract',allowedPaths:['tests/contracts/**']});
+    create({id:'NEYNA-201',title:'Overlapping alternate contract',allowedPaths:['tests/contracts/**']});
+    create({id:'NEYNA-202',title:'Unrelated staged work',allowedPaths:['independent/**']});
+    for(const id of ['NEYNA-200','NEYNA-201','NEYNA-202'])
+      ledger!.approve(id,'owner');
+    const first=ledger!.claim('NEYNA-200','developer');
+    expect(()=>ledger!.claim('NEYNA-202','other'))
+      .toThrow(/already claimed/);
+    save('tests/contracts/change.json','{}\n');
+    commit('finish first task');
+    ledger!.report('NEYNA-200',first.leaseToken,
+      {kind:'test',reference:'Real original scope test'},true);
+    ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'Submitted first bounded outcome',
+      implementation:'Committed one approved contract file',
+      verification:'Executed original project tests against exact commit',
+    });
+    expect(()=>ledger!.claim('NEYNA-201','overlap'))
+      .toThrow(/already claimed/);
+    save('independent/staged.txt','unsafe staged work\n');
+    git('add','independent/staged.txt');
+    expect(()=>ledger!.claim('NEYNA-202','other'))
+      .toThrow(/already claimed/);
+    expect(ledger!.get('NEYNA-200').status).toBe('in_review');
+  });
+
+  it('accepting a parked review does not release another task shared Git writer',()=>{
+    create({id:'NEYNA-200',title:'First submitted contract',allowedPaths:['tests/contracts/**']});
+    create({id:'NEYNA-201',title:'Second disjoint change',allowedPaths:['independent/**']});
+    ledger!.approve('NEYNA-200','owner');
+    ledger!.approve('NEYNA-201','owner');
+    const first=ledger!.claim('NEYNA-200','first-ai');
+    save('tests/contracts/review.json','{"first":true}\n');
+    commit('first atomic delivery');
+    const evidence='Real project suite for the first submitted contract';
+    ledger!.report('NEYNA-200',first.leaseToken,{kind:'test',reference:evidence},true);
+    ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'Original atomic outcome committed',
+      implementation:'One approved contract implemented',
+      verification:'Responsible AI recorded real project test result',
+    });
+    const second=ledger!.claim('NEYNA-201','second-ai');
+    ledger!.reviewOwnTask('NEYNA-200',first.leaseToken,{
+      outcome:'passed',evidenceReference:evidence,
+      findings:'Responsible AI checked the original committed contract against the submitted tests, with no changed or staged files and no external reviewer.',
+    });
+    ledger!.reviewExternalGate('NEYNA-200',first.leaseToken,{
+      gate:'docs',runner:'first-ai',reviewer:'first-ai',reviewMode:'self',
+      outcome:'passed',evidenceReference:evidence,
+      reviewNotes:'Developer checked the actual original test receipt and commit before acceptance.',
+    });
+    expect(ledger!.verify('NEYNA-200',first.leaseToken).passed).toBe(true);
+    expect(ledger!.next().activeLease?.taskId).toBe('NEYNA-201');
+    save('independent/second.json','{"second":true}\n');
+    git('add','independent/second.json');
+    expect(ledger!.checkStaged()).toMatchObject({passed:true,taskId:'NEYNA-201'});
+    commit('second atomic delivery after first accepted');
+    expect(ledger!.renew('NEYNA-201',second.leaseToken,600)).toMatchObject({
+      taskId:'NEYNA-201',
+    });
+  });
+
+  it('reacquires the Git writer before reworking a parked review that failed AI self-review',()=>{
+    create({id:'NEYNA-200',title:'Original reviewable outcome',
+      allowedPaths:['tests/contracts/**']});
+    create({id:'NEYNA-201',title:'Disjoint queued change',
+      allowedPaths:['independent/**']});
+    ledger!.approve('NEYNA-200','owner');
+    ledger!.approve('NEYNA-201','owner');
+    const first=ledger!.claim('NEYNA-200','original-ai');
+    save('tests/contracts/review.txt','original\n');
+    commit('original delivered implementation');
+    const evidence='Actual unit test output from original implementation';
+    ledger!.report('NEYNA-200',first.leaseToken,
+      {kind:'test',reference:evidence},true);
+    ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'Reviewable original task committed',
+      implementation:'Added a single contract behavior',
+      verification:'Current developer ran tests for original code',
+    });
+    const other=ledger!.claim('NEYNA-201','other-ai');
+    expect(ledger!.reviewOwnTask('NEYNA-200',first.leaseToken,{
+      outcome:'failed',evidenceReference:evidence,
+      findings:'Developer found that the original behavior does not yet satisfy the exact negative test requirements and must fix the code before recording acceptance.',
+    })).toMatchObject({outcome:'failed',taskStatus:'in_progress'});
+    expect(()=>ledger!.complete('NEYNA-200',first.leaseToken,{
+      summary:'Unsafe cross-task attempt',
+      implementation:'Would overwrite unrelated writer work',
+      verification:'No new project test was executed',
+    })).toThrow(/shared Git checkout/);
+    expect(ledger!.release('NEYNA-201',other.leaseToken).released).toBe(true);
+    const reclaimed=ledger!.claim('NEYNA-200','original-ai');
+    expect(reclaimed.baseHead).toBe(first.baseHead);
+    expect(reclaimed.leaseToken).not.toBe(first.leaseToken);
+    save('tests/contracts/review.txt','original with fixed negative case\n');
+    git('add','tests/contracts/review.txt');
+    expect(ledger!.checkStaged()).toMatchObject({passed:true,taskId:'NEYNA-200'});
+  });
+
   it('requires exact Agent-reviewed intervening Git diff before resuming intentionally evolved same-file code',()=>{
     const original=Array.from({length:30},(_,i)=>`baseline line ${i}`);
     save('tests/contracts/shared.txt',original.join('\n')+'\n');
