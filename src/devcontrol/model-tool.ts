@@ -4,13 +4,16 @@
  * Deliberately does not expose the legacy import-spec/ad-hoc task shortcuts.
  */
 import { resolve } from 'node:path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { dispatchDevControl } from './command.js';
 import { DevControlError, ProjectTaskLedger } from './task-ledger.js';
 import { V5_DEVC_ACTIONS } from './action-catalog.js';
 import { devControlGuide } from './action-guide.js';
-import {mergeDevControlSqlite} from './sqlite-merge.js';
+import {mergeDevControlSqlite,type MergeDecision} from './sqlite-merge.js';
 import {resolveGitWorktreeContext} from './git-worktree-context.js';
 import {resolveProjectDatabase} from './project-storage.js';
+import {resolveWorkspaceRootWithMeta,getMcpPackageInstallRoot} from '../lib/workspace-root.js';
 import type { RegisteredToolResult } from '../server/tool-definition.js';
 
 export { V5_DEVC_ACTIONS } from './action-catalog.js';
@@ -31,9 +34,31 @@ export async function runV5DevControlTool(args: unknown): Promise<RegisteredTool
       ? input as Record<string,unknown> : {});
     return {content:[{type:'text',text:JSON.stringify(result)}],structuredContent:result,isError:false};
   }
-  if (typeof projectRoot !== 'string' || !projectRoot.trim()) {
-    return failure('PROJECT_ROOT_REQUIRED', 'Provide the target Git project_root; never infer the MCP source checkout');
+  let workspace: string;
+  if(typeof projectRoot==='string'&&projectRoot.trim()){
+    workspace=resolve(projectRoot);
+  }else if(projectRoot!==undefined&&projectRoot!==null){
+    return failure('PROJECT_ROOT_REQUIRED','project_root must be an existing workspace path');
+  }else{
+    // Use a verified configured/connected workspace only. In particular do
+    // not initialize SQLite in the installed MCP package or guess a child Git
+    // repository because the caller omitted project_root.
+    let detected:ReturnType<typeof resolveWorkspaceRootWithMeta>;
+    try{detected=resolveWorkspaceRootWithMeta();}
+    catch(error){return failure('PROJECT_ROOT_REQUIRED',String(error));}
+    const candidate=resolve(detected.root);
+    const established=['.mcp-probe-kit',path.join('.neyna','state'),
+      path.join('.agents','skills','mcp-probe-kit')].some(marker=>
+      fs.existsSync(path.join(candidate,marker)));
+    if(detected.source==='package-fallback'||candidate===getMcpPackageInstallRoot()||
+      !established){
+      return failure('PROJECT_ROOT_REQUIRED',
+        'No recognized MCP project workspace. Supply project_root (relative to server cwd or absolute on this machine); Git is optional.');
+    }
+    workspace=candidate;
   }
+  if(!fs.existsSync(workspace)||!fs.statSync(workspace).isDirectory())
+    return failure('PROJECT_ROOT_REQUIRED','Project workspace directory does not exist');
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return failure('INVALID_INPUT', 'input must be a JSON object');
   }
@@ -41,7 +66,8 @@ export async function runV5DevControlTool(args: unknown): Promise<RegisteredTool
   try {
     if(action==='sqlite-merge-preview'||action==='sqlite-merge-candidate'){
       const parsed=input as Record<string,unknown>;
-      const canonical=resolveGitWorktreeContext(resolve(projectRoot)).mainRoot;
+      const canonical=fs.existsSync(path.join(workspace,'.git'))?
+        resolveGitWorktreeContext(workspace).mainRoot:workspace;
       const result=mergeDevControlSqlite({
         targetPath:resolveProjectDatabase(canonical),
         sourcePath:String(parsed.sourcePath??''),
@@ -49,11 +75,13 @@ export async function runV5DevControlTool(args: unknown): Promise<RegisteredTool
         outputPath:typeof parsed.outputPath==='string'?parsed.outputPath:undefined,
         expectedFingerprint:typeof parsed.expectedFingerprint==='string'?
           parsed.expectedFingerprint:undefined,
+        basePath:typeof parsed.basePath==='string'?parsed.basePath:undefined,
+        resolutions:parsed.resolutions as MergeDecision[]|undefined,
       });
       return {content:[{type:'text',text:JSON.stringify(result)}],
         structuredContent:result,isError:false};
     }
-    ledger = new ProjectTaskLedger(resolve(projectRoot));
+    ledger = new ProjectTaskLedger(workspace);
     const result = dispatchDevControl(ledger, action, input as Record<string, any>);
     return {
       content: [{ type: 'text', text: JSON.stringify(result) }],

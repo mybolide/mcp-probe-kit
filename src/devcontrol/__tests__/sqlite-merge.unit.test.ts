@@ -44,7 +44,8 @@ describe('AI-assisted SQLite project state merge',()=>{
           reference TEXT NOT NULL
         );
         CREATE TABLE dc_audit(
-          id INTEGER PRIMARY KEY,task_id TEXT,event TEXT NOT NULL
+          id INTEGER PRIMARY KEY,task_id TEXT,event TEXT NOT NULL,
+          actor TEXT NOT NULL,details_json TEXT NOT NULL,created_at TEXT NOT NULL
         );
         CREATE TABLE dc_task_leases(
           task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),agent TEXT NOT NULL
@@ -100,6 +101,24 @@ describe('AI-assisted SQLite project state merge',()=>{
       .toEqual(['ROOT','UI']);
     expect(f.query(f.source,'SELECT id FROM dc_tasks ORDER BY id').map(r=>r.id))
       .toEqual(['API','ROOT']);
+  });
+  it('rejects AI conflict preference when no genuine common-ancestor snapshot was provided',()=>{
+    const f=fixtures();
+    f.run(f.target,"INSERT INTO dc_tasks(id,title,status) VALUES('DRAFT','Computer A version','draft')");
+    f.run(f.source,"INSERT INTO dc_tasks(id,title,status) VALUES('DRAFT','Computer B version','draft')");
+    const initial=f.preview();
+    expect(initial).toMatchObject({comparison:'two-way',candidatePossible:false});
+    expect(initial.conflicts[0]).toMatchObject({
+      table:'dc_tasks',resolutionAllowed:false,
+    });
+    expect(()=>mergeDevControlSqlite({
+      targetPath:f.target,sourcePath:f.source,mode:'preview',
+      resolutions:[{
+        table:'dc_tasks',key:initial.conflicts[0].key,
+        choice:'source',actor:'responsible-ai',
+        reason:'Cannot prove this conflicting row originated from a shared immutable baseline.',
+      }],
+    })).toThrow(/forbidden/);
   });
   it('reports competing task statuses and never produces a candidate',()=>{
     const f=fixtures();
@@ -186,5 +205,127 @@ describe('AI-assisted SQLite project state merge',()=>{
         .toEqual({status:'draft'});
       expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
     }finally{db.close();}
+  });
+  it('uses the common ancestor to incorporate a single-sided draft task edit',()=>{
+    const f=fixtures();
+    f.run(f.target,"INSERT INTO dc_tasks(id,title,status) VALUES('DRAFT','Original draft','draft')");
+    const base=path.join(f.folder,'common-base.sqlite3');
+    fs.copyFileSync(f.target,base);
+    f.run(f.source,"INSERT INTO dc_tasks(id,title,status) VALUES('DRAFT','Original draft','draft')");
+    f.run(f.source,"UPDATE dc_tasks SET title='Source draft update' WHERE id='DRAFT'");
+    const preview=mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,mode:'preview'});
+    expect(preview).toMatchObject({comparison:'three-way',candidatePossible:true,
+      automaticallyResolvedDraftChanges:1,proposedDraftUpdates:1});
+    const output=path.join(f.folder,'three-way.sqlite3');
+    mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,mode:'candidate',expectedFingerprint:preview.fingerprint,
+      outputPath:output});
+    expect(f.query(output,"SELECT title FROM dc_tasks WHERE id='DRAFT'"))
+      .toEqual([{title:'Source draft update'}]);
+    expect(f.query(f.target,"SELECT title FROM dc_tasks WHERE id='DRAFT'"))
+      .toEqual([{title:'Original draft'}]);
+  });
+  it('requires an explicit, reasoned AI choice for two divergent unapproved drafts',()=>{
+    const f=fixtures();
+    f.run(f.target,"INSERT INTO dc_tasks(id,title,status) VALUES('DRAFT','Original draft','draft')");
+    const base=path.join(f.folder,'ancestor.sqlite3');
+    fs.copyFileSync(f.target,base);
+    f.run(f.source,"INSERT INTO dc_tasks(id,title,status) VALUES('DRAFT','Original draft','draft')");
+    f.run(f.target,"UPDATE dc_tasks SET title='Computer A scope' WHERE id='DRAFT'");
+    f.run(f.source,"UPDATE dc_tasks SET title='Computer B scope' WHERE id='DRAFT'");
+    const initial=mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,mode:'preview'});
+    expect(initial).toMatchObject({candidatePossible:false,counts:{conflicting:1}});
+    expect(initial.conflicts[0]).toMatchObject({table:'dc_tasks',category:'task_state',
+      resolutionAllowed:true,base:{title:'Original draft'}});
+    const decisions=[{table:'dc_tasks',key:initial.conflicts[0].key,
+      choice:'source' as const,actor:'responsible-ai',
+      reason:'Compared both unapproved drafts with the shared requirement and chose the more specific outcome description.'}];
+    const reviewed=mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,resolutions:decisions,mode:'preview'});
+    expect(reviewed).toMatchObject({candidatePossible:true,reviewedResolutions:decisions,
+      proposedDraftUpdates:1});
+    const output=path.join(f.folder,'reviewed.sqlite3');
+    expect(()=>mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,mode:'candidate',outputPath:output,
+      expectedFingerprint:initial.fingerprint,resolutions:decisions}))
+      .toThrow(/changed since preview/);
+    mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,mode:'candidate',outputPath:output,
+      expectedFingerprint:reviewed.fingerprint,resolutions:decisions});
+    expect(f.query(output,"SELECT title FROM dc_tasks WHERE id='DRAFT'"))
+      .toEqual([{title:'Computer B scope'}]);
+    const audit=f.query(output,`SELECT task_id,event,actor,details_json FROM dc_audit
+      WHERE event='sqlite_merge_draft_resolution'`);
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({task_id:'DRAFT',
+      actor:'responsible-ai',event:'sqlite_merge_draft_resolution'});
+    expect(JSON.parse(String(audit[0].details_json))).toMatchObject({
+      fingerprint:reviewed.fingerprint,choice:'source',
+      reason:decisions[0].reason,
+    });
+  });
+  it('never lets AI preference override a Verified task or a collided evidence identity',()=>{
+    const f=fixtures();
+    const base=path.join(f.folder,'ancestor.sqlite3');
+    fs.copyFileSync(f.target,base);
+    f.run(f.target,"UPDATE dc_tasks SET status='in_progress' WHERE id='ROOT'");
+    f.run(f.source,"UPDATE dc_tasks SET status='verified' WHERE id='ROOT'");
+    const report=mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,mode:'preview'});
+    expect(report.conflicts[0]).toMatchObject({
+      category:'task_state',resolutionAllowed:false,
+    });
+    expect(()=>mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,mode:'preview',resolutions:[{
+        table:'dc_tasks',key:report.conflicts[0].key,choice:'source',
+        actor:'ai',reason:'Blindly accept this different completion status from another computer',
+      }]})).toThrow(/forbidden/);
+    const g=fixtures();
+    g.run(g.target,"INSERT INTO dc_evidence(id,task_id,reference) VALUES(1,'ROOT','a')");
+    g.run(g.source,"INSERT INTO dc_evidence(id,task_id,reference) VALUES(1,'ROOT','b')");
+    expect(g.preview().conflicts[0]).toMatchObject({
+      category:'immutable_evidence',resolutionAllowed:false,
+    });
+  });
+  it('detects source deletion of an original row and rejects stale/mismatched ancestor',()=>{
+    const f=fixtures();
+    const base=path.join(f.folder,'base.sqlite3');
+    fs.copyFileSync(f.target,base);
+    f.run(f.source,"DELETE FROM dc_tasks WHERE id='ROOT'");
+    expect(mergeDevControlSqlite({targetPath:f.target,sourcePath:f.source,
+      basePath:base,mode:'preview'}).blockingIssues.join(' '))
+      .toContain('deleted an existing history row');
+    const g=fixtures();
+    const badBase=path.join(g.folder,'bad-base.sqlite3');
+    fs.copyFileSync(g.target,badBase);
+    g.run(badBase,"UPDATE dc_meta SET value='unrelated' WHERE key='bootstrap'");
+    g.run(badBase,"DELETE FROM dc_tasks");
+    expect(mergeDevControlSqlite({targetPath:g.target,sourcePath:g.source,
+      basePath:badBase,mode:'preview'}).candidatePossible).toBe(false);
+  });
+  it('blocks a dependency cycle created only when independent SQLite changes combine',()=>{
+    const f=fixtures();
+    f.run(f.target,`INSERT INTO dc_tasks(id,title,status) VALUES
+      ('A','Task A','ready'),('B','Task B','ready');`);
+    f.run(f.source,`INSERT INTO dc_tasks(id,title,status) VALUES
+      ('A','Task A','ready'),('B','Task B','ready');`);
+    f.run(f.target,"INSERT INTO dc_dependencies(task_id,depends_on) VALUES('A','B')");
+    f.run(f.source,"INSERT INTO dc_dependencies(task_id,depends_on) VALUES('B','A')");
+    const preview=f.preview();
+    expect(preview.blockingIssues.join(' ')).toContain('dependency cycle');
+    expect(preview.candidatePossible).toBe(false);
+  });
+  it('blocks an executing task whose prerequisite is not Verified in the merged state',()=>{
+    const f=fixtures();
+    f.run(f.target,`INSERT INTO dc_tasks(id,title,status) VALUES
+      ('A','Verified task from A','verified'),('B','Pending prerequisite','ready');`);
+    f.run(f.source,`INSERT INTO dc_tasks(id,title,status) VALUES
+      ('A','Verified task from A','verified'),('B','Pending prerequisite','ready');`);
+    f.run(f.source,"INSERT INTO dc_dependencies(task_id,depends_on) VALUES('A','B')");
+    const preview=f.preview();
+    expect(preview.candidatePossible).toBe(false);
+    expect(preview.blockingIssues.join(' ')).toContain('not Verified');
   });
 });

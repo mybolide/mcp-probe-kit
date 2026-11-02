@@ -19,13 +19,42 @@ interface Database{
   prepare(sql:string):Statement;
   close():void;
 }
+function auditDraftChoices(db:Database,shapes:Map<string,TableShape>,
+  decisions:MergeDecision[],fingerprint:string):void{
+  if(!decisions.length)return;
+  const required=['task_id','event','actor','details_json','created_at'];
+  const columns=new Set(shapes.get('dc_audit')?.columns.map(c=>c.name)??[]);
+  if(!required.every(c=>columns.has(c)))
+    throw Error('Cannot preserve AI merge decision evidence: dc_audit schema unsupported');
+  const insert=db.prepare(`INSERT INTO dc_audit
+    (task_id,event,actor,details_json,created_at) VALUES (?,?,?,?,?)`);
+  const at=new Date().toISOString();
+  for(const decision of decisions){
+    const key=JSON.parse(decision.key) as unknown;
+    if(decision.table!=='dc_tasks'||!Array.isArray(key)||
+      key.length!==1||typeof key[0]!=='string')
+      throw Error('Draft merge decision requires a unique task ID');
+    insert.run(key[0],'sqlite_merge_draft_resolution',decision.actor,
+      JSON.stringify({fingerprint,choice:decision.choice,reason:decision.reason,
+        table:decision.table,key:decision.key}),at);
+  }
+}
 type Column={name:string;type:string;notnull:number;dflt_value:string|null;pk:number};
 type ForeignKey={table:string;from:string;to:string};
 type TableShape={columns:Column[];keys:string[];foreignKeys:ForeignKey[]};
 type Conflict={table:string;key:string;source:Record<string,unknown>;
-  target:Record<string,unknown>};
+  target:Record<string,unknown>;base?:Record<string,unknown>;
+  category:'concurrent_change'|'identity_collision'|'task_state'|'immutable_evidence'|'metadata'|'deletion';
+  changedBySource:string[];changedByTarget:string[];
+  resolutionAllowed:boolean};
+export type MergeDecision={
+  table:string;key:string;choice:'source'|'target';actor:string;reason:string;
+};
+type PlannedUpdate={row:RecordRow;key:string;previous:RecordRow};
 type InternalPlan={
-  tables:string[];newRows:Map<string,RecordRow[]>;conflicts:Conflict[];
+  tables:string[];newRows:Map<string,RecordRow[]>;
+  updates:Map<string,PlannedUpdate[]>;conflicts:Conflict[];
+  acceptedDecisions:MergeDecision[];autoResolved:number;
   totals:{sourceOnly:number;identical:number;conflicting:number};
   fingerprint:string;schemaErrors:string[];warnings:string[];
 };
@@ -46,6 +75,19 @@ const canonical=(value:unknown)=>JSON.stringify(value);
 const present=(row:RecordRow):Record<string,unknown>=>Object.fromEntries(
   Object.entries(row).map(([k,v])=>[k,cell(v)]));
 const hash=(value:unknown)=>createHash('sha256').update(canonical(value)).digest('hex');
+const equal=(a:RecordRow,b:RecordRow)=>canonical(present(a))===canonical(present(b));
+function changed(a:RecordRow,b?:RecordRow):string[]{
+  if(!b)return Object.keys(a);
+  return Object.keys(a).filter(k=>canonical(cell(a[k]))!==canonical(cell(b[k])));
+}
+function safeDraft(...rows:RecordRow[]):boolean{
+  // Draft tasks have no claim, integration or Verified promise. A Ready
+  // frozen contract, in-progress delivery, or completed verification is
+  // NEVER auto-replaced by a newer timestamp or by an AI preference.
+  return rows.every(r=>r.status==='draft'&&
+    (!('approved_by' in r)||r.approved_by===null)&&
+    (!('verified_at' in r)||r.verified_at===null));
+}
 
 function tables(db:Database):Map<string,TableShape>{
   const result=new Map<string,TableShape>();
@@ -108,21 +150,97 @@ function sortDependencies(shapes:Map<string,TableShape>,names:string[]):string[]
   names.forEach(visit);
   return order;
 }
-function analyze(target:Database,source:Database):InternalPlan{
-  const lhs=tables(target),rhs=tables(source);
-  const names=[...new Set([...lhs.keys(),...rhs.keys()])].sort();
+function taskDependencyIssues(target:Database,shapes:Map<string,TableShape>,
+  additions:Map<string,RecordRow[]>,updates:Map<string,PlannedUpdate[]>):string[]{
+  if(!shapes.has('dc_tasks')||!shapes.has('dc_dependencies'))return [];
+  const state=new Map<string,string>();
+  const taskRows=[
+    ...rows(target,'dc_tasks',shapes.get('dc_tasks')!),
+    ...(additions.get('dc_tasks')??[]),
+  ];
+  for(const task of taskRows)state.set(String(task.id),String(task.status));
+  for(const change of updates.get('dc_tasks')??[])
+    state.set(String(change.row.id),String(change.row.status));
+  const edges=new Map<string,string[]>();
+  const dependencies=[
+    ...rows(target,'dc_dependencies',shapes.get('dc_dependencies')!),
+    ...(additions.get('dc_dependencies')??[]),
+  ];
+  const issues:string[]=[];
+  for(const relation of dependencies){
+    const task=String(relation.task_id),prerequisite=String(relation.depends_on);
+    if(!state.has(task)||!state.has(prerequisite)){
+      issues.push('Merged dependency references a missing task: '+task+'/'+prerequisite);
+      continue;
+    }
+    if(['in_progress','in_review','verified'].includes(state.get(task)!)&&
+      state.get(prerequisite)!=='verified')
+      issues.push('Merged executing or Verified task '+task+
+        ' has a prerequisite that is not Verified: '+prerequisite);
+    const entries=edges.get(task)??[];
+    entries.push(prerequisite);edges.set(task,entries);
+  }
+  const visiting=new Set<string>(),visited=new Set<string>();
+  function visit(task:string){
+    if(visiting.has(task)){
+      issues.push('Merged task dependency cycle at '+task);return;
+    }
+    if(visited.has(task))return;
+    visiting.add(task);
+    for(const predecessor of edges.get(task)??[])visit(predecessor);
+    visiting.delete(task);visited.add(task);
+  }
+  for(const task of state.keys())visit(task);
+  return [...new Set(issues)];
+}
+function analyze(target:Database,source:Database,base?:Database,
+  decisions:MergeDecision[]=[]):InternalPlan{
+  const lhs=tables(target),rhs=tables(source),ancestor=base?tables(base):undefined;
+  const names=[...new Set([...lhs.keys(),...rhs.keys(),...(ancestor?.keys()??[])])].sort();
   const schemaErrors:string[]=[];
   for(const name of names)
-    if(!lhs.has(name)||!rhs.has(name)||canonical(lhs.get(name))!==canonical(rhs.get(name)))
+    if(!lhs.has(name)||!rhs.has(name)||canonical(lhs.get(name))!==canonical(rhs.get(name))||
+      (ancestor&&canonical(lhs.get(name))!==canonical(ancestor.get(name))))
       schemaErrors.push('Incompatible table schema: '+name);
   if(!lhs.has('dc_tasks')||!lhs.has('dc_meta'))
     schemaErrors.push('Not a supported DevControl project ledger');
   const warnings:string[]=[];
-  if(!schemaErrors.length&&!projectAnchor(target,source))
+  if(!schemaErrors.length&&(!projectAnchor(target,source)||
+    (base&&(!projectAnchor(base,target)||!projectAnchor(base,source)))))
     schemaErrors.push('No shared project ancestry. Do not merge unrelated DevControl SQLite databases');
-  const newRows=new Map<string,RecordRow[]>(),conflicts:Conflict[]=[];
+  const newRows=new Map<string,RecordRow[]>(),updates=new Map<string,PlannedUpdate[]>();
+  const conflicts:Conflict[]=[];
+  const acceptedDecisions:MergeDecision[]=[];
   const totals={sourceOnly:0,identical:0,conflicting:0};
   const fingerprints:unknown[]=[];
+  let autoResolved=0;
+  const usedDecisions=new Set<number>();
+  function addConflict(table:string,key:string,src:RecordRow,dst:RecordRow,
+    previous:RecordRow|undefined,category:Conflict['category'],
+    resolutionAllowed:boolean,pendingUpdates:PlannedUpdate[]){
+    const record:Conflict={
+      table,key,source:present(src),target:present(dst),
+      ...(previous?{base:present(previous)}:{}),category,
+      changedBySource:changed(src,previous),changedByTarget:changed(dst,previous),
+      resolutionAllowed,
+    };
+    const matches=decisions.map((d,i)=>({d,i}))
+      .filter(({d})=>d.table===table&&d.key===key);
+    if(matches.length>1)throw Error('Duplicate merge decisions for '+table+'/'+key);
+    if(matches.length===1){
+      const {d,i}=matches[0];
+      if(!resolutionAllowed)throw Error(
+        'Merge decision is forbidden for frozen/Verified task or immutable record: '+table+'/'+key);
+      if(!['source','target'].includes(d.choice)||!d.actor?.trim()||
+        typeof d.reason!=='string'||d.reason.trim().length<20)
+        throw Error('Merge decision needs a source/target choice, responsible AI actor and detailed reason');
+      usedDecisions.add(i);acceptedDecisions.push(d);
+      if(d.choice==='source')pendingUpdates.push({row:src,key,previous:dst});
+      return;
+    }
+    totals.conflicting++;
+    if(conflicts.length<maxPreviewConflicts)conflicts.push(record);
+  }
   for(const name of names){
     if(schemaErrors.some(e=>e.includes('table schema: '+name))||
       !lhs.has(name)||!rhs.has(name))continue;
@@ -132,21 +250,27 @@ function analyze(target:Database,source:Database):InternalPlan{
     }
     const shape=lhs.get(name)!;
     if(!shape.keys.length){
-      schemaErrors.push('Missing stable primary key: '+name);
-      continue;
+      schemaErrors.push('Missing stable primary key: '+name);continue;
     }
-    const targetRows=rows(target,name,shape);
-    const sourceRows=rows(source,name,shape);
-    fingerprints.push([name,targetRows.map(present),sourceRows.map(present)]);
+    const targetRows=rows(target,name,shape),sourceRows=rows(source,name,shape);
+    const baseRows=base?rows(base,name,shape):[];
+    fingerprints.push([name,targetRows.map(present),sourceRows.map(present),
+      ...(base?[baseRows.map(present)]:[])]);
     const existing=new Map(targetRows.map(r=>[rowKey(r,shape.keys),r]));
-    const pending:RecordRow[]=[];
+    const fromBase=new Map(baseRows.map(r=>[rowKey(r,shape.keys),r]));
+    const fromSource=new Map(sourceRows.map(r=>[rowKey(r,shape.keys),r]));
+    const pending:RecordRow[]=[],pendingUpdates:PlannedUpdate[]=[];
     for(const src of sourceRows){
-      const key=rowKey(src,shape.keys),dst=existing.get(key);
+      const key=rowKey(src,shape.keys),dst=existing.get(key),prior=fromBase.get(key);
       if(!dst){
-        // Local-meta markers are never adopted from another machine.
-        if(name==='dc_meta'){
-          warnings.push('Source-only metadata remains local: '+key);
+        if(prior){
+          // Deleting an old row on one computer cannot silently erase a
+          // modified row on the other. No physical deletion is supported.
+          schemaErrors.push('Source row has a missing/deleted target ancestor: '+name+'/'+key);
           continue;
+        }
+        if(name==='dc_meta'){
+          warnings.push('Source-only metadata remains local: '+key);continue;
         }
         if(name==='dc_tasks'&&!['draft','ready'].includes(String(src.status))){
           schemaErrors.push('Source-only executing or accepted task '+String(src.id)+
@@ -154,19 +278,47 @@ function analyze(target:Database,source:Database):InternalPlan{
           continue;
         }
         pending.push(src);totals.sourceOnly++;
-      }else if(canonical(present(src))===canonical(present(dst))){
+      }else if(equal(src,dst)){
         totals.identical++;
+      }else if(prior&&equal(src,prior)){
+        // Source has not modified this exact baseline row; keep local edits.
+        // For immutable history rows, do not collapse a differing identity
+        // or an audit/evidence rewrite merely because source is older.
+        if(name==='dc_tasks'&&safeDraft(src,dst,prior))autoResolved++;
+        else addConflict(name,key,src,dst,prior,
+          name==='dc_tasks'?'task_state':'immutable_evidence',false,pendingUpdates);
+      }else if(prior&&equal(dst,prior)&&name==='dc_tasks'&&safeDraft(src,dst,prior)){
+        // Only a one-sided unapproved task draft edit is safely commutative.
+        pendingUpdates.push({row:src,key,previous:dst});autoResolved++;
       }else{
-        totals.conflicting++;
-        if(conflicts.length<maxPreviewConflicts)
-          conflicts.push({table:name,key,source:present(src),target:present(dst)});
+        const category:Conflict['category']=name==='dc_tasks'?'task_state':
+          name==='dc_meta'?'metadata':
+          name==='dc_evidence'||name==='dc_audit'||name==='dc_completion_notes'?
+            'immutable_evidence':prior?'concurrent_change':'identity_collision';
+        addConflict(name,key,src,dst,prior,category,
+          name==='dc_tasks'&&!!prior&&safeDraft(src,dst,prior),
+          pendingUpdates);
+      }
+    }
+    if(base){
+      for(const prior of baseRows){
+        const key=rowKey(prior,shape.keys);
+        if(existing.has(key)&&!fromSource.has(key))
+          schemaErrors.push('Source deleted an existing history row: '+name+'/'+key);
       }
     }
     if(pending.length)newRows.set(name,pending);
+    if(pendingUpdates.length)updates.set(name,pendingUpdates);
   }
-  const fingerprint=hash({schema:[...lhs,...rhs],rows:fingerprints});
-  return {tables:sortDependencies(lhs,[...newRows.keys()]),
-    newRows,conflicts,totals,fingerprint,schemaErrors,warnings};
+  if(usedDecisions.size!==decisions.length)
+    throw Error('Merge decision does not match an actual current conflict');
+  if(!schemaErrors.length)
+    schemaErrors.push(...taskDependencyIssues(target,lhs,newRows,updates));
+  const fingerprint=hash({schema:[...lhs,...rhs,...(ancestor?[...ancestor]:[])],
+    rows:fingerprints,decisions});
+  return {tables:sortDependencies(lhs,[...new Set([...newRows.keys(),...updates.keys()])]),
+    newRows,updates,conflicts,totals,fingerprint,schemaErrors,warnings,
+    acceptedDecisions,autoResolved};
 }
 function open(file:string,readOnly:boolean):Database{
   const absolute=path.resolve(file);
@@ -183,6 +335,7 @@ function open(file:string,readOnly:boolean):Database{
 export type MergeRequest={
   targetPath:string;sourcePath:string;mode:'preview'|'candidate';
   outputPath?:string;expectedFingerprint?:string;
+  basePath?:string;resolutions?:MergeDecision[];
 };
 /** No in-place changes: candidate builds a separately VACUUMed target copy.
  * Conflicting mutable task rows and identity collisions are reported, NEVER
@@ -192,15 +345,28 @@ export function mergeDevControlSqlite(request:MergeRequest){
   const targetPath=path.resolve(request.targetPath);
   const sourcePath=path.resolve(request.sourcePath);
   if(targetPath===sourcePath)throw Error('Source and target SQLite must differ');
-  const source=open(sourcePath,true),target=open(targetPath,true);
+  const basePath=request.basePath?path.resolve(request.basePath):undefined;
+  if(basePath&&[targetPath,sourcePath].includes(basePath))
+    throw Error('Common-ancestor SQLite must be a separate original snapshot');
+  if(request.resolutions!==undefined&&!Array.isArray(request.resolutions))
+    throw Error('Merge resolutions must be a JSON array');
+  const source=open(sourcePath,true);
+  let target:Database|undefined,base:Database|undefined;
   try{
-    const plan=analyze(target,source);
+    target=open(targetPath,true);
+    base=basePath?open(basePath,true):undefined;
+    const plan=analyze(target,source,base,request.resolutions??[]);
     const summary={
       kind:'devcontrol-sqlite-merge',mode:request.mode,
-      targetPath,sourcePath,fingerprint:plan.fingerprint,
+      targetPath,sourcePath,basePath:basePath??null,
+      comparison:base?'three-way':'two-way',
+      fingerprint:plan.fingerprint,
       counts:plan.totals,schemasCompatible:plan.schemaErrors.length===0,
       conflicts:plan.conflicts,conflictsTruncated:plan.totals.conflicting>plan.conflicts.length,
       blockingIssues:plan.schemaErrors,warnings:plan.warnings,
+      automaticallyResolvedDraftChanges:plan.autoResolved,
+      reviewedResolutions:plan.acceptedDecisions,
+      proposedDraftUpdates:[...plan.updates.values()].reduce((n,a)=>n+a.length,0),
       candidatePossible:plan.schemaErrors.length===0&&plan.totals.conflicting===0,
       candidateNotAccepted:'A merged SQLite is only a candidate. Current AI must validate its Git revisions, task dependencies, real tests and acceptance before using it as project state.',
     };
@@ -220,7 +386,7 @@ export function mergeDevControlSqlite(request:MergeRequest){
     let candidate:Database|undefined;
     try{
       candidate=open(outputPath,false);
-      const post=analyze(candidate,source);
+      const post=analyze(candidate,source,base,request.resolutions??[]);
       if(post.fingerprint!==plan.fingerprint||post.totals.conflicting)
         throw Error('Input data changed during merge; candidate discarded');
       candidate.exec('BEGIN IMMEDIATE');
@@ -236,7 +402,19 @@ export function mergeDevControlSqlite(request:MergeRequest){
             ') VALUES ('+cols.map(()=>'?').join(',')+')';
           for(const row of plan.newRows.get(table)??[])
             candidate.prepare(query).run(...cols.map(c=>row[c]));
+          const setCols=cols.filter(c=>!shape.keys.includes(c));
+          if(!setCols.length)continue;
+          const updateSql='UPDATE '+quoted(table)+' SET '+
+            setCols.map(c=>quoted(c)+'=?').join(',')+' WHERE '+
+            shape.keys.map(k=>quoted(k)+'=?').join(' AND ');
+          for(const update of plan.updates.get(table)??[]){
+            const result=candidate.prepare(updateSql).run(
+              ...setCols.map(c=>update.row[c]),...shape.keys.map(k=>update.row[k]));
+            if(!result||typeof result!=='object'||(result as {changes?:number}).changes!==1)
+              throw Error('Draft resolution did not update exactly one candidate row');
+          }
         }
+        auditDraftChoices(candidate,shapes,plan.acceptedDecisions,plan.fingerprint);
         const violation=candidate.prepare('PRAGMA foreign_key_check').all();
         if(violation.length)throw Error('Merged candidate has foreign-key violations');
         candidate.exec('COMMIT');
@@ -249,6 +427,6 @@ export function mergeDevControlSqlite(request:MergeRequest){
       throw error;
     }
   }finally{
-    source.close();target.close();
+    base?.close();target?.close();source.close();
   }
 }

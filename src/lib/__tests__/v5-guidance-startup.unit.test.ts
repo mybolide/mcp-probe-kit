@@ -112,7 +112,7 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(updatedSkill).toContain('<!-- ' + SKILL_GUIDANCE_MARKER + ': ' + SKILL_GUIDANCE_REVISION + ' -->');
     expect(updatedSkill).toContain('DevControl operation reference');
     expect(updatedAgents).toContain('DevControl operation reference');
-    expect(updatedSkill).toContain('A separate Reviewer is OPTIONAL');
+    expect(updatedSkill).toContain('acceptance');
     expect(updatedAgents).toContain('self-review');
     expect(updatedAgents).toContain('refresh-protected-worktree');
     expect(updatedAgents).toContain(outside.trim());
@@ -177,7 +177,7 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('`review-submit`');
     expect(skill).toContain('`self-review`');
     expect(agents).toContain('self-review');
-    expect(agents).toContain('OPTIONAL');
+    expect(agents).toContain('acceptance');
     expect(agents).toContain(SKILL_GUIDANCE_REVISION);
     expect(fs.existsSync(path.join(root,'docs','requirements.md'))).toBe(false);
   });

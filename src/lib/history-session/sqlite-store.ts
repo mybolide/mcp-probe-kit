@@ -43,9 +43,9 @@ export function usesHistorySqlite(projectRoot: string, historyDir: string): bool
   if (path.resolve(historyDir) !== path.join(root, 'docs', 'history-session')) {
     throw new Error('V5_SQLITE_ONLY: custom history_dir is unsupported. Use the project SQLite hs_* history.');
   }
-  if (!fs.existsSync(path.join(root, '.git'))) {
-    throw new Error('V5_GIT_PROJECT_REQUIRED: History SQLite needs a real Git project root.');
-  }
+  if(!fs.existsSync(root)||!fs.lstatSync(root).isDirectory()||
+      fs.lstatSync(root).isSymbolicLink())
+    throw new Error('V5_PROJECT_ROOT_REQUIRED: History SQLite needs an existing real workspace directory.');
   return true;
 }
 
@@ -54,7 +54,7 @@ export function sqliteProjectForHistoryDir(historyDir: string): string | null {
   const normalized = path.resolve(historyDir);
   if (path.basename(normalized) !== 'history-session' ||
       path.basename(path.dirname(normalized)) !== 'docs') {
-    throw new Error('V5_SQLITE_ONLY: history_dir must be <Git project>/docs/history-session (virtual locator).');
+    throw new Error('V5_SQLITE_ONLY: history_dir must be <MCP workspace>/docs/history-session (virtual locator).');
   }
   const project = path.dirname(path.dirname(normalized));
   return usesHistorySqlite(project, normalized) ? project : null;

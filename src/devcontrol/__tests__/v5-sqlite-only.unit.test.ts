@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -11,6 +11,7 @@ import { executeRegisteredTool, getToolDefinition, listToolDefinitionsForToolset
 import { isV5Tool, V4_PROCESS_TOOLS } from '../../server/v5-tool-policy.js';
 import { generateWorkflowSkillBody } from '../../lib/workflow-skill-template.js';
 import { buildToolManifestSections } from '../../server/tool-manifest.js';
+import { resolveProjectDatabase } from '../project-storage.js';
 
 const roots: string[] = [];
 afterEach(() => {
@@ -25,6 +26,39 @@ function newProject(): string {
 }
 
 describe('v5 SQLite-only lifecycle', () => {
+  test('MCP discovers an established Git-free project and offers three-way SQLite preview without git',async()=>{
+    const root=mkdtempSync(join(tmpdir(),'mcp-v5-no-git-mcp-'));
+    roots.push(root);
+    const old=process.env.MCP_PROJECT_ROOT;
+    try{
+      const onboard=await runV5DevControlTool({action:'onboard',project_root:root});
+      expect(onboard.isError).toBeFalsy();
+      expect(existsSync(join(root,'.git'))).toBe(false);
+      process.env.MCP_PROJECT_ROOT=root;
+      const implicit=await runV5DevControlTool({action:'next'});
+      expect(implicit.isError).toBeFalsy();
+      const copy=join(root,'source-copy.sqlite3');
+      copyFileSync(resolveProjectDatabase(root),copy);
+      const merged=await runV5DevControlTool({
+        action:'sqlite-merge-preview',
+        input:{sourcePath:copy,basePath:copy},
+      });
+      // A common ancestor must be separate from source and target.
+      expect(merged.structuredContent).toMatchObject({
+        ok:false,
+      });
+      const preview=await runV5DevControlTool({
+        action:'sqlite-merge-preview',input:{sourcePath:copy},
+      });
+      expect(preview.isError).toBeFalsy();
+      expect(preview.structuredContent).toMatchObject({
+        comparison:'two-way',candidatePossible:true,
+      });
+    }finally{
+      if(old===undefined)delete process.env.MCP_PROJECT_ROOT;
+      else process.env.MCP_PROJECT_ROOT=old;
+    }
+  });
   test('main MCP exposes DevControl with scoped target root and rejects legacy import operations', async () => {
     const root = newProject();
     const listed = getToolDefinition('devcontrol');
@@ -75,8 +109,11 @@ describe('v5 SQLite-only lifecycle', () => {
     expect(() => usesHistorySqlite(root, path)).toThrow('V5_SQLITE_ONLY');
     delete process.env.MCP_HISTORY_STORAGE;
     expect(() => resolveHistoryDir(root, 'legacy/history')).toThrow('V5_SQLITE_ONLY');
-    expect(() => usesHistorySqlite(join(root, 'not-git'), join(root, 'not-git/docs/history-session')))
-      .toThrow('V5_GIT_PROJECT_REQUIRED');
+    const nonGit=join(root,'not-git');
+    mkdirSync(nonGit);
+    expect(usesHistorySqlite(nonGit,join(nonGit,'docs/history-session'))).toBe(true);
+    expect(() => usesHistorySqlite(join(root,'missing'),
+      join(root,'missing/docs/history-session'))).toThrow('V5_PROJECT_ROOT_REQUIRED');
     expect(() => isHistorySessionEnabled({ MCP_HISTORY_SESSION: 'off' })).toThrow('V5_SQLITE_ONLY');
     expect(isHistorySessionEnabled({})).toBe(true);
     expect(generateWorkflowSkillBody('5.0.0')).toContain('v4 file-backed');

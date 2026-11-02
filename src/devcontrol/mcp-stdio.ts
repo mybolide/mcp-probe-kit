@@ -168,9 +168,19 @@ export async function serveDevControlStdio(projectRoot: string): Promise<void> {
                     "step", "status", "evidence", "expectedRevision", "expectedFeatureRevision", "taskId", "role",
                     "language","submittedBy","assessment","review","disposition",
                     "expectedReviewHash","reason","explicitAuthorization",
-                    "sourcePath","outputPath","expectedFingerprint","acceptance"])]
+                    "sourcePath","outputPath","expectedFingerprint",
+                    "basePath","resolutions","acceptance"])]
                     .map((field) => [field, ["allowedPaths", "requiredGates", "dependsOn", "evidence"].includes(field)
                       ? { type: "array", items: { type: "string" } }
+                      : field === "resolutions" ? {type:"array",items:{
+                        type:"object",additionalProperties:false,
+                        required:["table","key","choice","actor","reason"],
+                        properties:{
+                          table:{type:"string"},key:{type:"string"},
+                          choice:{type:"string",enum:["source","target"]},
+                          actor:{type:"string"},reason:{type:"string"},
+                        },
+                      }}
                       : ["priority", "ttlSeconds", "step", "expectedRevision", "expectedFeatureRevision"].includes(field) ? { type: "integer" }
                       : ["readyForReview","explicitAuthorization"].includes(field) ? { type: "boolean" }
                       : field === "architectureImpact" ? { type: "boolean" }

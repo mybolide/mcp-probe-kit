@@ -15,15 +15,18 @@ export function renderV5Skill(version: string): string {
 
 ## On every MCP startup and new Agent conversation
 
-- v5 checks the target Git project for its managed Skill and AGENTS.md
+- v5 checks the target MCP workspace for its managed Skill and AGENTS.md
   section at startup and before each project tool call. It refreshes stale
   guidance **even when the installed package is still version 5.0.0**.
   If the project was unknown at startup, pass the correct explicit
   project_root on the first tool call, never the MCP installation path.
 - Read the synchronized Skill and user-written AGENTS.md rules before work.
-  For mismatches run local probe status and probe install-agent
-  --project-root /ABSOLUTE/GIT/PROJECT; do not fetch unpublished v5 from
-  npm or silently downgrade to v4.
+  From the MCP workspace root, run \`probe status\` and
+  \`probe install-agent --project-root .\` if guidance is stale. Generated
+  guidance must reference project files relative to that workspace root. If the
+  MCP server cannot discover the workspace, pass its real absolute
+  \`project_root\` only as a call-time locator, never as a stored repository identity.
+  Do not fetch unpublished v5 from npm or silently downgrade to v4.
 - Resume SQLite History and frozen DevControl task state BEFORE planning.
 
 ## The only project-development workflow
@@ -32,19 +35,23 @@ Use the main MCP tool \`devcontrol\` with \`{action,project_root,input}\`.
 If uncertain, call \`devcontrol\` action=\`guide\` with
 \`input={intent:"feature"}\` first; this is a read-only orientation call
 which needs no project_root and never authorizes work.
-\`project_root\` is the **target application Git repository**, not the MCP
-installation. Node.js 22+ is required. The project database is at
+\`project_root\` is the **MCP-managed application workspace**, not the MCP
+installation directory. Git is OPTIONAL: a workspace may have no Git at all,
+one Git repository, or several independent child Git repositories.
+Source files and optional repository identities use workspace-relative paths. Node.js
+22+ is required. The project database is at
 \`.mcp-probe-kit/state/devcontrol.sqlite3\` (existing Neyna projects retain
 their existing \`.neyna/state/devcontrol.sqlite3\`).
 
 1. At conversation start call \`history_session_bootstrap\` and inspect its bounded
    SQLite project history (\`hs_*\`). Then \`devcontrol\` action=\`onboard\`,
    \`next\`, \`list\`, \`execution-contract\` to recover actual task state,
-   Git branch, existing dirty files, dependency graph and lease.
+   source evidence (Git commits when present, SHA-256 files otherwise),
+   existing files, dependency graph and lease.
 2. New requirements, Features, Bugs, Ideas and decisions are versioned in the
    project SQLite \`dc_*\` tables via the appropriate \`devcontrol\` actions.
-   Real PRD, ADR, API/Schema contracts and software source remain in Git; the
-   application database is separate and must never be confused with DevControl.
+   Real PRD, ADR, API/Schema contracts and software source remain in project
+   files; Git is optional. The application database stays separate from DevControl.
    For Feature planning, use feature-create then feature-save for three
    versioned SQLite chapters (**requirements → design → tasks**) followed by
    feature-validate, feature-task-brief, feature-task-review,
@@ -69,8 +76,12 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    Proposed work is NOT executable.
 4. For an approved task, use \`next\` → \`execution-contract\` → \`claim\`
    and, as needed, \`renew\`. Edit only frozen paths. The Agent, not DevControl,
-   independently reviews software, runs real tests and commits approved files.
-5. Use \`check\` → real Git commit → \`complete\` / \`report\`.
+   independently reviews software and runs real tests. Only Git projects
+   require actual approved commits. Never create a Git repository implicitly.
+5. Use \`check\`, then \`complete\` / \`report\`. Git projects require the original
+   committed task changes; Git-free projects use exact claim-time and
+   completion-time SHA-256 file manifests, without Git binaries or commits.
+   Neither evidence format waives approved file scope or real test Gates.
    Then read task-closure-status. The responsible developer AI runs genuine
    tests and reviews the frozen atomic delivery. Ordinary tasks use ONE verify
    call with acceptance={evidenceReference,findings,gates:[{gate,evidenceReference,findings}]}
@@ -87,18 +98,19 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    per leaf and prerequisite Verified status BEFORE dependent claim remain
    mandatory. Positive, negative and recovery acceptance lists for the same
    outcome must not be mistaken for several tasks.
-   A commit, progress claim or synthetic test is never Verified.
+   A commit, file hash, progress claim or synthetic test alone is never Verified.
    Missing actual test evidence, substantive review or a Gate fails closed.
-   When a required physical/external Gate is unavailable after a committed
+   When a required physical/external Gate is unavailable after a completed
    completion, use \`defer-verification\` with the current lease token, exact
    Gate and reason. This frees the task lease but NEVER passes the Gate.
    After the real runner/device returns use the resume-verification action.
    Then call read-only task-closure-status to identify the next required
    operation and missing evidence instead of endlessly waiting for Owner.
-   The reviewer inspects the original immutable delivery
-   Commit; later unrelated HEAD commits may coexist but may never touch
-   the submitted files. Post-resume real Gate evidence can be reported
-   without rewriting the old commit. One verify with complete acceptance
+   The reviewer inspects the original immutable delivery. In Git projects
+   preserve exact commits and ancestry. In Git-free projects preserve the
+   tested SHA-256 file manifest and reject changed source content.
+   Post-resume real Gate evidence may be reported without replacing the
+   original delivery. One verify with complete acceptance
    still enforces every frozen Gate. Legacy reviewer records remain readable.
    Never rewrite SQLite task states or silently discard user files.
    Pre-existing unrelated tracked/untracked files at claim are protected by
@@ -162,6 +174,19 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    the later timestamp. A candidate is NOT automatically active, and this
    is NOT yet automatic multi-computer state synchronization or a global
    offline-exclusive claim service. No central host or third-party Agent.
+   When available, pass a genuine common-ancestor SQLite snapshot as
+   basePath on BOTH sqlite-merge-preview and sqlite-merge-candidate.
+   Three-way comparison auto-applies a source-only edit ONLY if the same
+   existing task stays unapproved draft in all three versions. Divergent
+   draft changes need an AI-reviewed resolutions array with exact table/key,
+   source/target choice, responsible actor and a substantial reason. The
+   selected choices bind into expectedFingerprint and are written to the
+   separate candidate's dc_audit for later explanation. Never use this
+   choice to override Ready, in_progress, in_review or Verified tasks,
+   Git completion/evidence identities, or historical audits. Candidate
+   also rejects any merged task dependency cycle or a task marked
+   in_progress/in_review/Verified whose prerequisite is not Verified.
+   Candidate remains inactive until separately reviewed and safely adopted.
    Only exceptional forensic physical-location audit correction needs the
    Owner-key-authorized relocate-repository-baselines operation.
    MCP-generated Skill and AGENTS.md changes are exempt only when their staged
@@ -246,8 +271,9 @@ ${renderV5DevControlActionReference()}
   invent independent reviewers or impersonate Owner approval.
 - Back up SQLite with a consistent SQLite backup, including before upgrading
   old projects. Do not put a live DB, WAL, secret or active lease in Git.
-- CLI fallback: \`probe exec devcontrol --stdin\` or
-  \`node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol next --project-root .\`.
+- CLI fallback from the MCP workspace root:
+  \`probe exec devcontrol --stdin\` or
+  \`./.mcp-probe-kit/bin/probe devcontrol next --project-root .\`.
   For unpublished 5.0.0 builds use the correct local entry, never download
   \`mcp-probe-kit@5.0.0\` from npm or silently fall back to v4.
 - Non-stateful helpers remain callable: \`code_review\`, \`code_insight\`,
@@ -276,26 +302,28 @@ ${skillRef}
 
 ${managedRevision}
 
+- **三方 SQLite 冲突处理**：如有两台电脑共同的旧数据库快照，当前 AI 应将其作为 basePath 同时传给 sqlite-merge-preview 和 sqlite-merge-candidate。仅同一任务始终是未批准 draft 的单边修改可以自动纳入候选库；两边都修改了 draft 时，当前 AI 根据需求与差异提交 resolutions，其中包含 table、key、choice（source 或 target）、actor 和详细 reason，选择与预检指纹绑定，并写入候选库 dc_audit。绝不能用这种选择覆盖 Ready、进行中、待审核、Verified 的任务或不可变测试记录。候选库仍不是正式项目状态。
+
 - **跨电脑 SQLite 安全合并**：当前 AI 使用 sqlite-merge-preview 对比两份本地 SQLite，按任务状态、依赖、测试证据和历史记录识别冲突，不按时间戳自动覆盖。只有同项目来源、表结构兼容、无冲突且预检指纹未变化，才用 sqlite-merge-candidate 生成新的候选 SQLite，两份原文件均不修改。租约和另一台电脑的 Git 工作树路径不合并，已执行或已验收的外部任务需要当前 AI 审核原始 Git 提交与真实测试。候选文件不会自动成为正式项目状态，也不代表已经完成跨电脑自动同步或离线独占领取。不要求权威主机，不引入其他 Agent。
 
 - **独立 Git Worktree 开发**：Git 正式注册的不同工作树拥有各自的 Git 暂存区，同时共享主仓库的同一份 DevControl SQLite 项目数据。当前 AI 使用普通 Git 创建、合并工作树；领取任务时把对应工作树路径传为 project-root。前置依赖仍必须 Verified，未验收任务的冻结文件范围不得重叠。任务报告、测试与技术自审绑定原工作树；独立工作树的准确提交被合并进主 Git 历史后，才允许记为 Verified。DevControl 不执行代码测试、Git 合并，也不引入第三方 Agent。独立子仓库组合暂不支持根 Worktree 并行。
 
-- **启动文档自检**：MCP 每次启动检查目标 Git 项目的 Skill、AGENTS.md 托管区；即使版本仍是 5.0.0，指导修订过期也必须同步。若启动时无法找到项目，首次调用显式传入正确的 \`project_root\`；不得写入 MCP 安装目录。Agent 每轮先阅读最新 Skill 与项目自定义规则，可用本地 \`probe status\` / \`probe install-agent --project-root /ABSOLUTE/GIT/PROJECT\` 核对。
+- **启动文档自检**：MCP 每次启动检查目标项目工作区的 Skill、AGENTS.md 托管区；即使版本仍是 5.0.0，指导修订过期也必须同步。Agent 每轮先阅读最新 Skill 与项目自定义规则；从 MCP 工作区根目录执行 \`probe status\` / \`probe install-agent --project-root .\`。父目录可以没有 Git，子项目可以分别使用独立 Git；生成的项目文件引用和 Git 仓库身份必须相对 MCP 工作区根目录。若服务启动时未识别目标工作区，首次工具调用才显式传入该机器真实的绝对 \`project_root\` 作为运行时定位参数，不得把它写作持久仓库身份，也不得写入 MCP 安装目录。
 - **管理操作**：当前 24 个模型工具，唯一正式研发入口 \`devcontrol\` 提供 ${V5_DEVC_ACTIONS.length} 个 SQLite action，完整分组见 Skill 的 DevControl operation reference；不要将 action 当作独立 MCP 工具。
-- **必须先恢复**：新对话先 \`history_session_bootstrap\`（Git/Node22+ 项目唯一实时 History = SQLite \`hs_*\`），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
-- **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码/正式 PRD/ADR/API/Schema 仍归 Git，业务数据库独立。
+- **必须先恢复**：新对话先 \`history_session_bootstrap\`（Node22+ 项目唯一实时 History = SQLite \`hs_*\`，不需要 Git），再调用主 MCP \`devcontrol\` 的 \`onboard\` / \`next\` / \`execution-contract\` 核实冻结任务与租约；用户说“继续”时不重新生成计划。
+- **唯一项目状态**：需求、Feature、Bug、Idea、计划、任务、依赖、租约、审批、测试证据、决策全部归本项目 SQLite \`dc_*\`；代码与正式 PRD/ADR/API/Schema 保存在项目文件中，Git 仅为可选的版本管理工具，业务数据库独立。
 - **质量与责任边界**：DevControl 只是项目管理工具，保存需求、架构、原子任务、依赖、进度和当前 AI 上报的测试及完成记录，不是测试或验收 Agent。当前研发 AI 自己完成设计、开发、测试、技术自审和逐项验收，不引入任何第三方 Agent。每项叶子任务只有一个独立可验收成果；正向、异常和恢复测试可以是同一任务的多条验收标准。前置任务必须已真实验收并记录 Verified，才能领取依赖任务；其他无依赖任务不应被全局阻塞。
-- **正式任务一次验收**：正式版本规划仍必须完成 plan-review、plan-propose 和精确 Hash 的 plan-approve；按冻结合同领取任务，当前 AI 负责真实开发、项目测试和技术自审。提交 Git 后通过 complete/report 保存测试证据，处于 in_review 时只需一次 verify，提交 acceptance 中的真实证据引用、具体检查结论、每项冻结 Gate 的证据和结论。DevControl 原子检查原始提交、全部测试条件、依赖和验收记录，只有通过才记为 Verified。旧 self-review/gate-review/reviewed-verify 仅为历史兼容，不再强制三次登记；无需额外 Agent，不新增逐项 Owner 审批。
+- **正式任务一次验收**：正式版本规划仍必须完成 plan-review、plan-propose 和精确 Hash 的 plan-approve；当前 AI 通过 claim 领取已批准且前置全部 Verified 的任务，自己负责真实开发、项目测试和技术自审。有 Git 时提交批准范围内的真实代码；没有 Git 时 DevControl 比对领取时与完成时的 SHA-256 文件清单，不需要 Git 命令、安装 Git 或自动创建 .git。通过 complete/report 登记实际测试证据，处于 in_review 时一次 verify，acceptance 逐项包含冻结 Gate 的真实证据及检查结论。DevControl 审核文件范围、Git 提交（若有）或文件清单、全部测试条件、依赖和验收记录，合格才标 Verified。旧 self-review/gate-review/reviewed-verify 仅作历史兼容，不强制额外 Agent 或逐项 Owner 审批。
 - **三阶段 SQLite 规格**：先用 \`feature-create\` → \`feature-save\` 形成需求、设计、任务三部分；第一轮完成 \`feature-validate\`、\`feature-task-brief\` / \`feature-task-review\` / \`feature-task-propose\` 并结束规划轮次。下一轮重读提案，使用 \`feature-task-second-review\` 单独记录覆盖、依赖、失败场景、文件范围和验收五项审查，再以精确 Hash \`feature-task-approve\` 确认。开发 Agent 可以自行做第二轮 Review，不强制另一名 Agent，也不逐项要求 Owner 批准；重大冻结范围变更仍须 Owner 明确授权。草稿不可领取。
 - **MCP 自动更新文件不阻断研发**：领取任务以后 MCP 可自动同步 AGENTS.md 和 .agents/skills/mcp-probe-kit/SKILL.md。只有内容完全符合正式生成器，而且 AGENTS.md 中用户原有规则没有变化时，这两份文件才属于 MCP 自身维护，不算作领取后新增的外部业务改动。不能放行被手工修改的 Skill、用户自定义 AGENTS 内容、已暂存内容或整个 .agents 目录。无须因此恢复租约、删除文件或重做验收。
 - **任务原子性强制**：不怕任务多，只怕目标太泛。每个叶子只有一个可独立验收成果，清晰列出来源、设计、依赖、负责人、精确文件范围、输入输出、正反测试、证据、不做内容、停止条件。新 Feature 叶子任务以 30–60 分钟为主，必须填写预计工时；1–2 小时需具体说明无法继续安全拆分的原因，超过 2 小时须拆分。新整版计划可采用 task-detail-v2 执行相同严格规则；旧已冻结计划不得直接重写。父任务只组织阶段，Agent 不得自行扩散、偷换验收或跳过任务。
-- **真实验收 Gate**：docs、go_contract、flutter_test、ios_device_e2e 等只是产品测试条件标识，不是 MCP 测试执行器。开发 AI 必须实际运行或检查项目测试及原始输出，verify 的 acceptance.gates 必须逐项绑定准确 Git 交付和已登记测试报告；缺失或版本变化不能自动通过。
-- **延期验收与会话恢复**：真机或外部 Gate 不可用时使用 defer-verification 释放任务写入权，但不能标记通过。恢复后通过 resume-verification，补充实际测试报告，再用一次带 acceptance 的 verify 完成登记；其他无依赖任务继续开发，Git 证据、冻结 Gate 与 Verified 前置任务始终严格。
+- **真实验收 Gate**：docs、go_contract、flutter_test、ios_device_e2e 等只是产品测试条件标识，不是 MCP 测试执行器。开发 AI 必须实际运行或检查项目测试及原始输出，verify 的 acceptance.gates 必须逐项绑定准确 Git 交付（有 Git 时）或冻结的 SHA-256 文件清单（无 Git 时）与已登记测试报告；缺失或版本变化不能自动通过。
+- **延期验收与会话恢复**：真机或外部 Gate 不可用时使用 defer-verification 释放任务写入权，但不能标记通过。恢复后通过 resume-verification，补充实际测试报告，再用一次带 acceptance 的 verify 完成登记；其他无依赖任务继续开发，原 Git 提交（若有）或原文件快照、冻结 Gate 与 Verified 前置任务始终严格。
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
-- **无密钥任务恢复与工作树保护**：普通任务租约到期后，当前 AI 用 \`recover-task\` 提供 \`actor\` 和具体 \`reason\` 即可恢复原任务，不再要求 Owner 密钥或环境变量，必须严格检查 Git 历史、代码范围与本地工作树保护。旧多仓特殊迁移只有明确 \`explicitAuthorization:true\` 和原有双开关才能继续；受保护文件回到 Git HEAD 后，\`refresh-protected-worktree\` 需要 \`id\`、\`actor\`、\`reason\` 与 \`explicitAuthorization:true\`；异常仓库位置迁移还需精确映射和明确授权。原保护快照与操作审计保留，绝不因此自动通过测试和验收。
-- **多开发者与跨设备工作区**：仓库身份以项目根目录下的相对路径识别，根仓库为 \`.git\`，独立子仓库如 \`apw-life/.git\`。正常 git pull、merge、clone 和移动目录无需 Owner 密钥、无需每台机器手动搬迁，也无需改 SQLite。旧 v5 的绝对 git_dir 冻结记录及历史完成证据保留原值，读取时自动解析成相对位置。后续正常提交不会修改历史基线，安全检查仅要求真正独立的 Git 仓库保有原始基线提交，旧测试证据仍绑定旧任务的交付 SHA。只有异常历史位置审计纠正才使用 Owner 授权 relocate-repository-baselines。
+- **无密钥任务恢复与工作树保护**：普通任务租约到期后，当前 AI 用 \`recover-task\` 提供 \`actor\` 和具体 \`reason\` 即可恢复原任务，不再要求 Owner 密钥或环境变量。Git 项目检查原 Git 历史和工作树；无 Git 项目检查原 SHA-256 文件清单和冻结范围。旧多仓特殊迁移只有明确 \`explicitAuthorization:true\` 和原有双开关才能继续；Git 项目受保护文件回到 Git HEAD 后，\`refresh-protected-worktree\` 需要 \`id\`、\`actor\`、\`reason\` 与 \`explicitAuthorization:true\`；异常仓库位置迁移还需精确映射和明确授权。原保护快照与操作审计保留，绝不因此自动通过测试和验收。
+- **多开发者与跨设备工作区**：MCP 项目根可以完全没有 Git，所有文件引用相对项目工作区；使用 Git 时才记录仓库相对身份，根仓库为 \`.git\`，独立子仓库如 \`apw-life/.git\`。正常 git pull、merge、clone 和移动目录无需 Owner 密钥、无需每台机器手动搬迁，也无需改 SQLite。旧 v5 的绝对 git_dir 冻结记录及历史完成证据保留原值，读取时自动解析成相对位置。后续正常提交不会修改历史基线，安全检查仅要求真正独立的 Git 仓库保有原始基线提交，旧测试证据仍绑定旧任务的交付 SHA。只有异常历史位置审计纠正才使用 Owner 授权 relocate-repository-baselines。
 - **已交付任务让出 Git 写入权**：一个任务已经提交代码和真实测试记录，处于 in_review 待审核时，可保留自己的管理租约，让没有前置依赖、文件范围不重叠的 Ready 任务使用同一个 Git 工作区继续开发。任何时候最多一个实际写入任务，暂存代码、未提交工作或范围重叠时不得切换。用 \`next.parkedReviews\` 查看待审任务；当前 AI 继续负责真实自审和结果登记，绝不能因让出写入权就把任务当作 Verified。若自审失败，要先重新领取 Git 写入权才能修改代码。正常切换无需 Owner 密钥和其他 Agent。
-- **本地 Git 忽略与精确交付**：每个独立仓库可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
+- **本地 Git 忽略与精确交付**：只有使用 Git 时，每个独立仓库才可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
 - **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再通过 \`task-spec-supplement-self-review\` 完成有来源的实质开发者自审（可选 \`task-spec-supplement-independent-review\`，不强制第二人），最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
 - **冻结变更与架构评审**：不强制第三名审核人。范围变更使用 \`release-work-scope-self-review\`，新增任务使用 \`release-work-incremental-self-review\`，受控工件使用 \`artifact-self-review\`，并提交真实来源、范围、依赖和安全测试审查。独立复审按风险选用。涉及冻结范围或受控工件变更时，仍须 Owner 明确批准精确 proposalHash/reviewHash，未批准不得执行。
 - **变更评估**：新想法依次使用 \`idea-capture\` / \`idea-assess\` / \`idea-self-review\` / \`idea-decide\` 进行真实自审与决策，\`idea-review\` 保留为可选独立复审；不得擅自修改冻结范围、架构与依赖；重大改变由 Owner 明确批准。
@@ -375,6 +403,14 @@ ${managedRevision}
   review. An isolated delivery cannot be Verified before main Git contains
   its exact commit. Multi-Git child repository projects require the existing
   stricter workflow. DevControl runs neither Git merges nor tests.
+- When a real common-ancestor SQLite snapshot exists, provide basePath on
+  both preview and candidate requests. Three-way reconciliation can
+  automatically apply only a one-sided edit to the same unapproved draft
+  task. Two divergent drafts need the current AI's resolutions specifying
+  exact table/key, source or target choice, actor and substantive reason.
+  The choice is fingerprint-bound and durably audited in the candidate's
+  dc_audit. Never resolve a Ready, running, in_review or Verified task,
+  evidence identity or historical audit by arbitrary AI preference.
 - For two independently modified SQLite files, the responsible AI uses
   sqlite-merge-preview to inspect task, dependency, evidence and history
   conflicts. Only if both files have shared project ancestry, compatible

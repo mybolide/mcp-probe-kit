@@ -209,6 +209,10 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 
 **两份 SQLite 的安全合并（第一阶段）**：当前 AI 调用 `devcontrol` 的 `sqlite-merge-preview`，输入 `sourcePath` 为明确传入的另一份 SQLite 文件，读取本地项目库和源库，生成结构、记录数量、任务状态及测试证据冲突报告。无共享项目来源、结构不一致、行内容冲突、另一台电脑新增已执行或 Verified 的任务时，不允许自动合并。只有预检全部通过，才能用 `sqlite-merge-candidate` 输入相同 `sourcePath`、预检返回的 `expectedFingerprint` 以及全新 `outputPath` 生成候选数据库。两个原始 SQLite 保持不变，本机租约和设备相关 Git 路径不复制。候选结果必须由当前研发 AI 检查、完成真实 Git 及验收核对后才能正式使用。**这不是自动同步、在线冲突协调或可直接替换项目数据库的功能**，后续还需要完成同步协议和冲突解决机制。无需常在线权威主机或其他 Agent。
 
+**三方合并与 AI 冲突判断（第二阶段）**：如果保留了两份 SQLite 分叉前的共同快照，额外传入 `basePath` 进行三方对比。只有未审批的同一草稿任务发生单边修改时，才自动使用该修改。如果两台电脑都修改了同一草稿，预检会给出 `table`、`key`、修改字段和原始版本。当前 AI 可在 `resolutions` 中逐条提供 `choice`（`source` 或 `target`）、`actor` 和详细 `reason`，重新预检并使用新的 `expectedFingerprint` 创建候选库。AI 的决定会写入候选库的 `dc_audit`。已批准的任务、领取中的任务、Verified、历史与测试证据冲突不支持这种偏好选择，继续要求真实 Git 与验收核对。没有共同快照时保持原来的严格双库预检；候选库不会自动投入使用。
+
+**项目不以 Git 为前提（v5 Git 可选）**：项目根目录是 MCP 工作区，不需要 `.git`。可以完全没有 Git，也可以由普通父目录统一管理多个独立 Git 子项目。Skill、AGENTS.md、SQLite 任务与 History 均存放于工作区。任务、批准的范围、需求版本、真实测试与验收前置不变。Git 项目继续以原始提交审计；无 Git 项目在 claim 时保留 SHA-256 文件基线，在 complete 时冻结交付文件清单，report 与 verify 必须绑定同一份文件内容和实际测试记录，不能把哈希冒充 Git 提交。真实生成器同步的 Skill 与 AGENTS.md，只有在用户原有规则未改变、内容字节级匹配时才作为工具维护，不属于业务交付。无 Git 项目同样支持延期验收、租约恢复和基于 SQLite 的历史恢复。MCP 从已确认的项目工作区解析 `project_root`，找不到时才由调用者传入本机实际目录，不得回退到 MCP 安装目录。无需安装 Git 或执行 git init。
+
 | 流程领域 | 可用 `action` |
 |---|---|
 | 冻结任务说明补充 / Reviewed additive task specification (7) | `task-spec-supplement-get`、`task-spec-supplement-review`、`task-spec-supplement-stage`、`task-spec-supplement-self-review`、`task-spec-supplement-independent-review`、`task-spec-supplement-approve`、`task-spec-supplement-withdraw` |

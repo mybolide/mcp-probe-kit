@@ -6,6 +6,9 @@ import {execFileSync} from 'node:child_process';
 import {ProjectTaskLedger} from '../task-ledger.js';
 import {discoverRepositories} from '../repository-audit.js';
 import {workspaceHookStatus} from '../git-gate.js';
+import {ensureMcpProbeKitBootstrap} from '../../lib/workflow-skill-installer.js';
+import {MCP_PROBE_SKILL_REL_PATH} from '../../lib/workflow-skill-template.js';
+import {SKILL_GUIDANCE_REVISION} from '../../lib/workflow-skill-version.js';
 import type {ReleasePlanProposal,ReleasePlanNode} from '../release-plan.js';
 
 const roots:string[]=[];
@@ -101,6 +104,117 @@ describe('DevControl project without any Git repository',()=>{
       expect(result.evidenceKind).toBe('files-sha256-v1');
       expect(()=>ledger.verify('GITLESS-1',claim.leaseToken))
         .toThrow(/Report real test evidence/);
+    }finally{ledger.close();}
+  });
+  it('accepts only byte-identical MCP-generated Skill and AGENTS upgrades after a Gitless claim',()=>{
+    const root=rootless();
+    fs.writeFileSync(path.join(root,'AGENTS.md'),
+      '# User security rules\nDo not modify production credentials.\n');
+    ensureMcpProbeKitBootstrap(root);
+    const tracked=['AGENTS.md',MCP_PROBE_SKILL_REL_PATH];
+    for(const file of tracked){
+      const full=path.join(root,file);
+      fs.writeFileSync(full,fs.readFileSync(full,'utf8')
+        .replaceAll(SKILL_GUIDANCE_REVISION,
+          'v5-sqlite-devcontrol-20261102-owned-guidance-r19'));
+    }
+    const ledger=prepare(root,'GITLESS-8');
+    try{
+      const token=ledger.claim('GITLESS-8','developer').leaseToken;
+      const refreshed=ensureMcpProbeKitBootstrap(root);
+      expect(refreshed.agentsMd.updated).toBe(true);
+      expect(refreshed.skill.updated).toBe(true);
+      expect(ledger.checkStaged()).toMatchObject({
+        passed:false,reason:'No source changes since claim',
+      });
+      fs.mkdirSync(path.join(root,'src'));
+      fs.writeFileSync(path.join(root,'src','feature.ts'),'export const code = 8;');
+      expect(ledger.checkStaged()).toMatchObject({
+        passed:true,changedFiles:['src/feature.ts'],deniedFiles:[],
+      });
+      expect(ledger.complete('GITLESS-8',token,{
+        summary:'Actual accepted implementation',implementation:'One approved file',
+        verification:'Local source test completed',
+      }).files).toEqual(['src/feature.ts']);
+      const reference='The actual approved source passed its project-owned test';
+      ledger.report('GITLESS-8',token,{kind:'docs',reference},true);
+      const original=fs.readFileSync(path.join(root,'AGENTS.md'),'utf8');
+      fs.writeFileSync(path.join(root,'AGENTS.md'),
+        original+'\n# Unauthorized change to user instructions\n');
+      expect(ledger.verify('GITLESS-8',token,acceptance(reference))).toMatchObject({
+        passed:false,reason:'FILE_SOURCE_CHANGED',
+      });
+      fs.writeFileSync(path.join(root,'AGENTS.md'),original);
+      expect(ledger.verify('GITLESS-8',token,acceptance(reference))).toMatchObject({
+        passed:true,files:['src/feature.ts'],
+      });
+    }finally{ledger.close();}
+  });
+  it('releases an untouched Git-free claim and refuses to release a changed source',()=>{
+    const root=rootless(),ledger=prepare(root,'GITLESS-5');
+    try{
+      const untouched=ledger.claim('GITLESS-5','developer').leaseToken;
+      expect(ledger.release('GITLESS-5',untouched)).toMatchObject({
+        released:true,status:'ready',
+      });
+      const next=ledger.claim('GITLESS-5','developer').leaseToken;
+      fs.mkdirSync(path.join(root,'src'));
+      fs.writeFileSync(path.join(root,'src','feature.ts'),'a real change');
+      expect(()=>ledger.release('GITLESS-5',next)).toThrow(/UNFINISHED_WORK|Do not release/);
+    }finally{ledger.close();}
+  });
+  it('recovers an expired Git-free lease without resetting its original source baseline',()=>{
+    const root=rootless(),ledger=prepare(root,'GITLESS-6');
+    try{
+      ledger.claim('GITLESS-6','original-developer');
+      fs.mkdirSync(path.join(root,'src'));
+      fs.writeFileSync(path.join(root,'src','feature.ts'),'approved progress');
+      const db=(ledger as any).db;
+      db.exec('UPDATE dc_leases SET expires_at=1');
+      db.exec('UPDATE dc_task_leases SET expires_at=1');
+      const recovered=ledger.recoverTaskLease('GITLESS-6',{
+        actor:'responsible-developer',
+        reason:'The previous process crashed; the original approved file baseline and task scope were inspected before restoring the lease.',
+      });
+      expect(recovered).toMatchObject({
+        status:'in_progress',evidenceKind:'files-sha256-v1',
+        testsPassedByRecovery:false,
+      });
+      expect(ledger.complete('GITLESS-6',recovered.leaseToken,{
+        summary:'Recovered approved work',implementation:'Kept exact file',
+        verification:'Test results need review',
+      })).toMatchObject({files:['src/feature.ts']});
+    }finally{ledger.close();}
+  });
+  it('defers and resumes an external Gate without fabricating Git or passing the Gate',()=>{
+    const root=rootless(),ledger=prepare(root,'GITLESS-7');
+    try{
+      const token=ledger.claim('GITLESS-7','developer').leaseToken;
+      fs.mkdirSync(path.join(root,'src'));
+      fs.writeFileSync(path.join(root,'src','feature.ts'),'approved output');
+      ledger.complete('GITLESS-7',token,{
+        summary:'Finished implementation',implementation:'Delivered feature.ts',
+        verification:'Recorded local receipt; the external verifier is unavailable',
+      });
+      ledger.report('GITLESS-7',token,{
+        kind:'docs',reference:'Local test passed; the final external test is deferred',
+      },true);
+      expect(ledger.deferVerification({
+        id:'GITLESS-7',leaseToken:token,gate:'docs',
+        reason:'The independent external test runner is currently unavailable and must be rerun before final acceptance.',
+      })).toMatchObject({pendingVerification:true,gatePassed:false});
+      expect(ledger.taskClosureStatus('GITLESS-7').nextAction)
+        .toBe('resume-verification');
+      const resumed=ledger.resumeVerification('GITLESS-7','developer');
+      expect(resumed).toMatchObject({
+        resumedVerification:true,evidenceKind:'files-sha256-v1',
+      });
+      const evidence='Final real external runner receipt for unchanged source SHA256';
+      ledger.report('GITLESS-7',resumed.leaseToken,{
+        kind:'docs',reference:evidence,
+      },true);
+      expect(ledger.verify('GITLESS-7',resumed.leaseToken,acceptance(evidence)))
+        .toMatchObject({passed:true,evidenceKind:'files-sha256-v1'});
     }finally{ledger.close();}
   });
 

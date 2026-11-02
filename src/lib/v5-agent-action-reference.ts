@@ -13,9 +13,13 @@ First discover the correct flow with the **read-only, project-free** call
 \`start\`, \`planning\`, \`task\`, \`verification\`, \`bug\`,
 \`idea\`, \`scope\`, \`architecture\`.
 The response gives a short list of relevant actions, copyable input example,
-and approval caution, without modifying SQLite. Then call the **single**
-MCP tool \`devcontrol\` with
-\`{"action":"next","project_root":"/ABSOLUTE/GIT/PROJECT","input":{}}\`.
+and approval caution, without modifying SQLite. When the MCP server has
+discovered the correct MCP workspace (which can contain independent child Git
+repositories), call the **single** MCP tool
+\`devcontrol\` with \`{"action":"next","input":{}}\`. If discovery cannot
+identify the target project, pass its real absolute \`project_root\` in
+that call only. All generated file references and durable repository
+identities remain relative to the project root, not a developer's machine.
 Each action has different input fields; do not invent parameters, approvals,
 test results or task state. Actions are not separate MCP tools.
 
