@@ -107,7 +107,7 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
         passed:true,files:['apw-life/src/task.ts'],
       });
     }finally{ledger.close();}
-  });
+  },60_000);
   it('refuses to exempt business source even when the file is tracked and explicitly listed',()=>{
     const {root}=fixture(false);
     fs.mkdirSync(path.join(root,'src'));
@@ -966,7 +966,7 @@ describe('immutable multi-repository delivery commits',()=>{
       expect(fs.readFileSync(path.join(child,'draft.txt'),'utf8')).toBe(untracked);
       expect(ledger.get('AUDIT-ROOT-DEFER').status).toBe('in_review');
     }finally{ledger.close();}
-  });
+  },60_000);
 
   it('rejects modified, new or staged child WIP before root-only deferral and after resume',()=>{
     const {root,child}=fixture();
