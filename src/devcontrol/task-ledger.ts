@@ -729,6 +729,117 @@ export class ProjectTaskLedger {
     return [...new Set([...first,...resumed])].sort();
   }
 
+  /** Attribution is based on every first-parent Git commit, NOT the net diff
+   * of all work since the original claim. A foreign delivery counts only if
+   * it belongs to a separately Verified task, starts at its stored claim
+   * HEAD, ends at its exact recorded completion HEAD, and every commit in
+   * that range touches ONLY its disjoint approved scope. Mixed commits,
+   * overlapping contracts, rewritten history and unverifiable gaps fail.
+   */
+  private verifiedInterveningCommits(id:string,base:string,head:string,
+    filter='ACMRTD'):{files:string[];verified:Array<{
+      taskId:string;baseHead:string;completionHead:string;files:string[]}>}{
+    if(!run(this.root,'git',['merge-base','--is-ancestor',base,head]).passed)
+      fail('RECOVERY_HISTORY_CHANGED','Original claim HEAD is not an ancestor');
+    const log=spawnSync('git',['rev-list','--first-parent','--reverse',
+      base+'..'+head],{cwd:this.root,encoding:'utf8',timeout:20_000,
+      maxBuffer:200_000});
+    if(log.status!==0||log.error)
+      fail('GIT_ERROR','Cannot inspect the complete first-parent history');
+    const commits=log.stdout.trim().split('\n').filter(Boolean);
+    if(commits.length>1000)
+      fail('RECOVERY_COMMIT_LIMIT','Inspect the long intervening Git history in a bounded review');
+    const revisions=[base,...commits];
+    const positions=new Map(revisions.map((item,i)=>[item,i]));
+    const task=this.requireTask(id);
+    const own=JSON.parse(task.allowed_paths) as string[];
+    const slices:Array<{full:string[];added:string[]}>=[];
+    for(let i=1;i<revisions.length;i++){
+      if(git(this.root,['rev-parse',revisions[i]+'^1'])!==revisions[i-1])
+        fail('RECOVERY_HISTORY_NONLINEAR',
+          'Original task baseline is not on the first-parent Git history');
+      const raw=committedFilesBetween(this.root,revisions[i-1],revisions[i]);
+      const changed=this.deliveryTaskFiles(raw,revisions[i-1],revisions[i]);
+      const added=filter==='ACMRTD'?changed:
+        committedFilesBetween(this.root,revisions[i-1],revisions[i],filter)
+          .filter(file=>changed.includes(file));
+      slices.push({full:changed,added});
+    }
+    const candidates=this.db.prepare(`SELECT t.id,t.allowed_paths,
+      l.base_head,c.git_head AS completion_head
+      FROM dc_tasks t JOIN dc_task_worktree_baselines l ON l.task_id=t.id
+      JOIN dc_completion_notes c ON c.task_id=t.id
+      WHERE t.status='verified' AND t.id!=? AND t.approved_by IS NOT NULL
+      AND c.revision=(SELECT MAX(revision) FROM dc_completion_notes
+        WHERE task_id=t.id)`).all(id);
+    const ownership=new Map<number,string>();
+    const verified:Array<{taskId:string;baseHead:string;
+      completionHead:string;files:string[]}>=[];
+    for(const candidate of candidates){
+      const initial=positions.get(String(candidate.base_head));
+      const final=positions.get(String(candidate.completion_head));
+      if(initial===undefined||final===undefined||initial>=final)continue;
+      if(this.taskRepositories(id,task).some(repo=>!!repo.prefix)||
+        this.taskRepositories(String(candidate.id),
+          this.requireTask(String(candidate.id))).some(repo=>!!repo.prefix))
+        fail('RECOVERY_VERIFIED_MULTI_REPO_UNSUPPORTED',
+          'Automatic Verified commit attribution requires a single Git repository; child repositories need their own frozen evidence');
+      const external=JSON.parse(candidate.allowed_paths) as string[];
+      if(taskScopesOverlap(own,external))
+        fail('RECOVERY_VERIFIED_SCOPE_OVERLAP',
+          'A separate Verified task has overlapping frozen scope; automatic recovery cannot attribute its commits to the original task',
+          {originalTaskId:id,verifiedTaskId:candidate.id});
+      const affected=slices.slice(initial,final).flatMap(item=>item.full);
+      if(!affected.length||affected.some(file=>
+        !external.some(pattern=>pathAllowed(file,pattern))))continue;
+      for(let index=initial;index<final;index++){
+        const earlier=ownership.get(index);
+        if(earlier&&earlier!==candidate.id)
+          fail('RECOVERY_VERIFIED_OVERLAP',
+            'Two Verified tasks claim the same intervening commit; inspect exact delivery provenance');
+        ownership.set(index,String(candidate.id));
+      }
+      verified.push({taskId:String(candidate.id),baseHead:String(candidate.base_head),
+        completionHead:String(candidate.completion_head),files:[...new Set(affected)].sort()});
+    }
+    const owned:string[]=[];
+    for(let i=0;i<slices.length;i++){
+      if(ownership.has(i))continue;
+      const changed=slices[i].full;
+      const out=changed.filter(file=>!own.some(pattern=>pathAllowed(file,pattern)));
+      if(out.length)fail('RECOVERY_SCOPE_CONFLICT',
+        'Unverified or unprovable out-of-scope Git commits exist after the claim',
+        {commit:commits[i],files:out,verifiedDeliveries:verified});
+      owned.push(...slices[i].added);
+    }
+    return {files:[...new Set(owned)].sort(),verified};
+  }
+
+  private recoveredVerifiedDeliveryFiles(id:string,base:string,head:string,
+    filter='ACMRTD'):string[]|null{
+    const recoveries=this.db.prepare(`SELECT details_json FROM dc_audit
+      WHERE task_id=? AND event='owner_task_lease_recovered'
+      ORDER BY id DESC`).all(id);
+    if(!recoveries.length)return null;
+    let details:Record<string,unknown>;
+    let found:Record<string,unknown>|null=null;
+    for(const row of recoveries){
+      try{details=JSON.parse(String(row.details_json)) as Record<string,unknown>;}
+      catch{fail('RECOVERY_AUDIT_INVALID','Cannot read the original recovery audit');}
+      if(details.originalBaseHead===base&&Array.isArray(details.verifiedDeliveries)&&
+        details.verifiedDeliveries.length){found=details;break;}
+    }
+    if(!found)return null;
+    details=found;
+    const reviewedHead=String(details.currentHead??'');
+    if(!run(this.root,'git',['merge-base','--is-ancestor',reviewedHead,head]).passed)
+      fail('RECOVERY_HISTORY_CHANGED','Git history no longer retains the reviewed recovery HEAD');
+    const reviewed=this.verifiedInterveningCommits(id,base,reviewedHead);
+    if(JSON.stringify(reviewed.verified)!==JSON.stringify(details.verifiedDeliveries))
+      fail('RECOVERY_ATTRIBUTION_CHANGED','Verified task delivery attribution changed since Owner review');
+    return this.verifiedInterveningCommits(id,base,head,filter).files;
+  }
+
   private completeFileTask(id:string,token:string,input:CompletionReport):Row{
     if(input.deliveryHeads!==undefined||input.existingDirtyFiles!==undefined||
         input.preserveExistingWorktree===true)
@@ -1120,6 +1231,23 @@ export class ProjectTaskLedger {
         reviewed_snapshot_json TEXT NOT NULL,
         reviewed_digest TEXT NOT NULL,
         reviewed_head TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      -- Shared append-only recovery checkpoints: a known approved source and
+      -- an Owner-quarantined unknown source are distinct provenance states.
+      -- Quarantined bytes are preserved, NEVER attributed to task delivery.
+      CREATE TABLE IF NOT EXISTS dc_recovery_worktree_checkpoints (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        source_kind TEXT NOT NULL CHECK(source_kind IN ('approved_task','owner_quarantine')),
+        source_task_id TEXT REFERENCES dc_tasks(id),
+        prior_digest TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        digest TEXT NOT NULL,
+        reviewed_head TEXT NOT NULL,
+        reviewed_paths_json TEXT NOT NULL,
         actor TEXT NOT NULL,
         reason TEXT NOT NULL,
         created_at TEXT NOT NULL
@@ -1635,7 +1763,11 @@ export class ProjectTaskLedger {
     if(!['in_progress','in_review'].includes(task.status))
       fail('TASK_NOT_ACTIVE','Only unfinished or review-ready tasks can be resumed');
     const currentWriter=this.checkoutWriter();
-    if(currentWriter&&currentWriter.task_id!==id)
+    const priorVerifiedWriter=!!currentWriter&&currentWriter.task_id!==id&&
+      this.requireTask(String(currentWriter.task_id)).status==='verified'&&
+      this.hasRootGit&&!this.linkedWorktree&&
+      !stagedChanges(discoverRepositories(this.root,[])).length;
+    if(currentWriter&&currentWriter.task_id!==id&&!priorVerifiedWriter)
       fail('RECOVERY_WRITER_CONFLICT',
         'Another task owns this Git index. Do not recover a second writer over its source; finish or safely yield that task first',
         {blockedTask:id,writerTaskId:currentWriter.task_id,
@@ -1692,13 +1824,25 @@ export class ProjectTaskLedger {
     this.protectedClaimWorktree(id,task,String(lease.base_head));
     const note=!writer&&task.status==='in_review'?this.latestCompletion(id):null;
     if(note)this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
-    const changed=committedFilesBetween(this.root,String(lease.base_head),
-      note?String(note.git_head):head);
     const allowed=JSON.parse(task.allowed_paths) as string[];
+    const originalChanged=committedFilesBetween(this.root,String(lease.base_head),
+      note?String(note.git_head):head);
+    const attribution=!note?
+      this.verifiedInterveningCommits(id,String(lease.base_head),head):null;
+    if(attribution?.verified.length&&
+      stagedChanges(discoverRepositories(this.root,allowed)).length)
+      fail('RECOVERY_STAGED_INDEX',
+        'Intervening Verified task attribution cannot claim a shared Git index with staged work');
+    const changed=attribution?.files??originalChanged;
     if(changed.some(file=>!allowed.some(pattern=>pathAllowed(file,pattern))))
       fail('RECOVERY_SCOPE_CONFLICT','Git commits since the original claim exceed the approved task scope');
     const newToken=randomUUID(),expiresAt=Date.now()+ttl*1000;
     return this.inTransaction(()=>{
+      if(git(this.root,['rev-parse','HEAD'])!==head||
+        (attribution?.verified.length&&
+          stagedChanges(discoverRepositories(this.root,allowed)).length))
+        fail('RECOVERY_RACE','Git HEAD or staging index changed after recovery provenance review');
+      this.protectedClaimWorktree(id,task,String(lease.base_head));
       // Defensive compare-and-swap to avoid an interleaving claim or renewal.
       const updated=this.db.prepare(`UPDATE ${writer?'dc_leases':'dc_task_leases'}
         SET agent=?,token=?,expires_at=?
@@ -1708,12 +1852,39 @@ export class ProjectTaskLedger {
       if(writer)this.db.prepare(`UPDATE dc_task_leases
         SET agent=?,token=?,expires_at=? WHERE task_id=?`)
         .run(actor,newToken,expiresAt,id);
+      if(priorVerifiedWriter){
+        const activeNow=this.checkoutWriter();
+        if(!activeNow||activeNow.token!==currentWriter!.token||
+          this.requireTask(String(activeNow.task_id)).status!=='verified'||
+          stagedChanges(discoverRepositories(this.root,[])).length)
+          fail('RECOVERY_RACE','Previously Verified writer or Git index changed during recovery');
+        this.db.prepare(`INSERT OR REPLACE INTO dc_leases
+          (singleton,task_id,agent,token,base_head,expires_at)
+          VALUES(1,?,?,?,?,?)`).run(id,actor,newToken,
+          String(lease.base_head),expiresAt);
+        const parked=this.db.prepare(`SELECT successor_task_id,parked_head
+          FROM dc_parked_writers WHERE task_id=? AND resumed_head IS NULL`).get(id);
+        if(parked&&parked.successor_task_id===currentWriter!.task_id&&
+          run(this.root,'git',['merge-base','--is-ancestor',
+            String(parked.parked_head),head]).passed)
+          this.db.prepare(`UPDATE dc_parked_writers SET resumed_head=?,resumed_at=?
+            WHERE task_id=? AND resumed_head IS NULL`).run(head,utc(),id);
+      }else if(!writer&&!this.linkedWorktree){
+        if(this.checkoutWriter())
+          fail('RECOVERY_RACE','Another task claimed the shared Git index during recovery');
+        this.db.prepare(`INSERT INTO dc_leases
+          (singleton,task_id,agent,token,base_head,expires_at)
+          VALUES(1,?,?,?,?,?)`).run(id,actor,newToken,
+          String(lease.base_head),expiresAt);
+      }
       this.audit(id,'owner_task_lease_recovered',actor,{
         previousAgent:lease.agent,originalBaseHead:lease.base_head,
         currentHead:head,reason,ttlSeconds:ttl,previousStatus:task.status,
-        committedFiles:changed});
+        committedFiles:changed,verifiedDeliveries:attribution?.verified??[],
+        previousVerifiedWriter:priorVerifiedWriter?currentWriter!.task_id:null});
       return {taskId:id,status:task.status,leaseToken:newToken,
         originalBaseHead:lease.base_head,currentHead:head,expiresAt,
+        verifiedIndependentDeliveries:attribution?.verified??[],
         nextActions:['complete','report','review-handoff'],
         warning:'Recovery restores processing rights only; no tests, review or Gate passed'};
     });
@@ -3176,6 +3347,75 @@ export class ProjectTaskLedger {
       'dc_protected_worktree_refreshes.next_snapshot_json');
   }
 
+  /** Validate the complete append-only chain, never trust a single mutable
+   * latest pointer. Legacy task-attributed reviews remain readable without
+   * rewriting or deleting their original evidence. */
+  private recoveryReviewedSnapshot(id:string):
+    ReturnType<typeof preservedWorktreeSnapshot>|null{
+    const checkpoints=this.db.prepare(`SELECT prior_digest,snapshot_json,digest
+      FROM dc_recovery_worktree_checkpoints WHERE task_id=? ORDER BY id ASC`).all(id);
+    if(!checkpoints.length){
+      const legacy=this.db.prepare(`SELECT reviewed_snapshot_json,reviewed_digest
+        FROM dc_recovery_worktree_reviews WHERE task_id=? ORDER BY id DESC LIMIT 1`).get(id);
+      if(!legacy)return null;
+      const value=String(legacy.reviewed_snapshot_json);
+      if(createHash('sha256').update(value).digest('hex')!==legacy.reviewed_digest)
+        fail('RECOVERY_REVIEW_CORRUPT','Prior approved worktree record was modified');
+      return parseProtectedWorktreeSnapshot(value,
+        'dc_recovery_worktree_reviews.reviewed_snapshot_json');
+    }
+    const originalRow=this.db.prepare(`SELECT snapshot_json FROM
+      dc_task_worktree_baselines WHERE task_id=?`).get(id);
+    const migration=this.db.prepare(`SELECT protected_worktree_json FROM
+      dc_legacy_active_migrations WHERE task_id=?`).get(id);
+    if(!originalRow&&!migration)
+      fail('RECOVERY_REVIEW_CORRUPT','Original protected claim snapshot is missing');
+    const baseline=this.effectiveOwnerSnapshot(id,'',parseProtectedWorktreeSnapshot(
+      migration?.protected_worktree_json??originalRow!.snapshot_json,
+      'dc_task_worktree_baselines.snapshot_json'));
+    const sha=(value:string)=>createHash('sha256').update(value).digest('hex');
+    // The first new checkpoint starts at the immutable claim snapshot or a
+    // previously audited legacy task-attributed review. Later legacy rows
+    // must never replace the predecessor of an existing checkpoint.
+    let prior=sha(JSON.stringify(baseline));
+    if(checkpoints[0].prior_digest!==prior){
+      const predecessor=this.db.prepare(`SELECT reviewed_snapshot_json FROM
+        dc_recovery_worktree_reviews WHERE task_id=? AND reviewed_digest=?
+        ORDER BY id DESC LIMIT 1`).get(id,checkpoints[0].prior_digest);
+      if(!predecessor||sha(String(predecessor.reviewed_snapshot_json))!==
+        checkpoints[0].prior_digest)
+        fail('RECOVERY_REVIEW_CORRUPT','First recovery checkpoint has no valid original predecessor');
+      prior=String(checkpoints[0].prior_digest);
+    }
+    let result:ReturnType<typeof preservedWorktreeSnapshot>|null=null;
+    for(const checkpoint of checkpoints){
+      const raw=String(checkpoint.snapshot_json);
+      const digest=sha(raw);
+      if(digest!==checkpoint.digest||
+        checkpoint.prior_digest!==prior)
+        fail('RECOVERY_REVIEW_CORRUPT','A protected recovery checkpoint or predecessor digest changed');
+      result=parseProtectedWorktreeSnapshot(raw,
+        'dc_recovery_worktree_checkpoints.snapshot_json');
+      prior=digest;
+    }
+    return result;
+  }
+
+  private appendRecoveryCheckpoint(id:string,input:{sourceKind:'approved_task'|'owner_quarantine';
+    sourceTaskId:string|null;previous:ReturnType<typeof preservedWorktreeSnapshot>;
+    current:ReturnType<typeof preservedWorktreeSnapshot>;head:string;
+    reviewedPaths:string[];actor:string;reason:string}):void{
+    const beforeJson=JSON.stringify(input.previous);
+    const afterJson=JSON.stringify(input.current);
+    const sha=(s:string)=>createHash('sha256').update(s).digest('hex');
+    this.db.prepare(`INSERT INTO dc_recovery_worktree_checkpoints
+      (task_id,source_kind,source_task_id,prior_digest,snapshot_json,digest,
+       reviewed_head,reviewed_paths_json,actor,reason,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(id,input.sourceKind,input.sourceTaskId,
+        sha(beforeJson),afterJson,sha(afterJson),input.head,
+        JSON.stringify(input.reviewedPaths),input.actor,input.reason,utc());
+  }
+
   /** Detailed, bounded conflict report. Paths come only from Git's checked
    * project-local snapshot and never expose file contents or secrets.
    */
@@ -3194,12 +3434,13 @@ export class ProjectTaskLedger {
           before.kind!==after.kind?'kind_changed':'content_changed',
           inFrozenScope:scope.some(pattern=>pathAllowed(file,pattern)),
           expected:before,observed:after,
-          safeAction:'Review this specific file against an approved other-task scope, or restore the prior protected bytes without deleting someone else\'s work'};
+          safeAction:'For a separate approved disjoint task, review exact sourceTaskId and paths. For a NEW out-of-scope unknown file, Owner may quarantine exact reviewedHead and reviewedHashes. Never overwrite previously protected bytes or include frozen-scope files'};
       });
     return {taskId:task.id,conflicts,
       originalProtectedFileCount:expected.length,
       currentProtectedFileCount:current.length,
       safeActions:['review-recovery-worktree for files attributable to a separate approved disjoint task',
+        'For only NEW out-of-scope files without approved provenance, Owner may use review-recovery-worktree with quarantineUnknown, reviewedHead, reviewedPaths, reviewedHashes and explicitAuthorization',
         'Keep unresolved files untouched and report the exact conflicts to the responsible Agent',
         'Never reset, stash or rebaseline the original frozen task scope']};
   }
@@ -3210,8 +3451,11 @@ export class ProjectTaskLedger {
    * infer attribution from an arbitrary Owner assertion alone.
    */
   reviewRecoveryWorktree(id:string,input:{actor:string;reason:string;
-    explicitAuthorization?:boolean;sourceTaskId:string;
-    reviewedPaths:string[]}):Row{
+    explicitAuthorization?:boolean;sourceTaskId?:string;
+    reviewedPaths:string[];quarantineUnknown?:boolean;
+    reviewedHead?:string;reviewedHashes?:Record<string,string>}):Row{
+    if(input?.quarantineUnknown===true)
+      return this.quarantineUnknownRecoveryWorktree(id,input);
     const actor=String(input?.actor??'').trim();
     const reason=String(input?.reason??'').trim();
     if(actor.length<2||reason.length<50||reason.length>2000||
@@ -3247,15 +3491,7 @@ export class ProjectTaskLedger {
       migration?.protected_worktree_json??originalRow!.snapshot_json,
       'dc_task_worktree_baselines.snapshot_json');
     const base=this.effectiveOwnerSnapshot(id,'',original);
-    const prior=this.db.prepare(`SELECT original_digest,reviewed_snapshot_json,
-      reviewed_digest FROM dc_recovery_worktree_reviews
-      WHERE task_id=? ORDER BY id DESC LIMIT 1`).get(id);
-    const previous=prior?
-      JSON.parse(String(prior.reviewed_snapshot_json)) as
-        ReturnType<typeof preservedWorktreeSnapshot>:base;
-    if(prior&&createHash('sha256').update(JSON.stringify(previous)).digest('hex')!==
-      prior.reviewed_digest)
-      fail('RECOVERY_REVIEW_CORRUPT','Previous authorized worktree record was modified');
+    const previous=this.recoveryReviewedSnapshot(id)??base;
     const expected=worktreeSnapshotWithLocalExemptions(this.root,previous,own);
     const current=preservedWorktreeSnapshot(this.root,own).filter(file=>
       !own.some(pattern=>pathAllowed(file.path,pattern)));
@@ -3282,13 +3518,18 @@ export class ProjectTaskLedger {
         fail('RECOVERY_RACE','Original task was recovered during external worktree review');
       if(JSON.stringify(preservedWorktreeSnapshot(this.root,own).filter(file=>
         !own.some(pattern=>pathAllowed(file.path,pattern))))!==afterJson||
-        git(this.root,['rev-parse','HEAD'])!==head)
+        git(this.root,['rev-parse','HEAD'])!==head||
+        JSON.stringify(this.recoveryReviewedSnapshot(id)??base)!==
+          JSON.stringify(previous))
         fail('RECOVERY_RACE','Git or unrelated worktree changed during evidence review');
       this.db.prepare(`INSERT INTO dc_recovery_worktree_reviews
         (task_id,source_task_id,original_digest,reviewed_snapshot_json,
         reviewed_digest,reviewed_head,actor,reason,created_at)
         VALUES(?,?,?,?,?,?,?,?,?)`).run(id,source.id,beforeDigest,
         afterJson,afterDigest,head,actor,reason,utc());
+      this.appendRecoveryCheckpoint(id,{sourceKind:'approved_task',
+        sourceTaskId:source.id,previous,current,head,reviewedPaths:reviewed,
+        actor,reason});
       this.audit(id,'recovery_external_wip_reviewed',actor,{
         sourceTaskId:source.id,sourceScope:external,originalDigest:beforeDigest,
         reviewedDigest:afterDigest,head,changes:details.conflicts,reason,
@@ -3296,6 +3537,108 @@ export class ProjectTaskLedger {
       });
       return {taskId:id,sourceTaskId:source.id,reviewedPaths:reviewed,
         reviewedDigest:afterDigest,filesModifiedByMcp:false,
+        testsPassed:false,gateApproved:false,nextAction:'recover-task'};
+    });
+  }
+
+  /** Explicit Owner quarantine when a NEW post-claim file has no approved
+   * source task. This protects its exact bytes while permitting the original
+   * task to resume. It does NOT approve the file as project work, create a
+   * task, or waive frozen delivery scope, Git history or acceptance Gates.
+   * Changed/deleted pre-existing Owner bytes and in-scope files fail closed.
+   */
+  private quarantineUnknownRecoveryWorktree(id:string,input:{actor:string;
+    reason:string;explicitAuthorization?:boolean;sourceTaskId?:string;
+    reviewedPaths:string[];reviewedHead?:string;
+    reviewedHashes?:Record<string,string>}):Row{
+    const actor=String(input.actor??'').trim();
+    const reason=String(input.reason??'').trim();
+    if(input.explicitAuthorization!==true||actor.length<2||
+      reason.length<80||reason.length>2000||
+      String(input.sourceTaskId??'').trim()||
+      !Array.isArray(input.reviewedPaths)||!input.reviewedPaths.length||
+      input.reviewedPaths.length>256||
+      !input.reviewedHashes||typeof input.reviewedHashes!=='object'||
+      Array.isArray(input.reviewedHashes))
+      fail('OWNER_QUARANTINE_REQUIRED',
+        'Owner must explicitly approve every unknown new file with a detailed reason, current reviewedHead, reviewedPaths and exact reviewedHashes');
+    if(!this.hasRootGit)
+      fail('OWNER_QUARANTINE_GIT_REQUIRED','Use a Git worktree for this controlled recovery');
+    const task=this.requireTask(id);
+    if(task.status!=='in_progress'||this.latestCompletion(id))
+      fail('OWNER_QUARANTINE_STATE','Only an unfinished task without submitted delivery may quarantine new unrelated files');
+    const lease=this.db.prepare('SELECT * FROM dc_task_leases WHERE task_id=?').get(id)??
+      this.db.prepare('SELECT * FROM dc_leases WHERE task_id=?').get(id);
+    if(!lease||lease.expires_at>Date.now())
+      fail('RECOVERY_LEASE_ACTIVE','Owner quarantine requires the original developer lease to expire');
+    const writer=this.checkoutWriter();
+    if(writer&&writer.task_id!==id)
+      fail('RECOVERY_WRITER_CONFLICT','Another task currently owns the Git index');
+    const scope=JSON.parse(task.allowed_paths) as string[];
+    if(discoverRepositories(this.root,scope).length!==1)
+      fail('OWNER_QUARANTINE_MULTI_REPO','Independent child repositories require separate frozen file checkpoints');
+    const originalRow=this.db.prepare(`SELECT snapshot_json FROM
+      dc_task_worktree_baselines WHERE task_id=?`).get(id);
+    const migration=this.db.prepare(`SELECT protected_worktree_json FROM
+      dc_legacy_active_migrations WHERE task_id=?`).get(id);
+    if(!originalRow&&!migration)
+      fail('RECOVERY_BASELINE_MISSING','No immutable original claim-time snapshot');
+    const original=parseProtectedWorktreeSnapshot(
+      migration?.protected_worktree_json??originalRow!.snapshot_json,
+      'dc_task_worktree_baselines.snapshot_json');
+    const base=this.effectiveOwnerSnapshot(id,'',original);
+    const previous=this.recoveryReviewedSnapshot(id)??base;
+    const expected=worktreeSnapshotWithLocalExemptions(this.root,previous,scope);
+    const current=preservedWorktreeSnapshot(this.root,scope).filter(file=>
+      !scope.some(pattern=>pathAllowed(file.path,pattern)));
+    const details=this.worktreeConflictDetails(task,expected,current);
+    const changes=details.conflicts as Array<{path:string;type:string;
+      inFrozenScope:boolean;observed?:{sha256:string;kind:string;size:number}|null}>;
+    const reviewed=[...new Set(input.reviewedPaths)];
+    const hashNames=Object.keys(input.reviewedHashes);
+    const head=git(this.root,['rev-parse','HEAD']);
+    if(head!==input.reviewedHead||reviewed.length!==input.reviewedPaths.length||
+      !changes.length||reviewed.length!==changes.length||
+      hashNames.length!==changes.length||
+      changes.some(item=>item.type!=='added'||item.inFrozenScope||
+        isManagedGuidancePath(item.path)||
+        !reviewed.includes(item.path)||
+        item.observed?.sha256!==input.reviewedHashes![item.path])||
+      reviewed.some(file=>!changes.some(item=>item.path===file))||
+      hashNames.some(file=>!reviewed.includes(file)))
+      fail('OWNER_QUARANTINE_CONFLICT',
+        'Only exact newly added out-of-scope files can be quarantined, with current HEAD and matching SHA-256 for every file; old Owner bytes cannot be silently replaced',details);
+    if(!this.checkGovernedArtifacts(reviewed,true).passed)
+      fail('OWNER_QUARANTINE_GOVERNED','Governed project documents require their normal Owner approval');
+    if(stagedChanges(discoverRepositories(this.root,scope)).length)
+      fail('RECOVERY_STAGED_INDEX','Cannot quarantine changes in the Git staging index');
+    const concurrentChanges=committedFilesBetween(this.root,String(lease.base_head),head);
+    if(reviewed.some(file=>concurrentChanges.includes(file)))
+      fail('OWNER_QUARANTINE_COMMITTED_FILE',
+        'A new unknown file cannot obscure intervening committed delivery');
+    const afterJson=JSON.stringify(current);
+    const digest=createHash('sha256').update(afterJson).digest('hex');
+    return this.inTransaction(()=>{
+      const renewed=this.db.prepare(`SELECT token,expires_at FROM dc_task_leases
+        WHERE task_id=?`).get(id);
+      if(!renewed||renewed.token!==lease.token||renewed.expires_at>Date.now()||
+        git(this.root,['rev-parse','HEAD'])!==head||
+        JSON.stringify(preservedWorktreeSnapshot(this.root,scope).filter(file=>
+          !scope.some(pattern=>pathAllowed(file.path,pattern))))!==afterJson||
+        JSON.stringify(this.recoveryReviewedSnapshot(id)??base)!==JSON.stringify(previous))
+        fail('RECOVERY_RACE','Lease, HEAD or file fingerprints changed during Owner authorization');
+      this.appendRecoveryCheckpoint(id,{sourceKind:'owner_quarantine',
+        sourceTaskId:null,previous,current,head,reviewedPaths:reviewed,
+        actor,reason});
+      this.audit(id,'owner_unknown_wip_quarantined',actor,{
+        reviewedHead:head,reviewedPaths:reviewed,
+        fingerprints:changes.map(x=>x.observed?{path:x.path,...x.observed}:null),
+        digest,reason,attribution:'unknown_not_approved',
+        originalClaimUnmodified:true,filesModifiedByMcp:false,
+        taskDeliveryApproved:false,testsPassed:false,gateApproved:false});
+      return {taskId:id,quarantinedPaths:reviewed,reviewedHead:head,
+        reviewedDigest:digest,sourceTaskId:null,
+        attribution:'unknown_not_approved',filesModifiedByMcp:false,
         testsPassed:false,gateApproved:false,nextAction:'recover-task'};
     });
   }
@@ -6013,9 +6356,7 @@ export class ProjectTaskLedger {
     const snapshot=this.effectiveOwnerSnapshot(id,'',original);
     const refreshed=!!this.db.prepare(`SELECT id FROM dc_protected_worktree_refreshes
       WHERE task_id=? AND prefix='' LIMIT 1`).get(id);
-    const reviewed=this.db.prepare(`SELECT reviewed_snapshot_json,reviewed_digest,
-      original_digest FROM dc_recovery_worktree_reviews
-      WHERE task_id=? ORDER BY id DESC LIMIT 1`).get(id);
+    const reviewed=this.recoveryReviewedSnapshot(id);
     if(!snapshot.length&&!refreshed&&!reviewed)return null; // original clean-claim compatibility
     const allowed=JSON.parse(task.allowed_paths) as string[];
     if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))))
@@ -6038,22 +6379,7 @@ export class ProjectTaskLedger {
       legacyGuidance.filter(file=>dirtyGuidance.has(file))));
     const comparable=worktreeSnapshotWithLocalExemptions(this.root,
       snapshot.filter(file=>!trustedLegacy.has(file.path)),allowed);
-    let reviewedExpected:ReturnType<typeof preservedWorktreeSnapshot>|null=null;
-    if(reviewed){
-      reviewedExpected=JSON.parse(String(reviewed.reviewed_snapshot_json));
-    }
-    if(reviewedExpected){
-      const originalDigest=createHash('sha256').update(JSON.stringify(comparable)).digest('hex');
-      const reviewedDigest=createHash('sha256').update(JSON.stringify(reviewedExpected)).digest('hex');
-      if(reviewedDigest!==reviewed!.reviewed_digest)
-        fail('RECOVERY_REVIEW_CORRUPT','An approved external Agent file fingerprint was altered');
-      // Earlier reviews can be incremental; their source SHA belongs in the
-      // immutable audit record, never as a reason to rewrite claim baseline.
-      if(!originalDigest||!reviewed!.original_digest)
-        fail('RECOVERY_REVIEW_CORRUPT','Original protected claim digest unavailable');
-    }
-    const expected=reviewedExpected??
-      comparable;
+    const expected=reviewed??comparable;
     if(JSON.stringify(current)!==JSON.stringify(expected))
       fail("WORKTREE_CHANGED",
         "An unrelated pre-existing file changed or an unapproved new file appeared after claim; see details for exact protected file differences",
@@ -6150,6 +6476,8 @@ export class ProjectTaskLedger {
       if(input.preserveExistingWorktree===true&&input.existingDirtyFiles!==undefined)
         fail("DIRTY_MODE_CONFLICT","Choose either legacy protected tracked edits or audited worktree snapshot");
       const protectedAtClaim=this.protectedClaimWorktree(id,task,lease.base_head);
+      const recoveredVerified=!multiRepo?
+        this.recoveredVerifiedDeliveryFiles(id,String(lease.base_head),head):null;
       const autoCandidate=protectedAtClaim??(
         input.preserveExistingWorktree===true?preservedWorktreeSnapshot(this.root,
           JSON.parse(task.allowed_paths)):
@@ -6166,7 +6494,7 @@ export class ProjectTaskLedger {
       if(protectedSnapshot){
         const resumedBase=this.resumedDeliveryBase(id,String(lease.base_head),head);
         const rawChanges=multiRepo?committedChanges(this.root,repositories):
-          this.parkedDeliveryFiles(id,String(lease.base_head),head)??
+          recoveredVerified??this.parkedDeliveryFiles(id,String(lease.base_head),head)??
           committedFilesBetween(this.root,resumedBase??lease.base_head,head);
         const changed=this.deliveryTaskFiles(rawChanges,
           multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:resumedBase??lease.base_head,head);
@@ -6176,6 +6504,15 @@ export class ProjectTaskLedger {
         if(JSON.stringify(preservedWorktree)!==
             JSON.stringify(preservedWorktreeSnapshot(this.root,allowed)))
           fail("WORKTREE_CHANGED","Pre-existing uncommitted source changed during completion");
+      }
+      if(recoveredVerified&&!protectedSnapshot){
+        const permitted=JSON.parse(task.allowed_paths) as string[];
+        const trusted=this.deliveryTaskFiles(recoveredVerified,
+          String(lease.base_head),head);
+        if(!trusted.length||trusted.some(file=>
+          !permitted.some(pattern=>pathAllowed(file,pattern))))
+          fail('DELIVERY_SCOPE_INVALID',
+            'Recovered task must commit its own in-scope work, excluding Verified foreign deliveries');
       }
       if(!this.checkGovernedArtifacts().passed)
         fail("GOVERNED_ARTIFACT_CHANGED","Frozen architecture artifacts cannot be exempted");
@@ -8179,9 +8516,11 @@ export class ProjectTaskLedger {
     const incrementalBase=!frozenReview&&deferred&&
       note.revision>deferred.completion_revision?
       this.resumedDeliveryBase(id,String(lease.base_head),startHead):null;
+    const recoveredFiles=!multiRepo&&!frozenReview?
+      this.recoveredVerifiedDeliveryFiles(id,String(lease.base_head),String(note.git_head)):null;
     const parkedFiles=!multiRepo&&!frozenReview?
       this.parkedDeliveryFiles(id,String(lease.base_head),String(note.git_head)):null;
-    const rawFiles = parkedFiles??(multiRepo?committedChanges(this.root,repositories):frozenReview ?
+    const rawFiles = recoveredFiles??parkedFiles??(multiRepo?committedChanges(this.root,repositories):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head) :
       note.git_head!==startHead ?
         committedFilesBetween(this.root,incrementalBase??lease.base_head,String(note.git_head)):
@@ -8219,9 +8558,11 @@ export class ProjectTaskLedger {
       (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
     const denied = files.filter((f) =>
       !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
+    const recoveredAdded=!multiRepo&&!frozenReview?
+      this.recoveredVerifiedDeliveryFiles(id,String(lease.base_head),String(note.git_head),'A'):null;
     const parkedAdded=!multiRepo&&!frozenReview?
       this.parkedDeliveryFiles(id,String(lease.base_head),String(note.git_head),'A'):null;
-    const added=parkedAdded??(multiRepo?committedChanges(this.root,repositories,'A'):frozenReview ?
+    const added=recoveredAdded??parkedAdded??(multiRepo?committedChanges(this.root,repositories,'A'):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head,"A") :
       note.git_head!==startHead ?
         committedFilesBetween(this.root,incrementalBase??lease.base_head,String(note.git_head),"A"):

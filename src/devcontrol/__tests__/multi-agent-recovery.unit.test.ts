@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
 import {ProjectTaskLedger,DevControlError} from '../task-ledger.js';
 
 let root:string;
@@ -49,6 +50,197 @@ describe('GP shared-checkout expired task recovery and audited writer handoff',(
     db.prepare(`INSERT OR REPLACE INTO dc_meta(key,value)
       VALUES('bootstrap',?)`).run(JSON.stringify({importedTasks:2}));
     db.close();
+  });
+
+  it('keeps Owner quarantine and later approved-task provenance in one checked append-only chain',()=>{
+    create('GP-T1',['src/t1/**']);
+    create('GP-T2',['src/t2/**']);
+    ledger.claim('GP-T1','agent-a',60);
+    write('misc/unassigned.txt','unknown isolated file\n');
+    const now=Date.now();
+    vi.spyOn(Date,'now').mockReturnValue(now+61_000);
+    const sha=createHash('sha256').update(fs.readFileSync(
+      path.join(root,'misc/unassigned.txt'))).digest('hex');
+    ledger.reviewRecoveryWorktree('GP-T1',{
+      ...approval,sourceTaskId:'',quarantineUnknown:true,
+      reviewedHead:git('rev-parse','HEAD'),reviewedPaths:['misc/unassigned.txt'],
+      reviewedHashes:{'misc/unassigned.txt':sha},
+      reason:'Owner explicitly quarantines an unknown newly introduced file, without assigning it to the original task or claiming any test or Gate status.',
+    });
+    write('src/t2/approved-wip.ts','other separately approved Agent WIP\n');
+    ledger.reviewRecoveryWorktree('GP-T1',{
+      ...approval,sourceTaskId:'GP-T2',reviewedPaths:['src/t2/approved-wip.ts'],
+    });
+    expect(recover('GP-T1')).toMatchObject({status:'in_progress'});
+    const db=new (createRequire(import.meta.url)('node:sqlite').DatabaseSync)(
+      ledger.databasePath);
+    db.prepare(`UPDATE dc_recovery_worktree_checkpoints
+      SET prior_digest=? WHERE task_id=? AND source_kind='owner_quarantine'`)
+      .run('f'.repeat(64),'GP-T1');
+    db.close();
+    vi.spyOn(Date,'now').mockReturnValue(now+61_000+3_601_000);
+    // Internal state reads must reject a tampered predecessor, even when
+    // original code and all protected file bytes are unchanged.
+    expect(()=>recover('GP-T1'))
+      .toThrow(/First recovery checkpoint has no valid original predecessor|recovery checkpoint or predecessor digest changed/);
+  });
+
+  it('quarantines only exact new unknown Agent files after explicit Owner authorization, then recovers without attribution',()=>{
+    create('GP-T1',['src/t1/**']);
+    write('owner-existing.txt','immutable Owner WIP at claim');
+    const original=ledger.claim('GP-T1','agent-a',60);
+    write('src/t1/task.ts','original task unfinished implementation\n');
+    write('agents/unassigned.txt','unknown Agent work that Owner must preserve\n');
+    const now=Date.now();
+    vi.spyOn(Date,'now').mockReturnValue(now+61_000);
+    let errorDetails:any;
+    try{recover('GP-T1');}
+    catch(error){
+      expect((error as DevControlError).code).toBe('WORKTREE_CHANGED');
+      errorDetails=(error as DevControlError).details;
+    }
+    const conflict=errorDetails?.conflicts?.[0];
+    expect(conflict).toMatchObject({path:'agents/unassigned.txt',type:'added',
+      observed:{kind:'untracked',sha256:expect.any(String)}});
+    const reviewedHead=git('rev-parse','HEAD');
+    const request={...approval,sourceTaskId:'',quarantineUnknown:true,
+      reviewedHead,reviewedPaths:['agents/unassigned.txt'],
+      reviewedHashes:{'agents/unassigned.txt':conflict.observed.sha256},
+      reason:'Owner reviewed an unattributed file introduced after the original task claim. It is not an approved delivery, must retain the exact bytes, and the developer may only work within the old frozen task scope.'};
+    expect(()=>ledger.reviewRecoveryWorktree('GP-T1',{
+      ...request,reviewedHashes:{'agents/unassigned.txt':'0'.repeat(64)},
+    })).toThrow(/Only exact newly added/);
+    expect(()=>ledger.reviewRecoveryWorktree('GP-T1',{
+      ...request,explicitAuthorization:false,
+    })).toThrow(/Owner must explicitly approve/);
+    expect(ledger.reviewRecoveryWorktree('GP-T1',request)).toMatchObject({
+      taskId:'GP-T1',sourceTaskId:null,attribution:'unknown_not_approved',
+      quarantinedPaths:['agents/unassigned.txt'],filesModifiedByMcp:false,
+      testsPassed:false,gateApproved:false,
+    });
+    const renewed=recover('GP-T1');
+    expect(renewed).toMatchObject({status:'in_progress',originalBaseHead:original.baseHead});
+    expect(fs.readFileSync(path.join(root,'agents/unassigned.txt'),'utf8'))
+      .toBe('unknown Agent work that Owner must preserve\n');
+    expect(ledger.trace('GP-T1').audit.map((row:{event:string})=>row.event))
+      .toContain('owner_unknown_wip_quarantined');
+    git('add','src/t1/task.ts');
+    git('commit','-qm','only the original T1 code, never unknown Agent bytes');
+    const evidence='T1 independent fixture test results bound to its original code delivery';
+    ledger.report('GP-T1',renewed.leaseToken,{kind:'docs',reference:evidence},true);
+    ledger.complete('GP-T1',renewed.leaseToken,{
+      summary:'Original task delivered while Owner retained unknown Agent files',
+      implementation:'Only original frozen T1 implementation was committed',
+      verification:'Examined the original task source and separate fixture acceptance requirements',
+    });
+    const outcome=ledger.verify('GP-T1',renewed.leaseToken,{
+      evidenceReference:evidence,
+      findings:'The original T1 test fixture was reviewed using its own exact committed source and evidence; the quarantined unknown Agent file remained untouched and did not count as delivery.',
+      gates:[{gate:'docs',evidenceReference:evidence,
+        findings:'Checked T1 source and separate fixture evidence, without claiming a quarantined Agent file.'}],
+    });
+    expect(outcome).toMatchObject({passed:true});
+    expect(outcome.files).not.toContain('agents/unassigned.txt');
+    expect(fs.readFileSync(path.join(root,'agents/unassigned.txt'),'utf8'))
+      .toBe('unknown Agent work that Owner must preserve\n');
+  });
+
+  it('rejects unknown-file quarantine for mutated protected bytes, frozen scope and later drift',()=>{
+    create('GP-T1',['src/t1/**']);
+    write('owner-original.txt','preclaim Owner byte-for-byte baseline');
+    ledger.claim('GP-T1','agent-a',60);
+    write('owner-original.txt','changed prior Owner data');
+    write('src/t1/foreign.ts','unknown new file inside original frozen scope');
+    const now=Date.now();
+    vi.spyOn(Date,'now').mockReturnValue(now+61_000);
+    const base={...approval,sourceTaskId:'',quarantineUnknown:true,
+      reviewedHead:git('rev-parse','HEAD'),reviewedPaths:['owner-original.txt'],
+      reviewedHashes:{'owner-original.txt':'0'.repeat(64)},
+      reason:'Owner is reviewing every changed file to protect original WIP, but cannot waive the original immutable scope or overwrite preexisting bytes.'};
+    expect(()=>ledger.reviewRecoveryWorktree('GP-T1',base))
+      .toThrow(/Only exact newly added/);
+    write('owner-original.txt','preclaim Owner byte-for-byte baseline');
+    fs.rmSync(path.join(root,'src/t1/foreign.ts'));
+    write('unknown.txt','unknown at first review\n');
+    const content=fs.readFileSync(path.join(root,'unknown.txt'));
+    const sha=createHash('sha256').update(content).digest('hex');
+    ledger.reviewRecoveryWorktree('GP-T1',{
+      ...base,reviewedPaths:['unknown.txt'],reviewedHashes:{'unknown.txt':sha},
+    });
+    write('unknown.txt','changed after exact Owner fingerprint\n');
+    expect(()=>recover('GP-T1')).toThrow(/unrelated pre-existing file changed/);
+  });
+
+  it('resumes an expired original writer after a genuinely Verified disjoint delivery and never claims the foreign commit',()=>{
+    create('GP-T1',['src/t1/**']);
+    create('GP-T2',['src/t2/**']);
+    const first=ledger.claim('GP-T1','agent-a',60);
+    write('src/t1/draft.ts','original task remains unfinished\n');
+    const now=Date.now();
+    vi.spyOn(Date,'now').mockReturnValue(now+61_000);
+    ledger.parkExpiredWriter('GP-T1',{
+      ...approval,nextTaskId:'GP-T2',
+    });
+    const other=ledger.claim('GP-T2','agent-b',1800);
+    write('src/t2/feature.ts','T2 independent verified source\n');
+    git('add','src/t2/feature.ts');
+    git('commit','-qm','T2 own approved implementation commit');
+    write('src/t2/negative.ts','T2 separately committed regression test\n');
+    git('add','src/t2/negative.ts');
+    git('commit','-qm','T2 own approved second test commit');
+    const verifiedHead=git('rev-parse','HEAD');
+    const proof='GP-T2 fixture test source and separate actual test inspection';
+    ledger.report('GP-T2',other.leaseToken,{kind:'docs',reference:proof},true);
+    ledger.complete('GP-T2',other.leaseToken,{
+      summary:'T2 independently delivered its exact frozen source',
+      implementation:'Only src/t2/feature.ts was committed as the T2 result',
+      verification:'Confirmed separate T2 checked source and relevant test requirements',
+    });
+    expect(ledger.verify('GP-T2',other.leaseToken,{
+      evidenceReference:proof,
+      findings:'Independent T2 fixture was inspected against the approved frozen scope, checked source and reported test evidence, without using the original T1 task code.',
+      gates:[{gate:'docs',evidenceReference:proof,
+        findings:'Reviewed original T2 fixture source, proof and resulting Git commit independently.'}],
+    })).toMatchObject({passed:true});
+    const returned=recover('GP-T1');
+    expect(returned).toMatchObject({status:'in_progress',
+      originalBaseHead:first.baseHead,
+      verifiedIndependentDeliveries:[{taskId:'GP-T2',baseHead:first.baseHead,
+        completionHead:verifiedHead,files:['src/t2/feature.ts','src/t2/negative.ts']}],
+    });
+    git('add','src/t1/draft.ts');
+    expect(ledger.checkStaged()).toMatchObject({passed:true,taskId:'GP-T1'});
+    git('commit','-qm','T1 original approved delivery after verified T2');
+    const proof1='T1 own separate fixture test evidence tied to final T1 commit';
+    ledger.report('GP-T1',returned.leaseToken,{kind:'docs',reference:proof1},true);
+    ledger.complete('GP-T1',returned.leaseToken,{
+      summary:'T1 resumed work and delivered only its original frozen scope',
+      implementation:'Committed T1 original code without claiming the Verified T2 source',
+      verification:'Checked the isolated original T1 requirements and evidence',
+    });
+    const outcome=ledger.verify('GP-T1',returned.leaseToken,{
+      evidenceReference:proof1,
+      findings:'The original task code and its own test evidence were inspected independently of the Verified T2 commit, which was retained unchanged and excluded from this acceptance.',
+      gates:[{gate:'docs',evidenceReference:proof1,
+        findings:'Checked the original T1 fixture and its own Git commit, not the separate verified T2 result.'}],
+    });
+    expect(outcome).toMatchObject({passed:true});
+    expect(outcome.files).toContain('src/t1/draft.ts');
+    expect(outcome.files).not.toContain('src/t2/feature.ts');
+    expect(outcome.files).not.toContain('src/t2/negative.ts');
+  });
+
+  it('does not treat an unverified foreign Git commit as an independent approved delivery',()=>{
+    create('GP-T1',['src/t1/**']);
+    ledger.claim('GP-T1','agent-a',60);
+    write('src/t2/not-approved.ts','another Agent committed outside the frozen scope\n');
+    git('add','src/t2/not-approved.ts');
+    git('commit','-qm','unverified independent-looking commit');
+    const now=Date.now();
+    vi.spyOn(Date,'now').mockReturnValue(now+61_000);
+    expect(()=>recover('GP-T1')).toThrow(/Unverified or unprovable out-of-scope/);
+    expect(fs.readFileSync(path.join(root,'src/t2/not-approved.ts'),'utf8'))
+      .toBe('another Agent committed outside the frozen scope\n');
   });
   afterEach(()=>{
     vi.restoreAllMocks();

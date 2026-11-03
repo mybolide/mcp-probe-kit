@@ -194,11 +194,22 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    explicitly approved Agent WIP. A different Agent's bytes are NOT
    automatically safe. WORKTREE_CHANGED reports exact conflicting paths,
    kind and SHA-256 of expected/current state and whether in frozen scope.
-   review-recovery-worktree requires explicit Owner approval, the exact
-   reviewedPaths and a different approved sourceTaskId with DISJOINT frozen
-   scope; it records an append-only provenance snapshot and does not modify
-   Git, source or the original claim baseline. Unknown or overlapping files
-   remain blocked. If an unrelated Ready task must use the same index,
+   review-recovery-worktree requires explicit Owner approval and exact
+   reviewedPaths. When an approved disjoint source is known, provide its
+   sourceTaskId. If a NEW out-of-scope file has unknown provenance, the Owner
+   may instead submit quarantineUnknown:true, current reviewedHead, exact
+   reviewedHashes by file path, a detailed reason and explicitAuthorization;
+   omit sourceTaskId. Unknown files remain unapproved and cannot become the
+   original task delivery. Existing protected Owner bytes, staged changes,
+   overlapping scope and later drift still block recovery. All recovery
+   checkpoints are append-only, never a Git reset or a passing Gate.
+   After independently approved and Verified tasks commit on the same branch,
+   recover-task checks each original claim-to-delivery Git commit against
+   the actual separate task's frozen base, completed HEAD and disjoint scope.
+   Only demonstrably Verified segments are excluded from the original task's
+   file attribution; verifiedIndependentDeliveries reports their exact IDs
+   and heads. Unverified, mixed, missing or overlapping proof fails closed.
+   If an unrelated Ready task must use the same index,
    park-expired-writer requires an expired in_progress writer, explicit
    approval, nextTaskId with Verified dependencies and disjoint scope,
    no staged files, and byte-exact preserved local WIP. The successor must
@@ -409,6 +420,8 @@ export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): st
 
 **旧日志遗失后的真实重跑登记**：已经处于 in_review 且原测试输出丢失的多仓任务，不要反复调用 report、recover-task 或不支持多仓的 defer-verification。先从 task-closure-status 取得原 evidenceId 和完整 frozenDeliveryHeads；在每个独立 Git 仓库的原始冻结提交上准备干净、隔离的 worktree，Agent 真正运行项目测试并保存新日志和 SHA-256。然后调用 record-rerun-evidence，填写 supersedesEvidenceId、完整 deliveryHeads、每个冻结仓库的 testedCheckouts、实际执行目录 commandCwd、真实 command/exitCode、artifactPath/artifactSha256、原 leaseToken、actor、reason 和详细 findings。此动作仅追加测试运行事实和来源关联，不占用独占代码写入租约，不改旧证据、不修改代码、不自动通过 Gate。测试失败也要如实记录，不能作为通过证据；成功后使用新返回的 evidenceReference 对每个原始 Gate 做正式 verify。后续提交即使没有改动测试文件，也不能把当前 HEAD 冒充原冻结代码。
 
+**r33 未知文件与 Verified 提交恢复**：当原任务领取后出现不能归属其他获批任务的新文件，先读取 recover-task 的 WORKTREE_CHANGED 中各 path 和 observed.sha256。对单 Git、租约已过期、尚未完成的原任务，Owner 可在 review-recovery-worktree 提交 quarantineUnknown:true，省略 sourceTaskId，并提供 reviewedHead、完整 reviewedPaths、逐文件 SHA-256 的 reviewedHashes、actor、详细 reason 和 explicitAuthorization:true。只隔离领取后新增、冻结范围外且未暂存的普通文件。原 Owner 受保护文件被改动、范围内文件、受控文档或隔离后哈希变化继续拒绝。隔离不把未知文件变成批准的业务代码，也不替代 Gate。其他独立任务已 Verified 的真实 Git 提交，recover-task 会逐提交核实冻结领取基线、交付 HEAD 和不重叠的范围，通过 verifiedIndependentDeliveries 返回合法排除的任务。complete 与 verify 重新确认这些提交的真实归属；未经 Verified、混合及范围重叠的提交继续阻断，原 Git 基线不变。
+
 ${skillRef}
 
 ${managedRevision}
@@ -487,6 +500,22 @@ ${managedRevision}
   submitted Git commit or immutable file delivery snapshot. Follow the
   closure checklist to report later real evidence and complete reviews;
   do not rerun business tests from DevControl or reset other Agent work.
+- For an expired in_progress task with newly added UNKNOWN out-of-scope Agent
+  files, recover-task first reports exact WORKTREE_CHANGED fingerprints.
+  The Owner may use review-recovery-worktree with quarantineUnknown:true,
+  current reviewedHead, complete reviewedPaths, matching reviewedHashes,
+  actor, substantive reason and explicitAuthorization:true. Omit sourceTaskId.
+  Only new ordinary unstaged files outside the frozen scope qualify, never
+  modified preclaim Owner bytes, governed documents or in-scope files.
+  Quarantined files remain unapproved and cannot count as the original task's
+  source, test results or Gate. No file is removed or reset.
+- For later independently Verified tasks, recover-task recognizes only Git
+  commits demonstrably owned by each other task's original frozen claim
+  base, actual submitted HEAD and disjoint scope. It returns exact
+  verifiedIndependentDeliveries. The resumed task's complete and verify
+  revalidate the attribution and exclude foreign files. Unverified or mixed
+  commits and overlapping task scopes remain blocked; recovery cannot pass
+  a test or modify either task's original frozen baseline.
 - When later Git commits changed files inside a deferred task's frozen
   allowed scope, resume-verification must review ALL affected frozen paths,
   not only the original delivery files. Supply the current reviewedHead,

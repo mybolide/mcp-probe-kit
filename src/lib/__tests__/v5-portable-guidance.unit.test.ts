@@ -114,6 +114,9 @@ describe('portable generated v5 project guidance',()=>{
       expect(generated).toContain('reviewedHead');
       expect(generated).toMatch(/original (frozen )?patch|原冻结补丁/);
       expect(generated).toMatch(/frozen (scope|allowed paths)|冻结范围|冻结允许范围/);
+      expect(generated).toContain('quarantineUnknown');
+      expect(generated).toContain('reviewedHashes');
+      expect(generated).toContain('verifiedIndependentDeliveries');
     }
   });
 
@@ -136,6 +139,35 @@ describe('portable generated v5 project guidance',()=>{
     const agents=fs.readFileSync(agentsPath,'utf8');
     expect(agents).toContain(SKILL_GUIDANCE_REVISION);
     expect(agents).toContain('Preserve original test receipts.');
+    const repeat=ensureMcpProbeKitBootstrap(root);
+    expect(repeat.skill.updated).toBe(false);
+    expect(repeat.agentsMd.updated).toBe(false);
+  });
+
+  it('upgrades r32 Skill and AGENTS to r33 even when MCP still reports package 5.0.0',()=>{
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),'portable-recovery-r32-r33-'));
+    roots.push(root);
+    execFileSync('git',['init','-q',root],{timeout:3000,windowsHide:true});
+    fs.writeFileSync(path.join(root,'AGENTS.md'),
+      '# User source rules\nDo not delete other Agent files or skip real Gates.\n');
+    ensureMcpProbeKitBootstrap(root);
+    const skill=path.join(root,MCP_PROBE_SKILL_REL_PATH);
+    const agents=path.join(root,'AGENTS.md');
+    const previous='v5-sqlite-devcontrol-20261103-deferred-scope-r32';
+    for(const file of [skill,agents])
+      fs.writeFileSync(file,fs.readFileSync(file,'utf8').replaceAll(SKILL_GUIDANCE_REVISION,previous));
+    const result=ensureMcpProbeKitBootstrap(root);
+    expect(result.skill.updated).toBe(true);
+    expect(result.agentsMd.updated).toBe(true);
+    for(const file of [skill,agents]){
+      const text=fs.readFileSync(file,'utf8');
+      expect(text).toContain(SKILL_GUIDANCE_REVISION);
+      expect(text).toContain('quarantineUnknown');
+      expect(text).toContain('reviewedHashes');
+      expect(text).toContain('verifiedIndependentDeliveries');
+    }
+    expect(fs.readFileSync(agents,'utf8'))
+      .toContain('Do not delete other Agent files or skip real Gates.');
     const repeat=ensureMcpProbeKitBootstrap(root);
     expect(repeat.skill.updated).toBe(false);
     expect(repeat.agentsMd.updated).toBe(false);

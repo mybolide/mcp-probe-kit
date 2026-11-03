@@ -69,6 +69,10 @@ for(const [name,source] of guidance){
     !(source.includes('frozen scope')||source.includes('frozen allowed paths')||source.includes('冻结范围')||source.includes('冻结允许范围'))||
     !(source.includes('original patch')||source.includes('original frozen patch')||source.includes('原冻结补丁')))
     errors.push(name+' omits full-scope HEAD-bound deferred verification guidance');
+  if(!source.includes('quarantineUnknown')||
+    !source.includes('reviewedHashes')||
+    !source.includes('verifiedIndependentDeliveries'))
+    errors.push(name+' omits Owner unknown-file preservation or independently Verified commit recovery');
   if(/have a DIFFERENT reviewer perform review-submit|不同的独立 Reviewer.{0,18}review-submit|distinct Reviewer supplies/.test(source))
     errors.push(name+' still mandates an external Reviewer for every delivery');
 }

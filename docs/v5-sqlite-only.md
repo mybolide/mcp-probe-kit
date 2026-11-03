@@ -376,8 +376,43 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 
 该动作只增加 `dc_recovery_worktree_reviews` 与 `dc_audit`，保存旧快照
 来源和新的文件指纹，不删除、不暂存、不提交文件，也不覆盖原领取快照。
-被改坏的原 Owner 文件、无法证明来源的文件、暂存中的文件及范围重叠
-仍继续拒绝。审核成功后可以再次调用 `recover-task`。
+被改坏的原 Owner 文件、暂存中的文件及范围重叠仍继续拒绝。
+来源未知但在领取后**新出现**的范围外普通文件，Owner 可选择明确的隔离保留模式：
+
+```json
+{
+  "action": "review-recovery-worktree",
+  "project_root": "/PROJECT/ROOT",
+  "input": {
+    "id": "EXPIRED-TASK-A",
+    "quarantineUnknown": true,
+    "reviewedHead": "CURRENT_EXACT_GIT_SHA",
+    "reviewedPaths": ["other-agent/unassigned-file.ts"],
+    "reviewedHashes": {
+      "other-agent/unassigned-file.ts": "ACTUAL_SHA256_FROM_WORKTREE_CHANGED"
+    },
+    "actor": "responsible-owner-agent",
+    "reason": "Owner has reviewed the unknown new file and permits exact-byte quarantine only. It is not approved project delivery and must remain unchanged while the original frozen task resumes.",
+    "explicitAuthorization": true
+  }
+}
+```
+
+此模式省略 `sourceTaskId`，并且必须使用真实 Git SHA 和文件 SHA-256，
+不能照抄示例占位符。仅限单 Git、`in_progress`、原开发租约已过期且
+尚未提交交付的任务。新的指纹通过 `dc_recovery_worktree_checkpoints`
+和 `dc_audit` 追加审计，不改原领取快照，也不标记文件来源获批。
+原有受保护 Owner 文件发生变动、文件位于冻结范围内、治理文件、
+软链、暂存变化或复核后的文件内容漂移都继续阻止恢复。
+审核成功后再次调用 `recover-task`，原任务仍须提交自身代码和真实 Gate。
+
+对于领取后由其他独立任务产生的正式 Verified Git 提交，
+`recover-task` 核实每个合法任务的**冻结领取基线、实际交付 HEAD、
+第一父提交差异与完全不重叠的批准范围**。只有全部证据一致时，
+才以 `verifiedIndependentDeliveries` 列出并从原任务交付中排除。
+`complete`、`verify` 会重复核实，不会把其他任务的文件算作原任务代码。
+无法证明属于某个 Verified 任务的提交仍视为越界；重叠的提交、
+混合范围、Git 历史改写和真实 Gate 缺失不会自动放行。
 
 另一种阻断是旧任务仍在 `in_progress`，租约已过期，整个单 Git 暂存区
 还保存它自己的真实未提交代码。若下一项 Ready 任务已经正式批准、

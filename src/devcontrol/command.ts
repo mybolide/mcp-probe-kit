@@ -234,6 +234,9 @@ export function dispatchDevControl(
         explicitAuthorization:input.explicitAuthorization===true,
         sourceTaskId:String(input.sourceTaskId??''),
         reviewedPaths:input.reviewedPaths as string[],
+        quarantineUnknown:input.quarantineUnknown===true,
+        reviewedHead:String(input.reviewedHead??''),
+        reviewedHashes:input.reviewedHashes as Record<string,string>,
       });
     case "park-expired-writer": return ledger.parkExpiredWriter(
       String(input.id??''),{
