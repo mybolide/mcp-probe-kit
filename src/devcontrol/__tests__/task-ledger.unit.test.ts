@@ -173,14 +173,15 @@ function create(options: Partial<{
 function deferredAudioFixture(mode:'delivered'|'allowed'|'mixed'|'outside'){
   const delivered='apps/client/lib/features/audio/foreground_capture_test.dart';
   const laterAllowed='apps/client/lib/features/audio/foreground_audio_session.dart';
-  save(delivered,'original baseline audio off-state test\n');
+  const stableTail=Array.from({length:12},(_,i)=>'unchanged audio context '+i+'\n').join('');
+  save(delivered,'original baseline audio off-state test\n'+stableTail);
   commit('initial audio source before F4-20');
   create({id:'NEYNA-200',title:'Frozen native audio acceptance',
     allowedPaths:['apps/client/lib/features/audio/**'],
     requiredGates:['ios_device_e2e']});
   ledger!.approve('NEYNA-200','owner');
   const first=ledger!.claim('NEYNA-200','responsible-agent');
-  save(delivered,'F4-20 frozen implementation and off-state test\n');
+  save(delivered,'F4-20 frozen implementation and off-state test\n'+stableTail);
   commit('F4-20 frozen delivered test only');
   const originalHead=git('rev-parse','HEAD');
   const originalReference='Original source-specific Flutter fixture unit tests recorded';
@@ -312,6 +313,30 @@ function acceptFrozenAudioWithReview(token:string,fixture:ReturnType<typeof defe
     expect(ledger!.trace('NEYNA-200').evidence.every((e:any)=>
       e.kind!=='ios_device_e2e')).toBe(true);
     expect(ledger!.get('NEYNA-200').status).toBe('in_review');
+  },40_000);
+
+  it('requires HEAD-bound review even when the original frozen patch still applies',()=>{
+    const fixture=deferredAudioFixture('outside');
+    const original=fs.readFileSync(path.join(root,fixture.delivered),'utf8');
+    save(fixture.delivered,original+'Later task appended a separate regression.\\n');
+    commit('later audio update preserves the original frozen patch');
+    fixture.currentHead=git('rev-parse','HEAD');
+    fixture.affectedPaths.push(fixture.delivered);
+    const base=git('rev-parse',fixture.originalHead+'^');
+    const frozenPatch=execFileSync('git',['diff','--binary',base,fixture.originalHead],{
+      cwd:root,
+    });
+    expect(()=>execFileSync('git',['apply','--cached','--reverse','--check'],{
+      cwd:root,input:frozenPatch,
+    })).not.toThrow();
+    expect(()=>ledger!.resumeVerification('NEYNA-200','responsible-agent'))
+      .toThrow(/Overlapping committed code requires/);
+    const resumed=reconcileFrozenAudio(fixture);
+    save('independent/after-audit.txt','Another approved change advanced Git HEAD\\n');
+    commit('new HEAD invalidates previous review even if patch is intact');
+    expect(()=>ledger!.report('NEYNA-200',resumed.leaseToken,{
+      kind:'ios_device_e2e',reference:'Original frozen iPhone device receipt',
+    },true)).toThrow(/Later commits touched the deferred delivery/);
   },40_000);
 
   it('revised resumed delivery records new-HEAD evidence and safely re-defers an unpassed Gate',()=>{
@@ -449,7 +474,7 @@ function acceptFrozenAudioWithReview(token:string,fixture:ReturnType<typeof defe
     expect(ledger!.verify('NEYNA-200',resumed.leaseToken).passed).toBe(false);
   });
 
-  it('resumes a frozen task after a later change to the same file only when the exact original patch still applies in reverse',()=>{
+  it('requires explicit HEAD-bound diff review even when later same-file change preserves the original patch',()=>{
     const lines=Array.from({length:30},(_,i)=>`line ${String(i).padStart(2,'0')}`);
     save('tests/contracts/shared.txt',lines.join('\n')+'\n');
     commit('freeze a baseline shared text file');
@@ -473,7 +498,14 @@ function acceptFrozenAudioWithReview(token:string,fixture:ReturnType<typeof defe
     const later=[...accepted];later[25]='independent later appended feature';
     save('tests/contracts/shared.txt',later.join('\n')+'\n');
     commit('legitimate later non-overlapping change in same source file');
-    const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent');
+    const reviewedHead=git('rev-parse','HEAD');
+    expect(()=>ledger!.resumeVerification('NEYNA-200','responsible-agent'))
+      .toThrow(/Overlapping committed code requires/);
+    const resumed=ledger!.resumeVerification('NEYNA-200','responsible-agent',1800,{
+      reviewedHead,overlappingPaths:['tests/contracts/shared.txt'],
+      findings:'Reviewed the exact later shared-file diff at the new HEAD. The original frozen change at line four is still intact, while a subsequent approved task changed line twenty-five. This is a separate delivery; the original iPhone Gate and evidence remain necessary.',
+      evidenceReference:'Original frozen scoped implementation and separately recorded project unit-test receipt',
+    });
     expect(resumed.originalCompletionHead).toBe(originalHead);
     expect(resumed.resumedVerification).toBe(true);
     expect(ledger!.trace('NEYNA-200').audit.map((a:any)=>a.event))

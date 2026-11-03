@@ -228,7 +228,10 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    diff findings and the original frozen-version test artifact reference in
    resume-verification. The same HEAD-bound audited paths must be accepted
    by report, Gate review, re-deferral and verify. A new commit invalidates
-   that approval; review the new HEAD again. Evidence must come from actual
+   that approval; review the new HEAD again. Even if the original frozen
+   patch still cleanly applies to current source, this does NOT waive
+   the later-file review or authorize stale audit records.
+   Evidence must come from actual
    testing of the original frozen delivery, not tests of current HEAD, and
    no resume/reconciliation by itself passes ios_device_e2e or other Gates.
    On Windows the generated CMD/PowerShell launcher must use the exact pinned
@@ -398,7 +401,7 @@ export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): st
 
 **Windows 与 GP 协作验收**：本机 Windows 运行前先核对启动器的精确本地版本，local-only 模式禁止自动下载 npm 包，4.x 不得冒充 5.0.0。local.env 只补充未设置或空值变量，现有系统和 IDE 环境变量始终优先；明确设置的 MCP_PROJECT_ROOT 优先于运行目录，运行目录优先于自动发现的其他项目。台账测试必须执行完整批次，超时或失败必定拒绝通过，并保留每批 JSON 与日志。GP 实际恢复先只读检查 next、execution-contract、trace 和冲突路径归属；没有已批准且范围不重叠的源任务和 Owner 显式确认时，不得调用 review-recovery-worktree 或 park-expired-writer，也不得修改数据库或其他 Agent 的文件。
 
-**延期验收统一文件审查**：单 Git 任务经 defer-verification 后，如果后续提交修改过原冻结允许范围内的文件，resume-verification 的 overlappingPaths 应包含当前 HEAD 相对原完成提交的全部受影响冻结路径，不只是原任务实际交付的文件。Agent 需要对完整差异逐文件审核，并提交当前 reviewedHead、100 字以上 findings 和原冻结版本真实测试证据引用。MCP 在审计中另外记录 changedDeliveryPaths，明确哪些后续改动碰到原任务实际交付文件。report、技术 Review、再次延期和 verify 均按同一份冻结路径集合与 Git HEAD 检查，新的 HEAD 会让旧审核失效。恢复和审查不替代真实设备测试，不会自动通过 Gate，也不改原提交、旧证据、SQLite 历史审计或其他 Agent 未提交代码。
+**延期验收统一文件审查**：单 Git 任务经 defer-verification 后，如果后续提交修改过原冻结允许范围内的文件，resume-verification 的 overlappingPaths 应包含当前 HEAD 相对原完成提交的全部受影响冻结路径，不只是原任务实际交付的文件。Agent 需要对完整差异逐文件审核，并提交当前 reviewedHead、100 字以上 findings 和原冻结版本真实测试证据引用。MCP 在审计中另外记录 changedDeliveryPaths，明确哪些后续改动碰到原任务实际交付文件。report、技术 Review、再次延期和 verify 均按同一份冻结路径集合与 Git HEAD 检查，新的 HEAD 会让旧审核失效。即使原冻结补丁仍能无冲突应用，也不能跳过对后续变更的审核，或继续使用旧 HEAD 的审核记录。恢复和审查不替代真实设备测试，不会自动通过 Gate，也不改原提交、旧证据、SQLite 历史审计或其他 Agent 未提交代码。
 
 **审核租约与旧多仓证据**：开发写入租约默认 30 分钟，最长 60 分钟，长时间编码或测试时要在过期前 renew；已经提交并处于 in_review 的任务即使开发租约过期，只要保留原 leaseToken 和冻结提交，仍可直接执行技术自审、Gate 审核和 verify，不再因倒计时要求 recover-task。过期租约绝不能继续改源码或提交新的 report。旧多仓测试记录如缺少准确的冻结版本向量，先用 task-closure-status 取得 frozenDeliveryHeads 和原 evidenceReference；有可核验的旧真实测试日志时，使用 rebind-legacy-evidence 提交原 leaseToken、actor、reason、完整 deliveryHeads、原 evidenceReference、项目内实际日志 artifactPath 及 artifactSha256 和详细 findings。仅追加审计与派生证据关联，不改原测试记录、不运行测试、更不会自动通过 Gate；原日志不能证明该冻结代码受测时，必须重新运行真正的项目测试，不得补造证明。
 

@@ -82,23 +82,6 @@ function taskScopesOverlap(left:string[],right:string[]):boolean{
       (pathAllowed(a,b)||a.startsWith(b.slice(0,-3)+'/'))));
 }
 
-/** Prove that the original frozen patch still exists verbatim in HEAD's
- * tracked files even if a later, unrelated delivery appended to those files.
- * `--cached` inspects committed index content only, never unrelated WIP.
- * This is Git integrity checking, NOT a project test or Gate decision.
- */
-function frozenPatchStillPresent(root:string,base:string,completion:string):boolean {
-  const diff=spawnSync('git',['diff','--no-renames','--binary','--full-index',base,completion],{
-    cwd:root,encoding:'buffer',timeout:12000,maxBuffer:4_000_000,windowsHide:true,
-  });
-  if(diff.status!==0||!Buffer.isBuffer(diff.stdout)||diff.stdout.length===0||
-    diff.stdout.length>4_000_000)return false;
-  const check=spawnSync('git',['apply','--cached','--reverse','--check'],{
-    cwd:root,input:diff.stdout,timeout:12000,maxBuffer:400_000,windowsHide:true,
-  });
-  return check.status===0&&!check.error;
-}
-
 /** For an already committed task, subsequent uncommitted work is not delivery
  * evidence. An explicit Owner-authorized preservation mode fingerprints it
  * without staging, stashing, resetting, overwriting or claiming ownership.
@@ -2090,8 +2073,7 @@ export class ProjectTaskLedger {
       deferral.completion_head!==completionHead)
       fail('DELIVERY_SCOPE_CHANGED',
         'Later commits changed files in the submitted task. Recheck and record a new scoped delivery before marking it accepted: '+collisions.join(', '));
-    if(!frozenPatchStillPresent(this.root,baseHead,completionHead)&&
-      !this.hasReviewedDeferredOverlap(id,baseHead,completionHead,current,collisions))
+    if(!this.hasReviewedDeferredOverlap(id,baseHead,completionHead,current,collisions))
       fail('DEFERRED_CODE_CHANGED',
       'Later commits touched the deferred delivery: '+collisions.join(', ')+
       '. Inspect changes and record a new scoped completion before reviewing');
@@ -7032,7 +7014,6 @@ export class ProjectTaskLedger {
         const impacts=deferredReviewImpact(this.root,resumed.base_head,
           resumed.completion_head,head,JSON.parse(task.allowed_paths));
         if(impacts.affectedPaths.length&&
-          !frozenPatchStillPresent(this.root,resumed.base_head,resumed.completion_head)&&
           !this.hasReviewedDeferredOverlap(input.id,resumed.base_head,
             resumed.completion_head,head,impacts.affectedPaths))
           fail('DEFERRED_CODE_CHANGED',
@@ -7178,9 +7159,9 @@ export class ProjectTaskLedger {
         fail("GIT_HISTORY_CHANGED","Deferred completion is no longer an ancestor of HEAD");
       const impacts=deferredReviewImpact(this.root,pending.base_head,
         pending.completion_head,head,JSON.parse(task.allowed_paths));
-      const preservedPatch=impacts.changedDeliveryPaths.length>0&&
-        frozenPatchStillPresent(this.root,pending.base_head,pending.completion_head);
-      const needsReconciliation=impacts.affectedPaths.length>0&&!preservedPatch;
+      // A still-applicable original patch does not authorize later changes.
+      // The exact frozen scope and HEAD require explicit review every time.
+      const needsReconciliation=impacts.affectedPaths.length>0;
       if(needsReconciliation){
         if(!reconciliation||reconciliation.reviewedHead!==head||
           !Array.isArray(reconciliation.overlappingPaths)||
@@ -7209,7 +7190,7 @@ export class ProjectTaskLedger {
       this.audit(id,"verification_resumed",agent,{
         originalBaseHead:pending.base_head,originalCompletionHead:pending.completion_head,
         currentHead:head,originalGate:pending.gate_name,
-        originalPatchVerifiedOnSharedFiles:preservedPatch,
+        frozenScopeChangedPaths:impacts.affectedPaths,
         explicitOverlapReconciliation:needsReconciliation,
       });
       return {...resumed,baseHead:pending.base_head,
@@ -8137,7 +8118,6 @@ export class ProjectTaskLedger {
       const impacts=deferredReviewImpact(this.root,deferred.base_head,
         deferred.completion_head,startHead,JSON.parse(task.allowed_paths));
       if(impacts.affectedPaths.length&&
-        !frozenPatchStillPresent(this.root,deferred.base_head,deferred.completion_head)&&
         !this.hasReviewedDeferredOverlap(id,deferred.base_head,
           deferred.completion_head,startHead,impacts.affectedPaths))
         return {taskId:id,passed:false,
