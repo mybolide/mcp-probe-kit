@@ -130,8 +130,12 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    Missing untracked files, symlinks, staged or new unrelated WIP never qualify.
    An optional local worktree-ignore file is stored in each repository's real
    Git directory at info/devcontrol-worktree-ignore. Its patterns add to Git's
-   standard ignore layers and only exempt unrelated untracked regular files.
-   It cannot hide staged or tracked files, frozen task paths or symlinks.
+   standard ignore layers. Explicit entries can exempt tracked, staged or
+   untracked LOCAL non-business tool configuration (AGENTS.md, generated
+   Skill, .cursor/mcp.json) and safe temporary output from DevControl
+   worktree-noise checks. They NEVER alter Git tracking or index; never
+   exempt business code, frozen task scope, committed delivery or symlinks.
+   Applied paths and SHA-256 fingerprints are audited in DevControl SQLite.
    Multi-repository report and complete can accept deliveryHeads, a map from
    every Git prefix to the exact tested commit SHA (root prefix is "").
    Gate reviews and verify bind to this immutable delivery rather than later
@@ -323,7 +327,7 @@ ${managedRevision}
 - **无密钥任务恢复与工作树保护**：普通任务租约到期后，当前 AI 用 \`recover-task\` 提供 \`actor\` 和具体 \`reason\` 即可恢复原任务，不再要求 Owner 密钥或环境变量。Git 项目检查原 Git 历史和工作树；无 Git 项目检查原 SHA-256 文件清单和冻结范围。旧多仓特殊迁移只有明确 \`explicitAuthorization:true\` 和原有双开关才能继续；Git 项目受保护文件回到 Git HEAD 后，\`refresh-protected-worktree\` 需要 \`id\`、\`actor\`、\`reason\` 与 \`explicitAuthorization:true\`；异常仓库位置迁移还需精确映射和明确授权。原保护快照与操作审计保留，绝不因此自动通过测试和验收。
 - **多开发者与跨设备工作区**：MCP 项目根可以完全没有 Git，所有文件引用相对项目工作区；使用 Git 时才记录仓库相对身份，根仓库为 \`.git\`，独立子仓库如 \`apw-life/.git\`。正常 git pull、merge、clone 和移动目录无需 Owner 密钥、无需每台机器手动搬迁，也无需改 SQLite。旧 v5 的绝对 git_dir 冻结记录及历史完成证据保留原值，读取时自动解析成相对位置。后续正常提交不会修改历史基线，安全检查仅要求真正独立的 Git 仓库保有原始基线提交，旧测试证据仍绑定旧任务的交付 SHA。只有异常历史位置审计纠正才使用 Owner 授权 relocate-repository-baselines。
 - **已交付任务让出 Git 写入权**：一个任务已经提交代码和真实测试记录，处于 in_review 待审核时，可保留自己的管理租约，让没有前置依赖、文件范围不重叠的 Ready 任务使用同一个 Git 工作区继续开发。任何时候最多一个实际写入任务，暂存代码、未提交工作或范围重叠时不得切换。用 \`next.parkedReviews\` 查看待审任务；当前 AI 继续负责真实自审和结果登记，绝不能因让出写入权就把任务当作 Verified。若自审失败，要先重新领取 Git 写入权才能修改代码。正常切换无需 Owner 密钥和其他 Agent。
-- **本地 Git 忽略与精确交付**：只有使用 Git 时，每个独立仓库才可在真实 Git 目录的 info/devcontrol-worktree-ignore 添加本机未跟踪普通文件例外，与标准 Git ignore 叠加，不允许忽略 staged、tracked、软链或冻结任务范围。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
+- **本地配置豁免与精确交付**：使用 Git 的项目可在各独立仓库真实 Git 目录的 info/devcontrol-worktree-ignore 填写本机非业务配置文件的匹配规则。明确填写的 AGENTS.md、Skill、.cursor/mcp.json 等工具配置即使已被 Git 跟踪或暂存，也能从 DevControl 工作树噪声检查中排除；不改变 Git 跟踪、暂存、提交和原始交付证据。**禁止豁免冻结任务路径、业务代码、软链、不安全路径和实际测试 Gate**。本机实际使用豁免时会写入 dc_audit，记录规则及文件 SHA-256，不保存私有配置正文。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA（根仓库键为空字符串），证据、Review、Gate 和 \`verify\` 只承认这些交付提交，后续无关 merge 不算入原任务交付。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
 - **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再通过 \`task-spec-supplement-self-review\` 完成有来源的实质开发者自审（可选 \`task-spec-supplement-independent-review\`，不强制第二人），最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
 - **冻结变更与架构评审**：不强制第三名审核人。范围变更使用 \`release-work-scope-self-review\`，新增任务使用 \`release-work-incremental-self-review\`，受控工件使用 \`artifact-self-review\`，并提交真实来源、范围、依赖和安全测试审查。独立复审按风险选用。涉及冻结范围或受控工件变更时，仍须 Owner 明确批准精确 proposalHash/reviewHash，未批准不得执行。
 - **变更评估**：新想法依次使用 \`idea-capture\` / \`idea-assess\` / \`idea-self-review\` / \`idea-decide\` 进行真实自审与决策，\`idea-review\` 保留为可选独立复审；不得擅自修改冻结范围、架构与依赖；重大改变由 Owner 明确批准。
@@ -377,8 +381,12 @@ ${managedRevision}
   closure checklist to report later real evidence and complete reviews;
   do not rerun business tests from DevControl or reset other Agent work.
 - Optional local-only info/devcontrol-worktree-ignore in each real Git-dir
-  adds to standard Git ignore. It only exempts unrelated untracked regular
-  files; never hide staged/tracked edits, frozen scope or symlinks.
+  adds to standard Git ignore. Explicit patterns exempt tracked, staged and
+  untracked non-business LOCAL tool configurations (e.g. AGENTS.md, managed
+  SKILL.md, .cursor/mcp.json) from worktree noise checks. The rules DO NOT
+  change Git's index, commit history, frozen task scope or real Gate checks;
+  business source, symlinks and unsafe files cannot be exempted. DevControl
+  audits exact paths and SHA-256 fingerprints whenever the exemption is used.
 - Multi-Git report and complete can specify deliveryHeads for every Git
   prefix (root key is ""), to bind test evidence and Gates to the original
   commits. Later unrelated merges never enlarge the frozen delivery diff.

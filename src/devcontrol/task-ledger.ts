@@ -40,7 +40,7 @@ import { normalizeFrozenTaskContract, auditNormalizedTaskContract,
 import { discoverRepositories, currentRevisions, updateRevisions, stagedChanges,
   committedChanges, revisionDigest, assertRepositoryTopology, assertDeliveryStillPresent,
   portableGitDir, type RepositoryRevision } from './repository-audit.js';
-import { auditedUntrackedFiles } from './worktree-ignore.js';
+import { auditedUntrackedFiles, localWorktreeExemptedFiles } from './worktree-ignore.js';
 import {captureFileEvidence,compareFileEvidence,
   type FileEvidenceSnapshot} from './file-evidence.js';
 import {previewManagedGuidanceSync} from '../lib/workflow-skill-installer.js';
@@ -115,14 +115,21 @@ function preservedWorktreeSnapshot(root:string,
       fail("GIT_ERROR","Cannot fingerprint existing uncommitted work");
     return result.stdout.toString("utf8").split("\0").filter(Boolean).sort();
   };
-  if(readGitPaths(["diff","--cached","--name-only"]).length)
+  const inScope=(file:string)=>taskPaths.some(scope=>
+    pathAllowed(prefix?prefix+'/'+file:file,scope));
+  const staged=readGitPaths(["diff","--cached","--name-only"]);
+  const exemptStaged=new Set(localWorktreeExemptedFiles(root,staged,inScope));
+  if(staged.some(file=>!exemptStaged.has(file)))
     fail("STAGED_WORKTREE",
-      "Preserving an existing working tree cannot hide staged content; review the index first");
+      "Staged content not explicitly exempted must be reviewed and committed before protecting unrelated work");
   const tracked=readGitPaths(["diff","--name-only","--no-ext-diff"]);
+  const exemptTracked=new Set(localWorktreeExemptedFiles(root,tracked,file=>
+    inScope(file)));
   const untracked=auditedUntrackedFiles(root,file=>taskPaths.some(scope=>
     pathAllowed(prefix?prefix+'/'+file:file,scope)));
   const paths=[
-    ...tracked.map(file=>({path:file,kind:"tracked" as const})),
+    ...tracked.filter(file=>!exemptTracked.has(file))
+      .map(file=>({path:file,kind:"tracked" as const})),
     ...untracked.map(file=>({path:file,kind:"untracked" as const})),
   ];
   if(paths.length>256)fail("WORKTREE_TOO_LARGE",
@@ -151,6 +158,18 @@ function preservedWorktreeSnapshot(root:string,
     entries.filter(entry=>!taskPaths.some(pattern=>pathAllowed(entry.path,pattern)))
       .map(entry=>entry.path)));
   return entries.filter(entry=>!trusted.has(entry.path));
+}
+
+/** A local exception entered after a claim also applies to the comparison
+ * view of the original Owner snapshot. Never rewrite that audit snapshot;
+ * frozen task paths cannot be made exempt through a later pattern change.
+ */
+function worktreeSnapshotWithLocalExemptions(root:string,
+  original:ReturnType<typeof preservedWorktreeSnapshot>,
+  scope:string[]=[],prefix=''):ReturnType<typeof preservedWorktreeSnapshot>{
+  const exempt=new Set(localWorktreeExemptedFiles(root,original.map(x=>x.path),
+    file=>scope.some(pattern=>pathAllowed(prefix?prefix+'/'+file:file,pattern))));
+  return original.filter(entry=>!exempt.has(entry.path));
 }
 
 /** An immutable task submission must retain its own diff after other tasks
@@ -720,6 +739,64 @@ export class ProjectTaskLedger {
     this.db.prepare(
       "INSERT INTO dc_audit (task_id,event,actor,details_json,created_at) VALUES (?,?,?,?,?)",
     ).run(taskId, event, actor, JSON.stringify(data), utc());
+  }
+
+  /** Audit only SHA-256 of explicit machine-local rules and file bytes.
+   * The contents may contain secrets and are never copied into task SQLite.
+   */
+  private auditLocalExemptions(taskId:string|null,actor:string,phase:string,
+    matches:Array<{repoRoot:string;prefix:string;files:string[]}>):void{
+    const evidence=matches.filter(m=>m.files.length).map(({repoRoot,prefix,files})=>{
+      const rules=fs.readFileSync(
+        path.join(fs.realpathSync(git(repoRoot,['rev-parse','--absolute-git-dir'])),
+          'info','devcontrol-worktree-ignore'));
+      return {repository:prefix||'.',
+        rulesSha256:createHash('sha256').update(rules).digest('hex'),
+        files:files.map(file=>{
+          const absolute=path.join(repoRoot,file),stat=fs.lstatSync(absolute);
+          if(!stat.isFile()||stat.isSymbolicLink()||stat.size>16*1024*1024)
+            fail('EXEMPTION_CHANGED','Local configuration changed while recording audit');
+          return {path:prefix?prefix+'/'+file:file,
+            sha256:createHash('sha256').update(fs.readFileSync(absolute)).digest('hex')};
+        })};
+    });
+    if(!evidence.length)return;
+    const details={phase,evidence,gitTrackingUnchanged:true,
+      frozenScopeUnchanged:true,gitDeliveryUnchanged:true,
+      testsOrGatesApproved:false};
+    const prior=this.db.prepare(`SELECT details_json FROM dc_audit
+      WHERE task_id IS ? AND event='local_worktree_exemption_applied'
+      ORDER BY id DESC LIMIT 1`).get(taskId);
+    if(prior?.details_json===JSON.stringify(details))return;
+    this.audit(taskId,'local_worktree_exemption_applied',actor,details);
+  }
+
+  /** Inspect actual tracked/staged and untracked local exceptions at claim
+   * and completion, so a checkStaged call is not required to get audit data.
+   */
+  private auditCurrentLocalExemptions(taskId:string,actor:string,phase:string,
+    scopes:string[]):void{
+    if(!this.hasRootGit)return;
+    const matches=discoverRepositories(this.root,scopes).map(repo=>{
+      const changed=new Set<string>();
+      for(const args of [
+        ['diff','--cached','--name-only','-z'],
+        ['diff','--name-only','-z'],
+        ['ls-files','--others','--exclude-standard','-z'],
+      ]){
+        const r=spawnSync('git',args,{cwd:repo.root,encoding:'buffer',
+          timeout:12_000,windowsHide:true});
+        if(r.status!==0||!Buffer.isBuffer(r.stdout))
+          fail('GIT_ERROR','Cannot audit current local worktree exceptions');
+        for(const file of r.stdout.toString('utf8').split('\0').filter(Boolean))
+          changed.add(file);
+      }
+      return {repoRoot:repo.root,prefix:repo.prefix,
+        files:localWorktreeExemptedFiles(repo.root,[...changed],
+          file=>scopes.some(scope=>pathAllowed(
+            repo.prefix?repo.prefix+'/'+file:file,scope)))};
+    });
+    this.auditLocalExemptions(taskId,actor,phase,matches);
   }
 
   private migrate(): void {
@@ -3010,7 +3087,32 @@ export class ProjectTaskLedger {
     const task=active?this.requireTask(active.task_id):null;
     if(task)this.taskRepositories(task.id,task);
     const roots=task?discoverRepositories(this.root,JSON.parse(task.allowed_paths)):discoverRepositories(this.root,[]);
-    const files=stagedChanges(roots);
+    const allStaged=stagedChanges(roots);
+    const frozenScope=task?JSON.parse(task.allowed_paths) as string[]:[];
+    // The local exception is a DevControl rule, not Git's untracked-only
+    // .gitignore. Explicitly exempted tracked/staged local files are not
+    // frozen task delivery. Never exempt MCP guidance or frozen task paths.
+    const exemptedStagedFiles=roots.flatMap(repo=>{
+      const local=allStaged.filter(file=>repo.prefix?
+        file.startsWith(repo.prefix+'/'):!roots.some(child=>child.prefix&&
+          file.startsWith(child.prefix+'/')));
+      const relative=local.map(file=>repo.prefix?
+        file.slice(repo.prefix.length+1):file);
+      return localWorktreeExemptedFiles(repo.root,relative,file=>{
+        const full=repo.prefix?repo.prefix+'/'+file:file;
+        return frozenScope.some(pattern=>pathAllowed(full,pattern));
+      }).map(file=>repo.prefix?repo.prefix+'/'+file:file);
+    });
+    const exemptedSet=new Set(exemptedStagedFiles);
+    const files=allStaged.filter(file=>!exemptedSet.has(file));
+    if(exemptedStagedFiles.length)
+      this.auditLocalExemptions(task?.id??null,
+        active?.agent??'devcontrol','check-staged',
+        roots.map(repo=>({repoRoot:repo.root,prefix:repo.prefix,
+          files:exemptedStagedFiles.filter(file=>repo.prefix?
+            file.startsWith(repo.prefix+'/'):!roots.some(child=>
+              !!child.prefix&&file.startsWith(child.prefix+'/')))
+            .map(file=>repo.prefix?file.slice(repo.prefix.length+1):file)})));
     const managed=files.filter(isManagedGuidancePath);
     const scopedFiles=files.filter(file=>!isManagedGuidancePath(file));
     const guidance=managed.length?checkManagedGuidanceCommit(this.root,managed):null;
@@ -3030,6 +3132,10 @@ export class ProjectTaskLedger {
     if(managed.length&&!scopedFiles.length&&guidance?.passed)
       return {passed:true,taskId:null,scope:"managed-guidance-sync",
         stagedFiles:files,deniedFiles:[],unapprovedDocs:[],managedFiles:guidance.managedFiles};
+    if(!files.length&&exemptedStagedFiles.length)
+      return {passed:true,taskId:null,scope:"local-worktree-exemption",
+        stagedFiles:[],exemptedStagedFiles,deniedFiles:[],unapprovedDocs:[],
+        note:"Only locally exempt working files are staged; no task delivery or tests are approved."};
     const lease = active;
     if (!lease || lease.expires_at <= Date.now()) {
       fail("LEASE_REQUIRED", "No active approved task lease; refusing Git commit"+
@@ -3065,6 +3171,7 @@ export class ProjectTaskLedger {
     return {
       passed: files.length>0 && denied.length === 0 && unapprovedDocs.length === 0,
       taskId: claimedTask.id, stagedFiles: files, deniedFiles: denied,
+      exemptedStagedFiles,
       managedFiles:managed,
       unapprovedDocs,exactFileScope:exact??null,
       ...(files.length?{}:{reason:"No staged task changes"}),
@@ -5368,19 +5475,26 @@ export class ProjectTaskLedger {
       item.path.split("/").includes("..")||item.path.includes("\\")||
       item.path.includes("\0")))
       fail("DIRTY_MANIFEST_INVALID","Exact relative tracked paths and SHA-256 are required");
-    // Staged or untracked files are NEVER exempted. The only exception is a
-    // fully declared, byte-identical set of pre-existing unstaged tracked edits.
+    // Explicit local rules apply to tracked and untracked working files.
+    // The frozen task scope is never exempt, and exempt changes never count
+    // as the actual committed delivery for this task.
+    const allowed=JSON.parse(task.allowed_paths) as string[];
+    const inScope=(file:string)=>allowed.some(p=>pathAllowed(file,p));
     const trusted=new Set(trustedUncommittedGuidance(this.root,
       ["AGENTS.md",".agents/skills/mcp-probe-kit/SKILL.md"]
-        .filter(file=>!(JSON.parse(task.allowed_paths) as string[])
-          .some(pattern=>pathAllowed(file,pattern)))));
-    if(git(this.root,["diff","--cached","--name-only"])||
+        .filter(file=>!inScope(file))));
+    const staged=git(this.root,["diff","--cached","--name-only","-z"])
+      .split("\0").filter(Boolean);
+    const exemptStaged=new Set(localWorktreeExemptedFiles(this.root,staged,inScope));
+    if(staged.some(file=>!exemptStaged.has(file))||
       auditedUntrackedFiles(this.root,file=>
-        (JSON.parse(task.allowed_paths) as string[]).some(p=>pathAllowed(file,p)))
+        inScope(file))
         .some(file=>!trusted.has(file)))
-      fail("DIRTY_WORKTREE","Staged and untracked files must be committed before completion");
-    const actual=git(this.root,["diff","--name-only","-z"]).split("\0")
-      .filter(file=>file&&!trusted.has(file)).sort();
+      fail("DIRTY_WORKTREE","Staged and untracked files not explicitly exempted must be committed before completion");
+    const dirty=git(this.root,["diff","--name-only","-z"]).split("\0")
+      .filter(Boolean);
+    const exemptDirty=new Set(localWorktreeExemptedFiles(this.root,dirty,inScope));
+    const actual=dirty.filter(file=>!trusted.has(file)&&!exemptDirty.has(file)).sort();
     const names=manifest.map(entry=>entry.path).sort();
     if(JSON.stringify(actual)!==JSON.stringify(names))
       fail("DIRTY_MANIFEST_MISMATCH","Unstaged edits differ from the explicitly protected Owner manifest");
@@ -5397,11 +5511,11 @@ export class ProjectTaskLedger {
     if(status.status!==0||typeof status.stdout!=="string")
       fail("GIT_ERROR","Cannot read Git index and worktree status");
     const porcelain=status.stdout.split("\0").filter(line=>
-      line&&!trusted.has(line.slice(3)));
+      line&&!trusted.has(line.slice(3))&&!exemptDirty.has(line.slice(3))&&
+        !exemptStaged.has(line.slice(3)));
     if(porcelain.length!==actual.length||porcelain.some(line=>
       !line.startsWith(" M ")||!actual.includes(line.slice(3))))
       fail("DIRTY_WORKTREE","Only unchanged-index tracked file edits may be preserved");
-    const allowed=JSON.parse(task.allowed_paths) as string[];
     const taskCommits=changedFiles(this.root,baseHead);
     for(const item of manifest){
       if(allowed.some(p=>pathAllowed(item.path,p))||taskCommits.includes(item.path))
@@ -5412,6 +5526,8 @@ export class ProjectTaskLedger {
         createHash("sha256").update(fs.readFileSync(file)).digest("hex")!==item.sha256)
         fail("DIRTY_MANIFEST_MISMATCH","Protected Owner edits differ from the exact expected bytes");
     }
+    this.auditCurrentLocalExemptions(String(task.id),'devcontrol',
+      'completion-or-verification',allowed);
     return manifest.slice().sort((a,b)=>a.path.localeCompare(b.path));
   }
 
@@ -5453,7 +5569,8 @@ export class ProjectTaskLedger {
         ...legacyGuidance]).split('\n').filter(Boolean)):new Set<string>();
     const trustedLegacy=new Set(trustedUncommittedGuidance(this.root,
       legacyGuidance.filter(file=>dirtyGuidance.has(file))));
-    const comparable=snapshot.filter(file=>!trustedLegacy.has(file.path));
+    const comparable=worktreeSnapshotWithLocalExemptions(this.root,
+      snapshot.filter(file=>!trustedLegacy.has(file.path)),allowed);
     if(JSON.stringify(current)!==JSON.stringify(comparable))
       fail("WORKTREE_CHANGED",
         "An unrelated pre-existing file changed or an unapproved new file appeared after claim");
@@ -6147,6 +6264,8 @@ export class ProjectTaskLedger {
       // per-repository signed manifest, so stop instead of silently trusting it.
       this.requireChildReposClean(claimedRepositories,id,task);
       this.recordLocalDeveloper(id,"claimed");
+      this.auditCurrentLocalExemptions(id,agent.trim(),'claim',
+        JSON.parse(task.allowed_paths) as string[]);
       if(yielding){
         // Legacy SQLite may still have only the old singleton; preserve its
         // real token before changing shared writer ownership.

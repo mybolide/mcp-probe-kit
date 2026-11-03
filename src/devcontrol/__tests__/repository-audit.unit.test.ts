@@ -7,7 +7,7 @@ import {createRequire} from 'node:module';
 import {ProjectTaskLedger} from '../task-ledger.js';
 import {discoverRepositories,currentRevisions,updateRevisions,revisionDigest,
   stagedChanges,committedChanges,assertRepositoryTopology} from '../repository-audit.js';
-import {auditedUntrackedFiles,localWorktreeIgnoreFile} from '../worktree-ignore.js';
+import {auditedUntrackedFiles,localWorktreeIgnoreFile,localWorktreeExemptedFiles} from '../worktree-ignore.js';
 import {previewManagedGuidanceSync} from '../../lib/workflow-skill-installer.js';
 import {MCP_PROBE_SKILL_REL_PATH} from '../../lib/workflow-skill-template.js';
 
@@ -94,6 +94,46 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
       });
     }finally{ledger.close();}
   });
+  it('refuses to exempt business source even when the file is tracked and explicitly listed',()=>{
+    const {root}=fixture(false);
+    fs.mkdirSync(path.join(root,'src'));
+    fs.writeFileSync(path.join(root,'src/app.ts'),'original business code');
+    cmd(root,'add','src/app.ts');
+    cmd(root,'commit','-qm','business source');
+    fs.writeFileSync(path.join(root,'src/app.ts'),'changed business code');
+    fs.writeFileSync(localWorktreeIgnoreFile(root),'/src/app.ts\n');
+    expect(()=>localWorktreeExemptedFiles(root,['src/app.ts']))
+      .toThrow(/business source/);
+  });
+  it('explicitly recognizes tracked AGENTS, MCP Skill and Cursor configuration',()=>{
+    const {root}=fixture(false);
+    const skill=MCP_PROBE_SKILL_REL_PATH;
+    fs.mkdirSync(path.join(root,'.cursor'),{recursive:true});
+    fs.mkdirSync(path.dirname(path.join(root,skill)),{recursive:true});
+    for(const file of ['AGENTS.md',skill,'.cursor/mcp.json']){
+      fs.writeFileSync(path.join(root,file),'initial instructions');
+      cmd(root,'add',file);
+    }
+    cmd(root,'commit','-qm','baseline managed config');
+    for(const file of ['AGENTS.md',skill,'.cursor/mcp.json'])
+      fs.writeFileSync(path.join(root,file),'local machine instructions');
+    fs.writeFileSync(localWorktreeIgnoreFile(root),
+      '/AGENTS.md\n/'+skill+'\n/.cursor/mcp.json\n');
+    expect(localWorktreeExemptedFiles(root,['AGENTS.md',skill,'.cursor/mcp.json']))
+      .toEqual([skill,'.cursor/mcp.json','AGENTS.md']);
+    expect(cmd(root,'diff','--name-only')).toContain('AGENTS.md');
+    cmd(root,'add','AGENTS.md',skill,'.cursor/mcp.json');
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      expect(ledger.checkStaged()).toMatchObject({
+        passed:true,scope:'local-worktree-exemption',
+        stagedFiles:[],
+        exemptedStagedFiles:['.agents/skills/mcp-probe-kit/SKILL.md',
+          '.cursor/mcp.json','AGENTS.md'],
+      });
+      expect(cmd(root,'diff','--cached','--name-only')).toContain('AGENTS.md');
+    }finally{ledger.close();}
+  });
 
   it('portable baselines allow a workspace move without a key, but reject another Git history',()=>{
     const {root}=fixture();
@@ -155,6 +195,105 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
 });
 
 describe('layered local worktree-ignore protection',()=>{
+  it('matches explicitly exempt tracked, staged and untracked paths without changing Git tracking',()=>{
+    const {root}=fixture(false);
+    fs.mkdirSync(path.join(root,'.cursor'),{recursive:true});
+    fs.mkdirSync(path.join(root,'.vscode'),{recursive:true});
+    fs.writeFileSync(path.join(root,'.cursor/mcp.json'),'baseline configuration');
+    fs.writeFileSync(path.join(root,'.vscode/settings.json'),'baseline staged configuration');
+    cmd(root,'add','.cursor/mcp.json','.vscode/settings.json');
+    cmd(root,'commit','-qm','existing tracked files');
+    fs.writeFileSync(path.join(root,'.cursor/mcp.json'),'local tracked override');
+    fs.writeFileSync(path.join(root,'.vscode/settings.json'),'staged local override');
+    cmd(root,'add','.vscode/settings.json');
+    fs.writeFileSync(path.join(root,'local.tmp'),'local new file');
+    fs.writeFileSync(localWorktreeIgnoreFile(root),
+      '/.cursor/mcp.json\n/.vscode/settings.json\n/local.tmp\n');
+    expect(localWorktreeExemptedFiles(root,
+      ['.cursor/mcp.json','.vscode/settings.json','local.tmp','README.md']))
+      .toEqual(['.cursor/mcp.json','.vscode/settings.json','local.tmp']);
+    expect(auditedUntrackedFiles(root)).not.toContain('local.tmp');
+    expect(cmd(root,'ls-files','.cursor/mcp.json','.vscode/settings.json'))
+      .toContain('.cursor/mcp.json');
+    expect(cmd(root,'diff','--cached','--name-only')).toContain('.vscode/settings.json');
+    expect(()=>localWorktreeExemptedFiles(root,['.cursor/mcp.json'],
+      name=>name==='.cursor/mcp.json')).toThrow(/frozen task file/);
+  });
+  it('DevControl check honors the ignore file for tracked/staged paths without adding them to task delivery',()=>{
+    const {root}=fixture(false);
+    fs.mkdirSync(path.join(root,'.cursor'),{recursive:true});
+    fs.writeFileSync(path.join(root,'.cursor/mcp.json'),'original user settings');
+    cmd(root,'add','.cursor/mcp.json');
+    cmd(root,'commit','-qm','baseline tracked settings');
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-IGNORED-TRACKED',
+        title:'Deliver code alongside explicitly exempt local tracked settings',
+        track:'governance',allowedPaths:['docs/task.txt'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-IGNORED-TRACKED','owner');
+      const claimed=ledger.claim('AUDIT-IGNORED-TRACKED','developer');
+      fs.writeFileSync(path.join(root,'.cursor/mcp.json'),'local machine settings');
+      cmd(root,'add','.cursor/mcp.json');
+      fs.writeFileSync(localWorktreeIgnoreFile(root),'/.cursor/mcp.json\n');
+      expect(ledger.checkStaged()).toMatchObject({
+        passed:true,scope:'local-worktree-exemption',
+        exemptedStagedFiles:['.cursor/mcp.json'],
+      });
+      const audited=ledger.trace('AUDIT-IGNORED-TRACKED').audit.filter(
+        (event:{event:string})=>event.event==='local_worktree_exemption_applied');
+      expect(audited.length).toBeGreaterThan(0);
+      const details=audited.at(-1).details;
+      expect(details).toMatchObject({
+        phase:'check-staged',gitTrackingUnchanged:true,
+        testsOrGatesApproved:false,
+        evidence:[{repository:'.',rulesSha256:expect.stringMatching(/^[a-f0-9]{64}$/),
+          files:[{path:'.cursor/mcp.json',sha256:expect.stringMatching(/^[a-f0-9]{64}$/)}]}],
+      });
+      fs.mkdirSync(path.join(root,'docs'),{recursive:true});
+      fs.writeFileSync(path.join(root,'docs','task.txt'),'approved task code');
+      cmd(root,'add','docs/task.txt');
+      expect(ledger.checkStaged()).toMatchObject({
+        passed:true,taskId:'AUDIT-IGNORED-TRACKED',
+        stagedFiles:['docs/task.txt'],exemptedStagedFiles:['.cursor/mcp.json'],
+        deniedFiles:[],
+      });
+      // Git's index is untouched by DevControl. Only the task source is
+      // committed: the exempt local file remains staged on this computer.
+      cmd(root,'commit','-qm','approved task code','--only','--','docs/task.txt');
+      expect(cmd(root,'diff','--cached','--name-only')).toBe('.cursor/mcp.json');
+      const reference='Actual test result for the committed task document';
+      ledger.report('AUDIT-IGNORED-TRACKED',claimed.leaseToken,
+        {kind:'docs',reference},true);
+      expect(ledger.complete('AUDIT-IGNORED-TRACKED',claimed.leaseToken,{
+        summary:'Committed approved source',implementation:'Only task path',
+        verification:'Actual project-owned test was reviewed',
+      })).toMatchObject({taskId:'AUDIT-IGNORED-TRACKED'});
+      expect(ledger.verify('AUDIT-IGNORED-TRACKED',claimed.leaseToken,{
+        findings:'Reviewed the exact committed task document, checked the approved path and actual test output; the local machine settings remain excluded from this delivery.',
+        evidenceReference:reference,
+        gates:[{gate:'docs',evidenceReference:reference,
+          findings:'Confirmed actual project-owned test output for the exact approved Git revision.'}],
+      })).toMatchObject({passed:true});
+      expect(ledger.trace('AUDIT-IGNORED-TRACKED').audit
+        .some((event:{event:string})=>event.event==='local_worktree_exemption_applied'))
+        .toBe(true);
+    }finally{ledger.close();}
+  });
+  it('a frozen task file cannot be hidden by adding its pattern to the ignore file',()=>{
+    const {root}=fixture(false);
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-IGNORED-SCOPE',title:'Never ignore approved code',
+        track:'governance',allowedPaths:['docs/task.txt'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-IGNORED-SCOPE','owner');
+      ledger.claim('AUDIT-IGNORED-SCOPE','developer');
+      fs.mkdirSync(path.join(root,'docs'),{recursive:true});
+      fs.writeFileSync(path.join(root,'docs','task.txt'),'unfinished task');
+      cmd(root,'add','docs/task.txt');
+      fs.writeFileSync(localWorktreeIgnoreFile(root),'/docs/task.txt\n');
+      expect(()=>ledger.checkStaged()).toThrow(/frozen task file/);
+    }finally{ledger.close();}
+  });
   it('adds Git-local untracked exceptions after standard ignores, without modifying Git ignore',()=>{
     const {root,child}=fixture();
     fs.writeFileSync(path.join(root,'.git','info','exclude'),'*.from-git\n');

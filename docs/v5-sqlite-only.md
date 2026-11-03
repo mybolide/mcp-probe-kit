@@ -118,10 +118,25 @@ Owner 可以在任务尚未产生完成报告时，使用 `refresh-protected-wor
 `info/devcontrol-worktree-ignore`，语法沿用 Git exclude patterns，
 包括 Git worktree 使用 `.git` 文件的情况。该本地文件不加入 Git
 提交，也不会更改标准 `.gitignore`、`.git/info/exclude` 或全局忽略。
-DevControl 先执行 Git 标准忽略，再读取本机附加规则，只从未跟踪
-普通文件的工作树快照中移除符合条件的无关文件；已暂存、已跟踪、
-软链、逃逸路径及冻结任务范围内的文件禁止借此隐藏。后续规则文件
-的改动不追溯修改原先的只读 SHA-256 保护快照。
+DevControl 先执行 Git 标准忽略，再读取本机附加规则。**本机附加规则
+不仅适用于 untracked，也适用于 Git 已跟踪、已修改和已暂存的文件。**
+例如需要排除本机 AI 工具配置时，可以写入：
+
+```gitignore
+/AGENTS.md
+/.agents/skills/mcp-probe-kit/SKILL.md
+/.cursor/mcp.json
+```
+
+规则只影响 DevControl 对本机工作树噪声的检查，不修改 Git 的 index、
+tracked 状态或历史提交。只有明确配置的 AI 工具、编辑器设置与临时
+输出允许豁免；**业务代码、冻结任务路径、软链、路径逃逸和大文件
+仍然禁止豁免**。即使暂存了豁免文件，Git 也不会自动将其移出索引；
+提交任务代码时应仅提交实际批准的文件，不把本地配置混入任务交付。
+本机豁免不代表 Git commit 内容获得豁免，也不会通过任何测试 Gate。
+在领取、检查和完成/验收时，DevControl 将实际应用的豁免记录在
+`dc_audit`，包括路径、规则文件和文件内容的 SHA-256，不保存私有
+配置正文；历史原始 SHA-256 保护快照保留不变。
 
 ### 多仓库精确 delivery HEAD
 
