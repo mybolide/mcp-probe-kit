@@ -1900,6 +1900,10 @@ describe("project ledger and legacy migration", () => {
   });
 
   it("allows only byte-exact generated CLI launchers without a task lease",()=>{
+    save(".gitattributes",
+      ".mcp-probe-kit/bin/*.cmd text eol=crlf\n"+
+      ".mcp-probe-kit/bin/*.ps1 text eol=crlf\n");
+    commit("track Windows launcher Git line-ending policy");
     ensureCliFallback(root);
     const launchers=[CLI_POWERSHELL_REL_PATH,CLI_CMD_REL_PATH,
       CLI_SHELL_REL_PATH,CLI_RUNTIME_MANIFEST_REL_PATH];

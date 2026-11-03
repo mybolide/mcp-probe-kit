@@ -82,12 +82,21 @@ export function checkManagedCliFallbackCommit(root:string,stagedFiles:readonly s
       if(!managedCliPaths.has(file))continue;
       const mode=gitRead(root,["ls-files","--stage","--",file]);
       const requiredMode=file===CLI_SHELL_REL_PATH?"100755":"100644";
-      if(!mode.ok||!new RegExp("^"+requiredMode+" [0-9a-f]{40,64} 0\\t").test(mode.text)){
+      const match=mode.ok?mode.text.match(
+        new RegExp("^"+requiredMode+" ([0-9a-f]{40,64}) 0\\t")):null;
+      if(!match){
         issues.push(file+": expected staged regular generator file with correct Git mode");
         continue;
       }
-      const staged=gitRead(root,["show",":"+file]);
-      if(!staged.ok||staged.text!==canonical[file])
+      // Hash canonical source through the same Git clean/eol filters used by
+      // the index. Windows wrappers are CRLF in the generator but may be LF
+      // Git blobs under an explicit `.gitattributes eol=crlf` policy.
+      const expectedBlob=spawnSync("git",["hash-object","--path",file,"--stdin"],{
+        cwd:root,windowsHide:true,encoding:"utf8",timeout:10_000,
+        input:canonical[file],maxBuffer:2_000_000,
+      });
+      if(expectedBlob.status!==0||expectedBlob.error||
+        expectedBlob.stdout.trim()!==match[1])
         issues.push(file+": staged bytes differ from current canonical MCP CLI generator");
     }
   }
