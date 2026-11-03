@@ -2,7 +2,7 @@ import {afterEach,describe,expect,it,vi} from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {execFileSync} from 'node:child_process';
+import {execFileSync,spawnSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 import {ProjectTaskLedger} from '../task-ledger.js';
@@ -475,6 +475,152 @@ describe('layered local worktree-ignore protection',()=>{
 });
 
 describe('immutable multi-repository delivery commits',()=>{
+  it('records a genuine frozen multi-Git test rerun after lost legacy logs without a new writer lease or Gate bypass',()=>{
+    const {root,child,app}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    const id='AUDIT-LOST-RERUN';
+    const oldReference='Original Flutter layout test was reported by the legacy runner; original output is lost';
+    try{
+      ledger.create({id,title:'Replace lost test output by truly testing the frozen Git delivery',
+        track:'governance',allowedPaths:['apw-life/test/**'],
+        requiredGates:['docs']},'agent');
+      ledger.approve(id,'owner');
+      const lease=ledger.claim(id,'developer',60);
+      fs.mkdirSync(path.join(child,'test'),{recursive:true});
+      fs.writeFileSync(path.join(child,'test/layout.test.cjs'),
+        "const test = require('node:test');\nconst assert = require('node:assert/strict');\ntest('frozen layout test', () => assert.equal(2+2, 4));\n");
+      cmd(child,'add','test/layout.test.cjs');
+      cmd(child,'commit','-qm','verified layout source to be tested');
+      const heads={'':cmd(root,'rev-parse','HEAD'),
+        'apw-life':cmd(child,'rev-parse','HEAD'),
+        'apw-life-app':cmd(app,'rev-parse','HEAD')};
+      ledger.report(id,lease.leaseToken,{kind:'unit_test',
+        reference:oldReference},true);
+      ledger.complete(id,lease.leaseToken,{
+        summary:'Original frozen layout test delivery',
+        implementation:'Original child Git test committed',
+        verification:'Original legacy test output was lost after its historical report was stored',
+      });
+      const sqlite=createRequire(import.meta.url)('node:sqlite') as {
+        DatabaseSync:new(filename:string)=>any;
+      };
+      const db=new sqlite.DatabaseSync(ledger.databasePath);
+      let oldId:number;
+      try{
+        oldId=db.prepare('SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1')
+          .get(id).id as number;
+        // Simulate historical mismatched repository metadata ONLY in
+        // disposable test SQLite, never in the actual Neyna database.
+        db.prepare('UPDATE dc_evidence_repository_digests SET digest=? WHERE evidence_id=?')
+          .run('0'.repeat(64),oldId);
+      }finally{db.close();}
+      // Another contributor may advance HEAD in an unrelated area. The
+      // original scoped delivery is still intact, but testing that newer
+      // checkout would wrongly include unrelated changed dependencies.
+      fs.writeFileSync(path.join(child,'README.md'),'later unrelated code integration\n');
+      cmd(child,'add','README.md');
+      cmd(child,'commit','-qm','later unrelated integration');
+      fs.appendFileSync(path.join(root,'.git/info/exclude'),'\n/.neyna/state/\n');
+      fs.mkdirSync(path.join(root,'.neyna/state'),{recursive:true});
+      const testedCheckouts={
+        '':'.neyna/state/rerun-root',
+        'apw-life':'.neyna/state/rerun-child',
+        'apw-life-app':'.neyna/state/rerun-app',
+      };
+      for(const [prefix,checkout] of Object.entries(testedCheckouts)){
+        const original=prefix===''?root:prefix==='apw-life'?child:app;
+        cmd(original,'worktree','add','--detach',path.join(root,checkout),heads[prefix as keyof typeof heads]);
+      }
+      const cwd=testedCheckouts['apw-life'];
+      const testDir=path.join(root,cwd);
+      const runOriginal=(args:string[],name:string)=>{
+        const result=spawnSync(process.execPath,args,{cwd:testDir,encoding:'utf8',timeout:12_000});
+        const log='Actual frozen test command: node '+args.join(' ')+
+          '\nActual frozen child HEAD: '+cmd(testDir,'rev-parse','HEAD')+
+          '\nObserved exit: '+result.status+'\n'+result.stdout+'\n'+result.stderr;
+        const relative='.neyna/state/'+name+'.log';
+        fs.writeFileSync(path.join(root,relative),log);
+        return {artifactPath:relative,artifactSha256:createHash('sha256').update(log).digest('hex'),
+          exitCode:result.status??255};
+      };
+      const reason='The legacy test artifact was lost during cross-machine migration, so the real project tests were rerun from isolated checkouts at every exact frozen Git commit.';
+      const findings='Inspected the actual Node test command output, real exit code and the detached Git commit of every frozen repository. The later child README change was not included in the test checkout. Re-running does not assert any Gate or replace the original historical report.';
+      const makeRequest=(cmdline:string,output:ReturnType<typeof runOriginal>)=>({
+        id,leaseToken:lease.leaseToken,actor:'developer',reason,
+        supersedesEvidenceId:oldId,deliveryHeads:heads,testedCheckouts,
+        commandCwd:cwd,command:cmdline,...output,findings,
+      });
+      const now=Date.now();
+      vi.spyOn(Date,'now').mockReturnValue(now+61_000);
+      expect(ledger.taskClosureStatus(id)).toMatchObject({
+        nextAction:'rebind-legacy-evidence',reviewTokenUsable:true,
+        staleLegacyEvidence:[{evidenceId:oldId}],frozenDeliveryHeads:heads,
+      });
+      expect(()=>ledger.report(id,lease.leaseToken,
+        {kind:'unit_test',reference:'new test'},false))
+        .toThrow(/Active writer lease/);
+      const failedOutput=runOriginal(['--test','test/missing.test.cjs'],'rerun-failed');
+      expect(failedOutput.exitCode).not.toBe(0);
+      const failRun=ledger.recordRerunEvidence(makeRequest(
+        'node --test test/missing.test.cjs',failedOutput));
+      expect(failRun).toMatchObject({exitCode:failedOutput.exitCode,
+        passedTest:false,evidenceId:null,gateApproved:false});
+      expect(ledger.get(id).status).toBe('in_review');
+      const passedOutput=runOriginal(['--test','test/layout.test.cjs'],'rerun-passed');
+      expect(passedOutput.exitCode).toBe(0);
+      const request=makeRequest('node --test test/layout.test.cjs',passedOutput);
+      expect(()=>ledger.recordRerunEvidence({...request,
+        exitCode:null as unknown as number}))
+        .toThrow(/actual|exit code|0–255|Provide an original evidence ID/);
+      expect(()=>ledger.recordRerunEvidence({...request,
+        supersedesEvidenceId:999999}))
+        .toThrow(/supersedesEvidenceId must refer/);
+      fs.writeFileSync(path.join(testDir,'UNTRACKED-POLLUTION.txt'),
+        'Untracked source outside the original frozen Git commit');
+      expect(()=>ledger.recordRerunEvidence(request))
+        .toThrow(/untracked source changes/);
+      fs.unlinkSync(path.join(testDir,'UNTRACKED-POLLUTION.txt'));
+      const link='.neyna/state/rerun-output-symlink.log';
+      fs.symlinkSync(path.join(root,passedOutput.artifactPath),path.join(root,link));
+      expect(()=>ledger.recordRerunEvidence({...request,
+        artifactPath:link}))
+        .toThrow(/regular, non-symlink/);
+      expect(()=>ledger.recordRerunEvidence({...request,
+        testedCheckouts:{...testedCheckouts,'apw-life':'apw-life'}}))
+        .toThrow(/Test checkout HEAD differs|checkout must|unique real directory/);
+      expect(()=>ledger.recordRerunEvidence({...request,
+        deliveryHeads:{...heads,'apw-life':'0'.repeat(40)}}))
+        .toThrow(/DELIVERY_HEAD_CHANGED|Git|ancestor|Mismatch|mismatch/i);
+      expect(()=>ledger.recordRerunEvidence({...request,
+        artifactSha256:'b'.repeat(64)}))
+        .toThrow(/Rerun output SHA-256 differs/);
+      const registered=ledger.recordRerunEvidence(request);
+      expect(registered).toMatchObject({taskId:id,passedTest:true,
+        gateApproved:false,testsExecutedByMcp:false,supersedesEvidenceId:oldId});
+      expect(typeof registered.evidenceReference).toBe('string');
+      expect(ledger.taskClosureStatus(id)).toMatchObject({
+        nextAction:'verify',staleLegacyEvidence:[],reviewTokenUsable:true,
+      });
+      expect(()=>ledger.recordRerunEvidence(request))
+        .toThrow(/already recorded/);
+      expect(dbReadEvidence(ledger.databasePath,oldId)).toMatchObject({
+        reference:oldReference,digest:'0'.repeat(64),
+      });
+      expect(ledger.verify(id,lease.leaseToken)).toMatchObject({passed:false});
+      const accepted=ledger.verify(id,lease.leaseToken,{
+        evidenceReference:registered.evidenceReference,
+        findings:'I reviewed the real rerun output against the exact frozen multi-Git delivery, including the negative-case test and current descendant source, and found the recorded results supported the declared acceptance.',
+        gates:[{gate:'docs',evidenceReference:registered.evidenceReference,
+          findings:'I inspected the actual source test output and checked the exact original frozen revision of every repository.'}],
+      });
+      expect(accepted).toMatchObject({passed:true,acceptanceRecorded:true});
+      expect(ledger.get(id).status).toBe('verified');
+      const audit=ledger.trace(id).audit.filter((entry:{event:string})=>
+        entry.event==='real_test_rerun_recorded');
+      expect(audit).toHaveLength(2);
+    }finally{ledger.close();}
+  });
+
   it('audits legacy multi-Git evidence rebind without rewriting old receipts, approving Gates or renewing expired writers',()=>{
     const {root,child,app}=fixture();
     const ledger=new ProjectTaskLedger(root);

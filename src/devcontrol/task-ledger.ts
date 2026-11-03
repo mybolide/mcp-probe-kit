@@ -871,6 +871,29 @@ export class ProjectTaskLedger {
         bound_at TEXT NOT NULL,
         UNIQUE(source_evidence_id,completion_revision)
       );
+      -- Rerun a real test against the ORIGINAL frozen Git checkouts when an
+      -- old receipt has lost its output. Failures are recorded here but are
+      -- deliberately not eligible as passed evidence in dc_evidence.
+      CREATE TABLE IF NOT EXISTS dc_rerun_test_receipts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        completion_revision INTEGER NOT NULL,
+        supersedes_evidence_id INTEGER NOT NULL REFERENCES dc_evidence(id),
+        new_evidence_id INTEGER UNIQUE REFERENCES dc_evidence(id),
+        repository_digest TEXT NOT NULL,
+        command TEXT NOT NULL,
+        command_cwd TEXT NOT NULL,
+        tested_checkouts_json TEXT NOT NULL,
+        exit_code INTEGER NOT NULL,
+        artifact_path TEXT NOT NULL,
+        artifact_sha256 TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        findings TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        UNIQUE(task_id,completion_revision,supersedes_evidence_id,
+          artifact_sha256,command)
+      );
       CREATE TABLE IF NOT EXISTS dc_external_gate_repository_digests (
         task_id TEXT NOT NULL REFERENCES dc_tasks(id),
         gate_name TEXT NOT NULL, digest TEXT NOT NULL,
@@ -1968,7 +1991,11 @@ export class ProjectTaskLedger {
       }
     }
     const staleLegacyEvidence=[...latestEvidenceByRef.values()]
-      .filter(row=>row.digest!==frozenRow?.digest)
+      .filter(row=>row.digest!==frozenRow?.digest&&
+        !this.db.prepare(`SELECT r.id FROM dc_rerun_test_receipts r
+          WHERE r.task_id=? AND r.completion_revision=?
+            AND r.supersedes_evidence_id=? AND r.new_evidence_id IS NOT NULL
+          LIMIT 1`).get(id,note?.revision??-1,row.id))
       .map(row=>({reference:row.reference,evidenceId:row.id,
         recordedDigest:row.digest??null}));
     const handoff=this.db.prepare(`SELECT reviewer,outcome,completion_head,completion_revision,
@@ -2030,7 +2057,9 @@ export class ProjectTaskLedger {
     if(note&&evidence.length&&task.status==='in_review'&&
       staleLegacyEvidence.length>0&&!internalDecision){
       add('rebind-legacy-evidence','existing multi-Git test receipt lacks the frozen delivery vector',
-        'Inspect the ORIGINAL real test log, calculate its SHA-256, supply the exact frozenDeliveryHeads map, original evidenceReference, responsible Agent token and substantive Git/test findings. This only records an audited provenance link, never a Gate pass. If the original log does not establish those exact tested commits, rerun the real project tests.');
+        'If the ORIGINAL test log exists, inspect its SHA-256 and use rebind-legacy-evidence. If that log was lost, run genuine project tests again from clean, exact frozen Git worktrees for ALL repositories; then use record-rerun-evidence with supersedesEvidenceId, testedCheckouts, commandCwd, exitCode and new log SHA-256. Neither action runs a test or passes a Gate; the original review token works even after writer expiry.');
+      add('record-rerun-evidence','original test output is missing but actual frozen-code tests can be rerun',
+        'Run the original project tests in exact detached frozen checkouts, independently verify all checkout HEADs, keep the new output and SHA-256, record the true exitCode. Review still needs a separate verify covering every frozen Gate.');
     }
     if(note&&evidence.length&&task.status==='in_review'&&!internalDecision){
       add('verify','ready for one developer acceptance',
@@ -7139,6 +7168,189 @@ export class ProjectTaskLedger {
         sourceEvidenceId:original.id,repositoryDigest:digest,
         evidenceRebound:true,testsExecuted:false,gateApproved:false,
         nextAction:'verify with substantive acceptance and actual Gate findings'};
+    });
+  }
+
+  /** Record NEW tests run by the host Agent against the unchanged frozen
+   * multi-repository checkout vector. This does not execute tests, mutate
+   * any Git checkout, re-open development or approve a Gate. In particular,
+   * an expired writer TTL does not block the original review token here.
+   *
+   * Requiring each physical test checkout's exact HEAD and a clean tracked
+   * index avoids mistaking a descendant checkout (with altered dependencies)
+   * for the frozen code merely because the task's test file is unchanged.
+   */
+  recordRerunEvidence(input:{
+    id:string;leaseToken:string;actor:string;reason:string;
+    supersedesEvidenceId:number;deliveryHeads:Record<string,string>;
+    testedCheckouts:Record<string,string>;commandCwd:string;
+    command:string;exitCode:number;artifactPath:string;
+    artifactSha256:string;findings:string;
+  }):Row {
+    const actor=String(input?.actor??'').trim();
+    const reason=String(input?.reason??'').trim();
+    const findings=String(input?.findings??'').trim();
+    const command=String(input?.command??'').trim();
+    const commandCwd=String(input?.commandCwd??'').trim();
+    const artifactPath=String(input?.artifactPath??'').trim();
+    const sha=String(input?.artifactSha256??'').trim().toLowerCase();
+    const originalId=input?.supersedesEvidenceId;
+    if(!Number.isSafeInteger(originalId)||originalId<1||
+      actor.length<2||reason.length<40||reason.length>1200||
+      findings.length<100||findings.length>4000||
+      command.length<12||command.length>2000||
+      !Number.isSafeInteger(input?.exitCode)||input.exitCode<0||
+      input.exitCode>255||!/^[a-f0-9]{64}$/.test(sha))
+      fail('RERUN_EVIDENCE_REQUIRED',
+        'Provide an original evidence ID, responsible actor, concrete reason, real test command, 0–255 exit code, SHA-256 log and detailed findings');
+    if(!this.hasRootGit)
+      fail('RERUN_MULTI_GIT_ONLY','Use the immutable file manifest protocol in projects without Git');
+    const validRelative=(value:unknown):value is string=>
+      typeof value==='string'&&value.length>0&&value.length<=512&&
+      !path.isAbsolute(value)&&!value.includes('\\')&&
+      value.split('/').every(part=>!!part&&part!=='.'&&part!=='..')&&
+      value!=='.git'&&!value.startsWith('.git/');
+    if(!validRelative(commandCwd)||!validRelative(artifactPath))
+      fail('RERUN_PATH_UNSAFE','Use real project-relative test checkout and artifact paths');
+    if(!input.deliveryHeads||typeof input.deliveryHeads!=='object'||
+      Array.isArray(input.deliveryHeads)||
+      !input.testedCheckouts||typeof input.testedCheckouts!=='object'||
+      Array.isArray(input.testedCheckouts))
+      fail('RERUN_CHECKOUTS_REQUIRED',
+        'Provide the complete frozen deliveryHeads and the physical checkout path for every Git repository');
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(input.id,input.leaseToken,'review');
+      if(actor!==lease.agent)
+        fail('RERUN_AGENT_MISMATCH',
+          'The existing responsible developer must inspect and register this test rerun');
+      const task=this.requireTask(input.id);
+      const note=this.latestCompletion(input.id);
+      if(task.status!=='in_review'||!note)
+        fail('RERUN_REVIEW_ONLY',
+          'Only an already completed multi-Git delivery awaiting review can record rerun evidence');
+      const observed=this.observedTaskRepositories(input.id,task);
+      if(!observed.some(repo=>!!repo.prefix))
+        fail('RERUN_MULTI_GIT_ONLY','Rerun replacement requires a frozen multi-repository delivery');
+      this.checkReviewDeliveryHead(input.id,String(lease.base_head),String(note.git_head));
+      const frozen=this.frozenDeliveryRepositories(input.id,task);
+      const selected=this.selectDeliveryRepositories(task,observed,input.deliveryHeads);
+      const digest=this.repositoryEvidenceDigest(input.id,frozen);
+      if(digest!==this.repositoryEvidenceDigest(input.id,selected)||
+        JSON.stringify(frozen)!==JSON.stringify(selected))
+        fail('RERUN_DELIVERY_MISMATCH',
+          'The full supplied Git vector differs from the frozen delivery; do not test descendant code and claim original evidence');
+      const original=this.db.prepare(`SELECT e.id,e.kind,e.reference,e.git_head
+        FROM dc_evidence e WHERE e.id=? AND e.task_id=?`)
+        .get(originalId,input.id);
+      if(!original||original.git_head!==note.git_head)
+        fail('RERUN_SOURCE_EVIDENCE_MISSING',
+          'supersedesEvidenceId must refer to an existing receipt from this exact completed task');
+      const existing=this.db.prepare(`SELECT id FROM dc_rerun_test_receipts
+        WHERE task_id=? AND completion_revision=? AND
+          supersedes_evidence_id=? AND artifact_sha256=? AND command=?`)
+        .get(input.id,note.revision,originalId,sha,command);
+      if(existing)fail('RERUN_ALREADY_RECORDED',
+        'This exact rerun output and command are already recorded against the frozen delivery');
+
+      const workspace=fs.realpathSync(this.root);
+      const safeFile=(relative:string):string=>{
+        if(!validRelative(relative))
+          fail('RERUN_PATH_UNSAFE','Test proof path contains unsafe segments');
+        const lexical=path.resolve(this.root,relative);
+        if(!lexical.startsWith(path.resolve(this.root)+path.sep))
+          fail('RERUN_PATH_UNSAFE','Test proof escaped the project workspace');
+        let stat:fs.Stats,real:string;
+        try{stat=fs.lstatSync(lexical);real=fs.realpathSync(lexical);}
+        catch{fail('RERUN_ARTIFACT_MISSING','Keep the actual rerun output on disk until it has been audited');}
+        if(!stat!.isFile()||stat!.isSymbolicLink()||stat!.size<32||
+          stat!.size>8*1024*1024||real!==path.resolve(workspace,relative)||
+          !real.startsWith(workspace+path.sep))
+          fail('RERUN_ARTIFACT_UNSAFE',
+            'Rerun output must be a regular, non-symlink project file of 32 bytes to 8 MiB');
+        return real;
+      };
+      const artifact=safeFile(artifactPath);
+      const artifactDigest=createHash('sha256').update(fs.readFileSync(artifact)).digest('hex');
+      if(artifactDigest!==sha)
+        fail('RERUN_ARTIFACT_CHANGED','Rerun output SHA-256 differs from the supplied test log hash');
+
+      if(Object.keys(input.testedCheckouts).length!==frozen.length||
+        frozen.some(repo=>!validRelative(input.testedCheckouts[repo.prefix]??'')))
+        fail('RERUN_CHECKOUTS_REQUIRED',
+          'Supply one existing project-relative Git test checkout for every frozen repository, including root');
+      const physical=new Set<string>();
+      for(const repo of frozen){
+        const relative=input.testedCheckouts[repo.prefix];
+        const lexical=path.resolve(this.root,relative);
+        let real:string,stat:fs.Stats;
+        try{real=fs.realpathSync(lexical);stat=fs.lstatSync(lexical);}
+        catch{fail('RERUN_CHECKOUT_MISSING',
+          'Create an isolated detached Git worktree at the frozen commit before rerunning real project tests');}
+        if(!stat!.isDirectory()||stat!.isSymbolicLink()||
+          real!==path.resolve(workspace,relative)||
+          !real.startsWith(workspace+path.sep)||physical.has(real))
+          fail('RERUN_CHECKOUT_UNSAFE','Each Git test checkout must be a unique real directory within the project workspace');
+        physical.add(real);
+        const toplevel=git(real,['rev-parse','--show-toplevel']);
+        if(fs.realpathSync(toplevel)!==real)
+          fail('RERUN_CHECKOUT_NESTED',
+            'The declared checkout must be the root of an independent Git repository or linked worktree');
+        if(git(real,['rev-parse','HEAD'])!==repo.head)
+          fail('RERUN_CHECKOUT_HEAD_CHANGED',
+            'Test checkout HEAD differs from the immutable frozen delivery; use exact detached commits, not descendant code');
+        const sourcePath=path.join(this.root,repo.prefix);
+        const commonDir=(repoRoot:string)=>fs.realpathSync(path.resolve(repoRoot,
+          git(repoRoot,['rev-parse','--git-common-dir'])));
+        if(commonDir(real)!==commonDir(sourcePath))
+          fail('RERUN_REPOSITORY_MISMATCH',
+            'The frozen test checkout must belong to the original independent Git repository, not an unrelated clone with a matching SHA');
+        if(git(real,['status','--porcelain','--untracked-files=normal']))
+          fail('RERUN_CHECKOUT_DIRTY',
+            'Test checkout has tracked, staged or untracked source changes; only ignored generated test output may differ from the frozen source');
+      }
+      if(!Object.values(input.testedCheckouts).includes(commandCwd))
+        fail('RERUN_COMMAND_CWD_INVALID',
+          'Actual test command working directory must be one of the frozen physical Git checkouts');
+      const evidenceReference='rerun:'+createHash('sha256').update(
+        JSON.stringify([input.id,note.revision,originalId,digest,command,sha]),
+      ).digest('hex');
+      const now=utc();
+      let evidenceId:number|null=null;
+      // A non-zero exit code is important historical test evidence, never
+      // an eligible dc_evidence proof for a passing project Gate.
+      if(input.exitCode===0){
+        this.db.prepare(`INSERT INTO dc_evidence
+          (task_id,kind,reference,git_head,created_at) VALUES(?,?,?,?,?)`)
+          .run(input.id,original.kind,evidenceReference,note.git_head,now);
+        const evidence=this.db.prepare(`SELECT id FROM dc_evidence
+          WHERE task_id=? ORDER BY id DESC LIMIT 1`).get(input.id);
+        evidenceId=Number(evidence!.id);
+        this.db.prepare(`INSERT INTO dc_evidence_repository_digests
+          (evidence_id,digest) VALUES(?,?)`).run(evidenceId,digest);
+      }
+      this.db.prepare(`INSERT INTO dc_rerun_test_receipts
+        (task_id,completion_revision,supersedes_evidence_id,new_evidence_id,
+         repository_digest,command,command_cwd,tested_checkouts_json,exit_code,
+         artifact_path,artifact_sha256,actor,reason,findings,recorded_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(input.id,note.revision,
+        originalId,evidenceId,digest,command,commandCwd,
+        JSON.stringify(input.testedCheckouts),input.exitCode,
+        artifactPath,sha,actor,reason,findings,now);
+      this.audit(input.id,'real_test_rerun_recorded',actor,{
+        sourceEvidenceId:originalId,newEvidenceId:evidenceId,
+        evidenceReference:input.exitCode===0?evidenceReference:null,
+        completionRevision:note.revision,frozenDeliveryHeads:input.deliveryHeads,
+        repositoryDigest:digest,testedCheckouts:input.testedCheckouts,
+        commandCwd,command,exitCode:input.exitCode,
+        artifactPath,artifactSha256:sha,reason,findings,
+        originalEvidenceUnchanged:true,testsExecutedByMcp:false,gateApproved:false,
+      });
+      return {taskId:input.id,supersedesEvidenceId:originalId,
+        evidenceId,evidenceReference:evidenceId===null?null:evidenceReference,
+        repositoryDigest:digest,exitCode:input.exitCode,passedTest:input.exitCode===0,
+        testsExecutedByMcp:false,gateApproved:false,
+        nextAction:input.exitCode===0?'verify with substantive original Gate acceptance':
+          'Inspect failed test logs and rerun the real test; the failed receipt cannot approve a Gate'};
     });
   }
 

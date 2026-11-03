@@ -156,10 +156,25 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    record and a derived digest binding; original evidence is never rewritten,
    and no tests or Gates are marked passed. If the original test log does not
    demonstrate testing of those commits, rerun the real project tests.
+   When the original output has been LOST, use record-rerun-evidence, not
+   report, defer-verification or a fabricated legacy rebind. The host Agent
+   runs real tests from exact detached Git worktrees for EVERY frozen Git
+   prefix, with unchanged tracked/index source. Provide existing
+   supersedesEvidenceId, complete frozen deliveryHeads and testedCheckouts
+   maps, commandCwd (one of the frozen test checkouts), actual command,
+   real numeric exitCode, new project-local artifactPath, artifactSha256,
+   original review leaseToken, actor, reason and detailed findings.
+   DevControl verifies Git HEADs and SHA-256 but does NOT run the test or
+   approve any Gate. Failed reruns are audited, never passing test evidence.
+   A successful rerun appends a NEW version-bound evidence reference;
+   preserve the old evidence and use the new reference in a separate verify.
+   A descendant HEAD is NOT the same tested code even when the scoped test
+   file is unchanged; do not certify a descendant checkout as frozen.
    An in_review task with a committed delivery can review and verify using
    its unchanged original token even after the writer lease expires; changing
-   code, completing a new delivery or reporting new evidence still needs a
-   valid writing lease. Never automatically approve an expired Gate.
+   code, completing a new delivery or ordinary report still needs a valid
+   writing lease. Neither reviewing nor recording a frozen-code rerun needs
+   a new exclusive writer lease. Never automatically approve a Gate.
    Normal Git pull, merge, clone and moving the entire workspace need no
    Owner key, per-machine rebind or SQLite update. Git metadata locations
    are identified relative to the current workspace root (".git" and
@@ -324,6 +339,8 @@ export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): st
 
 **审核租约与旧多仓证据**：开发写入租约默认 30 分钟，最长 60 分钟，长时间编码或测试时要在过期前 renew；已经提交并处于 in_review 的任务即使开发租约过期，只要保留原 leaseToken 和冻结提交，仍可直接执行技术自审、Gate 审核和 verify，不再因倒计时要求 recover-task。过期租约绝不能继续改源码或提交新的 report。旧多仓测试记录如缺少准确的冻结版本向量，先用 task-closure-status 取得 frozenDeliveryHeads 和原 evidenceReference；有可核验的旧真实测试日志时，使用 rebind-legacy-evidence 提交原 leaseToken、actor、reason、完整 deliveryHeads、原 evidenceReference、项目内实际日志 artifactPath 及 artifactSha256 和详细 findings。仅追加审计与派生证据关联，不改原测试记录、不运行测试、更不会自动通过 Gate；原日志不能证明该冻结代码受测时，必须重新运行真正的项目测试，不得补造证明。
 
+**旧日志遗失后的真实重跑登记**：已经处于 in_review 且原测试输出丢失的多仓任务，不要反复调用 report、recover-task 或不支持多仓的 defer-verification。先从 task-closure-status 取得原 evidenceId 和完整 frozenDeliveryHeads；在每个独立 Git 仓库的原始冻结提交上准备干净、隔离的 worktree，Agent 真正运行项目测试并保存新日志和 SHA-256。然后调用 record-rerun-evidence，填写 supersedesEvidenceId、完整 deliveryHeads、每个冻结仓库的 testedCheckouts、实际执行目录 commandCwd、真实 command/exitCode、artifactPath/artifactSha256、原 leaseToken、actor、reason 和详细 findings。此动作仅追加测试运行事实和来源关联，不占用独占代码写入租约，不改旧证据、不修改代码、不自动通过 Gate。测试失败也要如实记录，不能作为通过证据；成功后使用新返回的 evidenceReference 对每个原始 Gate 做正式 verify。后续提交即使没有改动测试文件，也不能把当前 HEAD 冒充原冻结代码。
+
 ${skillRef}
 
 ${managedRevision}
@@ -406,7 +423,7 @@ ${managedRevision}
   to 60 minutes. A committed in_review delivery does NOT need to reclaim
   an expired writer lease for self-review, Gate inspection or verify:
   use the original retained task token and unchanged reviewed source.
-  New code and new test reports still need an active writer lease.
+  New code and ordinary report still need an active writer lease.
   An old multi-Git receipt with missing/stale repository binding may use
   rebind-legacy-evidence, but ONLY after inspecting the real original test
   artifact (relative path plus SHA-256) and matching every frozen delivery
@@ -415,6 +432,16 @@ ${managedRevision}
   binding without rewriting the original report, running tests or approving
   any Gate. If the original receipt cannot establish these commits, rerun
   the real project tests; never create a synthetic passing test or Gate.
+- If the old multi-Git test output was LOST, run genuine tests again using
+  isolated, clean Git worktrees at EVERY originally frozen delivery HEAD.
+  Then record-rerun-evidence with supersedesEvidenceId, complete frozen
+  deliveryHeads and testedCheckouts, commandCwd, actual command/exitCode,
+  new test log artifactPath/artifactSha256 and substantive findings.
+  This narrow evidence-only action uses the original in_review token after
+  the writer lease expires, never grabs another task's Git index, and never
+  overwrites original evidence. Nonzero results are audited but cannot pass
+  Gate. Successful results must still pass all original Gates via verify;
+  testing a descendant checkout is not proof of frozen source behavior.
 - Optional local-only info/devcontrol-worktree-ignore in each real Git-dir
   adds to standard Git ignore. Explicit patterns exempt tracked, staged and
   untracked non-business LOCAL tool configurations (e.g. AGENTS.md, managed

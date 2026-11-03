@@ -237,6 +237,18 @@ export function dispatchDevControl(
       artifactSha256:String(input.artifactSha256??''),
       findings:String(input.findings??''),
     });
+    case "record-rerun-evidence": return ledger.recordRerunEvidence({
+      id:String(input.id??''),leaseToken:String(input.leaseToken??''),
+      actor:String(input.actor??''),reason:String(input.reason??''),
+      supersedesEvidenceId:input.supersedesEvidenceId as number,
+      deliveryHeads:input.deliveryHeads as Record<string,string>,
+      testedCheckouts:input.testedCheckouts as Record<string,string>,
+      commandCwd:String(input.commandCwd??''),
+      command:String(input.command??''),exitCode:input.exitCode as number,
+      artifactPath:String(input.artifactPath??''),
+      artifactSha256:String(input.artifactSha256??''),
+      findings:String(input.findings??''),
+    });
     case "recover-task": return ledger.recoverTaskLease(String(input.id),{
       actor:String(input.actor??''),explicitAuthorization:input.explicitAuthorization===true,
       reason:String(input.reason??''),ttlSeconds:Number(input.ttlSeconds??1800),

@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **100 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **101 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -245,6 +245,67 @@ AGENTS.md 提供简短入口，**只更新受管理的 MCP 区块**，保留项�
 如果没有可检查的原始输出，或者不能证明原记录确实覆盖这些 Git 版本，
 应在保留交付的前提下重新运行真实项目测试，而不是生成虚假的证据。
 
+### 旧日志遗失后，在冻结多仓交付上真实重跑
+
+若旧日志已经丢失，**不要**将新日志谎称为旧测试。
+`report` 不负责给 `in_review` 补交一份新测试，也不能使用只支持根仓
+延期的 `defer-verification` 绕过多仓提交。直接使用
+`record-rerun-evidence`，不需要占用其他 Agent 的 Git 写入租约。
+
+先调用 `task-closure-status` 读取 `frozenDeliveryHeads` 和
+`staleLegacyEvidence[].evidenceId`。在各独立仓库的**原冻结 SHA**
+创建干净的 detached worktree；可以放在被 Git 忽略的
+`.neyna/state/frozen-rerun/` 下。若当前工作分支已有后续提交，即使
+测试文件没变，也不能在当前 HEAD 上测试之后冒充冻结交付。
+Agent 在隔离目录运行项目自己的真实测试，把**实际输出、实际退出码**
+记录为普通文件并计算 SHA-256。MCP 不运行项目测试。
+
+```json
+{
+  "action": "record-rerun-evidence",
+  "project_root": "/ABSOLUTE/PROJECT",
+  "input": {
+    "id": "EXISTING-IN-REVIEW-TASK",
+    "leaseToken": "ORIGINAL-TASK-REVIEW-TOKEN",
+    "actor": "responsible-developer",
+    "reason": "The original test output was lost during a machine migration. Real tests were rerun in isolated worktrees at exactly the unchanged frozen delivery HEADs.",
+    "supersedesEvidenceId": 62,
+    "deliveryHeads": {
+      "": "EXACT_FROZEN_ROOT_SHA",
+      "apw-life": "EXACT_FROZEN_CHILD_SHA",
+      "apw-life-app": "EXACT_FROZEN_APP_SHA"
+    },
+    "testedCheckouts": {
+      "": ".neyna/state/frozen-rerun/root",
+      "apw-life": ".neyna/state/frozen-rerun/apw-life",
+      "apw-life-app": ".neyna/state/frozen-rerun/apw-life-app"
+    },
+    "commandCwd": ".neyna/state/frozen-rerun/apw-life-app",
+    "command": "flutter analyze --no-pub test/activity_android_ios_layout_test.dart && flutter test --no-pub test/activity_android_ios_layout_test.dart",
+    "exitCode": 0,
+    "artifactPath": ".neyna/state/test-artifacts/android-layout-rerun.log",
+    "artifactSha256": "REAL_64_CHARACTER_SHA256_OF_ACTUAL_NEW_OUTPUT",
+    "findings": "Inspect the original frozen commits of every independent repository, the actual test runner's output, the real command and exit status, the negative cases, and the unchanged frozen source. This is a newly executed test result, not an old log, and the project Gate has not been approved yet."
+  }
+}
+```
+
+示例中提交 SHA、日志 SHA 和编号需要使用当前项目的实际值。三个
+`testedCheckouts` 必须分别是真实独立 Git 仓库根目录，HEAD 与完整
+`deliveryHeads` 一致，已跟踪文件和 index 都干净；命令执行目录必须
+是其中之一。MCP 校验目录、Git HEAD、日志文件及 SHA-256。
+不能仅凭日志哈希证明测试执行，负责 Agent 还必须检查实际执行来源。
+`supersedesEvidenceId` 必须指向当前任务原来登记的测试，不可借用其他
+任务的证据。
+
+每次操作都只追加 `dc_rerun_test_receipts` 和审计记录。
+**失败的重跑同样登记，但不会生成能够用于通过 Gate 的新证据。**
+退出码为 0 的重跑才追加一条新 `dc_evidence`，绑定原冻结
+repository digest，返回新的 `evidenceReference`。它不替换旧记录，
+也不让 Gate 自动通过。之后必须由 Agent 使用该新引用和真实检查结论
+单独执行 `verify`，逐项满足原有 Gate。尤其是
+`ios_device_e2e` 不能被普通 Flutter 单元测试冒充。
+
 **生成规则同步检查（每次 MCP 研发修改都必须做）**：检查实际业务流程是否改变，核对 `src/lib/v5-sqlite-guidance.ts`（Skill/AGENTS.md）、`src/lib/v5-agent-action-reference.ts`、`src/lib/harness-adapters.ts`、`src/lib/workflow-skill-installer.ts` 的生成与写入规则；如规则改变，应更新 `SKILL_GUIDANCE_REVISION`。运行 `verify-workflow-skill` 和 Skill/AGENTS bootstrap 回归，确认旧版同版本托管块会被更新，用户自定义 AGENTS.md 内容不会覆盖，第二次启动保持幂等。`prebuild` 自动运行一致性检查及 Skill 同步，但不应自动重写其他开发者正在工作的真实项目文件。
 
 Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcontrol` 工具的对应 `action` 进入项目 SQLite。**DevControl 只管理状态与验证契约，Agent 自己分析需求、写代码、独立审核、执行真正的测试和业务 SQL。** 未实际运行的 Gate 不算通过。
@@ -315,7 +376,7 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | Bug / Defect management (3) | `bug-get`、`bug-step-save`、`bug-task-link` |
 | Idea / Proposed change governance (7) | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-self-review`、`idea-review`、`idea-decide` |
 | 工件 / Governed artifacts (6) | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-self-review`、`artifact-independent-review`、`artifact-approve` |
-| 领取、报告与验收 / Execution and evidence (21) | `claim`、`renew`、`recover-task`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`rebind-legacy-evidence`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
+| 领取、报告与验收 / Execution and evidence (22) | `claim`、`renew`、`recover-task`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`rebind-legacy-evidence`、`record-rerun-evidence`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
 | 决策 / Decision records (2) | `decision-save`、`decision-get` |
 | 本地工具 / Local developer and hooks (3) | `local-developer`、`hook-status`、`hook-install` |
 
