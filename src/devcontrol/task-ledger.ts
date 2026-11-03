@@ -3177,6 +3177,70 @@ export class ProjectTaskLedger {
   /** Frozen repo baselines are immutable for the duration of a task.
    * Legacy single-repo tasks keep their existing Git and SQLite semantics.
    */
+  private validatedLegacyAuxiliaryCheckouts(id:string,task:Row,
+    rows:Row[],discovered:ReturnType<typeof discoverRepositories>):boolean {
+    // Earlier v5 discovery accidentally froze auxiliary linked checkouts of
+    // the *same* common Git repository as if they were independent producers.
+    // A later fix correctly omits them, but the claim-time audit is immutable.
+    // Reconcile ONLY that exact historical shape, without editing a baseline
+    // or silently releasing another Agent's protected uncommitted source.
+    if(discovered.length!==1||discovered[0].prefix!==''||
+      rows.length<2||rows.filter(row=>row.prefix==='').length!==1)return false;
+    const extras=rows.filter(row=>row.prefix!=='');
+    const scopes=JSON.parse(task.allowed_paths) as string[];
+    const childRows=this.db.prepare(`SELECT prefix,git_dir,snapshot_json,digest
+      FROM dc_legacy_child_worktree_snapshots WHERE task_id=?`).all(id);
+    if(childRows.length!==extras.length)
+      fail('LEGACY_AUXILIARY_BASELINE_INCOMPLETE',
+        'Historical auxiliary checkouts need their original protected snapshots');
+    const locations=this.repositoryLocations(id);
+    const mainGit=fs.realpathSync(path.join(this.root,'.git'));
+    const originalRoot=path.resolve(this.root);
+    for(const row of extras){
+      const prefix=String(row.prefix);
+      if(!prefix||path.posix.isAbsolute(prefix)||prefix.includes('\\')||
+        prefix.split('/').some(part=>!part||part==='.'||part==='..')||
+        scopes.some(scope=>scope===prefix||scope.startsWith(prefix+'/')||
+          (scope.endsWith('/**')&&prefix.startsWith(scope.slice(0,-3)+'/'))))
+        fail('LEGACY_AUXILIARY_SCOPE',
+          'A scoped or unsafe checkout cannot be reclassified as auxiliary');
+      const checkout=path.resolve(this.root,prefix);
+      if(!checkout.startsWith(originalRoot+path.sep))
+        fail('LEGACY_AUXILIARY_SCOPE','Auxiliary checkout escaped the project');
+      const marker=path.join(checkout,'.git');
+      if(!fs.existsSync(checkout)||fs.realpathSync(checkout)!==checkout||
+        !fs.existsSync(marker)||!fs.lstatSync(marker).isFile()||
+        fs.lstatSync(marker).isSymbolicLink())
+        fail('LEGACY_AUXILIARY_IDENTITY',
+          'The original auxiliary Git checkout is missing or was replaced');
+      const protectedRow=childRows.find(item=>item.prefix===prefix);
+      if(!protectedRow||protectedRow.git_dir!==row.git_dir||
+        createHash('sha256').update(String(protectedRow.snapshot_json))
+          .digest('hex')!==protectedRow.digest)
+        fail('LEGACY_AUXILIARY_SNAPSHOT',
+          'Original child snapshot is missing or its immutable digest changed');
+      if(stagedChanges([{prefix,root:checkout,gitDir:portableGitDir(prefix),
+        absoluteGitDir:fs.realpathSync(git(checkout,
+          ['rev-parse','--absolute-git-dir']))}]).length||
+        JSON.stringify(preservedWorktreeSnapshot(checkout,scopes,prefix))!==
+          String(protectedRow.snapshot_json))
+        fail('PROTECTED_CHILD_WORKTREE_CHANGED',
+          'Historical auxiliary checkout has staged or changed protected Agent files');
+      const top=fs.realpathSync(git(checkout,['rev-parse','--show-toplevel']));
+      const common=fs.realpathSync(path.resolve(checkout,
+        git(checkout,['rev-parse','--git-common-dir'])));
+      const gitDir=fs.realpathSync(git(checkout,['rev-parse','--absolute-git-dir']));
+      const location=locations.get(prefix);
+      if(top!==checkout||common!==mainGit||!location||
+        !location.known.has(gitDir)||
+        fs.realpathSync(String(row.git_dir))!==gitDir||
+        git(checkout,['rev-parse','HEAD'])!==row.base_head)
+        fail('LEGACY_AUXILIARY_IDENTITY',
+          'Original auxiliary Git identity, common directory or HEAD changed');
+    }
+    return true;
+  }
+
   private taskRepositories(id:string,task:Row):RepositoryRevision[] {
     const rows=this.db.prepare(`SELECT prefix,git_dir,base_head
       FROM dc_task_repository_baselines WHERE task_id=? ORDER BY prefix`).all(id);
@@ -3193,6 +3257,15 @@ export class ProjectTaskLedger {
       baseHead:String(row.base_head),head:String(row.base_head),
     }));
     try{
+      if(this.validatedLegacyAuxiliaryCheckouts(id,task,rows,discovered)){
+        // Deliveries and intervening Verified commits belong to ONE shared
+        // Git history. The three legacy auxiliary checkout baselines remain
+        // stored and independently protected, but cannot claim task commits.
+        const rootOnly=records.filter(repo=>repo.prefix==='');
+        assertRepositoryTopology(this.root,paths,rootOnly);
+        updateRevisions(this.root,rootOnly);
+        return rootOnly;
+      }
       assertRepositoryTopology(this.root,paths,records);
       // A new machine and later normal merges are fine, but the actual
       // repository must still contain the original immutable base commit.

@@ -52,6 +52,64 @@ describe('GP shared-checkout expired task recovery and audited writer handoff',(
     db.close();
   });
 
+  it('recovers an archived auxiliary worktree baseline without modifying or claiming other Agent bytes',()=>{
+    // Before same-common-Git worktrees were excluded from discovery, an old
+    // claim could freeze those checkouts as independent repositories. Model
+    // the immutable historical SQLite records, not a new downgraded claim.
+    const auxPrefix='.worktrees/other-agent';
+    const aux=path.join(root,auxPrefix);
+    fs.appendFileSync(path.join(root,'.git','info','exclude'),'\n/.worktrees/\n');
+    git('worktree','add','-q','-b','test/other-agent',aux,'HEAD');
+    write('src/t1/.keep','frozen task local file\n');
+    // Do not include the in-scope path in the unrelated protected snapshot.
+    git('add','src/t1/.keep');
+    git('commit','-qm','fixture initial approved task scope');
+    create('GP-T1',['src/t1/**']);
+    const original=ledger.claim('GP-T1','agent-a',60);
+    fs.writeFileSync(path.join(aux,'README.md'),'other Agent historical WIP\n');
+    const bytes=fs.readFileSync(path.join(aux,'README.md'));
+    const childFiles=[{path:'README.md',kind:'tracked',
+      sha256:createHash('sha256').update(bytes).digest('hex'),size:bytes.length}];
+    const db=new (createRequire(import.meta.url)('node:sqlite').DatabaseSync)(
+      ledger.databasePath);
+    const childGit=execFileSync('git',['rev-parse','--absolute-git-dir'],{
+      cwd:aux,encoding:'utf8',windowsHide:true}).trim();
+    const childHead=execFileSync('git',['rev-parse','HEAD'],{
+      cwd:aux,encoding:'utf8',windowsHide:true}).trim();
+    const claimHead=String(original.baseHead);
+    const at='2026-11-03T00:00:00.000Z';
+    const store=db.prepare(`INSERT INTO dc_task_repository_baselines
+      (task_id,prefix,git_dir,base_head,captured_at) VALUES(?,?,?,?,?)`);
+    store.run('GP-T1','',path.join(root,'.git'),claimHead,at);
+    store.run('GP-T1',auxPrefix,childGit,childHead,at);
+    const snapshot=JSON.stringify(childFiles);
+    db.prepare(`INSERT INTO dc_legacy_child_worktree_snapshots
+      (task_id,prefix,git_dir,snapshot_json,digest,captured_at)
+      VALUES(?,?,?,?,?,?)`).run('GP-T1',auxPrefix,childGit,snapshot,
+        createHash('sha256').update(snapshot).digest('hex'),at);
+    db.close();
+    const now=Date.now();
+    vi.spyOn(Date,'now').mockReturnValue(now+61_000);
+    const recovery=recover('GP-T1');
+    expect(recovery).toMatchObject({status:'in_progress',originalBaseHead:claimHead});
+    expect(fs.readFileSync(path.join(aux,'README.md'),'utf8'))
+      .toBe('other Agent historical WIP\n');
+    // The extra record is never deleted or silently rewritten.
+    const check=new (createRequire(import.meta.url)('node:sqlite').DatabaseSync)(
+      ledger.databasePath);
+    const stored=check.prepare(`SELECT COUNT(*) n FROM
+      dc_task_repository_baselines WHERE task_id=?`).get('GP-T1');
+    expect(stored.n).toBe(2);
+    check.close();
+    // Every subsequent ledger read must protect the WIP, not merely the
+    // original recover action.
+    fs.writeFileSync(path.join(aux,'README.md'),'unauthorized change\n');
+    expect(()=>ledger.complete('GP-T1',recovery.leaseToken,{
+      summary:'frozen exact scope',implementation:'frozen exact source',
+      verification:'real project tests',remaining:'',
+    })).toThrow(/Historical auxiliary checkout has staged or changed protected Agent files/);
+  });
+
   it('keeps Owner quarantine and later approved-task provenance in one checked append-only chain',()=>{
     create('GP-T1',['src/t1/**']);
     create('GP-T2',['src/t2/**']);
