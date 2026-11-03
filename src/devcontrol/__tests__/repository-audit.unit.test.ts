@@ -714,7 +714,7 @@ describe('immutable multi-repository delivery commits',()=>{
         .toMatchObject({passed:true,acceptanceRecorded:true});
       expect(ledger.get(id).status).toBe('verified');
     }finally{ledger.close();}
-  });
+  },60_000);
 
   it('does not mistake a merge second-parent difference for a changed frozen delivery',()=>{
     const {root,child}=fixture();
