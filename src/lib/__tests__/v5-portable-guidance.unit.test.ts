@@ -100,4 +100,44 @@ describe('portable generated v5 project guidance',()=>{
     expect(repeat.skill.updated).toBe(false);
     expect(repeat.agentsMd.updated).toBe(false);
   });
+
+  it('generates current full-scope deferred review guidance for Skill and both AGENTS locales',()=>{
+    const guidance=[
+      generateWorkflowSkillContent(VERSION),
+      renderV5AgentsMd('zh-CN','@.agents/skills/mcp-probe-kit/SKILL.md'),
+      renderV5AgentsMd('en','@.agents/skills/mcp-probe-kit/SKILL.md'),
+    ];
+    for(const generated of guidance){
+      expect(generated).toContain(SKILL_GUIDANCE_REVISION);
+      expect(generated).toContain('resume-verification');
+      expect(generated).toContain('overlappingPaths');
+      expect(generated).toContain('reviewedHead');
+      expect(generated).toMatch(/original (frozen )?patch|原冻结补丁/);
+      expect(generated).toMatch(/frozen (scope|allowed paths)|冻结范围|冻结允许范围/);
+    }
+  });
+
+  it('upgrades a prior r31 installation at the same package version without losing user AGENTS rules',()=>{
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),'portable-r31-to-r32-'));
+    roots.push(root);
+    execFileSync('git',['init','-q',root],{timeout:3000,windowsHide:true});
+    fs.writeFileSync(path.join(root,'AGENTS.md'),'# Owner rules\nPreserve original test receipts.\n');
+    ensureMcpProbeKitBootstrap(root);
+    const skillPath=path.join(root,MCP_PROBE_SKILL_REL_PATH);
+    const agentsPath=path.join(root,'AGENTS.md');
+    const previous='v5-sqlite-devcontrol-20261103-deferred-scope-r31';
+    for(const file of [skillPath,agentsPath]){
+      fs.writeFileSync(file,fs.readFileSync(file,'utf8').replaceAll(SKILL_GUIDANCE_REVISION,previous));
+    }
+    const upgraded=ensureMcpProbeKitBootstrap(root);
+    expect(upgraded.skill.updated).toBe(true);
+    expect(upgraded.agentsMd.updated).toBe(true);
+    expect(fs.readFileSync(skillPath,'utf8')).toContain(SKILL_GUIDANCE_REVISION);
+    const agents=fs.readFileSync(agentsPath,'utf8');
+    expect(agents).toContain(SKILL_GUIDANCE_REVISION);
+    expect(agents).toContain('Preserve original test receipts.');
+    const repeat=ensureMcpProbeKitBootstrap(root);
+    expect(repeat.skill.updated).toBe(false);
+    expect(repeat.agentsMd.updated).toBe(false);
+  });
 });

@@ -224,12 +224,14 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    changed paths inside the frozen scope, not only the files the original
    delivery edited. The audit identifies those changed original delivery
    files separately; it does not transfer ownership of later changes.
-   Supply the exact current Git HEAD, every affected frozen path, substantive
-   diff findings and the original frozen-version test artifact reference in
-   resume-verification. The same HEAD-bound audited paths must be accepted
+   Supply the exact current Git HEAD as reviewedHead, every affected frozen
+   path as overlappingPaths, substantive diff findings and the original
+   frozen-version test artifact reference in resume-verification. The
+   changedDeliveryPaths audit separately identifies changed original files.
+   The same HEAD-bound audited paths must be accepted
    by report, Gate review, re-deferral and verify. A new commit invalidates
-   that approval; review the new HEAD again. Even if the original frozen
-   patch still cleanly applies to current source, this does NOT waive
+   that approval; review the new HEAD again. Even if the original patch
+   still cleanly applies to current source, this does NOT waive
    the later-file review or authorize stale audit records.
    Evidence must come from actual
    testing of the original frozen delivery, not tests of current HEAD, and
@@ -485,6 +487,14 @@ ${managedRevision}
   submitted Git commit or immutable file delivery snapshot. Follow the
   closure checklist to report later real evidence and complete reviews;
   do not rerun business tests from DevControl or reset other Agent work.
+- When later Git commits changed files inside a deferred task's frozen
+  allowed scope, resume-verification must review ALL affected frozen paths,
+  not only the original delivery files. Supply the current reviewedHead,
+  exact overlappingPaths, substantive diff findings and real tests bound to
+  the original frozen delivery. The same HEAD-bound review applies to report,
+  Gate review, re-deferral and verify. Any new HEAD invalidates the review,
+  even when the original patch still applies cleanly. Never treat a resumed
+  review as a successful test or as permission to bypass frozen Gates.
 - Writer leases expire after 30 minutes by default and can be renewed up
   to 60 minutes. A committed in_review delivery does NOT need to reclaim
   an expired writer lease for self-review, Gate inspection or verify:

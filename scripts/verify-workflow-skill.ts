@@ -63,6 +63,12 @@ for(const [name,source] of guidance){
     !source.includes('release-work-incremental-self-review')||
     !source.includes('artifact-self-review')||!source.includes('idea-self-review'))
     errors.push(name+' omits developer self-review for frozen changes and governed artifacts');
+  if(!source.includes('resume-verification')||
+    !source.includes('overlappingPaths')||
+    !source.includes('reviewedHead')||
+    !(source.includes('frozen scope')||source.includes('frozen allowed paths')||source.includes('冻结范围')||source.includes('冻结允许范围'))||
+    !(source.includes('original patch')||source.includes('original frozen patch')||source.includes('原冻结补丁')))
+    errors.push(name+' omits full-scope HEAD-bound deferred verification guidance');
   if(/have a DIFFERENT reviewer perform review-submit|不同的独立 Reviewer.{0,18}review-submit|distinct Reviewer supplies/.test(source))
     errors.push(name+' still mandates an external Reviewer for every delivery');
 }
