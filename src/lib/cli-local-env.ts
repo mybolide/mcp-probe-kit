@@ -102,6 +102,11 @@ export function bootstrapCliLocalEnv(): {
     roots.push(resolved);
   };
 
+  // The explicitly configured project wins, followed by the cwd from which
+  // the CLI was invoked. Never let an unrelated discovered workspace's env
+  // override the current project. Nonempty shell variables retain priority.
+  pushRoot(process.env.MCP_PROJECT_ROOT);
+  pushRoot(process.cwd());
   try {
     const workspace = resolveWorkspaceRootWithMeta(undefined);
     if (workspace.source !== "package-fallback") {

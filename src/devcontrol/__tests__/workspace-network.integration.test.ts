@@ -16,16 +16,42 @@ import http from "node:http";
 import {createRequire} from "node:module";
 
 const directories: string[] = [];
+const startedPids = new Map<string,Set<number>>();
+function trackStarted(root:string,pid:number|null|undefined):void{
+  // Only remember PIDs returned by our authenticated workspace supervisor.
+  // Never derive a process to terminate from an untrusted occupied port.
+  if(!pid)return;
+  const known=startedPids.get(root)??new Set<number>();
+  known.add(pid);
+  startedPids.set(root,known);
+}
+async function waitForStoppedProcess(pid:number):Promise<void>{
+  for(let attempt=0;attempt<100;attempt++){
+    try{process.kill(pid,0);}
+    catch(error){
+      if((error as NodeJS.ErrnoException).code==='ESRCH')return;
+      throw error;
+    }
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+  throw new Error('Test-owned workspace process '+pid+' did not exit after SIGTERM');
+}
 function project(git=true): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "devcontrol-auth-"));
   if(git)execFileSync("git", ["init", "-q"], { cwd: dir });
   directories.push(dir);
   return dir;
 }
-afterEach(() => {
+afterEach(async () => {
   for (const dir of directories.splice(0)){
+    for(const pid of startedPids.get(dir)??[])await waitForStoppedProcess(pid);
+    startedPids.delete(dir);
     fs.rmSync(localWorkspaceRuntimePath(dir),{force:true});
-    fs.rmSync(dir, { recursive: true, force: true });
+    // Windows delays releasing SQLite, cwd and Node child-process handles.
+    // Bounded OS-native EBUSY/EPERM retries; never swallow a real leak.
+    fs.rmSync(dir, { recursive: true, force: true,
+      maxRetries:20,retryDelay:150 });
+    expect(fs.existsSync(dir)).toBe(false);
   }
 });
 
@@ -66,6 +92,7 @@ describe("project workbench HTTP LAN access", () => {
       const runtime=readWorkspaceRuntime(root);
       expect(runtime).toMatchObject({port,version:WORKSPACE_SCHEMA_VERSION});
       pid=runtime?.pid??null;
+      trackStarted(root,pid);
       expect(fs.existsSync(path.join(root,'.git'))).toBe(false);
       const sqlite=createRequire(import.meta.url)('node:sqlite') as {
         DatabaseSync:new(file:string,opts?:{readOnly?:boolean})=>{
@@ -153,12 +180,14 @@ process.on("SIGTERM",()=>server.close(()=>process.exit(0)));
     try {
       const first = await ensureProjectWorkspaceRunning(root, { cliEntry: fakeCli });
       firstPid = first.pid;
+      trackStarted(root,firstPid);
       expect(first).toMatchObject({ port: basePort, reused: false });
       expect(readWorkspaceRuntime(root)).toMatchObject({
         port: basePort, pid: firstPid, version: WORKSPACE_SCHEMA_VERSION,
       });
       const second = await ensureProjectWorkspaceRunning(root, { cliEntry: fakeCli });
       secondPid = second.pid;
+      trackStarted(root,secondPid);
       expect(second).toMatchObject({ port: basePort, reused: false });
       expect(secondPid).not.toBe(firstPid);
       expect(readWorkspaceRuntime(root)).toMatchObject({ port: basePort, pid: secondPid });
@@ -199,6 +228,7 @@ process.on("SIGTERM",()=>server.close(()=>process.exit(0)));
     try {
       const result = await ensureProjectWorkspaceRunning(root, { cliEntry: fakeCli });
       workerPid = result.pid;
+      trackStarted(root,workerPid);
       expect(result.port).toBeGreaterThan(busyPort);
       expect(unrelated.listening).toBe(true);
       expect(readWorkspaceRuntime(root)?.port).toBe(result.port);

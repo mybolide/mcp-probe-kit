@@ -465,6 +465,46 @@ v5 读取时只兼容**恰好一层**这种历史包装，并验证内层是完�
 
 以上分组中的数字仅用于阅读，不影响正式任务批准。DevControl 管理过程和证据，不运行 Python/Go/gRPC/Flutter 等项目业务测试；外部测试结论必须由 Agent 真实执行并实质自审（独立复审可选）记录。**原子任务只允许一个可独立验收结果**，宽泛目标必须先拆解。
 
+## Windows v5 完整测试和 GP 安全恢复
+
+Windows 22.21.1 的标准验证顺序是 `npm run build`、
+`npm run docs:verify`、`npm run test:ledger:batch`、`npm test`，
+再单独运行 `multi-agent-recovery.unit.test.ts` 和
+`workspace-network.integration.test.ts`。GitHub Actions 的
+`.github/workflows/v5-windows-regression.yml` 会在 `v5` 推送后
+使用真实 Windows runner 执行全部命令；只有对应的 runner 任务
+**真正成功**才能宣称 Windows 全量回归通过。
+
+台账测试保留全部 88 条回归，不再以每批 14 项固定 45 秒判断成功。
+Windows 缩小为每批 5 项并给予有界进程超时。每批的退出码、
+测试数量、通过和失败数量、实际耗时、JSON 及 stdout/stderr
+均记录在操作系统临时目录。CI 使用
+`MCP_PROBE_LEDGER_TEST_LOG_ROOT` 设置日志根目录并上传测试工件。
+即使超时，也必须非零退出，日志留存，不得自动视为通过。
+
+Windows 的 `.mcp-probe-kit/bin/probe.cmd` 在执行本地运行包前
+先独立校验 `package.json` 的名称和精确版本。local-only 项目
+如果本地安装包丢失，不允许从 npm 回退。真实系统环境变量优先于
+`local.env`；明确的 `MCP_PROJECT_ROOT` 优先于 cwd 项目，
+cwd 项目优先于自动发现的其他工作区。测试仅使用隔离的临时目录，
+不编辑 Windows 用户机器已有的环境配置。
+
+对 GP 的 `DAP-FIRSTKNOWN-06` 和 `DAP-PIT-TESTBASE-02`，
+首先在 **GP 实际项目**只读查询 `next`、`execution-contract`、
+`trace` 和 `WORKTREE_CHANGED.details.conflicts`，获得每个冲突路径、
+原快照/当前 SHA-256、当前 Writer 及原冻结范围。
+目前只知道十个差异的大致业务类别，不能据此假定它们属于某个
+`sourceTaskId`。只有逐个核查其所属任务已经批准、范围冻结且
+与原任务完全不重叠，并明确获得 Owner 授权，才可提交
+`review-recovery-worktree` 的 `sourceTaskId` 和 `reviewedPaths`。
+不能证明归属的路径继续阻断，不得自行修改 SQLite、stash、reset
+或删除其他 Agent 的文件。所有差异审核完成后可尝试
+`recover-task`；若需要让不重叠新任务继续领取，可以在满足
+严格单 Git Writer 条件时审计执行 `park-expired-writer`，
+之后通过原有 `claim/complete/verify` 独立验收两项任务。
+**GP 实际任务仍需 GP 主机的只读预检与真实操作验收，不能使用
+MCP 的 Mac 端模拟测试结果宣称已经解锁。**
+
 ## GitNexus 代码图谱的项目初始化
 
 GitNexus 是可选代码分析提供者，不是 DevControl 的研发状态库。安装 GitNexus 托管运行时，不等于当前 Git 仓库已经建立图谱。查询若出现 `index_missing`，在实际 Git 项目根目录执行：

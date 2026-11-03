@@ -330,6 +330,29 @@ function renderCmdWrapper(version: string, localSourceCheckout: boolean, localOn
     `rem ${CLI_VERSION_MARKER}: ${version}\r\n` +
     `setlocal EnableDelayedExpansion\r\n` +
     `for %%I in ("%~dp0..\\..") do set "MCP_PROBE_WRAPPER_ROOT=%%~fI"\r\n` +
+    // Execute safety gates outside CMD's nested IF/ELSE parser. A missing
+    // local-only runtime or a wrong pinned version must ALWAYS exit 1.
+    `if defined MCP_PROBE_LOCAL_ENTRY goto MCP_PROBE_PREFLIGHT_DONE\r\n` +
+    `if exist "%MCP_PROBE_WRAPPER_ROOT%\\.mcp-probe-kit\\local-verify\\node_modules\\mcp-probe-kit\\build\\index.js" goto MCP_PROBE_CHECK_LOCALVERIFY\r\n` +
+    `if exist "%MCP_PROBE_WRAPPER_ROOT%\\node_modules\\mcp-probe-kit\\build\\index.js" goto MCP_PROBE_CHECK_MODULES\r\n` +
+    `if "${localOnly ? "1" : "0"}"=="1" goto MCP_PROBE_LOCAL_ONLY_MISSING\r\n` +
+    `if /I "%MCP_PROBE_LOCAL_ONLY%"=="1" goto MCP_PROBE_LOCAL_ONLY_MISSING\r\n` +
+    `goto MCP_PROBE_PREFLIGHT_DONE\r\n` +
+    `:MCP_PROBE_CHECK_LOCALVERIFY\r\n` +
+    `node -e "try{const p=require(process.argv[1]);process.exit(p.name==='mcp-probe-kit'&&p.version===process.argv[2]?0:1)}catch{process.exit(1)}" "%MCP_PROBE_WRAPPER_ROOT%\\.mcp-probe-kit\\local-verify\\node_modules\\mcp-probe-kit\\package.json" "${version}"\r\n` +
+    `if errorlevel 1 goto MCP_PROBE_WRONG_VERSION\r\n` +
+    `goto MCP_PROBE_PREFLIGHT_DONE\r\n` +
+    `:MCP_PROBE_CHECK_MODULES\r\n` +
+    `node -e "try{const p=require(process.argv[1]);process.exit(p.name==='mcp-probe-kit'&&p.version===process.argv[2]?0:1)}catch{process.exit(1)}" "%MCP_PROBE_WRAPPER_ROOT%\\node_modules\\mcp-probe-kit\\package.json" "${version}"\r\n` +
+    `if errorlevel 1 goto MCP_PROBE_WRONG_VERSION\r\n` +
+    `goto MCP_PROBE_PREFLIGHT_DONE\r\n` +
+    `:MCP_PROBE_LOCAL_ONLY_MISSING\r\n` +
+    `echo Local MCP build is missing; npm fallback disabled. Restore local-verify. 1>&2\r\n` +
+    `exit /b 1\r\n` +
+    `:MCP_PROBE_WRONG_VERSION\r\n` +
+    `echo Local MCP build version mismatch. Restore the pinned local package. 1>&2\r\n` +
+    `exit /b 1\r\n` +
+    `:MCP_PROBE_PREFLIGHT_DONE\r\n` +
     `if defined MCP_PROBE_NPX_CACHE (\r\n` +
     `  set "MCP_PROBE_CACHE=%MCP_PROBE_NPX_CACHE%"\r\n` +
     `) else (\r\n` +

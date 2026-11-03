@@ -43,6 +43,49 @@ MEMORY_EMBEDDING_MODEL="nomic-embed-text"
     });
   });
 
+  test("cwd local.env is used before an unrelated detected workspace, without overwriting a shell value",()=>{
+    const root=tempRoot();
+    const other=tempRoot();
+    for(const [dir,value] of [[root,"http://127.0.0.1:50008"],
+      [other,"http://different-project:50008"]]){
+      fs.mkdirSync(path.join(dir,".mcp-probe-kit"),{recursive:true});
+      fs.writeFileSync(path.join(dir,CLI_LOCAL_ENV_REL_PATH),
+        "MEMORY_QDRANT_URL="+value+"\n");
+    }
+    const cwd=process.cwd();
+    vi.stubEnv("MCP_PROJECT_ROOT",undefined);
+    vi.stubEnv("WORKSPACE_FOLDER_PATHS",other);
+    vi.stubEnv("MEMORY_QDRANT_URL","");
+    process.chdir(root);
+    try{
+      bootstrapCliLocalEnv();
+      expect(process.env.MEMORY_QDRANT_URL).toBe("http://127.0.0.1:50008");
+      vi.stubEnv("MEMORY_QDRANT_URL","http://shell-precedence:50008");
+      const result=bootstrapCliLocalEnv();
+      expect(result.appliedKeys).not.toContain("MEMORY_QDRANT_URL");
+      expect(process.env.MEMORY_QDRANT_URL).toBe("http://shell-precedence:50008");
+    }finally{process.chdir(cwd);}
+  });
+
+  test("an explicitly selected MCP_PROJECT_ROOT takes precedence over cwd local.env",()=>{
+    const cwdProject=tempRoot();
+    const selected=tempRoot();
+    for(const [dir,value] of [[cwdProject,"http://cwd:50008"],
+      [selected,"http://explicit:50008"]]){
+      fs.mkdirSync(path.join(dir,".mcp-probe-kit"),{recursive:true});
+      fs.writeFileSync(path.join(dir,CLI_LOCAL_ENV_REL_PATH),
+        "MEMORY_QDRANT_URL="+value+"\n");
+    }
+    const cwd=process.cwd();
+    vi.stubEnv("MCP_PROJECT_ROOT",selected);
+    vi.stubEnv("MEMORY_QDRANT_URL","");
+    process.chdir(cwdProject);
+    try{
+      expect(bootstrapCliLocalEnv().appliedKeys).toContain("MEMORY_QDRANT_URL");
+      expect(process.env.MEMORY_QDRANT_URL).toBe("http://explicit:50008");
+    }finally{process.chdir(cwd);}
+  });
+
   test("applyCliLocalEnv 不覆盖已有环境变量", () => {
     const root = tempRoot();
     const envDir = path.join(root, ".mcp-probe-kit");
@@ -100,6 +143,7 @@ MEMORY_EMBEDDING_MODEL="nomic-embed-text"
     );
 
     vi.stubEnv("MEMORY_QDRANT_URL", "");
+    vi.stubEnv("MCP_PROJECT_ROOT", undefined);
     process.chdir(root);
     try {
       const outcome = bootstrapCliLocalEnv();

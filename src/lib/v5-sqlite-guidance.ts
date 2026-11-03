@@ -219,6 +219,20 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    rules may exempt only explicitly approved paths outside task scope.
    Malformed or multiply nested snapshots are rejected, never mapped to [].
    Do not bypass verify, project tests or any frozen Gate to fix a snapshot.
+   On Windows the generated CMD/PowerShell launcher must use the exact pinned
+   local package version and must NOT fall back to npm when localOnly is set.
+   local.env fills only undefined or empty variables. The explicit
+   MCP_PROJECT_ROOT has precedence over cwd, then auto-discovered workspaces;
+   nonempty process/IDE env values always win over local.env.
+   A batch timeout means FAILED, never passed. Run
+   npm run test:ledger:batch and the complete npm test separately; inspect
+   retained per-batch JSON and stdout logs. For GP/AlphaLoop/DAP real
+   projects, first use read-only next/execution-contract/trace to identify
+   each of the exact conflicting paths and the approved disjoint source
+   task. Do not attribute files to a task merely from similar filenames.
+   Only an explicitly approved, audited review-recovery-worktree or
+   park-expired-writer may mutate the task ledger; never change a live
+   GP database or Git worktree just to make a regression test pass.
    Registered linked Git worktrees share one canonical project SQLite ledger
    while keeping separate Git indexes. The current development AI creates
    and integrates worktrees using ordinary Git commands, passing the exact
@@ -369,6 +383,8 @@ export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): st
 **多 Agent 过期任务安全恢复**：任务领取后其他 Agent 有合法未提交文件，并不意味着需要删除或 stash。先用 recover-task；如果返回 WORKTREE_CHANGED，查看 details.conflicts 中的 path、type、expected/observed SHA-256 和冻结范围标识。只有能够归属另一项已批准且文件范围不重叠的任务时，才由 Owner 明确授权 review-recovery-worktree，逐个提供 sourceTaskId、reviewedPaths、actor、具体 reason。此动作只追加快照审计，不改原任务 Git 基线或任何源文件。若原任务仍在 in_progress，Writer 已过期，且必须让另一项无依赖且不重叠的 Ready 任务继续，显式执行 park-expired-writer，提供 id、nextTaskId、actor、reason 和 explicitAuthorization。它保存所有未提交文件真实哈希和原 HEAD，不自动执行测试或通过 Gate。原任务恢复时继续严格识别其他任务的 Git 提交，不将它们记入原任务交付。请分别检查 execution-contract.eligible（规格是否批准）与 claimableNow/writerBlocker（当前是否可领取），以及 next.selectedTaskWriterStatus。单 Git 工作区支持这一受审停放；多独立子 Git 仓库尚不支持，不得直接绕过。MCP 通用功能不能固定使用 .neyna/state 等 Neyna 专属路径；隔离测试目录由各项目自行选择。
 
 **旧 SQLite 快照的严格兼容**：如果原任务已经提交代码和真实测试，但 verify 被旧 worktree 快照阻断，先检查领取时的 snapshot_json 和完成记录中的 preserved_worktree_json。老版本可能保存恰好一层 [{"snapshot_json":"[]"}] 包装。最新版只读展开这一严格格式，不直接改写 SQLite，不覆盖真实的非空 Owner 文件保护。非空快照必须包含完整的 path、kind、size、sha256 并校验当前文件；只对既有本地 ignore 明确豁免且不在冻结任务范围内的路径按原规则排除。格式畸形或多层嵌套依然拒绝，测试和 Gate 仍需要正式 verify。
+
+**Windows 与 GP 协作验收**：本机 Windows 运行前先核对启动器的精确本地版本，local-only 模式禁止自动下载 npm 包，4.x 不得冒充 5.0.0。local.env 只补充未设置或空值变量，现有系统和 IDE 环境变量始终优先；明确设置的 MCP_PROJECT_ROOT 优先于运行目录，运行目录优先于自动发现的其他项目。台账测试必须执行完整批次，超时或失败必定拒绝通过，并保留每批 JSON 与日志。GP 实际恢复先只读检查 next、execution-contract、trace 和冲突路径归属；没有已批准且范围不重叠的源任务和 Owner 显式确认时，不得调用 review-recovery-worktree 或 park-expired-writer，也不得修改数据库或其他 Agent 的文件。
 
 **审核租约与旧多仓证据**：开发写入租约默认 30 分钟，最长 60 分钟，长时间编码或测试时要在过期前 renew；已经提交并处于 in_review 的任务即使开发租约过期，只要保留原 leaseToken 和冻结提交，仍可直接执行技术自审、Gate 审核和 verify，不再因倒计时要求 recover-task。过期租约绝不能继续改源码或提交新的 report。旧多仓测试记录如缺少准确的冻结版本向量，先用 task-closure-status 取得 frozenDeliveryHeads 和原 evidenceReference；有可核验的旧真实测试日志时，使用 rebind-legacy-evidence 提交原 leaseToken、actor、reason、完整 deliveryHeads、原 evidenceReference、项目内实际日志 artifactPath 及 artifactSha256 和详细 findings。仅追加审计与派生证据关联，不改原测试记录、不运行测试、更不会自动通过 Gate；原日志不能证明该冻结代码受测时，必须重新运行真正的项目测试，不得补造证明。
 

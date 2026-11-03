@@ -71,6 +71,11 @@ describe("cli-fallback-installer", () => {
     expect(cmd).toContain("local-verify\\node_modules\\mcp-probe-kit\\build\\index.js");
     expect(cmd).toContain("node_modules\\mcp-probe-kit\\build\\index.js");
     expect(cmd).toContain("NPM_CONFIG_FETCH_RETRIES");
+    // On Windows these top-level guards run before the old nested branch
+    // parser can swallow a rejected local package's exit code.
+    expect(cmd).toContain("goto MCP_PROBE_LOCAL_ONLY_MISSING");
+    expect(cmd).toContain("goto MCP_PROBE_WRONG_VERSION");
+    expect(cmd).toContain(":MCP_PROBE_PREFLIGHT_DONE");
     expect(cmd).toContain("could not resolve mcp-probe-kit@");
     expect(cmd).not.toContain("pushd");
     expect(cmd).not.toContain("MCP_PROBE_PROJECT_ROOT");

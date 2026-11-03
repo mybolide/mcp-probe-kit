@@ -1,0 +1,48 @@
+name: MCP Probe Kit v5 Windows regression
+
+on:
+  push:
+    branches: [v5]
+  workflow_dispatch:
+
+jobs:
+  windows-v5:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      CI: 'true'
+      MCP_PROBE_LEDGER_TEST_LOG_ROOT: ${{ runner.temp }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.21.1'
+          cache: npm
+      - name: Install exact locked dependencies and build
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Documentation
+        run: npm run docs:verify
+      - name: Every task-ledger batch with retained JSON and stdout
+        run: npm run test:ledger:batch
+      - name: Complete test suite
+        run: npm test
+      - name: GP multi-Agent safe recovery
+        run: npx vitest run src/devcontrol/__tests__/multi-agent-recovery.unit.test.ts --maxWorkers 1 --testTimeout 60000
+      - name: Workbench process and locked-file cleanup
+        run: npx vitest run src/devcontrol/__tests__/workspace-network.integration.test.ts --maxWorkers 1 --testTimeout 60000
+      - name: Local-only and pinned-version CLI protections
+        run: npx vitest run src/lib/__tests__/cli-fallback-installer.unit.test.ts --maxWorkers 1 --reporter verbose
+      - name: Isolated CLI env precedence
+        run: npx vitest run src/lib/__tests__/cli-local-env.unit.test.ts --maxWorkers 1 --reporter verbose
+      - name: Retain all batch counts, failures and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task-ledger-windows-evidence
+          path: ${{ runner.temp }}/task-ledger-regression-*/
+          if-no-files-found: warn
+          retention-days: 14
