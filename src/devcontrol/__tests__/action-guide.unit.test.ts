@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
 import { devControlGuide } from '../action-guide.js';
 import { V5_DEVC_ACTIONS } from '../action-catalog.js';
 import { runV5DevControlTool } from '../model-tool.js';
@@ -40,8 +42,12 @@ describe('v5 agent action routing', () => {
       code:'UNSUPPORTED_V5_ACTION',message:expect.stringContaining('action=guide'),
     });
   });
-  it('write actions still require a real target project root', async () => {
-    const result=await runV5DevControlTool({action:'feature-create',input:{name:'x'}});
+  it('write actions reject an explicitly missing target project root without modifying a discovered workspace', async () => {
+    // A correctly connected MCP may automatically discover its project
+    // when project_root is omitted. Explicit invalid paths must fail safe.
+    const result=await runV5DevControlTool({action:'feature-create',
+      project_root:join(tmpdir(),'missing-v5-project-'+process.pid),
+      input:{name:'x'}});
     expect(result.isError).toBe(true);
     expect(result.structuredContent).toMatchObject({code:'PROJECT_ROOT_REQUIRED'});
   });

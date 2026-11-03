@@ -41,9 +41,13 @@ const checks: Evaluation[] = [
   },
   {
     id: 'scoped-project-root', category: 'parameter-construction',
-    description: 'v5 guidance requires explicit project_root for SQLite project isolation',
-    expected: true, evaluate: () => renderV5Skill('5.0.0').includes('project_root')
-      && renderV5Skill('5.0.0').includes('target application Git repository'), matches: equal,
+    description: 'v5 guidance isolates the application project_root from the MCP package and supports Git-free workspaces',
+    expected: true, evaluate: () => {
+      const guidance=renderV5Skill('5.0.0');
+      return guidance.includes('project_root')&&
+        guidance.includes('never the MCP installation path')&&
+        guidance.includes('Git is optional');
+    }, matches: equal,
   },
   {
     id: 'owner-review-prerequisite', category: 'plan-compliance',

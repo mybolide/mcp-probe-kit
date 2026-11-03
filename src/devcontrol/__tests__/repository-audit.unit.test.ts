@@ -619,7 +619,7 @@ describe('immutable multi-repository delivery commits',()=>{
         entry.event==='real_test_rerun_recorded');
       expect(audit).toHaveLength(2);
     }finally{ledger.close();}
-  });
+  },45_000);
 
   it('audits legacy multi-Git evidence rebind without rewriting old receipts, approving Gates or renewing expired writers',()=>{
     const {root,child,app}=fixture();

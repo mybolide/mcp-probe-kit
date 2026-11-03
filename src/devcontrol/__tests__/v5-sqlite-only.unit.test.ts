@@ -78,7 +78,10 @@ describe('v5 SQLite-only lifecycle', () => {
       expect(response.isError).toBe(true);
       expect(response.structuredContent).toMatchObject({ code: 'UNSUPPORTED_V5_ACTION' });
     }
-    expect((await runV5DevControlTool({ action: 'next' })).structuredContent).toMatchObject({
+    // project_root is optional for a verified connected workspace; an
+    // explicit nonexistent root must still never initialize any SQLite DB.
+    expect((await runV5DevControlTool({ action: 'next',
+      project_root:join(root,'explicit-missing-workspace') })).structuredContent).toMatchObject({
       code: 'PROJECT_ROOT_REQUIRED',
     });
   });

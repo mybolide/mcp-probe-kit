@@ -2,7 +2,7 @@ import { V5_DEVC_ACTIONS } from '../devcontrol/model-tool.js';
 
 export const devcontrolToolSchemas = [{
   name: 'devcontrol',
-  description: 'MCP Probe Kit v5 SQLite project governance for Git or Git-free workspaces. FIRST use action=guide if unsure; guide needs no project_root. Other actions discover an established MCP workspace or accept the target project_root when discovery is unavailable. The developer AI runs real tests and reviews deliveries; Owner approves frozen plans. No retired v4 file workflows.',
+  description: 'MCP Probe Kit v5 SQLite project governance for Git or Git-free workspaces. FIRST use action=guide if unsure; guide needs no project_root. Other actions discover an established MCP workspace or accept the target project_root when discovery is unavailable. DevControl enforces approved frozen task contracts; Agent reviews actual source deliveries and runs real tests. Owner approves frozen plans, not individual test results. No retired v4 file workflows.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
