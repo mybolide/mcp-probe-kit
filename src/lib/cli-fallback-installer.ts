@@ -22,6 +22,30 @@ export interface CliFallbackFileResult {
   skipped: boolean;
 }
 
+/** Pure, byte-exact preview for a Git commit gate. This never writes files or
+ * trusts executable text from the worktree as a source of generated content.
+ * The caller must validate the manifest's fields against the installed kit.
+ */
+export function previewCliFallbackManagedFiles(
+  projectRoot: string, manifest: CliRuntimeManifest
+): Record<string, string> {
+  const root = path.resolve(projectRoot);
+  const localCheckout = isLocalSourceCheckout(root, manifest.version);
+  const localOnly = manifest.localOnly === true;
+  return {
+    [CLI_POWERSHELL_REL_PATH]: renderPowerShellWrapper(manifest.version, localCheckout, localOnly),
+    [CLI_CMD_REL_PATH]: renderCmdWrapper(manifest.version, localCheckout, localOnly),
+    [CLI_SHELL_REL_PATH]: renderShellWrapper(manifest.version, localCheckout, localOnly),
+    [CLI_RUNTIME_MANIFEST_REL_PATH]: `${JSON.stringify(manifest, null, 2)}\n`,
+  };
+}
+
+/** Whether a project contains the version-pinned local runtime which makes
+ * an unpublished CLI launcher strictly local-only. */
+export function hasPinnedCliFallbackRuntime(projectRoot:string, version:string):boolean {
+  return hasPinnedLocalVerify(path.resolve(projectRoot),version);
+}
+
 function hasPinnedLocalVerify(projectRoot: string, version: string): boolean {
   const installedRoot = path.join(
     projectRoot, ".mcp-probe-kit", "local-verify", "node_modules", "mcp-probe-kit",

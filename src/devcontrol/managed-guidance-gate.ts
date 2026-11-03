@@ -9,9 +9,90 @@ import fs from "node:fs";
 import path from "node:path";
 import { previewManagedGuidanceSync } from "../lib/workflow-skill-installer.js";
 import { MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
+import {
+  CLI_CMD_REL_PATH, CLI_POWERSHELL_REL_PATH, CLI_SHELL_REL_PATH,
+  CLI_RUNTIME_MANIFEST_REL_PATH, hasPinnedCliFallbackRuntime,
+  previewCliFallbackManagedFiles, type CliRuntimeManifest,
+} from "../lib/cli-fallback-installer.js";
+import { VERSION } from "../version.js";
 
 const managedPaths=new Set([MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"]);
 export function isManagedGuidancePath(path:string):boolean{return managedPaths.has(path);}
+
+const managedCliPaths=new Set([
+  CLI_CMD_REL_PATH,CLI_POWERSHELL_REL_PATH,CLI_SHELL_REL_PATH,
+  CLI_RUNTIME_MANIFEST_REL_PATH,
+]);
+export function isManagedCliFallbackPath(file:string):boolean{
+  return managedCliPaths.has(file);
+}
+
+/** A narrow no-lease exception for CLI bootstrap files. It compares staged
+ * bytes with the actual current launcher generator and validates the pinned
+ * runtime manifest. It never accepts arbitrary code, noncanonical JSON,
+ * staged symlinks, or anything beyond these four installer-owned paths.
+ */
+export function checkManagedCliFallbackCommit(root:string,stagedFiles:readonly string[]):{
+  passed:boolean;managedFiles:string[];issues:string[];
+} {
+  const files=[...new Set(stagedFiles)];
+  const issues:string[]=[];
+  for(const file of files)if(!managedCliPaths.has(file))
+    issues.push(file+": not an MCP-managed CLI bootstrap file");
+  const manifestStaged=files.includes(CLI_RUNTIME_MANIFEST_REL_PATH);
+  const manifestGit=gitRead(root,["show",
+    (manifestStaged?":":"HEAD:")+CLI_RUNTIME_MANIFEST_REL_PATH]);
+  let manifest:CliRuntimeManifest|null=null;
+  try {
+    if(!manifestGit.ok)throw Error("missing version-pinned manifest");
+    const raw=JSON.parse(manifestGit.text) as CliRuntimeManifest;
+    const expectedKeys=["generatedByVersion","installedAt","localOnly","package",
+      "packageSpec","schemaVersion","source","version","wrappers"];
+    if(!raw||typeof raw!=="object"||Array.isArray(raw)||
+      JSON.stringify(Object.keys(raw).sort())!==JSON.stringify(expectedKeys.sort())||
+      raw.schemaVersion!==1||raw.package!=="mcp-probe-kit"||
+      raw.version!==VERSION||raw.packageSpec!==`mcp-probe-kit@${VERSION}`||
+      raw.generatedByVersion!==VERSION||raw.source!=="mcp-bootstrap"||
+      typeof raw.localOnly!=="boolean"||
+      !raw.wrappers||typeof raw.wrappers!=="object"||
+      Object.keys(raw.wrappers).length!==3||
+      raw.wrappers.powershell!==CLI_POWERSHELL_REL_PATH||
+      raw.wrappers.cmd!==CLI_CMD_REL_PATH||
+      raw.wrappers.shell!==CLI_SHELL_REL_PATH||
+      typeof raw.installedAt!=="string"||
+      !Number.isFinite(Date.parse(raw.installedAt))||
+      new Date(raw.installedAt).toISOString()!==raw.installedAt||
+      Date.parse(raw.installedAt)>Date.now()+60_000)
+      throw Error("invalid or noncanonical pinned runtime manifest");
+    const previous=gitRead(root,["show","HEAD:"+CLI_RUNTIME_MANIFEST_REL_PATH]);
+    let old:Partial<CliRuntimeManifest>|null=null;
+    try{if(previous.ok)old=JSON.parse(previous.text) as Partial<CliRuntimeManifest>;}catch{}
+    if(old?.version===VERSION&&old?.installedAt&&raw.installedAt!==old.installedAt)
+      throw Error("installer timestamp changed without a package version change");
+    const pinned=hasPinnedCliFallbackRuntime(root,VERSION);
+    if(raw.localOnly!==Boolean(pinned||old?.localOnly===true))
+      throw Error("local-only launcher policy differs from verified local runtime");
+    manifest=raw;
+  } catch(error) {
+    issues.push("runtime.json: "+String(error instanceof Error?error.message:error));
+  }
+  if(manifest){
+    const canonical=previewCliFallbackManagedFiles(root,manifest);
+    for(const file of files){
+      if(!managedCliPaths.has(file))continue;
+      const mode=gitRead(root,["ls-files","--stage","--",file]);
+      const requiredMode=file===CLI_SHELL_REL_PATH?"100755":"100644";
+      if(!mode.ok||!new RegExp("^"+requiredMode+" [0-9a-f]{40,64} 0\\t").test(mode.text)){
+        issues.push(file+": expected staged regular generator file with correct Git mode");
+        continue;
+      }
+      const staged=gitRead(root,["show",":"+file]);
+      if(!staged.ok||staged.text!==canonical[file])
+        issues.push(file+": staged bytes differ from current canonical MCP CLI generator");
+    }
+  }
+  return {passed:issues.length===0,managedFiles:files.filter(isManagedCliFallbackPath),issues};
+}
 
 function gitRead(root:string,args:string[]):{ok:boolean;text:string} {
   const result=spawnSync("git",args,{

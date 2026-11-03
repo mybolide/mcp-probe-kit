@@ -19,7 +19,7 @@ import { reviewReleasePlan, type ReleasePlanProposal, type ReleasePlanNode } fro
 import { localDeveloper } from "./local-developer.js";
 import { SRC8_STEPS, type BugStepUpdate } from "./bug-analysis.js";
 import { reviewFeatureTaskPlan, type FeatureTaskPlan } from "./feature-task-plan.js";
-import { checkManagedGuidanceCommit, isManagedGuidancePath, trustedCommittedGuidance, trustedUncommittedGuidance } from "./managed-guidance-gate.js";
+import { checkManagedCliFallbackCommit, checkManagedGuidanceCommit, isManagedCliFallbackPath, isManagedGuidancePath, trustedCommittedGuidance, trustedUncommittedGuidance } from "./managed-guidance-gate.js";
 import { amendmentSubjectHash, checkAmendmentShape, checkAmendmentReview,
   type ReleaseWorkScopeAmendment, type ReleaseWorkAmendmentReview,
 } from "./release-work-amendment.js";
@@ -3557,8 +3557,12 @@ export class ProjectTaskLedger {
               !!child.prefix&&file.startsWith(child.prefix+'/')))
             .map(file=>repo.prefix?file.slice(repo.prefix.length+1):file)})));
     const managed=files.filter(isManagedGuidancePath);
-    const scopedFiles=files.filter(file=>!isManagedGuidancePath(file));
+    const managedCli=files.filter(isManagedCliFallbackPath);
+    const scopedFiles=files.filter(file=>
+      !isManagedGuidancePath(file)&&!isManagedCliFallbackPath(file));
     const guidance=managed.length?checkManagedGuidanceCommit(this.root,managed):null;
+    const cliGuidance=managedCli.length?
+      checkManagedCliFallbackCommit(this.root,managedCli):null;
     if(guidance&&!guidance.passed){
       if(!active||active.expires_at<=Date.now())
         fail('LEASE_REQUIRED','No active approved task lease; managed guidance validation: '+
@@ -3566,15 +3570,24 @@ export class ProjectTaskLedger {
       return {passed:false,reason:'Generated Skill/AGENTS content differs from the canonical MCP generator',
         stagedFiles:files,managedIssues:guidance.issues};
     }
+    if(cliGuidance&&!cliGuidance.passed){
+      if(!active||active.expires_at<=Date.now())
+        fail('LEASE_REQUIRED','No active approved task lease; MCP launcher validation: '+
+          cliGuidance.issues.join('; '));
+      return {passed:false,reason:'Generated MCP launchers differ from canonical generator',
+        stagedFiles:files,managedIssues:cliGuidance.issues};
+    }
     const artifactGate=this.checkGovernedArtifacts(files,true);
     if(!artifactGate.passed)
       return {passed:false,reason:"Frozen governed artifact changed without reviewed approval",
         ...artifactGate,stagedFiles:files};
     // No implicit approval for arbitrary edits to AGENTS.md or the Skill.
     // This exception requires only canonical generator output and no other files.
-    if(managed.length&&!scopedFiles.length&&guidance?.passed)
+    if((managed.length||managedCli.length)&&!scopedFiles.length&&
+      (guidance?.passed??true)&&(cliGuidance?.passed??true))
       return {passed:true,taskId:null,scope:"managed-guidance-sync",
-        stagedFiles:files,deniedFiles:[],unapprovedDocs:[],managedFiles:guidance.managedFiles};
+        stagedFiles:files,deniedFiles:[],unapprovedDocs:[],
+        managedFiles:[...(guidance?.managedFiles??[]),...(cliGuidance?.managedFiles??[])]};
     if(!files.length&&exemptedStagedFiles.length)
       return {passed:true,taskId:null,scope:"local-worktree-exemption",
         stagedFiles:[],exemptedStagedFiles,deniedFiles:[],unapprovedDocs:[],
