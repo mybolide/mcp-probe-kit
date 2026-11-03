@@ -141,6 +141,10 @@ for (const file of gifFiles) {
 check(read('scripts/render-doc-demo-gifs.py').includes('crop_to_content'), 'GIF renderer crops all frames to their shared content bounds');
 
 const readmes = ['README.md', ...['zh-CN','ja-JP','ko-KR','es-ES','fr-FR','de-DE','pt-BR'].map((lang) => `i18n/README.${lang}.md`)];
+const actionCatalogSource = read('src/devcontrol/action-catalog.ts');
+const sourceActionGroups = [...actionCatalogSource.matchAll(/actions:\s*\[([\s\S]*?)\]/g)];
+const sourceActions = sourceActionGroups.flatMap(match =>
+  [...match[1].matchAll(/'([^']+)'/g)].map(name=>name[1]));
 for (const file of readmes) {
   const text = read(file);
   check(text.includes('<!-- v5-action-navigation:start -->') && text.includes('<!-- v5-action-navigation:end -->'),
@@ -149,7 +153,7 @@ for (const file of readmes) {
     `${file} links both source and website v5 Agent guide`);
   check(text.includes('{"action":"guide","input":{"intent":"feature"}}'),
     `${file} shows read-only project-free guide call`);
-  check(text.includes('74 SQLite actions'), `${file} reflects current guided action count`);
+  check(text.includes(sourceActions.length+' SQLite actions'), `${file} reflects current guided action count`);
   check(text.includes('docs/v5-development-guide.md'), `${file} links to the unpublished 5.0.0 source-development guide`);
   check(text.includes('docs/v5-best-practices.md'), `${file} links to the v5 field-tested best-practices guide`);
   check(text.includes('4.1.1') && text.includes('5.0.0'), `${file} separates published 4.1.1 from v5 source development`);
@@ -188,10 +192,6 @@ check(!/^docs\/\*\.md\s*$/m.test(gitIgnoreText),
   'canonical docs Markdown must not be ignored wholesale; ignore only generated or private artifacts');
 const v5Sqlite = read('docs/v5-sqlite-only.md');
 const actionGuidePage = read('docs/pages/v5-action-guide.html');
-const actionCatalogSource = read('src/devcontrol/action-catalog.ts');
-const sourceActionGroups = [...actionCatalogSource.matchAll(/actions:\s*\[([\s\S]*?)\]/g)];
-const sourceActions = sourceActionGroups.flatMap(match =>
-  [...match[1].matchAll(/'([^']+)'/g)].map(name=>name[1]));
 check(sourceActions.length >= 74 && new Set(sourceActions).size === sourceActions.length,
   'v5 source catalog exposes >=74 unique guided DevControl actions without duplicates');
 check(sourceActions.includes('guide'), 'v5 action catalog contains the read-only guide');
