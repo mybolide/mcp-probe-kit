@@ -146,6 +146,20 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    another parent's older file tree does not count as a post-delivery edit.
    Any real first-parent scoped change (even if later reverted) invalidates
    original review and requires fresh verified evidence.
+   For an already completed multi-repository task at in_review, a legacy
+   receipt may have no usable frozen repository digest. Do NOT bypass Gate
+   checks or invent an extra test run. Inspect the real original test log,
+   calculate its SHA-256, and call rebind-legacy-evidence with the existing
+   evidenceReference, the complete FROZEN deliveryHeads, a safe project-relative
+   artifactPath, artifactSha256, original developer leaseToken, responsible
+   actor, concrete reason and detailed findings. This appends a provenance
+   record and a derived digest binding; original evidence is never rewritten,
+   and no tests or Gates are marked passed. If the original test log does not
+   demonstrate testing of those commits, rerun the real project tests.
+   An in_review task with a committed delivery can review and verify using
+   its unchanged original token even after the writer lease expires; changing
+   code, completing a new delivery or reporting new evidence still needs a
+   valid writing lease. Never automatically approve an expired Gate.
    Normal Git pull, merge, clone and moving the entire workspace need no
    Owner key, per-machine rebind or SQLite update. Git metadata locations
    are identified relative to the current workspace root (".git" and
@@ -308,6 +322,8 @@ export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): st
 
 ### MCP Probe Kit v5 — SQLite + DevControl 唯一研发流程
 
+**审核租约与旧多仓证据**：开发写入租约默认 30 分钟，最长 60 分钟，长时间编码或测试时要在过期前 renew；已经提交并处于 in_review 的任务即使开发租约过期，只要保留原 leaseToken 和冻结提交，仍可直接执行技术自审、Gate 审核和 verify，不再因倒计时要求 recover-task。过期租约绝不能继续改源码或提交新的 report。旧多仓测试记录如缺少准确的冻结版本向量，先用 task-closure-status 取得 frozenDeliveryHeads 和原 evidenceReference；有可核验的旧真实测试日志时，使用 rebind-legacy-evidence 提交原 leaseToken、actor、reason、完整 deliveryHeads、原 evidenceReference、项目内实际日志 artifactPath 及 artifactSha256 和详细 findings。仅追加审计与派生证据关联，不改原测试记录、不运行测试、更不会自动通过 Gate；原日志不能证明该冻结代码受测时，必须重新运行真正的项目测试，不得补造证明。
+
 ${skillRef}
 
 ${managedRevision}
@@ -386,6 +402,19 @@ ${managedRevision}
   submitted Git commit or immutable file delivery snapshot. Follow the
   closure checklist to report later real evidence and complete reviews;
   do not rerun business tests from DevControl or reset other Agent work.
+- Writer leases expire after 30 minutes by default and can be renewed up
+  to 60 minutes. A committed in_review delivery does NOT need to reclaim
+  an expired writer lease for self-review, Gate inspection or verify:
+  use the original retained task token and unchanged reviewed source.
+  New code and new test reports still need an active writer lease.
+  An old multi-Git receipt with missing/stale repository binding may use
+  rebind-legacy-evidence, but ONLY after inspecting the real original test
+  artifact (relative path plus SHA-256) and matching every frozen delivery
+  commit. Record the original evidenceReference, exact deliveryHeads, actor,
+  detailed reason and technical findings. This action appends an audited
+  binding without rewriting the original report, running tests or approving
+  any Gate. If the original receipt cannot establish these commits, rerun
+  the real project tests; never create a synthetic passing test or Gate.
 - Optional local-only info/devcontrol-worktree-ignore in each real Git-dir
   adds to standard Git ignore. Explicit patterns exempt tracked, staged and
   untracked non-business LOCAL tool configurations (e.g. AGENTS.md, managed

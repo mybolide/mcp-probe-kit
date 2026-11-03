@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
 import {ProjectTaskLedger} from '../task-ledger.js';
 import {discoverRepositories,currentRevisions,updateRevisions,revisionDigest,
   stagedChanges,committedChanges,assertRepositoryTopology,assertDeliveryStillPresent} from '../repository-audit.js';
@@ -44,6 +45,19 @@ function fixture(withChildren=true){
   const app=path.join(root,'apw-life-app');
   if(withChildren){createRepo(child);createRepo(app);}
   return {root,child,app};
+}
+function dbReadEvidence(databasePath:string,evidenceId:number):{
+  kind:string;reference:string;digest:string;
+}{
+  const sqlite=createRequire(import.meta.url)('node:sqlite') as {
+    DatabaseSync:new(filename:string)=>any;
+  };
+  const db=new sqlite.DatabaseSync(databasePath);
+  try{
+    return db.prepare(`SELECT e.kind,e.reference,d.digest
+      FROM dc_evidence e JOIN dc_evidence_repository_digests d
+        ON d.evidence_id=e.id WHERE e.id=?`).get(evidenceId);
+  }finally{db.close();}
 }
 afterEach(()=>{
   vi.restoreAllMocks();
@@ -461,6 +475,100 @@ describe('layered local worktree-ignore protection',()=>{
 });
 
 describe('immutable multi-repository delivery commits',()=>{
+  it('audits legacy multi-Git evidence rebind without rewriting old receipts, approving Gates or renewing expired writers',()=>{
+    const {root,child,app}=fixture();
+    const ledger=new ProjectTaskLedger(root);
+    const id='AUDIT-LEGACY-EVIDENCE';
+    const receipt='Recorded original Flutter Android layout test output at verified task delivery';
+    try{
+      ledger.create({id,title:'Audit original multi-Git receipt binding without rerunning tests',
+        track:'governance',allowedPaths:['apw-life/src/**'],
+        requiredGates:['docs']},'agent');
+      ledger.approve(id,'owner');
+      const lease=ledger.claim(id,'developer',60);
+      fs.mkdirSync(path.join(child,'src'),{recursive:true});
+      fs.writeFileSync(path.join(child,'src/task.ts'),'export const tested=1;');
+      cmd(child,'add','src/task.ts');cmd(child,'commit','-qm','original tested task');
+      const heads={'':cmd(root,'rev-parse','HEAD'),
+        'apw-life':cmd(child,'rev-parse','HEAD'),
+        'apw-life-app':cmd(app,'rev-parse','HEAD')};
+      ledger.report(id,lease.leaseToken,{kind:'flutter_test',reference:receipt},true);
+      ledger.complete(id,lease.leaseToken,{
+        summary:'Original tested task delivery',implementation:'Frozen scoped child commit',
+        verification:'Original real Flutter test receipt predates version-vector migration',
+      });
+      const sqlite=createRequire(import.meta.url)('node:sqlite') as {
+        DatabaseSync:new(filename:string)=>any;
+      };
+      const db=new sqlite.DatabaseSync(ledger.databasePath);
+      let originalId:number;
+      try{
+        originalId=db.prepare('SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1')
+          .get(id).id as number;
+        // Simulate a legacy v5 receipt that was recorded against stale child
+        // metadata. Never change production SQLite directly.
+        db.prepare('UPDATE dc_evidence_repository_digests SET digest=? WHERE evidence_id=?')
+          .run('0'.repeat(64),originalId);
+      }finally{db.close();}
+      fs.appendFileSync(path.join(root,'.git/info/exclude'),'\n/test-artifacts/\n');
+      fs.mkdirSync(path.join(root,'test-artifacts'),{recursive:true});
+      const artifact='test-artifacts/original-flutter.log';
+      const output='Original flutter test evidence: 27 Android and iOS layout test cases executed with exit 0; PASS. Reviewed the exact app and child commits, outputs and no untested change.\n';
+      fs.writeFileSync(path.join(root,artifact),output);
+      const sha=createHash('sha256').update(output).digest('hex');
+      const request={
+        id,leaseToken:lease.leaseToken,actor:'developer',
+        reason:'Legacy v5 failed to bind the existing recorded test receipt to the actual frozen original multi-repository task delivery.',
+        evidenceReference:receipt,deliveryHeads:heads,
+        artifactPath:artifact,artifactSha256:sha,
+        findings:'I inspected the original recorded Flutter test output and exit status, verified its provenance against the exact three frozen Git commits, and checked the immutable original code and all frozen test acceptance requirements. No new test or Gate is claimed.',
+      };
+      const acceptance={
+        evidenceReference:receipt,
+        findings:'The existing Flutter output and original frozen Git commits were inspected for actual functionality, negative cases and the unchanged approved code.',
+        gates:[{gate:'docs',evidenceReference:receipt,
+          findings:'Inspected the original actual Flutter test output and frozen docs acceptance.'}],
+      };
+      const now=Date.now();
+      vi.spyOn(Date,'now').mockReturnValue(now+61_000);
+      expect(ledger.taskClosureStatus(id)).toMatchObject({
+        status:'in_review',nextAction:'rebind-legacy-evidence',
+        reviewTokenUsable:true,frozenDeliveryHeads:heads,
+        staleLegacyEvidence:[{reference:receipt,evidenceId:originalId}],
+      });
+      expect(()=>ledger.report(id,lease.leaseToken,{
+        kind:'flutter_test',reference:'Cannot report invented new test',
+      },false)).toThrow(/Active writer lease/);
+      expect(()=>ledger.verify(id,lease.leaseToken,acceptance))
+        .toThrow(/REPOSITORY_EVIDENCE_STALE|test receipt must cover/i);
+      expect(ledger.get(id).status).toBe('in_review');
+      expect(()=>ledger.rebindLegacyEvidence({...request,
+        deliveryHeads:{...heads,'apw-life':'0'.repeat(40)}}))
+        .toThrow(/DELIVERY_HEAD_CHANGED|Git|ancestor|Mismatch|mismatch/i);
+      expect(()=>ledger.rebindLegacyEvidence({...request,
+        artifactSha256:'a'.repeat(64)}))
+        .toThrow(/artifact content does not match/i);
+      const result=ledger.rebindLegacyEvidence(request);
+      expect(result).toMatchObject({taskId:id,evidenceRebound:true,
+        testsExecuted:false,gateApproved:false,sourceEvidenceId:originalId});
+      expect(ledger.taskClosureStatus(id)).toMatchObject({
+        nextAction:'verify',staleLegacyEvidence:[],
+        reviewTokenUsable:true,
+      });
+      expect(ledger.verify(id,lease.leaseToken)).toMatchObject({passed:false});
+      expect(()=>ledger.rebindLegacyEvidence(request))
+        .toThrow(/ALREADY_REBOUND|prior audited binding/i);
+      const original=dbReadEvidence(ledger.databasePath,originalId);
+      expect(original).toMatchObject({kind:'flutter_test',reference:receipt,
+        digest:'0'.repeat(64)});
+      expect(ledger.trace(id).audit.some((event:{event:string})=>
+        event.event==='legacy_test_evidence_repository_rebound')).toBe(true);
+      expect(ledger.verify(id,lease.leaseToken,acceptance))
+        .toMatchObject({passed:true,acceptanceRecorded:true});
+      expect(ledger.get(id).status).toBe('verified');
+    }finally{ledger.close();}
+  });
+
   it('does not mistake a merge second-parent difference for a changed frozen delivery',()=>{
     const {root,child}=fixture();
     const initial=cmd(child,'rev-parse','HEAD');

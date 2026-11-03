@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **84 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **100 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -193,6 +193,58 @@ AGENTS.md 提供简短入口，**只更新受管理的 MCP 区块**，保留项�
 
 完整研发路径：新会话先恢复 History 和已批准的任务及依赖，需求和架构明确后，当前 AI 领取单一可验收任务，实际编码、测试并提交 Git，再通过 complete/report 登记真实证据。任务处于 in_review 时，调用一次 verify，携带 acceptance 的证据引用、具体技术自审结论以及每个真实 Gate 的证据与检查结论。DevControl 在一个 SQLite 事务中核对冻结目标、Git 版本和全部真实验收条件并登记 Verified，不再要求依次调用 self-review、gate-review、verify 三个管理动作。旧三步仅作历史兼容。真机 Gate 缺失不能自动通过，前置任务未验收仍不得领取后续任务。不需要其他 Agent 或常在线权威主机。
 
+### 开发租约与待验收任务
+
+开发写入租约默认 1800 秒，允许设置 60 至 3600 秒。开发中须在
+到期前显式 `renew`；超时后需 `recover-task` 检查原始代码和工作区。
+**已完成 Git 提交并处于 `in_review` 的任务不再因为写入租约到期
+而阻断原 `leaseToken` 的自审、Gate 审查和 `verify`。**
+这不延长独占 Git 写入权限。过期写入租约无法补报新的测试记录、
+修改代码或提交新的完成报告。原令牌如果丢失、已更换，仍需审计恢复。
+无 Git 项目也遵循相同的审核规则，并校验冻结 SHA-256 文件快照。
+
+### 旧多仓测试证据的受审补绑
+
+旧 `in_review` 任务已有真实测试记录，但其
+`dc_evidence_repository_digests` 缺失或与
+`dc_completion_repository_revisions` 冻结向量不一致时，不得在
+`in_review` 强行 `report`，也不能把多仓任务伪装成
+`defer-verification`。首先调用 `task-closure-status` 获取
+`frozenDeliveryHeads`、`staleLegacyEvidence` 和原证据引用。
+当前负责 Agent 检查原始真实测试输出；若能够证明它对应实际冻结交付，
+调用如下操作，提交 **原有证据**、原本准确的 Git 提交和实际测试日志：
+
+```json
+{
+  "action": "rebind-legacy-evidence",
+  "project_root": "/ABSOLUTE/PROJECT",
+  "input": {
+    "id": "EXISTING-IN-REVIEW-TASK",
+    "leaseToken": "ORIGINAL-TASK-LEASE-TOKEN",
+    "actor": "responsible-developer",
+    "reason": "An existing real test receipt predates the frozen multi-Git evidence association; the original output has been inspected and matched to the frozen delivery.",
+    "evidenceReference": "EXISTING-ORIGINAL-TEST-REFERENCE",
+    "deliveryHeads": {
+      "": "ORIGINAL_ROOT_COMMIT_SHA",
+      "apw-life": "ORIGINAL_CHILD_COMMIT_SHA"
+    },
+    "artifactPath": "test-artifacts/original-test-output.log",
+    "artifactSha256": "ORIGINAL_OUTPUT_SHA256",
+    "findings": "Detailed real test output, test command, observed outcomes, original full multi-repository commit vector, checked negative cases, and why this existing receipt belongs to the frozen delivery. No new test run or Gate pass is claimed."
+  }
+}
+```
+
+`deliveryHeads` 必须包含当前任务实际发现的**全部独立 Git 仓库**，
+不是示例中的固定两个。工具会核对冻结完成记录、完整版本向量、
+原始测试引用、Git 提交关系、日志真实文件与 SHA-256，且只追加
+`dc_legacy_evidence_rebindings` 和带来源指针的派生关联记录。
+原始 `dc_evidence`、冻结交付、Gate 状态及曾经失败的审核记录
+一律不改。**补绑不代表 Gate 通过或测试重新执行。**
+补绑后必须由 Agent 根据真正的测试输出按原合同单独 `verify`。
+如果没有可检查的原始输出，或者不能证明原记录确实覆盖这些 Git 版本，
+应在保留交付的前提下重新运行真实项目测试，而不是生成虚假的证据。
+
 **生成规则同步检查（每次 MCP 研发修改都必须做）**：检查实际业务流程是否改变，核对 `src/lib/v5-sqlite-guidance.ts`（Skill/AGENTS.md）、`src/lib/v5-agent-action-reference.ts`、`src/lib/harness-adapters.ts`、`src/lib/workflow-skill-installer.ts` 的生成与写入规则；如规则改变，应更新 `SKILL_GUIDANCE_REVISION`。运行 `verify-workflow-skill` 和 Skill/AGENTS bootstrap 回归，确认旧版同版本托管块会被更新，用户自定义 AGENTS.md 内容不会覆盖，第二次启动保持幂等。`prebuild` 自动运行一致性检查及 Skill 同步，但不应自动重写其他开发者正在工作的真实项目文件。
 
 Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcontrol` 工具的对应 `action` 进入项目 SQLite。**DevControl 只管理状态与验证契约，Agent 自己分析需求、写代码、独立审核、执行真正的测试和业务 SQL。** 未实际运行的 Gate 不算通过。
@@ -263,7 +315,7 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | Bug / Defect management (3) | `bug-get`、`bug-step-save`、`bug-task-link` |
 | Idea / Proposed change governance (7) | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-self-review`、`idea-review`、`idea-decide` |
 | 工件 / Governed artifacts (6) | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-self-review`、`artifact-independent-review`、`artifact-approve` |
-| 领取、报告与验收 / Execution and evidence (20) | `claim`、`renew`、`recover-task`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
+| 领取、报告与验收 / Execution and evidence (21) | `claim`、`renew`、`recover-task`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`rebind-legacy-evidence`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
 | 决策 / Decision records (2) | `decision-save`、`decision-get` |
 | 本地工具 / Local developer and hooks (3) | `local-developer`、`hook-status`、`hook-install` |
 

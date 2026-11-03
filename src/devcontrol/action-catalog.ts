@@ -75,7 +75,7 @@ export const V5_DEVC_ACTION_GROUPS = [
     actions: ['claim', 'renew', 'recover-task', 'refresh-protected-worktree',
       'relocate-repository-baselines',
       'release', 'defer-verification','resume-verification',
-      'check', 'report', 'gate-review', 'review-worktree', 'complete',
+      'check', 'report', 'rebind-legacy-evidence', 'gate-review', 'review-worktree', 'complete',
       'self-review','review-handoff','review-submit','reviewed-verify','task-closure-status',
       'verify', 'trace'],
   },

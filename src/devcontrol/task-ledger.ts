@@ -608,7 +608,7 @@ export class ProjectTaskLedger {
 
   private verifyFileTask(id:string,token:string,acceptance?:TaskAcceptance):Row{
     return this.inTransaction(()=>{
-      const lease=this.requireLease(id,token);
+      const lease=this.requireLease(id,token,'review');
       const task=this.requireTask(id);
       if(task.status!=='in_review')fail('NOT_IN_REVIEW','Report real test evidence before verification');
       const completed=this.latestCompletion(id);
@@ -853,6 +853,23 @@ export class ProjectTaskLedger {
       );
       CREATE TABLE IF NOT EXISTS dc_evidence_repository_digests (
         evidence_id INTEGER PRIMARY KEY REFERENCES dc_evidence(id), digest TEXT NOT NULL
+      );
+      -- Append-only proven migration to a frozen repository vector.
+      -- Original evidence and existing Gate results are never rewritten.
+      CREATE TABLE IF NOT EXISTS dc_legacy_evidence_rebindings (
+        derived_evidence_id INTEGER PRIMARY KEY REFERENCES dc_evidence(id),
+        source_evidence_id INTEGER NOT NULL REFERENCES dc_evidence(id),
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        completion_revision INTEGER NOT NULL,
+        repository_digest TEXT NOT NULL,
+        previous_digest TEXT,
+        artifact_path TEXT NOT NULL,
+        artifact_sha256 TEXT NOT NULL,
+        reviewer TEXT NOT NULL,
+        findings TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        bound_at TEXT NOT NULL,
+        UNIQUE(source_evidence_id,completion_revision)
       );
       CREATE TABLE IF NOT EXISTS dc_external_gate_repository_digests (
         task_id TEXT NOT NULL REFERENCES dc_tasks(id),
@@ -1689,7 +1706,7 @@ export class ProjectTaskLedger {
       fail('SELF_REVIEW_EVIDENCE_REQUIRED',
         'Record a substantive review of actual code and tests, an outcome and the exact evidence reference');
     return this.inTransaction(()=>{
-      const lease=this.requireLease(id,token);
+      const lease=this.requireLease(id,token,'review');
       const task=this.requireTask(id);
       if(task.status!=='in_review')fail('NOT_IN_REVIEW','Complete and report real evidence first');
       const note=this.latestCompletion(id);
@@ -1713,7 +1730,7 @@ export class ProjectTaskLedger {
             'Self-review must inspect the exact committed revision of every Git repository');
       }
       const evidence=this.db.prepare(`SELECT id FROM dc_evidence
-        WHERE task_id=? AND reference=? AND git_head=? LIMIT 1`)
+        WHERE task_id=? AND reference=? AND git_head=? ORDER BY id DESC LIMIT 1`)
         .get(id,input.evidenceReference.trim(),note.git_head);
       if(!evidence)fail('REVIEW_EVIDENCE_MISSING',
         'Self-review must cite actual task evidence at the committed delivery');
@@ -1933,6 +1950,27 @@ export class ProjectTaskLedger {
     const deferred=this.db.prepare('SELECT gate_name,completion_head,resumed_at FROM dc_verification_deferrals WHERE task_id=?').get(id);
     const note=this.latestCompletion(id);
     const evidence=this.db.prepare('SELECT reference,git_head,kind FROM dc_evidence WHERE task_id=? ORDER BY id').all(id);
+    const frozenRow=note?this.db.prepare(`SELECT snapshot_json,digest
+      FROM dc_completion_repository_revisions
+      WHERE task_id=? AND revision=?`).get(id,note.revision):null;
+    const frozenDeliveryHeads:Record<string,string>|null=frozenRow
+      ?Object.fromEntries((JSON.parse(String(frozenRow.snapshot_json)) as
+        RepositoryRevision[]).map(repo=>[repo.prefix,repo.head])):null;
+    const latestEvidenceByRef=new Map<string,Row>();
+    if(frozenRow&&note){
+      for(const row of this.db.prepare(`SELECT e.id,e.reference,d.digest
+        FROM dc_evidence e LEFT JOIN dc_evidence_repository_digests d
+          ON d.evidence_id=e.id
+        WHERE e.task_id=? AND e.git_head=? ORDER BY e.id DESC`)
+        .all(id,String(note.git_head))){
+        const ref=String(row.reference);
+        if(!latestEvidenceByRef.has(ref))latestEvidenceByRef.set(ref,row);
+      }
+    }
+    const staleLegacyEvidence=[...latestEvidenceByRef.values()]
+      .filter(row=>row.digest!==frozenRow?.digest)
+      .map(row=>({reference:row.reference,evidenceId:row.id,
+        recordedDigest:row.digest??null}));
     const handoff=this.db.prepare(`SELECT reviewer,outcome,completion_head,completion_revision,
       issued_at,expires_at FROM dc_task_review_handoffs WHERE task_id=?`).get(id);
     const gates=JSON.parse(task.required_gates) as string[];
@@ -1970,9 +2008,12 @@ export class ProjectTaskLedger {
           instructions:'Run the required project-owned acceptance test; resume this frozen delivery when evidence exists. If the real retry still fails or is unavailable, re-defer with an honest reason. Never mark the Gate passed without proof',
         }],note:'Deferral preserves the original code and evidence; no Verified yet'};
     }
-    if(!lease||lease.expires_at<=Date.now()){
-      add('recover-task','no valid developer lease',
-        'Use explicitly authorized Owner recovery for a lost lease; a completed deferred task should first use resume-verification');
+    if(!lease){
+      add('recover-task','task has no retained identity token',
+        'Recover the original task without changing its frozen delivery or test evidence');
+    }else if(lease.expires_at<=Date.now()&&task.status!=='in_review'){
+      add('recover-task','writer lease expired',
+        'Restore the original coding task after checking its files and Git history');
     }
     if(!note){
       add('complete','structured delivery missing',
@@ -1985,6 +2026,11 @@ export class ProjectTaskLedger {
     if(task.status==='in_progress'&&note&&evidence.length){
       add('report','developer has not requested review yet',
         'Use report with existing real evidence and readyForReview=true before the Agent review');
+    }
+    if(note&&evidence.length&&task.status==='in_review'&&
+      staleLegacyEvidence.length>0&&!internalDecision){
+      add('rebind-legacy-evidence','existing multi-Git test receipt lacks the frozen delivery vector',
+        'Inspect the ORIGINAL real test log, calculate its SHA-256, supply the exact frozenDeliveryHeads map, original evidenceReference, responsible Agent token and substantive Git/test findings. This only records an audited provenance link, never a Gate pass. If the original log does not establish those exact tested commits, rerun the real project tests.');
     }
     if(note&&evidence.length&&task.status==='in_review'&&!internalDecision){
       add('verify','ready for one developer acceptance',
@@ -2015,6 +2061,8 @@ export class ProjectTaskLedger {
         'files-sha256:'+captureFileEvidence(this.root).digest,
       deferredGate:deferred&&!deferred.resumed_at?deferred.gate_name:null,
       leaseActive:!!lease&&lease.expires_at>Date.now(),
+      reviewTokenUsable:!!lease&&task.status==='in_review'&&!!note,
+      staleLegacyEvidence,frozenDeliveryHeads,
       recordedEvidence:evidence.map(item=>({reference:item.reference,kind:item.kind,head:item.git_head})),
       reviewStatus:handoff?.outcome??(handoff?'awaiting_review':'not_started'),
       reviewCompletionHead:handoff?.completion_head??null,requiredGates:gates,
@@ -6876,11 +6924,20 @@ export class ProjectTaskLedger {
       'This task retains a review lease while another task owns the shared Git checkout; reclaim the writer before submitting a new code revision');
   }
 
-  private requireLease(id: string, token: string): Row {
+  private requireLease(id: string, token: string,
+    purpose:'write'|'review'='write'): Row {
     const row = this.db.prepare("SELECT * FROM dc_task_leases WHERE task_id=?").get(id)??
       this.db.prepare("SELECT * FROM dc_leases WHERE task_id=?").get(id);
-    if (!row || row.token !== token || row.expires_at <= Date.now()) {
+    if (!row || row.token !== token) {
       fail("LEASE_REQUIRED", "Active task lease token required");
+    }
+    if(row.expires_at<=Date.now()){
+      // Review owns no Git writer privilege. Keep the original authenticated
+      // token usable after TTL if and only if a committed delivery is already
+      // awaiting review. No new evidence/report/complete operation can use it.
+      const task=purpose==='review'?this.requireTask(id):null;
+      if(task?.status!=='in_review'||!this.latestCompletion(id))
+        fail("LEASE_REQUIRED","Active writer lease token required; recover the original unfinished work");
     }
     if(String(row.worktree_path??'')!==
       (this.linkedWorktree?fs.realpathSync(this.root):''))
@@ -6954,6 +7011,138 @@ export class ProjectTaskLedger {
   }
 
   /**
+   * One-time migration for genuine test receipts recorded before v5 started
+   * binding multi-Git evidence to the frozen completion vector. Never change
+   * the old row or a Gate result: append a derived, provenance-linked receipt
+   * only after checking the original report, exact frozen Git commits and a
+   * real, SHA-256-verified test artifact inspected by the responsible Agent.
+   *
+   * This is NOT a report, a test run, or a Gate approval. It does not confer
+   * permission to add evidence or modify an in_review delivery.
+   */
+  rebindLegacyEvidence(input:{
+    id:string;leaseToken:string;actor:string;reason:string;
+    evidenceReference:string;deliveryHeads:Record<string,string>;
+    artifactPath:string;artifactSha256:string;findings:string;
+  }):Row {
+    const actor=String(input?.actor??'').trim();
+    const reason=String(input?.reason??'').trim();
+    const findings=String(input?.findings??'').trim();
+    const reference=String(input?.evidenceReference??'').trim();
+    const relative=String(input?.artifactPath??'').trim();
+    const sha=String(input?.artifactSha256??'').trim().toLowerCase();
+    if(actor.length<2||reason.length<40||reason.length>1200||
+      findings.length<100||findings.length>4000||
+      !reference||relative.length<4||relative.length>512||
+      !/^[a-f0-9]{64}$/.test(sha))
+      fail('LEGACY_EVIDENCE_PROOF_REQUIRED',
+        'Provide original evidence reference, SHA-256 test artifact, responsible actor, concrete reason and substantive findings about original test output and every frozen Git commit');
+    if(path.isAbsolute(relative)||relative.includes('\\')||
+      relative.split('/').some(part=>!part||part==='.'||part==='..')||
+      relative==='.git'||relative.startsWith('.git/'))
+      fail('LEGACY_EVIDENCE_ARTIFACT_UNSAFE','Use a regular project-relative test artifact outside Git metadata');
+    if(!this.hasRootGit)
+      fail('LEGACY_EVIDENCE_MULTI_GIT_ONLY','File-delivery tasks have a separate evidence contract');
+    return this.inTransaction(()=>{
+      const lease=this.requireLease(input.id,input.leaseToken,'review');
+      if(actor!==lease.agent)
+        fail('LEGACY_EVIDENCE_REVIEWER_MISMATCH',
+          'The original responsible Agent must inspect the preserved receipt; no new Owner or independent reviewer is required');
+      const task=this.requireTask(input.id);
+      const note=this.latestCompletion(input.id);
+      if(task.status!=='in_review'||!note)
+        fail('LEGACY_EVIDENCE_REVIEW_ONLY',
+          'Only an already committed multi-repository task awaiting review may rebind a legacy receipt');
+      const observed=this.observedTaskRepositories(input.id,task);
+      if(!observed.some(repo=>!!repo.prefix))
+        fail('LEGACY_EVIDENCE_MULTI_GIT_ONLY','Only existing multi-repository deliveries can use this migration');
+      if(!input.deliveryHeads||typeof input.deliveryHeads!=='object'||
+        Array.isArray(input.deliveryHeads))
+        fail('LEGACY_EVIDENCE_DELIVERY_MISMATCH',
+          'Supply the full, explicit, already frozen Git deliveryHeads map');
+      this.requireChildReposClean(observed,input.id,task);
+      this.checkReviewDeliveryHead(input.id,String(lease.base_head),String(note.git_head));
+      const frozen=this.frozenDeliveryRepositories(input.id,task);
+      const supplied=this.selectDeliveryRepositories(task,observed,input.deliveryHeads);
+      const digest=this.repositoryEvidenceDigest(input.id,frozen);
+      if(digest!==this.repositoryEvidenceDigest(input.id,supplied)||
+        JSON.stringify(frozen)!==JSON.stringify(supplied))
+        fail('LEGACY_EVIDENCE_DELIVERY_MISMATCH',
+          'The complete provided HEAD map must equal the immutable committed delivery, not the current Git HEAD');
+      const original=this.db.prepare(`SELECT e.id,e.kind,e.reference,e.git_head,e.created_at,
+        d.digest FROM dc_evidence e
+        LEFT JOIN dc_evidence_repository_digests d ON d.evidence_id=e.id
+        LEFT JOIN dc_legacy_evidence_rebindings r ON r.derived_evidence_id=e.id
+        WHERE e.task_id=? AND e.reference=? AND e.git_head=?
+          AND r.derived_evidence_id IS NULL
+        ORDER BY e.id DESC LIMIT 1`).get(input.id,reference,note.git_head);
+      if(!original||!String(original.kind??'').trim())
+        fail('LEGACY_EVIDENCE_MISSING',
+          'Original, real, pre-existing task test receipt must match this exact completion HEAD and reference');
+      if(original.digest===digest)
+        fail('LEGACY_EVIDENCE_ALREADY_BOUND',
+          'This receipt already covers the frozen repository vector; no migration or new test claim needed');
+      const existing=this.db.prepare(`SELECT derived_evidence_id,repository_digest
+        FROM dc_legacy_evidence_rebindings
+        WHERE source_evidence_id=? AND completion_revision=?`)
+        .get(original.id,note.revision);
+      if(existing)
+        fail('LEGACY_EVIDENCE_ALREADY_REBOUND',
+          'A prior audited binding exists; do not create another receipt or overwrite its provenance');
+
+      const workspace=fs.realpathSync(this.root);
+      const lexical=path.resolve(this.root,relative);
+      if(!lexical.startsWith(path.resolve(this.root)+path.sep))
+        fail('LEGACY_EVIDENCE_ARTIFACT_UNSAFE','Test artifact is outside the project workspace');
+      let stat:fs.Stats,real:string;
+      try{
+        stat=fs.lstatSync(lexical);
+        real=fs.realpathSync(lexical);
+      }catch{
+        fail('LEGACY_EVIDENCE_ARTIFACT_MISSING',
+          'Original test output must be available as a real local artifact; otherwise rerun tests');
+      }
+      if(!stat!.isFile()||stat!.isSymbolicLink()||stat!.size<32||
+        stat!.size>8*1024*1024||
+        real!==path.resolve(workspace,relative)||
+        !real.startsWith(workspace+path.sep))
+        fail('LEGACY_EVIDENCE_ARTIFACT_UNSAFE',
+          'Legacy test proof must be a regular, non-symlink file inside this workspace (32 bytes to 8 MiB)');
+      const actual=createHash('sha256').update(fs.readFileSync(real)).digest('hex');
+      if(actual!==sha)
+        fail('LEGACY_EVIDENCE_ARTIFACT_CHANGED',
+          'Original test artifact content does not match its independently supplied SHA-256');
+      const now=utc();
+      this.db.prepare(`INSERT INTO dc_evidence
+        (task_id,kind,reference,git_head,created_at) VALUES(?,?,?,?,?)`)
+        .run(input.id,original.kind,reference,note.git_head,original.created_at);
+      const derived=this.db.prepare(`SELECT id FROM dc_evidence
+        WHERE task_id=? ORDER BY id DESC LIMIT 1`).get(input.id);
+      this.db.prepare(`INSERT INTO dc_evidence_repository_digests
+        (evidence_id,digest) VALUES(?,?)`).run(derived!.id,digest);
+      this.db.prepare(`INSERT INTO dc_legacy_evidence_rebindings
+        (derived_evidence_id,source_evidence_id,task_id,completion_revision,
+         repository_digest,previous_digest,artifact_path,artifact_sha256,
+         reviewer,findings,reason,bound_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(derived!.id,original.id,input.id,note.revision,digest,
+          original.digest??null,relative,sha,actor,findings,reason,now);
+      this.audit(input.id,'legacy_test_evidence_repository_rebound',actor,{
+        sourceEvidenceId:original.id,derivedEvidenceId:derived!.id,
+        originalEvidenceKind:original.kind,originalEvidenceReference:reference,
+        originalGitHead:note.git_head,originalDigest:original.digest??null,
+        frozenDigest:digest,deliveryHeads:input.deliveryHeads,
+        completionRevision:note.revision,artifactPath:relative,
+        artifactSha256:sha,findings,reason,
+        originalEvidenceUnchanged:true,testsExecuted:false,gateApproved:false,
+      });
+      return {taskId:input.id,derivedEvidenceId:derived!.id,
+        sourceEvidenceId:original.id,repositoryDigest:digest,
+        evidenceRebound:true,testsExecuted:false,gateApproved:false,
+        nextAction:'verify with substantive acceptance and actual Gate findings'};
+    });
+  }
+
+  /**
    * Agent executes business tests; MCP records the declared result and an
    * independent review tied to a reported artifact and exact Git revision.
    * An evidence reference without a reviewer conclusion is never a pass.
@@ -6963,7 +7152,7 @@ export class ProjectTaskLedger {
     reviewer: string; outcome: "passed" | "failed"; reviewNotes: string;
     reviewMode?:'self';
   }): Row {
-    const lease = this.requireLease(id, token);
+    const lease = this.requireLease(id, token,'review');
     const task = this.requireTask(id);
     if (task.status !== "in_review") fail("NOT_IN_REVIEW", "Complete and report evidence before external review");
     const planned = JSON.parse(task.required_gates) as string[];
@@ -7046,7 +7235,7 @@ export class ProjectTaskLedger {
    * three-step review states can trap a different project.
    */
   private recordTaskAcceptance(id:string,token:string,input:TaskAcceptance):void{
-    const lease=this.requireLease(id,token);
+    const lease=this.requireLease(id,token,'review');
     const task=this.requireTask(id);
     const note=this.latestCompletion(id);
     if(task.status!=='in_review'||!note)
@@ -7129,7 +7318,7 @@ export class ProjectTaskLedger {
     if(acceptance!==undefined){
       try{
         return this.inTransaction(()=>{
-          const actor=this.requireLease(id,token).agent;
+          const actor=this.requireLease(id,token,'review').agent;
           this.recordTaskAcceptance(id,token,acceptance);
           const result=this.verify(id,token);
           if(!result.passed)throw new AcceptanceRejected(result);
@@ -7146,7 +7335,7 @@ export class ProjectTaskLedger {
         throw error;
       }
     }
-    const lease = this.requireLease(id, token);
+    const lease = this.requireLease(id, token,'review');
     const task = this.requireTask(id);
     if (task.status !== "in_review") fail("NOT_IN_REVIEW", "Submit evidence and request review first");
     // Plans imported through the v5 approval process need explicit substantive
@@ -7400,7 +7589,7 @@ export class ProjectTaskLedger {
     const stable = startHead === stableHead && protectedEditsStable && repoStable();
     const passed = stable && Object.values(results).every((r) => r.passed);
     this.inTransaction(() => {
-      const current = this.requireLease(id, token);
+      const current = this.requireLease(id, token,'review');
       if (current.base_head !== lease.base_head) fail("LEASE_CHANGED", "Lease changed during validation");
       const editsStillMatch=protectedEditsAreStable();
       if (git(this.root, ["rev-parse", "HEAD"]) !== startHead ||

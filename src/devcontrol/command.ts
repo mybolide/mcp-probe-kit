@@ -228,6 +228,15 @@ export function dispatchDevControl(
     case "renew": return ledger.renew(
       String(input.id), String(input.leaseToken), Number(input.ttlSeconds ?? 1800),
     );
+    case "rebind-legacy-evidence": return ledger.rebindLegacyEvidence({
+      id:String(input.id??''),leaseToken:String(input.leaseToken??''),
+      actor:String(input.actor??''),reason:String(input.reason??''),
+      evidenceReference:String(input.evidenceReference??''),
+      deliveryHeads:input.deliveryHeads as Record<string,string>,
+      artifactPath:String(input.artifactPath??''),
+      artifactSha256:String(input.artifactSha256??''),
+      findings:String(input.findings??''),
+    });
     case "recover-task": return ledger.recoverTaskLease(String(input.id),{
       actor:String(input.actor??''),explicitAuthorization:input.explicitAuthorization===true,
       reason:String(input.reason??''),ttlSeconds:Number(input.ttlSeconds??1800),

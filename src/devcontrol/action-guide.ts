@@ -38,14 +38,15 @@ const FLOWS = {
   },
   verification: {
     description: '提交代码和真实测试 → 当前 AI 一次完成正式验收登记 → Verified',
-    actions: ['task-closure-status','check','complete','report','verify','trace'],
+    actions: ['task-closure-status','check','complete','report',
+      'rebind-legacy-evidence','verify','trace'],
     example: {action:'verify',project_root:'/ABSOLUTE/PROJECT',
       input:{id:'APPROVED-TASK-ID',leaseToken:'CURRENT-LEASE',
         acceptance:{evidenceReference:'ACTUAL-TEST-REPORT',
           findings:'Current AI inspected the exact Git commit or immutable file snapshot, negative cases and genuine test output against frozen acceptance.',
           gates:[{gate:'docs',evidenceReference:'ACTUAL-TEST-REPORT',
             findings:'Actual project-owned docs tests passed for the original source delivery (Git or SHA-256 files).'}]}}},
-    caution: 'DevControl is project management, NEVER a test runner or independent reviewing Agent. Current AI runs real tests, reports their original revision-bound evidence, and uses ONE verify with an acceptance object to record findings for each frozen Gate. The required tests and dependency checks remain strict. Old self-review and gate-review actions remain only for existing in-flight task compatibility. Missing evidence never means approval.',
+    caution: 'DevControl is project management, NEVER a test runner or independent reviewing Agent. Current AI runs real tests, reports their original revision-bound evidence, and uses ONE verify with an acceptance object to record findings for each frozen Gate. For old multi-Git in_review receipts lacking the original frozen Git version vector, rebind-legacy-evidence requires the existing receipt, exact original deliveryHeads, and a real local test output artifact checked by SHA-256 with substantive findings. It does NOT run tests, rewrite existing evidence or approve any Gate; if the original test provenance cannot be established, rerun the real tests under a valid development lease. In_review review and verify retain the original developer token even after its writing TTL expires; editing or reporting new evidence still requires a live writer lease. The required tests and dependency checks remain strict. Old self-review and gate-review actions remain only for existing in-flight task compatibility. Missing evidence never means approval.',
   },
   bug: {
     description: '缺陷记录、调查步骤和关联获批任务',
