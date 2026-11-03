@@ -37,7 +37,12 @@ function git(cwd:string,args:string[],binary=false):Buffer {
 
 /** Keep the exact delivered commit vector, not a subsequent merge's HEAD.
  * Later commits are acceptable only when they touch NO frozen task path.
- * Inspect per-commit changes (including merge parents), not just a net diff.
+ * Follow the first-parent integration history: comparing a merge against
+ * each parent (-m alone) falsely counts a file already present in the first
+ * parent as newly added relative to an older side branch. A genuine change
+ * in the merged tree relative to the first parent still invalidates review.
+ * Do not replace this with a net diff: a scoped edit followed by a revert
+ * must not silently reuse the original acceptance evidence.
  */
 export function assertDeliveryStillPresent(root:string,delivery:RepositoryRevision[],
   current:RepositoryRevision[],allowedPaths:string[]):void{
@@ -58,7 +63,7 @@ export function assertDeliveryStillPresent(root:string,delivery:RepositoryRevisi
       if(ok.status!==0)throw Error('Delivery commit not an ancestor of HEAD: '+saved.prefix);
     }
     if(saved.head===observed.head)continue;
-    const later=names(repo,['log','-m','--format=','--name-only','-z',
+    const later=names(repo,['log','--first-parent','-m','--format=','--name-only','-z',
       '--diff-filter=ACMRTD',saved.head+'..'+observed.head]);
     const overlaps=later.filter(name=>allowedPaths.some(pattern=>
       name===pattern||pattern.endsWith('/**')&&

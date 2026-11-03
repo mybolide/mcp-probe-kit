@@ -6,7 +6,7 @@ import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {ProjectTaskLedger} from '../task-ledger.js';
 import {discoverRepositories,currentRevisions,updateRevisions,revisionDigest,
-  stagedChanges,committedChanges,assertRepositoryTopology} from '../repository-audit.js';
+  stagedChanges,committedChanges,assertRepositoryTopology,assertDeliveryStillPresent} from '../repository-audit.js';
 import {auditedUntrackedFiles,localWorktreeIgnoreFile,localWorktreeExemptedFiles} from '../worktree-ignore.js';
 import {previewManagedGuidanceSync} from '../../lib/workflow-skill-installer.js';
 import {MCP_PROBE_SKILL_REL_PATH} from '../../lib/workflow-skill-template.js';
@@ -192,9 +192,144 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
       expect(()=>ledger.checkStaged()).toThrow(/managed guidance validation/);
     }finally{ledger.close();}
   });
+
+  it('accepts original Android layout delivery when a later merge only differs on its second parent',()=>{
+    const {root,app}=fixture();
+    const main=cmd(app,'branch','--show-current');
+    const oldBase=cmd(app,'rev-parse','HEAD');
+    cmd(app,'branch','older-unrelated',oldBase);
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-ANDROID-MERGE',
+        title:'Android and iOS layout regression tests remain reviewed after unrelated merge',
+        track:'governance',
+        allowedPaths:['apw-life-app/test/activity_android_ios_layout_test.dart'],
+        requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-ANDROID-MERGE','owner');
+      const lease=ledger.claim('AUDIT-ANDROID-MERGE','developer');
+      fs.mkdirSync(path.join(app,'test'),{recursive:true});
+      fs.writeFileSync(path.join(app,'test/activity_android_ios_layout_test.dart'),
+        'void main() { /* tested original layout */ }\n');
+      cmd(app,'add','test/activity_android_ios_layout_test.dart');
+      cmd(app,'commit','-qm','original Android layout delivery');
+      const delivered=cmd(app,'rev-parse','HEAD');
+      const receipt='Actual Android layout test output for delivered child commit';
+      ledger.report('AUDIT-ANDROID-MERGE',lease.leaseToken,
+        {kind:'unit_test',reference:receipt},true);
+      ledger.complete('AUDIT-ANDROID-MERGE',lease.leaseToken,{
+        summary:'Original tested Android and iOS layout',implementation:'Scoped test committed',
+        verification:'Actual layout test evidence bound to delivered Git commit',
+      });
+      cmd(app,'switch','older-unrelated');
+      fs.writeFileSync(path.join(app,'README.md'),'old unrelated branch changes\n');
+      cmd(app,'add','README.md');
+      cmd(app,'commit','-qm','old branch unrelated changes');
+      cmd(app,'switch',main);
+      cmd(app,'merge','--no-ff','-m','merge old unrelated branch','older-unrelated');
+      const merged=cmd(app,'rev-parse','HEAD');
+      const scoped='test/activity_android_ios_layout_test.dart';
+      expect(cmd(app,'diff','--name-only',merged+'^1',merged,'--',scoped)).toBe('');
+      expect(cmd(app,'diff','--name-only',merged+'^2',merged,'--',scoped)).toBe(scoped);
+      expect(cmd(app,'diff','--name-only',delivered,'HEAD','--',scoped)).toBe('');
+      ledger.reviewOwnTask('AUDIT-ANDROID-MERGE',lease.leaseToken,{
+        outcome:'passed',evidenceReference:receipt,
+        findings:'Reviewed the originally committed Android layout test, original test evidence, and later integration merge with no first-parent change in the frozen task file.',
+      });
+      ledger.reviewExternalGate('AUDIT-ANDROID-MERGE',lease.leaseToken,{
+        gate:'docs',runner:'developer',reviewer:'developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:receipt,
+        reviewNotes:'Reviewed the original test evidence and exact submitted file content; second-parent merge diff does not change the frozen delivery.',
+      });
+      expect(ledger.verify('AUDIT-ANDROID-MERGE',lease.leaseToken))
+        .toMatchObject({passed:true});
+    }finally{ledger.close();}
+  });
 });
 
 describe('layered local worktree-ignore protection',()=>{
+  it('accepts explicitly listed tracked and staged legacy History docs, but not broad docs sources',()=>{
+    const {root}=fixture(false);
+    fs.mkdirSync(path.join(root,'docs/history-session'),{recursive:true});
+    fs.writeFileSync(path.join(root,'docs/history-session/26.md'),'old local history\n');
+    fs.writeFileSync(path.join(root,'docs/history-session/index.json'),'{}\n');
+    fs.writeFileSync(path.join(root,'docs/requirements.md'),'approved scope source\n');
+    cmd(root,'add','docs/history-session/26.md',
+      'docs/history-session/index.json','docs/requirements.md');
+    cmd(root,'commit','-qm','baseline requirements and local history');
+    fs.writeFileSync(path.join(root,'docs/history-session/26.md'),'updated local history\n');
+    fs.writeFileSync(path.join(root,'docs/history-session/index.json'),'{"n":26}\n');
+    cmd(root,'add','docs/history-session/index.json');
+    fs.writeFileSync(path.join(root,'docs/requirements.md'),'tampered requirement source\n');
+    fs.writeFileSync(localWorktreeIgnoreFile(root),'/docs/history-session/\n');
+    const files=['docs/history-session/26.md',
+      'docs/history-session/index.json','docs/requirements.md'];
+    expect(localWorktreeExemptedFiles(root,files)).toEqual(files.slice(0,2));
+    expect(cmd(root,'diff','--cached','--name-only'))
+      .toContain('docs/history-session/index.json');
+    expect(()=>localWorktreeExemptedFiles(root,files,
+      file=>file==='docs/history-session/26.md'))
+      .toThrow(/frozen task file/);
+    fs.writeFileSync(localWorktreeIgnoreFile(root),'/docs/\n');
+    expect(()=>localWorktreeExemptedFiles(root,files)).toThrow(/business source/);
+    // A business code file under the archive tree is not archive output.
+    fs.writeFileSync(path.join(root,'docs/history-session/hide.ts'),'business code');
+    fs.writeFileSync(localWorktreeIgnoreFile(root),'/docs/history-session/\n');
+    expect(()=>localWorktreeExemptedFiles(root,['docs/history-session/hide.ts']))
+      .toThrow(/business source/);
+  });
+
+  it('does not block a task because an explicitly exempt tracked History file was staged',()=>{
+    const {root}=fixture(false);
+    fs.mkdirSync(path.join(root,'docs/history-session'),{recursive:true});
+    fs.writeFileSync(path.join(root,'docs/history-session/27.md'),'previous archive');
+    cmd(root,'add','docs/history-session/27.md');
+    cmd(root,'commit','-qm','local history baseline');
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-HISTORY-EXEMPT',
+        title:'Deliver task without touching locally archived History',
+        track:'governance',allowedPaths:['docs/task.txt'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-HISTORY-EXEMPT','owner');
+      const lease=ledger.claim('AUDIT-HISTORY-EXEMPT','developer');
+      fs.writeFileSync(path.join(root,'docs/history-session/27.md'),'machine-specific archive');
+      cmd(root,'add','docs/history-session/27.md');
+      fs.writeFileSync(localWorktreeIgnoreFile(root),'/docs/history-session/\n');
+      expect(ledger.checkStaged()).toMatchObject({
+        passed:true,scope:'local-worktree-exemption',
+        exemptedStagedFiles:['docs/history-session/27.md'],
+      });
+      fs.writeFileSync(path.join(root,'docs/task.txt'),'actual approved task file');
+      cmd(root,'add','docs/task.txt');
+      expect(ledger.checkStaged()).toMatchObject({
+        passed:true,taskId:'AUDIT-HISTORY-EXEMPT',
+        stagedFiles:['docs/task.txt'],deniedFiles:[],
+        exemptedStagedFiles:['docs/history-session/27.md'],
+      });
+      cmd(root,'commit','-qm','approved scope only','--only','--','docs/task.txt');
+      const reference='Real test receipt for actual task document';
+      ledger.report('AUDIT-HISTORY-EXEMPT',lease.leaseToken,
+        {kind:'docs',reference},true);
+      ledger.complete('AUDIT-HISTORY-EXEMPT',lease.leaseToken,{
+        summary:'Committed approved task document only',
+        implementation:'Local tracked History is excluded from worktree checks',
+        verification:'Actual task evidence checked against Git delivery',
+      });
+      expect(ledger.verify('AUDIT-HISTORY-EXEMPT',lease.leaseToken,{
+        findings:'Verified actual committed task document against approved scope and real tests; local History remained outside task delivery.',
+        evidenceReference:reference,
+        gates:[{gate:'docs',evidenceReference:reference,
+          findings:'Checked task-specific document tests and exact committed delivery.'}],
+      })).toMatchObject({passed:true});
+      const audit=ledger.trace('AUDIT-HISTORY-EXEMPT').audit.filter(
+        (event:{event:string})=>event.event==='local_worktree_exemption_applied');
+      expect(audit.length).toBeGreaterThan(0);
+      expect(audit.at(-1).details.evidence[0].files[0]).toMatchObject({
+        path:'docs/history-session/27.md',
+        sha256:expect.stringMatching(/^[a-f0-9]{64}$/),
+      });
+    }finally{ledger.close();}
+  });
+
   it('matches explicitly exempt tracked, staged and untracked paths without changing Git tracking',()=>{
     const {root}=fixture(false);
     fs.mkdirSync(path.join(root,'.cursor'),{recursive:true});
@@ -326,6 +461,66 @@ describe('layered local worktree-ignore protection',()=>{
 });
 
 describe('immutable multi-repository delivery commits',()=>{
+  it('does not mistake a merge second-parent difference for a changed frozen delivery',()=>{
+    const {root,child}=fixture();
+    const initial=cmd(child,'rev-parse','HEAD');
+    const main=cmd(child,'branch','--show-current');
+    cmd(child,'branch','old-feature',initial);
+    fs.mkdirSync(path.join(child,'src'),{recursive:true});
+    fs.writeFileSync(path.join(child,'src','task.ts'),'export const task=1;\n');
+    cmd(child,'add','src/task.ts');
+    cmd(child,'commit','-qm','original verified task delivery');
+    const delivered=cmd(child,'rev-parse','HEAD');
+    cmd(child,'switch','old-feature');
+    fs.writeFileSync(path.join(child,'README.md'),'unrelated old feature branch\n');
+    cmd(child,'add','README.md');
+    cmd(child,'commit','-qm','old unrelated feature');
+    cmd(child,'switch',main);
+    cmd(child,'merge','--no-ff','-m','integrate unrelated old feature','old-feature');
+    const merged=cmd(child,'rev-parse','HEAD');
+    expect(cmd(child,'diff','--name-only',merged+'^1',merged,'--','src/task.ts'))
+      .toBe('');
+    expect(cmd(child,'diff','--name-only',merged+'^2',merged,'--','src/task.ts'))
+      .toBe('src/task.ts');
+    const frozen=[{prefix:'apw-life',gitDir:'apw-life/.git',
+      baseHead:initial,head:delivered}];
+    const observed=[{...frozen[0],head:merged}];
+    expect(()=>assertDeliveryStillPresent(root,frozen,observed,
+      ['apw-life/src/**'])).not.toThrow();
+
+    // A later first-parent scoped modification must still invalidate the
+    // original approval even if a second commit reverts to identical bytes.
+    fs.writeFileSync(path.join(child,'src/task.ts'),'export const task=2;\n');
+    cmd(child,'add','src/task.ts');cmd(child,'commit','-qm','change reviewed code');
+    fs.writeFileSync(path.join(child,'src/task.ts'),'export const task=1;\n');
+    cmd(child,'add','src/task.ts');cmd(child,'commit','-qm','revert change');
+    expect(cmd(child,'diff','--name-only',delivered,'HEAD','--','src/task.ts'))
+      .toBe('');
+    expect(()=>assertDeliveryStillPresent(root,frozen,[{...frozen[0],
+      head:cmd(child,'rev-parse','HEAD')}],['apw-life/src/**']))
+      .toThrow(/Later commit touched frozen task scope/);
+  });
+
+  it('rejects a merge that actually changes frozen source against its first parent',()=>{
+    const {root,child}=fixture();
+    const initial=cmd(child,'rev-parse','HEAD');
+    const main=cmd(child,'branch','--show-current');
+    fs.mkdirSync(path.join(child,'src'),{recursive:true});
+    fs.writeFileSync(path.join(child,'src','task.ts'),'export const task=1;\n');
+    cmd(child,'add','src/task.ts');cmd(child,'commit','-qm','original delivery');
+    const delivered=cmd(child,'rev-parse','HEAD');
+    cmd(child,'switch','-c','change-scope');
+    fs.writeFileSync(path.join(child,'src/task.ts'),'export const task=2;\n');
+    cmd(child,'add','src/task.ts');cmd(child,'commit','-qm','side branch changed source');
+    cmd(child,'switch',main);
+    cmd(child,'merge','--no-ff','-m','merge changed source','change-scope');
+    const frozen=[{prefix:'apw-life',gitDir:'apw-life/.git',
+      baseHead:initial,head:delivered}];
+    expect(()=>assertDeliveryStillPresent(root,frozen,[{...frozen[0],
+      head:cmd(child,'rev-parse','HEAD')}],['apw-life/src/**']))
+      .toThrow(/Later commit touched frozen task scope/);
+  });
+
   it('legacy absolute three-repository SQLite records survive a workspace move without Owner key or rewritten evidence',()=>{
     const {root,child}=fixture();
     fs.writeFileSync(path.join(child,'README.md'),'Original child Owner WIP preserved across copy\n');

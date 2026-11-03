@@ -15,8 +15,9 @@ function names(root:string,args:string[]):string[]{
 }
 
 /** Explicit rules are not permission to hide arbitrary application code.
- * Only MCP/agent/editor settings and local scratch output may be exempted.
- * A frozen task path is additionally forbidden, regardless of its name.
+ * Allow a narrow local History/archive or scratch-notes folder even if it
+ * lives under docs/. Approved PRD/ADR/design/scope sources elsewhere in docs
+ * remain protected. A frozen task path is forbidden regardless of filename.
  */
 function nonBusinessLocalFile(file:string):boolean{
   if(file==='AGENTS.md'||file==='.agents/skills/mcp-probe-kit/SKILL.md'||
@@ -25,6 +26,13 @@ function nonBusinessLocalFile(file:string):boolean{
       file==='.claude/settings.json'||file==='.claude/settings.local.json'||
       file==='.codex/config.toml')return true;
   if(/^\.cursor\/rules\/[a-zA-Z0-9_.-]+\.mdc?$/.test(file))return true;
+  // These are local legacy History exports and scratch notes, not an
+  // exemption for docs/**. Existing reviewed source documents still have
+  // independent Git/content-SHA checks at planning/acceptance boundaries.
+  if(/^docs\/history-session\/(?:[1-9][0-9]*\.md|index\.json|\.history\.lock|memory\/[a-zA-Z0-9_./-]+\.(?:md|json))$/.test(file))
+    return true;
+  if(/^docs\/local-notes\/[a-zA-Z0-9_./-]+\.(?:md|txt|log)$/.test(file))
+    return true;
   // Temporary outputs are only local noise outside business source trees.
   if(/^(src|app|apps|lib|client|server|packages|services|tests|test|docs|api|cmd|scripts|infra|db|migrations|assets)\//.test(file))
     return false;

@@ -20,7 +20,18 @@
 | 应用业务数据库 | 应用自己的 PostgreSQL 等 | 业务数据，与研发过程账本隔离 |
 | 可选 Memory | Qdrant | 经验证的跨项目知识，不拥有任务状态与审批 |
 
-**Node.js 22+ 与 Git 项目根目录是 v5 的强制前提。** 新项目数据库位于 `.mcp-probe-kit/state/devcontrol.sqlite3`；已有 Neyna 项目保留 `.neyna/state/devcontrol.sqlite3`。数据库、WAL、SHM、活跃租约与机密不能提交 Git。
+**Node.js 22+ 是 v5 的运行前提，Git 可选，项目根目录是 MCP 工作区。** 新项目数据库位于 `.mcp-probe-kit/state/devcontrol.sqlite3`；已有 Neyna 项目保留 `.neyna/state/devcontrol.sqlite3`。数据库、WAL、SHM、活跃租约与机密不能提交 Git。
+
+**正式研发数据并不等于把所有原始文档自动同步到 SQLite。**
+需求、Feature、任务、审批和验收的正式管理状态保存在 `dc_*`；
+History 的新会话检查点写入 `hs_*`，并不实时生成或反向同步 Markdown。
+但受控的正式 PRD、ADR、API、Schema、版本范围说明等仍可保留在 Git
+工作目录，已批准的版本计划可能将 `scopeSource` 指向其中某份文档，
+并在 SQLite 保存其 SHA-256。MCP 在计划复审/执行时重新读取这份源文件
+验证哈希，并没有用可编辑的本地历史文件覆盖数据库任务。
+已有 `docs/history-session/N.md` 是旧 History 导入原件或归档，不等于
+现行 History 同时写入 SQLite 和 Markdown；对原件的本机豁免也不等于
+绕过对正式需求来源和真实测试证据的校验。
 
 **时间显示约定。** DevControl 工作台、任务看板、History、Bug/Feature 详情、
 审核事件和同步时间统一按北京时间（`Asia/Shanghai`，UTC+8）展示，
@@ -126,12 +137,15 @@ DevControl 先执行 Git 标准忽略，再读取本机附加规则。**本机�
 /AGENTS.md
 /.agents/skills/mcp-probe-kit/SKILL.md
 /.cursor/mcp.json
+/docs/history-session/
 ```
 
 规则只影响 DevControl 对本机工作树噪声的检查，不修改 Git 的 index、
 tracked 状态或历史提交。只有明确配置的 AI 工具、编辑器设置与临时
-输出允许豁免；**业务代码、冻结任务路径、软链、路径逃逸和大文件
-仍然禁止豁免**。即使暂存了豁免文件，Git 也不会自动将其移出索引；
+输出，以及明确限定的旧 History 文本、索引或本机笔记可以豁免。
+`/docs/history-session/` 只允许旧归档格式文件，而不是整个 `docs/**`；
+正式 PRD、ADR、范围源文件、业务代码、冻结任务路径、软链、路径逃逸
+和大文件**仍然禁止豁免**。即使暂存了豁免文件，Git 也不会自动将其移出索引；
 提交任务代码时应仅提交实际批准的文件，不把本地配置混入任务交付。
 本机豁免不代表 Git commit 内容获得豁免，也不会通过任何测试 Gate。
 在领取、检查和完成/验收时，DevControl 将实际应用的豁免记录在
@@ -146,9 +160,11 @@ tracked 状态或历史提交。只有明确配置的 AI 工具、编辑器设�
 键必须覆盖所有发现的仓库，其中空字符串是根仓库。这是说明结构，
 实际 SHA 必须是合法提交值。完成报告保存交付版本向量和摘要，
 证据与正式验收记录均绑定原 Git 提交。普通任务只需一次带完整 acceptance 的 verify；旧 self-review、gate-review 记录仅用于历史兼容。
-后续无关合并可以前进 HEAD，但不能追加进原交付文件列表；后来
-任何提交触及冻结范围，或者交付提交不再是当前 HEAD 的祖先，
-旧证据都必须拒绝。不能把当前合并后的 HEAD 默认为过去交付的版本。
+后续无关合并可以前进 HEAD，但不能追加进原交付文件列表。后续 Merge
+必须只相对第一父检查实际集成的更改，不能因第二父没有旧文件而误判。
+若第一父合并差异或后续主线提交真实触及冻结范围，即使最终又恢复
+原内容，旧证据也必须拒绝；交付提交不再是当前 HEAD 的祖先时同样拒绝。
+不能把当前合并后的 HEAD 默认为过去交付的版本。
 
 MCP 自动生成的 Skill 和 AGENTS.md 若内容与生成器在对应提交
 的预期完全一致，属于受管理的规则维护，可以和合法业务文件一起
