@@ -82,8 +82,8 @@
       }
       const exports=n("div",null,"kpirow");
       for(const [fmt,label,ext] of [["markdown","导出 Markdown","md"],["json","导出 JSON","json"]]){
-        const a=n("a",label+" ↓","btn");a.href="/api/features/"+encodeURIComponent(name)+"/export?format="+fmt;
-        a.download="feature-"+name+"."+ext;a.style.textDecoration="none";exports.append(a);
+        const a=n("a",label+" ↓","btn feature-export-link");a.href="/api/features/"+encodeURIComponent(name)+"/export?format="+fmt;
+        a.download="feature-"+name+"."+ext;exports.append(a);
       }
       root.prepend(exports);
     }catch(e){$("doc-content").replaceChildren(n("p","无法读取功能："+e.message,"error"));}

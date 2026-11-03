@@ -104,6 +104,16 @@ SQLite \`dc_task_spec_supplement_proposals\` 只保存当前待审批记录，\`
 
 ## v5 全站视觉回归（开发版）
 
+### 2026-11-03 页面体验优化与 Playwright 真机浏览器回归
+
+本轮先使用 Chrome 实际截图对照原工作台，再修复问题并逐项复测。侧栏「本地工作台」下新增**项目文档**与官方 [GitHub 仓库](https://github.com/mybolide/mcp-probe-kit) 链接，使用 `target="_blank"` 和 `rel="noopener noreferrer"`，不依赖远程脚本或字体。手机和平板都保留这两个入口。平板 621–850px 把八个菜单完整排为两行，不再让前面的页面隐藏在横向滚动之外；390px 及 360px 手机仍有八个可直接点击的入口。
+
+首页侧边的纯装饰区域改为真实的 SQLite 正式工作项 **Verified 数、总数和进度条**，手机改为紧凑的卡片底部信息。界面再次强调 Verified 不代表产品发布 Gate 已通过。任务页增加与其他页面一致的标题、筛选结果数量、清除全部筛选以及无结果时的可操作说明；切页恢复页面顶部，但任务列表自动刷新仍保留筛选与滚动位置。设置等不执行自动刷新的页面不再占用顶部空间显示无意义的倒计时。
+
+Playwright 实际检查还查到两个原先未被静态测试捕获的问题：360px 需求统计卡存在 350px 最小宽度，使页面扩大到 387px；当前固定宽度已改为可收缩双列。原 HTML 和部分文档组件使用 `style=""` 或动态 `element.style`，在正式工作台的严格 CSP 下会被 Chrome 拦截；本轮已改为由 nonce 样式表提供 CSS 类，不放宽 CSP。
+
+使用本机 Chrome、Playwright 和只读的本地项目 API，覆盖九个页面（含项目文档中心）、2560/1920/1500/1024/768/390/360px 七档宽度，实际操作导航、任务搜索与清除、三个任务状态、详情弹层和设置页。**98 项 Playwright 浏览器检查全部通过**，另有导航、HTTP 指引、刷新、文档和国际化等 **15 项 Vitest 回归通过**。检查包含横向溢出、所有菜单可见、首页数据非占位符、GitHub URL 和安全属性、详情内容与可视宽度，以及 Chrome 控制台 CSP/JS 错误。每次视觉改动仍需人工审阅实际截图，不能只相信代码或静态 DOM。该测试使用已安装的本机 Chrome，不启动外部网站、不发布 npm，也不写入 DevControl 任务状态。
+
 以已编译的工作台实例为对象，而不是只检查 CSS。全站统一的 15px 正文基准、清晰的标题层级、任务卡片、响应式表单与文档阅读器，共同支持八个一级菜单。冻结任务、验收依据、父子关系及 Gate 仍来自 DevControl SQLite。
 
 先执行 `npm run build`，用真实 Git 项目启动 `node build/index.js devcontrol board --project-root /path/to/git-project --port 38182`，再运行 `npm run smoke:workbench:browser -- --url=http://127.0.0.1:38182/`。

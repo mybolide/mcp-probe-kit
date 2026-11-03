@@ -18,13 +18,17 @@
     <button type="button" class="navbtn" data-view="guide"><span class="symbol">◇</span>研发指南</button>
     <button type="button" class="navbtn" data-view="settings"><span class="symbol">⚙</span>设置</button>
   </nav>
-  <div class="sidefooter"><div class="status"><span class="pulse"></span>本地工作台</div>
-    <p>mcp-probe-kit <span id="footer-version">v—</span> · SQLite</p></div>
+  <div class="sidefooter"><div class="status"><span class="pulse" aria-hidden="true"></span>本地工作台</div>
+    <p>mcp-probe-kit <span id="footer-version">v—</span> · SQLite</p>
+    <div class="sidefooter-links" aria-label="项目资源">
+      <button type="button" class="sidefooter-link" data-go="docs" id="sidebar-docs">项目文档 <span aria-hidden="true">↗</span></button>
+      <a class="sidefooter-link" id="sidebar-github" href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener noreferrer" aria-label="在 GitHub 新窗口查看 mcp-probe-kit 源码">GitHub 仓库 <span aria-hidden="true">↗</span></a>
+    </div></div>
 </aside>
 <main class="main">
   <header class="bar"><div class="breadcrumbs"><span id="projectcrumb">项目</span><span>/</span><b id="crumb">工作台</b></div>
   <div class="actions"><span class="badge" id="branch">Git · 读取中</span>
-    <label class="refresh-control">自动刷新
+    <label class="refresh-control" id="refresh-control">自动刷新
       <select id="refresh-interval" aria-label="自动刷新间隔">
         <option value="5">5 秒</option><option value="10" selected>10 秒</option>
         <option value="30">30 秒</option><option value="60">1 分钟</option>
@@ -38,7 +42,7 @@
         <p id="project-intro">正在读取项目研发上下文…</p>
         <div class="meta-row"><span class="chip" id="projectname">PROJECT</span><span class="chip" id="projectstate">读取项目状态</span><span class="chip" id="governance-count">工程治理 · —</span></div>
       </div>
-      <div class="hero-aside" aria-hidden="true"><span class="hero-aside-kicker">DEVELOPMENT</span><span class="hero-aside-word">Build<br>with clarity.</span><span class="hero-aside-footer">SINGLE PROJECT · GIT + SQLITE</span></div>
+      <div class="hero-aside" aria-label="本阶段正式工作项的验证进度"><span class="hero-aside-kicker">DELIVERY STATUS · 正式工作项</span><strong class="hero-aside-word" id="hero-verified">—</strong><span class="hero-aside-caption">已验证 / <span id="hero-total">—</span> 项</span><progress id="hero-progress" value="0" max="1" aria-label="工作项 Verified 进度"></progress><span class="hero-aside-footer">工作项 Verified 不代表版本发布 Gate 通过</span></div>
     </div>
     <section class="overview-primary" aria-label="当前工作和审核">
       <section class="panel focus-panel"><div class="panelhead"><div><span class="eyebrow">NEXT ACTION</span><h2>当前研发焦点</h2></div><button class="focus-link" data-go="tasks">打开任务 <span aria-hidden="true">↗</span></button></div>
@@ -52,7 +56,7 @@
     <div class="review-overview hide" id="overview-release-review"></div>
     <div class="overview-metrics"><div class="overview-metrics-head"><div><span class="eyebrow">EXECUTION</span><h2>研发进度</h2></div><button class="link" data-go="tasks">全部任务 ↗</button></div>
     <div class="grid stats">
-      <div class="stat"><strong id="s-total">—</strong><span>任务总数（含待审核）</span></div><div class="stat"><strong id="s-done">—</strong><span>已完成</span></div>
+      <div class="stat"><strong id="s-total">—</strong><span>正式工作项总数</span></div><div class="stat"><strong id="s-done">—</strong><span>已验证工作项</span></div>
       <div class="stat"><strong id="s-active">—</strong><span>开发中 / 待验证</span></div><div class="stat"><strong id="s-pending">—</strong><span>未开始（含待审核）</span></div>
     </div></div>
     <section class="panel insight-panel" aria-label="项目研发阻断与待审事项">
@@ -74,7 +78,7 @@
         <article class="panel"><span class="eyebrow">OUTCOMES</span><h3 id="okr-title">阶段目标与原则</h3><p id="okr-summary" class="body">读取中…</p><div class="foot"><span id="okr-source" class="docpath"></span><button class="link" id="open-okr" type="button">查看阶段目标 ↗</button></div></article>
       </div>
     </section>
-    <section class="panel overview-process" style="margin-top:18px"><div class="panelhead"><h2>从需求到可验证交付</h2><span class="eyebrow">研发流程</span></div>
+    <section class="panel overview-process"><div class="panelhead"><h2>从需求到可验证交付</h2><span class="eyebrow">研发流程</span></div>
       <div class="flow"><div class="flowitem"><span class="flownum">01 / DEFINE</span><b>产品目标</b><p>愿景、OKR、需求定义要解决的问题</p></div>
       <div class="flowitem"><span class="flownum">02 / DESIGN</span><b>架构与规格</b><p>模块所有权、ADR、功能 Spec</p></div>
       <div class="flowitem"><span class="flownum">03 / EXECUTE</span><b>任务与计划</b><p>父子任务、依赖、Agent 执行</p></div>
@@ -91,13 +95,13 @@
       <p class="sub">来自项目 SQLite 的 Idea 记录；评估、独立审核、Owner 决策分别展示，没有审批记录的想法不得进入开发。</p>
       <div id="idea-list" class="insight-list" aria-live="polite"></div>
     </section>
-    <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能需求清单</h2><button class="link" data-doc="docs/product/requirements.md">查看完整 PRD →</button></div>
+    <div class="panel requirements-panel"><div class="panelhead"><h2>功能需求清单</h2><button class="link" data-doc="docs/product/requirements.md">查看完整 PRD →</button></div>
       <div class="doclist" id="requirement-list"></div></div>
-    <div class="panel" style="margin-bottom:18px" id="requirement-review-panel"><div class="panelhead"><h2>待落实需求与验收项</h2><span class="insight-meta" id="requirement-review-count">读取中…</span></div>
+    <div class="panel requirements-panel" id="requirement-review-panel"><div class="panelhead"><h2>待落实需求与验收项</h2><span class="insight-meta" id="requirement-review-count">读取中…</span></div>
       <p class="sub">按真实任务关联展示待拆分、开发中与待产品验收事项。工程方案已定案不代表已实现，任务 Verified 不代表产品验收通过。</p>
       <div class="doclist" id="requirement-review-list"></div></div>
-    <div class="panel" style="margin-bottom:18px"><div class="panelhead"><h2>功能提案与规格</h2><span class="eyebrow">数据库记录</span></div>
-      <p class="sub" style="margin-bottom:18px">Feature 的需求、技术方案与原子任务分别保存在项目 SQLite；点击阅读完整版本记录。</p>
+    <div class="panel requirements-panel"><div class="panelhead"><h2>功能提案与规格</h2><span class="eyebrow">数据库记录</span></div>
+      <p class="sub requirements-feature-intro">Feature 的需求、技术方案与原子任务分别保存在项目 SQLite；点击阅读完整版本记录。</p>
       <div class="doclist" id="db-features"></div></div>
     <div class="panel"><div class="panelhead"><h2>既有 Git 功能规格</h2><button class="link" data-go="docs">全部文档 →</button></div><div class="doclist" id="specdocs"></div></div>
   </section>
@@ -110,7 +114,7 @@
       <div id="database-design-tables" class="database-schema-list"></div>
     </section>
     <div class="widebox"><h2 id="architecture-title">总体架构</h2><p class="body" id="architecture-summary">读取中…</p>
-      <pre id="architecture-diagram" class="hide" style="white-space:pre;max-width:100%;overflow-x:auto;font:12px/1.5 ui-monospace,monospace;background:#0a1929;border:1px solid #2a4e68;border-radius:10px;color:#b4def0;padding:18px;margin:18px 0"></pre>
+      <pre id="architecture-diagram" class="hide"></pre>
       <button class="link" id="open-architecture">查看完整架构说明 →</button></div>
     <div class="architecture-sections">
       <section class="panel architecture-doc-section"><div class="panelhead"><div><span class="eyebrow">DESIGN REFERENCES</span><h2>架构文档与 ADR</h2></div><button class="link" data-go="docs">全部文档 ↗</button></div>
@@ -124,7 +128,7 @@
     </div>
   </section>
   <section id="view-tasks" class="view">
-    <div class="task-section-heading"><strong>任务管理</strong><span>待审核任务不可领取</span></div>
+    <div class="sectionhead task-page-header"><div class="eyebrow">EXECUTION / TASKS</div><h1>任务管理</h1><p class="sub">按正式任务状态、版本和类型查找工作项。待审批不等于可开发，已验证不等于产品发布。</p></div>
     <div class="task-progress"><span id="task-progress-label">正在读取已验证的工作项进度…</span>
       <progress id="task-progress-bar" value="0" max="1" aria-label="正式版本已验证工作项进度"></progress></div>
     <details class="panel task-readability-audit" id="task-readability-audit">
@@ -144,13 +148,14 @@
     <div class="task-tabs" role="tablist" aria-label="任务状态">
       <button type="button" role="tab" data-tasktab="not_started" aria-selected="true" aria-controls="task-list-panel">未开始 <span id="count-not_started" class="count">0</span></button>
       <button type="button" role="tab" data-tasktab="in_progress" aria-selected="false" aria-controls="task-list-panel">开发中 / 待验证 <span id="count-in_progress" class="count">0</span></button>
-      <button type="button" role="tab" data-tasktab="completed" aria-selected="false" aria-controls="task-list-panel">已完成 <span id="count-completed" class="count">0</span></button>
+      <button type="button" role="tab" data-tasktab="completed" aria-selected="false" aria-controls="task-list-panel">已验证 <span id="count-completed" class="count">0</span></button>
     </div>
     <div id="task-list-panel" role="tabpanel" aria-label="当前状态的任务">
       <div class="issue-controls">
         <input id="task-search" type="search" placeholder="搜索任务编号、目标或验收条件…" aria-label="搜索任务">
         <select id="task-stage-filter" aria-label="按版本阶段筛选"><option value="">全部阶段</option></select>
         <select id="task-type-filter" aria-label="按工作项类型筛选"><option value="">全部类型</option></select>
+        <button type="button" class="task-filter-clear" id="task-clear-filters" hidden>清除筛选</button>
       </div>
       <div class="task-results-header"><h2>工作项</h2><p class="issue-count" id="task-list-count">正在读取任务…</p></div>
       <div id="task-rows" class="simple-task-list" aria-live="polite"></div>

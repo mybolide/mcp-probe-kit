@@ -31,11 +31,11 @@
     const align=divider.map(cell=>cell.startsWith(":")&&cell.endsWith(":")?"center":
       cell.endsWith(":")?"right":"left");
     const headerRow=n("tr");
-    header.forEach((cell,j)=>{const th=n("th",strip(cell));th.scope="col";th.style.textAlign=align[j];headerRow.append(th);});
+    header.forEach((cell,j)=>{const th=n("th",strip(cell),"md-align-"+align[j]);th.scope="col";headerRow.append(th);});
     head.append(headerRow);
     rows.forEach(cells=>{
       const row=n("tr");
-      header.forEach((_,j)=>{const td=n("td",strip(cells[j]||""));td.style.textAlign=align[j];row.append(td);});
+      header.forEach((_,j)=>{const td=n("td",strip(cells[j]||""),"md-align-"+align[j]);row.append(td);});
       body.append(row);
     });
     table.append(head,body);scroll.append(table);out.append(scroll);

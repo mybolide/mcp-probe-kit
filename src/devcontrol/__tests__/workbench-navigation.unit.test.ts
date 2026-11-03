@@ -18,6 +18,16 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('alt="mcp-probe-kit 官方 Logo"');
     expect(html).toContain('data:image/webp;base64,');
     expect(html).toContain('id="brand-version"');
+    expect(html).toContain('id="sidebar-github"');
+    expect(html).toContain('href="https://github.com/mybolide/mcp-probe-kit"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('id="sidebar-docs"');
+    expect(html).toContain('data-go="docs"');
+    expect(html).toContain('id="hero-verified"');
+    expect(html).toContain('id="hero-total"');
+    expect(html).toContain('id="hero-progress"');
+    expect(html).toContain('id="task-clear-filters"');
+    expect(html).not.toMatch(/<[^>]+\sstyle="/);
     expect(html).not.toContain('class="mark">D');
     expect(html).toContain('class="overview-primary"');
     expect(html).toContain('class="baseline-details"');
@@ -81,6 +91,10 @@ describe('v5 lightweight single-project workbench', () => {
       expect(html).toContain(label);
     }
     expect(html).toContain('task-delivery-details:before');
+    expect(html).toContain('function clearTaskFilters()');
+    expect(html).toContain('function renderTaskList()');
+    expect(html).toContain('task-empty-state');
+    expect(html).toContain('aria-current');
     expect(html).toContain('.task-detail-view [hidden]');
     for(const label of ['任务说明','必须完成什么 · 验收目标','对应需求',
       '已批准的执行步骤','实施步骤的规格状态','文件修改范围',
@@ -91,9 +105,9 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind==="bug")');
     expect(html).toContain('items=(data.items||[]).filter(item=>item.kind!=="bug")');
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
-    // The actual six-field source-backed review preview is deliberately
-    // rendered without a new framework; allow its small additional footprint.
-    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(61_000);
+    // Added accessible project resources and filter states remain inside a
+    // bounded single-document payload, with zero remote CSS/JS dependencies.
+    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(64_000);
   });
 
   test('Hash navigation handles deep links and back/forward without reload', () => {

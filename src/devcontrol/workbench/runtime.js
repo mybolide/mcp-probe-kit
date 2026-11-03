@@ -17,6 +17,10 @@
   function renderTaskProgress(){
     const rows=currentReleaseProgressRows();
     const verified=rows.filter(row=>taskBucket(row)==="completed").length;
+    $("hero-verified").textContent=String(verified);
+    $("hero-total").textContent=String(rows.length);
+    $("hero-progress").max=Math.max(1,rows.length);
+    $("hero-progress").value=verified;
     $("s-total").textContent=String(rows.length);
     $("s-done").textContent=String(verified);
     $("s-active").textContent=String(rows.filter(row=>taskBucket(row)==="in_progress").length);
@@ -87,7 +91,7 @@
   $('refresh-interval').value=String(refreshSeconds);
   function updateRefreshCountdown(){
     const active=router.current()==='tasks'||router.current()==='overview';
-    $('refresh-countdown').textContent=!active?'仅工作台与任务管理自动刷新':
+    $('refresh-countdown').textContent=!active?'':
       reloadInProgress||taskRefreshInProgress?'正在刷新，等待全部接口返回…':
       (refreshRemaining+' 秒后刷新');
   }
@@ -161,8 +165,10 @@
   for(const b of document.querySelectorAll("[data-tasktab]"))
     b.addEventListener("click",()=>setTaskTab(b.dataset.tasktab));
   $("task-search").addEventListener("input",renderTaskList);
+  $("task-search").addEventListener("keydown",e=>{if(e.key==="Escape")clearTaskFilters();});
   $("task-stage-filter").addEventListener("change",renderTaskList);
   $("task-type-filter").addEventListener("change",renderTaskList);
+  $("task-clear-filters").addEventListener("click",clearTaskFilters);
   $("open-vision").addEventListener("click",()=>openDoc("docs/product/vision.md"));
   $("open-roadmap").addEventListener("click",()=>openDoc("docs/roadmap/releases.md"));
   $("open-okr").addEventListener("click",()=>openDoc(project?.okr.source||"docs/okr/README.md"));

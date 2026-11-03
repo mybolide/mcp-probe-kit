@@ -22,8 +22,7 @@
     const heading=n("h3","关联工作项");content.append(heading);
     if(!linked.length){content.append(n("p","当前版本没有与本需求关联的正式工作项。"));return;}
     for(const row of linked){
-      const button=n("button",null,"docitem");button.type="button";
-      button.style.display="block";button.style.width="100%";button.style.marginBottom="8px";
+      const button=n("button",null,"docitem requirement-linked-task");button.type="button";
       button.append(n("b",row.item.id+" · "+displayTaskTitle(row.item)),
         n("small",taskStatus(row)[0]+" · "+(row.item.acceptance||row.current?.spec?.acceptance||"尚无验收说明")));
       button.addEventListener("click",()=>openPlanTask(row));content.append(button);
@@ -43,7 +42,7 @@
     $("requirement-list").replaceChildren(...(project.requirements.items || []).map(req=>{
       const b=n("button",null,"docitem");b.type="button";
       const head=n("span",req.id,"taskid");
-      const tag=n("span",req.stage,"chip");tag.style.float="right";
+      const tag=n("span",req.stage,"chip requirement-stage");
       const linked=linkedByRequirement.get(req.id)||[];
       const progress=requirementWorkState(linked);
       b.append(head,tag,n("b",req.title),n('span',progress.label,'req-work-status '+progress.state),

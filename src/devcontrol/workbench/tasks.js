@@ -355,6 +355,13 @@
       b.setAttribute("aria-selected",String(b.dataset.tasktab===tab));
     renderTaskList();
   }
+  function clearTaskFilters(){
+    $("task-search").value="";
+    $("task-stage-filter").value="";
+    $("task-type-filter").value="";
+    renderTaskList();
+    $("task-search").focus();
+  }
   // One detail renderer for frozen Feature and release-work tasks. Only the
   // server knows the authoritative plan snapshot and its approved revision.
   function openPlanTask(row){
@@ -764,6 +771,9 @@
       $("count-"+bucket).textContent=String(rows.filter(row=>taskBucket(row)===bucket).length);
     }
     const search=$("task-search").value.trim().toLowerCase();
+    const hasFilters=!!(search||$("task-stage-filter").value||$("task-type-filter").value);
+    $("task-clear-filters").hidden=!hasFilters;
+    const currentBucket=rows.filter(row=>taskBucket(row)===taskTab).length;
     const filtered=rows.filter(row=>{
       if(taskBucket(row)!==taskTab)return false;
       const data=row.item;
@@ -774,15 +784,32 @@
         data.platform,data.owner,data.remark,data.blockingReason,
         (data.negativeCases||[]).join(" "),(data.deliverables||[]).join(" ")].join(" ").toLowerCase().includes(search);
     });
+    const emptyState=()=>{
+      const host=n("div",null,"task-empty-state");
+      host.append(n("strong",hasFilters?"没有匹配的工作项":
+        taskTab==="completed"?"当前阶段暂无已验证任务":
+        taskTab==="in_progress"?"当前没有开发中或待验证任务":
+        "当前阶段暂无未开始任务"));
+      host.append(n("p",hasFilters?
+        "可清除搜索关键词或筛选条件，再查看当前状态下的工作项。":
+        "可以切换上方任务状态，查看其他任务。正式任务数据以项目 SQLite 为准。"));
+      if(hasFilters){
+        const reset=n("button","清除全部筛选","task-empty-reset");
+        reset.type="button";
+        reset.addEventListener("click",clearTaskFilters);
+        host.append(reset);
+      }
+      return host;
+    };
     if((typeof releaseWorkPlan!=="undefined")&&releaseWorkPlan&&
       releaseWorkPlan.status!=="missing"){
       // One readable, responsive task surface across desktop and mobile.
       // Keep every task's approved identity, state, evidence and detail action.
       const shell=n("div",null,"task-collection");
       for(const row of filtered)shell.append(renderTaskCard(row));
-      $("task-rows").replaceChildren(filtered.length?shell:n("div","当前筛选无工作项。","docs-empty"));
+      $("task-rows").replaceChildren(filtered.length?shell:emptyState());
       $("task-list-count").textContent="当前版本 "+releaseWorkPlan.release+" · "+
-        filtered.length+" 项独立工作 · "+(releaseWorkPlan.status==="needs_revision"?
+        (hasFilters?"筛选 "+filtered.length+" / "+currentBucket+" 项":"当前状态 "+filtered.length+" 项")+" · "+(releaseWorkPlan.status==="needs_revision"?
         "整版规划待完善":releaseWorkPlan.status==="review_pending"?
         "整版待确认":releaseWorkPlan.status==="frozen"?"整版已冻结":"尚未规划");
       return;
@@ -801,9 +828,9 @@
       const list=n("div",null,"task-collection");
       for(const row of items)list.append(renderTaskCard(row));
       container.append(head,list);return container;
-    }):[n("div",search?"没有匹配的任务。":"当前没有任务。","docs-empty")]));
+    }):[emptyState()]));
     const pending=rows.filter(row=>row.pending&&taskBucket(row)===taskTab).length;
     $("task-list-count").textContent=locale==="en"?
-      ("Showing "+filtered.length+" tasks"+(pending?" · "+pending+" awaiting plan confirmation (not executable)":"")):
-      ("显示 "+filtered.length+" 项"+(pending?" · "+pending+" 项待规划确认（尚不可领取）":""));
+      ("Showing "+filtered.length+" of "+currentBucket+" tasks"+(pending?" · "+pending+" awaiting plan confirmation (not executable)":"")):
+      ("显示 "+filtered.length+" / "+currentBucket+" 项"+(pending?" · "+pending+" 项待规划确认（尚不可领取）":""));
   }

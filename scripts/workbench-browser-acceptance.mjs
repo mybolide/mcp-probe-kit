@@ -69,10 +69,30 @@ try {
      }
      v.dataLoaded=loaded;
    }
+   v.githubLinkValid=await evalJS(`(()=>{
+     const link=document.getElementById('sidebar-github');
+     return !!link&&link.href==='https://github.com/mybolide/mcp-probe-kit'&&
+       link.target==='_blank'&&link.rel.includes('noopener')&&link.rel.includes('noreferrer');
+   })()`);
+   if(view==='overview'){
+     // Source-backed totals must be populated; a visually pleasing placeholder
+     // is NOT a passed project dashboard.
+     for(let k=0;k<25;k++){
+       v.heroReady=await evalJS(`(()=>{
+         const verified=document.getElementById('hero-verified')?.textContent;
+         const total=document.getElementById('hero-total')?.textContent;
+         const bar=document.getElementById('hero-progress');
+         return /^\\d+$/.test(verified||'')&&/^\\d+$/.test(total||'')&&
+           Number(verified)<=Number(total)&&Number(bar?.value)===Number(verified);
+       })()`);
+       if(v.heroReady)break;
+       await sleep(120);
+     }
+   }
    // Check rendered project-derived management facts, not merely DOM shells.
    // The old visual gate only checked fonts and could miss an empty screen.
    const insightSelector={overview:'#overview-insight-metrics .insight-metric',
-     requirements:'#idea-list .insight-row',tasks:'#task-granularity .insight-metric',
+     requirements:'#idea-list .insight-row',tasks:'#task-rows .task-card',
      issues:'#bug-insight-metrics .insight-metric',
      guide:'#guide-project-context .insight-row',
      settings:'#settings-diff .insight-list,.settings-change-panel .insight-list'}[view];
@@ -95,6 +115,22 @@ try {
      v.reviewLoaded=reviewLoaded;
    }
    if(view==='tasks'){
+     v.hasTaskTitle=await evalJS('document.querySelector("#view-tasks h1")?.textContent.trim()==="任务管理"');
+     v.taskFilterReady=await evalJS('!!document.getElementById("task-clear-filters")&&!!document.getElementById("task-stage-filter")');
+     if(width===1500){
+       v.searchResetWorks=await evalJS(`(()=>{
+         const search=document.getElementById('task-search');
+         const clear=document.getElementById('task-clear-filters');
+         search.value='no-task-can-match-this-unique-query-000000';
+         search.dispatchEvent(new Event('input',{bubbles:true}));
+         const empty=!!document.querySelector('#task-rows .task-empty-state');
+         const revealed=!clear.hidden;
+         clear.click();
+         const restored=search.value===''&&clear.hidden&&
+           document.querySelectorAll('#task-rows .task-card').length>0;
+         return empty&&revealed&&restored;
+       })()`);
+     }
      v.footerLayout=await evalJS(`(()=>{
        const cards=[...document.querySelectorAll('#task-rows .task-card')].slice(0,12);
        if(!cards.length)return {checked:0,broken:0};
@@ -125,8 +161,10 @@ try {
   }
  }
  const failures=results.filter(v=>v.dataLoaded===false||v.insightsLoaded===false||v.reviewLoaded===false||!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3||v.navItems!==8
+ ||!v.githubLinkValid||(v.view==='overview'&&!v.heroReady)||v.searchResetWorks===false
  ||v.mainRight<v.width-3 ||(v.view==='overview'&&!v.hasPlanning)
  ||(v.view==='architecture'&&!v.hasArchChanges)
+ ||(v.view==='tasks'&&(!v.hasTaskTitle||!v.taskFilterReady))
  ||(v.view==='tasks'&&v.width>=1920&&v.taskCols<2)
  ||(v.view==='tasks'&&v.footerLayout?.broken>0)
  ||(v.width===390&&v.navScroll>v.navWidth+3));
