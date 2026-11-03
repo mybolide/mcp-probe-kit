@@ -166,6 +166,154 @@ function create(options: Partial<{
   }, "agent-proposal");
 }
 
+/** Disposable Git + SQLite fixture modeled on F4-20. No device result or
+ * project Gate is manufactured by DevControl; reviewers explicitly accept
+ * only the test receipts that an external runner has supplied.
+ */
+function deferredAudioFixture(mode:'delivered'|'allowed'|'mixed'|'outside'){
+  const delivered='apps/client/lib/features/audio/foreground_capture_test.dart';
+  const laterAllowed='apps/client/lib/features/audio/foreground_audio_session.dart';
+  save(delivered,'original baseline audio off-state test\n');
+  commit('initial audio source before F4-20');
+  create({id:'NEYNA-200',title:'Frozen native audio acceptance',
+    allowedPaths:['apps/client/lib/features/audio/**'],
+    requiredGates:['ios_device_e2e']});
+  ledger!.approve('NEYNA-200','owner');
+  const first=ledger!.claim('NEYNA-200','responsible-agent');
+  save(delivered,'F4-20 frozen implementation and off-state test\n');
+  commit('F4-20 frozen delivered test only');
+  const originalHead=git('rev-parse','HEAD');
+  const originalReference='Original source-specific Flutter fixture unit tests recorded';
+  ledger!.report('NEYNA-200',first.leaseToken,{
+    kind:'flutter_test',reference:originalReference,
+  },true);
+  ledger!.complete('NEYNA-200',first.leaseToken,{
+    summary:'Original frozen audio task committed',
+    implementation:'Only the foreground capture test was delivered by this task',
+    verification:'Original Flutter fixture tests passed; physical iPhone Gate remained pending',
+  });
+  ledger!.deferVerification({id:'NEYNA-200',leaseToken:first.leaseToken,
+    gate:'ios_device_e2e',reason:'No genuine physical iPhone Gate evidence was available at original completion'});
+  const affectedPaths:string[]=[];
+  if(mode==='delivered'||mode==='mixed'){
+    save(delivered,'Later approved task changed the original capture test behavior\n');
+    affectedPaths.push(delivered);
+  }
+  if(mode==='allowed'||mode==='mixed'){
+    save(laterAllowed,'Another task changed unrelated audio session within approved frozen folder\n');
+    affectedPaths.push(laterAllowed);
+  }
+  if(mode==='mixed'){
+    // Neyna F4-20 changed exactly one delivered file, but later tasks touched
+    // eight approved audio paths in total. The review must cover all eight.
+    for(const file of [
+      'foreground_audio_bridge_test.dart',
+      'foreground_audio_stop_release_test.dart',
+      'foreground_capture.dart',
+      'foreground_perception_state.dart',
+      'foreground_session_transitions_test.dart',
+      'microphone_usage_description_test.dart',
+    ]){
+      const laterPath='apps/client/lib/features/audio/'+file;
+      save(laterPath,'Later legitimate task revision to '+file+'\n');
+      affectedPaths.push(laterPath);
+    }
+  }
+  if(mode==='outside')save('independent/another-task.txt','Different later task scope\n');
+  commit('later approved development while phone was unavailable');
+  return {originalHead,currentHead:git('rev-parse','HEAD'),
+    delivered,affectedPaths:affectedPaths.sort(),originalReference};
+}
+
+function reconcileFrozenAudio(fixture:ReturnType<typeof deferredAudioFixture>,
+  reviewedPaths=fixture.affectedPaths){
+  return ledger!.resumeVerification('NEYNA-200','responsible-agent',1800,
+    reviewedPaths.length?{
+      reviewedHead:fixture.currentHead,overlappingPaths:reviewedPaths,
+      findings:'Reviewed all later committed audio files under the frozen allowed scope against the original task commit, checked their exact Git differences and preserved the original device test version. Later tasks are not credited as original delivery and this review does not claim an iPhone Gate passed.',
+      evidenceReference:'Original frozen iPhone test artifact reference inspected by the responsible developer',
+    }:undefined);
+}
+
+function acceptFrozenAudioWithReview(token:string,fixture:ReturnType<typeof deferredAudioFixture>){
+  const receipt='Physical iPhone off-state test receipt bound to original frozen audio delivery';
+  ledger!.report('NEYNA-200',token,{kind:'ios_device_e2e',reference:receipt},true);
+  // Recording a real receipt never proves the Gate without an actual review.
+  expect(ledger!.verify('NEYNA-200',token).passed).toBe(false);
+  ledger!.reviewOwnTask('NEYNA-200',token,{
+    outcome:'passed',evidenceReference:receipt,
+    findings:'Reviewed the original frozen audio delivery commit, its scope, all later changes and the separately recorded physical iPhone fixture receipt without attributing later tasks to the original delivery.',
+  });
+  ledger!.reviewExternalGate('NEYNA-200',token,{
+    gate:'ios_device_e2e',runner:'responsible-agent',
+    reviewer:'responsible-agent',reviewMode:'self',outcome:'passed',
+    evidenceReference:receipt,
+    reviewNotes:'Explicitly examined the physical test receipt for the original frozen audio source and the exact subsequent Git changes; no Gate is automatically approved on resume.',
+  });
+  expect(ledger!.verify('NEYNA-200',token).passed).toBe(true);
+  const trace=ledger!.trace('NEYNA-200');
+  expect(trace.completion?.git_head).toBe(fixture.originalHead);
+  expect(trace.evidence.some((e:any)=>e.reference===fixture.originalReference)).toBe(true);
+}
+
+  it('reconciles later changes confined to the actual delivered F4-20 file',()=>{
+    const fixture=deferredAudioFixture('delivered');
+    const resumed=reconcileFrozenAudio(fixture);
+    const audit=ledger!.trace('NEYNA-200').audit
+      .find((entry:any)=>entry.event==='deferred_overlap_reconciled');
+    expect(audit?.details.overlappingPaths).toEqual([fixture.delivered]);
+    expect(audit?.details.changedDeliveryPaths).toEqual([fixture.delivered]);
+    acceptFrozenAudioWithReview(resumed.leaseToken,fixture);
+  },40_000);
+
+  it('requires and reuses an exact review of later allowed audio files absent from original delivery',()=>{
+    const fixture=deferredAudioFixture('allowed');
+    expect(()=>ledger!.resumeVerification('NEYNA-200','responsible-agent'))
+      .toThrow(/Overlapping committed code requires/);
+    const resumed=reconcileFrozenAudio(fixture);
+    const audit=ledger!.trace('NEYNA-200').audit
+      .find((entry:any)=>entry.event==='deferred_overlap_reconciled');
+    expect(audit?.details.overlappingPaths).toEqual(fixture.affectedPaths);
+    expect(audit?.details.changedDeliveryPaths).toEqual([]);
+    acceptFrozenAudioWithReview(resumed.leaseToken,fixture);
+  },40_000);
+
+  it('rejects incomplete one-file review when F4-20 delivery and other allowed audio files both changed',()=>{
+    const fixture=deferredAudioFixture('mixed');
+    expect(fixture.affectedPaths).toHaveLength(8);
+    expect(()=>reconcileFrozenAudio(fixture,[fixture.delivered]))
+      .toThrow(/Overlapping committed code requires/);
+    expect(ledger!.trace('NEYNA-200').audit
+      .filter((entry:any)=>entry.event==='deferred_overlap_reconciled')).toHaveLength(0);
+    const resumed=reconcileFrozenAudio(fixture);
+    const audit=ledger!.trace('NEYNA-200').audit
+      .find((entry:any)=>entry.event==='deferred_overlap_reconciled');
+    expect(audit?.details.overlappingPaths).toEqual(fixture.affectedPaths);
+    expect(audit?.details.changedDeliveryPaths).toEqual([fixture.delivered]);
+    acceptFrozenAudioWithReview(resumed.leaseToken,fixture);
+  },40_000);
+
+  it('does not demand a deferred scope review for a later commit entirely outside the frozen audio range',()=>{
+    const fixture=deferredAudioFixture('outside');
+    const resumed=reconcileFrozenAudio(fixture);
+    expect(ledger!.trace('NEYNA-200').audit
+      .filter((entry:any)=>entry.event==='deferred_overlap_reconciled')).toHaveLength(0);
+    acceptFrozenAudioWithReview(resumed.leaseToken,fixture);
+  },40_000);
+
+  it('invalidates an accepted deferred F4-20 overlap audit when Git HEAD advances',()=>{
+    const fixture=deferredAudioFixture('mixed');
+    const resumed=reconcileFrozenAudio(fixture);
+    save('independent/new-commit.txt','New HEAD after audited reconciliation\n');
+    commit('separate approved work moved HEAD after frozen review');
+    expect(()=>ledger!.report('NEYNA-200',resumed.leaseToken,{
+      kind:'ios_device_e2e',reference:'Real frozen iPhone test artifact has not changed',
+    },true)).toThrow(/Later commits touched the deferred delivery/);
+    expect(ledger!.trace('NEYNA-200').evidence.every((e:any)=>
+      e.kind!=='ios_device_e2e')).toBe(true);
+    expect(ledger!.get('NEYNA-200').status).toBe('in_review');
+  },40_000);
+
   it('revised resumed delivery records new-HEAD evidence and safely re-defers an unpassed Gate',()=>{
     create({id:'NEYNA-200',requiredGates:['ios_device_e2e']});
     create({id:'NEYNA-201',allowedPaths:['other-project/**'],requiredGates:['docs']});
@@ -1019,7 +1167,17 @@ describe("project ledger and legacy migration", () => {
       'Documentation check for unrelated task');
     expect(ledger!.verify('NEYNA-201',second.leaseToken).passed).toBe(true);
     const current=git('rev-parse','HEAD');expect(current).not.toBe(original);
-    const resumed=ledger!.resumeVerification('NEYNA-200','service-agent');
+    // Although this later task delivered a different file, it still falls
+    // inside the first task's approved frozen tests/contracts/** directory.
+    // The same complete scope review must work for report and final Gate.
+    expect(()=>ledger!.resumeVerification('NEYNA-200','service-agent'))
+      .toThrow(/Overlapping committed code requires/);
+    const resumed=ledger!.resumeVerification('NEYNA-200','service-agent',1800,{
+      reviewedHead:current,
+      overlappingPaths:['tests/contracts/unrelated-after-deferral.json'],
+      findings:'Reviewed the later unrelated test contract against the original frozen submitted service JSON. The later file belongs to a different verified task, but both files are within the originally approved tests/contracts scope. The first delivered contract is byte-identical and is not replaced by the subsequent commit; original acceptance still requires the external runner result.',
+      evidenceReference:'Original unit tests executed for frozen service delivery',
+    });
     ledger!.report('NEYNA-200',resumed.leaseToken,{kind:'external_test',
       reference:'Independent acceptance fixture output from resumed external runner'},false);
     const handoff=ledger!.handoffReview('NEYNA-200',{
@@ -3559,7 +3717,17 @@ describe("project ledger and legacy migration", () => {
     expect(ledger!.verify("NEYNA-201",second.leaseToken).passed).toBe(true);
     const laterHead=git("rev-parse","HEAD");
     expect(laterHead).not.toBe(originalHead);
-    const resumed=ledger!.resumeVerification("NEYNA-200","audio-agent");
+    // The later task added another file within the first task's frozen
+    // tests/contracts/** scope. It did not edit the original delivery, but
+    // the later path still needs an explicit, HEAD-bound code-diff review.
+    expect(()=>ledger!.resumeVerification("NEYNA-200","audio-agent"))
+      .toThrow(/Overlapping committed code requires/);
+    const resumed=ledger!.resumeVerification("NEYNA-200","audio-agent",1800,{
+      reviewedHead:laterHead,
+      overlappingPaths:["tests/contracts/other-delivery.json"],
+      findings:"Reviewed the original frozen audio-session JSON and the later independent task JSON at the exact current Git HEAD. The original submission is unchanged, but the newly committed file lies within the first task's approved tests/contracts scope. Attribution remains with the second verified task, and the physical iPhone Gate remains unpassed.",
+      evidenceReference:"Actual Flutter local tests pass; device absent",
+    });
     expect(resumed.baseHead).toBe(first.baseHead);
     expect(resumed.originalCompletionHead).toBe(originalHead);
     expect(ledger!.get("NEYNA-200").pendingVerification).toBeNull();

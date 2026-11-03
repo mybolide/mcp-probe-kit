@@ -242,6 +242,24 @@ function committedFilesBetween(root: string, base: string, end: string,
   return [...new Set(result.stdout.toString("utf8").split("\0").filter(Boolean))].sort();
 }
 
+/** One canonical, frozen-scope diff for every deferred acceptance stage.
+ * Later allowed-scope files are relevant to review even when the original
+ * delivery did not edit them. Keep the actual delivered-file intersection
+ * separately so the audit never credits later files to the old task.
+ */
+function deferredReviewImpact(root:string,baseHead:string,completionHead:string,
+  currentHead:string,allowedPaths:string[]):{
+    affectedPaths:string[];changedDeliveryPaths:string[];
+  }{
+  const submitted=new Set(committedFilesBetween(root,baseHead,completionHead));
+  const later=committedFilesBetween(root,completionHead,currentHead);
+  return {
+    affectedPaths:later.filter(file=>submitted.has(file)||
+      allowedPaths.some(pattern=>pathAllowed(file,pattern))),
+    changedDeliveryPaths:later.filter(file=>submitted.has(file)),
+  };
+}
+
 /** Preflight only: an impossible frozen file scope must not be claimable.
  * Existing fixtures may satisfy a gate; otherwise this task must be allowed
  * to create or repair the actual files used by that gate. Do not weaken it.
@@ -2062,11 +2080,9 @@ export class ProjectTaskLedger {
     }
     if(!run(this.root,'git',['merge-base','--is-ancestor',completionHead,current]).passed)
       fail('REVIEW_BASE_CHANGED','The submitted task commit is no longer in Git history');
-    const submitted=new Set(committedFilesBetween(this.root,baseHead,completionHead));
     const allowed=JSON.parse(task.allowed_paths) as string[];
-    const intervening=committedFilesBetween(this.root,completionHead,current);
-    const collisions=intervening.filter(file=>submitted.has(file)||
-      allowed.some(pattern=>pathAllowed(file,pattern)));
+    const collisions=deferredReviewImpact(this.root,baseHead,
+      completionHead,current,allowed).affectedPaths;
     if(!collisions.length)return current;
     const deferral=this.db.prepare(`SELECT base_head,completion_head,resumed_at
       FROM dc_verification_deferrals WHERE task_id=?`).get(id);
@@ -7013,14 +7029,12 @@ export class ProjectTaskLedger {
           !run(this.root,'git',['merge-base','--is-ancestor',note.git_head,head]).passed)
           fail('REDEFERRAL_BASE_CHANGED',
             'The original submitted revision must remain in Git history');
-        const delivered=committedFilesBetween(this.root,
-          resumed.base_head,resumed.completion_head);
-        const later=committedFilesBetween(this.root,resumed.completion_head,head);
-        const overlaps=later.filter(file=>delivered.includes(file));
-        if(overlaps.length&&
+        const impacts=deferredReviewImpact(this.root,resumed.base_head,
+          resumed.completion_head,head,JSON.parse(task.allowed_paths));
+        if(impacts.affectedPaths.length&&
           !frozenPatchStillPresent(this.root,resumed.base_head,resumed.completion_head)&&
           !this.hasReviewedDeferredOverlap(input.id,resumed.base_head,
-            resumed.completion_head,head,overlaps))
+            resumed.completion_head,head,impacts.affectedPaths))
           fail('DEFERRED_CODE_CHANGED',
             'Later commits changed the original delivery; record a fresh reviewed completion');
         const dirty=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
@@ -7162,18 +7176,16 @@ export class ProjectTaskLedger {
       const head=git(this.root,["rev-parse","HEAD"]);
       if(!run(this.root,"git",["merge-base","--is-ancestor",pending.completion_head,head]).passed)
         fail("GIT_HISTORY_CHANGED","Deferred completion is no longer an ancestor of HEAD");
-      const originals=committedFilesBetween(this.root,
-        pending.base_head,pending.completion_head);
-      const changed=committedFilesBetween(this.root,pending.completion_head,head);
-      const overlaps=changed.filter(file=>originals.includes(file));
-      const preservedPatch=overlaps.length>0&&
+      const impacts=deferredReviewImpact(this.root,pending.base_head,
+        pending.completion_head,head,JSON.parse(task.allowed_paths));
+      const preservedPatch=impacts.changedDeliveryPaths.length>0&&
         frozenPatchStillPresent(this.root,pending.base_head,pending.completion_head);
-      const needsReconciliation=overlaps.length>0&&!preservedPatch;
+      const needsReconciliation=impacts.affectedPaths.length>0&&!preservedPatch;
       if(needsReconciliation){
         if(!reconciliation||reconciliation.reviewedHead!==head||
           !Array.isArray(reconciliation.overlappingPaths)||
           JSON.stringify([...reconciliation.overlappingPaths].sort())!==
-            JSON.stringify([...overlaps].sort())||
+            JSON.stringify(impacts.affectedPaths)||
           typeof reconciliation.findings!=='string'||
           reconciliation.findings.trim().length<100||
           typeof reconciliation.evidenceReference!=='string'||
@@ -7187,7 +7199,9 @@ export class ProjectTaskLedger {
       const resumed=this.claim(id,agent,ttlSeconds,String(pending.base_head));
       if(needsReconciliation)this.audit(id,'deferred_overlap_reconciled',agent,{
         baseHead:pending.base_head,completionHead:pending.completion_head,
-        currentHead:head,overlappingPaths:[...overlaps].sort(),
+        currentHead:head,overlappingPaths:impacts.affectedPaths,
+        changedDeliveryPaths:impacts.changedDeliveryPaths,
+        reviewScope:'frozen-allowed-or-delivered-v1',
         findings:reconciliation!.findings.trim(),
         evidenceReference:reconciliation!.evidenceReference.trim(),
         gatePassed:false,
@@ -8120,14 +8134,12 @@ export class ProjectTaskLedger {
     if(frozenReview){
       if(!run(this.root,"git",["merge-base","--is-ancestor",deferred.completion_head,startHead]).passed)
         return {taskId:id,passed:false,reason:"Frozen submitted code is not in Git history"};
-      const previousFiles=committedFilesBetween(this.root,
-        deferred.base_head,deferred.completion_head);
-      const laterFiles=committedFilesBetween(this.root,deferred.completion_head,startHead);
-      const overlaps=laterFiles.filter(file=>previousFiles.includes(file));
-      if(overlaps.length&&
+      const impacts=deferredReviewImpact(this.root,deferred.base_head,
+        deferred.completion_head,startHead,JSON.parse(task.allowed_paths));
+      if(impacts.affectedPaths.length&&
         !frozenPatchStillPresent(this.root,deferred.base_head,deferred.completion_head)&&
         !this.hasReviewedDeferredOverlap(id,deferred.base_head,
-          deferred.completion_head,startHead,overlaps))
+          deferred.completion_head,startHead,impacts.affectedPaths))
         return {taskId:id,passed:false,
           reason:"Deferred task files changed after the original delivery; new scoped review required"};
     }
