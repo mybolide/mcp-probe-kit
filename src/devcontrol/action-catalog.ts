@@ -72,7 +72,8 @@ export const V5_DEVC_ACTION_GROUPS = [
   },
   {
     title: '领取、报告与验收 / Execution and evidence',
-    actions: ['claim', 'renew', 'recover-task', 'refresh-protected-worktree',
+    actions: ['claim', 'renew', 'recover-task', 'review-recovery-worktree',
+      'park-expired-writer', 'refresh-protected-worktree',
       'relocate-repository-baselines',
       'release', 'defer-verification','resume-verification',
       'check', 'report', 'rebind-legacy-evidence', 'record-rerun-evidence',

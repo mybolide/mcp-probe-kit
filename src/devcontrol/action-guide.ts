@@ -32,9 +32,10 @@ const FLOWS = {
   },
   task: {
     description: '领取当前已批准任务，按冻结合同逐项开发',
-    actions: ['next','execution-contract','claim','check','renew','release'],
+    actions: ['next','execution-contract','claim','check','renew','recover-task',
+      'review-recovery-worktree','park-expired-writer','release'],
     example: {action:'next',project_root:'/ABSOLUTE/PROJECT',input:{}},
-    caution: 'Inspect exact task ID, dependencies and allowedPaths before claim; no scope expansion.',
+    caution: 'Inspect exact task ID, dependencies, allowedPaths and the separate runtime claimableNow/writerBlocker fields before claim. An expired in_progress writer with protected unfinished code is NOT free to steal. First reconcile only specific out-of-scope files tied to a distinct approved, disjoint task using review-recovery-worktree with exact paths and explicit approval. If a disjoint Ready task must continue, park-expired-writer preserves all unfinished bytes, the original immutable Git base and every protected SHA-256 without changing Gate status. Never reset, stash, delete or silently rebaseline unrelated Agent work, or infer a clean Writer from eligible=true. Multi-repo shared-index parking is deliberately unsupported until child-checkpoint safety is proven.',
   },
   verification: {
     description: '提交代码和真实测试 → 当前 AI 一次完成正式验收登记 → Verified',

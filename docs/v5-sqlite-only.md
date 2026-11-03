@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **101 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **103 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -254,8 +254,9 @@ AGENTS.md 提供简短入口，**只更新受管理的 MCP 区块**，保留项�
 
 先调用 `task-closure-status` 读取 `frozenDeliveryHeads` 和
 `staleLegacyEvidence[].evidenceId`。在各独立仓库的**原冻结 SHA**
-创建干净的 detached worktree；可以放在被 Git 忽略的
-`.neyna/state/frozen-rerun/` 下。若当前工作分支已有后续提交，即使
+创建干净的 detached worktree；由项目在本机选择**专用的临时测试目录**
+（如下仅示例 `local-test-runs/frozen/`，请自行配置 Git 忽略规则），
+**不要复用任何产品或 MCP 的状态数据库目录**。若当前工作分支已有后续提交，即使
 测试文件没变，也不能在当前 HEAD 上测试之后冒充冻结交付。
 Agent 在隔离目录运行项目自己的真实测试，把**实际输出、实际退出码**
 记录为普通文件并计算 SHA-256。MCP 不运行项目测试。
@@ -276,14 +277,14 @@ Agent 在隔离目录运行项目自己的真实测试，把**实际输出、实
       "apw-life-app": "EXACT_FROZEN_APP_SHA"
     },
     "testedCheckouts": {
-      "": ".neyna/state/frozen-rerun/root",
-      "apw-life": ".neyna/state/frozen-rerun/apw-life",
-      "apw-life-app": ".neyna/state/frozen-rerun/apw-life-app"
+      "": "local-test-runs/frozen/root",
+      "apw-life": "local-test-runs/frozen/apw-life",
+      "apw-life-app": "local-test-runs/frozen/apw-life-app"
     },
-    "commandCwd": ".neyna/state/frozen-rerun/apw-life-app",
+    "commandCwd": "local-test-runs/frozen/apw-life-app",
     "command": "flutter analyze --no-pub test/activity_android_ios_layout_test.dart && flutter test --no-pub test/activity_android_ios_layout_test.dart",
     "exitCode": 0,
-    "artifactPath": ".neyna/state/test-artifacts/android-layout-rerun.log",
+    "artifactPath": "local-test-runs/artifacts/android-layout-rerun.log",
     "artifactSha256": "REAL_64_CHARACTER_SHA256_OF_ACTUAL_NEW_OUTPUT",
     "findings": "Inspect the original frozen commits of every independent repository, the actual test runner's output, the real command and exit status, the negative cases, and the unchanged frozen source. This is a newly executed test result, not an old log, and the project Gate has not been approved yet."
   }
@@ -347,7 +348,89 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 
 **单工作区的独立任务继续开发**：DevControl 仍保持同一 Git 暂存区同时只有一个写入任务。如果当前任务已经提交原子交付和测试记录、正在等待 AI 自审，且没有暂存修改，领取一个不存在前置依赖且文件范围不重叠的 Ready 任务时，可自动保留前者的独立任务租约并让出 Git 写入权。旧任务保持 `in_review`，`next.parkedReviews` 显示待审核任务；只有当前 AI 依据真实测试与既定验收条件完成后才可记为 Verified。自审失败要先重新领取写入权才能修改该任务代码。依赖未验收、范围重叠、未提交或暂存的场景继续拒绝切换。该功能不启动项目测试，也不需要独立第三方 Agent。
 
-**`devcontrol` 统一入口：99 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
+### 多 Agent 工作区过期任务恢复（受审）
+
+领取后的其他 Agent 合法修改不能一律视为旧任务越界，也不能因为
+“无关”就无条件放行。`recover-task` 如返回 `WORKTREE_CHANGED`，MCP
+现在附带 `details.conflicts`，逐个包含 `path`、`type`、
+`expected`、`observed`、`inFrozenScope` 和可执行建议；
+指纹是普通文件的 SHA-256，不会泄露文件正文。
+
+只有能够证明变更属于另一项**已批准且冻结文件范围完全不重叠**的任务，
+并由当前负责 Agent 明确作出 Owner 审核决定，才使用：
+
+```json
+{
+  "action": "review-recovery-worktree",
+  "project_root": "/PROJECT/ROOT",
+  "input": {
+    "id": "EXPIRED-TASK-A",
+    "sourceTaskId": "APPROVED-DISJOINT-TASK-B",
+    "reviewedPaths": ["src/task-b/uncommitted-file.ts"],
+    "actor": "responsible-owner-agent",
+    "reason": "The exact external task scope and original protected claim bytes were inspected. Only the listed files belong to the separately approved disjoint task, and no frozen task-A bytes or Gate evidence are changed.",
+    "explicitAuthorization": true
+  }
+}
+```
+
+该动作只增加 `dc_recovery_worktree_reviews` 与 `dc_audit`，保存旧快照
+来源和新的文件指纹，不删除、不暂存、不提交文件，也不覆盖原领取快照。
+被改坏的原 Owner 文件、无法证明来源的文件、暂存中的文件及范围重叠
+仍继续拒绝。审核成功后可以再次调用 `recover-task`。
+
+另一种阻断是旧任务仍在 `in_progress`，租约已过期，整个单 Git 暂存区
+还保存它自己的真实未提交代码。若下一项 Ready 任务已经正式批准、
+依赖全部 Verified、范围与旧任务无交集，可选择显式安全停放：
+
+```json
+{
+  "action": "park-expired-writer",
+  "project_root": "/PROJECT/ROOT",
+  "input": {
+    "id": "EXPIRED-TASK-A",
+    "nextTaskId": "APPROVED-DISJOINT-TASK-B",
+    "actor": "responsible-owner-agent",
+    "reason": "The original expired writer's exact frozen scope, Git ancestry, unstaged local files, all SHA-256 bytes and the independently approved successor were examined. Both tasks remain unverified.",
+    "explicitAuthorization": true
+  }
+}
+```
+
+它只追加 `dc_parked_writers` 和审计记录，且要求 Writer 已过期、
+无暂存、原 Git 历史仍在、下一任务冻结范围内没有未提交变化。
+只有检查完全通过，下一次 `claim` 才能领取指定的 B 任务。
+原 A 任务仍处于 `in_progress`。B 任务完成自己的实际提交和验收后，
+A 才能继续领取原任务；验收只统计属于 A 的前后两段真实 Git 改动，
+不会把 B 的中间提交算入 A 的交付，也不自动放行任何 Gate。
+
+该受审 Writer 停放只支持**单一 Git 仓库的共享工作区**。
+多个独立子 Git 仓库的组合项目继续要求完整子仓库冻结审计，
+不能把单仓安全证明冒充多仓支持。GP 等其他项目无需创建
+`.neyna/state`；所有通用隔离测试工作目录均由当前项目选择。
+
+`execution-contract.eligible` 仅表示业务规格已批准，
+`claimableNow` 与 `writerBlocker` 分别说明当前 Writer 是否可安全领取
+及阻断任务、是否过期和建议操作；`next.selectedTaskWriterStatus`
+也会显示同一信息。`claim` 仍在事务中重新严格验证，不直接相信预检值。
+
+### 旧 SQLite 受保护工作树快照兼容
+
+部分旧数据曾将 `dc_task_worktree_baselines.snapshot_json` 或
+`dc_completion_notes.preserved_worktree_json` 中的正常文件快照
+再次包装成 `[{"snapshot_json":"[]"}]`，导致代码、真实测试和
+完成报告都已登记，但最终 `verify` 将多余包装误认为本地文件变化。
+v5 读取时只兼容**恰好一层**这种历史包装，并验证内层是完整的
+受保护文件指纹数组。不修改历史 SQLite 原始值。
+
+空快照可以正常读成空数组；非空快照的每个 `path`、`kind`、
+`size` 和 `sha256` 都必须合法，且继续接受当前真实文件的校验。
+符合正式本地 `devcontrol-worktree-ignore` 且不在任务冻结范围内的
+路径可以按现有精确规则豁免。错误 JSON、连续多层包装、缺字段、
+重复路径和实际 Owner 文件改动都继续拒绝。这个兼容修复**不会**
+替代原来的测试证据、仓库交付向量、`verify` 或任何 Gate。
+
+**`devcontrol` 统一入口：103 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
 
 **独立 Git Worktree 开发（单根 Git 仓库）**：当前 AI 可通过普通 Git 命令创建独立工作树，在领取任务时把其路径作为 project-root。工作树各有自己的 Git 暂存区，但共享主仓库原有的同一份 DevControl SQLite。只有全部前置任务 Verified、不同未验收任务的冻结文件范围不重叠，才允许独立领取。测试记录与技术自审绑定执行任务的工作树，独立交付的准确 Git 提交必须先被 AI 集成进主仓库，才可把任务记为 Verified。DevControl 不运行测试、不替 AI 合并 Git，也不要求其他 Agent。含独立子 Git 仓库的组合项目暂不支持此模式；这里的共享 SQLite 仅限同一台机器，不等于跨电脑同步。
 
@@ -376,7 +459,7 @@ Feature、Bug、Idea、范围变更、架构保护与决策通过相同 `devcont
 | Bug / Defect management (3) | `bug-get`、`bug-step-save`、`bug-task-link` |
 | Idea / Proposed change governance (7) | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-self-review`、`idea-review`、`idea-decide` |
 | 工件 / Governed artifacts (6) | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-self-review`、`artifact-independent-review`、`artifact-approve` |
-| 领取、报告与验收 / Execution and evidence (22) | `claim`、`renew`、`recover-task`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`rebind-legacy-evidence`、`record-rerun-evidence`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
+| 领取、报告与验收 / Execution and evidence (24) | `claim`、`renew`、`recover-task`、`review-recovery-worktree`、`park-expired-writer`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`rebind-legacy-evidence`、`record-rerun-evidence`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
 | 决策 / Decision records (2) | `decision-save`、`decision-get` |
 | 本地工具 / Local developer and hooks (3) | `local-developer`、`hook-status`、`hook-install` |
 

@@ -520,12 +520,12 @@ describe('immutable multi-repository delivery commits',()=>{
       fs.writeFileSync(path.join(child,'README.md'),'later unrelated code integration\n');
       cmd(child,'add','README.md');
       cmd(child,'commit','-qm','later unrelated integration');
-      fs.appendFileSync(path.join(root,'.git/info/exclude'),'\n/.neyna/state/\n');
-      fs.mkdirSync(path.join(root,'.neyna/state'),{recursive:true});
+      fs.appendFileSync(path.join(root,'.git/info/exclude'),'\n/local-test-runs/\n');
+      fs.mkdirSync(path.join(root,'local-test-runs'),{recursive:true});
       const testedCheckouts={
-        '':'.neyna/state/rerun-root',
-        'apw-life':'.neyna/state/rerun-child',
-        'apw-life-app':'.neyna/state/rerun-app',
+        '':'local-test-runs/rerun-root',
+        'apw-life':'local-test-runs/rerun-child',
+        'apw-life-app':'local-test-runs/rerun-app',
       };
       for(const [prefix,checkout] of Object.entries(testedCheckouts)){
         const original=prefix===''?root:prefix==='apw-life'?child:app;
@@ -538,7 +538,7 @@ describe('immutable multi-repository delivery commits',()=>{
         const log='Actual frozen test command: node '+args.join(' ')+
           '\nActual frozen child HEAD: '+cmd(testDir,'rev-parse','HEAD')+
           '\nObserved exit: '+result.status+'\n'+result.stdout+'\n'+result.stderr;
-        const relative='.neyna/state/'+name+'.log';
+        const relative='local-test-runs/'+name+'.log';
         fs.writeFileSync(path.join(root,relative),log);
         return {artifactPath:relative,artifactSha256:createHash('sha256').update(log).digest('hex'),
           exitCode:result.status??255};
@@ -580,7 +580,7 @@ describe('immutable multi-repository delivery commits',()=>{
       expect(()=>ledger.recordRerunEvidence(request))
         .toThrow(/untracked source changes/);
       fs.unlinkSync(path.join(testDir,'UNTRACKED-POLLUTION.txt'));
-      const link='.neyna/state/rerun-output-symlink.log';
+      const link='local-test-runs/rerun-output-symlink.log';
       fs.symlinkSync(path.join(root,passedOutput.artifactPath),path.join(root,link));
       expect(()=>ledger.recordRerunEvidence({...request,
         artifactPath:link}))
@@ -709,7 +709,8 @@ describe('immutable multi-repository delivery commits',()=>{
         digest:'0'.repeat(64)});
       expect(ledger.trace(id).audit.some((event:{event:string})=>
         event.event==='legacy_test_evidence_repository_rebound')).toBe(true);
-      expect(ledger.verify(id,lease.leaseToken,acceptance))
+      const accepted=ledger.verify(id,lease.leaseToken,acceptance);
+      expect(accepted,JSON.stringify(accepted))
         .toMatchObject({passed:true,acceptanceRecorded:true});
       expect(ledger.get(id).status).toBe('verified');
     }finally{ledger.close();}
@@ -1559,6 +1560,126 @@ describe('Owner-authorized migration of a pre-v5 expired active task',()=>{
 });
 
 describe('multi-repository file identity and source audit',()=>{
+  it('verifies frozen real evidence with historical nested empty claim and completion snapshots without rewriting SQLite',()=>{
+    const {root}=fixture(false);
+    const ledger=new ProjectTaskLedger(root);
+    const id='AUDIT-NESTED-EMPTY';
+    const reference='Actual docs test reported on original frozen Git delivery';
+    try{
+      ledger.create({id,title:'Legacy nested empty snapshot must not block a verified task',
+        track:'governance',allowedPaths:['src/**'],requiredGates:['docs']},'agent');
+      ledger.approve(id,'owner');
+      const lease=ledger.claim(id,'developer');
+      fs.mkdirSync(path.join(root,'src'),{recursive:true});
+      fs.writeFileSync(path.join(root,'src','implementation.ts'),'export const actuallyTested=true;\n');
+      cmd(root,'add','src/implementation.ts');
+      cmd(root,'commit','-qm','document actual task completion');
+      ledger.report(id,lease.leaseToken,{kind:'docs',reference},true);
+      ledger.complete(id,lease.leaseToken,{
+        summary:'Actually submitted the original frozen approved source',
+        implementation:'Committed documentation in the frozen scope',
+        verification:'Previously recorded test result is attached to the original commit',
+      });
+      const sqlite=createRequire(import.meta.url)('node:sqlite') as {
+        DatabaseSync:new(filename:string)=>any;
+      };
+      const legacy='[{"snapshot_json":"[]"}]';
+      const db=new sqlite.DatabaseSync(ledger.databasePath);
+      try{
+        expect(db.prepare('SELECT snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?')
+          .get(id).snapshot_json).toBe('[]');
+        expect(db.prepare('SELECT preserved_worktree_json FROM dc_completion_notes WHERE task_id=?')
+          .get(id).preserved_worktree_json).toBe('[]');
+        db.prepare('UPDATE dc_task_worktree_baselines SET snapshot_json=? WHERE task_id=?').run(legacy,id);
+        db.prepare('UPDATE dc_completion_notes SET preserved_worktree_json=? WHERE task_id=?').run(legacy,id);
+      }finally{db.close();}
+      const result=ledger.verify(id,lease.leaseToken,{
+        evidenceReference:reference,
+        findings:'Inspected the exact original Git delivery and real recorded project test results, including positive and negative cases and unchanged preexisting workspace files.',
+        gates:[{gate:'docs',evidenceReference:reference,
+          findings:'Reviewed the real recorded docs test against the original frozen source and the approved Gate requirements.'}],
+      });
+      expect(result,JSON.stringify(result)).toMatchObject({passed:true,acceptanceRecorded:true});
+      expect(ledger.get(id).status).toBe('verified');
+      const check=new sqlite.DatabaseSync(ledger.databasePath);
+      try{
+        expect(check.prepare('SELECT snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?')
+          .get(id).snapshot_json).toBe(legacy);
+        expect(check.prepare('SELECT preserved_worktree_json FROM dc_completion_notes WHERE task_id=?')
+          .get(id).preserved_worktree_json).toBe(legacy);
+      }finally{check.close();}
+    }finally{ledger.close();}
+  });
+
+  it('preserves exact nonempty legacy wrapped fingerprints and rejects changed Owner bytes and malformed wrappers',()=>{
+    const {root}=fixture(false);
+    const ownerBytes='Original unrelated Owner notes which must be protected exactly\n';
+    fs.writeFileSync(path.join(root,'README.md'),ownerBytes);
+    const ledger=new ProjectTaskLedger(root);
+    const id='AUDIT-NESTED-NONEMPTY';
+    const reference='Real docs test recorded with exact Owner protection and committed source';
+    try{
+      ledger.create({id,title:'Wrapped nonempty fingerprints cannot erase Owner protection',
+        track:'governance',allowedPaths:['src/**'],requiredGates:['docs']},'agent');
+      ledger.approve(id,'owner');
+      const lease=ledger.claim(id,'developer');
+      fs.mkdirSync(path.join(root,'src'),{recursive:true});
+      fs.writeFileSync(path.join(root,'src','implementation.ts'),'export const wrappedLegacy=true;\n');
+      cmd(root,'add','src/implementation.ts');
+      cmd(root,'commit','-qm','real docs task commit');
+      ledger.report(id,lease.leaseToken,{kind:'docs',reference},true);
+      ledger.complete(id,lease.leaseToken,{
+        summary:'Original approved docs submitted with unrelated protected Owner notes',
+        implementation:'Committed only the approved scoped source',
+        verification:'Actual Gate proof recorded before format compatibility update',
+      });
+      const sqlite=createRequire(import.meta.url)('node:sqlite') as {
+        DatabaseSync:new(filename:string)=>any;
+      };
+      const db=new sqlite.DatabaseSync(ledger.databasePath);
+      let wrapped='';
+      try{
+        const original=db.prepare('SELECT snapshot_json FROM dc_task_worktree_baselines WHERE task_id=?')
+          .get(id).snapshot_json as string;
+        expect(JSON.parse(original)).toMatchObject([{
+          path:'README.md',kind:'tracked',sha256:expect.stringMatching(/^[a-f0-9]{64}$/),
+        }]);
+        wrapped=JSON.stringify([{snapshot_json:original}]);
+        db.prepare('UPDATE dc_task_worktree_baselines SET snapshot_json=? WHERE task_id=?').run(wrapped,id);
+        db.prepare('UPDATE dc_completion_notes SET preserved_worktree_json=? WHERE task_id=?').run(wrapped,id);
+      }finally{db.close();}
+      const acceptance={
+        evidenceReference:reference,
+        findings:'Reviewed original Git delivery and real project test evidence, including preexisting protected Owner file bytes and the exact frozen acceptance conditions.',
+        gates:[{gate:'docs',evidenceReference:reference,
+          findings:'Inspected original Git source, actual test output and unchanged unrelated Owner content.'}],
+      };
+      fs.writeFileSync(path.join(root,'README.md'),'Unauthorized modified Owner content\n');
+      expect(ledger.verify(id,lease.leaseToken,acceptance)).toMatchObject({
+        passed:false,reason:'Uncommitted files differ from the recorded protected Owner edits',
+      });
+      expect(ledger.get(id).status).toBe('in_review');
+      fs.writeFileSync(path.join(root,'README.md'),ownerBytes);
+      const corrupted=new sqlite.DatabaseSync(ledger.databasePath);
+      try{
+        corrupted.prepare('UPDATE dc_completion_notes SET preserved_worktree_json=? WHERE task_id=?')
+          .run('[{"snapshot_json":"[{\\"snapshot_json\\":\\"[]\\"}]"}]',id);
+      }finally{corrupted.close();}
+      expect(()=>ledger.verify(id,lease.leaseToken,acceptance))
+        .toThrow(/invalid protected-worktree snapshot/);
+      expect(ledger.get(id).status).toBe('in_review');
+      const restored=new sqlite.DatabaseSync(ledger.databasePath);
+      try{
+        restored.prepare('UPDATE dc_completion_notes SET preserved_worktree_json=? WHERE task_id=?')
+          .run(wrapped,id);
+      }finally{restored.close();}
+      const finalResult=ledger.verify(id,lease.leaseToken,acceptance);
+      expect(finalResult,JSON.stringify(finalResult))
+        .toMatchObject({passed:true,acceptanceRecorded:true});
+      expect(ledger.get(id).status).toBe('verified');
+    }finally{ledger.close();}
+  });
+
   it('refreshes a single root protected tracked file without accepting any new unrelated dirty file',()=>{
     const {root}=fixture(false);
     fs.writeFileSync(path.join(root,'README.md'),'local Owner notes predating the claim');

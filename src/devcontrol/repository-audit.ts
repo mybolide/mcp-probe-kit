@@ -123,6 +123,20 @@ export function discoverRepositories(root:string,allowedPaths:string[]):Reposito
       const candidate=path.join(dir,entry.name);
       const prefix=path.relative(workspace,candidate).split(path.sep).join('/');
       if(fs.existsSync(path.join(candidate,'.git'))){
+        // An auxiliary detached worktree kept inside this project may have
+        // a .git FILE pointing back to an independent repository already
+        // inside the workspace. It is a second checkout, not an additional
+        // delivered repository. Never hardcode a product-specific temp dir.
+        // Explicitly scoped checkouts are still discovered and validated.
+        const marker=path.join(candidate,'.git');
+        const explicitlyScoped=allowedPaths.some(scope=>
+          scope===prefix||scope.startsWith(prefix+'/'));
+        if(!explicitlyScoped&&fs.lstatSync(marker).isFile()){
+          const common=path.resolve(candidate,
+            output(candidate,['rev-parse','--git-common-dir']));
+          const real=fs.realpathSync(common);
+          if(contained(workspace,real)&&real!==candidate)continue;
+        }
         found.set(prefix,identity(workspace,prefix));
       }
       pending.push([candidate,depth+1]);

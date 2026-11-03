@@ -10,7 +10,9 @@ import {join,resolve} from 'node:path';
 const root=resolve(import.meta.dirname,'..');
 const file='src/devcontrol/__tests__/task-ledger.unit.test.ts';
 const input=readFileSync(resolve(root,file),'utf8');
-const titles=[...input.matchAll(/^\s*it\("([^"\n]+)"/gm)].map(m=>m[1]);
+// Both quote styles, including .only/.skip, must be counted by the guard.
+const titles=[...input.matchAll(/^\s*(?:it|test)(?:\.[a-z]+)?\s*\(\s*(['"])([^\r\n]*?)\1\s*,/gm)]
+  .map(m=>m[2]);
 const declarations=[...input.matchAll(/^\s*(?:it|test)(?:\.[a-z]+)?\s*\(/gm)];
 if(titles.length<40||new Set(titles).size!==titles.length||
     declarations.length!==titles.length)

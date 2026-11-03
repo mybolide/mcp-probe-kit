@@ -160,6 +160,61 @@ function preservedWorktreeSnapshot(root:string,
   return entries.filter(entry=>!trusted.has(entry.path));
 }
 
+/** Historical SQLite migrations sometimes stored one extra JSON envelope:
+ *   [{"snapshot_json":"[]"}] instead of [].
+ * Accept ONLY that exact single-entry shape (or its direct equivalent).
+ * Crucially, an invalid or nonempty inner manifest never becomes [].
+ * Interpretation is read-only: the original SQLite bytes remain immutable.
+ */
+function parseProtectedWorktreeSnapshot(raw:unknown,source:string):
+  ReturnType<typeof preservedWorktreeSnapshot>{
+  const invalid=(reason:string):never=>
+    fail('PROTECTED_SNAPSHOT_INVALID',
+      source+' has an invalid protected-worktree snapshot: '+reason);
+  const parse=(value:string):unknown=>{
+    try{return JSON.parse(value);}
+    catch{return invalid('invalid JSON');}
+  };
+  let data:unknown=typeof raw==='string'?parse(raw):raw;
+  const isEnvelope=(value:unknown):value is {snapshot_json:string}=>{
+    if(!value||typeof value!=='object'||Array.isArray(value))return false;
+    const fields=Object.keys(value);
+    return fields.length===1&&fields[0]==='snapshot_json'&&
+      typeof (value as Record<string,unknown>).snapshot_json==='string';
+  };
+  if(Array.isArray(data)&&data.length===1&&isEnvelope(data[0]))
+    data=parse(data[0].snapshot_json);
+  else if(isEnvelope(data))data=parse(data.snapshot_json);
+  if(!Array.isArray(data)||data.length>256)
+    return invalid('expected an array of at most 256 exact file fingerprints');
+  const seen=new Set<string>();
+  for(const entry of data){
+    if(!entry||typeof entry!=='object'||Array.isArray(entry))
+      return invalid('every entry must be a complete file fingerprint');
+    const fields=Object.keys(entry).sort();
+    if(JSON.stringify(fields)!==
+      JSON.stringify(['kind','path','sha256','size']))
+      return invalid('a file fingerprint must have exactly path, kind, size and sha256');
+    const file=entry as Record<string,unknown>;
+    const name=file.path;
+    if(typeof name!=='string'||!name||name.length>2048||
+      path.isAbsolute(name)||path.win32.isAbsolute(name)||
+      name.includes('\\')||name.includes('\0')||
+      name.split('/').some(part=>!part||part==='.'||part==='..')||
+      seen.has(name))
+      return invalid('unsafe or repeated file path');
+    seen.add(name);
+    if(file.kind!=='tracked'&&file.kind!=='untracked')
+      return invalid('invalid tracked/untracked file kind');
+    if(!Number.isSafeInteger(file.size)||Number(file.size)<0||
+      Number(file.size)>64*1024*1024)
+      return invalid('invalid file byte count');
+    if(typeof file.sha256!=='string'||!/^[a-f0-9]{64}$/.test(file.sha256))
+      return invalid('invalid SHA-256 fingerprint');
+  }
+  return data as ReturnType<typeof preservedWorktreeSnapshot>;
+}
+
 /** A local exception entered after a claim also applies to the comparison
  * view of the original Owner snapshot. Never rewrite that audit snapshot;
  * frozen task paths cannot be made exempt through a later pattern change.
@@ -260,14 +315,15 @@ const allowedGates = new Set([
 const utc = () => new Date().toISOString();
 
 export class DevControlError extends Error {
-  constructor(public readonly code: string, message: string) {
+  constructor(public readonly code: string, message: string,
+    public readonly details?:Row) {
     super(message);
   }
 
 }
 
-function fail(code: string, message: string): never {
-  throw new DevControlError(code, message);
+function fail(code: string, message: string, details?:Row): never {
+  throw new DevControlError(code, message, details);
 }
 
 function run(root: string, command: string, args: string[], timeout = 90_000) {
@@ -522,6 +578,154 @@ export class ProjectTaskLedger {
       return {task:this.get(id),executionContract:this.executionContract(id),
         leaseToken:token,baseHead:source,evidenceKind:'files-sha256-v1'};
     });
+  }
+
+  /** Explicitly park an expired in_progress writer while preserving its
+   * unfinished files, original Git base, exact dirty-file hashes and scope.
+   * A successor must be a different approved, ready, DISJOINT task. Merely
+   * expiring a lease never grants this permission.
+   */
+  parkExpiredWriter(id:string,input:{actor:string;reason:string;
+    explicitAuthorization?:boolean;nextTaskId:string}):Row{
+    const actor=String(input?.actor??'').trim();
+    const reason=String(input?.reason??'').trim();
+    if(actor.length<2||reason.length<50||reason.length>2000||
+      input?.explicitAuthorization!==true)
+      fail('PARK_REVIEW_REQUIRED',
+        'Owner must explicitly approve and explain the preserved WIP, old task scope and chosen disjoint next task');
+    if(!this.hasRootGit)
+      fail('PARK_GIT_REQUIRED','The file-backed writer has a separate recovery contract');
+    const task=this.requireTask(id);
+    const next=this.requireTask(String(input.nextTaskId??''));
+    const original=this.checkoutWriter();
+    if(!original||original.task_id!==id||original.expires_at>Date.now()||
+      task.status!=='in_progress'||next.status!=='ready')
+      fail('PARK_STATE_INVALID',
+        'Only an expired in_progress Git writer can be parked for an approved ready task');
+    if(this.db.prepare('SELECT task_id FROM dc_parked_writers WHERE task_id=?')
+      .get(id))
+      fail('PARK_ALREADY_RECORDED','This task already has an audited writer handoff');
+    if(this.blockers(next.id).length||!this.isApprovedForExecution(next)||
+      !this.executionContract(next.id).eligible||!next.approved_by)
+      fail('PARK_NEXT_TASK_BLOCKED',
+        'Successor task must have its own frozen approved contract and Verified dependencies');
+    const oldScope=JSON.parse(task.allowed_paths) as string[];
+    const newScope=JSON.parse(next.allowed_paths) as string[];
+    if(taskScopesOverlap(oldScope,newScope))
+      fail('PARALLEL_SCOPE_CONFLICT',
+        'The next task overlaps unfinished source. Do not share its Git index');
+    if(discoverRepositories(this.root,[...oldScope,...newScope]).length!==1)
+      fail('MULTI_REPO_PARK_UNSUPPORTED',
+        'A shared-index handoff cannot move a multi-repository task without full child repository checkpoints');
+    this.protectedClaimWorktree(id,task,String(original.base_head));
+    const dirty=preservedWorktreeSnapshot(this.root,[]);
+    const outsideOld=dirty.filter(file=>
+      !oldScope.some(pattern=>pathAllowed(file.path,pattern)));
+    const protectedOriginal=this.protectedClaimWorktree(id,task,String(original.base_head));
+    if(outsideOld.length&&!protectedOriginal)
+      fail('PARK_UNREVIEWED_EXTERNAL_WIP',
+        'New unrelated work after a clean claim needs explicit source-task attribution before parking',
+        this.worktreeConflictDetails(task,[],outsideOld));
+    if(dirty.some(file=>newScope.some(pattern=>pathAllowed(file.path,pattern))))
+      fail('PARK_NEXT_SCOPE_DIRTY',
+        'Successor has existing uncommitted files in its frozen scope; do not misattribute them');
+    const head=git(this.root,['rev-parse','HEAD']);
+    if(!run(this.root,'git',['merge-base','--is-ancestor',
+      String(original.base_head),head]).passed)
+      fail('PARK_HISTORY_CHANGED','Original claim Git head is no longer an ancestor');
+    const oldCommits=committedFilesBetween(this.root,String(original.base_head),head);
+    const outOfScope=oldCommits.filter(file=>
+      !oldScope.some(pattern=>pathAllowed(file,pattern)));
+    if(outOfScope.length)
+      fail('PARK_COMMITTED_SCOPE_CONFLICT',
+        'Cannot prove which Agent committed the intervening paths; review provenance before parking',
+        {paths:outOfScope,originalBaseHead:original.base_head,currentHead:head});
+    const snapshot=JSON.stringify(dirty);
+    const digest=createHash('sha256').update(snapshot).digest('hex');
+    return this.inTransaction(()=>{
+      const live=this.checkoutWriter();
+      if(!live||live.token!==original.token||live.expires_at>Date.now()||
+        git(this.root,['rev-parse','HEAD'])!==head||
+        JSON.stringify(preservedWorktreeSnapshot(this.root,[]))!==snapshot)
+        fail('PARK_RACE','Writer, Git HEAD or tracked local work changed during Owner review');
+      this.db.prepare(`INSERT INTO dc_parked_writers
+        (task_id,successor_task_id,original_base_head,parked_head,
+         preserved_snapshot_json,preserved_digest,actor,reason,parked_at)
+         VALUES(?,?,?,?,?,?,?,?,?)`).run(id,next.id,String(original.base_head),
+        head,snapshot,digest,actor,reason,utc());
+      this.audit(id,'expired_writer_safely_parked',actor,{
+        successorTaskId:next.id,originalBaseHead:original.base_head,
+        parkedHead:head,preservedDigest:digest,
+        preservedPaths:dirty.map(file=>({path:file.path,sha256:file.sha256,
+          size:file.size,kind:file.kind})),
+        oldScope,newScope,reason,leaseExpired:true,
+        writerTransferred:false,filesModifiedByMcp:false,
+        testsPassed:false,gateApproved:false,
+      });
+      return {taskId:id,nextTaskId:next.id,originalBaseHead:original.base_head,
+        parkedHead:head,preservedDigest:digest,parked:true,
+        filesModifiedByMcp:false,gateApproved:false,
+        nextAction:'claim '+next.id};
+    });
+  }
+
+  private parkedWriterForClaim(previous:Row,task:Row):boolean{
+    if(previous.expires_at>Date.now())return false;
+    const park=this.db.prepare(`SELECT * FROM dc_parked_writers
+      WHERE task_id=? AND successor_task_id=? AND resumed_head IS NULL`)
+      .get(previous.task_id,task.id);
+    if(!park||this.requireTask(previous.task_id).status!=='in_progress'||
+      task.status!=='ready')return false;
+    const old=JSON.parse(this.requireTask(previous.task_id).allowed_paths) as string[];
+    const next=JSON.parse(task.allowed_paths) as string[];
+    if(taskScopesOverlap(old,next))return false;
+    const value=String(park.preserved_snapshot_json);
+    if(createHash('sha256').update(value).digest('hex')!==park.preserved_digest)
+      fail('PARK_RECORD_CORRUPT','The original protected Agent WIP digest was modified');
+    if(git(this.root,['rev-parse','HEAD'])!==park.parked_head||
+      JSON.stringify(preservedWorktreeSnapshot(this.root,[]))!==value)
+      fail('PARK_SOURCE_CHANGED',
+        'Git HEAD or protected source changed since Owner-approved handoff; preserve files and review the exact differences',
+        this.worktreeConflictDetails(this.requireTask(previous.task_id),
+          JSON.parse(value),preservedWorktreeSnapshot(this.root,[])));
+    this.protectedClaimWorktree(previous.task_id,
+      this.requireTask(previous.task_id),String(previous.base_head));
+    return true;
+  }
+
+  /** After parked work resumes, distinguish its real Git delivery from the
+   * intervening successor task's committed scope. Never credit that task's
+   * commit as the original task's code or approval evidence.
+   */
+  private parkedDeliveryFiles(id:string,base:string,head:string,
+    filter='ACMRTD'):string[]|null{
+    const park=this.db.prepare(`SELECT * FROM dc_parked_writers
+      WHERE task_id=? AND resumed_head IS NOT NULL`).get(id);
+    if(!park)return null;
+    if(park.original_base_head!==base||!run(this.root,'git',
+      ['merge-base','--is-ancestor',base,String(park.parked_head)]).passed||
+      !run(this.root,'git',['merge-base','--is-ancestor',
+        String(park.parked_head),String(park.resumed_head)]).passed||
+      !run(this.root,'git',['merge-base','--is-ancestor',
+        String(park.resumed_head),head]).passed)
+      fail('PARK_DELIVERY_HISTORY_CHANGED',
+        'A parked task may continue only from its exact immutable Git delivery checkpoints');
+    const first=committedFilesBetween(this.root,base,String(park.parked_head),filter);
+    const middle=committedFilesBetween(this.root,
+      String(park.parked_head),String(park.resumed_head));
+    const successor=this.requireTask(String(park.successor_task_id));
+    const task=this.requireTask(id);
+    const own=JSON.parse(task.allowed_paths) as string[];
+    const other=JSON.parse(successor.allowed_paths) as string[];
+    if(first.some(file=>!own.some(pattern=>pathAllowed(file,pattern)))||
+      middle.some(file=>!other.some(pattern=>pathAllowed(file,pattern)))||
+      taskScopesOverlap(own,other)||
+      !['in_review','verified'].includes(successor.status)||
+      !this.latestCompletion(successor.id))
+      fail('PARK_INTERVENING_SCOPE_CHANGED',
+        'Intervening commits are not demonstrably the disjoint, submitted successor delivery');
+    const resumed=committedFilesBetween(this.root,String(park.resumed_head),head,filter);
+    return [...new Set([...first,...resumed])].sort();
   }
 
   private completeFileTask(id:string,token:string,input:CompletionReport):Row{
@@ -903,6 +1107,37 @@ export class ProjectTaskLedger {
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
         base_head TEXT NOT NULL, snapshot_json TEXT NOT NULL,
         captured_at TEXT NOT NULL
+      );
+      -- Only an explicitly approved, task-attributed, append-only review
+      -- can recognize unrelated Agent WIP created after another task claimed.
+      -- The immutable claim snapshot is never overwritten.
+      CREATE TABLE IF NOT EXISTS dc_recovery_worktree_reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        source_task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        original_digest TEXT NOT NULL,
+        reviewed_snapshot_json TEXT NOT NULL,
+        reviewed_digest TEXT NOT NULL,
+        reviewed_head TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      -- One explicitly inspected handoff of an EXPIRED coding writer. The
+      -- original task remains in_progress with its original claim baseline.
+      -- Never silently transfer an index containing staged changes.
+      CREATE TABLE IF NOT EXISTS dc_parked_writers (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        successor_task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        original_base_head TEXT NOT NULL,
+        parked_head TEXT NOT NULL,
+        preserved_snapshot_json TEXT NOT NULL,
+        preserved_digest TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        parked_at TEXT NOT NULL,
+        resumed_head TEXT,
+        resumed_at TEXT
       );
       -- Non-Git projects have first-class source evidence. This is NOT a
       -- synthetic Git commit. Capture both the immutable claim baseline and
@@ -1398,6 +1633,13 @@ export class ProjectTaskLedger {
     const task=this.requireTask(id);
     if(!['in_progress','in_review'].includes(task.status))
       fail('TASK_NOT_ACTIVE','Only unfinished or review-ready tasks can be resumed');
+    const currentWriter=this.checkoutWriter();
+    if(currentWriter&&currentWriter.task_id!==id)
+      fail('RECOVERY_WRITER_CONFLICT',
+        'Another task owns this Git index. Do not recover a second writer over its source; finish or safely yield that task first',
+        {blockedTask:id,writerTaskId:currentWriter.task_id,
+          writerExpired:currentWriter.expires_at<=Date.now(),
+          safeAction:'Use claim for an explicitly parked original task only after the disjoint successor has completed or safely yielded its writer'});
     if(!this.hasRootGit){
       if(input.preserveExistingWorktree||input.rebaselineLegacyRepositories)
         fail('FILE_DELIVERY_MODE','A Git-free project has no Git worktree to migrate');
@@ -1493,7 +1735,8 @@ export class ProjectTaskLedger {
       fail('MIGRATION_DEFERRED','Deferred verification requires separate version-vector review');
     const prior=this.db.prepare(`SELECT base_head,snapshot_json
       FROM dc_task_worktree_baselines WHERE task_id=?`).get(id);
-    const original=(prior?JSON.parse(String(prior.snapshot_json)):[]) as ReturnType<typeof preservedWorktreeSnapshot>;
+    const original=parseProtectedWorktreeSnapshot(
+      prior?.snapshot_json??'[]','dc_task_worktree_baselines.snapshot_json');
     if(prior&&prior.base_head!==lease.base_head&&
       !run(this.root,'git',['merge-base','--is-ancestor',
         String(prior.base_head),String(lease.base_head)]).passed)
@@ -2931,7 +3174,132 @@ export class ProjectTaskLedger {
     if(createHash('sha256').update(value).digest('hex')!==refreshed.next_digest)
       fail('PROTECTED_SNAPSHOT_CORRUPT',
         'Owner-authorized protected snapshot digest no longer matches');
-    return JSON.parse(value) as ReturnType<typeof preservedWorktreeSnapshot>;
+    return parseProtectedWorktreeSnapshot(value,
+      'dc_protected_worktree_refreshes.next_snapshot_json');
+  }
+
+  /** Detailed, bounded conflict report. Paths come only from Git's checked
+   * project-local snapshot and never expose file contents or secrets.
+   */
+  private worktreeConflictDetails(task:Row,
+    expected:ReturnType<typeof preservedWorktreeSnapshot>,
+    current:ReturnType<typeof preservedWorktreeSnapshot>):Row{
+    const scope=JSON.parse(task.allowed_paths) as string[];
+    const oldByPath=new Map(expected.map(x=>[x.path,x]));
+    const nowByPath=new Map(current.map(x=>[x.path,x]));
+    const conflicts=[...new Set([...oldByPath.keys(),...nowByPath.keys()])]
+      .sort().filter(file=>JSON.stringify(oldByPath.get(file))!==
+        JSON.stringify(nowByPath.get(file)))
+      .map(file=>{
+        const before=oldByPath.get(file)??null,after=nowByPath.get(file)??null;
+        return {path:file,type:!before?'added':!after?'removed':
+          before.kind!==after.kind?'kind_changed':'content_changed',
+          inFrozenScope:scope.some(pattern=>pathAllowed(file,pattern)),
+          expected:before,observed:after,
+          safeAction:'Review this specific file against an approved other-task scope, or restore the prior protected bytes without deleting someone else\'s work'};
+      });
+    return {taskId:task.id,conflicts,
+      originalProtectedFileCount:expected.length,
+      currentProtectedFileCount:current.length,
+      safeActions:['review-recovery-worktree for files attributable to a separate approved disjoint task',
+        'Keep unresolved files untouched and report the exact conflicts to the responsible Agent',
+        'Never reset, stash or rebaseline the original frozen task scope']};
+  }
+
+  /** Audited recognition of other Agents' WIP only when every changed file
+   * belongs to a different approved task's disjoint frozen scope. This does
+   * not edit a byte, move a Git index, modify original claim evidence or
+   * infer attribution from an arbitrary Owner assertion alone.
+   */
+  reviewRecoveryWorktree(id:string,input:{actor:string;reason:string;
+    explicitAuthorization?:boolean;sourceTaskId:string;
+    reviewedPaths:string[]}):Row{
+    const actor=String(input?.actor??'').trim();
+    const reason=String(input?.reason??'').trim();
+    if(actor.length<2||reason.length<50||reason.length>2000||
+      input?.explicitAuthorization!==true||
+      !Array.isArray(input?.reviewedPaths)||!input.reviewedPaths.length||
+      input.reviewedPaths.length>256)
+      fail('RECOVERY_WORKTREE_REVIEW_REQUIRED',
+        'Provide explicit Owner approval, actor, detailed reason, source task ID and all exact conflict paths');
+    const target=this.requireTask(id);
+    const source=this.requireTask(String(input.sourceTaskId??''));
+    if(target.status!=='in_progress'||source.id===id||
+      !['ready','in_progress','in_review','verified'].includes(source.status)||
+      !source.approved_by)
+      fail('RECOVERY_SOURCE_TASK_INVALID',
+        'Recognize only a different approved task, without changing the unfinished original');
+    const lease=this.db.prepare('SELECT * FROM dc_task_leases WHERE task_id=?').get(id)??
+      this.db.prepare('SELECT * FROM dc_leases WHERE task_id=?').get(id);
+    if(!lease||lease.expires_at>Date.now())
+      fail('RECOVERY_LEASE_ACTIVE',
+        'A protected-writer review requires the original development lease to be expired');
+    const own=JSON.parse(target.allowed_paths) as string[];
+    const external=JSON.parse(source.allowed_paths) as string[];
+    if(taskScopesOverlap(own,external))
+      fail('RECOVERY_SCOPE_OVERLAP',
+        'Source task overlaps original scope; no cross-Agent provenance shortcut is safe');
+    const originalRow=this.db.prepare(`SELECT snapshot_json FROM
+      dc_task_worktree_baselines WHERE task_id=?`).get(id);
+    const migration=this.db.prepare(`SELECT protected_worktree_json
+      FROM dc_legacy_active_migrations WHERE task_id=?`).get(id);
+    if(!originalRow&&!migration)
+      fail('RECOVERY_BASELINE_MISSING','No original task claim worktree baseline to protect');
+    const original=parseProtectedWorktreeSnapshot(
+      migration?.protected_worktree_json??originalRow!.snapshot_json,
+      'dc_task_worktree_baselines.snapshot_json');
+    const base=this.effectiveOwnerSnapshot(id,'',original);
+    const prior=this.db.prepare(`SELECT original_digest,reviewed_snapshot_json,
+      reviewed_digest FROM dc_recovery_worktree_reviews
+      WHERE task_id=? ORDER BY id DESC LIMIT 1`).get(id);
+    const previous=prior?
+      JSON.parse(String(prior.reviewed_snapshot_json)) as
+        ReturnType<typeof preservedWorktreeSnapshot>:base;
+    if(prior&&createHash('sha256').update(JSON.stringify(previous)).digest('hex')!==
+      prior.reviewed_digest)
+      fail('RECOVERY_REVIEW_CORRUPT','Previous authorized worktree record was modified');
+    const expected=worktreeSnapshotWithLocalExemptions(this.root,previous,own);
+    const current=preservedWorktreeSnapshot(this.root,own).filter(file=>
+      !own.some(pattern=>pathAllowed(file.path,pattern)));
+    const details=this.worktreeConflictDetails(target,expected,current);
+    const changes=details.conflicts as Array<{path:string;type:string;
+      inFrozenScope:boolean}>;
+    const reviewed=[...new Set(input.reviewedPaths)];
+    if(!changes.length||reviewed.length!==changes.length||
+      changes.some(change=>!reviewed.includes(change.path)||change.inFrozenScope||
+        !external.some(pattern=>pathAllowed(change.path,pattern)))||
+      reviewed.some(file=>!changes.some(change=>change.path===file)))
+      fail('RECOVERY_ATTRIBUTION_REJECTED',
+        'Every changed file must be named and fall only inside the other approved task scope',details);
+    if(stagedChanges(discoverRepositories(this.root,own)).length)
+      fail('RECOVERY_STAGED_INDEX','A staged Git index cannot be reconciled as other Agent WIP');
+    const beforeDigest=createHash('sha256').update(JSON.stringify(expected)).digest('hex');
+    const afterJson=JSON.stringify(current);
+    const afterDigest=createHash('sha256').update(afterJson).digest('hex');
+    const head=git(this.root,['rev-parse','HEAD']);
+    return this.inTransaction(()=>{
+      const race=this.db.prepare(`SELECT agent,token,expires_at FROM dc_task_leases
+        WHERE task_id=?`).get(id);
+      if(race&&race.expires_at>Date.now())
+        fail('RECOVERY_RACE','Original task was recovered during external worktree review');
+      if(JSON.stringify(preservedWorktreeSnapshot(this.root,own).filter(file=>
+        !own.some(pattern=>pathAllowed(file.path,pattern))))!==afterJson||
+        git(this.root,['rev-parse','HEAD'])!==head)
+        fail('RECOVERY_RACE','Git or unrelated worktree changed during evidence review');
+      this.db.prepare(`INSERT INTO dc_recovery_worktree_reviews
+        (task_id,source_task_id,original_digest,reviewed_snapshot_json,
+        reviewed_digest,reviewed_head,actor,reason,created_at)
+        VALUES(?,?,?,?,?,?,?,?,?)`).run(id,source.id,beforeDigest,
+        afterJson,afterDigest,head,actor,reason,utc());
+      this.audit(id,'recovery_external_wip_reviewed',actor,{
+        sourceTaskId:source.id,sourceScope:external,originalDigest:beforeDigest,
+        reviewedDigest:afterDigest,head,changes:details.conflicts,reason,
+        originalClaimUnmodified:true,testsPassed:false,gateApproved:false,
+      });
+      return {taskId:id,sourceTaskId:source.id,reviewedPaths:reviewed,
+        reviewedDigest:afterDigest,filesModifiedByMcp:false,
+        testsPassed:false,gateApproved:false,nextAction:'recover-task'};
+    });
   }
 
   /** Never silently rebaseline an Owner file. Only a known tracked file
@@ -4351,6 +4719,7 @@ export class ProjectTaskLedger {
       const frozenEligible=!!item&&this.isApprovedForExecution(this.requireTask(id));
       const eligible=frozenEligible;
       return {taskId:id,eligible,approvedSupplement,
+        ...this.claimAvailability(this.requireTask(id)),
         issues:!frozenEligible?["Whole-release task roster has not been frozen or source changed"]:[],
         profile:"atomic-work-item",release,planHash:frozen.frozenHash,
         spec:item??null,owner:task.owner,dependencies:task.dependsOn,
@@ -4369,6 +4738,7 @@ export class ProjectTaskLedger {
       if(node?.openQuestions?.length)issues.push("Unresolved design choices in Feature task");
       if(task.status==="draft"||task.status==="cancelled")issues.push("Task is not approved for development");
         return {taskId:id,eligible:issues.length===0,issues,approvedSupplement,
+          ...this.claimAvailability(this.requireTask(id)),
         profile:"spec-depth-v3",planHash:approved.hash,featureName:name,
         featureRevision:snapshot?.sourceFeature?.revision??null,
         owner:task.owner??this.localDeveloper().name,assignment:task.ownerAssignment,
@@ -4391,6 +4761,7 @@ export class ProjectTaskLedger {
         issues.push("Incomplete frozen trigger, workflow or business invariants");
     }
     return {taskId:id,eligible:issues.length===0,issues,approvedSupplement,
+      ...this.claimAvailability(this.requireTask(id)),
       profile:plan?.qualityProfile??null,planHash:frozen.frozenHash,
       owner:task.owner??this.localDeveloper().name,
       assignment:task.ownerAssignment,
@@ -5625,11 +5996,16 @@ export class ProjectTaskLedger {
           snapshotBase,baseHead]).passed)
       fail("CLAIM_BASE_CHANGED",
         "Claim baseline changed; protected local files require reviewed recovery");
-    const original=JSON.parse(String(migration?.protected_worktree_json??row!.snapshot_json)) as ReturnType<typeof preservedWorktreeSnapshot>;
+    const original=parseProtectedWorktreeSnapshot(
+      migration?.protected_worktree_json??row!.snapshot_json,
+      'dc_task_worktree_baselines.snapshot_json');
     const snapshot=this.effectiveOwnerSnapshot(id,'',original);
     const refreshed=!!this.db.prepare(`SELECT id FROM dc_protected_worktree_refreshes
       WHERE task_id=? AND prefix='' LIMIT 1`).get(id);
-    if(!snapshot.length&&!refreshed)return null; // original clean-claim compatibility
+    const reviewed=this.db.prepare(`SELECT reviewed_snapshot_json,reviewed_digest,
+      original_digest FROM dc_recovery_worktree_reviews
+      WHERE task_id=? ORDER BY id DESC LIMIT 1`).get(id);
+    if(!snapshot.length&&!refreshed&&!reviewed)return null; // original clean-claim compatibility
     const allowed=JSON.parse(task.allowed_paths) as string[];
     if(snapshot.some(file=>allowed.some(pattern=>pathAllowed(file.path,pattern))))
       fail("DIRTY_SCOPE_VIOLATION","An already dirty file overlaps this task's approved scope");
@@ -5637,7 +6013,10 @@ export class ProjectTaskLedger {
     // New snapshots omit *only* exact canonical, unstaged guidance. Compare
     // both sides under the same rule without rewriting the historical row or
     // relaxing protection for any other file (including MCP launch wrappers).
-    const current=preservedWorktreeSnapshot(this.root,allowed);
+    // Original developer's own unfinished in-scope WIP is NOT unrelated
+    // Owner work and must not count as an extra protected-path conflict.
+    const current=preservedWorktreeSnapshot(this.root,allowed).filter(file=>
+      !allowed.some(pattern=>pathAllowed(file.path,pattern)));
     const legacyGuidance=snapshot.filter(file=>file.kind==='tracked'&&
       isManagedGuidancePath(file.path)&&
       !allowed.some(pattern=>pathAllowed(file.path,pattern))).map(file=>file.path);
@@ -5648,10 +6027,27 @@ export class ProjectTaskLedger {
       legacyGuidance.filter(file=>dirtyGuidance.has(file))));
     const comparable=worktreeSnapshotWithLocalExemptions(this.root,
       snapshot.filter(file=>!trustedLegacy.has(file.path)),allowed);
-    if(JSON.stringify(current)!==JSON.stringify(comparable))
+    let reviewedExpected:ReturnType<typeof preservedWorktreeSnapshot>|null=null;
+    if(reviewed){
+      reviewedExpected=JSON.parse(String(reviewed.reviewed_snapshot_json));
+    }
+    if(reviewedExpected){
+      const originalDigest=createHash('sha256').update(JSON.stringify(comparable)).digest('hex');
+      const reviewedDigest=createHash('sha256').update(JSON.stringify(reviewedExpected)).digest('hex');
+      if(reviewedDigest!==reviewed!.reviewed_digest)
+        fail('RECOVERY_REVIEW_CORRUPT','An approved external Agent file fingerprint was altered');
+      // Earlier reviews can be incremental; their source SHA belongs in the
+      // immutable audit record, never as a reason to rewrite claim baseline.
+      if(!originalDigest||!reviewed!.original_digest)
+        fail('RECOVERY_REVIEW_CORRUPT','Original protected claim digest unavailable');
+    }
+    const expected=reviewedExpected??
+      comparable;
+    if(JSON.stringify(current)!==JSON.stringify(expected))
       fail("WORKTREE_CHANGED",
-        "An unrelated pre-existing file changed or an unapproved new file appeared after claim");
-    return comparable;
+        "An unrelated pre-existing file changed or an unapproved new file appeared after claim; see details for exact protected file differences",
+        this.worktreeConflictDetails(task,expected,current));
+    return expected;
   }
 
   /** Separate this task's renewed commit slice from legitimately intervening
@@ -5759,6 +6155,7 @@ export class ProjectTaskLedger {
       if(protectedSnapshot){
         const resumedBase=this.resumedDeliveryBase(id,String(lease.base_head),head);
         const rawChanges=multiRepo?committedChanges(this.root,repositories):
+          this.parkedDeliveryFiles(id,String(lease.base_head),head)??
           committedFilesBetween(this.root,resumedBase??lease.base_head,head);
         const changed=this.deliveryTaskFiles(rawChanges,
           multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:resumedBase??lease.base_head,head);
@@ -5817,7 +6214,12 @@ export class ProjectTaskLedger {
    * Never yield uncommitted coding, overlapping scope or staged changes.
    */
   private canYieldReviewWriter(lease:Row,nextTask:Row):boolean{
-    if(lease.task_id===nextTask.id||nextTask.status!=='ready')return false;
+    if(lease.task_id===nextTask.id)return false;
+    const parkedResumption=nextTask.status==='in_progress'&&
+      !!this.db.prepare(`SELECT task_id FROM dc_parked_writers WHERE
+        task_id=? AND successor_task_id=? AND resumed_head IS NULL`)
+        .get(nextTask.id,lease.task_id);
+    if(nextTask.status!=='ready'&&!parkedResumption)return false;
     const previous=this.requireTask(String(lease.task_id));
     if(previous.status!=='in_review'||!this.latestCompletion(previous.id)||
       !this.db.prepare('SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1')
@@ -5837,6 +6239,17 @@ export class ProjectTaskLedger {
       this.checkReviewDeliveryHead(previous.id,String(lease.base_head),
         String(note.git_head));
       this.protectedClaimWorktree(previous.id,previous,String(lease.base_head));
+      if(parkedResumption){
+        const row=this.db.prepare(`SELECT preserved_snapshot_json,preserved_digest
+          FROM dc_parked_writers WHERE task_id=?`).get(nextTask.id);
+        if(!row||createHash('sha256').update(String(row.preserved_snapshot_json))
+          .digest('hex')!==row.preserved_digest||
+          JSON.stringify(preservedWorktreeSnapshot(this.root,[]))!==
+            row.preserved_snapshot_json)return false;
+        this.protectedClaimWorktree(nextTask.id,nextTask,
+          String(this.db.prepare('SELECT base_head FROM dc_task_leases WHERE task_id=?')
+            .get(nextTask.id)?.base_head??''));
+      }
       this.requireChildReposClean(this.observedTaskRepositories(previous.id,previous),
         previous.id,previous);
       return true;
@@ -5852,6 +6265,58 @@ export class ProjectTaskLedger {
       JOIN dc_tasks t ON t.id=l.task_id
       WHERE l.worktree_path=? AND t.status IN ('in_progress','in_review')
       ORDER BY l.expires_at DESC LIMIT 1`).get(fs.realpathSync(this.root));
+  }
+
+  /** Report runtime Writer readiness separately from frozen contract
+   * eligibility. This preflight has no side effects. Claim rechecks all
+   * conditions in the same SQLite transaction before rotating any token.
+   */
+  private claimAvailability(task:Row):Row{
+    if(!['ready','in_progress'].includes(task.status))
+      return {claimableNow:false,writerBlocker:{
+        code:'TASK_NOT_READY',taskId:task.id,action:'complete the prior review'}};
+    try{this.checkOtherCheckoutScopes(task);}
+    catch(error){
+      return {claimableNow:false,writerBlocker:{
+        code:error instanceof DevControlError?error.code:'PARALLEL_SCOPE_CONFLICT',
+        taskId:task.id,action:'Use an independent non-overlapping Git checkout'}};
+    }
+    const writer=this.checkoutWriter();
+    if(!writer)return {claimableNow:true,writerBlocker:null};
+    if(writer.task_id===task.id){
+      if(writer.expires_at>Date.now())
+        return {claimableNow:false,writerBlocker:{
+          code:'LEASE_STILL_ACTIVE',taskId:task.id,action:'renew existing lease'}};
+      return {claimableNow:true,writerBlocker:null};
+    }
+    try{
+      if(this.canYieldReviewWriter(writer,task))
+        return {claimableNow:true,writerBlocker:null};
+      if(writer.expires_at<=Date.now()&&this.parkedWriterForClaim(writer,task))
+        return {claimableNow:true,writerBlocker:null};
+    }catch(error){
+      return {claimableNow:false,writerBlocker:{
+        code:error instanceof DevControlError?error.code:'WORKTREE_CHANGED',
+        taskId:writer.task_id,writerExpired:writer.expires_at<=Date.now(),
+        details:error instanceof DevControlError?error.details:undefined,
+        action:'Inspect the recorded frozen and protected file differences before claim'}};
+    }
+    const previous=this.requireTask(String(writer.task_id));
+    if(previous.status==='verified'&&writer.expires_at<=Date.now())
+      return {claimableNow:true,writerBlocker:null};
+    return {claimableNow:false,writerBlocker:{
+      code:writer.expires_at>Date.now()?'LEASE_CONFLICT':'ABANDONED_TASK',
+      taskId:writer.task_id,previousStatus:previous.status,
+      writerExpired:writer.expires_at<=Date.now(),
+      frozenScope:JSON.parse(previous.allowed_paths),
+      overlaps:taskScopesOverlap(JSON.parse(previous.allowed_paths),
+        JSON.parse(task.allowed_paths)),
+      action:writer.expires_at>Date.now()?
+        'Finish or explicitly yield the existing task writer':
+        previous.status==='in_progress'?
+          'Review external worktree conflicts, then use park-expired-writer with the exact approved disjoint successor':
+          'Complete the existing review or recover only if actual source rework is required',
+    }};
   }
 
   /** Separate Git indexes cannot safely overlap an unverified task's
@@ -5998,6 +6463,8 @@ export class ProjectTaskLedger {
     return {
       projectRoot: this.root, nextTask: selected,
       activeLease,
+      selectedTaskWriterStatus:selected?
+        this.claimAvailability(this.requireTask(selected.id)):null,
       parkedReviews,
       reviewWriterCanYield:availableAfterReview.length>0,
       pendingAgentActions,
@@ -6260,7 +6727,8 @@ export class ProjectTaskLedger {
         fail('REVIEW_LEASE_ACTIVE',
           'This task already has a retained review lease; renew or finish its existing review instead of replacing the evidence token');
       const yielding=!!lease&&lease.task_id!==id&&
-        this.canYieldReviewWriter(lease,task);
+        (this.canYieldReviewWriter(lease,task)||
+          this.parkedWriterForClaim(lease,task));
       if (lease && lease.expires_at > Date.now() && !yielding) {
         fail("LEASE_CONFLICT", `Task ${lease.task_id} is already claimed by ${lease.agent}`);
       }
@@ -6322,12 +6790,14 @@ export class ProjectTaskLedger {
             .run(id,claimBase,JSON.stringify(files),utc());
         } // ambiguous in-scope dirty claims retain the original strict checker
       }else if(previousSnapshot.base_head!==claimBase&&
-        (JSON.parse(String(previousSnapshot.snapshot_json)) as unknown[]).length>0){
+        parseProtectedWorktreeSnapshot(previousSnapshot.snapshot_json,
+          'dc_task_worktree_baselines.snapshot_json').length>0){
         // After a legitimate new deferred delivery revision, its frozen Git
         // base may advance past the initial claim. Do not reject unchanged
         // Owner WIP simply because that audited revision advanced the base.
         // Require both ancestry and byte-identical prior protected worktree.
-        const previousFiles=JSON.parse(String(previousSnapshot.snapshot_json)) as unknown[];
+        const previousFiles=parseProtectedWorktreeSnapshot(
+          previousSnapshot.snapshot_json,'dc_task_worktree_baselines.snapshot_json');
         if(!run(this.root,'git',['merge-base','--is-ancestor',
           String(previousSnapshot.base_head),claimBase]).passed||
           JSON.stringify(previousFiles)!==JSON.stringify(preservedWorktreeSnapshot(this.root,
@@ -6350,11 +6820,31 @@ export class ProjectTaskLedger {
           (task_id,agent,token,base_head,expires_at,worktree_path)
           SELECT task_id,agent,token,base_head,expires_at,''
           FROM dc_leases WHERE task_id=?`).run(String(lease.task_id));
-        this.audit(String(lease.task_id),'review_writer_yielded',
+        this.audit(String(lease.task_id),
+          this.requireTask(String(lease.task_id)).status==='in_review'?
+            'review_writer_yielded':'parked_expired_writer_transferred',
           String(lease.agent),{
             nextTask:id,originalBaseHead:lease.base_head,
             writerLeaseRetainedForReview:true,originalTestEvidenceUnchanged:true,
           });
+      }
+      if(restoringParkedWork&&(yielding||!lease)){
+        const park=this.db.prepare(`SELECT task_id,successor_task_id FROM
+          dc_parked_writers WHERE task_id=? AND resumed_head IS NULL`)
+          .get(id);
+        const successor=park?this.requireTask(String(park.successor_task_id)):null;
+        if(park&&((lease&&park.successor_task_id===lease.task_id&&
+          successor?.status==='in_review')||
+          (!lease&&successor?.status==='verified'))){
+          this.db.prepare(`UPDATE dc_parked_writers
+            SET resumed_head=?,resumed_at=? WHERE task_id=? AND resumed_head IS NULL`)
+            .run(base,utc(),id);
+          this.audit(id,'original_parked_task_resumed',agent.trim(),{
+            successorTaskId:park.successor_task_id,resumedHead:base,
+            originalBaseHead:claimBase,originalEvidencePreserved:true,
+            writerReacquired:true,testsOrGatesPassed:false,
+          });
+        }
       }
       if(!this.linkedWorktree)this.db.prepare(`
         INSERT OR REPLACE INTO dc_leases(singleton,task_id,agent,token,base_head,expires_at)
@@ -7646,16 +8136,23 @@ export class ProjectTaskLedger {
     // SHA-256 snapshot: it would reject every unrelated untracked file, even
     // though complete() and defer-verification already protected their bytes.
     const preserved=JSON.parse(note.preserved_dirty_json??"[]") as Array<{path:string;sha256:string}>;
-    const preservedWorktree=JSON.parse(note.preserved_worktree_json??"[]") as
-      Array<{path:string;kind:string;sha256:string;size:number}>;
+    // Read-only normalization of one historical SQLite wrapper is necessary
+    // both at claim and at completion. A malformed or nonempty manifest can
+    // never be silently treated as an empty Owner snapshot.
+    const preservedWorktree=parseProtectedWorktreeSnapshot(
+      note.preserved_worktree_json??'[]',
+      'dc_completion_notes.preserved_worktree_json');
     const protectedEditsAreStable=():boolean=>{
       try{
         if(frozenReview&&this.hasReviewedDeferredWorktree(id,note.git_head,startHead))
           return true;
         if(preservedWorktree.length){
-          const current=preservedWorktreeSnapshot(this.root,JSON.parse(task.allowed_paths));
+          const allowed=JSON.parse(task.allowed_paths) as string[];
+          const current=preservedWorktreeSnapshot(this.root,allowed);
+          const expected=worktreeSnapshotWithLocalExemptions(
+            this.root,preservedWorktree,allowed);
           if(!frozenReview&&
-              JSON.stringify(current)!==JSON.stringify(preservedWorktree))
+              JSON.stringify(current)!==JSON.stringify(expected))
             return false;
         }else{
           this.checkPreservedOwnerEdits(task,preserved,lease.base_head);
@@ -7677,11 +8174,13 @@ export class ProjectTaskLedger {
     const incrementalBase=!frozenReview&&deferred&&
       note.revision>deferred.completion_revision?
       this.resumedDeliveryBase(id,String(lease.base_head),startHead):null;
-    const rawFiles = multiRepo?committedChanges(this.root,repositories):frozenReview ?
+    const parkedFiles=!multiRepo&&!frozenReview?
+      this.parkedDeliveryFiles(id,String(lease.base_head),String(note.git_head)):null;
+    const rawFiles = parkedFiles??(multiRepo?committedChanges(this.root,repositories):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head) :
       note.git_head!==startHead ?
         committedFilesBetween(this.root,incrementalBase??lease.base_head,String(note.git_head)):
-        changedFiles(this.root,incrementalBase??lease.base_head);
+        changedFiles(this.root,incrementalBase??lease.base_head));
     const files=this.deliveryTaskFiles(rawFiles,
       multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:incrementalBase??lease.base_head,
       multiRepo?note.git_head:note.git_head!==startHead?String(note.git_head):startHead);
@@ -7715,11 +8214,13 @@ export class ProjectTaskLedger {
       (contract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
     const denied = files.filter((f) =>
       !allowedPaths.some((p) => pathAllowed(f, p))||(exact&&!exact.includes(f)));
-    const added=multiRepo?committedChanges(this.root,repositories,'A'):frozenReview ?
+    const parkedAdded=!multiRepo&&!frozenReview?
+      this.parkedDeliveryFiles(id,String(lease.base_head),String(note.git_head),'A'):null;
+    const added=parkedAdded??(multiRepo?committedChanges(this.root,repositories,'A'):frozenReview ?
       committedFilesBetween(this.root,deferred.base_head,deferred.completion_head,"A") :
       note.git_head!==startHead ?
         committedFilesBetween(this.root,incrementalBase??lease.base_head,String(note.git_head),"A"):
-        addedFiles(this.root, incrementalBase??lease.base_head);
+        addedFiles(this.root, incrementalBase??lease.base_head));
     const unapprovedDocs = undocumentedMarkdown(added.filter(file=>files.includes(file)), allowedPaths);
     if ((!files.length&&!sqliteDelivery) || denied.length || unapprovedDocs.length) {
       return {

@@ -90,13 +90,14 @@ export async function runV5DevControlTool(args: unknown): Promise<RegisteredTool
     };
   } catch (error) {
     return failure(error instanceof DevControlError ? error.code : 'DEVCONTROL_ERROR',
-      error instanceof Error ? error.message : String(error));
+      error instanceof Error ? error.message : String(error),
+      error instanceof DevControlError ? error.details : undefined);
   } finally {
     ledger?.close();
   }
 }
 
-function failure(code: string, message: string): RegisteredToolResult {
-  const result = { ok: false, code, message };
+function failure(code: string, message: string, details?:Record<string,any>): RegisteredToolResult {
+  const result = { ok: false, code, message, ...(details?{details}:{}) };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result };
 }

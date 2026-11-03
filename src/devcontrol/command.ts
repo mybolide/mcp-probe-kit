@@ -228,6 +228,19 @@ export function dispatchDevControl(
     case "renew": return ledger.renew(
       String(input.id), String(input.leaseToken), Number(input.ttlSeconds ?? 1800),
     );
+    case "review-recovery-worktree": return ledger.reviewRecoveryWorktree(
+      String(input.id??''),{
+        actor:String(input.actor??''),reason:String(input.reason??''),
+        explicitAuthorization:input.explicitAuthorization===true,
+        sourceTaskId:String(input.sourceTaskId??''),
+        reviewedPaths:input.reviewedPaths as string[],
+      });
+    case "park-expired-writer": return ledger.parkExpiredWriter(
+      String(input.id??''),{
+        actor:String(input.actor??''),reason:String(input.reason??''),
+        explicitAuthorization:input.explicitAuthorization===true,
+        nextTaskId:String(input.nextTaskId??''),
+      });
     case "rebind-legacy-evidence": return ledger.rebindLegacyEvidence({
       id:String(input.id??''),leaseToken:String(input.leaseToken??''),
       actor:String(input.actor??''),reason:String(input.reason??''),
