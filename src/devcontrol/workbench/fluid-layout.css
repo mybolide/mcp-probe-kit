@@ -508,20 +508,13 @@ button.insight-row:hover{background:#f0f7ff;border-color:#9fc4ed}
   outline:3px solid #80b5ed;outline-offset:2px}
 .mobile-nav-more{display:none}
 .workbench-modal-open{overflow:hidden}
-.task-attention-filters{display:flex;align-items:center;flex-wrap:wrap;gap:8px;
-  margin:0 0 15px}
-.task-attention-filters button{border:1px solid #d6e4f2;background:#fff;
-  color:#3e6185;padding:9px 13px;border-radius:10px;
-  font-size:13px;font-weight:640;min-height:38px;cursor:pointer}
-.task-attention-filters button:hover{background:#eff6fe}
-.task-attention-filters button[aria-pressed="true"]{color:#0956a4;
-  background:#e9f3ff;border-color:#a7c9f1;font-weight:740}
-.task-attention-filters button:focus-visible,.task-show-more:focus-visible{
+.task-show-more:focus-visible{
   outline:3px solid #8bbaf0;outline-offset:2px}
-.task-extra-filters-toggle,#task-attention-mobile{display:none}
+.task-extra-filters-toggle{display:none}
 .task-show-more{display:block;width:100%;margin:13px 0 0;min-height:46px;
   border:1px solid #c9def4;border-radius:11px;color:#1f68ac;
   background:#fff;font-size:13px;font-weight:680;cursor:pointer}
+.task-show-more[hidden]{display:none!important}
 .task-show-more:hover{background:#f0f7ff}
 .task-tools-jump{border:0;background:transparent;color:#1b67ab;
   font-size:12px;font-weight:680;cursor:pointer;padding:6px 0;
@@ -656,7 +649,7 @@ button.insight-row:hover{background:#f0f7ff;border-color:#9fc4ed}
 }
 
 /* Final interaction-layer overrides follow all older responsive contracts. */
-.task-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.task-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:620px){
   .sidebar .nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
     overflow:visible;gap:5px;padding:0}
@@ -684,12 +677,6 @@ button.insight-row:hover{background:#f0f7ff;border-color:#9fc4ed}
   .attention-context{padding:10px 12px;font-size:12px}
   .task-tabs button{font-size:11px;padding:8px 2px;min-height:42px;white-space:normal}
   .task-tabs .count{font-size:10px}
-  .task-attention-filters{gap:6px;margin-bottom:11px}
-  .task-attention-filters button{font-size:11px;min-height:34px;padding:7px 9px}
-  .task-attention-filters{display:none}
-  #task-attention-mobile{display:block;width:100%;margin:9px 0 13px;
-    min-height:42px;padding:9px 12px;border:1px solid #d6e4f2;
-    border-radius:10px;background:#fff;color:#2a5887;font-size:13px;font-weight:650}
   .issue-controls:has(#task-clear-filters){display:grid;
     grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:0}
   .issue-controls #task-search{grid-column:1/-1;min-width:0}

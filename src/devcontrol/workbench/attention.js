@@ -45,16 +45,15 @@
     openPlanTask(row);
   }
   function showTaskFocus(kind){
+    // Homepage signals are explanations, not another task-state taxonomy.
+    // Link directly to an EXISTING lifecycle tab; keep real task badges.
     if(!['all',...attentionOrder].includes(kind))return;
-    attentionFilter=kind;
+    const tab=['verification','active'].includes(kind)?'in_progress':'not_started';
     $('task-search').value='';
     $('task-stage-filter').value='';
     $('task-type-filter').value='';
-    attentionVisibleLimit=12;
-    setTaskTab('attention');
+    setTaskTab(tab);
     go('tasks');
-    // Re-run after routing so the on-screen filter and count agree.
-    renderTaskList();
   }
   function renderAttentionCenter(){
     if(!board){

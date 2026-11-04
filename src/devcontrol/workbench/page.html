@@ -45,7 +45,7 @@
         <button type="button" class="attention-metric" data-attention="planning"><span class="attention-metric-name">规划待确认</span><strong id="attention-planning-count">—</strong><small>尚未授权执行</small></button>
         <button type="button" class="attention-metric" data-attention="ready"><span class="attention-metric-name">可继续</span><strong id="attention-ready-count">—</strong><small>仍需按合同领取</small></button>
       </div>
-      <div class="attention-work"><div class="attention-work-head"><div><h2>优先查看的工作项</h2><p class="sub" id="attention-description">读取当前工作项…</p></div><button type="button" class="attention-all-link" id="attention-view-all">查看同类任务 <span aria-hidden="true">↗</span></button></div>
+      <div class="attention-work"><div class="attention-work-head"><div><h2>优先查看的工作项</h2><p class="sub" id="attention-description">读取当前工作项…</p></div><button type="button" class="attention-all-link" id="attention-view-all">查看待开发任务 <span aria-hidden="true">↗</span></button></div>
         <div id="attention-list" class="attention-list" aria-live="polite"><p class="sub">正在读取真实任务状态…</p></div>
       </div>
       <div class="attention-context"><span id="attention-idea-summary">正在核对待决策 Idea…</span><button type="button" data-go="requirements">查看想法与决策 <span aria-hidden="true">↗</span></button></div>
@@ -144,9 +144,8 @@
   <section id="view-tasks" class="view">
     <div class="sectionhead task-page-header"><div class="eyebrow">EXECUTION / TASKS</div><h1>任务管理</h1><p class="sub">先找到需要处理的工作项。未批准规划不能领取，任务 Verified 不等于产品发布。</p><button type="button" class="task-tools-jump" id="task-tools-jump">查看版本进度与质量检查 <span aria-hidden="true">↗</span></button></div>
     <div class="task-tabs" role="tablist" aria-label="任务状态">
-      <button type="button" role="tab" data-tasktab="attention" aria-selected="true" aria-controls="task-list-panel">需要关注 <span id="count-attention" class="count">0</span></button>
-      <button type="button" role="tab" data-tasktab="not_started" aria-selected="false" aria-controls="task-list-panel">未开始 <span id="count-not_started" class="count">0</span></button>
-      <button type="button" role="tab" data-tasktab="in_progress" aria-selected="false" aria-controls="task-list-panel">开发中 / 待验证 <span id="count-in_progress" class="count">0</span></button>
+      <button type="button" role="tab" data-tasktab="not_started" aria-selected="true" aria-controls="task-list-panel">待开发 <span id="count-not_started" class="count">0</span></button>
+      <button type="button" role="tab" data-tasktab="in_progress" aria-selected="false" aria-controls="task-list-panel">开发中 <span id="count-in_progress" class="count">0</span></button>
       <button type="button" role="tab" data-tasktab="completed" aria-selected="false" aria-controls="task-list-panel">已验证 <span id="count-completed" class="count">0</span></button>
     </div>
     <div id="task-list-panel" role="tabpanel" aria-label="当前状态的任务">
@@ -156,18 +155,6 @@
         <select id="task-type-filter" aria-label="按工作项类型筛选"><option value="">全部类型</option></select>
         <button type="button" class="task-filter-clear" id="task-clear-filters" hidden>清除筛选</button>
         <button type="button" class="task-extra-filters-toggle" id="task-extra-filters-toggle" aria-expanded="false" aria-controls="task-stage-filter task-type-filter">更多筛选 <span aria-hidden="true">⌄</span></button>
-      </div>
-      <select id="task-attention-mobile" aria-label="按关注类型筛选任务" hidden>
-        <option value="all">全部关注</option><option value="verification">待验收</option>
-        <option value="blocked">依赖受阻</option><option value="planning">规划待确认</option>
-        <option value="ready">可继续</option>
-      </select>
-      <div id="task-attention-filters" class="task-attention-filters" aria-label="需要关注的任务类型">
-        <button type="button" data-attention-filter="all" aria-pressed="true">全部关注</button>
-        <button type="button" data-attention-filter="verification" aria-pressed="false">待验收</button>
-        <button type="button" data-attention-filter="blocked" aria-pressed="false">依赖受阻</button>
-        <button type="button" data-attention-filter="planning" aria-pressed="false">规划待确认</button>
-        <button type="button" data-attention-filter="ready" aria-pressed="false">可继续</button>
       </div>
       <div class="task-results-header"><h2>工作项</h2><p class="issue-count" id="task-list-count">正在读取任务…</p></div>
       <div id="task-rows" class="simple-task-list" aria-live="polite"></div>

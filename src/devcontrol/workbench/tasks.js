@@ -231,8 +231,8 @@
     if(s==="verified")return ["已验证","done"];
     if(s==="in_progress")return ["开发中",""];
     if(s==="in_review")return ["等待验收",""];
-    if(s==="ready"||s==="draft")return ["未开始",""];
-    return ["未开始","blocked"];
+    if(s==="ready"||s==="draft")return ["待开发",""];
+    return ["待开发","blocked"];
   }
   function taskBucket(row){
     if(row.status==="cancelled")return null;
@@ -349,21 +349,18 @@
     }
   }
   function setTaskTab(tab){
-    if(!["attention","not_started","in_progress","completed"].includes(tab))return;
+    if(!["not_started","in_progress","completed"].includes(tab))return;
     taskTab=tab;
     for(const b of document.querySelectorAll("[data-tasktab]"))
       b.setAttribute("aria-selected",String(b.dataset.tasktab===tab));
-    $('task-attention-filters').hidden=tab!=='attention';
-    $('task-attention-mobile').hidden=tab!=='attention';
-    attentionVisibleLimit=12;
+    taskVisibleLimit=12;
     renderTaskList();
   }
   function clearTaskFilters(){
     $("task-search").value="";
     $("task-stage-filter").value="";
     $("task-type-filter").value="";
-    attentionFilter='all';
-    attentionVisibleLimit=12;
+    taskVisibleLimit=12;
     renderTaskList();
     $("task-search").focus();
   }
@@ -801,10 +798,6 @@
             row.current.pendingVerification.reason):
           (item.blockingReason||item.remark||"");
         if(note)supporting.append(n("span",note,"task-card-note"));
-        if(taskTab==='attention'&&!note){
-          const kind=taskAttentionKind(row);
-          if(kind)supporting.append(n('span',taskAttentionReason(row),'task-card-note'));
-        }
         const side=n("span",null,"task-card-side");
         side.append(chips,owner,n("span","查看详情","task-card-detail"));
         button.append(leading,side,supporting);
@@ -830,39 +823,14 @@
     for(const bucket of ["not_started","in_progress","completed"]){
       $("count-"+bucket).textContent=String(rows.filter(row=>taskBucket(row)===bucket).length);
     }
-    const counts=attentionCounts(rows);
-    $('count-attention').textContent=String(Object.values(counts).reduce((a,b)=>a+b,0));
-    for(const b of document.querySelectorAll('[data-attention-filter]')){
-      const kind=b.dataset.attentionFilter;
-      const name=kind==='all'?'全部关注':attentionLabels[kind]||'关注';
-      const count=kind==='all'?Object.values(counts).reduce((a,b)=>a+b,0):counts[kind]||0;
-      b.textContent=name+' '+count;
-      b.setAttribute('aria-pressed',String(kind===attentionFilter));
-    }
-    $('task-attention-filters').hidden=taskTab!=='attention';
-    $('task-attention-mobile').hidden=taskTab!=='attention';
-    const mobileSelect=$('task-attention-mobile');
-    for(const option of mobileSelect.options){
-      const kind=option.value;
-      option.textContent=(kind==='all'?'全部关注':attentionLabels[kind]||'关注')+' '+
-        (kind==='all'?Object.values(counts).reduce((a,b)=>a+b,0):counts[kind]||0);
-    }
-    mobileSelect.value=attentionFilter;
     const search=$("task-search").value.trim().toLowerCase();
-    const hasFilters=!!(search||$("task-stage-filter").value||$("task-type-filter").value||
-      (taskTab==='attention'&&attentionFilter!=='all'));
+    const hasFilters=!!(search||$("task-stage-filter").value||$("task-type-filter").value);
     $("task-clear-filters").hidden=!hasFilters;
-    const currentBucket=rows.filter(row=>search?true:taskTab==='attention'?
-      !!taskAttentionKind(row)&&(attentionFilter==='all'||
-        taskAttentionKind(row)===attentionFilter):taskBucket(row)===taskTab).length;
+    const currentBucket=rows.filter(row=>!!search||taskBucket(row)===taskTab).length;
     const filtered=rows.filter(row=>{
       // Searching a task ID is a project-wide lookup. Never silently hide a
       // Verified or blocked task only because a previous status tab is active.
-      if(search){/* Match against every release state below. */}
-      else if(taskTab==='attention'){
-        const kind=taskAttentionKind(row);
-        if(!kind||(attentionFilter!=='all'&&kind!==attentionFilter))return false;
-      }else if(taskBucket(row)!==taskTab)return false;
+      if(!search&&taskBucket(row)!==taskTab)return false;
       const data=row.item;
       if($("task-stage-filter").value&&(data.stageId||row.phase)!==$(
         "task-stage-filter").value)return false;
@@ -871,13 +839,8 @@
         data.platform,data.owner,data.remark,data.blockingReason,
         (data.negativeCases||[]).join(" "),(data.deliverables||[]).join(" ")].join(" ").toLowerCase().includes(search);
     });
-    if(taskTab==='attention'&&!search)filtered.sort((a,b)=>
-      (attentionOrder.indexOf(taskAttentionKind(a))-
-       attentionOrder.indexOf(taskAttentionKind(b)))||
-      (a.item.id||'').localeCompare(b.item.id||'',undefined,{numeric:true}));
-    const visible=taskTab==='attention'&&!search&&filtered.length>attentionVisibleLimit?
-      filtered.slice(0,attentionVisibleLimit):filtered;
-    $('task-show-more').hidden=!(taskTab==='attention'&&!search&&filtered.length>visible.length);
+    const visible=filtered.slice(0,taskVisibleLimit);
+    $('task-show-more').hidden=filtered.length<=visible.length;
     $('task-show-more').textContent='再显示 '+Math.min(12,filtered.length-visible.length)+
       ' 项（剩余 '+(filtered.length-visible.length)+' 项）';
     const emptyState=()=>{
@@ -885,7 +848,7 @@
       host.append(n("strong",hasFilters?"没有匹配的工作项":
         taskTab==="completed"?"当前阶段暂无已验证任务":
         taskTab==="in_progress"?"当前没有开发中或待验证任务":
-        "当前阶段暂无未开始任务"));
+        "当前阶段暂无待开发任务"));
       host.append(n("p",hasFilters?
         "可清除搜索关键词或筛选条件，再查看当前状态下的工作项。":
         "可以切换上方任务状态，查看其他任务。正式任务数据以项目 SQLite 为准。"));

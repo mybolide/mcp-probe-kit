@@ -116,7 +116,13 @@ describe('v5 lightweight single-project workbench', () => {
     expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(73_000);
     expect(html).toContain('id="attention-center"');
     expect(html).toContain('id="attention-list"');
-    expect(html).toContain('data-tasktab="attention"');
+    expect(html).not.toContain('data-tasktab="attention"');
+    expect(html).not.toContain('id="task-attention-filters"');
+    expect(html).not.toContain('id="task-attention-mobile"');
+    expect(html).not.toContain('count-attention');
+    expect(html).toContain('data-tasktab="not_started" aria-selected="true"');
+    expect(html).toContain('data-tasktab="in_progress"');
+    expect(html).toContain('data-tasktab="completed"');
     expect(html).toContain('id="mobile-nav-more"');
     expect(html).toContain('id="task-show-more"');
     expect(html).toContain('function showTaskFocus(kind)');

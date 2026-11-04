@@ -1,4 +1,4 @@
-  let project=null,board=null,features=[],featureTaskPlans=[],releaseWorkPlan=null,onboarding=null,releasePlan=null,localGit=null,insights=null,taskTab="attention",attentionFilter="all",attentionVisibleLimit=12,reviewExpanded=false;
+  let project=null,board=null,features=[],featureTaskPlans=[],releaseWorkPlan=null,onboarding=null,releasePlan=null,localGit=null,insights=null,taskTab="not_started",taskVisibleLimit=12,reviewExpanded=false;
   const developerHint=()=>localGit?.name?
     localGit.name+" · "+(localGit.device||"") :
     (locale==="en"?"Git developer unavailable":"未识别本机 Git 开发身份");

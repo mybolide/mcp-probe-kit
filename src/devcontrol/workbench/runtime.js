@@ -169,17 +169,6 @@
   for(const b of document.querySelectorAll('[data-attention]'))
     b.addEventListener('click',()=>showTaskFocus(b.dataset.attention));
   $("attention-view-all").addEventListener('click',()=>showTaskFocus('all'));
-  for(const b of document.querySelectorAll('[data-attention-filter]'))
-    b.addEventListener('click',()=>{
-      attentionFilter=b.dataset.attentionFilter;
-      attentionVisibleLimit=12;
-      renderTaskList();
-    });
-  $("task-attention-mobile").addEventListener('change',()=>{
-    attentionFilter=$("task-attention-mobile").value;
-    attentionVisibleLimit=12;
-    renderTaskList();
-  });
   $("task-extra-filters-toggle").addEventListener('click',()=>{
     const expanded=$("task-extra-filters-toggle").getAttribute('aria-expanded')!=='true';
     $("task-extra-filters-toggle").setAttribute('aria-expanded',String(expanded));
@@ -187,7 +176,7 @@
     $("view-tasks").classList.toggle('task-advanced-filters-open',expanded);
   });
   $("task-show-more").addEventListener('click',()=>{
-    attentionVisibleLimit+=12;
+    taskVisibleLimit+=12;
     renderTaskList();
   });
   $("task-tools-jump").addEventListener('click',()=>{

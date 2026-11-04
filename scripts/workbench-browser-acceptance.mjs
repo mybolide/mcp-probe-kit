@@ -117,6 +117,15 @@ try {
    if(view==='tasks'){
      v.hasTaskTitle=await evalJS('document.querySelector("#view-tasks h1")?.textContent.trim()==="任务管理"');
      v.taskFilterReady=await evalJS('!!document.getElementById("task-clear-filters")&&!!document.getElementById("task-stage-filter")');
+     v.lifecycleTabs=await evalJS(`(()=>{
+       const tabs=[...document.querySelectorAll('#view-tasks [data-tasktab]')];
+       const names=tabs.map(b=>b.dataset.tasktab);
+       const selected=tabs.filter(b=>b.getAttribute('aria-selected')==='true');
+       return {names,selected:selected.map(b=>b.dataset.tasktab),
+         noAttentionControls:!document.getElementById('task-attention-filters')&&
+           !document.getElementById('task-attention-mobile')&&
+           !document.querySelector('[data-tasktab="attention"]')};
+     })()`);
      if(width===1500){
        v.searchResetWorks=await evalJS(`(()=>{
          const search=document.getElementById('task-search');
@@ -170,19 +179,18 @@ try {
     }
     const homeAction=await evalJS(`(()=>{
       document.querySelector('[data-attention="verification"]')?.click();
-      return {hash:location.hash,selected:document.querySelector('[data-tasktab="attention"]')?.getAttribute('aria-selected'),
-        filter:document.querySelector('[data-attention-filter="verification"]')?.getAttribute('aria-pressed'),
+      return {hash:location.hash,selected:document.querySelector('[data-tasktab="in_progress"]')?.getAttribute('aria-selected'),
         tasks:document.querySelectorAll('#task-rows .task-card').length};
     })()`);
     journeys.push({width,scenario:'home-to-verification',
       passed:homeAction.hash==='#tasks'&&homeAction.selected==='true'&&
-        homeAction.filter==='true'&&homeAction.tasks>0,details:homeAction});
+        homeAction.tasks>0,details:homeAction});
     const searchAction=await evalJS(`(()=>{
       const selected=document.querySelector('[data-tasktab="completed"]');
       selected?.click();
       const task=document.querySelector('#task-rows .task-card');
       const id=task?.getAttribute('aria-label')?.split(' ')[0];
-      document.querySelector('[data-tasktab="attention"]')?.click();
+      document.querySelector('[data-tasktab="not_started"]')?.click();
       const search=document.getElementById('task-search');
       search.value=id||'';search.dispatchEvent(new Event('input',{bubbles:true}));
       const found=[...document.querySelectorAll('#task-rows .task-card')]
@@ -213,6 +221,9 @@ try {
  }
  const failures=results.filter(v=>v.dataLoaded===false||v.insightsLoaded===false||v.reviewLoaded===false||!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3||v.navItems!==8
  ||!v.githubLinkValid||(v.view==='overview'&&!v.heroReady)||v.searchResetWorks===false
+ ||(v.view==='tasks'&&(
+   v.lifecycleTabs?.names.join(',')!=='not_started,in_progress,completed'||
+   v.lifecycleTabs?.selected.length!==1||!v.lifecycleTabs?.noAttentionControls))
  ||v.mainRight<v.width-3 ||(v.view==='overview'&&!v.hasPlanning)
  ||(v.view==='architecture'&&!v.hasArchChanges)
  ||(v.view==='tasks'&&(!v.hasTaskTitle||!v.taskFilterReady))
