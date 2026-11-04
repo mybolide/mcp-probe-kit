@@ -316,6 +316,22 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    dependencies or original history and is not executable before approval.
    Withdraw stale proposals with task-spec-supplement-withdraw. Material
    scope or acceptance changes require the usual reviewed release amendment.
+   Feature decision inbox is a LIGHTWEIGHT user confirmation, separate from
+   claimed engineering decision-save. Use decision-request-save to attach a
+   specific question, background, recommended and alternative choices to a
+   real Feature revision and optionally affected task IDs. The UI displays
+   it inside Requirements, not as a new task state or workflow Gate. The user
+   chooses an option, not doing it or defer, via decision-request-respond in
+   the UI (or MCP), with a name and optional rationale. Agent reads the result
+   through decision-request-list/get, then updates the original Feature and
+   reuses EXISTING feature validation/review/proposal/approval. A user answer
+   NEVER edits openQuestions, task source, status or Gate. When the Feature or
+   planned-task source has changed, an old question cannot be answered until
+   the Agent republishes it with the next question revision. Repeated retries
+   use the SAME idempotencyKey and cannot create duplicate decisions. Web
+   access is limited to same-origin trusted private LAN with CSRF and
+   self-declared actor (not strong identity verification). Do not misrepresent
+   the LAN actor as externally authenticated or add a new Owner key/reviewer.
    Human and AI task content are now two independently versioned SQLite
    documents for ONE existing task, NOT two ledgers. Use task-content-get
    to read the current reviewed human overview, AI execution brief, their
@@ -473,6 +489,7 @@ ${managedRevision}
 - **人读概览与 AI 执行内容分开保存**：同一个 SQLite Task 下，\`task-content-get\` 查看已审查的人读版本 H 与 AI 版本 E，均绑定原冻结计划 Hash，状态、依赖、审批、Gate 和真实证据仍来自同一正式台账。\`task-content-stage\` 按 audience=human/ai 分别提交 why/work/effects/scenarios/businessAcceptance/exclusions 与 context/prerequisites/inputs/outputs/invariants/steps/failureRecovery/tests/evidence/stopConditions，必须指定实际来源 Hash、原版本和具体原因。\`task-content-check\` 与 \`task-content-review\` 对每项业务承诺和不做的事核实对应 AI 规则、步骤或测试，并明确核对没有遗漏及额外范围。实质版本组合由 Owner 通过 \`task-content-approve\` 以精确双内容 Hash、审查 Hash 和 explicitAuthorization:true 确认；纯人读措辞修订可由有具体依据的同一 Reviewer 复核且声明语义不变，不重走整套 Owner 批准。用 \`task-content-withdraw\` 撤回未批准草案。不得用新文字绕开原冻结验收条件、文件范围或 Gate；实质业务变化回正式范围审批。历史任务未独立记录就明确显示缺失，\`acceptance\` 只能作为正式验收标准，不能拆句冒充业务目标；不能自动改写执行中或已 Verified 记录。
 - **冻结变更与架构评审**：不强制第三名审核人。范围变更使用 \`release-work-scope-self-review\`，新增任务使用 \`release-work-incremental-self-review\`，受控工件使用 \`artifact-self-review\`，并提交真实来源、范围、依赖和安全测试审查。独立复审按风险选用。涉及冻结范围或受控工件变更时，仍须 Owner 明确批准精确 proposalHash/reviewHash，未批准不得执行。
 - **变更评估**：新想法依次使用 \`idea-capture\` / \`idea-assess\` / \`idea-self-review\` / \`idea-decide\` 进行真实自审与决策，\`idea-review\` 保留为可选独立复审；不得擅自修改冻结范围、架构与依赖；重大改变由 Owner 明确批准。
+- **Feature 待确认决策（轻量版）**：普通产品、后端或 SDK 待确认事项不必领取 \`decision-save\` 研发任务。Agent 使用 \`decision-request-save\` 绑定真实 Feature 修订、具体问题、背景、选项、关联任务；用户在需求管理工作台选择方案、不做或延期，\`decision-request-respond\` 写入带 actor、问题版本、Feature 哈希、幂等键和时间的 SQLite 审计。\`decision-request-list\` / \`decision-request-get\` 让 Agent 读取确认结果，\`decision-request-withdraw\` 仅撤回当前未回答问题。Feature 或规划来源有变化时旧题目不允许确认，需更新问题版本。**确认不会自动修改 openQuestions、冻结合同或任务状态，也不增加新的 Gate**；Agent 按原有 Feature 修改和评审流程继续。局域网同源请求使用 CSRF 与私有 LAN 限制，确认人姓名为自行填写，不宣称是真实账户认证。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
 - **会话结束**：\`history_session_checkpoint\` 记录用户原话、发现、决策、改动、真实测试、分支/租约、阻碍及下一步。保留用户未提交修改，真机/真实数据库 Gate 缺失就报告未通过。
 - MCP 工具不可见时可用本地已锁版本 \`probe exec devcontrol --stdin\` 或 \`probe devcontrol ...\`；v5 未发布，禁止自动退回 v4 npm 或发布 5.0.0。
@@ -680,6 +697,17 @@ ${managedRevision}
 - New ideas use idea-capture, idea-assess, the current AI's idea-self-review
   and exact Owner idea-decide for material changes. Another Agent is not
   required, and frozen scope must not expand without authorization.
+- Ordinary product/backend/SDK questions use the lightweight Feature decision
+  inbox, NOT a claimed decision-save engineering task. The Agent creates or
+  revises a real source-versioned question with decision-request-save, reads
+  it through decision-request-list and decision-request-get, and may withdraw a still-pending
+  question with decision-request-withdraw. Users choose one listed option,
+  not-doing or defer in Requirements; decision-request-respond records the
+  exact question revision and source Feature/plan hashes, an idempotency key,
+  timestamp and self-declared actor. It NEVER changes openQuestions, task
+  creation/get/completion, frozen scope, approvals or Gates. Stale questions
+  require a new revision; the Agent then follows the EXISTING Feature
+  revision and review/proposal workflow, without adding another Gate.
 - No v4 file-backed Specs, start_* workflows, plan_heartbeat, resume_plan,
   converge or Markdown History. Old archives are read-imported only.
 - On every new session call history_session_bootstrap and before handoff call

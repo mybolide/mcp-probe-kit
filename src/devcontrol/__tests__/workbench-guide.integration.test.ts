@@ -100,7 +100,8 @@ describe('DevControl v5 browser guide and settings API',()=>{
       const guide=await listing.json() as {hasSideEffects:boolean;intents:Array<{intent:string}>};
       expect(guide.hasSideEffects).toBe(false);
       expect(guide.intents.map(row=>row.intent)).toEqual([
-        'start','content','database','feature','planning','task','verification','bug','idea','scope','architecture',
+        'start','content','database','feature','planning','task','verification','bug','idea',
+        'decisionRequest','scope','architecture',
       ]);
       const selected=await fetch(base+'/api/guide?intent=feature');
       expect((await selected.json()) as object).toMatchObject({
@@ -119,7 +120,7 @@ describe('DevControl v5 browser guide and settings API',()=>{
       expect(meta.schema).toBe('devcontrol-project-workspace');
       expect(meta.product).toBe('mcp-probe-kit');
       expect(meta.version).toBe(VERSION);
-      expect(meta.workspaceSchemaVersion).toBe('0.11.0');
+      expect(meta.workspaceSchemaVersion).toBe('0.12.0');
       const access=await (await fetch(base+'/api/access')).json() as {
         lanEnabled:boolean;canManageSettings:boolean;
       };

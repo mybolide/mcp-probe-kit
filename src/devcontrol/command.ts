@@ -217,6 +217,12 @@ export function dispatchDevControl(
         consequences:input.consequences,verificationPlan:input.verificationPlan,
         status:input.status,expectedRevision:input.expectedRevision,
       });
+    case 'decision-request-save':return ledger.saveDecisionRequest(input as never);
+    case 'decision-request-list':return ledger.listDecisionRequests({
+      featureName:input.featureName,status:input.status});
+    case 'decision-request-get':return ledger.getDecisionRequest(String(input.id));
+    case 'decision-request-respond':return ledger.respondDecisionRequest(input as never);
+    case 'decision-request-withdraw':return ledger.withdrawDecisionRequest(input as never);
     case "hook-status": return { ...workspaceHookStatus(ledger.root) };
     case "hook-install": return { ...installWorkspaceHooks(ledger.root, path.resolve(process.argv[1]??"")) };
     case "create": return ledger.create(input as CreateWorkItem, String(input.actor ?? "agent-proposal"));

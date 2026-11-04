@@ -1,4 +1,5 @@
-/** Local read-only DevControl Kanban. The board is a projection of SQLite. */
+/** DevControl workbench. Task/approval data stays read-only; only isolated
+ * Feature decision answers have a deliberately narrow, audited POST. */
 import http, { type ServerResponse } from "node:http";
 import { randomBytes } from "node:crypto";
 import { VERSION } from "../version.js";
@@ -23,7 +24,7 @@ import {
 
 // Bump when transport behavior changes so MCP never reuses an older process
 // that still presents a now-obsolete login screen.
-export const WORKSPACE_SCHEMA_VERSION = "0.11.0";
+export const WORKSPACE_SCHEMA_VERSION = "0.12.0";
 
 interface BoardServerOptions {
   lanEnabled?: boolean;
@@ -54,6 +55,7 @@ export function createDevControlBoardServer(
   const config = workspaceAccess(ledger.root);
   const lanEnabled = options.lanEnabled ?? config.lanEnabled;
   const settingsToken = randomBytes(32).toString("hex");
+  const decisionToken = randomBytes(32).toString('hex');
   const server = http.createServer((req, res) => {
     // LAN disable revokes remote access immediately, without a restart.
     const live = options.lanEnabled === undefined ? workspaceAccess(ledger.root) : null;
@@ -104,6 +106,47 @@ export function createDevControlBoardServer(
       });
       return;
     }
+    if(/^\/api\/decision-requests\/DR-[A-Z0-9-]{2,64}\/answer$/.test(route)&&
+      req.method==='POST'){
+      const origin=String(req.headers.origin??'');
+      const host=String(req.headers.host??'');
+      const type=String(req.headers['content-type']??'').split(';')[0].trim().toLowerCase();
+      // The workbench's existing private-LAN trust boundary is the only
+      // authorisation for this LOW-IMPACT operation. Actor is user-declared,
+      // not authenticated. No other write APIs are exposed to LAN clients.
+      if(origin!==`http://${host}`||type!=='application/json'||
+        req.headers['x-mcp-decision-token']!==decisionToken||
+        (req.headers['sec-fetch-site']&&req.headers['sec-fetch-site']!=='same-origin')){
+        respond(res,403,'Decision confirmation requires trusted same-origin access');
+        return;
+      }
+      let raw='',tooLarge=false;
+      req.on('data',(chunk:Buffer)=>{
+        if(tooLarge)return;
+        raw+=chunk.toString('utf8');
+        if(raw.length>12_000)tooLarge=true;
+      });
+      req.on('end',()=>{
+        if(tooLarge){respond(res,413,'Decision request too large');return;}
+        try{
+          const id=route.split('/')[3];
+          const body=JSON.parse(raw) as Record<string,any>;
+          const saved=ledger.respondDecisionRequest({
+            id,expectedRevision:body.expectedRevision,kind:body.kind,
+            optionId:body.optionId,rationale:body.rationale,deferTo:body.deferTo,
+            actor:body.actor,idempotencyKey:body.idempotencyKey,
+            clientAddress:String(req.socket.remoteAddress??''),
+          });
+          respond(res,200,JSON.stringify(saved),nonce,'application/json; charset=utf-8');
+        }catch(error){
+          const code=error instanceof DevControlError?error.code:'DECISION_REQUEST_INVALID';
+          const status=/STALE|ALREADY_ANSWERED|IDEMPOTENCY/.test(code)?409:400;
+          respond(res,status,JSON.stringify({code,message: error instanceof DevControlError?
+            error.message:'Invalid decision request'}),nonce,'application/json; charset=utf-8');
+        }
+      });
+      return;
+    }
     if (req.method !== "GET") {
       respond(res, 405, "Read-only board");
       return;
@@ -134,6 +177,20 @@ export function createDevControlBoardServer(
           'application/json; charset=utf-8');
       } else if (route === '/api/insights') {
         respond(res,200,JSON.stringify(workbenchInsights(ledger)),nonce,
+          'application/json; charset=utf-8');
+      } else if (route === '/api/decision-requests') {
+        const query=new URL(req.url??'/', 'http://localhost').searchParams;
+        respond(res,200,JSON.stringify(ledger.listDecisionRequests({
+          featureName:query.get('feature')??undefined,
+          status:query.get('status')??undefined,
+        })),nonce,'application/json; charset=utf-8');
+      } else if (route === '/api/decision-requests/access') {
+        respond(res,200,JSON.stringify({canRespond:true,
+          csrfToken:decisionToken,actorMethod:'self-declared-trusted-private-LAN',
+          taskApprovalUnchanged:true}),nonce,'application/json; charset=utf-8');
+      } else if (/^\/api\/decision-requests\/DR-[A-Z0-9-]{2,64}$/.test(route)) {
+        respond(res,200,JSON.stringify(ledger.getDecisionRequest(
+          route.slice('/api/decision-requests/'.length))),nonce,
           'application/json; charset=utf-8');
       } else if (route === '/api/architecture/database') {
         respond(res,200,JSON.stringify({

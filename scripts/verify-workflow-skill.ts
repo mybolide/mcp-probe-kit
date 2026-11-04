@@ -64,6 +64,10 @@ for(const [name,source] of guidance){
       source.includes(action))||
     !(source.includes('acceptance')&&source.includes('human')))
     errors.push(name+' omits separately versioned human/AI contents or their consistency review');
+  if(!['decision-request-save','decision-request-list','decision-request-get',
+    'decision-request-respond','decision-request-withdraw'].every(action=>
+    source.includes(action)))
+    errors.push(name+' omits lightweight Feature decision confirmation workflow');
   if(!source.includes('release-work-scope-self-review')||
     !source.includes('release-work-incremental-self-review')||
     !source.includes('artifact-self-review')||!source.includes('idea-self-review'))

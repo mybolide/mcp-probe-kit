@@ -1619,6 +1619,33 @@ export class ProjectTaskLedger {
         created_at TEXT NOT NULL,
         PRIMARY KEY(name,revision)
       );
+      -- Small product decision inbox attached to existing Features. It is
+      -- NOT a second task lifecycle, approval or unlock mechanism.
+      CREATE TABLE IF NOT EXISTS dc_decision_requests (
+        id TEXT PRIMARY KEY,
+        feature_name TEXT NOT NULL REFERENCES dc_features(name),
+        question_revision INTEGER NOT NULL,
+        feature_revision INTEGER NOT NULL,
+        feature_hash TEXT NOT NULL,
+        plan_hash TEXT,
+        question_json TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN
+          ('pending','decided','rejected','deferred','superseded','withdrawn')),
+        decision_json TEXT,
+        created_by TEXT NOT NULL,created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_decision_request_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        request_id TEXT NOT NULL REFERENCES dc_decision_requests(id),
+        question_revision INTEGER NOT NULL,
+        kind TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        event_json TEXT NOT NULL,
+        idempotency_key TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(request_id,idempotency_key)
+      );
       CREATE TABLE IF NOT EXISTS dc_feature_task_proposals (
         feature_name TEXT PRIMARY KEY REFERENCES dc_features(name),
         revision INTEGER NOT NULL, hash TEXT NOT NULL,
@@ -2624,6 +2651,217 @@ export class ProjectTaskLedger {
     }:null,history:this.db.prepare(
       "SELECT revision,snapshot_json,created_at FROM dc_task_decision_revisions WHERE task_id=? ORDER BY revision"
     ).all(id).map(row=>({...row,snapshot:JSON.parse(row.snapshot_json),snapshot_json:undefined}))};
+  }
+
+  /** Product/technical choices awaiting a human answer. These methods never
+   * update dc_tasks, feature plans, openQuestions, approvals or leases. */
+  private decisionRequestRow(row:Row,includeHistory=false):Row {
+    const question=JSON.parse(String(row.question_json));
+    const decision=row.decision_json?JSON.parse(String(row.decision_json)):null;
+    const current=this.featureBinding(String(row.feature_name));
+    const plan=this.featureTaskPlan(String(row.feature_name));
+    const currentPlanHash=plan.proposalHash??plan.frozen?.hash??null;
+    const stale=current.revision!==row.feature_revision||
+      current.hash!==row.feature_hash||currentPlanHash!==(row.plan_hash??null);
+    return {id:row.id,featureName:row.feature_name,
+      questionRevision:row.question_revision,featureRevision:row.feature_revision,
+      featureHash:row.feature_hash,planHash:row.plan_hash??null,
+      ...question,status:row.status,decision,stale,createdBy:row.created_by,
+      createdAt:row.created_at,updatedAt:row.updated_at,
+      blocksPlanningOnly:question.blocking===true,
+      taskApprovalUnchanged:true,
+      ...(includeHistory?{history:this.db.prepare(`SELECT question_revision,kind,actor,
+        event_json,created_at FROM dc_decision_request_events WHERE request_id=?
+        ORDER BY id`).all(row.id).map(item=>({revision:item.question_revision,
+          event:item.kind,actor:item.actor,at:item.created_at,
+          ...JSON.parse(String(item.event_json))}))}:{}),
+    };
+  }
+
+  listDecisionRequests(input:{featureName?:string;status?:string}={}):Row {
+    let rows=this.db.prepare(`SELECT * FROM dc_decision_requests
+      ORDER BY CASE WHEN status='pending' THEN 0 ELSE 1 END, updated_at DESC,id`).all();
+    if(input.featureName)rows=rows.filter(row=>row.feature_name===input.featureName);
+    if(input.status)rows=rows.filter(row=>row.status===input.status);
+    return {requests:rows.map(row=>this.decisionRequestRow(row)),
+      total:rows.length};
+  }
+
+  getDecisionRequest(id:string):Row {
+    const row=this.db.prepare('SELECT * FROM dc_decision_requests WHERE id=?').get(id);
+    if(!row)fail('DECISION_REQUEST_NOT_FOUND','Unknown pending decision '+id);
+    return this.decisionRequestRow(row,true);
+  }
+
+  saveDecisionRequest(input:{id?:string;featureName:string;title:string;
+    question:string;background:string;recommendedOption?:string|null;
+    options:Array<{id:string;label:string;description:string}>;
+    blocking?:boolean;taskIds?:string[];sourceRefs?:string[];
+    ownerRole?:string;actor:string;expectedRevision?:number}):Row {
+    if(!input||typeof input.featureName!=='string'||
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.featureName))
+      fail('DECISION_REQUEST_INPUT','Existing Feature name is required');
+    const actor=String(input.actor??'').trim();
+    if(actor.length<2||actor.length>100)fail('DECISION_REQUEST_ACTOR','Identify the proposing Agent');
+    for(const value of [input.title,input.question,input.background]){
+      if(typeof value!=='string'||value.trim().length<8||value.length>3000)
+        fail('DECISION_REQUEST_INPUT','Write a specific title, question and context');
+    }
+    const options=input.options;
+    if(!Array.isArray(options)||options.length<1||options.length>8||
+      options.some(option=>!option||typeof option.id!=='string'||
+        !/^[A-Za-z0-9_-]{1,30}$/.test(option.id)||
+        typeof option.label!=='string'||!option.label.trim()||option.label.length>100||
+        typeof option.description!=='string'||option.description.length>1500)||
+      new Set(options.map(option=>option.id)).size!==options.length)
+      fail('DECISION_REQUEST_OPTIONS','Supply unique, concrete option IDs and labels');
+    if(input.recommendedOption&&
+      !options.some(option=>option.id===input.recommendedOption))
+      fail('DECISION_REQUEST_OPTIONS','Recommended option must be listed');
+    const taskIds=input.taskIds??[],sourceRefs=input.sourceRefs??[];
+    if(!Array.isArray(taskIds)||taskIds.length>40||taskIds.some(id=>
+      typeof id!=='string'||!/^[A-Z][A-Z0-9-]{1,39}$/.test(id))||
+      !Array.isArray(sourceRefs)||sourceRefs.length>20||sourceRefs.some(ref=>
+      typeof ref!=='string'||!ref.trim()||ref.length>500))
+      fail('DECISION_REQUEST_REFS','Invalid task identifiers or source references');
+    const question={title:input.title.trim(),question:input.question.trim(),
+      background:input.background.trim(),recommendedOption:input.recommendedOption??null,
+      options:options.map(item=>({id:item.id,label:item.label.trim(),
+        description:item.description.trim()})),blocking:input.blocking===true,
+      taskIds:[...new Set(taskIds)],sourceRefs,
+      ownerRole:['product','backend','sdk','architecture','other'].includes(input.ownerRole??'')?
+        input.ownerRole:'other'};
+    return this.inTransaction(()=>{
+      const feature=this.featureBinding(input.featureName);
+      const plan=this.featureTaskPlan(input.featureName);
+      const planHash=plan.proposalHash??plan.frozen?.hash??null;
+      const id=input.id??('DR-'+randomUUID().toUpperCase());
+      if(!/^DR-[A-Z0-9-]{2,64}$/.test(id))
+        fail('DECISION_REQUEST_ID','Invalid decision request ID');
+      const old=this.db.prepare('SELECT * FROM dc_decision_requests WHERE id=?').get(id);
+      if(old&&old.feature_name!==input.featureName)
+        fail('DECISION_REQUEST_FEATURE','Request cannot change its Feature owner');
+      const expected=input.expectedRevision??0;
+      if(!Number.isSafeInteger(expected)||expected!==Number(old?.question_revision??0))
+        fail('DECISION_REQUEST_STALE','Reload the latest question before changing it');
+      const version=expected+1,at=utc();
+      if(old){
+        this.db.prepare(`UPDATE dc_decision_requests SET question_revision=?,
+          feature_revision=?,feature_hash=?,plan_hash=?,question_json=?,
+          status='pending',decision_json=NULL,updated_at=? WHERE id=?`)
+          .run(version,feature.revision,feature.hash,planHash,
+            JSON.stringify(question),at,id);
+      }else{
+        this.db.prepare(`INSERT INTO dc_decision_requests(id,feature_name,
+          question_revision,feature_revision,feature_hash,plan_hash,
+          question_json,status,created_by,created_at,updated_at)
+          VALUES(?,?,?,?,?,?,?,'pending',?,?,?)`)
+          .run(id,input.featureName,version,feature.revision,feature.hash,
+            planHash,JSON.stringify(question),actor,at,at);
+      }
+      this.db.prepare(`INSERT INTO dc_decision_request_events(request_id,
+        question_revision,kind,actor,event_json,created_at)
+        VALUES(?,?,'question',?,?,?)`)
+        .run(id,version,actor,JSON.stringify({question,
+          featureRevision:feature.revision,featureHash:feature.hash,planHash,
+          previousRevision:old?.question_revision??null,
+          previousStatus:old?.status??null}),at);
+      this.audit(null,'decision_request_question_saved',actor,{id,version,
+        featureName:input.featureName,featureRevision:feature.revision,
+        featureHash:feature.hash,planHash});
+      return this.getDecisionRequest(id);
+    });
+  }
+
+  respondDecisionRequest(input:{id:string;expectedRevision:number;
+    kind:'decided'|'rejected'|'deferred';optionId?:string;
+    rationale?:string;deferTo?:string;actor:string;
+    idempotencyKey:string;clientAddress?:string}):Row {
+    if(!input||typeof input.actor!=='string'||input.actor.trim().length<2||
+      input.actor.length>120||typeof input.idempotencyKey!=='string'||
+      !/^[A-Za-z0-9_-]{8,110}$/.test(input.idempotencyKey))
+      fail('DECISION_REQUEST_INPUT','Actor and stable retry request ID required');
+    if(!['decided','rejected','deferred'].includes(input.kind))
+      fail('DECISION_REQUEST_INPUT','Choose a defined option, not doing it, or defer');
+    const rationale=String(input.rationale??'').trim();
+    if(rationale.length>3000)fail('DECISION_REQUEST_INPUT','Reason is too long');
+    if(input.kind==='deferred'&&(!input.deferTo?.trim()||input.deferTo.length>180))
+      fail('DECISION_REQUEST_INPUT','Deferred decision needs a target version or Feature');
+    return this.inTransaction(()=>{
+      const row=this.db.prepare('SELECT * FROM dc_decision_requests WHERE id=?')
+        .get(input.id);
+      if(!row)fail('DECISION_REQUEST_NOT_FOUND','Decision item does not exist');
+      // Require a live source check even for a network retry, so an old
+      // decision cannot silently approve a newly revised question.
+      if(row.question_revision!==input.expectedRevision)
+        fail('DECISION_REQUEST_STALE','Question version changed; reload before confirming');
+      const state=this.decisionRequestRow(row);
+      if(state.stale)fail('DECISION_REQUEST_STALE',
+        'Feature or planning source changed; Agent must republish this question');
+      const question=JSON.parse(String(row.question_json));
+      if(input.kind==='decided'&&
+        !question.options.some((option:{id:string})=>option.id===input.optionId))
+        fail('DECISION_REQUEST_OPTIONS','Choose one of the current question options');
+      const decision={kind:input.kind,optionId:input.kind==='decided'?input.optionId:null,
+        rationale:rationale|| (input.kind==='decided'?'按所选方案确认':
+          input.kind==='rejected'?'本次不做':'延期至指定版本或功能'),
+        deferTo:input.kind==='deferred'?input.deferTo?.trim():null,
+        actor:input.actor.trim(),questionRevision:row.question_revision,
+        featureRevision:row.feature_revision,featureHash:row.feature_hash,
+        planHash:row.plan_hash??null,taskIds:question.taskIds,
+        clientAddress:input.clientAddress?.slice(0,90)??null};
+      const oldEvent=this.db.prepare(`SELECT event_json FROM dc_decision_request_events
+        WHERE request_id=? AND idempotency_key=?`)
+        .get(input.id,input.idempotencyKey);
+      if(oldEvent){
+        const previous=JSON.parse(String(oldEvent.event_json));
+        // A network retry can arrive from a different private LAN address.
+        // Preserve the first recorded transport origin, but compare the
+        // actual human choice instead of treating that IP drift as a new answer.
+        const withoutTransport=(value:Row)=>({...value,clientAddress:null});
+        if(JSON.stringify(withoutTransport(previous.decision))!==
+          JSON.stringify(withoutTransport(decision)))
+          fail('DECISION_REQUEST_IDEMPOTENCY','Retry ID reused for a different decision');
+        return {...this.getDecisionRequest(input.id),idempotentReplay:true};
+      }
+      if(row.status!=='pending')
+        fail('DECISION_REQUEST_ALREADY_ANSWERED',
+          'This question was already answered. Reload the current record');
+      const at=utc(),snapshot={...decision,at};
+      this.db.prepare(`UPDATE dc_decision_requests SET status=?,decision_json=?,
+        updated_at=? WHERE id=?`).run(input.kind,JSON.stringify(snapshot),at,input.id);
+      this.db.prepare(`INSERT INTO dc_decision_request_events(request_id,
+        question_revision,kind,actor,event_json,idempotency_key,created_at)
+        VALUES(?,?,?,?,?,?,?)`).run(input.id,row.question_revision,input.kind,
+          input.actor.trim(),JSON.stringify({decision}),input.idempotencyKey,at);
+      this.audit(null,'decision_request_answered',input.actor.trim(),{
+        id:input.id,kind:input.kind,questionRevision:row.question_revision,
+        featureRevision:row.feature_revision,featureHash:row.feature_hash,
+        planHash:row.plan_hash,taskIds:question.taskIds,
+        clientAddress:decision.clientAddress});
+      return {...this.getDecisionRequest(input.id),idempotentReplay:false};
+    });
+  }
+
+  withdrawDecisionRequest(input:{id:string;expectedRevision:number;
+    actor:string;reason:string}):Row {
+    if(!input||!input.actor?.trim()||!input.reason?.trim())
+      fail('DECISION_REQUEST_INPUT','Agent and withdrawal reason are required');
+    return this.inTransaction(()=>{
+      const row=this.db.prepare('SELECT * FROM dc_decision_requests WHERE id=?').get(input.id);
+      if(!row||row.question_revision!==input.expectedRevision||row.status!=='pending')
+        fail('DECISION_REQUEST_STALE','Only the current pending question can be withdrawn');
+      const at=utc();
+      this.db.prepare(`UPDATE dc_decision_requests SET status='withdrawn',updated_at=?
+        WHERE id=?`).run(at,input.id);
+      this.db.prepare(`INSERT INTO dc_decision_request_events(request_id,
+        question_revision,kind,actor,event_json,created_at)
+        VALUES(?,?,'withdrawn',?,?,?)`).run(input.id,input.expectedRevision,
+          input.actor.trim(),JSON.stringify({reason:input.reason.trim()}),at);
+      this.audit(null,'decision_request_withdrawn',input.actor.trim(),{
+        id:input.id,questionRevision:input.expectedRevision});
+      return this.getDecisionRequest(input.id);
+    });
   }
 
   /** The frozen release is the only source of executable stage/task IDs. */

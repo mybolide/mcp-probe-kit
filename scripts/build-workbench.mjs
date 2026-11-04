@@ -18,7 +18,7 @@ const css=await transform(style,{loader:'css',minify:true,target:'es2020'});
 const router=readFileSync(resolve(root,'router.js'),'utf8').replace('export function createHashRouter',
   'function createHashRouter');
 const fragments=['app.js','guide.js','state.js','time.js','tasks.js','records.js','features.js',
-  'markdown.js','documents.js','insights.js','attention.js','runtime.js'];
+  'markdown.js','documents.js','insights.js','attention.js','decisions.js','runtime.js'];
 // Git worktrees on Windows may use CRLF. Removing the ESM import must not
 // depend on the checkout line ending or the inline script redeclares router.
 const app=fragments.map(name=>readFileSync(resolve(root,name),'utf8')).join('\n')

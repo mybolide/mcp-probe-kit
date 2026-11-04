@@ -69,6 +69,13 @@ const FLOWS = {
     example: {action:'idea-list',project_root:'/ABSOLUTE/PROJECT',input:{}},
     caution: 'An idea never automatically modifies a frozen execution contract.',
   },
+  decisionRequest: {
+    description:'Feature 下的用户待确认选择，独立于已领取的研发 decision-save 任务',
+    actions:['decision-request-save','decision-request-list','decision-request-get',
+      'decision-request-respond','decision-request-withdraw'],
+    example:{action:'decision-request-list',project_root:'/ABSOLUTE/PROJECT',input:{status:'pending'}},
+    caution:'An Agent creates a specific Feature question using decision-request-save. Users answer in Requirements with an option, not-doing or deferral. Both MCP and web store a single idempotent audited record with source Feature revision and planning hash. Reading or answering NEVER changes openQuestions, frozen task contracts, task status, leases or approvals. If the Feature revision changes, the Agent must republish the question and use the original feature-task-review/propose/approve workflow; no extra approval Gate is added for an ordinary user answer. Private LAN web users self-declare their actor; project LAN trust is not strong account authentication.',
+  },
   scope: {
     description: '冻结范围变更或新增任务的实质自审及 Owner 审批',
     actions: ['release-work-scope-review','release-work-scope-stage','release-work-scope-self-review','release-work-scope-independent-review','release-work-scope-approve','release-work-incremental-review','release-work-incremental-stage','release-work-incremental-self-review','release-work-incremental-independent-review','release-work-incremental-approve'],
@@ -88,7 +95,9 @@ export function devControlGuide(input: Record<string, unknown> = {}): Record<str
   const alias: Record<string, keyof typeof FLOWS> = {
     '开始':'start','继续':'start','恢复':'start','需求':'feature','功能':'feature',
     '设计':'feature','任务':'task','开发':'task','测试':'verification','验收':'verification',
-    '缺陷':'bug','新想法':'idea','评估':'idea','变更':'scope','架构':'architecture',
+    '缺陷':'bug','新想法':'idea','评估':'idea','待确认':'decisionRequest',
+    '决策':'decisionRequest','选择':'decisionRequest',
+    '变更':'scope','架构':'architecture',
     '计划':'planning',
     '内容':'content','概览':'content','任务说明':'content','双版本':'content',
     '数据库':'database','合并':'database','sqlite':'database',

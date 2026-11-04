@@ -38,6 +38,7 @@
       loadDatabaseDesign();
     }
     if(view==="issues")loadIssues();
+    if(view==="requirements")loadDecisionRequests();
     if(view==="guide")loadGuide();
     if(view==="settings")loadSettings();
   });

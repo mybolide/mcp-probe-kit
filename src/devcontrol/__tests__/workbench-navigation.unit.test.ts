@@ -128,6 +128,14 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('function showTaskFocus(kind)');
     expect(html).toContain('function taskAttentionKind(row)');
     expect(html).toContain('function renderAttentionCenter()');
+    expect(html).toContain('id="decision-request-panel"');
+    expect(html).toContain('id="decision-request-list"');
+    expect(html).toContain('id="decision-request-filter"');
+    expect(html).toContain('function loadDecisionRequests()');
+    expect(html).toContain('decision-request-submit');
+    expect(html).toContain('/api/decision-requests/');
+    expect(html).toContain('idempotencyKey');
+    expect(html).toContain('提交只记录决定，不修改任务合同或审批状态');
     expect(html).toContain('canManageSettings===false');
   });
 

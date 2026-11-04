@@ -195,6 +195,8 @@
   $("open-roadmap").addEventListener("click",()=>openDoc("docs/roadmap/releases.md"));
   $("open-okr").addEventListener("click",()=>openDoc(project?.okr.source||"docs/okr/README.md"));
   $("open-requirements").addEventListener("click",()=>openDoc("docs/product/requirements.md"));
+  $('decision-request-refresh').addEventListener('click',loadDecisionRequests);
+  $('decision-request-filter').addEventListener('change',renderDecisionRequests);
   $("open-architecture").addEventListener("click",()=>openDoc("docs/architecture/overview.md"));
   $("doc-search").addEventListener("input",renderDocs);
   $("history-refresh").addEventListener("click",loadHistory);

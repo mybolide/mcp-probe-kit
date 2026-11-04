@@ -48,7 +48,7 @@
       <div class="attention-work"><div class="attention-work-head"><div><h2>优先查看的工作项</h2><p class="sub" id="attention-description">读取当前工作项…</p></div><button type="button" class="attention-all-link" id="attention-view-all">查看待开发任务 <span aria-hidden="true">↗</span></button></div>
         <div id="attention-list" class="attention-list" aria-live="polite"><p class="sub">正在读取真实任务状态…</p></div>
       </div>
-      <div class="attention-context"><span id="attention-idea-summary">正在核对待决策 Idea…</span><button type="button" data-go="requirements">查看想法与决策 <span aria-hidden="true">↗</span></button></div>
+      <div class="attention-context"><span id="attention-idea-summary">正在核对待决策事项…</span><button type="button" data-go="requirements">查看需求与待确认 <span aria-hidden="true">↗</span></button></div>
     </section>
     <div class="hero">
       <div class="hero-main"><div class="eyebrow">SINGLE PROJECT · 当前 Git 项目</div>
@@ -100,11 +100,19 @@
     </section>
   </section>
   <section id="view-requirements" class="view">
-    <div class="sectionhead"><div class="eyebrow">需求范围</div><h1>需求与功能边界</h1><p class="sub">每个功能编号在需求文档中定义，关联规格与任务；此处只读原始需求。</p></div>
+    <div class="sectionhead"><div class="eyebrow">需求范围</div><h1>需求与功能边界</h1><p class="sub">查看来源与 Feature，直接处理待确认事项；原任务合同、审批和验收记录仍只读。</p></div>
+    <section class="panel decision-request-panel" id="decision-request-panel" aria-labelledby="decision-request-title">
+      <div class="panelhead"><div><span class="eyebrow">FEATURE DECISIONS</span><h2 id="decision-request-title">待确认决策</h2></div><span class="insight-meta" id="decision-request-count">读取中…</span></div>
+      <p class="sub">直接选择方案、不做或延期。提交只保存决策记录，Agent 仍须按原流程更新并评审 Feature 和任务；不会自动授权开发。</p>
+      <div class="decision-request-controls"><label for="decision-request-filter">查看</label>
+        <select id="decision-request-filter" aria-label="筛选待确认事项"><option value="pending">待确认</option><option value="all">全部及历史结果</option></select>
+        <button type="button" id="decision-request-refresh" class="link">刷新</button></div>
+      <div id="decision-request-list" class="decision-request-list" aria-live="polite"><p class="sub">正在读取当前 Feature 待确认项…</p></div>
+    </section>
     <div class="widebox"><h2 id="requirements-title">产品需求</h2><p class="body">下面的数量由需求文档中实际 FR/NFR 编号去重计算，不是完成比例。</p>
       <div class="kpirow"><div class="kpi"><b id="fr-count">—</b><span>功能需求 FR</span></div><div class="kpi"><b id="nfr-count">—</b><span>非功能需求 NFR</span></div></div>
       <button class="link" id="open-requirements">查看完整产品需求 →</button></div>
-    <div class="requirements-principles" role="note"><div><span class="eyebrow">CHANGE CONTROL</span><strong>需求变更和候选 Idea</strong></div><p>新想法先进入需求评估，再明确影响、设计和审批；未冻结的想法不能直接进入开发。当前页面只展示已有权威需求与 Feature 记录，不将候选想法虚报为已批准任务。</p><button class="link" data-go="guide">查看研发流程 ↗</button></div>
+    <div class="requirements-principles" role="note"><div><span class="eyebrow">CHANGE CONTROL</span><strong>需求变更和候选 Idea</strong></div><p>新想法先评估、再确认影响和审批。待确认的用户选择只写入决策记录，不能自动成为可领取的任务。</p><button class="link" data-go="guide">查看研发流程 ↗</button></div>
     <section class="panel insight-panel"><div class="panelhead"><div><span class="eyebrow">IDEA GOVERNANCE</span><h2>想法与变更决策</h2></div><span class="insight-meta" id="idea-count">读取中…</span></div>
       <p class="sub">来自项目 SQLite 的 Idea 记录；评估、独立审核、Owner 决策分别展示，没有审批记录的想法不得进入开发。</p>
       <div id="idea-list" class="insight-list" aria-live="polite"></div>

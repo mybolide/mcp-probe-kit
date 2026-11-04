@@ -91,6 +91,11 @@ export const V5_DEVC_ACTION_GROUPS = [
     actions: ['decision-save', 'decision-get'],
   },
   {
+    title: '待确认选择 / Feature decision inbox (no new task lifecycle)',
+    actions: ['decision-request-save','decision-request-list',
+      'decision-request-get','decision-request-respond','decision-request-withdraw'],
+  },
+  {
     title: '本地工具 / Local developer and hooks',
     actions: ['local-developer', 'hook-status', 'hook-install'],
   },

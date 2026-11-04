@@ -120,6 +120,9 @@ describe('portable generated v5 project guidance',()=>{
       for(const action of ['task-content-get','task-content-stage','task-content-check',
         'task-content-review','task-content-approve','task-content-withdraw'])
         expect(generated).toContain(action);
+      for(const action of ['decision-request-save','decision-request-list',
+        'decision-request-get','decision-request-respond','decision-request-withdraw'])
+        expect(generated).toContain(action);
     }
   });
 
