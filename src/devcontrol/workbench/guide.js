@@ -35,7 +35,7 @@
       $('guide-caution').textContent='注意：'+flow.caution;
     }catch(error){$('guide-description').textContent='导航暂不可用：'+error.message;}
   }
-  let settingsLoaded=false,settingsToken='',settingsBaseline=null;
+  let settingsLoaded=false,settingsLoading=false,settingsToken='',settingsBaseline=null;
   const settingValue=id=>$(id).value.trim();
   const settingInputs={
     MCP_ENABLE_UI_APPS:'flag-ui-apps',MCP_ENABLE_GITNEXUS_BRIDGE:'flag-gitnexus',
@@ -112,25 +112,38 @@
     }
   }
   async function loadSettings(){
-    if(settingsLoaded)return;
+    if(settingsLoaded||settingsLoading)return;
+    settingsLoading=true;
     try{
-      const [meta,access,data,currentProject]=await Promise.all([
-        fetchJSON('/api/meta'),fetchJSON('/api/access'),fetchJSON('/api/settings'),
-        fetchJSON('/api/project'),
+      const [meta,access,currentProject]=await Promise.all([
+        fetchJSON('/api/meta'),fetchJSON('/api/access'),fetchJSON('/api/project'),
       ]);
-      settingsToken=data.csrfToken;
-      renderSettingStates(data);
-      settingsBaseline=settingsDraft();renderSettingsDiff();
-      settingsBaseline=settingsDraft();renderSettingsDiff();
-      const overridden=Object.entries(data.ai).filter(([,value])=>value.overridden)
-        .map(([name])=>name);
-      if(overridden.length) $('settings-feedback').textContent=
-        '注意：'+overridden.join('、')+' 已由当前工作台进程环境变量指定，只读且不会写入项目覆盖值。其他独立 MCP 客户端进程的环境配置无法从浏览器直接读取。';
+      if(access.canManageSettings===false){
+        // A remote reader must not query /api/settings, which deliberately
+        // rejects every non-loopback socket. Never request or display secrets.
+        settingsToken='';
+        for(const control of document.querySelectorAll('#view-settings input,#view-settings select'))
+          control.disabled=true;
+        $('settings-save').disabled=true;
+        $('settings-diff').replaceChildren(n('div',
+          '局域网只读模式：本页不请求本机的配置参数和密钥。','sub'));
+        $('settings-feedback').textContent=
+          '如需修改 MCP 参数，请在运行工作台的电脑上用 127.0.0.1 地址打开设置。';
+      }else{
+        const data=await fetchJSON('/api/settings');
+        settingsToken=data.csrfToken;
+        renderSettingStates(data);
+        settingsBaseline=settingsDraft();renderSettingsDiff();
+        const overridden=Object.entries(data.ai).filter(([,value])=>value.overridden)
+          .map(([name])=>name);
+        if(overridden.length) $('settings-feedback').textContent=
+          '注意：'+overridden.join('、')+' 已由当前工作台进程环境变量指定，只读且不会写入项目覆盖值。其他独立 MCP 客户端进程的环境配置无法从浏览器直接读取。';
+      }
       const rows=[
         ['项目','当前 Git 项目 · '+(currentProject?.name||'未知')],
         ['当前分支',currentProject?.git?.branch||'未识别'],
         ['工作台访问',access.lanEnabled?'允许私有局域网只读':'仅本机'],
-        ['配置权限','仅本机 · 同源授权'],
+        ['配置权限',access.canManageSettings===false?'当前连接只读':'仅本机 · 同源授权'],
         ['mcp-probe-kit 版本',meta.version||'未知'],
         ['生效时间','重连 MCP 后生效'],
         ['配置优先级','当前工作台进程环境变量 > 项目保存值 > 默认值'],
@@ -144,7 +157,7 @@
       $('settings-status').replaceChildren(n('p','设置只允许在服务器本机查看和修改。','sub'));
       $('settings-save').disabled=true;
       $('settings-feedback').textContent='当前连接只读；请通过本机 127.0.0.1 地址打开设置。';
-    }
+    }finally{settingsLoading=false;}
   }
   async function saveSettings(){
     if(!settingsToken)return;

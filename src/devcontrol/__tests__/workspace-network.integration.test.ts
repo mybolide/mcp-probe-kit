@@ -132,7 +132,12 @@ describe("project workbench HTTP LAN access", () => {
       expect(await guest.text()).toContain("项目总览");
       const access = await fetch(base + "/api/access");
       expect(access.status).toBe(200);
-      expect(await access.text()).not.toContain("accessKey");
+      const accessBody=await access.json() as {canManageSettings:boolean};
+      expect(accessBody.canManageSettings).toBe(false);
+      expect(JSON.stringify(accessBody)).not.toContain("accessKey");
+      // The UI can show a stable read-only state without ever requesting
+      // protected configuration data from a LAN client.
+      expect((await fetch(base + "/api/settings")).status).toBe(403);
       const meta = await fetch(base + "/api/meta");
       expect((await meta.json())).not.toHaveProperty("pid");
       // Remote LAN readers cannot obtain process identity used by the local supervisor.

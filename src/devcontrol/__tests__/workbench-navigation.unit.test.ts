@@ -118,6 +118,7 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('function showTaskFocus(kind)');
     expect(html).toContain('function taskAttentionKind(row)');
     expect(html).toContain('function renderAttentionCenter()');
+    expect(html).toContain('canManageSettings===false');
   });
 
   test('Hash navigation handles deep links and back/forward without reload', () => {

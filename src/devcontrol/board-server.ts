@@ -158,6 +158,10 @@ export function createDevControlBoardServer(
           ? serverAddress.port : null;
         respond(res, 200, JSON.stringify({
           lanEnabled: enabledNow,
+          // Navigation hint only. Never grant settings access based on it:
+          // /api/settings still independently checks the loopback socket,
+          // same-origin request, CSRF token and actual HTTP method.
+          canManageSettings: local,
           urls: enabledNow && port ? lanAddresses().map((ip) => `http://${ip}:${port}/`) : [],
         }), nonce, "application/json; charset=utf-8");
       } else if (route === "/board") {

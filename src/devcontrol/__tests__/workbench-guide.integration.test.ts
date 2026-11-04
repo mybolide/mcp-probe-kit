@@ -120,8 +120,11 @@ describe('DevControl v5 browser guide and settings API',()=>{
       expect(meta.product).toBe('mcp-probe-kit');
       expect(meta.version).toBe(VERSION);
       expect(meta.workspaceSchemaVersion).toBe('0.11.0');
-      const access=await (await fetch(base+'/api/access')).json() as {lanEnabled:boolean};
+      const access=await (await fetch(base+'/api/access')).json() as {
+        lanEnabled:boolean;canManageSettings:boolean;
+      };
       expect(access.lanEnabled).toBe(false);
+      expect(access.canManageSettings).toBe(true);
       const invalidWrite=await fetch(base+'/api/guide',{method:'POST'});
       expect(invalidWrite.status).toBe(405);
       const settings=await fetch(base+'/api/settings');
