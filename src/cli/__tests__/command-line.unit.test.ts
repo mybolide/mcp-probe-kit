@@ -65,6 +65,19 @@ describe("mcp-probe-kit CLI", () => {
     expect(output().length).toBeLessThan(4096);
     expect(fs.existsSync(path.join(root, ".agents/skills/mcp-probe-kit/SKILL.md")))
       .toBe(true);
+    expect(fs.existsSync(path.join(root, ".devcontrol-worktree-ignore"))).toBe(false);
+  });
+
+  test("install-agent uses the project-root ignore config and preserves edits", async () => {
+    const root=createGitProject();
+    const config=path.join(root,'.devcontrol-worktree-ignore');
+    const output=captureStdout();
+    expect(await runCommandLine(['install-agent','--project-root',root])).toBe(0);
+    expect(JSON.parse(output()).ok).toBe(true);
+    expect(fs.readFileSync(config,'utf8')).toContain('# /AGENTS.md');
+    fs.writeFileSync(config,'/AGENTS.md\n');
+    expect(await runCommandLine(['install-agent','--project-root',root])).toBe(0);
+    expect(fs.readFileSync(config,'utf8')).toBe('/AGENTS.md\n');
   });
 
   test("exec 复用 Tool Registry 并返回结构化 JSON", async () => {

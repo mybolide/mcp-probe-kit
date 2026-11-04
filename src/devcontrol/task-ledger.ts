@@ -40,7 +40,9 @@ import { normalizeFrozenTaskContract, auditNormalizedTaskContract,
 import { discoverRepositories, currentRevisions, updateRevisions, stagedChanges,
   committedChanges, revisionDigest, assertRepositoryTopology, assertDeliveryStillPresent,
   portableGitDir, type RepositoryRevision } from './repository-audit.js';
-import { auditedUntrackedFiles, localWorktreeExemptedFiles } from './worktree-ignore.js';
+import { auditedUntrackedFiles, localWorktreeExemptedFiles,
+  localWorktreeIgnoreFile, LOCAL_WORKTREE_IGNORE_NAME,
+  gitStatusWithoutLocalConfig } from './worktree-ignore.js';
 import {captureFileEvidence,compareFileEvidence,
   type FileEvidenceSnapshot} from './file-evidence.js';
 import {previewManagedGuidanceSync} from '../lib/workflow-skill-installer.js';
@@ -1068,9 +1070,7 @@ export class ProjectTaskLedger {
   private auditLocalExemptions(taskId:string|null,actor:string,phase:string,
     matches:Array<{repoRoot:string;prefix:string;files:string[]}>):void{
     const evidence=matches.filter(m=>m.files.length).map(({repoRoot,prefix,files})=>{
-      const rules=fs.readFileSync(
-        path.join(fs.realpathSync(git(repoRoot,['rev-parse','--absolute-git-dir'])),
-          'info','devcontrol-worktree-ignore'));
+      const rules=fs.readFileSync(localWorktreeIgnoreFile(repoRoot));
       return {repository:prefix||'.',
         rulesSha256:createHash('sha256').update(rules).digest('hex'),
         files:files.map(file=>{
@@ -2597,7 +2597,7 @@ export class ProjectTaskLedger {
         (contract.spec as {type?:string}|null)?.type!=="decision"||
         !contract.eligible)
         fail("DECISION_TASK_REQUIRED","An approved, claimed frozen decision work item is required");
-      if(git(this.root,["status","--porcelain"])||
+      if(gitStatusWithoutLocalConfig(this.root).length||
         git(this.root,["rev-parse","HEAD"])!==lease.base_head)
         fail("GIT_CHANGED","SQLite-only decisions cannot carry uncommitted or committed Git changes");
       if(!["proposed","decided"].includes(input?.status))
@@ -7031,7 +7031,11 @@ export class ProjectTaskLedger {
       fail("GIT_ERROR","Cannot read Git index and worktree status");
     const porcelain=status.stdout.split("\0").filter(line=>
       line&&!trusted.has(line.slice(3))&&!exemptDirty.has(line.slice(3))&&
-        !exemptStaged.has(line.slice(3)));
+        !exemptStaged.has(line.slice(3))&&
+        !(line==='?? '+LOCAL_WORKTREE_IGNORE_NAME&&
+          !inScope(LOCAL_WORKTREE_IGNORE_NAME)&&
+          fs.existsSync(localWorktreeIgnoreFile(this.root))&&
+          fs.lstatSync(localWorktreeIgnoreFile(this.root)).isFile()));
     if(porcelain.length!==actual.length||porcelain.some(line=>
       !line.startsWith(" M ")||!actual.includes(line.slice(3))))
       fail("DIRTY_WORKTREE","Only unchanged-index tracked file edits may be preserved");
@@ -8328,7 +8332,7 @@ export class ProjectTaskLedger {
       const denied=files.filter(file=>!allowed.some(pattern=>pathAllowed(file,pattern)));
       if(denied.length)fail("PAUSE_SCOPE_VIOLATION","Committed changes exceed original scope: "+denied.join(", "));
       if(git(this.root,["diff","--cached","--name-only"])||
-        git(this.root,["ls-files","--others","--exclude-standard"]))
+        auditedUntrackedFiles(this.root).length)
         fail("DIRTY_WORKTREE","No staged or untracked files may exist during an audited pause");
       const dirty=git(this.root,["diff","--name-only"]).split("\n").filter(Boolean).sort();
       const declarations=input.existingDirtyFiles;
@@ -8429,7 +8433,7 @@ export class ProjectTaskLedger {
         fail("TASK_EVIDENCE_EXISTS",
           "Resolve recorded completion/evidence/decisions before pausing; do not discard verified provenance");
       const head=git(this.root,["rev-parse","HEAD"]);
-      const dirtyStatus=git(this.root,["status","--porcelain"]);
+      const dirtyStatus=gitStatusWithoutLocalConfig(this.root).join('\n');
       if(dirtyStatus&&existingDirtyFiles===undefined)
         fail("DIRTY_WORKTREE","Commit or revert local changes before pausing");
       if(existingDirtyFiles!==undefined){
@@ -8437,7 +8441,7 @@ export class ProjectTaskLedger {
         // Owner edits. An exact, immutable tracked-file manifest may preserve
         // them without staging, stashing, resetting or changing the Git base.
         if(git(this.root,["diff","--cached","--name-only"])||
-          git(this.root,["ls-files","--others","--exclude-standard"]))
+          auditedUntrackedFiles(this.root).length)
           fail("DIRTY_WORKTREE","No staged/untracked files allowed with owner-edit manifest");
         if(!Array.isArray(existingDirtyFiles)||existingDirtyFiles.some(item=>
           !item||typeof item.path!=="string"||typeof item.sha256!=="string"||

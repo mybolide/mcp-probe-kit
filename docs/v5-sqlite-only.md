@@ -125,10 +125,13 @@ Owner 可以在任务尚未产生完成报告时，使用 `refresh-protected-wor
 
 ### 本地 worktree-ignore 与 Git ignore
 
-每个独立 Git 仓库的真实 Git 目录下可选建
-`info/devcontrol-worktree-ignore`，语法沿用 Git exclude patterns，
-包括 Git worktree 使用 `.git` 文件的情况。该本地文件不加入 Git
-提交，也不会更改标准 `.gitignore`、`.git/info/exclude` 或全局忽略。
+每个独立 Git 工作树根目录使用
+`.devcontrol-worktree-ignore`，语法沿用 Git exclude patterns。
+显式执行 `probe install-agent` 时如不存在，则创建只有注释的模板，默认不启用任何排除。
+用户取消注释后才会生效。普通仓库和 Git worktree 都在自己的根目录读取。
+不会写入 `.git/info`，也不会更改 `.gitignore`、`.git/info/exclude` 或全局忽略。
+该配置仅用于本机，建议自行加入项目 `.gitignore` 以避免被 Git 误提交。
+DevControl 会自行排除未暂存的配置文件本身，已暂存的配置仍需正常审查。
 DevControl 先执行 Git 标准忽略，再读取本机附加规则。**本机附加规则
 不仅适用于 untracked，也适用于 Git 已跟踪、已修改和已暂存的文件。**
 例如需要排除本机 AI 工具配置时，可以写入：
@@ -460,7 +463,7 @@ v5 读取时只兼容**恰好一层**这种历史包装，并验证内层是完�
 
 空快照可以正常读成空数组；非空快照的每个 `path`、`kind`、
 `size` 和 `sha256` 都必须合法，且继续接受当前真实文件的校验。
-符合正式本地 `devcontrol-worktree-ignore` 且不在任务冻结范围内的
+符合正式本地 `.devcontrol-worktree-ignore` 且不在任务冻结范围内的
 路径可以按现有精确规则豁免。错误 JSON、连续多层包装、缺字段、
 重复路径和实际 Owner 文件改动都继续拒绝。这个兼容修复**不会**
 替代原来的测试证据、仓库交付向量、`verify` 或任何 Gate。

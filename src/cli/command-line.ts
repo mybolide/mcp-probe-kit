@@ -39,6 +39,7 @@ import {
   resolveRequiredWorkspace,
 } from "./cli-project-resolution.js";
 import { runDevControlCli } from "../devcontrol/command.js";
+import {ensureLocalWorktreeIgnoreFile} from "../devcontrol/worktree-ignore.js";
 
 interface ParsedArgv {
   command: string;
@@ -206,6 +207,9 @@ function runInstallAgent(parsed: ParsedArgv): number {
   const explicitProjectRoot = flagString(parsed.flags, "project-root");
   const project = resolveRequiredWorkspace(explicitProjectRoot);
   const bootstrap = ensureMcpProbeKitBootstrap(project.root);
+  // Explicit setup may create a root-local template. Read-only startup and
+  // DevControl calls never introduce an unexpected untracked Git file.
+  ensureLocalWorktreeIgnoreFile(project.root);
   const cliFallback = requireCliFallback(bootstrap.cliFallback);
   assertRuntimeVersionAligned(project.root, cliFallback.version);
   writeJson({

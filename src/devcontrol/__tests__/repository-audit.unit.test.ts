@@ -8,7 +8,8 @@ import {createHash} from 'node:crypto';
 import {ProjectTaskLedger} from '../task-ledger.js';
 import {discoverRepositories,currentRevisions,updateRevisions,revisionDigest,
   stagedChanges,committedChanges,assertRepositoryTopology,assertDeliveryStillPresent} from '../repository-audit.js';
-import {auditedUntrackedFiles,localWorktreeIgnoreFile,localWorktreeExemptedFiles} from '../worktree-ignore.js';
+import {auditedUntrackedFiles,localWorktreeIgnoreFile,localWorktreeExemptedFiles,
+  ensureLocalWorktreeIgnoreFile,gitStatusWithoutLocalConfig} from '../worktree-ignore.js';
 import {previewManagedGuidanceSync} from '../../lib/workflow-skill-installer.js';
 import {MCP_PROBE_SKILL_REL_PATH} from '../../lib/workflow-skill-template.js';
 
@@ -261,6 +262,43 @@ describe('canonical generated Skill and AGENTS are not task delivery',()=>{
 });
 
 describe('layered local worktree-ignore protection',()=>{
+  it('bootstraps an editable, non-active root config without changing Git internals or blocking tasks',()=>{
+    const {root}=fixture(false);
+    const config=path.join(root,'.devcontrol-worktree-ignore');
+    expect(localWorktreeIgnoreFile(root)).toBe(config);
+    expect(ensureLocalWorktreeIgnoreFile(root)).toBe(config);
+    const original=fs.readFileSync(config,'utf8');
+    expect(original).toContain('# /AGENTS.md');
+    expect(cmd(root,'ls-files','--others','--exclude-standard')).toContain('.devcontrol-worktree-ignore');
+    expect(auditedUntrackedFiles(root)).not.toContain('.devcontrol-worktree-ignore');
+    expect(gitStatusWithoutLocalConfig(root)).toEqual([]);
+    expect(ensureLocalWorktreeIgnoreFile(root)).toBe(config);
+    expect(fs.readFileSync(config,'utf8')).toBe(original);
+    fs.writeFileSync(path.join(root,'other.tmp'),'still unapproved');
+    expect(auditedUntrackedFiles(root)).toContain('other.tmp');
+    expect(gitStatusWithoutLocalConfig(root)).toContain('?? other.tmp');
+  });
+  it('does not silently hide a staged configuration or accept a symlinked root config',()=>{
+    const {root}=fixture(false);
+    const config=localWorktreeIgnoreFile(root);
+    ensureLocalWorktreeIgnoreFile(root);
+    cmd(root,'add','-f','.devcontrol-worktree-ignore');
+    expect(gitStatusWithoutLocalConfig(root)).toContain('A  .devcontrol-worktree-ignore');
+    cmd(root,'reset','-q','--','.devcontrol-worktree-ignore');
+    fs.rmSync(config);
+    fs.symlinkSync(path.join(root,'README.md'),config);
+    expect(()=>ensureLocalWorktreeIgnoreFile(root)).toThrow(/Unsafe local worktree-ignore/);
+    expect(()=>auditedUntrackedFiles(root)).toThrow(/Unsafe local worktree-ignore/);
+  });
+  it('uses a separate root config for each registered Git worktree',()=>{
+    const {root}=fixture(false);
+    const linked=root+'-linked';cleanups.push(linked);
+    cmd(root,'worktree','add','-q','-b','linked-ignore-test',linked);
+    expect(ensureLocalWorktreeIgnoreFile(root)).toBe(path.join(root,'.devcontrol-worktree-ignore'));
+    expect(ensureLocalWorktreeIgnoreFile(linked)).toBe(path.join(linked,'.devcontrol-worktree-ignore'));
+    fs.writeFileSync(localWorktreeIgnoreFile(root),'/AGENTS.md\n');
+    expect(fs.readFileSync(localWorktreeIgnoreFile(linked),'utf8')).not.toBe('/AGENTS.md\n');
+  });
   it('accepts explicitly listed tracked and staged legacy History docs, but not broad docs sources',()=>{
     const {root}=fixture(false);
     fs.mkdirSync(path.join(root,'docs/history-session'),{recursive:true});

@@ -1,4 +1,4 @@
-/** DevControl's machine-local worktree exemption, independent of Git ignore.
+/** DevControl's project-root worktree exemption, independent of Git ignore.
  *
  * Explicit patterns apply to tracked and untracked ordinary working files.
  * Git's index, committed task evidence and frozen scopes remain unchanged.
@@ -6,6 +6,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
+
+export const LOCAL_WORKTREE_IGNORE_NAME='.devcontrol-worktree-ignore';
+const DEFAULT_RULES=`# MCP Probe Kit local worktree exclusions (Git tracking is unchanged).
+# Uncomment only the local tool files you intentionally want to exclude.
+# /AGENTS.md
+# /.agents/skills/mcp-probe-kit/SKILL.md
+# /.cursor/mcp.json
+# /docs/history-session/
+`;
 
 function names(root:string,args:string[]):string[]{
   const r=spawnSync('git',args,{cwd:root,encoding:'buffer',timeout:12000,windowsHide:true});
@@ -40,16 +49,36 @@ function nonBusinessLocalFile(file:string):boolean{
 }
 
 export function localWorktreeIgnoreFile(root:string):string{
-  const r=spawnSync('git',['rev-parse','--absolute-git-dir'],{
+  return path.join(path.resolve(root),LOCAL_WORKTREE_IGNORE_NAME);
+}
+
+/** Created only during explicit project setup. Never touch .git,
+ * .gitignore or an existing Owner-edited configuration. The template has no
+ * active exclusions until the user explicitly enables a safe local pattern.
+ */
+export function ensureLocalWorktreeIgnoreFile(root:string):string|null{
+  const repo=spawnSync('git',['rev-parse','--show-toplevel'],{
     cwd:root,encoding:'utf8',timeout:12000,windowsHide:true});
-  if(r.status!==0||!r.stdout?.trim())throw Error('Cannot resolve local Git ignore storage');
-  return path.join(fs.realpathSync(r.stdout.trim()),'info','devcontrol-worktree-ignore');
+  if(repo.status!==0||!repo.stdout?.trim()||
+      fs.realpathSync(repo.stdout.trim())!==fs.realpathSync(root))return null;
+  const source=localWorktreeIgnoreFile(root);
+  if(!fs.existsSync(source)){
+    try{fs.writeFileSync(source,DEFAULT_RULES,{encoding:'utf8',flag:'wx',mode:0o600});}
+    catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}
+  }
+  localPatternFile(root); // Reject symlinks, non-files and oversized configs.
+  return source;
 }
 
 function localPatternFile(root:string):string|null{
   const source=localWorktreeIgnoreFile(root);
-  if(!fs.existsSync(source))return null;
-  const parent=fs.lstatSync(path.dirname(source)),file=fs.lstatSync(source);
+  let file:fs.Stats;
+  try{file=fs.lstatSync(source);}
+  catch(error){
+    if((error as NodeJS.ErrnoException).code==='ENOENT')return null;
+    throw error;
+  }
+  const parent=fs.lstatSync(path.dirname(source));
   if(!parent.isDirectory()||parent.isSymbolicLink()||!file.isFile()||
       file.isSymbolicLink()||file.size>65536)
     throw Error('Unsafe local worktree-ignore configuration');
@@ -97,5 +126,24 @@ export function auditedUntrackedFiles(root:string,
   inScope:(file:string)=>boolean=()=>false):string[]{
   const candidates=names(root,['ls-files','--others','--exclude-standard','-z']);
   const exempt=new Set(localWorktreeExemptedFiles(root,candidates,inScope));
+  // The optional local config is never part of a task's source delivery.
+  // Check its type before excluding it, and never exempt a frozen file.
+  if(candidates.includes(LOCAL_WORKTREE_IGNORE_NAME)&&
+      !inScope(LOCAL_WORKTREE_IGNORE_NAME)&&localPatternFile(root))
+    exempt.add(LOCAL_WORKTREE_IGNORE_NAME);
   return candidates.filter(file=>!exempt.has(file));
+}
+
+/** Do not mistake the freshly created, untracked MCP configuration itself
+ * for Owner source changes. Any staged, tracked-modified, linked or malformed
+ * config remains visible and subject to the normal repository checks.
+ */
+export function gitStatusWithoutLocalConfig(root:string):string[]{
+  const r=spawnSync('git',['status','--porcelain=v1','--untracked-files=all','-z'],{
+    cwd:root,encoding:'buffer',timeout:12000,windowsHide:true});
+  if(r.status!==0||!Buffer.isBuffer(r.stdout))
+    throw Error('Cannot read Git status for DevControl worktree');
+  const entries=r.stdout.toString('utf8').split('\0').filter(Boolean);
+  const source=localPatternFile(root);
+  return entries.filter(entry=>!(entry==='?? '+LOCAL_WORKTREE_IGNORE_NAME&&source));
 }
