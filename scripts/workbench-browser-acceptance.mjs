@@ -43,7 +43,7 @@ try {
  const evalJS=async expr=>(await send('Runtime.evaluate',{expression:expr,returnByValue:true})).result.value;
  await send('Page.enable');
  const views=['overview','requirements','architecture','tasks','issues','history','guide','settings'];
- const results=[],files=[];
+ const results=[],files=[],journeys=[];
  const requestedWidths=(args.widths||'1500,1920,2560,1024,768,390')
    .split(',').map(Number).filter(Number.isFinite);
  for(const width of requestedWidths){
@@ -159,6 +159,57 @@ try {
     writeFileSync(file,Buffer.from(shot.data,'base64'));files.push(file);
    }
   }
+  // Browser-backed user tasks, not just screenshot validity. Both routes
+  // must be accessible with an actual click from the home page. No mutations
+  // to SQLite, approvals or test evidence occur in this smoke test.
+  if(width===1500||width===390){
+    await send('Page.navigate',{url:url+'#overview'});
+    for(let k=0;k<40;k++){
+      if(await evalJS('document.querySelector("#attention-verification-count")?.textContent.match(/^\\d+$/)!=null'))break;
+      await sleep(125);
+    }
+    const homeAction=await evalJS(`(()=>{
+      document.querySelector('[data-attention="verification"]')?.click();
+      return {hash:location.hash,selected:document.querySelector('[data-tasktab="attention"]')?.getAttribute('aria-selected'),
+        filter:document.querySelector('[data-attention-filter="verification"]')?.getAttribute('aria-pressed'),
+        tasks:document.querySelectorAll('#task-rows .task-card').length};
+    })()`);
+    journeys.push({width,scenario:'home-to-verification',
+      passed:homeAction.hash==='#tasks'&&homeAction.selected==='true'&&
+        homeAction.filter==='true'&&homeAction.tasks>0,details:homeAction});
+    const searchAction=await evalJS(`(()=>{
+      const selected=document.querySelector('[data-tasktab="completed"]');
+      selected?.click();
+      const task=document.querySelector('#task-rows .task-card');
+      const id=task?.getAttribute('aria-label')?.split(' ')[0];
+      document.querySelector('[data-tasktab="attention"]')?.click();
+      const search=document.getElementById('task-search');
+      search.value=id||'';search.dispatchEvent(new Event('input',{bubbles:true}));
+      const found=[...document.querySelectorAll('#task-rows .task-card')]
+        .some(card=>card.getAttribute('aria-label')?.startsWith(id+' '));
+      document.getElementById('task-clear-filters')?.click();
+      return {id,found,cleared:search.value==='',restored:document.querySelectorAll('#task-rows .task-card').length>0};
+    })()`);
+    journeys.push({width,scenario:'find-verified-from-any-tab',
+      passed:!!searchAction.id&&searchAction.found&&searchAction.cleared&&searchAction.restored,
+      details:searchAction});
+    if(width===390){
+      const mobileAction=await evalJS(`(()=>{
+        const more=document.getElementById('mobile-nav-more');
+        const settings=document.querySelector('.navbtn[data-view="settings"]');
+        const initiallyHidden=settings.getClientRects().length===0;
+        more.click();
+        const expanded=more.getAttribute('aria-expanded')==='true';
+        const nowVisible=settings.getClientRects().length>0;
+        settings.click();
+        return {initiallyHidden,expanded,nowVisible,hash:location.hash};
+      })()`);
+      journeys.push({width,scenario:'mobile-more-to-settings',
+        passed:mobileAction.initiallyHidden&&mobileAction.expanded&&
+          mobileAction.nowVisible&&mobileAction.hash==='#settings',
+        details:mobileAction});
+    }
+  }
  }
  const failures=results.filter(v=>v.dataLoaded===false||v.insightsLoaded===false||v.reviewLoaded===false||!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3||v.navItems!==8
  ||!v.githubLinkValid||(v.view==='overview'&&!v.heroReady)||v.searchResetWorks===false
@@ -169,8 +220,10 @@ try {
  ||(v.view==='tasks'&&v.footerLayout?.broken>0)
  ||(v.width===390&&v.navScroll>v.navWidth+3));
  if(!results.some(v=>v.view==='tasks'&&v.width===1500&&v.cardCount>0))failures.push({reason:'Task list did not render'});
- process.stdout.write(JSON.stringify({ok:failures.length===0,results,failures,files})+'\n');
- if(failures.length)process.exitCode=1;
+ const failedJourneys=journeys.filter(item=>!item.passed);
+ process.stdout.write(JSON.stringify({ok:failures.length===0&&failedJourneys.length===0,
+   results,failures,files,journeys,failedJourneys})+'\n');
+ if(failures.length||failedJourneys.length)process.exitCode=1;
 }finally{
  socket?.close();proc.kill('SIGTERM');await sleep(250);rmSync(profile,{recursive:true,force:true});
 }

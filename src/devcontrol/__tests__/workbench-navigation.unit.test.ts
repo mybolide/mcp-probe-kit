@@ -107,7 +107,17 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
     // Added accessible project resources and filter states remain inside a
     // bounded single-document payload, with zero remote CSS/JS dependencies.
-    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(64_000);
+    // Source-backed action center adds contextual, interactive task guidance
+    // without a framework or remote assets. Keep its compressed budget bounded.
+    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(73_000);
+    expect(html).toContain('id="attention-center"');
+    expect(html).toContain('id="attention-list"');
+    expect(html).toContain('data-tasktab="attention"');
+    expect(html).toContain('id="mobile-nav-more"');
+    expect(html).toContain('id="task-show-more"');
+    expect(html).toContain('function showTaskFocus(kind)');
+    expect(html).toContain('function taskAttentionKind(row)');
+    expect(html).toContain('function renderAttentionCenter()');
   });
 
   test('Hash navigation handles deep links and back/forward without reload', () => {

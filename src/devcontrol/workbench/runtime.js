@@ -61,6 +61,7 @@
     const all=Object.values(board.columns).flat();
     const governance=all.filter(t=>t.track==="governance");
     renderTaskProgress();
+    renderAttentionCenter();
     $("governance-count").textContent="工程治理 · "+governance.filter(t=>t.status==="verified").length+"/"+governance.length+" 完成";
     $("next-id").textContent=board.current||"暂无可领取任务";
     const candidate=all.find(t=>t.id===board.current);
@@ -154,13 +155,45 @@
       const scroll=document.scrollingElement?.scrollTop||0;
       renderTaskList();
       renderTaskProgress();
+      renderAttentionCenter();
       if(document.scrollingElement)document.scrollingElement.scrollTop=scroll;
       $('synced').textContent='任务同步于 '+beijingClock();
     }catch(error){$('synced').textContent='任务同步失败：'+error.message+'（原数据保留）';}
     finally{taskRefreshInProgress=false;resetRefreshClock();}
   }
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));
+  $("mobile-nav-more").addEventListener('click',()=>{
+    setMobileNavExpanded($("mobile-nav-more").getAttribute('aria-expanded')!=='true');
+  });
   for(const b of document.querySelectorAll("[data-go]"))b.addEventListener("click",()=>go(b.dataset.go));
+  for(const b of document.querySelectorAll('[data-attention]'))
+    b.addEventListener('click',()=>showTaskFocus(b.dataset.attention));
+  $("attention-view-all").addEventListener('click',()=>showTaskFocus('all'));
+  for(const b of document.querySelectorAll('[data-attention-filter]'))
+    b.addEventListener('click',()=>{
+      attentionFilter=b.dataset.attentionFilter;
+      attentionVisibleLimit=12;
+      renderTaskList();
+    });
+  $("task-attention-mobile").addEventListener('change',()=>{
+    attentionFilter=$("task-attention-mobile").value;
+    attentionVisibleLimit=12;
+    renderTaskList();
+  });
+  $("task-extra-filters-toggle").addEventListener('click',()=>{
+    const expanded=$("task-extra-filters-toggle").getAttribute('aria-expanded')!=='true';
+    $("task-extra-filters-toggle").setAttribute('aria-expanded',String(expanded));
+    $("task-extra-filters-toggle").firstChild.textContent=expanded?'收起筛选 ':'更多筛选 ';
+    $("view-tasks").classList.toggle('task-advanced-filters-open',expanded);
+  });
+  $("task-show-more").addEventListener('click',()=>{
+    attentionVisibleLimit+=12;
+    renderTaskList();
+  });
+  $("task-tools-jump").addEventListener('click',()=>{
+    $('task-secondary').open=true;
+    $('task-secondary').scrollIntoView({block:'start',behavior:'smooth'});
+  });
   for(const b of document.querySelectorAll("[data-doc]"))b.addEventListener("click",()=>openDoc(b.dataset.doc));
   for(const b of document.querySelectorAll("[data-tasktab]"))
     b.addEventListener("click",()=>setTaskTab(b.dataset.tasktab));
@@ -191,9 +224,47 @@
   });
   $("share-lan").addEventListener("click",showLanAccess);
   $("settings-save").addEventListener("click",saveSettings);
-  $("close").addEventListener("click",()=>$("overlay").classList.remove("open","task-detail-view"));
-  $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))$("overlay").classList.remove("open","task-detail-view");});
-  document.addEventListener("keydown",e=>{if(e.key==="Escape")$("overlay").classList.remove("open","task-detail-view");});
+  let dialogPreviousFocus=null;
+  const overlay=$("overlay");
+  const closeWorkspaceDialog=()=>overlay.classList.remove("open","task-detail-view");
+  // Native dialog semantics also require usable keyboard focus, not merely
+  // role="dialog". Restore focus to the source task after the panel closes.
+  const dialogObserver=new MutationObserver(()=>{
+    if(overlay.classList.contains('open')){
+      if(!document.body.classList.contains('workbench-modal-open')){
+        dialogPreviousFocus=document.activeElement;
+        document.body.classList.add('workbench-modal-open');
+        $("close").focus();
+      }
+    }else if(document.body.classList.contains('workbench-modal-open')){
+      document.body.classList.remove('workbench-modal-open');
+      if(dialogPreviousFocus?.isConnected&&dialogPreviousFocus.focus)dialogPreviousFocus.focus();
+      dialogPreviousFocus=null;
+    }
+  });
+  dialogObserver.observe(overlay,{attributes:true,attributeFilter:['class']});
+  $("close").addEventListener("click",closeWorkspaceDialog);
+  overlay.addEventListener("click",e=>{if(e.target===overlay)closeWorkspaceDialog();});
+  document.addEventListener("keydown",e=>{
+    if(e.key==='/'&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&
+      !overlay.classList.contains('open')&&
+      !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)&&
+      !document.activeElement?.isContentEditable){
+      e.preventDefault();
+      go('tasks');
+      $('task-search').focus();
+      return;
+    }
+    if(!overlay.classList.contains('open'))return;
+    if(e.key==='Escape'){e.preventDefault();closeWorkspaceDialog();return;}
+    if(e.key!=='Tab')return;
+    const controls=[...overlay.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),[tabindex]:not([tabindex="-1"])')]
+      .filter(el=>el.getClientRects().length>0);
+    if(!controls.length)return;
+    const first=controls[0],last=controls[controls.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  });
   localizeChrome();
   router.sync();
   loadBrandVersion();
