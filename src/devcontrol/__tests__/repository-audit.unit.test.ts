@@ -66,6 +66,83 @@ afterEach(()=>{
 });
 
 describe('canonical generated Skill and AGENTS are not task delivery',()=>{
+  it('ignores explicitly configured MCP guidance even when historical commits differ from the current generator',()=>{
+    const {root}=fixture(false);
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-IGNORED-GUIDANCE',
+        title:'Committed business source with separately ignored MCP generated guidance',
+        track:'governance',allowedPaths:['docs/task.txt'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-IGNORED-GUIDANCE','owner');
+      const claim=ledger.claim('AUDIT-IGNORED-GUIDANCE','developer');
+      const skill=MCP_PROBE_SKILL_REL_PATH;
+      fs.mkdirSync(path.dirname(path.join(root,skill)),{recursive:true});
+      fs.mkdirSync(path.join(root,'docs'),{recursive:true});
+      fs.writeFileSync(path.join(root,'AGENTS.md'),'Previously generated guidance at r34\n');
+      fs.writeFileSync(path.join(root,skill),'Previously generated Skill at r34\n');
+      fs.writeFileSync(path.join(root,'docs/task.txt'),'actual approved implementation\n');
+      // Explicit local rules, not a Git ignore or blanket exemption.
+      fs.writeFileSync(localWorktreeIgnoreFile(root),
+        '/AGENTS.md\n/'+skill+'\n');
+      cmd(root,'add','AGENTS.md',skill,'docs/task.txt');
+      cmd(root,'commit','-qm','task implementation plus old tool guidance');
+      const reference='Actual test result for committed approved task source';
+      ledger.report('AUDIT-IGNORED-GUIDANCE',claim.leaseToken,
+        {kind:'docs',reference},true);
+      expect(ledger.complete('AUDIT-IGNORED-GUIDANCE',claim.leaseToken,{
+        summary:'Committed task delivery with old generated MCP guidance',
+        implementation:'Only approved docs task file counts as business output',
+        verification:'Checked actual committed source and project evidence',
+      })).toMatchObject({taskId:'AUDIT-IGNORED-GUIDANCE'});
+      ledger.reviewOwnTask('AUDIT-IGNORED-GUIDANCE',claim.leaseToken,{
+        outcome:'passed',evidenceReference:reference,
+        findings:'Inspected approved docs task file and actual evidence, without treating ignored tool configuration as source.',
+      });
+      ledger.reviewExternalGate('AUDIT-IGNORED-GUIDANCE',claim.leaseToken,{
+        gate:'docs',runner:'developer',reviewer:'developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:reference,
+        reviewNotes:'Confirmed actual docs source, while explicitly ignored tool instructions did not enter delivery.',
+      });
+      expect(localWorktreeExemptedFiles(root,['AGENTS.md',skill],
+        file=>file==='docs/task.txt')).toEqual([skill,'AGENTS.md']);
+      expect(ledger.verify('AUDIT-IGNORED-GUIDANCE',claim.leaseToken))
+        .toMatchObject({passed:true,files:['docs/task.txt']});
+    }finally{ledger.close();}
+  },30_000);
+  it('keeps rejecting noncanonical committed guidance when it is not configured for ignore',()=>{
+    const {root}=fixture(false);
+    const ledger=new ProjectTaskLedger(root);
+    try{
+      ledger.create({id:'AUDIT-UNTRUSTED-GUIDANCE',
+        title:'Reject unapproved committed instruction changes',
+        track:'governance',allowedPaths:['docs/task.txt'],requiredGates:['docs']},'agent');
+      ledger.approve('AUDIT-UNTRUSTED-GUIDANCE','owner');
+      const claim=ledger.claim('AUDIT-UNTRUSTED-GUIDANCE','developer');
+      fs.mkdirSync(path.join(root,'docs'),{recursive:true});
+      fs.writeFileSync(path.join(root,'AGENTS.md'),'Hand edited instructions, not canonical output');
+      fs.writeFileSync(path.join(root,'docs/task.txt'),'business change');
+      cmd(root,'add','AGENTS.md','docs/task.txt');
+      cmd(root,'commit','-qm','instructions modified without local ignore rule');
+      const reference='Actual scoped task evidence; no generated instructions approved';
+      ledger.report('AUDIT-UNTRUSTED-GUIDANCE',claim.leaseToken,
+        {kind:'docs',reference},true);
+      ledger.complete('AUDIT-UNTRUSTED-GUIDANCE',claim.leaseToken,{
+        summary:'Business change',implementation:'Real implementation',
+        verification:'Measured results',
+      });
+      ledger.reviewOwnTask('AUDIT-UNTRUSTED-GUIDANCE',claim.leaseToken,{
+        outcome:'passed',evidenceReference:reference,
+        findings:'Checked task source and external evidence independently of hand-edited instructions.',
+      });
+      ledger.reviewExternalGate('AUDIT-UNTRUSTED-GUIDANCE',claim.leaseToken,{
+        gate:'docs',runner:'developer',reviewer:'developer',reviewMode:'self',
+        outcome:'passed',evidenceReference:reference,
+        reviewNotes:'Verified actual scoped source, but no exemption for modified AGENTS instructions.',
+      });
+      expect(()=>ledger.verify('AUDIT-UNTRUSTED-GUIDANCE',claim.leaseToken))
+        .toThrow(/canonical generator/);
+    }finally{ledger.close();}
+  },30_000);
   it('accepts mixed generated guidance and task changes, but excludes maintenance files from completion',()=>{
     const {root,child}=fixture();
     const ledger=new ProjectTaskLedger(root);

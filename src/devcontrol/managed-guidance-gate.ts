@@ -142,7 +142,8 @@ export function trustedUncommittedGuidance(root:string,files:readonly string[]):
  * scope. Validate each intermediate commit against its own first parent,
  * never bless a path merely because it is named AGENTS.md or SKILL.md.
  */
-export function trustedCommittedGuidance(root:string,base:string,delivery:string):string[]{
+export function trustedCommittedGuidance(root:string,base:string,delivery:string,
+  ignoredPaths:ReadonlySet<string>=new Set()):string[]{
   const commits=gitRead(root,['rev-list','--reverse',base+'..'+delivery]);
   if(!commits.ok)throw Error('Cannot inspect generator commit history');
   const trusted=new Set<string>();
@@ -151,7 +152,8 @@ export function trustedCommittedGuidance(root:string,base:string,delivery:string
     if(!parent.ok)throw Error('Generator commit must have a traceable parent');
     const changed=gitRead(root,['diff','--name-only',parent.text.trim(),commit]);
     if(!changed.ok)throw Error('Cannot inspect generator changes');
-    const managed=changed.text.trim().split('\n').filter(isManagedGuidancePath);
+    const managed=changed.text.trim().split('\n').filter(file=>
+      isManagedGuidancePath(file)&&!ignoredPaths.has(file));
     if(!managed.length)continue;
     const old=gitRead(root,['show',parent.text.trim()+':AGENTS.md']);
     const generated=previewManagedGuidanceSync(root,old.ok?old.text:null);

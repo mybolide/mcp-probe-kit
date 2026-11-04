@@ -143,7 +143,10 @@ DevControl 先执行 Git 标准忽略，再读取本机附加规则。**本机�
 /docs/history-session/
 ```
 
-规则只影响 DevControl 对本机工作树噪声的检查，不修改 Git 的 index、
+规则影响 DevControl 对本机工作树噪声的检查，以及已明确忽略的
+`AGENTS.md` 和 MCP 托管 `SKILL.md` 的任务领取后 Git 交付检查。
+这些文件不再重复校验旧版模板内容，但仍保留在真实 Git 历史中，
+不会代替业务开发和真实验收。规则不修改 Git 的 index、
 tracked 状态或历史提交。只有明确配置的 AI 工具、编辑器设置与临时
 输出，以及明确限定的旧 History 文本、索引或本机笔记可以豁免。
 `/docs/history-session/` 只允许旧归档格式文件，而不是整个 `docs/**`；

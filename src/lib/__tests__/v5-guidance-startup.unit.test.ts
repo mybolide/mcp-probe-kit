@@ -39,6 +39,8 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('optional');
     expect(skill).toContain('refresh-protected-worktree');
     expect(skill).toContain('devcontrol-worktree-ignore');
+    expect(skill).toContain('no historical generator comparison is required');
+    expect(skill).toContain('Without an explicit rule, only canonical generator output');
     expect(skill).toContain('deliveryHeads');
     expect(skill).toContain('task-spec-supplement-stage');
     expect(skill).toContain('task-spec-supplement-self-review');
@@ -69,6 +71,9 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(text).toContain('self-review');
     expect(text).toContain('refresh-protected-worktree');
     expect(text).toContain('devcontrol-worktree-ignore');
+    expect(text).toContain(locale==='zh-CN'
+      ?'历史交付检查中排除，不再检查已豁免文件的旧版模板'
+      :'without historical generator checks');
     expect(text).toContain('deliveryHeads');
     expect(text).toContain('task-spec-supplement-stage');
     expect(text).toContain('task-spec-supplement-self-review');

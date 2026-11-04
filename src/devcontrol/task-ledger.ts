@@ -766,7 +766,7 @@ export class ProjectTaskLedger {
         fail('RECOVERY_HISTORY_NONLINEAR',
           'Original task baseline is not on the first-parent Git history');
       const raw=committedFilesBetween(this.root,revisions[i-1],revisions[i]);
-      const changed=this.deliveryTaskFiles(raw,revisions[i-1],revisions[i]);
+      const changed=this.deliveryTaskFiles(raw,revisions[i-1],revisions[i],own);
       const added=filter==='ACMRTD'?changed:
         committedFilesBetween(this.root,revisions[i-1],revisions[i],filter)
           .filter(file=>changed.includes(file));
@@ -3677,10 +3677,18 @@ export class ProjectTaskLedger {
     return frozen;
   }
 
-  private deliveryTaskFiles(files:string[],base:string,head:string):string[]{
+  private deliveryTaskFiles(files:string[],base:string,head:string,
+    allowedPaths:string[]):string[]{
     if(!files.some(isManagedGuidancePath))return files;
-    const trusted=trustedCommittedGuidance(this.root,base,head);
-    const exempt=new Set(trusted);
+    // A project owner may explicitly ignore safe local MCP guidance in the
+    // root .devcontrol-worktree-ignore. This also applies to Git commits
+    // created after a task was claimed. Ignored files must NOT be validated
+    // against the current (possibly newer) guidance generator.
+    const ignored=new Set(localWorktreeExemptedFiles(this.root,
+      files.filter(isManagedGuidancePath),file=>
+        allowedPaths.some(pattern=>pathAllowed(file,pattern))));
+    const trusted=trustedCommittedGuidance(this.root,base,head,ignored);
+    const exempt=new Set([...ignored,...trusted]);
     if(files.some(file=>isManagedGuidancePath(file)&&!exempt.has(file)))
       fail('MANAGED_GUIDANCE_INTEGRITY','Guidance was modified outside the canonical generator');
     return files.filter(file=>!exempt.has(file));
@@ -7185,7 +7193,7 @@ export class ProjectTaskLedger {
         this.requireChildReposClean(observed,id,task);
         const rootRepo=repositories.find(repo=>repo.prefix==='')!;
         const changed=this.deliveryTaskFiles(committedChanges(this.root,repositories),
-          rootRepo.baseHead,rootRepo.head);
+          rootRepo.baseHead,rootRepo.head,JSON.parse(task.allowed_paths) as string[]);
         const allowed=JSON.parse(task.allowed_paths) as string[];
         const exact=(this.executionContract(id).profile==='spec-depth-v3'
           ?(this.executionContract(id).spec as ReleasePlanNode)?.allowedChangedFiles:undefined);
@@ -7218,7 +7226,8 @@ export class ProjectTaskLedger {
           recoveredVerified??this.parkedDeliveryFiles(id,String(lease.base_head),head)??
           committedFilesBetween(this.root,resumedBase??lease.base_head,head);
         const changed=this.deliveryTaskFiles(rawChanges,
-          multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:resumedBase??lease.base_head,head);
+          multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:resumedBase??lease.base_head,
+          head,JSON.parse(task.allowed_paths) as string[]);
         const allowed=JSON.parse(task.allowed_paths) as string[];
         if(!changed.length||changed.some(file=>!allowed.some(p=>pathAllowed(file,p))))
           fail("DELIVERY_SCOPE_INVALID","Only committed, in-scope task work can record completion");
@@ -7229,7 +7238,7 @@ export class ProjectTaskLedger {
       if(recoveredVerified&&!protectedSnapshot){
         const permitted=JSON.parse(task.allowed_paths) as string[];
         const trusted=this.deliveryTaskFiles(recoveredVerified,
-          String(lease.base_head),head);
+          String(lease.base_head),head,permitted);
         if(!trusted.length||trusted.some(file=>
           !permitted.some(pattern=>pathAllowed(file,pattern))))
           fail('DELIVERY_SCOPE_INVALID',
@@ -9248,7 +9257,8 @@ export class ProjectTaskLedger {
         changedFiles(this.root,incrementalBase??lease.base_head));
     const files=this.deliveryTaskFiles(rawFiles,
       multiRepo?repositories.find(repo=>repo.prefix==='')!.baseHead:incrementalBase??lease.base_head,
-      multiRepo?note.git_head:note.git_head!==startHead?String(note.git_head):startHead);
+      multiRepo?note.git_head:note.git_head!==startHead?String(note.git_head):startHead,
+      JSON.parse(task.allowed_paths) as string[]);
     const governed=this.checkGovernedArtifacts();
     if(!governed.passed)return {taskId:id,passed:false,
       reason:"Governed architecture artifacts differ from approved revision",
