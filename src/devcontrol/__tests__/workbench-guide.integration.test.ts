@@ -100,7 +100,7 @@ describe('DevControl v5 browser guide and settings API',()=>{
       const guide=await listing.json() as {hasSideEffects:boolean;intents:Array<{intent:string}>};
       expect(guide.hasSideEffects).toBe(false);
       expect(guide.intents.map(row=>row.intent)).toEqual([
-        'start','database','feature','planning','task','verification','bug','idea','scope','architecture',
+        'start','content','database','feature','planning','task','verification','bug','idea','scope','architecture',
       ]);
       const selected=await fetch(base+'/api/guide?intent=feature');
       expect((await selected.json()) as object).toMatchObject({

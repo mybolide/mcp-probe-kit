@@ -316,6 +316,27 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    dependencies or original history and is not executable before approval.
    Withdraw stale proposals with task-spec-supplement-withdraw. Material
    scope or acceptance changes require the usual reviewed release amendment.
+   Human and AI task content are now two independently versioned SQLite
+   documents for ONE existing task, NOT two ledgers. Use task-content-get
+   to read the current reviewed human overview, AI execution brief, their
+   source plan SHA, independent revisions and history. A missing legacy
+   human overview is MISSING: never split acceptance text into work outcomes
+   or invent approved human commitments. Stage each audience separately with
+   task-content-stage using an exact approved source hash and base revision.
+   The human document covers why/work/effects/scenarios/businessAcceptance/
+   exclusions; the AI document covers context/prerequisites/inputs/outputs/
+   invariants/steps/failureRecovery/tests/evidence/stopConditions. Only a
+   Ready, approved, unclaimed task can be paired. Use task-content-check
+   to compare every human commitment to an exact AI clause and the frozen
+   requirements, then task-content-review with actual source-specific
+   findings. task-content-approve requires exact human, AI and review hashes
+   plus explicit Owner authorization. Pure human editorial rephrasing is
+   allowed with a real reviewer attesting unchanged meaning and original
+   coverage, without rerunning the full Owner approval. Withdraw stale
+   drafts with task-content-withdraw. New text can NEVER expand the frozen
+   acceptance, allowedPaths, requiredGates or dependencies; material changes
+   return to formal planning/scope review. In-progress, in-review and
+   Verified tasks retain their immutable historical record and Gate evidence.
    For frozen scope, incremental tasks or governed artifacts use real developer
    self-review with sources and concrete safety, dependency and test findings:
    release-work-scope-self-review, release-work-incremental-self-review or
@@ -449,6 +470,7 @@ ${managedRevision}
 - **已交付任务让出 Git 写入权**：一个任务已经提交代码和真实测试记录，处于 in_review 待审核时，可保留自己的管理租约，让没有前置依赖、文件范围不重叠的 Ready 任务使用同一个 Git 工作区继续开发。任何时候最多一个实际写入任务，暂存代码、未提交工作或范围重叠时不得切换。用 \`next.parkedReviews\` 查看待审任务；当前 AI 继续负责真实自审和结果登记，绝不能因让出写入权就把任务当作 Verified。若自审失败，要先重新领取 Git 写入权才能修改代码。正常切换无需 Owner 密钥和其他 Agent。
 - **本地配置豁免与精确交付**：使用 Git 的项目可在各独立仓库真实 Git 目录的 info/devcontrol-worktree-ignore 填写本机非业务配置文件的匹配规则。明确填写的 AGENTS.md、Skill、.cursor/mcp.json，以及 /docs/history-session/ 下旧 History Markdown/索引等，即使已被 Git 跟踪或暂存，也可从 DevControl 工作树噪声检查中排除；不改变 Git 跟踪、暂存、提交和原始交付证据。**禁止以 /docs/** 豁免正式 PRD/ADR/冻结 scopeSource、业务代码、冻结任务路径、软链、不安全路径和实际测试 Gate**。本机实际使用豁免时写入 dc_audit，记录规则及文件 SHA-256，不保存私有配置正文。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA，证据、Review、Gate 和 \`verify\` 只承认这些交付提交。后续 merge 只将相对第一父真正改变的冻结路径视为新改动，不能因为第二父缺少原文件就误判；但第一父路径发生真实改动，即使后续恢复原内容，也不能复用旧验收证据。MCP 自动生成的 Skill 和 AGENTS.md 只有符合真实生成器内容才可单独或与合法业务提交一起通过。
 - **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再通过 \`task-spec-supplement-self-review\` 完成有来源的实质开发者自审（可选 \`task-spec-supplement-independent-review\`，不强制第二人），最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
+- **人读概览与 AI 执行内容分开保存**：同一个 SQLite Task 下，\`task-content-get\` 查看已审查的人读版本 H 与 AI 版本 E，均绑定原冻结计划 Hash，状态、依赖、审批、Gate 和真实证据仍来自同一正式台账。\`task-content-stage\` 按 audience=human/ai 分别提交 why/work/effects/scenarios/businessAcceptance/exclusions 与 context/prerequisites/inputs/outputs/invariants/steps/failureRecovery/tests/evidence/stopConditions，必须指定实际来源 Hash、原版本和具体原因。\`task-content-check\` 与 \`task-content-review\` 对每项业务承诺和不做的事核实对应 AI 规则、步骤或测试，并明确核对没有遗漏及额外范围。实质版本组合由 Owner 通过 \`task-content-approve\` 以精确双内容 Hash、审查 Hash 和 explicitAuthorization:true 确认；纯人读措辞修订可由有具体依据的同一 Reviewer 复核且声明语义不变，不重走整套 Owner 批准。用 \`task-content-withdraw\` 撤回未批准草案。不得用新文字绕开原冻结验收条件、文件范围或 Gate；实质业务变化回正式范围审批。历史任务未独立记录就明确显示缺失，\`acceptance\` 只能作为正式验收标准，不能拆句冒充业务目标；不能自动改写执行中或已 Verified 记录。
 - **冻结变更与架构评审**：不强制第三名审核人。范围变更使用 \`release-work-scope-self-review\`，新增任务使用 \`release-work-incremental-self-review\`，受控工件使用 \`artifact-self-review\`，并提交真实来源、范围、依赖和安全测试审查。独立复审按风险选用。涉及冻结范围或受控工件变更时，仍须 Owner 明确批准精确 proposalHash/reviewHash，未批准不得执行。
 - **变更评估**：新想法依次使用 \`idea-capture\` / \`idea-assess\` / \`idea-self-review\` / \`idea-decide\` 进行真实自审与决策，\`idea-review\` 保留为可选独立复审；不得擅自修改冻结范围、架构与依赖；重大改变由 Owner 明确批准。
 - **不支持 v4**：不得调用 \`start_feature\`、\`start_bugfix\`、\`plan_heartbeat\`、\`resume_plan\`、\`converge\`，不得写文件式任务/Spec/History，也不得用 \`MCP_TOOLSET=full\` 绕过。旧 Markdown 仅做安全导入，正式运行只用 SQLite。
@@ -623,6 +645,22 @@ ${managedRevision}
   execution-contract and the human view, never rewrites the original
   acceptance, allowedPaths, requiredGates or dependencies. Unapproved
   additions are not actionable; material changes use a reviewed amendment.
+- Human and AI task content are separately authored and versioned under the
+  SAME SQLite task, not separate task ledgers. task-content-get reads the
+  approved human/AI versions and exact frozen source hash. Do not fabricate
+  human work outcomes by splitting acceptance, and do not auto-backfill
+  historical tasks. task-content-stage records audience=human or ai with
+  exact base revision, approved source hash, reason and specific fields;
+  task-content-check and task-content-review compare EACH human commitment,
+  business acceptance and exclusion against explicit AI clauses, with
+  evidence and a named reviewer. task-content-approve binds both hashes and
+  the review hash under explicit Owner authorization. For human editorial-only
+  changes, an actual reviewer may attest unchanged meaning and inherit the
+  existing approval without a complete new Owner approval. Unreviewed drafts
+  remain non-executable; task-content-withdraw drops a stale draft. The
+  executable scope, Gates, dependencies and acceptance always come from the
+  frozen plan. Material changes use normal reviewed amendments, and active or
+  Verified historical tasks cannot be rewritten.
 - For frozen scope, incremental work or governed artifacts, the actual
   developer performs substantive release-work-scope-self-review,
   release-work-incremental-self-review or artifact-self-review with source-backed

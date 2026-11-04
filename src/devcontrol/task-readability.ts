@@ -4,6 +4,7 @@
  * The frozen task node and the project's explicitly referenced requirements
  * are separate sources. A missing field remains missing.
  */
+import type {HumanTaskOverview} from './task-content.js';
 export interface RequirementReference {
   id:string; title:string; acceptance?:string;
 }
@@ -17,8 +18,9 @@ export interface ReadabilityIssue {
 export interface TaskReadability {
   status:'complete'|'needs_explanation'|'needs_contract_review'|'source_missing';
   authoritative:boolean;
-  purpose:{text:string;source:'frozen-task'|'approved-supplement'|'requirement-reference'|'missing'};
+  purpose:{text:string;source:'reviewed-human-overview'|'frozen-task'|'approved-supplement'|'requirement-reference'|'missing'};
   outcomes:string[];
+  outcomesSource:'reviewed-human-overview'|'missing';
   requirementRefs:RequirementReference[];
   issues:ReadabilityIssue[];
   nextAction:string;
@@ -40,11 +42,13 @@ function values(value:unknown):string[]{
   return Array.isArray(value)?value.filter((v):v is string=>typeof v==='string'&&!!v.trim()).map(v=>v.trim()):[];
 }
 
-/** Extract verifiable statements rather than asking AI to reword the scope.
- * Splitting only at unambiguous sentence boundaries preserves the semantics.
+/** Do NOT split acceptance sentences into business work. Acceptance is proof,
+ * not an authoritative list of business commitments. Legacy missing remains
+ * missing until a separately reviewed human revision exists.
  */
 export function taskReadability(contract:Record<string,unknown>,
-  requirements:RequirementReference[]=[],approvedFields:Record<string,unknown>={}):TaskReadability {
+  requirements:RequirementReference[]=[],approvedFields:Record<string,unknown>={},
+  humanOverview:HumanTaskOverview|null=null):TaskReadability {
   const authoritative=contract.authoritative===true;
   const ids=values(contract.requirementIds);
   const refs=ids.map(id=>{
@@ -54,15 +58,18 @@ export function taskReadability(contract:Record<string,unknown>,
   });
   // A trigger/scenario is not a reason for the task to exist.
   const approvedPurpose=text(approvedFields.purpose);
-  const explicitPurpose=text(contract.purpose)||text(contract.description)||approvedPurpose;
+  const reviewedPurpose=text(humanOverview?.why);
+  const explicitPurpose=reviewedPurpose||text(contract.purpose)||
+    text(contract.description)||approvedPurpose;
   const purpose:TaskReadability['purpose']=explicitPurpose?
-    {text:explicitPurpose,source:approvedPurpose&&!text(contract.purpose)&&
+    {text:explicitPurpose,source:reviewedPurpose?'reviewed-human-overview':
+      approvedPurpose&&!text(contract.purpose)&&
       !text(contract.description)?'approved-supplement':'frozen-task'}:
     refs.some(ref=>ref.title!=='未找到对应的需求说明')?
       {text:'对应产品需求：'+refs.filter(ref=>ref.title!=='未找到对应的需求说明')
         .map(ref=>ref.id+' '+ref.title).join('；'),source:'requirement-reference'}:
       {text:'原始任务没有单独记录业务目的，且没有可核对的需求描述。',source:'missing'};
-  const outcomes=text(contract.acceptance).split(/[；;。\n]+/).map(v=>v.trim()).filter(Boolean);
+  const outcomes=humanOverview?.work??[];
   const issues:ReadabilityIssue[]=[];
   if(!authoritative)issues.push({field:'frozenSource',label:'原始冻结合同来源',severity:'contract'});
   if(!explicitPurpose)issues.push({field:'purpose',label:labels.purpose,severity:'explanation'});
@@ -79,7 +86,9 @@ export function taskReadability(contract:Record<string,unknown>,
     contractGaps?'needs_contract_review':
     issues.length?'needs_explanation':'complete';
   return {
-    status,authoritative,purpose,outcomes,requirementRefs:refs,issues,
+    status,authoritative,purpose,outcomes,
+    outcomesSource:humanOverview?'reviewed-human-overview':'missing',
+    requirementRefs:refs,issues,
     nextAction:status==='source_missing'?
       '先核对原始审批版本和任务来源，不得从其他摘要补造冻结合同。':
       status==='needs_contract_review'?

@@ -60,6 +60,26 @@ export function dispatchDevControl(
       String(input.id),String(input.expectedProposalHash),input.review,'independent');
     case 'task-spec-supplement-approve':return ledger.approveTaskSpecSupplement(input as never);
     case 'task-spec-supplement-withdraw':return ledger.withdrawTaskSpecSupplement(input as never);
+    case 'task-content-get':return ledger.taskContent(String(input.id));
+    case 'task-content-check':return ledger.checkTaskContentPair({
+      id:String(input.id),expectedSourceHash:String(input.expectedSourceHash??''),
+      expectedHumanHash:String(input.expectedHumanHash??''),
+      expectedAiHash:String(input.expectedAiHash??''),review:input.review,
+    });
+    case 'task-content-stage':return ledger.stageTaskContent({
+      id:String(input.id),audience:input.audience,content:input.content,
+      expectedRevision:input.expectedRevision,
+      expectedSourceHash:String(input.expectedSourceHash??''),
+      changeKind:input.changeKind,actor:String(input.actor??''),
+      reason:String(input.reason??''),
+    });
+    case 'task-content-review':return ledger.reviewTaskContentPair({
+      id:String(input.id),expectedSourceHash:String(input.expectedSourceHash??''),
+      expectedHumanHash:String(input.expectedHumanHash??''),
+      expectedAiHash:String(input.expectedAiHash??''),review:input.review,
+    });
+    case 'task-content-approve':return ledger.approveTaskContentPair(input as never);
+    case 'task-content-withdraw':return ledger.withdrawTaskContent(input as never);
     case "release-work-plan": return ledger.releaseWorkPlan(String(input.release ?? ledger.primaryRelease()));
     case "release-work-review": return ledger.reviewReleaseWork(input.plan);
     case "release-work-stage": return ledger.stageReleaseWork(input.plan,String(input.actor??""),

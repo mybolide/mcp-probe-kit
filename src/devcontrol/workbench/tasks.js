@@ -469,15 +469,27 @@
       if(Array.isArray(requirements)&&requirements.length)
         relationsHost.append(n("p","关联需求 "+requirements.join("、"),"task-detail-muted"));
     }
-    function renderOverview(contract,completion,readability){
+    function renderOverview(contract,completion,readability,dual){
       overviewHost.replaceChildren();
       const usable=contract&&contract.authoritative===true;
       const preview=contract&&!usable;
+      const paired=dual?.approved||null;
+      const human=paired?.human?.content||null;
       const hero=n("section",null,"task-overview-hero");
       hero.append(n("small",row.pending?"规划未批准 · 不可执行":
         usable?"已关联正式冻结任务合同":"未找到可核实的冻结合同"),
         n("h3",status+" · "+(item.release||actual?.release||"当前版本")));
       if(preview)hero.append(n("p","以下为规划或台账摘要，不是已经批准的 AI 执行合同。"));
+      if(human)hero.append(n("p","已审查人读概览 H"+paired.human.revision+
+        " · AI 执行说明 E"+paired.ai.revision+
+        " · 共同来源 Hash "+paired.sourcePlanHash));
+      else hero.append(n("p",dual?.status==='initial-pair-pending'?
+        "两份说明尚在版本草案阶段，未完成一致性审查及授权；不能作为正式任务说明或 AI 合同。":
+        dual?.status==='integrity-invalid'?
+        "内容版本校验未通过，已拒绝使用新的说明。原始冻结合同仍保留。":
+        row.pending?
+        "规划仍在草案阶段，没有已批准的人读概览。":
+        "历史兼容：尚未登记独立人读版本。下方保留原始冻结说明，但不能把验收条件当作工作内容。"));
       overviewHost.append(hero);
       const text=value=>Array.isArray(value)?value.filter(Boolean).join("；"):String(value||"").trim();
       const purpose=usable?text(contract.purpose||contract.description):
@@ -495,10 +507,18 @@
           [why.text,"以上来自关联产品需求，并非独立批准的任务目的说明。"]:
         purpose||(requirements.length?"未单独记录业务背景；关联需求 "+requirements.join("、"):
           "原始规格未单独记录背景，需核对需求来源。");
-      section(overviewHost,"为什么做",whyContent);
+      section(overviewHost,"为什么做",human?.why||whyContent);
       const outcomes=readability?.outcomes;
       section(overviewHost,"本次要完成什么",
-        outcomes?.length?outcomes:scope||"未记录明确验收目标，不根据标题猜测任务内容。");
+        human?.work?.length?human.work:outcomes?.length?outcomes:
+        "尚未记录独立工作内容；不会再从 acceptance 拆句或复制验收标准冒充任务目标。");
+      if(human){
+        section(overviewHost,"预期业务效果",human.effects);
+        if(human.scenarios?.length)section(overviewHost,"典型使用场景",human.scenarios);
+        section(overviewHost,"业务验收",human.businessAcceptance);
+        section(overviewHost,"本次不做",human.exclusions?.length?human.exclusions:
+          "未单独列出业务排除项；实际执行范围仍由冻结合同限定。");
+      }
       if(readability?.requirementRefs?.length)
         section(overviewHost,"对应的产品需求",readability.requirementRefs.map(ref=>
           ref.id+" · "+ref.title));
@@ -510,15 +530,24 @@
         actual?.status==="in_progress"?"正在开发，尚未登记正式完成报告。":
         "尚未开始执行；任务状态以 SQLite 为准。");
       const pending=actual?.pendingVerification;
+      const planningReasons=[
+        ...(item.blockingReason?["具体阻塞："+item.blockingReason]:[]),
+        ...(Array.isArray(item.openQuestions)?item.openQuestions.map(x=>"待确定："+x):[]),
+        ...(actual?.pendingScopeReview?["尚有正式范围变更待审查"]:[]),
+        ...(actual?.pendingIncrementalReview?["新增工作范围待批准"]:[]),
+        ...(actual?.blockedBy?.length?["前置任务尚未完成："+actual.blockedBy.join("、")]:[]),
+        ...(actual?.unverifiedChildren?.length?["子任务尚未验证："+actual.unverifiedChildren.join("、")]:[]),
+      ];
       section(overviewHost,"当前阻塞与下一步",pending?
         ["待验证 Gate "+pending.gate,"原因："+pending.reason,
           "下一步：执行真实验收并登记对应证据。"]:
-        row.pending?"下一步：完成规划审核，批准前不能领取任务。":
+        row.pending?[...planningReasons,
+          "任务规划尚未批准，不能领取。具体未满足的审批项以原始提案和审批记录为准。"]:
         actual?.status==="verified"?"已正式验证；无待处理 Gate 信息。":
         actual?.status==="in_review"?"下一步：核对真实测试证据及未通过的 Gate。":
         actual?.status==="in_progress"?"下一步：按冻结合同继续实施并登记真实测试结果。":
         "下一步：检查依赖和审批状态，符合条件后领取任务。");
-      if(usable)section(overviewHost,"怎样算完成",
+      if(usable)section(overviewHost,"正式冻结验收条件（独立于工作目标）",
         contract.acceptance||"合同未记录独立验收标准。");
       if(readability){
         const label={
@@ -543,7 +572,7 @@
     }
     renderRelationships(null);
     renderOverview(null,null);
-    function renderTaskContract(contract){
+    function renderTaskContract(contract,dual){
       contractSections.replaceChildren();
       if(!contract){
         section(contractSections,"任务合同","正在读取原始冻结合同，不根据标题推断实施内容。");
@@ -557,6 +586,28 @@
         for(const [heading,value] of entries)section(disclosure,heading,value);
         contractSections.append(disclosure);
       };
+      const pair=dual?.approved||null;
+      const brief=pair?.ai?.content;
+      if(brief){
+        group("AI 独立执行说明 · E"+pair.ai.revision,[
+          ["对应人读说明与一致性审查",[
+            "人读版本 H"+pair.human.revision,
+            "对应来源 Hash："+pair.sourcePlanHash,
+            "一致性审查 Hash："+pair.reviewHash,
+            "授权类型："+pair.approvalMode,
+            "原始冻结文件范围与 Gate 仍然是执行权限来源，不由补充文字扩大。",
+          ]],
+          ["技术上下文",brief.context],["前置依赖",brief.prerequisites],
+          ["输入",brief.inputs],["输出",brief.outputs],
+          ["不可变规则",brief.invariants],["实施步骤",brief.steps],
+          ["失败与异常恢复",brief.failureRecovery],["测试",brief.tests],
+          ["验收证据",brief.evidence],["停止条件",brief.stopConditions],
+        ],true);
+      }else section(contractSections,"独立 AI 执行说明状态",
+        "尚无经过版本一致性审查的 AI 独立说明。原冻结执行合同仍有效；不能用人读文字或草案补造技术步骤。");
+      if(dual?.drafts&&Object.keys(dual.drafts).length)
+        section(contractSections,"待审查的新说明版本（不生效）",
+          "已提交的草稿需要重新进行双内容一致性审查；当前执行仍使用上一组已批准的版本及原冻结范围。");
       const source=contract.source;
       if(source){
         group("基本信息与冻结版本",[["冻结合同版本",[
@@ -663,12 +714,12 @@
         requiredGates:data.task.requiredGates,dependsOn:data.task.dependsOn,
         source:null,authoritative:false,audit:data.detailAudit,
       }:(data.detailAudit?{source:null,authoritative:false,audit:data.detailAudit}:null));
-      renderTaskContract(safeSummary);
+      renderTaskContract(safeSummary,data.content);
       const fill=(target,title,values)=>{
         target.replaceChildren(n("h3",title),...values.map(value=>n("p",value)));
       };
       const note=data.completion;
-      renderOverview(safeSummary,note,data.readability);
+      renderOverview(safeSummary,note,data.readability,data.content);
       renderRelationships(safeSummary);
       renderRawContract(data.executionContract,data.contract);
       if(data.supplement?.approved){

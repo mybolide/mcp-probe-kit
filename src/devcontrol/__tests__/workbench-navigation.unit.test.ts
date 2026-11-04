@@ -77,9 +77,13 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).not.toContain('$("release-review-summary").replaceChildren()');
     expect(html).toContain("input.closest('.settings-switch-row')||input.closest('label')");
     expect(html).toContain('.settings-switch-row>.switch');
-    expect(html).toContain('function renderTaskContract(contract)');
-    expect(html).toContain('renderTaskContract(safeSummary)');
-    expect(html).toContain('function renderOverview(contract,completion,readability)');
+    expect(html).toContain('function renderTaskContract(contract,dual)');
+    expect(html).toContain('renderTaskContract(safeSummary,data.content)');
+    expect(html).toContain('function renderOverview(contract,completion,readability,dual)');
+    expect(html).toContain('renderOverview(safeSummary,note,data.readability,data.content)');
+    expect(html).toContain('AI 独立执行说明 · E');
+    expect(html).toContain('尚未记录独立工作内容');
+    expect(html).toContain('本次不做');
     expect(html).toContain('id="task-readability-audit"');
     expect(html).toContain('fetchJSON("/api/task-readability")');
     expect(html).toContain('function renderRelationships(contract)');

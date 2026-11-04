@@ -10,6 +10,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
+import {checkTaskContent,taskContentReviewHash,
+  checkContentPair,type HumanTaskOverview,type AiExecutionBrief,
+  type TaskContentReview} from './task-content.js';
 
 type Cell=string|number|bigint|Uint8Array|null;
 type RecordRow=Record<string,Cell>;
@@ -202,6 +205,95 @@ function taskDependencyIssues(target:Database,shapes:Map<string,TableShape>,
   for(const task of state.keys())visit(task);
   return [...new Set(issues)];
 }
+
+/** Merging independent H/E revisions is safe only if every approved pair
+ * still points to both exact document bytes and its original review.
+ * Otherwise a split-brain SQLite copy could silently manufacture an AI
+ * brief that neither machine actually approved. Never auto-repair it.
+ */
+function taskContentMergeIssues(target:Database,shapes:Map<string,TableShape>,
+  additions:Map<string,RecordRow[]>,updates:Map<string,PlannedUpdate[]>):string[]{
+  const rev='dc_task_content_revisions',pairs='dc_task_content_pairs';
+  if(!shapes.has(rev)||!shapes.has(pairs))return [];
+  const merged=(name:string):RecordRow[]=>{
+    const shape=shapes.get(name);
+    if(!shape)return [];
+    const saved=rows(target,name,shape);
+    const changes=new Map((updates.get(name)??[]).map(item=>[item.key,item.row]));
+    return [...saved.map(row=>changes.get(rowKey(row,shape.keys))??row),
+      ...(additions.get(name)??[])];
+  };
+  const errors:string[]=[];
+  const docs=new Map<string,{content:HumanTaskOverview|AiExecutionBrief;
+    hash:string;source:string}>();
+  const key=(id:string,audience:string,version:number)=>
+    JSON.stringify([id,audience,version]);
+  for(const row of merged(rev)){
+    const id=String(row.task_id),audience=String(row.audience);
+    if(!['human','ai'].includes(audience)){
+      errors.push('Invalid task content audience: '+id);continue;
+    }
+    try{
+      const checked=checkTaskContent(audience as 'human'|'ai',
+        JSON.parse(String(row.content_json)));
+      if(!checked.passed||checked.hash!==row.content_hash||!checked.content)
+        throw Error('Content hash or fields did not match');
+      docs.set(key(id,audience,Number(row.revision)),{
+        content:checked.content,hash:checked.hash!,
+        source:String(row.source_plan_hash),
+      });
+    }catch{
+      errors.push('Invalid independent '+audience+' content revision: '+id+
+        ' v'+String(row.revision));
+    }
+  }
+  for(const row of merged('dc_task_content_drafts')){
+    const id=String(row.task_id),audience=String(row.audience);
+    if(!['human','ai'].includes(audience)){
+      errors.push('Invalid task content draft audience: '+id);continue;
+    }
+    try{
+      const checked=checkTaskContent(audience as 'human'|'ai',
+        JSON.parse(String(row.content_json)));
+      if(!checked.passed||checked.hash!==row.content_hash)
+        throw Error('Draft fingerprint changed');
+      docs.set(key(id,audience,Number(row.base_revision)+1),{
+        content:checked.content!,hash:checked.hash!,
+        source:String(row.source_plan_hash),
+      });
+    }catch{
+      errors.push('Invalid unapproved '+audience+' draft: '+id);
+    }
+  }
+  const validatePair=(row:RecordRow,approved:boolean)=>{
+    const id=String(row.task_id);
+    const h=docs.get(key(id,'human',Number(row.human_revision)));
+    const ai=docs.get(key(id,'ai',Number(row.ai_revision)));
+    if(!h||!ai||h.hash!==row.human_hash||ai.hash!==row.ai_hash||
+      h.source!==row.source_plan_hash||ai.source!==row.source_plan_hash){
+      errors.push('Orphaned or mismatched H/E pair after SQLite merge: '+id);
+      return;
+    }
+    try{
+      const review=JSON.parse(String(row.review_json)) as TaskContentReview;
+      const subject={taskId:id,sourcePlanHash:String(row.source_plan_hash),
+        humanHash:h.hash,aiHash:ai.hash,
+        humanRevision:Number(row.human_revision),
+        aiRevision:Number(row.ai_revision)};
+      if(taskContentReviewHash(subject,review)!==row.review_hash||
+        checkContentPair(h.content as HumanTaskOverview,
+          ai.content as AiExecutionBrief,review,
+          approved&&row.approval_mode==='editorial-reviewed'?
+            'editorial':'substantive').length)
+        throw Error('Review SHA or correspondence changed');
+    }catch{
+      errors.push('Unverifiable H/E consistency review after merge: '+id);
+    }
+  };
+  for(const row of merged(pairs))validatePair(row,true);
+  for(const row of merged('dc_task_content_pair_reviews'))validatePair(row,false);
+  return [...new Set(errors)];
+}
 function analyze(target:Database,source:Database,base?:Database,
   decisions:MergeDecision[]=[]):InternalPlan{
   const lhs=tables(target),rhs=tables(source),ancestor=base?tables(base):undefined;
@@ -323,6 +415,8 @@ function analyze(target:Database,source:Database,base?:Database,
     throw Error('Merge decision does not match an actual current conflict');
   if(!schemaErrors.length)
     schemaErrors.push(...taskDependencyIssues(target,lhs,newRows,updates));
+  if(!schemaErrors.length)
+    schemaErrors.push(...taskContentMergeIssues(target,lhs,newRows,updates));
   const fingerprint=hash({schema:[...lhs,...rhs,...(ancestor?[...ancestor]:[])],
     rows:fingerprints,decisions});
   return {tables:sortDependencies(lhs,[...new Set([...newRows.keys(),...updates.keys()])]),

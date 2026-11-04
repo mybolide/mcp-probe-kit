@@ -11,6 +11,14 @@ const FLOWS = {
     example: {action:'onboard',project_root:'/ABSOLUTE/PROJECT',input:{}},
     caution: 'Existing tasks take precedence. Do not regenerate a plan on resume.',
   },
+  content: {
+    description:'同一任务的人读概览 H 与 AI 执行说明 E 分开填写、核对并关联版本',
+    actions:['task-content-get','task-content-stage','task-content-check',
+      'task-content-review','task-content-approve','task-content-withdraw'],
+    example:{action:'task-content-get',project_root:'/ABSOLUTE/PROJECT',
+      input:{id:'APPROVED-READY-TASK-ID'}},
+    caution:'Only an approved Ready task with an immutable source plan may stage independent human/AI contents; the exact planHash and previous audience revision are required. Human content has why/work/effects/scenarios/businessAcceptance/exclusions; AI content has context/prerequisites/inputs/outputs/invariants/steps/failureRecovery/tests/evidence/stopConditions. Compare every human business commitment to specific AI steps, invariants, tests or evidence with a named reviewer. A substantive pair needs exact H/E/review hashes and explicit Owner authorization. A reviewed human editorial-only update may reuse the existing pair without repeated Owner approval if meaning and field counts are unchanged. Material business scope is NEVER allowed here: use the formal scope amendment. Existing acceptance/Gates/file scope remain frozen, and historic in_progress/in_review/Verified tasks are not retroactively changed.',
+  },
   database: {
     description:'本机两份 DevControl SQLite 预检、冲突报告和安全合并候选库',
     actions:['sqlite-merge-preview','sqlite-merge-candidate'],
@@ -82,6 +90,7 @@ export function devControlGuide(input: Record<string, unknown> = {}): Record<str
     '设计':'feature','任务':'task','开发':'task','测试':'verification','验收':'verification',
     '缺陷':'bug','新想法':'idea','评估':'idea','变更':'scope','架构':'architecture',
     '计划':'planning',
+    '内容':'content','概览':'content','任务说明':'content','双版本':'content',
     '数据库':'database','合并':'database','sqlite':'database',
   };
   const key = (requested in FLOWS ? requested : alias[requested]) as keyof typeof FLOWS | undefined;

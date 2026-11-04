@@ -49,6 +49,10 @@ import {proposalHash as supplementHash, reviewHash as supplementReviewHash,
   validateProposal as validateTaskSupplement,validateReview as validateSupplementReview,
   type TaskSpecSupplementProposal,type TaskSpecSupplementReview,
 } from './task-spec-supplement.js';
+import {checkTaskContent,checkContentPair,taskContentReviewHash,
+  type TaskContentAudience,type TaskContentDocument,type TaskContentChange,
+  type TaskContentReview,type HumanTaskOverview,type AiExecutionBrief,
+} from './task-content.js';
 
 type Value = string | number | null;
 type Row = Record<string, any>;
@@ -195,6 +199,7 @@ function parseProtectedWorktreeSnapshot(raw:unknown,source:string):
     if(typeof file.sha256!=='string'||!/^[a-f0-9]{64}$/.test(file.sha256))
       return invalid('invalid SHA-256 fingerprint');
   }
+
   return data as ReturnType<typeof preservedWorktreeSnapshot>;
 }
 
@@ -1139,6 +1144,44 @@ export class ProjectTaskLedger {
         revision INTEGER NOT NULL,proposal_hash TEXT NOT NULL,
         review_hash TEXT NOT NULL,proposal_json TEXT NOT NULL,
         reviewed_json TEXT NOT NULL,approved_by TEXT NOT NULL,
+        approved_at TEXT NOT NULL,PRIMARY KEY(task_id,revision)
+      );
+      -- Human and AI descriptions belong to one existing task, but each has
+      -- an independent, append-only revision history. Neither table grants
+      -- task approval, changes a frozen snapshot or replaces a Gate.
+      CREATE TABLE IF NOT EXISTS dc_task_content_revisions (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        audience TEXT NOT NULL CHECK(audience IN ('human','ai')),
+        revision INTEGER NOT NULL,content_hash TEXT NOT NULL,
+        content_json TEXT NOT NULL,source_plan_hash TEXT NOT NULL,
+        change_kind TEXT NOT NULL,created_by TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(task_id,audience,revision)
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_content_drafts (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        audience TEXT NOT NULL CHECK(audience IN ('human','ai')),
+        base_revision INTEGER NOT NULL,content_hash TEXT NOT NULL,
+        content_json TEXT NOT NULL,source_plan_hash TEXT NOT NULL,
+        change_kind TEXT NOT NULL,proposed_by TEXT NOT NULL,
+        reason TEXT NOT NULL,proposed_at TEXT NOT NULL,
+        PRIMARY KEY(task_id,audience)
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_content_pair_reviews (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        source_plan_hash TEXT NOT NULL,
+        human_hash TEXT NOT NULL,ai_hash TEXT NOT NULL,
+        human_revision INTEGER NOT NULL,ai_revision INTEGER NOT NULL,
+        review_json TEXT NOT NULL,review_hash TEXT NOT NULL,
+        reviewed_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS dc_task_content_pairs (
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        revision INTEGER NOT NULL,source_plan_hash TEXT NOT NULL,
+        human_revision INTEGER NOT NULL,ai_revision INTEGER NOT NULL,
+        human_hash TEXT NOT NULL,ai_hash TEXT NOT NULL,
+        review_hash TEXT NOT NULL,review_json TEXT NOT NULL,
+        approval_mode TEXT NOT NULL,approved_by TEXT NOT NULL,
         approved_at TEXT NOT NULL,PRIMARY KEY(task_id,revision)
       );
       -- A workspace can contain independently committed, ignored Git roots.
@@ -5055,6 +5098,352 @@ export class ProjectTaskLedger {
     });
   }
 
+  /** Independent audience revisions, bound to ONE immutable approved source.
+   * A missing pair remains explicitly missing; legacy tasks are never
+   * retrospectively rewritten or forced through a new execution Gate.
+   */
+  taskContent(id:string):Row {
+    this.requireTask(id);
+    const revisions=this.db.prepare(`SELECT audience,revision,content_hash,
+      content_json,source_plan_hash,change_kind,created_by,created_at
+      FROM dc_task_content_revisions WHERE task_id=?
+      ORDER BY audience,revision`).all(id);
+    const drafts=this.db.prepare(`SELECT audience,base_revision,content_hash,
+      content_json,source_plan_hash,change_kind,proposed_by,reason,proposed_at
+      FROM dc_task_content_drafts WHERE task_id=?`).all(id);
+    const pairs=this.db.prepare(`SELECT * FROM dc_task_content_pairs
+      WHERE task_id=? ORDER BY revision`).all(id);
+    const pendingReview=this.db.prepare(`SELECT * FROM dc_task_content_pair_reviews
+      WHERE task_id=?`).get(id);
+    const latest=pairs[pairs.length-1];
+    const readRevision=(audience:TaskContentAudience,revision:number)=>{
+      const row=revisions.find(item=>item.audience===audience&&item.revision===revision);
+      if(!row)return null;
+      try{return {revision,hash:row.content_hash,
+        content:JSON.parse(row.content_json),sourcePlanHash:row.source_plan_hash,
+        changeKind:row.change_kind};}
+      catch{return null;}
+    };
+    const human=latest?readRevision('human',latest.human_revision):null;
+    const ai=latest?readRevision('ai',latest.ai_revision):null;
+    let pairedIntegrity=true;
+    let reviewed:TaskContentReview|null=null;
+    if(latest){
+      try{reviewed=JSON.parse(latest.review_json) as TaskContentReview;}
+      catch{pairedIntegrity=false;}
+      const humanChecked=human?checkTaskContent('human',human.content):null;
+      const aiChecked=ai?checkTaskContent('ai',ai.content):null;
+      pairedIntegrity=pairedIntegrity&&!!human&&!!ai&&!!reviewed&&
+        human?.hash===latest.human_hash&&ai?.hash===latest.ai_hash&&
+        human?.sourcePlanHash===latest.source_plan_hash&&
+        ai?.sourcePlanHash===latest.source_plan_hash&&
+        humanChecked?.hash===latest.human_hash&&aiChecked?.hash===latest.ai_hash&&
+        taskContentReviewHash({taskId:id,sourcePlanHash:latest.source_plan_hash,
+          humanHash:latest.human_hash,aiHash:latest.ai_hash,
+          humanRevision:latest.human_revision,aiRevision:latest.ai_revision},
+        reviewed as TaskContentReview)===latest.review_hash;
+    }
+    return {taskId:id,schema:'task-content-v1',
+      status:!latest?(drafts.length?'initial-pair-pending':'legacy-unpaired'):
+        !pairedIntegrity?'integrity-invalid':
+        drafts.length?'revision-pending':'reviewed',
+      approved:latest&&pairedIntegrity?{
+        pairRevision:latest.revision,sourcePlanHash:latest.source_plan_hash,
+        human,ai,
+        reviewHash:latest.review_hash,review:reviewed,
+        approvalMode:latest.approval_mode,approvedBy:latest.approved_by,
+        approvedAt:latest.approved_at,
+      }:null,
+      drafts:Object.fromEntries(drafts.map(row=>[row.audience,{
+        expectedRevision:row.base_revision,revision:row.base_revision+1,
+        hash:row.content_hash,content:JSON.parse(row.content_json),
+        sourcePlanHash:row.source_plan_hash,changeKind:row.change_kind,
+        proposedBy:row.proposed_by,proposedAt:row.proposed_at,
+      }])),
+      pendingReview:pendingReview?{
+        humanHash:pendingReview.human_hash,aiHash:pendingReview.ai_hash,
+        humanRevision:pendingReview.human_revision,
+        aiRevision:pendingReview.ai_revision,reviewHash:pendingReview.review_hash,
+        reviewedAt:pendingReview.reviewed_at,
+      }:null,
+      history:pairs.map(row=>({pairRevision:row.revision,
+        humanRevision:row.human_revision,aiRevision:row.ai_revision,
+        sourcePlanHash:row.source_plan_hash,reviewHash:row.review_hash,
+        approvalMode:row.approval_mode,approvedBy:row.approved_by,
+        approvedAt:row.approved_at})),
+      revisions:revisions.map(row=>({audience:row.audience,
+        revision:row.revision,hash:row.content_hash,
+        sourcePlanHash:row.source_plan_hash,changeKind:row.change_kind,
+        createdBy:row.created_by,createdAt:row.created_at})),
+      originalFrozenContractUnchanged:true,legacyTaskStatusUnchanged:true,
+    };
+  }
+
+  private taskContentEligible(id:string,expectedSourceHash:string):Row {
+    const task=this.requireTask(id);
+    const original=this.frozenTaskContract(id);
+    if(task.status!=='ready'||!task.approved_by||
+      !original.authoritative||original.source?.frozen!==true)
+      fail('TASK_CONTENT_NOT_READY',
+        'Task must have an approved frozen source and be Ready; in-progress, review and Verified tasks are immutable');
+    if(!expectedSourceHash||original.source.planHash!==expectedSourceHash)
+      fail('TASK_CONTENT_SOURCE_CHANGED','Exact approved source plan hash required');
+    if(JSON.stringify(JSON.parse(task.allowed_paths))!==JSON.stringify(original.allowedPaths)||
+       JSON.stringify(JSON.parse(task.required_gates))!==JSON.stringify(original.requiredGates))
+      fail('TASK_CONTENT_FROZEN_SCOPE_CHANGED',
+        'Original frozen file range and Gates must still match');
+    if(this.db.prepare('SELECT task_id FROM dc_task_leases WHERE task_id=?').get(id))
+      fail('TASK_CONTENT_LEASED','No task text changes under an active lease');
+    if(this.taskAwaitsScopeReview(id,task.release)||
+      this.taskAwaitsIncrementalReview(id,task.release))
+      fail('TASK_CONTENT_SCOPE_PENDING','Finish reviewed scope amendments first');
+    return original;
+  }
+
+  private contentCandidate(id:string,audience:TaskContentAudience):Row|null {
+    const draft=this.db.prepare(`SELECT * FROM dc_task_content_drafts
+      WHERE task_id=? AND audience=?`).get(id,audience);
+    if(draft)return {audience,revision:draft.base_revision+1,
+      hash:draft.content_hash,content:JSON.parse(draft.content_json),
+      sourcePlanHash:draft.source_plan_hash,changeKind:draft.change_kind,
+      draft:true,baseRevision:draft.base_revision};
+    const row=this.db.prepare(`SELECT * FROM dc_task_content_revisions
+      WHERE task_id=? AND audience=? ORDER BY revision DESC LIMIT 1`).get(id,audience);
+    return row?{audience,revision:row.revision,hash:row.content_hash,
+      content:JSON.parse(row.content_json),sourcePlanHash:row.source_plan_hash,
+      changeKind:row.change_kind,draft:false}:null;
+  }
+
+  /** Stage exactly one audience. Material business changes MUST go through
+   * the normal Release/Feature scope review, not a task-text update.
+   */
+  stageTaskContent(input:{id:string;audience:TaskContentAudience;
+    content:TaskContentDocument;expectedRevision:number;
+    expectedSourceHash:string;changeKind:TaskContentChange;
+    actor:string;reason:string}):Row {
+    if(!input||!['human','ai'].includes(input.audience)||
+      !['editorial','clarification','material'].includes(input.changeKind))
+      fail('TASK_CONTENT_INPUT','Valid audience and change kind required');
+    if(input.changeKind==='material')
+      fail('TASK_CONTENT_SCOPE_REVIEW_REQUIRED',
+        'Material business scope, acceptance or executable rules require formal scope and Owner approval, not a content revision');
+    if(typeof input.actor!=='string'||input.actor.trim().length<2||
+      typeof input.reason!=='string'||input.reason.trim().length<20)
+      fail('TASK_CONTENT_REASON_REQUIRED','Named author and substantive reason required');
+    const checked=checkTaskContent(input.audience,input.content);
+    if(!checked.passed)fail('TASK_CONTENT_INVALID',checked.issues.join('; '));
+    return this.inTransaction(()=>{
+      this.taskContentEligible(input.id,input.expectedSourceHash);
+      const existing=this.db.prepare(`SELECT MAX(revision) AS latest
+        FROM dc_task_content_revisions WHERE task_id=? AND audience=?`)
+        .get(input.id,input.audience);
+      const last=Number(existing?.latest??0);
+      if(!Number.isSafeInteger(input.expectedRevision)||input.expectedRevision!==last)
+        fail('TASK_CONTENT_STALE','Exact previous audience revision required');
+      if(this.db.prepare(`SELECT task_id FROM dc_task_content_drafts
+        WHERE task_id=? AND audience=?`).get(input.id,input.audience))
+        fail('TASK_CONTENT_PENDING','Withdraw the current audience draft first');
+      if(input.changeKind==='editorial'){
+        const pair=this.taskContent(input.id).approved;
+        if(!pair||input.audience!=='human')
+          fail('TASK_CONTENT_EDITORIAL_INVALID',
+            'Only a paired human overview may receive an editorial-only review');
+        const earlier=pair.human.content as HumanTaskOverview;
+        const revised=checked.content as HumanTaskOverview;
+        if(['work','effects','scenarios','businessAcceptance','exclusions'].some(field=>
+          (earlier as unknown as Record<string,string[]>)[field].length!==
+          (revised as unknown as Record<string,string[]>)[field].length))
+          fail('TASK_CONTENT_EDITORIAL_STRUCTURE',
+            'Editorial-only changes cannot add or remove business commitments');
+      }
+      const previous=this.contentCandidate(input.id,input.audience);
+      if(previous?.hash===checked.hash)
+        fail('TASK_CONTENT_UNCHANGED','The proposed content equals the existing revision');
+      this.db.prepare(`INSERT INTO dc_task_content_drafts(task_id,audience,
+        base_revision,content_hash,content_json,source_plan_hash,
+        change_kind,proposed_by,reason,proposed_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?)`).run(input.id,input.audience,last,
+        checked.hash,JSON.stringify(checked.content),input.expectedSourceHash,
+        input.changeKind,input.actor.trim(),input.reason.trim(),utc());
+      this.db.prepare('DELETE FROM dc_task_content_pair_reviews WHERE task_id=?')
+        .run(input.id);
+      this.audit(input.id,'task_content_staged',input.actor.trim(),{
+        audience:input.audience,nextRevision:last+1,hash:checked.hash,
+        changeKind:input.changeKind,sourcePlanHash:input.expectedSourceHash,
+        priorPairedVersionRemainsUnchanged:true});
+      return {taskId:input.id,audience:input.audience,revision:last+1,
+        contentHash:checked.hash,status:'awaiting_consistency_review',
+        changesFrozenPlan:false};
+    });
+  }
+
+  withdrawTaskContent(input:{id:string;audience:TaskContentAudience;
+    expectedContentHash:string;actor:string;reason:string}):Row{
+    if(!input||!['human','ai'].includes(input.audience)||
+      typeof input.actor!=='string'||input.actor.trim().length<2||
+      typeof input.reason!=='string'||input.reason.trim().length<20)
+      fail('TASK_CONTENT_WITHDRAW_INVALID','Named actor and concrete withdrawal reason required');
+    return this.inTransaction(()=>{
+      const draft=this.db.prepare(`SELECT * FROM dc_task_content_drafts
+        WHERE task_id=? AND audience=?`).get(input.id,input.audience);
+      if(!draft||draft.content_hash!==input.expectedContentHash)
+        fail('TASK_CONTENT_DRAFT_CHANGED','Expected current audience draft hash required');
+      this.db.prepare(`DELETE FROM dc_task_content_drafts WHERE task_id=? AND audience=?`)
+        .run(input.id,input.audience);
+      this.db.prepare(`DELETE FROM dc_task_content_pair_reviews WHERE task_id=?`).run(input.id);
+      this.audit(input.id,'task_content_withdrawn',input.actor.trim(),{
+        audience:input.audience,hash:input.expectedContentHash,
+        reason:input.reason.trim(),approvedVersionsUnaffected:true});
+      return {taskId:input.id,audience:input.audience,withdrawn:true,
+        approvedVersionsUnaffected:true};
+    });
+  }
+
+  /** Read-only check can be used before registering any attestation. */
+  checkTaskContentPair(input:{id:string;expectedSourceHash:string;
+    expectedHumanHash:string;expectedAiHash:string;
+    review:TaskContentReview}):Row {
+    const original=this.taskContentEligible(input.id,input.expectedSourceHash);
+    const human=this.contentCandidate(input.id,'human');
+    const ai=this.contentCandidate(input.id,'ai');
+    const issues:string[]=[];
+    if(!human||!ai){
+      issues.push('Both independent human and AI contents are required');
+      return {passed:false,issues,taskId:input.id};
+    }
+    if(human.hash!==input.expectedHumanHash||ai.hash!==input.expectedAiHash)
+      issues.push('Expected exact audience content hashes do not match');
+    if(human.sourcePlanHash!==original.source.planHash||
+      ai.sourcePlanHash!==original.source.planHash)
+      issues.push('Both audiences must reference the same approved frozen source');
+    if(!human.draft&&!ai.draft)
+      issues.push('No new audience revision is staged');
+    const pair=this.taskContent(input.id).approved;
+    const editorial=!!pair&&human.draft&&!ai.draft&&
+      human.changeKind==='editorial'&&
+      human.baseRevision===pair.human.revision&&
+      ai.revision===pair.ai.revision;
+    if(human.changeKind==='editorial'&&!editorial)
+      issues.push('Editorial-only updates require an unchanged approved AI counterpart');
+    if(human.changeKind==='material'||ai.changeKind==='material')
+      issues.push('Material updates must use the formal planning/scope review');
+    issues.push(...checkContentPair(human.content as HumanTaskOverview,
+      ai.content as AiExecutionBrief,input.review,editorial?'editorial':'substantive'));
+    const subject={taskId:input.id,sourcePlanHash:input.expectedSourceHash,
+      humanHash:human.hash,aiHash:ai.hash,
+      humanRevision:human.revision,aiRevision:ai.revision};
+    return {taskId:input.id,passed:issues.length===0,issues,
+      subject,reviewHash:issues.length?null:taskContentReviewHash(subject,input.review),
+      reviewMode:editorial?'editorial':'substantive',
+      changesTaskStatus:false,changesFrozenPlan:false};
+  }
+
+  /** A real developer performs the substantive comparison. This records the
+   * exact pair, NOT an automatic claim that LLM prose is semantically equal.
+   */
+  reviewTaskContentPair(input:{id:string;expectedSourceHash:string;
+    expectedHumanHash:string;expectedAiHash:string;
+    review:TaskContentReview}):Row {
+    return this.inTransaction(()=>{
+      const check=this.checkTaskContentPair(input);
+      if(!check.passed)fail('TASK_CONTENT_CONSISTENCY_REVIEW_REQUIRED',
+        check.issues.join('; '));
+      this.db.prepare(`INSERT INTO dc_task_content_pair_reviews(task_id,
+        source_plan_hash,human_hash,ai_hash,human_revision,ai_revision,
+        review_json,review_hash,reviewed_at) VALUES(?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(task_id) DO UPDATE SET
+        source_plan_hash=excluded.source_plan_hash,
+        human_hash=excluded.human_hash,ai_hash=excluded.ai_hash,
+        human_revision=excluded.human_revision,ai_revision=excluded.ai_revision,
+        review_json=excluded.review_json,review_hash=excluded.review_hash,
+        reviewed_at=excluded.reviewed_at`).run(input.id,input.expectedSourceHash,
+          input.expectedHumanHash,input.expectedAiHash,
+          check.subject.humanRevision,check.subject.aiRevision,
+          JSON.stringify(input.review),check.reviewHash,utc());
+      this.audit(input.id,'task_content_consistency_reviewed',input.review.reviewer,{
+        ...check.subject,reviewHash:check.reviewHash,reviewMode:check.reviewMode,
+        reviewerAttestedNoOmissions:true,reviewerAttestedNoScopeExpansion:true,
+        approved:false});
+      return {...check,status:check.reviewMode==='editorial'?
+        'awaiting_editorial_acceptance':'awaiting_owner_authorization'};
+    });
+  }
+
+  /** Only reviewed, content-addressed pairs may become authoritative
+   * explanatory companions. Existing plan snapshots are NEVER replaced.
+   */
+  approveTaskContentPair(input:{id:string;expectedSourceHash:string;
+    expectedHumanHash:string;expectedAiHash:string;expectedReviewHash:string;
+    approvedBy:string;reason:string;explicitAuthorization?:boolean}):Row {
+    if(typeof input?.approvedBy!=='string'||input.approvedBy.trim().length<2||
+      typeof input.reason!=='string'||input.reason.trim().length<20)
+      fail('TASK_CONTENT_APPROVAL_REASON','Named actor and specific reason required');
+    return this.inTransaction(()=>{
+      const row=this.db.prepare('SELECT * FROM dc_task_content_pair_reviews WHERE task_id=?')
+        .get(input.id);
+      if(!row||row.source_plan_hash!==input.expectedSourceHash||
+        row.human_hash!==input.expectedHumanHash||
+        row.ai_hash!==input.expectedAiHash||
+        row.review_hash!==input.expectedReviewHash)
+        fail('TASK_CONTENT_REVIEW_CHANGED','Exact current reviewed pair and digest required');
+      const review=JSON.parse(row.review_json) as TaskContentReview;
+      const check=this.checkTaskContentPair({id:input.id,
+        expectedSourceHash:input.expectedSourceHash,
+        expectedHumanHash:input.expectedHumanHash,
+        expectedAiHash:input.expectedAiHash,review});
+      if(!check.passed||check.reviewHash!==input.expectedReviewHash||
+        check.subject.humanRevision!==row.human_revision||
+        check.subject.aiRevision!==row.ai_revision)
+        fail('TASK_CONTENT_SOURCE_CHANGED','Reviewer-approved version pair is stale');
+      const editorial=check.reviewMode==='editorial';
+      if(!editorial&&input.explicitAuthorization!==true)
+        fail('OWNER_AUTHORIZATION_REQUIRED','Substantive content pairing requires explicit Owner authorization');
+      if(editorial&&input.approvedBy.trim()!==review.reviewer.trim())
+        fail('EDITORIAL_REVIEWER_REQUIRED',
+          'Editorial-only acceptance requires the named substantive reviewer');
+      const draftRows=this.db.prepare(`SELECT * FROM dc_task_content_drafts
+        WHERE task_id=? ORDER BY audience`).all(input.id);
+      for(const draft of draftRows){
+        const intended=draft.audience==='human'?row.human_revision:row.ai_revision;
+        const digest=draft.audience==='human'?row.human_hash:row.ai_hash;
+        if(draft.base_revision+1!==intended||draft.content_hash!==digest)
+          fail('TASK_CONTENT_DRAFT_CHANGED','Staged audience revision changed since review');
+        this.db.prepare(`INSERT INTO dc_task_content_revisions(task_id,audience,
+          revision,content_hash,content_json,source_plan_hash,
+          change_kind,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?)`)
+          .run(input.id,draft.audience,intended,draft.content_hash,
+            draft.content_json,draft.source_plan_hash,draft.change_kind,
+            draft.proposed_by,utc());
+      }
+      const last=this.db.prepare(`SELECT MAX(revision) AS n FROM dc_task_content_pairs
+        WHERE task_id=?`).get(input.id);
+      const revision=Number(last?.n??0)+1;
+      this.db.prepare(`INSERT INTO dc_task_content_pairs(task_id,revision,
+        source_plan_hash,human_revision,ai_revision,human_hash,ai_hash,
+        review_hash,review_json,approval_mode,approved_by,approved_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run(input.id,revision,
+          input.expectedSourceHash,row.human_revision,row.ai_revision,
+          row.human_hash,row.ai_hash,row.review_hash,row.review_json,
+          editorial?'editorial-reviewed':'owner-approved',input.approvedBy.trim(),utc());
+      this.db.prepare('DELETE FROM dc_task_content_drafts WHERE task_id=?')
+        .run(input.id);
+      this.db.prepare('DELETE FROM dc_task_content_pair_reviews WHERE task_id=?')
+        .run(input.id);
+      this.audit(input.id,'task_content_pair_approved',input.approvedBy.trim(),{
+        pairRevision:revision,sourcePlanHash:input.expectedSourceHash,
+        humanRevision:row.human_revision,aiRevision:row.ai_revision,
+        humanHash:row.human_hash,aiHash:row.ai_hash,
+        reviewHash:row.review_hash,reason:input.reason.trim(),
+        approvalMode:editorial?'editorial-reviewed':'owner-approved',
+        frozenPlanUnchanged:true,scopeAndGatesUnchanged:true,
+        originalTaskApprovalUnchanged:true});
+      return {taskId:input.id,pairRevision:revision,
+        humanRevision:row.human_revision,aiRevision:row.ai_revision,
+        sourcePlanHash:input.expectedSourceHash,
+        approvalMode:editorial?'editorial-reviewed':'owner-approved',
+        frozenPlanUnchanged:true,taskLifecycleUnchanged:true};
+    });
+  }
   /** Resolve the approved snapshot revision that introduced this task.
    * Later plan revisions may add work but cannot redefine frozen ancestors.
    */
@@ -5138,6 +5527,23 @@ export class ProjectTaskLedger {
   executionContract(id:string):Row {
     const task=this.get(id);
     const approvedSupplement=this.taskSpecSupplement(id).approved;
+    const storedContent=this.taskContent(id);
+    const reviewedPair=storedContent.approved;
+    const originalSource=this.frozenTaskContract(id).source;
+    const audiencePair=reviewedPair&&reviewedPair.sourcePlanHash===originalSource.planHash?{
+      status:'reviewed',pairRevision:reviewedPair.pairRevision,
+      humanRevision:reviewedPair.human.revision,aiRevision:reviewedPair.ai.revision,
+      humanHash:reviewedPair.human.hash,aiHash:reviewedPair.ai.hash,
+      consistencyReviewHash:reviewedPair.reviewHash,
+      sourcePlanHash:reviewedPair.sourcePlanHash,
+      // This explanatory document supplements but NEVER overrides the
+      // frozen spec, exact allowedPaths, requiredGates or actual task state.
+      aiBrief:reviewedPair.ai.content,
+      frozenScopeRemainsAuthoritative:true,
+    }:{status:storedContent.status==='integrity-invalid'?'integrity-invalid':
+      reviewedPair?'source-stale':storedContent.status,
+      aiBrief:null,
+      frozenScopeRemainsAuthoritative:true};
 
     if(String(task.planId??"").startsWith("release-work:")) {
       const release=String(task.release);
@@ -5145,7 +5551,7 @@ export class ProjectTaskLedger {
       const item=frozen.frozen?.plan?.workItems?.find((entry:{id:string})=>entry.id===id);
       const frozenEligible=!!item&&this.isApprovedForExecution(this.requireTask(id));
       const eligible=frozenEligible;
-      return {taskId:id,eligible,approvedSupplement,
+      return {taskId:id,eligible,approvedSupplement,audiencePair,
         ...this.claimAvailability(this.requireTask(id)),
         issues:!frozenEligible?["Whole-release task roster has not been frozen or source changed"]:[],
         profile:"atomic-work-item",release,planHash:frozen.frozenHash,
@@ -5164,7 +5570,7 @@ export class ProjectTaskLedger {
       if(approved.sourceDrift)issues.push("start_feature source revision changed after Owner approval");
       if(node?.openQuestions?.length)issues.push("Unresolved design choices in Feature task");
       if(task.status==="draft"||task.status==="cancelled")issues.push("Task is not approved for development");
-        return {taskId:id,eligible:issues.length===0,issues,approvedSupplement,
+        return {taskId:id,eligible:issues.length===0,issues,approvedSupplement,audiencePair,
           ...this.claimAvailability(this.requireTask(id)),
         profile:"spec-depth-v3",planHash:approved.hash,featureName:name,
         featureRevision:snapshot?.sourceFeature?.revision??null,
@@ -5187,7 +5593,7 @@ export class ProjectTaskLedger {
       if(!node?.scenario||!node.workflow?.length||!node.businessRules?.length)
         issues.push("Incomplete frozen trigger, workflow or business invariants");
     }
-    return {taskId:id,eligible:issues.length===0,issues,approvedSupplement,
+    return {taskId:id,eligible:issues.length===0,issues,approvedSupplement,audiencePair,
       ...this.claimAvailability(this.requireTask(id)),
       profile:plan?.qualityProfile??null,planHash:frozen.frozenHash,
       owner:task.owner??this.localDeveloper().name,

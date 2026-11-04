@@ -26,6 +26,11 @@ export const V5_DEVC_ACTION_GROUPS = [
       'task-spec-supplement-approve','task-spec-supplement-withdraw'],
   },
   {
+    title: '任务双内容版本 / Human overview and AI brief',
+    actions: ['task-content-get','task-content-check','task-content-stage',
+      'task-content-review','task-content-approve','task-content-withdraw'],
+  },
+  {
     title: '版本计划 / Release plan approval',
     actions: ['release-plan', 'plan-review', 'plan-propose', 'plan-revise', 'plan-approve'],
   },

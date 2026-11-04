@@ -117,6 +117,9 @@ describe('portable generated v5 project guidance',()=>{
       expect(generated).toContain('quarantineUnknown');
       expect(generated).toContain('reviewedHashes');
       expect(generated).toContain('verifiedIndependentDeliveries');
+      for(const action of ['task-content-get','task-content-stage','task-content-check',
+        'task-content-review','task-content-approve','task-content-withdraw'])
+        expect(generated).toContain(action);
     }
   });
 

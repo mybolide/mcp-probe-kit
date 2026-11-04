@@ -59,6 +59,11 @@ for(const [name,source] of guidance){
     !source.includes('task-spec-supplement-approve')||
     !source.includes('task-spec-supplement-withdraw'))
     errors.push(name+' omits the reviewed, Owner-authorized additive task specification contract');
+  if(!['task-content-get','task-content-stage','task-content-check',
+    'task-content-review','task-content-approve','task-content-withdraw'].every(action=>
+      source.includes(action))||
+    !(source.includes('acceptance')&&source.includes('human')))
+    errors.push(name+' omits separately versioned human/AI contents or their consistency review');
   if(!source.includes('release-work-scope-self-review')||
     !source.includes('release-work-incremental-self-review')||
     !source.includes('artifact-self-review')||!source.includes('idea-self-review'))

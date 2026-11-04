@@ -1,6 +1,6 @@
 <!-- v5-action-navigation:start -->
 > **v5 Agent action navigation / v5 Agent 操作导航（source only, unpublished）**
-> Main model tool: **devcontrol**. It exposes **103 SQLite actions, including a read-only guide**; these are *not* 103 different MCP tools.
+> Main model tool: **devcontrol**. It exposes **109 SQLite actions, including a read-only guide**; these are *not* 109 different MCP tools.
 > When unsure call {"action":"guide","input":{"intent":"feature"}} (no project_root, no changes), then follow the returned next action using the real business Git project_root.
 > Requirements → Design → single-outcome atomic Tasks → independent review → explicit Owner hash approval → Agent-run genuine tests → evidence + review → Verified.
 > The v5 MCP checks and refreshes managed Skill/AGENTS.md at startup and again on the first explicit project tool call, preserving user rules and recognizing guidance revisions even with the same 5.0.0 package version.

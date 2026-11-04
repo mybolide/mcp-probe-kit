@@ -6,6 +6,8 @@ import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
 import {ProjectTaskLedger} from '../task-ledger.js';
 import {mergeDevControlSqlite} from '../sqlite-merge.js';
+import {checkTaskContent,taskContentReviewHash,
+  type HumanTaskOverview,type AiExecutionBrief,type TaskContentReview} from '../task-content.js';
 
 const sqlite=createRequire(import.meta.url)('node:sqlite') as {
   DatabaseSync:new(file:string)=>{
@@ -101,6 +103,97 @@ describe('AI-assisted SQLite project state merge',()=>{
       .toEqual(['ROOT','UI']);
     expect(f.query(f.source,'SELECT id FROM dc_tasks ORDER BY id').map(r=>r.id))
       .toEqual(['API','ROOT']);
+  });
+  it('only merges complete, content-hashed H/E versions and rejects an orphan or tampered approved pair',()=>{
+    const folder=fs.mkdtempSync(path.join(os.tmpdir(),'dc-merge-task-content-'));
+    folders.push(folder);
+    const root=path.join(folder,'project');fs.mkdirSync(root);
+    execFileSync('git',['init','-q'],{cwd:root});
+    const ledger=new ProjectTaskLedger(root);
+    const target=ledger.databasePath;
+    ledger.create({id:'MERGE-PAIR-01',title:'Keep last known result visible',
+      track:'product',release:'v1',allowedPaths:['src/result/**'],
+      requiredGates:['docs']},'fixture-planner');
+    ledger.close();
+    const d=new sqlite.DatabaseSync(target);
+    try{d.prepare("INSERT OR REPLACE INTO dc_meta(key,value) VALUES('bootstrap',?)")
+      .run('shared-content-pair-project');}finally{d.close();}
+    const source=path.join(folder,'source.sqlite3');fs.copyFileSync(target,source);
+    const human:HumanTaskOverview={
+      why:'Existing results should stay visible during a temporary shortage',
+      work:['Keep the last already confirmed result available'],
+      effects:['Display the last confirmed score with its original date'],
+      scenarios:[],businessAcceptance:['Confirm score and date remain stable'],
+      exclusions:['Do not reset historical entitlement on a network failure'],
+    };
+    const ai:AiExecutionBrief={
+      context:['Use frozen task requirements from the exact approved version'],
+      prerequisites:[],inputs:[],outputs:[],
+      invariants:['Preserve the previously confirmed timestamp'],
+      steps:['Keep the previous valid result in the existing state model'],
+      failureRecovery:[],tests:['Assert score/date retention on insufficient data'],
+      evidence:['Record actual test output for the original task'],
+      stopConditions:['Stop before clearing historical entitlement after failure'],
+    };
+    const review:TaskContentReview={
+      reviewer:'fixture-real-reviewer',outcome:'aligned',
+      rationale:'Compared each business promise and every excluded behavior to the exact frozen requirement and matching test cases.',
+      sourceReviewed:true,noOmittedCommitments:true,noAddedBusinessScope:true,
+      coverage:[
+        {humanField:'work',humanIndex:0,aiField:'steps',aiIndex:0},
+        {humanField:'effects',humanIndex:0,aiField:'invariants',aiIndex:0},
+        {humanField:'businessAcceptance',humanIndex:0,aiField:'tests',aiIndex:0},
+        {humanField:'exclusions',humanIndex:0,aiField:'stopConditions',aiIndex:0},
+      ].map(row=>({...row,rationale:'Checked this business commitment against the exact approved frozen requirement.'})) as TaskContentReview['coverage'],
+    };
+    const sourceHash='frozen-source-plan-checksum';
+    const humanHash=checkTaskContent('human',human).hash!;
+    const aiHash=checkTaskContent('ai',ai).hash!;
+    const reviewHash=taskContentReviewHash({taskId:'MERGE-PAIR-01',
+      sourcePlanHash:sourceHash,humanHash,aiHash,
+      humanRevision:1,aiRevision:1},review);
+    const db=new sqlite.DatabaseSync(source);
+    try{
+      const insert=db.prepare(`INSERT INTO dc_task_content_revisions(
+        task_id,audience,revision,content_hash,content_json,source_plan_hash,
+        change_kind,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?)`);
+      for(const [audience,hash,content] of [
+        ['human',humanHash,human],['ai',aiHash,ai]] as const)
+        insert.run('MERGE-PAIR-01',audience,1,hash,JSON.stringify(content),
+          sourceHash,'clarification','reviewed-fixture-author','2026-11-04');
+      db.prepare(`INSERT INTO dc_task_content_pairs(task_id,revision,
+        source_plan_hash,human_revision,ai_revision,human_hash,ai_hash,
+        review_hash,review_json,approval_mode,approved_by,approved_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run('MERGE-PAIR-01',1,sourceHash,
+          1,1,humanHash,aiHash,reviewHash,JSON.stringify(review),
+          'owner-approved','fixture-owner','2026-11-04');
+    }finally{db.close();}
+    const preview=mergeDevControlSqlite({targetPath:target,sourcePath:source,
+      mode:'preview'});
+    expect(preview).toMatchObject({candidatePossible:true,counts:{sourceOnly:3}});
+    const output=path.join(folder,'valid-pair-candidate.sqlite3');
+    expect(mergeDevControlSqlite({targetPath:target,sourcePath:source,
+      mode:'candidate',expectedFingerprint:preview.fingerprint,outputPath:output}))
+      .toMatchObject({candidateCreated:true});
+    const candidate=new sqlite.DatabaseSync(output);
+    try{
+      expect(candidate.prepare('SELECT human_hash,ai_hash FROM dc_task_content_pairs')
+        .get()).toEqual({human_hash:humanHash,ai_hash:aiHash});
+    }finally{candidate.close();}
+    const corrupted=new sqlite.DatabaseSync(source);
+    try{corrupted.prepare(`UPDATE dc_task_content_revisions SET content_json=?
+      WHERE task_id='MERGE-PAIR-01' AND audience='ai' AND revision=1`)
+      .run(JSON.stringify({...ai,steps:['Unreviewed scope expansion']}));
+    }finally{corrupted.close();}
+    const rejected=mergeDevControlSqlite({targetPath:target,sourcePath:source,
+      mode:'preview'});
+    expect(rejected.candidatePossible).toBe(false);
+    expect(rejected.blockingIssues.join(' ')).toMatch(/Invalid independent ai content revision/);
+    expect(rejected.blockingIssues.join(' ')).toMatch(/Orphaned or mismatched H\/E pair/);
+    expect(()=>mergeDevControlSqlite({targetPath:target,sourcePath:source,
+      mode:'candidate',expectedFingerprint:rejected.fingerprint,
+      outputPath:path.join(folder,'corrupt-not-allowed.sqlite3')}))
+      .toThrow(/conflicts/);
   });
   it('ignores absent, divergent and differently shaped machine-local runtime tables before schema comparison',()=>{
     const versions=[
