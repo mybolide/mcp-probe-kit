@@ -175,9 +175,12 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    A descendant HEAD is NOT the same tested code even when the scoped test
    file is unchanged; do not certify a descendant checkout as frozen.
    An in_review task with a committed delivery can review and verify using
-   its unchanged original token even after the writer lease expires; changing
-   code, completing a new delivery or ordinary report still needs a valid
-   writing lease. Neither reviewing nor recording a frozen-code rerun needs
+   its unchanged original token even after the writer lease expires. For an
+   unfinished in_progress task, expiry is an activity indicator, not a
+   project-wide code freeze: its original authenticated token may continue
+   when the same Git index and frozen scope are safe. Reclaiming an expired
+   original writer preserves its original Git base and unfinished files.
+   Neither reviewing nor recording a frozen-code rerun needs
    a new exclusive writer lease. Never automatically approve a Gate.
    Normal Git pull, merge, clone and moving the entire workspace need no
    Owner key, per-machine rebind or SQLite update. Git metadata locations
@@ -187,16 +190,19 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    relative Git locations when read. An independent repository must retain
    the original frozen base commit in its ancestry. Subsequent commits and
    normal collaborator merges never rewrite earlier tested delivery SHAs.
-   A completed, evidenced in_review task may retain its own management lease
-   while next/claim let a Ready task with no dependency or frozen-scope
-   overlap take the one shared Git writer. Unsubmitted or staged work cannot
-   yield. Read next.parkedReviews for older tasks awaiting the responsible
-   AI's technical review. They are NOT Verified until genuine acceptance is
-   recorded. A failed review must reclaim the Git writer before coding.
-   No extra Agent or Owner key is needed for normal non-overlapping work.
-   In_progress tasks with an EXPIRED shared writer may be blocked by other
-   explicitly approved Agent WIP. A different Agent's bytes are NOT
-   automatically safe. WORKTREE_CHANGED reports exact conflicting paths,
+   Different independent child Git repositories and the root planning Git
+   repository own separate indexes. Approved, dependency-safe tasks with
+   disjoint frozen paths can progress there in parallel, including when an
+   unrelated task is in_progress or its activity lease has expired. next
+   prioritizes claimable tasks rather than blocking the whole project with
+   ABANDONED_TASK. Use check with the exact task id when multiple indexes
+   have staged work. A real shared Git index or overlapping task scope still
+   blocks a conflicting writer; never claim another Agent's bytes as yours.
+   A completed, evidenced in_review task may retain its management lease
+   while an eligible Ready task takes the same shared Git writer only after
+   the original delivery is safely submitted and the index is clean. Read
+   next.parkedReviews for pending actual AI review. No Gate is auto-approved.
+   WORKTREE_CHANGED reports exact conflicting paths,
    kind and SHA-256 of expected/current state and whether in frozen scope.
    review-recovery-worktree requires explicit Owner approval and exact
    reviewedPaths. When an approved disjoint source is known, provide its
@@ -213,15 +219,17 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    Only demonstrably Verified segments are excluded from the original task's
    file attribution; verifiedIndependentDeliveries reports their exact IDs
    and heads. Unverified, mixed, missing or overlapping proof fails closed.
-   If an unrelated Ready task must use the same index,
+   If an unrelated Ready task must use the SAME shared index and a real
+   conflict remains,
    park-expired-writer requires an expired in_progress writer, explicit
    approval, nextTaskId with Verified dependencies and disjoint scope,
    no staged files, and byte-exact preserved local WIP. The successor must
    complete its own actual delivery/Gates; only then can the original task
    resume at the original frozen base with intervening Git commits attributed
    to the other task. Neither action tests source or auto-verifies a task.
-   Shared-index parking does NOT yet apply to multi-independent-Git child
-   repositories. execution-contract.eligible means approved business scope;
+   Independent child Git repositories do NOT need cross-repository parking
+   simply to continue. Shared-index parking remains the audited exception,
+   not the default task workflow. execution-contract.eligible means approved business scope;
    claimableNow and writerBlocker are separate runtime Writer readiness.
    Always inspect next.selectedTaskWriterStatus instead of claiming blindly.
    Do not use any Neyna-specific state directory as a universal Git worktree
@@ -374,12 +382,14 @@ their existing \`.neyna/state/devcontrol.sqlite3\`).
    substantive acceptance object for every frozen test Gate. Old self-review
    and gate-review actions are compatibility only, not mandatory extra steps.
    Losing a session does not erase the recorded completion. An expired
-   in_progress task can use recover-task to issue a new short-term lease,
-   preserving the original Git base so the Owner can record complete/report.
+   in_progress task may continue with its original authenticated token if
+   the frozen scope and repository writer are safe. If the token/session is
+   lost, use claim/recover-task to resume the original task while retaining
+   its original Git base and unfinished files, not to rebaseline it.
    An already in_review task uses one verify with existing genuine test
    receipts and current AI findings; do not require another Agent.
-   Ordinary expired task leases can be recovered using recover-task with
-   a responsible actor and detailed reason. Optional legacy review handoffs
+   Explicit recover-task remains for real workspace conflicts or historic
+   migrations, with a responsible actor and detailed reason. Optional legacy review handoffs
    from expired leases use explicitAuthorization:true, with no password.
    Neither recovery requires an Owner secret or environment variable.
    An active lease may not be seized; the original Git and test evidence
@@ -451,7 +461,7 @@ export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): st
 
 ### MCP Probe Kit v5 — SQLite + DevControl 唯一研发流程
 
-**多 Agent 过期任务安全恢复**：任务领取后其他 Agent 有合法未提交文件，并不意味着需要删除或 stash。先用 recover-task；如果返回 WORKTREE_CHANGED，查看 details.conflicts 中的 path、type、expected/observed SHA-256 和冻结范围标识。只有能够归属另一项已批准且文件范围不重叠的任务时，才由 Owner 明确授权 review-recovery-worktree，逐个提供 sourceTaskId、reviewedPaths、actor、具体 reason。此动作只追加快照审计，不改原任务 Git 基线或任何源文件。若原任务仍在 in_progress，Writer 已过期，且必须让另一项无依赖且不重叠的 Ready 任务继续，显式执行 park-expired-writer，提供 id、nextTaskId、actor、reason 和 explicitAuthorization。它保存所有未提交文件真实哈希和原 HEAD，不自动执行测试或通过 Gate。原任务恢复时继续严格识别其他任务的 Git 提交，不将它们记入原任务交付。请分别检查 execution-contract.eligible（规格是否批准）与 claimableNow/writerBlocker（当前是否可领取），以及 next.selectedTaskWriterStatus。单 Git 工作区支持这一受审停放；多独立子 Git 仓库尚不支持，不得直接绕过。MCP 通用功能不能固定使用 .neyna/state 等 Neyna 专属路径；隔离测试目录由各项目自行选择。
+**多仓库 Writer 与任务继续**：Writer 租约到期只表示活动时间超限，不自动把 in_progress 任务判为异常或阻塞全项目。原任务持有效 leaseToken、冻结文件范围和 Git 索引没有冲突时可以继续；会话或令牌丢失时，按真实任务状态 claim 或 recover-task，保留原 Git 基线和未完成源码。根规划 Git 仓库与各个独立子 Git 仓库拥有不同暂存区；已批准、依赖完成且文件范围不重叠的 Ready 任务可以并行领取，无需先停放别的仓库过期 Writer。next 优先返回可执行任务，不应以 ABANDONED_TASK 阻塞所有无关任务。多个仓库同时暂存时，使用 check 并明确传入任务 id。共享同一个 Git 索引或冻结文件范围重叠时仍严格阻止第二 Writer；只有确实发生同索引冲突才按需使用 recover-task、review-recovery-worktree 或 Owner 审计停放 park-expired-writer。出现 WORKTREE_CHANGED 时核对路径、Git HEAD、文件类型与 SHA-256，不 reset、stash、删除或认领其他 Agent 文件。请分别检查 execution-contract.eligible、claimableNow/writerBlocker 和 next.selectedTaskWriterStatus。DevControl 不运行测试，也不自动通过 Gate；MCP 通用功能不得固定使用 .neyna/state 等单个项目专属路径。
 
 **旧 SQLite 快照的严格兼容**：如果原任务已经提交代码和真实测试，但 verify 被旧 worktree 快照阻断，先检查领取时的 snapshot_json 和完成记录中的 preserved_worktree_json。老版本可能保存恰好一层 [{"snapshot_json":"[]"}] 包装。最新版只读展开这一严格格式，不直接改写 SQLite，不覆盖真实的非空 Owner 文件保护。非空快照必须包含完整的 path、kind、size、sha256 并校验当前文件；只对既有本地 ignore 明确豁免且不在冻结任务范围内的路径按原规则排除。格式畸形或多层嵌套依然拒绝，测试和 Gate 仍需要正式 verify。
 
@@ -459,7 +469,7 @@ export function renderV5AgentsMd(locale: 'zh-CN' | string, skillRef: string): st
 
 **延期验收统一文件审查**：单 Git 任务经 defer-verification 后，如果后续提交修改过原冻结允许范围内的文件，resume-verification 的 overlappingPaths 应包含当前 HEAD 相对原完成提交的全部受影响冻结路径，不只是原任务实际交付的文件。Agent 需要对完整差异逐文件审核，并提交当前 reviewedHead、100 字以上 findings 和原冻结版本真实测试证据引用。MCP 在审计中另外记录 changedDeliveryPaths，明确哪些后续改动碰到原任务实际交付文件。report、技术 Review、再次延期和 verify 均按同一份冻结路径集合与 Git HEAD 检查，新的 HEAD 会让旧审核失效。即使原冻结补丁仍能无冲突应用，也不能跳过对后续变更的审核，或继续使用旧 HEAD 的审核记录。恢复和审查不替代真实设备测试，不会自动通过 Gate，也不改原提交、旧证据、SQLite 历史审计或其他 Agent 未提交代码。
 
-**审核租约与旧多仓证据**：开发写入租约默认 30 分钟，最长 60 分钟，长时间编码或测试时要在过期前 renew；已经提交并处于 in_review 的任务即使开发租约过期，只要保留原 leaseToken 和冻结提交，仍可直接执行技术自审、Gate 审核和 verify，不再因倒计时要求 recover-task。过期租约绝不能继续改源码或提交新的 report。旧多仓测试记录如缺少准确的冻结版本向量，先用 task-closure-status 取得 frozenDeliveryHeads 和原 evidenceReference；有可核验的旧真实测试日志时，使用 rebind-legacy-evidence 提交原 leaseToken、actor、reason、完整 deliveryHeads、原 evidenceReference、项目内实际日志 artifactPath 及 artifactSha256 和详细 findings。仅追加审计与派生证据关联，不改原测试记录、不运行测试、更不会自动通过 Gate；原日志不能证明该冻结代码受测时，必须重新运行真正的项目测试，不得补造证明。
+**活动租约与旧多仓证据**：租约时间用于提示开发活动状态，不再要求 Agent 为避免计时过期而频繁 renew。原 in_progress 任务只有有效令牌及无冲突的 Git 索引和冻结范围才可继续开发与报告；其他 Agent 不得凭租约到期抢占相同索引。已经提交并处于 in_review 的任务即使租约过期，只要保留原 leaseToken 和冻结提交，仍可执行真实技术自审及一次带 acceptance 的 verify。旧多仓测试记录如缺少准确冻结版本向量，先用 task-closure-status 取得 frozenDeliveryHeads 和原 evidenceReference；有可核验的旧真实测试日志时，使用 rebind-legacy-evidence 提交原 leaseToken、actor、reason、完整 deliveryHeads、原 evidenceReference、项目内实际日志 artifactPath、artifactSha256 和详细 findings。仅追加审计与证据关联，不改原测试记录、不运行测试、也不自动通过 Gate；缺失真实日志必须重新运行项目测试。
 
 **旧日志遗失后的真实重跑登记**：已经处于 in_review 且原测试输出丢失的多仓任务，不要反复调用 report、recover-task 或不支持多仓的 defer-verification。先从 task-closure-status 取得原 evidenceId 和完整 frozenDeliveryHeads；在每个独立 Git 仓库的原始冻结提交上准备干净、隔离的 worktree，Agent 真正运行项目测试并保存新日志和 SHA-256。然后调用 record-rerun-evidence，填写 supersedesEvidenceId、完整 deliveryHeads、每个冻结仓库的 testedCheckouts、实际执行目录 commandCwd、真实 command/exitCode、artifactPath/artifactSha256、原 leaseToken、actor、reason 和详细 findings。此动作仅追加测试运行事实和来源关联，不占用独占代码写入租约，不改旧证据、不修改代码、不自动通过 Gate。测试失败也要如实记录，不能作为通过证据；成功后使用新返回的 evidenceReference 对每个原始 Gate 做正式 verify。后续提交即使没有改动测试文件，也不能把当前 HEAD 冒充原冻结代码。
 
@@ -487,9 +497,9 @@ ${managedRevision}
 - **真实验收 Gate**：docs、go_contract、flutter_test、ios_device_e2e 等只是产品测试条件标识，不是 MCP 测试执行器。开发 AI 必须实际运行或检查项目测试及原始输出，verify 的 acceptance.gates 必须逐项绑定准确 Git 交付（有 Git 时）或冻结的 SHA-256 文件清单（无 Git 时）与已登记测试报告；缺失或版本变化不能自动通过。
 - **延期验收与会话恢复**：真机或外部 Gate 不可用时使用 defer-verification 释放任务写入权，但不能标记通过。恢复后通过 resume-verification，补充实际测试报告，再用一次带 acceptance 的 verify 完成登记；其他无依赖任务继续开发，原 Git 提交（若有）或原文件快照、冻结 Gate 与 Verified 前置任务始终严格。
 - **原工作树已有后续未提交研发**：只有 Owner 明确要求保护当前 main 工作目录并经过代码归属确认后，才向 \`defer-verification\` 提交 \`preserveExistingWorktree:true\`；MCP 只读计算所有已修改和未跟踪普通文件的 SHA-256 与类型、数量，拒绝 index 中已暂存内容、软链和越界路径，不执行 stash/reset/删除。这些文件不是待验证旧任务的验收证据，更不能用于替代真实 Gate。
-- **无密钥任务恢复与工作树保护**：普通任务租约到期后，当前 AI 用 \`recover-task\` 提供 \`actor\` 和具体 \`reason\` 即可恢复原任务，不再要求 Owner 密钥或环境变量。Git 项目检查原 Git 历史和工作树；无 Git 项目检查原 SHA-256 文件清单和冻结范围。旧多仓特殊迁移只有明确 \`explicitAuthorization:true\` 和原有双开关才能继续；Git 项目受保护文件回到 Git HEAD 后，\`refresh-protected-worktree\` 需要 \`id\`、\`actor\`、\`reason\` 与 \`explicitAuthorization:true\`；异常仓库位置迁移还需精确映射和明确授权。原保护快照与操作审计保留，绝不因此自动通过测试和验收。
+- **无密钥任务继续与工作树保护**：原任务租约到期不是错误，持原有效令牌且无 Writer/文件冲突时继续，丢失会话时可按任务状态 claim 或通过 \`recover-task\` 提供 \`actor\` 和具体 \`reason\` 恢复，无需 Owner 密钥。原冻结 Git 基线不变，独立仓库无需跨仓库停放；真实共享索引冲突才需要审计恢复或停放。无 Git 项目仍检查原 SHA-256 文件清单和冻结范围。旧多仓特殊迁移只有明确 \`explicitAuthorization:true\` 和原双开关才能继续；受保护文件恢复 Git HEAD 后使用 \`refresh-protected-worktree\`，异常仓库位置迁移仍需精确映射及授权。所有原保护快照、Git 归属、测试和 Gate 严格保留。
 - **多开发者与跨设备工作区**：MCP 项目根可以完全没有 Git，所有文件引用相对项目工作区；使用 Git 时才记录仓库相对身份，根仓库为 \`.git\`，独立子仓库如 \`apw-life/.git\`。正常 git pull、merge、clone 和移动目录无需 Owner 密钥、无需每台机器手动搬迁，也无需改 SQLite。旧 v5 的绝对 git_dir 冻结记录及历史完成证据保留原值，读取时自动解析成相对位置。后续正常提交不会修改历史基线，安全检查仅要求真正独立的 Git 仓库保有原始基线提交，旧测试证据仍绑定旧任务的交付 SHA。只有异常历史位置审计纠正才使用 Owner 授权 relocate-repository-baselines。
-- **已交付任务让出 Git 写入权**：一个任务已经提交代码和真实测试记录，处于 in_review 待审核时，可保留自己的管理租约，让没有前置依赖、文件范围不重叠的 Ready 任务使用同一个 Git 工作区继续开发。任何时候最多一个实际写入任务，暂存代码、未提交工作或范围重叠时不得切换。用 \`next.parkedReviews\` 查看待审任务；当前 AI 继续负责真实自审和结果登记，绝不能因让出写入权就把任务当作 Verified。若自审失败，要先重新领取 Git 写入权才能修改代码。正常切换无需 Owner 密钥和其他 Agent。
+- **独立仓库并行与共享索引交接**：一个工作区可以有根规划仓库和多个独立子 Git 仓库，各仓库拥有独立 Writer，已批准且前置依赖 Verified 的非重叠任务可并行进行。只有共享同一个 Git 索引时才需要串行、安全让渡或真实冲突处理。已提交且拥有真实测试证据的 in_review 任务仍可保留管理租约，通过 \`next.parkedReviews\` 查看等待技术自审的任务；未提交的共享索引改动或重叠范围不能被抢占。当前 AI 负责真实测试、技术自审和一次 verify；正常并行不需要 Owner 密钥或其他 Agent。
 - **本地配置豁免与精确交付**：使用 Git 的项目可在各独立工作树根目录的 .devcontrol-worktree-ignore 填写本机非业务配置文件的匹配规则。显式执行 probe install-agent 初始化时创建仅含注释的模板，默认不豁免任何文件。明确填写的 AGENTS.md、Skill、.cursor/mcp.json，以及 /docs/history-session/ 下旧 History Markdown/索引等，即使已被 Git 跟踪、暂存或在领取任务后提交，也可从 DevControl 工作树和历史交付检查中排除，不再检查已豁免文件的旧版模板；不改变 Git 跟踪、暂存、提交和原始业务证据。**禁止以 /docs/** 豁免正式 PRD/ADR/冻结 scopeSource、业务代码、冻结任务路径、软链、不安全路径和实际测试 Gate**。本机实际使用豁免时写入 dc_audit，记录规则及文件 SHA-256，不保存私有配置正文。多仓 \`report\`、\`complete\` 可通过 \`deliveryHeads\` 指定完整的仓库路径前缀及实际提交 SHA，证据、Review、Gate 和 \`verify\` 只承认这些交付提交。后续 merge 只将相对第一父真正改变的冻结路径视为新改动，不能因为第二父缺少原文件就误判；但第一父路径发生真实改动，即使后续恢复原内容，也不能复用旧验收证据。未配置忽略的 Skill 和 AGENTS.md 仍需符合可信生成器；已明确忽略的属于工具配置，不作为业务代码或验收证据。
 - **冻结任务规格补充**：先用 \`task-spec-supplement-get\` / \`task-spec-supplement-review\` 检查原冻结来源及真正空缺的字段。只允许为 Ready 且尚未领取的任务追加原来缺失的业务目的、使用场景、步骤、正反测试和来源，绝不能借此修改验收目标、文件范围、Gate 或依赖。由 \`task-spec-supplement-stage\` 记录准确原计划修订及 Hash，再通过 \`task-spec-supplement-self-review\` 完成有来源的实质开发者自审（可选 \`task-spec-supplement-independent-review\`，不强制第二人），最后 Owner 明确批准精确提案及复审双 Hash 后才可 \`task-spec-supplement-approve\` 生效。不批准的草案对 AI 不可执行；过期草案使用 \`task-spec-supplement-withdraw\`。批准补充作为独立版本呈现在 \`execution-contract\` 与人类任务详情，原冻结历史不变；实际范围或验收变更继续走正式 Release Amendment。
 - **人读概览与 AI 执行内容分开保存**：同一个 SQLite Task 下，\`task-content-get\` 查看已审查的人读版本 H 与 AI 版本 E，均绑定原冻结计划 Hash，状态、依赖、审批、Gate 和真实证据仍来自同一正式台账。\`task-content-stage\` 按 audience=human/ai 分别提交 why/work/effects/scenarios/businessAcceptance/exclusions 与 context/prerequisites/inputs/outputs/invariants/steps/failureRecovery/tests/evidence/stopConditions，必须指定实际来源 Hash、原版本和具体原因。\`task-content-check\` 与 \`task-content-review\` 对每项业务承诺和不做的事核实对应 AI 规则、步骤或测试，并明确核对没有遗漏及额外范围。实质版本组合由 Owner 通过 \`task-content-approve\` 以精确双内容 Hash、审查 Hash 和 explicitAuthorization:true 确认；纯人读措辞修订可由有具体依据的同一 Reviewer 复核且声明语义不变，不重走整套 Owner 批准。用 \`task-content-withdraw\` 撤回未批准草案。不得用新文字绕开原冻结验收条件、文件范围或 Gate；实质业务变化回正式范围审批。历史任务未独立记录就明确显示缺失，\`acceptance\` 只能作为正式验收标准，不能拆句冒充业务目标；不能自动改写执行中或已 Verified 记录。
@@ -569,11 +579,21 @@ ${managedRevision}
   Gate review, re-deferral and verify. Any new HEAD invalidates the review,
   even when the original patch still applies cleanly. Never treat a resumed
   review as a successful test or as permission to bypass frozen Gates.
-- Writer leases expire after 30 minutes by default and can be renewed up
-  to 60 minutes. A committed in_review delivery does NOT need to reclaim
-  an expired writer lease for self-review, Gate inspection or verify:
-  use the original retained task token and unchanged reviewed source.
-  New code and ordinary report still need an active writer lease.
+- Writer lease expiry is an activity signal, NOT automatic abandonment or a
+  global project lock. The original authenticated in_progress task can keep
+  coding and reporting after the TTL if its frozen file scope and Git index
+  remain safe. If the session or token was lost, claim/recover-task can
+  resume the original task without rewriting its immutable Git base.
+  Distinct root and independent child Git repositories have separate indexes;
+  approved dependency-safe tasks with disjoint scopes can progress together.
+  next prioritizes claimable tasks instead of stopping on ABANDONED_TASK.
+  Compare execution-contract.eligible with claimableNow/writerBlocker and
+  next.selectedTaskWriterStatus before deciding that the project is blocked.
+  For multiple staged Git indexes, use check with an explicit task id.
+  A shared index or overlapping frozen scope still blocks conflicting
+  writers; no other Agent's uncommitted files can become this task's delivery.
+  A committed in_review delivery still uses its original token for self-review,
+  Gate inspection and verify without reclaiming the code writer.
   An old multi-Git receipt with missing/stale repository binding may use
   rebind-legacy-evidence, but ONLY after inspecting the real original test
   artifact (relative path plus SHA-256) and matching every frozen delivery
@@ -615,13 +635,14 @@ ${managedRevision}
   compatibly and retain their original evidence hashes and tested commits.
   Only exceptional historical audit correction uses Owner-key-authorized
   \`relocate-repository-baselines\`.
-- A completed and evidenced in_review task can yield the one shared Git writer
+- A completed and evidenced in_review task can yield a SHARED Git index
   to a Ready task only if all prerequisites are Verified, the frozen scopes
-  do not overlap and no Git index changes are staged. Review retains its
+  do not overlap and no conflicting Git index changes are staged. Review retains its
   own task lease, original commit and evidence without being marked Verified.
   next.parkedReviews lists such work for the current development AI. After
-  failed review, reclaim the single writer before editing new code; never
-  demand an Owner key or another Agent for normal disjoint collaboration.
+  failed review, reclaim that shared index before editing new code. Independent
+  Git repositories do not need cross-repository parking or Owner authorization
+  merely because another task's activity lease expired.
 - Registered linked Git worktrees keep separate Git indexes but share the
   canonical main project's SQLite. The current development AI uses ordinary
   Git to create worktrees and integrate exact commits; claim in that checkout
@@ -629,8 +650,10 @@ ${managedRevision}
   must be Verified, and unverified tasks must never have overlapping scopes.
   The original checkout owns its submitted test evidence and technical
   review. An isolated delivery cannot be Verified before main Git contains
-  its exact commit. Multi-Git child repository projects require the existing
-  stricter workflow. DevControl runs neither Git merges nor tests.
+  its exact commit. Independent child Git indexes may also progress in
+  parallel with the root planning repository, while real overlapping task
+  scopes and shared indexes remain guarded. DevControl runs neither Git
+  merges nor tests.
 - When a real common-ancestor SQLite snapshot exists, provide basePath on
   both preview and candidate requests. Three-way reconciliation can
   automatically apply only a one-sided edit to the same unapproved draft

@@ -82,6 +82,15 @@ for(const [name,source] of guidance){
     !source.includes('reviewedHashes')||
     !source.includes('verifiedIndependentDeliveries'))
     errors.push(name+' omits Owner unknown-file preservation or independently Verified commit recovery');
+  // Runtime Writer policy and auto-generated instructions must be upgraded
+  // together. Otherwise every new project reinstalls the old dead-end advice.
+  if(!(source.includes('independent child Git')||source.includes('独立子 Git'))||
+    !(source.includes('Git index')||source.includes('Git 索引'))||
+    !(source.includes('activity')||source.includes('活动'))||
+    !source.includes('next')||!source.includes('claimableNow'))
+    errors.push(name+' omits nonblocking TTL and independent-repository Writer rules');
+  if(/过期租约绝不能继续改源码|多独立子 Git 仓库尚不支持|New code and ordinary report still need an active writer lease|Shared-index parking does NOT yet apply to multi-independent-Git child/.test(source))
+    errors.push(name+' still instructs users to block all work after expiry or park across independent repos');
   if(/have a DIFFERENT reviewer perform review-submit|不同的独立 Reviewer.{0,18}review-submit|distinct Reviewer supplies/.test(source))
     errors.push(name+' still mandates an external Reviewer for every delivery');
 }

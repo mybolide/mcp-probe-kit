@@ -47,7 +47,7 @@
 5. **严格分轮复审**：第一轮完成 `feature-task-review` / `feature-task-propose`，保存提案和精确 Hash，结束规划轮次。下一轮必须重新读取已保存的提案，从需求覆盖、依赖、失败场景、文件范围和验收依据重新检查，调用 `feature-task-second-review` 将审阅结果与 Hash 单独存入 SQLite。通过后才能 `feature-task-approve`。同一个开发 Agent 可以执行两个轮次，**不需要另设审核 Agent**，但不能把规划和二次 Review 放在同一轮里。普通子任务不用逐条申请 Owner；新版本范围、重大变更和冻结范围扩展仍需 Owner 明确授权。未经计划确认的草稿可以查看，但**不得领取开发**。
 6. **实施**：`next` → `execution-contract` → `claim`，Agent 只修改受批准路径，使用 Git 提交真实修改。
 7. **验收**：开发 AI 真实测试并提交原始 Git 和报告，随后调用一次带完整 acceptance 的 verify。DevControl 只负责检查冻结任务、全部 Gate 证据和 Verified 依赖。旧 review-handoff、gate-review 仅为兼容，不要求另一个 Agent。
-8. **无密钥恢复**：任务租约过期后，当前 AI 用 recover-task 提交 actor 与 reason，按原 Git 和工作树保护规则恢复。异常多仓迁移、基线调整和合法保护刷新需要 explicitAuthorization:true、具体理由与审计，但不要求密码或环境密钥。未过期租约禁止任意接管。
+8. **Writer 不中断研发**：租约过期只是活动提示。原任务持有效令牌且冻结文件范围、Git 索引安全时可以继续；会话丢失后通过 claim 或 recover-task 恢复，保留原冻结 Git 基线。根规划 Git 仓库和多个独立子 Git 仓库可由不同的已批准且互不冲突任务并行写入，next 优先返回可执行任务，不再被一个无关过期 Writer 全局阻断。并行暂存时使用 check 并传入准确任务 id。真正共享 Git 索引、文件范围重叠或工作树证据不可信仍须安全恢复；Owner 授权的隔离或停放只用于这些实际冲突，不用于日常跨仓库继续开发。
 9. **延期验收**：defer-verification 保存原始提交并释放任务，真实设备恢复后通过 resume-verification 补录真实测试，再一次 verify 记录全部验收。不可用的 Gate 不算通过，其他无依赖任务可以继续开发。
 10. **History 交接**：`history_session_checkpoint` 保存用户原话、决策、Commit、测试、租约和下一步，但不能代替 DevControl 的任务交接、审核或 Verified。
 

@@ -34,6 +34,7 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('On every MCP startup');
     expect(skill).toContain('guidance');
     expect(skill).toContain('`self-review`');
+    expect(skill).toContain('Different independent child Git repositories');
     expect(skill).toContain('ONE verify');
     expect(skill).toContain('acceptance');
     expect(skill).toContain('optional');
@@ -42,6 +43,11 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('no historical generator comparison is required');
     expect(skill).toContain('Without an explicit rule, only canonical generator output');
     expect(skill).toContain('deliveryHeads');
+    expect(skill).toContain('ABANDONED_TASK');
+    expect(skill).toContain('Different independent child Git repositories');
+    expect(skill).toContain('activity indicator');
+    expect(skill).toContain('check with the exact task id');
+    expect(skill).not.toContain('Shared-index parking does NOT yet apply to multi-independent-Git child');
     expect(skill).toContain('task-spec-supplement-stage');
     expect(skill).toContain('task-spec-supplement-self-review');
     expect(skill).toContain('task-spec-supplement-independent-review');
@@ -75,6 +81,11 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
       ?'历史交付检查中排除，不再检查已豁免文件的旧版模板'
       :'without historical generator checks');
     expect(text).toContain('deliveryHeads');
+    expect(text).toContain(locale==='zh-CN'?'租约到期只表示活动时间超限':'Writer lease expiry is an activity signal');
+    expect(text).toContain(locale==='zh-CN'?'独立子 Git 仓库':'independent child Git repositories');
+    expect(text).toContain(locale==='zh-CN'?'claimableNow/writerBlocker':'claimableNow');
+    expect(text).not.toContain('过期租约绝不能继续改源码');
+    expect(text).not.toContain('New code and ordinary report still need an active writer lease');
     expect(text).toContain('task-spec-supplement-stage');
     expect(text).toContain('task-spec-supplement-self-review');
     expect(text).toContain('task-spec-supplement-independent-review');
@@ -95,7 +106,9 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     const agentsPath = path.join(root, 'AGENTS.md');
     fs.mkdirSync(path.dirname(skillPath), { recursive:true });
     const stale = generateWorkflowSkillContent(VERSION)
-      .replace(SKILL_GUIDANCE_REVISION, 'v5-older-guidance');
+      .replace(SKILL_GUIDANCE_REVISION, 'v5-sqlite-devcontrol-20261104-committed-ignore-r37')
+      .replace('Different independent child Git repositories',
+        'Shared-index parking does NOT yet apply to multi-independent-Git child repositories');
     fs.writeFileSync(skillPath, stale, 'utf8');
     const outside = '# User rules\nDo not rewrite custom instructions.\n';
     fs.writeFileSync(agentsPath, [
@@ -118,7 +131,10 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(updatedSkill).toContain('DevControl operation reference');
     expect(updatedAgents).toContain('DevControl operation reference');
     expect(updatedSkill).toContain('acceptance');
+    expect(updatedSkill).toContain('Different independent child Git repositories');
+    expect(updatedSkill).not.toContain('Shared-index parking does NOT yet apply to multi-independent-Git child repositories');
     expect(updatedAgents).toContain('self-review');
+    expect(updatedAgents).toContain('Writer lease expiry is an activity signal');
     expect(updatedAgents).toContain('refresh-protected-worktree');
     expect(updatedAgents).toContain(outside.trim());
     expect(updatedAgents).not.toContain('OUTDATED v4 workflow guidance');
@@ -159,9 +175,11 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain(SKILL_GUIDANCE_REVISION);
     expect(skill).toContain('DevControl NEVER');
     expect(skill).toContain('`task-closure-status`');
+    expect(skill).toContain('Different independent child Git repositories');
     expect(agents).toContain(SKILL_GUIDANCE_REVISION);
     expect(agents).toContain('gate-review');
     expect(agents).toContain('All legacy Gate names are acceptance criteria');
+    expect(agents).toContain('Writer lease expiry is an activity signal');
     expect(agents).not.toContain('Old Gate instruction');
     expect(agents).toContain(custom.trim());
     const second=ensureMcpProbeKitBootstrap(root);
@@ -183,6 +201,7 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('`self-review`');
     expect(agents).toContain('self-review');
     expect(agents).toContain('acceptance');
+    expect(agents).toContain('Writer lease expiry is an activity signal');
     expect(agents).toContain(SKILL_GUIDANCE_REVISION);
     expect(fs.existsSync(path.join(root,'docs','requirements.md'))).toBe(false);
   });
