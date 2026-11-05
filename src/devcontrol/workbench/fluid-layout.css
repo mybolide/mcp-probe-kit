@@ -31,12 +31,6 @@
 .overview-product-grid .foot .link{padding-top:0;white-space:nowrap}
 .overview-product-grid .docpath{font-size:12px;overflow-wrap:anywhere}
 #view-overview .overview-process{margin-top:20px!important}
-.requirements-principles{display:grid;grid-template-columns:minmax(170px,.5fr) minmax(0,1.5fr) auto;
-  gap:22px;align-items:center;background:#edf5ff;border:1px solid #d5e6fa;
-  border-radius:16px;padding:22px 28px;margin:0 0 22px}
-.requirements-principles strong{display:block;font-size:16px;color:#214469;margin-top:8px}
-.requirements-principles p{font-size:14px;color:#345573;line-height:1.65;margin:0}
-.requirements-principles .link{white-space:nowrap}
 .architecture-sections{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);
   gap:19px;align-items:start}
 .architecture-sections .panel{min-width:0;margin:0}
@@ -225,9 +219,6 @@
   .settings-aside{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}
   #view-requirements .widebox{display:block}
   #view-requirements .widebox .kpirow{margin:18px 0}
-  .requirements-principles{grid-template-columns:1fr auto}
-  .requirements-principles p{grid-column:1;grid-row:2}
-  .requirements-principles .link{grid-column:2;grid-row:1/3}
 }
 @media(max-width:850px){
   .layout{display:block}
@@ -238,8 +229,6 @@
   .navbtn{flex:none}
   .architecture-sections .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .overview-product-grid{grid-template-columns:1fr 1fr}
-  .requirements-principles{grid-template-columns:1fr;gap:9px}
-  .requirements-principles p,.requirements-principles .link{grid-column:1;grid-row:auto}
   #view-tasks .task-progress{display:block}
   #view-tasks .task-progress span{max-width:none}
   #view-tasks .task-progress progress{display:block;width:100%;margin-top:14px}
@@ -288,7 +277,6 @@
   .overview-product-grid .panel{padding:23px}
   .section-row{display:block;margin-top:22px}
   .section-row .link,.section-row .sub{display:block;margin-top:8px}
-  .requirements-principles{padding:20px}
   .architecture-sections .cards{grid-template-columns:1fr}
   .settings-aside{grid-template-columns:1fr}
   .issue-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -746,4 +734,122 @@ button.insight-row:hover{background:#f0f7ff;border-color:#9fc4ed}
     font-size:12px;font-weight:650;min-height:34px;cursor:pointer}
   .task-extra-filters-toggle[aria-expanded="true"] span{transform:rotate(180deg)}
   .task-extra-filters-toggle:focus-visible{outline:3px solid #8bbaf0;outline-offset:2px}
+}
+
+/* Unified control finishing and visual hierarchy. Kept at the end of the
+ * responsive layout so browser-native arrows and old control shorthands do
+ * not diverge between task, Feature, refresh and settings dropdowns. */
+:root{--wb-control-border:#cdd9e7;--wb-control-hover:#a9c0d8;
+  --wb-quiet-ink:#65778b;--wb-card-line:#e1e8f0}
+select:not([multiple]){
+  -webkit-appearance:none;appearance:none;
+  background-color:#fff;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4.2 6.2 3.8 3.8 3.8-3.8' fill='none' stroke='%23516b86' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 15px center;
+  background-size:16px 16px;
+  padding-right:44px;border-color:var(--wb-control-border);
+  border-radius:10px;min-height:42px;color:#284763;cursor:pointer;
+  transition:border-color .14s,box-shadow .14s;
+}
+select:not([multiple]):hover:not(:disabled){border-color:var(--wb-control-hover)}
+select:not([multiple]):focus-visible{
+  border-color:#3281d6;outline:2px solid #83b9f380;outline-offset:2px}
+select:not([multiple]):disabled{cursor:not-allowed;opacity:.78}
+.issue-controls input,.documentbar input,.decision-request-form input,
+.decision-request-form textarea,.settings-form-grid input{
+  border-radius:10px;border-color:var(--wb-control-border);
+  transition:border-color .14s,box-shadow .14s}
+.issue-controls input:hover,.documentbar input:hover,
+.decision-request-form :is(input,textarea):hover:not(:disabled),
+.settings-form-grid input:hover:not(:disabled){border-color:var(--wb-control-hover)}
+.issue-controls :is(input,select):focus-visible,
+.documentbar input:focus-visible,.settings-form-grid :is(input,select):focus-visible,
+.decision-request-form :is(input,textarea,select):focus-visible{
+  outline:2px solid #83b9f3;outline-offset:2px}
+
+/* Page title alone should establish where the developer is. Repeated
+ * uppercase captions in every heading added visual noise without context. */
+.view>.sectionhead>.eyebrow,.panelhead .eyebrow{display:none}
+.main .bar{margin-bottom:25px;padding-bottom:17px}
+.view>.sectionhead{margin-bottom:21px}
+.view>.sectionhead h1{font-size:clamp(30px,2.5vw,37px);
+  letter-spacing:-1.05px;margin:0 0 9px;line-height:1.25}
+.view>.sectionhead .sub{font-size:14px;line-height:1.6;
+  color:var(--wb-quiet-ink);max-width:900px}
+.panelhead{align-items:center;gap:14px}
+.panelhead h2{font-size:19px;line-height:1.4;margin:0}
+.panel,.widebox,.attention-work,.attention-metric{
+  border-color:var(--wb-card-line);box-shadow:0 2px 9px #19375506}
+.attention-center{gap:14px}
+.attention-metrics{gap:11px}
+.attention-metric{min-height:115px;padding:15px 18px;gap:5px}
+.attention-metric strong{font-size:32px}
+.attention-work{padding:18px 20px 20px}
+.attention-item{min-height:103px;padding:13px 15px;background:#fbfcfe}
+.attention-context{background:#f7f9fc;border-color:#e4eaf2;
+  color:#4d6580}
+.task-card{border-color:var(--wb-card-line);
+  box-shadow:0 2px 8px #19375506}
+.task-results-header{margin-top:18px}
+
+/* When there is nothing to decide, show an unobtrusive, still discoverable
+ * status row. The full form stays unchanged when real questions exist. */
+#decision-request-panel.is-empty{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 14px;align-items:center;padding:17px 21px;margin-bottom:16px}
+#decision-request-panel.is-empty>.sub{display:none}
+#decision-request-panel.is-empty .panelhead{
+  grid-column:1;grid-row:1;margin:0;min-width:0}
+#decision-request-panel.is-empty .panelhead h2{font-size:17px}
+#decision-request-panel.is-empty .decision-request-controls{
+  grid-column:2;grid-row:1;margin:0}
+#decision-request-panel.is-empty .decision-request-controls :is(label,select){display:none}
+#decision-request-panel.is-empty #decision-request-list{
+  grid-column:1/-1;grid-row:2}
+#decision-request-panel.is-empty #decision-request-list .sub{
+  font-size:12px;line-height:1.5;color:var(--wb-quiet-ink);margin:0}
+
+/* Historical Idea records matter, but should not bury the current Feature
+ * work. Native details gives one obvious summary without another filter. */
+.idea-disclosure{margin-top:16px}
+.idea-disclosure>summary{display:flex;align-items:center;list-style:none;
+  margin:0;gap:14px;cursor:pointer;min-width:0}
+.idea-disclosure>summary::-webkit-details-marker{display:none}
+.idea-disclosure>summary h2{flex:none}
+.idea-disclosure>summary .insight-meta{
+  margin-left:auto;font-size:12px;color:var(--wb-quiet-ink);text-align:right}
+.idea-disclosure-action{display:inline-flex;align-items:center;flex:none;
+  gap:5px;color:#2668a4;font-size:12px;font-weight:680;white-space:nowrap}
+.idea-disclosure-action:before{content:"展开"}
+.idea-disclosure-chevron{display:inline-block;transition:transform .14s}
+.idea-disclosure[open] .idea-disclosure-action:before{content:"收起"}
+.idea-disclosure[open] .idea-disclosure-chevron{transform:rotate(180deg)}
+.idea-disclosure[open]>summary{border-bottom:1px solid var(--wb-card-line);
+  padding-bottom:15px;margin-bottom:15px}
+.idea-disclosure>summary:focus-visible{outline:2px solid #83b9f3;outline-offset:3px}
+
+@media(max-width:760px){
+  .main .bar{margin-bottom:19px;padding-bottom:13px}
+  .view>.sectionhead{margin-bottom:17px}
+  .view>.sectionhead h1{font-size:29px;line-height:1.25}
+  .attention-metric{min-height:99px;padding:13px 15px}
+  .attention-metric strong{font-size:28px}
+  .attention-item{min-height:98px}
+}
+@media(max-width:620px){
+  .view>.sectionhead .sub{font-size:13px;line-height:1.55}
+  .panelhead h2{font-size:18px}
+  .attention-metric{min-height:91px;padding:12px 13px}
+  .attention-metric strong{font-size:27px}
+  .attention-work{padding:15px 13px}
+  select:not([multiple]){min-height:42px;
+    background-position:right 13px center;padding-right:40px}
+  #decision-request-panel.is-empty{padding:15px 14px}
+  #decision-request-panel.is-empty .panelhead{gap:8px}
+  #decision-request-panel.is-empty .panelhead h2{font-size:16px}
+  #decision-request-panel.is-empty .insight-meta{font-size:11px;white-space:nowrap}
+  .idea-disclosure{padding:18px 16px}
+  .idea-disclosure>summary{flex-wrap:wrap;gap:7px 12px}
+  .idea-disclosure>summary h2{font-size:17px}
+  .idea-disclosure>summary .insight-meta{font-size:11px}
 }

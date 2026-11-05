@@ -62,7 +62,10 @@ try {
    // Wait for the actual project data before capturing and scoring content.
    if(['overview','requirements','architecture'].includes(view)){
      let loaded=false;
-     for(let k=0;k<35;k++){
+     // Real project /api/board and /api/project may finish after the first
+     // render under SQLite load. Do not classify a still-loading shell as a
+     // visual failure while the actual status cards finish seconds later.
+     for(let k=0;k<90;k++){
        loaded=await evalJS('(()=>{const view="'+view+'";if(view==="overview")return !document.getElementById("project-intro").textContent.includes("正在读取");if(view==="requirements")return document.getElementById("fr-count").textContent!=="—";return !document.getElementById("architecture-summary").textContent.includes("读取中");})()');
        if(loaded)break;
        await sleep(115);
@@ -74,6 +77,40 @@ try {
      return !!link&&link.href==='https://github.com/mybolide/mcp-probe-kit'&&
        link.target==='_blank'&&link.rel.includes('noopener')&&link.rel.includes('noreferrer');
    })()`);
+   // Native dropdown glyphs rendered against the right border on some
+   // browsers. Check real CSS across every control family and viewport.
+   if(['overview','requirements','tasks','settings'].includes(view)){
+     v.selectControls=await evalJS(`(()=>{
+       const ids=${JSON.stringify({overview:['refresh-interval'],requirements:['decision-request-filter'],tasks:['task-stage-filter','task-type-filter'],settings:['setting-provider']}[view])};
+       return ids.map(id=>{
+         const element=document.getElementById(id);
+         if(!element)return {id,ok:false,missing:true};
+         const css=getComputedStyle(element);
+         return {id,ok:css.appearance==='none'&&
+           css.backgroundImage.includes('data:image/svg+xml')&&
+           parseFloat(css.paddingRight)>=40,
+           rightPadding:css.paddingRight,arrow:css.backgroundPosition,
+           appearance:css.appearance};
+       });
+     })()`);
+   }
+   if(view==='requirements'){
+     for(let i=0;i<25;i++){
+       const ready=await evalJS(`document.getElementById('decision-request-count')?.textContent.includes('项待确认')`);
+       if(ready)break;
+       await sleep(120);
+     }
+     if(!v.dataLoaded&&v.heroReady){
+       v.dataLoaded=await evalJS('!document.getElementById("project-intro")?.textContent.includes("正在读取")');
+     }
+     v.emptyDecisionCompact=await evalJS(`(()=>{
+       const panel=document.getElementById('decision-request-panel');
+       const count=document.getElementById('decision-request-count')?.textContent;
+       if(count!=='0 项待确认')return true;
+       return panel.classList.contains('is-empty')&&
+         panel.getBoundingClientRect().height<170;
+     })()`);
+   }
    if(view==='overview'){
      // Source-backed totals must be populated; a visually pleasing placeholder
      // is NOT a passed project dashboard.
@@ -221,6 +258,8 @@ try {
  }
  const failures=results.filter(v=>v.dataLoaded===false||v.insightsLoaded===false||v.reviewLoaded===false||!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3||v.navItems!==8
  ||!v.githubLinkValid||(v.view==='overview'&&!v.heroReady)||v.searchResetWorks===false
+ ||(v.selectControls&&v.selectControls.some(control=>!control.ok))||
+ v.emptyDecisionCompact===false
  ||(v.view==='tasks'&&(
    v.lifecycleTabs?.names.join(',')!=='not_started,in_progress,completed'||
    v.lifecycleTabs?.selected.length!==1||!v.lifecycleTabs?.noAttentionControls))

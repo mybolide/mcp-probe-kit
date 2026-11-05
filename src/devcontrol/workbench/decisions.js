@@ -17,6 +17,7 @@
       renderDecisionRequests();
       if(typeof renderAttentionCenter==='function'&&board)renderAttentionCenter();
     }catch(error){
+      $('decision-request-panel').classList.remove('is-empty');
       container.replaceChildren(n('p','决策列表读取失败：'+error.message,'sub'));
       $('decision-request-count').textContent='暂时无法读取';
     }
@@ -27,6 +28,8 @@
       decisionRequests.filter(item=>item.status==='pending');
     const pending=decisionRequests.filter(item=>item.status==='pending').length;
     $('decision-request-count').textContent=pending+' 项待确认';
+    // A zero-item inbox should remain discoverable, not consume half a page.
+    $('decision-request-panel').classList.toggle('is-empty',decisionRequests.length===0);
     const host=$('decision-request-list');host.replaceChildren();
     if(!visible.length){
       host.append(n('p',decisionRequests.length?

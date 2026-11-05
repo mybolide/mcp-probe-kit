@@ -112,11 +112,11 @@
     <div class="widebox"><h2 id="requirements-title">产品需求</h2><p class="body">下面的数量由需求文档中实际 FR/NFR 编号去重计算，不是完成比例。</p>
       <div class="kpirow"><div class="kpi"><b id="fr-count">—</b><span>功能需求 FR</span></div><div class="kpi"><b id="nfr-count">—</b><span>非功能需求 NFR</span></div></div>
       <button class="link" id="open-requirements">查看完整产品需求 →</button></div>
-    <div class="requirements-principles" role="note"><div><span class="eyebrow">CHANGE CONTROL</span><strong>需求变更和候选 Idea</strong></div><p>新想法先评估、再确认影响和审批。待确认的用户选择只写入决策记录，不能自动成为可领取的任务。</p><button class="link" data-go="guide">查看研发流程 ↗</button></div>
-    <section class="panel insight-panel"><div class="panelhead"><div><span class="eyebrow">IDEA GOVERNANCE</span><h2>想法与变更决策</h2></div><span class="insight-meta" id="idea-count">读取中…</span></div>
-      <p class="sub">来自项目 SQLite 的 Idea 记录；评估、独立审核、Owner 决策分别展示，没有审批记录的想法不得进入开发。</p>
+    <details class="panel insight-panel idea-disclosure" id="idea-disclosure">
+      <summary class="panelhead idea-disclosure-summary"><h2>想法与变更决策</h2><span class="insight-meta" id="idea-count">读取中…</span><span class="idea-disclosure-action" aria-hidden="true"><span class="idea-disclosure-chevron">⌄</span></span></summary>
+      <p class="sub">以下来自项目 SQLite 的 Idea 记录。评估和 Owner 决策仍按原研发规则进行，未获批准的想法不能进入开发。</p>
       <div id="idea-list" class="insight-list" aria-live="polite"></div>
-    </section>
+    </details>
     <div class="panel requirements-panel"><div class="panelhead"><h2>功能需求清单</h2><button class="link" data-doc="docs/product/requirements.md">查看完整 PRD →</button></div>
       <div class="doclist" id="requirement-list"></div></div>
     <div class="panel requirements-panel" id="requirement-review-panel"><div class="panelhead"><h2>待落实需求与验收项</h2><span class="insight-meta" id="requirement-review-count">读取中…</span></div>

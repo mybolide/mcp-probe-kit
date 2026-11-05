@@ -113,7 +113,9 @@ describe('v5 lightweight single-project workbench', () => {
     // bounded single-document payload, with zero remote CSS/JS dependencies.
     // Source-backed action center adds contextual, interactive task guidance
     // without a framework or remote assets. Keep its compressed budget bounded.
-    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(73_000);
+    // Keep the entire offline UI small even after the shared select control
+    // and compact empty-state accessibility/visual refinements.
+    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(74_000);
     expect(html).toContain('id="attention-center"');
     expect(html).toContain('id="attention-list"');
     expect(html).not.toContain('data-tasktab="attention"');
@@ -129,6 +131,11 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('function taskAttentionKind(row)');
     expect(html).toContain('function renderAttentionCenter()');
     expect(html).toContain('id="decision-request-panel"');
+    expect(html).toContain('id="idea-disclosure"');
+    expect(html).toContain('class="panelhead idea-disclosure-summary"');
+    expect(html).toContain("classList.toggle('is-empty',decisionRequests.length===0)");
+    expect(html).toContain('background-position:right 15px center');
+    expect(html).toContain('appearance:none');
     expect(html).toContain('id="decision-request-list"');
     expect(html).toContain('id="decision-request-filter"');
     expect(html).toContain('function loadDecisionRequests()');
