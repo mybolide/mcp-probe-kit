@@ -4169,8 +4169,11 @@ export class ProjectTaskLedger {
    * a clean child is also snapshotted so later dirty work cannot slip through.
    */
   private requireChildReposClean(revisions:RepositoryRevision[],
-    id?:string,task?:Row):void {
+    id?:string,task?:Row,allowScopedClaimWip=false):void {
     const scope=id&&task?JSON.parse(task.allowed_paths) as string[]:[];
+    const activeForeign=id?this.db.prepare(`SELECT t.id,t.allowed_paths FROM
+      dc_task_leases l JOIN dc_tasks t ON t.id=l.task_id
+      WHERE t.id!=? AND t.status IN ('in_progress','in_review')`).all(id):[];
     const protectedRows=id?this.db.prepare(`SELECT prefix,git_dir,snapshot_json,digest
       FROM dc_legacy_child_worktree_snapshots WHERE task_id=?`).all(id):[];
     const childRepos=revisions.filter(repo=>!!repo.prefix);
@@ -4189,12 +4192,20 @@ export class ProjectTaskLedger {
         scope,revision.prefix);
       const allowedDirty=dirty.filter(file=>
         scope.some(pattern=>pathAllowed(revision.prefix+'/'+file.path,pattern)));
-      if(allowedDirty.length)fail('CHILD_REPOSITORY_DIRTY',
+      if(allowedDirty.length&&!allowScopedClaimWip)fail('CHILD_REPOSITORY_DIRTY',
         'Uncommitted task-scope child files must be committed before completion or verification');
-      const unrelated=dirty.filter(file=>!scope.some(pattern=>
+      const foreignPaths=activeForeign.flatMap(row=>{
+        const another=this.requireTask(String(row.id));
+        return this.taskWriterRepositories(another).includes(revision.prefix)&&
+          !taskScopesOverlap(scope,JSON.parse(another.allowed_paths))?
+          JSON.parse(another.allowed_paths) as string[]:[];
+      });
+      const foreign=(file:{path:string})=>foreignPaths.some(pattern=>
+        pathAllowed(revision.prefix+'/'+file.path,pattern));
+      const unrelated=dirty.filter(file=>!foreign(file)&&!scope.some(pattern=>
         pathAllowed(revision.prefix+'/'+file.path,pattern)));
       if(!protectedRow){
-        if(dirty.length)fail('CHILD_REPOSITORY_DIRTY',
+        if(unrelated.length)fail('CHILD_REPOSITORY_DIRTY',
           `Commit or reconcile all changes in child repository ${revision.prefix} before task completion or verification`);
         continue;
       }
@@ -4204,16 +4215,16 @@ export class ProjectTaskLedger {
       if(digest!==protectedRow.digest||
         recorded.some(file=>scope.some(pattern=>
           pathAllowed(revision.prefix+'/'+file.path,pattern)))||
-        JSON.stringify(unrelated)!==JSON.stringify(recorded))
+        JSON.stringify(unrelated)!==JSON.stringify(recorded.filter(file=>!foreign(file))))
         fail('PROTECTED_CHILD_WORKTREE_CHANGED',
           'Out-of-scope child files differ from the Owner-authorized read-only snapshot');
     }
   }
 
-  checkStaged(): Row {
+  checkStaged(taskId?:string): Row {
     if(!this.hasRootGit){
       const active=this.checkoutWriter();
-      if(!active||active.expires_at<=Date.now())
+      if(!active)
         return {passed:false,reason:'No active approved file-backed task',
           evidenceKind:'files-sha256-v1',gitIndex:'not_applicable'};
       const task=this.requireTask(String(active.task_id));
@@ -4236,11 +4247,49 @@ export class ProjectTaskLedger {
         unapprovedDocs,sourceDigest:current.digest,
         ...(changes.changed.length?{}:{reason:'No source changes since claim'})};
     }
-    const active=this.checkoutWriter();
+    const allRepos=discoverRepositories(this.root,[]);
+    const stagedPaths=stagedChanges(allRepos);
+    const candidates=this.db.prepare(`SELECT l.* FROM dc_task_leases l
+      JOIN dc_tasks t ON t.id=l.task_id
+      WHERE t.status IN ('in_progress','in_review')`).all();
+    let active=this.checkoutWriter();
+    if(taskId){
+      active=candidates.find(row=>row.task_id===taskId);
+      if(!active)fail('LEASE_REQUIRED',
+        'The specified task does not have a retained authenticated Writer');
+    }else if(stagedPaths.length){
+      const matching=candidates.filter(row=>{
+        const scope=JSON.parse(this.requireTask(String(row.task_id)).allowed_paths) as string[];
+        return stagedPaths.every(file=>scope.some(pattern=>pathAllowed(file,pattern)));
+      });
+      if(matching.length===1)active=matching[0];
+      else if(candidates.length>1&&matching.length!==1)
+        fail('MULTI_REPOSITORY_STAGE_AMBIGUOUS',
+          'Staged files span multiple independent task indexes; call check with the exact task id');
+    }
     const task=active?this.requireTask(active.task_id):null;
     if(task)this.taskRepositories(task.id,task);
     const roots=task?discoverRepositories(this.root,JSON.parse(task.allowed_paths)):discoverRepositories(this.root,[]);
-    const allStaged=stagedChanges(roots);
+    let allStaged=stagedPaths;
+    if(taskId&&task&&this.hasRootGit){
+      // `check(id)` checks exactly that child's index. Staged files belonging
+      // to another active independent task are neither approved nor denied
+      // here; a staged unowned/root file still fails closed.
+      const owned=new Set(this.taskWriterRepositories(task));
+      allStaged=stagedChanges(roots.filter(repo=>owned.has(repo.prefix)));
+      const foreign=stagedPaths.filter(file=>!allStaged.includes(file));
+      const unsafe=foreign.filter(file=>!candidates.some(row=>{
+        if(row.task_id===task.id)return false;
+        const other=this.requireTask(String(row.task_id));
+        const scope=JSON.parse(other.allowed_paths) as string[];
+        return this.taskWriterRepositories(other).every(prefix=>
+          prefix!==''&&!owned.has(prefix))&&
+          scope.some(pattern=>pathAllowed(file,pattern));
+      }));
+      if(unsafe.length)fail('STAGED_OTHER_TASK_OR_UNOWNED',
+        'Staged files outside the independent task Git index have no proven separate Writer',
+        {files:unsafe});
+    }
     const frozenScope=task?JSON.parse(task.allowed_paths) as string[]:[];
     // The local exception is a DevControl rule, not Git's untracked-only
     // .gitignore. Explicitly exempted tracked/staged local files are not
@@ -4303,7 +4352,7 @@ export class ProjectTaskLedger {
         stagedFiles:[],exemptedStagedFiles,deniedFiles:[],unapprovedDocs:[],
         note:"Only locally exempt working files are staged; no task delivery or tests are approved."};
     const lease = active;
-    if (!lease || lease.expires_at <= Date.now()) {
+    if (!lease) {
       fail("LEASE_REQUIRED", "No active approved task lease; refusing Git commit"+
         (guidance?.issues.length?"; managed guidance validation: "+guidance.issues.join("; "):""));
     }
@@ -7007,6 +7056,17 @@ export class ProjectTaskLedger {
       item.path.split("/").includes("..")||item.path.includes("\\")||
       item.path.includes("\0")))
       fail("DIRTY_MANIFEST_INVALID","Exact relative tracked paths and SHA-256 are required");
+    if(this.hasRootGit&&!this.linkedWorktree&&
+      this.taskWriterRepositories(task).every(prefix=>prefix!=='')){
+      // A child-only task cannot turn planning-repository edits into its
+      // delivery. They need no manual Owner manifest and must never be
+      // silently committed by this task. Still validate index and managed
+      // guidance with the same root protection as claim/recovery.
+      this.protectedClaimWorktree(task.id,task,baseHead);
+      if(manifest.length)fail('DIRTY_MANIFEST_INVALID',
+        'Root planning files are not part of an independent child task delivery');
+      return [];
+    }
     // Explicit local rules apply to tracked and untracked working files.
     // The frozen task scope is never exempt, and exempt changes never count
     // as the actual committed delivery for this task.
@@ -7072,6 +7132,24 @@ export class ProjectTaskLedger {
    */
   private protectedClaimWorktree(id:string,task:Row,baseHead:string):
     Array<{path:string;kind:"tracked"|"untracked";sha256:string;size:number}>|null {
+    // A task wholly inside independent child Git repositories does not own
+    // the ROOT planning repository's working files. A local .gitignore (or
+    // other unrelated root file) can change without invalidating the child
+    // writer's original immutable child Git baseline. Do not trust a staged
+    // root index or modified managed instructions, even across repositories.
+    if(this.hasRootGit&&!this.linkedWorktree&&
+      this.taskWriterRepositories(task).every(prefix=>prefix!=='')){
+      const staged=git(this.root,['diff','--cached','--name-only','-z'])
+        .split('\0').filter(Boolean);
+      if(staged.length)fail('RECOVERY_STAGED_INDEX',
+        'Staged root planning files must be reviewed separately from a child task');
+      const changed=preservedWorktreeSnapshot(this.root,[]);
+      if(changed.some(file=>isManagedGuidancePath(file.path)||
+        isManagedCliFallbackPath(file.path)))
+        fail('GOVERNED_FILE_CHANGED',
+          'Managed instruction files cannot be bypassed through independent repository ownership');
+      return null;
+    }
     const migration=this.db.prepare(`SELECT original_root_base,protected_worktree_json
       FROM dc_legacy_active_migrations WHERE task_id=?`).get(id);
     const row=this.db.prepare(
@@ -7341,6 +7419,71 @@ export class ProjectTaskLedger {
   /** The current Git index belongs to exactly one writable task per
    * checkout. Linked worktrees share the project SQLite, NOT its index.
    */
+  /** Only the repository containing a frozen path owns its Git index. The
+   * root planning repository is not the writer for an independent child.
+   * Discover all repositories so a new or replaced child is not overlooked. */
+  private taskWriterRepositories(task:Row):string[]{
+    const scope=JSON.parse(task.allowed_paths) as string[];
+    return [...new Set(scope.map(file=>{
+      // Do not walk the entire workspace for EACH candidate in `next`.
+      // The actual claim and Gate still run full repository discovery and
+      // immutable Git-identity checks. This cheap preflight follows ONLY
+      // the frozen path's ancestors and errs on the conservative root owner.
+      const parts=file.split('/').filter(part=>part!=='*'&&part!=='**');
+      for(let i=parts.length;i>0;i--){
+        const prefix=parts.slice(0,i).join('/');
+        const candidate=path.join(this.root,prefix);
+        const marker=path.join(candidate,'.git');
+        if(fs.existsSync(marker)){
+          if(fs.lstatSync(marker).isSymbolicLink()||
+            fs.realpathSync(candidate)!==
+              path.resolve(fs.realpathSync(this.root),prefix))
+            fail('UNSAFE_REPOSITORY_LOCATION',
+              'A child Git repository is symlinked or moved outside the frozen workspace');
+          return prefix;
+        }
+      }
+      return '';
+    }))];
+  }
+
+  /** A singleton lease remains a compatibility pointer, NOT a global lock
+   * across independent indexes. An inactive or expired Writer still owns its
+   * original scope; expiry alone never makes overlapping source claimable. */
+  private independentRepositoryWriters(task:Row):boolean{
+    if(!this.hasRootGit||this.linkedWorktree)return false;
+    const target=new Set(this.taskWriterRepositories(task));
+    if(!target.size)return false;
+    const paths=JSON.parse(task.allowed_paths) as string[];
+    const others=this.db.prepare(`SELECT l.task_id FROM dc_task_leases l
+      JOIN dc_tasks t ON t.id=l.task_id
+      WHERE t.status IN ('in_progress','in_review') AND l.task_id!=?`)
+      .all(task.id);
+    if(!others.length)return false;
+    return others.every(row=>{
+      const previous=this.requireTask(String(row.task_id));
+      const old=JSON.parse(previous.allowed_paths) as string[];
+      return !taskScopesOverlap(paths,old)&&
+        this.taskWriterRepositories(previous).every(prefix=>!target.has(prefix));
+    });
+  }
+
+  private independentWriterConflict(task:Row):Row|undefined{
+    if(!this.hasRootGit||this.linkedWorktree)return undefined;
+    const target=new Set(this.taskWriterRepositories(task));
+    const paths=JSON.parse(task.allowed_paths) as string[];
+    for(const row of this.db.prepare(`SELECT l.* FROM dc_task_leases l
+      JOIN dc_tasks t ON t.id=l.task_id
+      WHERE t.status IN ('in_progress','in_review') AND l.task_id!=?`)
+      .all(task.id)){
+      const previous=this.requireTask(String(row.task_id));
+      if(taskScopesOverlap(paths,JSON.parse(previous.allowed_paths))||
+        this.taskWriterRepositories(previous).some(prefix=>target.has(prefix)))
+        return row;
+    }
+    return undefined;
+  }
+
   private checkoutWriter():Row|undefined{
     if(!this.linkedWorktree)
       return this.db.prepare('SELECT * FROM dc_leases WHERE singleton=1').get();
@@ -7364,8 +7507,25 @@ export class ProjectTaskLedger {
         code:error instanceof DevControlError?error.code:'PARALLEL_SCOPE_CONFLICT',
         taskId:task.id,action:'Use an independent non-overlapping Git checkout'}};
     }
+    const competing=this.independentWriterConflict(task);
+    if(competing){
+      try{
+        if(!this.canYieldReviewWriter(competing,task)&&
+          !(competing.expires_at<=Date.now()&&
+            this.parkedWriterForClaim(competing,task)))
+          return {claimableNow:false,writerBlocker:{
+            code:'REPOSITORY_WRITER_CONFLICT',taskId:competing.task_id,
+            writerExpired:competing.expires_at<=Date.now(),
+            action:'A shared Git index remains owned; resume its original writer or use an audited safe handoff'}};
+      }catch(error){return {claimableNow:false,writerBlocker:{
+        code:error instanceof DevControlError?error.code:'WORKTREE_CHANGED',
+        taskId:competing.task_id,action:'Inspect the exact shared repository conflict'}};}
+    }
     const writer=this.checkoutWriter();
     if(!writer)return {claimableNow:true,writerBlocker:null};
+    if(writer.task_id!==task.id&&this.independentRepositoryWriters(task))
+      return {claimableNow:true,writerBlocker:null,
+        repositoryIsolated:true};
     if(writer.task_id===task.id){
       if(writer.expires_at>Date.now())
         return {claimableNow:false,writerBlocker:{
@@ -7537,11 +7697,13 @@ export class ProjectTaskLedger {
     );
     // Coding still has one shared Git writer. A completed review does NOT
     // need to hold it while an unrelated, non-overlapping task is developed.
-    const availableAfterReview=active&&activeLease?
-      ready.filter(t=>t.status==='ready'&&this.canYieldReviewWriter(active,t)): [];
-    const selected = availableAfterReview.find(t=>t.track==='product')??
-      availableAfterReview[0]??(activeLease ? this.get(activeLease.taskId)
-      : ready.find((t) => t.status==='ready'&&t.track==='product')??
+    const claimable=ready.filter(t=>t.status==='ready'&&
+      this.claimAvailability(this.requireTask(t.id)).claimableNow);
+    const selected = claimable.find(t=>t.track==='product')??claimable[0]??
+      (activeLease?this.get(activeLease.taskId):
+        ready.find(t=>t.status==='in_progress'&&
+          this.claimAvailability(this.requireTask(t.id)).claimableNow)??
+        ready.find(t=>t.status==='ready'&&t.track==='product')??
         ready.find(t=>t.status==='ready')??ready[0]??null);
     return {
       projectRoot: this.root, nextTask: selected,
@@ -7549,7 +7711,7 @@ export class ProjectTaskLedger {
       selectedTaskWriterStatus:selected?
         this.claimAvailability(this.requireTask(selected.id)):null,
       parkedReviews,
-      reviewWriterCanYield:availableAfterReview.length>0,
+      reviewWriterCanYield:claimable.length>0&&!!activeLease,
       pendingAgentActions,
       // A claimed task is finished first; pending reviews never steal leases.
       nextAgentAction:activeLease?null:pendingAgentActions[0]??null,
@@ -7788,6 +7950,26 @@ export class ProjectTaskLedger {
       }
       if (this.blockers(id).length) fail("TASK_BLOCKED", `Task ${id} depends on ${this.blockers(id).join(", ")}`);
       this.checkOtherCheckoutScopes(task);
+      if(this.hasRootGit&&!this.linkedWorktree&&
+        discoverRepositories(this.root,JSON.parse(task.allowed_paths)).length>1){
+        const frozen=JSON.parse(task.allowed_paths) as string[];
+        const staged=stagedChanges(discoverRepositories(this.root,frozen));
+        const competingLeases=this.db.prepare(`SELECT l.task_id FROM dc_task_leases l
+          JOIN dc_tasks t ON t.id=l.task_id
+          WHERE t.status IN ('in_progress','in_review') AND l.task_id!=?`)
+          .all(id);
+        const foreign=staged.filter(file=>!competingLeases.some(row=>{
+          const other=this.requireTask(String(row.task_id));
+          const otherPaths=JSON.parse(other.allowed_paths) as string[];
+          return !taskScopesOverlap(frozen,otherPaths)&&
+            this.taskWriterRepositories(other).every(prefix=>
+              prefix!==''&&!this.taskWriterRepositories(task).includes(prefix))&&
+            otherPaths.some(pattern=>pathAllowed(file,pattern));
+        }));
+        if(foreign.length)fail('CLAIM_STAGED_INDEX',
+          'The task Git index or an unowned repository contains staged changes',
+          {files:foreign});
+      }
       if(this.linkedWorktree){
         // Multi-repo deliveries require an independent repository checkout
         // vector. A root-only worktree cannot magically include child .git
@@ -7799,6 +7981,13 @@ export class ProjectTaskLedger {
       }
       const lease = this.checkoutWriter();
       const parked=this.db.prepare('SELECT * FROM dc_task_leases WHERE task_id=?').get(id);
+      const competing=this.independentWriterConflict(task);
+      if(competing&&!this.canYieldReviewWriter(competing,task)&&
+        !(competing.expires_at<=Date.now()&&
+          this.parkedWriterForClaim(competing,task)))
+        fail('REPOSITORY_WRITER_CONFLICT',
+        'Another unfinished task owns a shared Git repository or overlapping frozen file scope',
+        {taskId:competing.task_id,writerExpired:competing.expires_at<=Date.now()});
       if(parked&&parked.worktree_path!==(this.linkedWorktree?fs.realpathSync(this.root):'')&&
         ['in_progress','in_review'].includes(task.status))
         fail('TASK_CHECKOUT_CONFLICT',
@@ -7809,8 +7998,10 @@ export class ProjectTaskLedger {
         !restoringParkedWork)
         fail('REVIEW_LEASE_ACTIVE',
           'This task already has a retained review lease; renew or finish its existing review instead of replacing the evidence token');
+      const independent=!!lease&&lease.task_id!==id&&
+        this.independentRepositoryWriters(task);
       const yielding=!!lease&&lease.task_id!==id&&
-        (this.canYieldReviewWriter(lease,task)||
+        (independent||this.canYieldReviewWriter(lease,task)||
           this.parkedWriterForClaim(lease,task));
       if (lease && lease.expires_at > Date.now() && !yielding) {
         fail("LEASE_CONFLICT", `Task ${lease.task_id} is already claimed by ${lease.agent}`);
@@ -7892,7 +8083,8 @@ export class ProjectTaskLedger {
       // A child index may contain unrelated WIP at claim time. Unlike the
       // single-root legacy snapshot, it cannot safely be exempted without a
       // per-repository signed manifest, so stop instead of silently trusting it.
-      this.requireChildReposClean(claimedRepositories,id,task);
+      this.requireChildReposClean(claimedRepositories,id,task,
+        task.status==='in_progress');
       this.recordLocalDeveloper(id,"claimed");
       this.auditCurrentLocalExemptions(id,agent.trim(),'claim',
         JSON.parse(task.allowed_paths) as string[]);
@@ -7904,10 +8096,12 @@ export class ProjectTaskLedger {
           SELECT task_id,agent,token,base_head,expires_at,''
           FROM dc_leases WHERE task_id=?`).run(String(lease.task_id));
         this.audit(String(lease.task_id),
+          independent?'independent_repository_writer_yielded':
           this.requireTask(String(lease.task_id)).status==='in_review'?
             'review_writer_yielded':'parked_expired_writer_transferred',
           String(lease.agent),{
             nextTask:id,originalBaseHead:lease.base_head,
+            independentGitIndex:independent,
             writerLeaseRetainedForReview:true,originalTestEvidenceUnchanged:true,
           });
       }
@@ -8519,8 +8713,15 @@ export class ProjectTaskLedger {
 
   private requireGitWriter(id:string):void{
     const writer=this.checkoutWriter();
-    if(writer?.task_id!==id)fail('GIT_WRITER_REQUIRED',
-      'This task retains a review lease while another task owns the shared Git checkout; reclaim the writer before submitting a new code revision');
+    if(writer?.task_id===id)return;
+    const task=this.requireTask(id);
+    const lease=this.db.prepare(`SELECT task_id FROM dc_task_leases
+      WHERE task_id=?`).get(id);
+    if(lease&&['in_progress','in_review'].includes(task.status)&&
+      !this.independentWriterConflict(task)&&
+      this.independentRepositoryWriters(task))return;
+    fail('GIT_WRITER_REQUIRED',
+      'A different task owns a shared Git index; only independent repository writers can proceed without a handoff');
   }
 
   private requireLease(id: string, token: string,
@@ -8531,12 +8732,13 @@ export class ProjectTaskLedger {
       fail("LEASE_REQUIRED", "Active task lease token required");
     }
     if(row.expires_at<=Date.now()){
-      // Review owns no Git writer privilege. Keep the original authenticated
-      // token usable after TTL if and only if a committed delivery is already
-      // awaiting review. No new evidence/report/complete operation can use it.
-      const task=purpose==='review'?this.requireTask(id):null;
-      if(task?.status!=='in_review'||!this.latestCompletion(id))
-        fail("LEASE_REQUIRED","Active writer lease token required; recover the original unfinished work");
+      // Expiry is a liveness indicator, never an automatic revocation of an
+      // authenticated original task. File overlap and Git index ownership,
+      // not the wall clock, determine whether writes may safely continue.
+      const task=this.requireTask(id);
+      if(task.status==='in_progress')this.requireGitWriter(id);
+      else if(purpose!=='review'||task.status!=='in_review'||!this.latestCompletion(id))
+        fail('LEASE_REQUIRED','The task token is no longer a valid writer');
     }
     if(String(row.worktree_path??'')!==
       (this.linkedWorktree?fs.realpathSync(this.root):''))

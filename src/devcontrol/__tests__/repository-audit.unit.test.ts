@@ -673,7 +673,7 @@ describe('immutable multi-repository delivery commits',()=>{
       });
       expect(()=>ledger.report(id,lease.leaseToken,
         {kind:'unit_test',reference:'new test'},false))
-        .toThrow(/Active writer lease/);
+        .toThrow(/Active writer lease|task token is no longer a valid writer/);
       const failedOutput=runOriginal(['--test','test/missing.test.cjs'],'rerun-failed');
       expect(failedOutput.exitCode).not.toBe(0);
       const failRun=ledger.recordRerunEvidence(makeRequest(
@@ -799,7 +799,7 @@ describe('immutable multi-repository delivery commits',()=>{
       });
       expect(()=>ledger.report(id,lease.leaseToken,{
         kind:'flutter_test',reference:'Cannot report invented new test',
-      },false)).toThrow(/Active writer lease/);
+      },false)).toThrow(/Active writer lease|task token is no longer a valid writer/);
       expect(()=>ledger.verify(id,lease.leaseToken,acceptance))
         .toThrow(/REPOSITORY_EVIDENCE_STALE|test receipt must cover/i);
       expect(ledger.get(id).status).toBe('in_review');
@@ -1269,7 +1269,7 @@ describe('immutable multi-repository delivery commits',()=>{
         track:'governance',allowedPaths:['docs/approved.md'],requiredGates:['docs']},'agent');
       ledger.approve('AUDIT-NO-STAGED-CHILD','owner');
       expect(()=>ledger.claim('AUDIT-NO-STAGED-CHILD','developer'))
-        .toThrow(/staged content|STAGED_WORKTREE/i);
+        .toThrow(/staged content|STAGED_WORKTREE|contains staged changes/i);
       expect(ledger.get('AUDIT-NO-STAGED-CHILD').status).toBe('ready');
     }finally{ledger.close();}
   });

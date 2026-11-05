@@ -637,7 +637,7 @@ function acceptFrozenAudioWithReview(token:string,fixture:ReturnType<typeof defe
       ledger!.approve(id,'owner');
     const first=ledger!.claim('NEYNA-200','developer');
     expect(()=>ledger!.claim('NEYNA-202','other'))
-      .toThrow(/already claimed/);
+      .toThrow(/already claimed|shared Git repository or overlapping frozen file scope/);
     save('tests/contracts/change.json','{}\n');
     commit('finish first task');
     ledger!.report('NEYNA-200',first.leaseToken,
@@ -648,11 +648,11 @@ function acceptFrozenAudioWithReview(token:string,fixture:ReturnType<typeof defe
       verification:'Executed original project tests against exact commit',
     });
     expect(()=>ledger!.claim('NEYNA-201','overlap'))
-      .toThrow(/already claimed/);
+      .toThrow(/already claimed|shared Git repository or overlapping frozen file scope/);
     save('independent/staged.txt','unsafe staged work\n');
     git('add','independent/staged.txt');
     expect(()=>ledger!.claim('NEYNA-202','other'))
-      .toThrow(/already claimed/);
+      .toThrow(/already claimed|shared Git repository or overlapping frozen file scope/);
     expect(ledger!.get('NEYNA-200').status).toBe('in_review');
   });
 
@@ -719,7 +719,7 @@ function acceptFrozenAudioWithReview(token:string,fixture:ReturnType<typeof defe
       summary:'Unsafe cross-task attempt',
       implementation:'Would overwrite unrelated writer work',
       verification:'No new project test was executed',
-    })).toThrow(/shared Git checkout/);
+    })).toThrow(/shared Git checkout|shared Git index/);
     expect(ledger!.release('NEYNA-201',other.leaseToken).released).toBe(true);
     const reclaimed=ledger!.claim('NEYNA-200','original-ai');
     expect(reclaimed.baseHead).toBe(first.baseHead);

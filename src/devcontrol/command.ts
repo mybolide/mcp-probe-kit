@@ -317,7 +317,7 @@ export function dispatchDevControl(
     case "pause-for-scope": return ledger.pauseForScopeAmendment(
       String(input.id),String(input.leaseToken),String(input.reason??""),
       input.existingDirtyFiles);
-    case "check": return ledger.checkStaged();
+    case "check": return ledger.checkStaged(input.id?String(input.id):undefined);
     case "report": return ledger.report(
       String(input.id), String(input.leaseToken),
       { kind: String(input.kind), reference: String(input.reference) },

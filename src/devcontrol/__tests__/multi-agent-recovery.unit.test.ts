@@ -387,14 +387,15 @@ describe('GP shared-checkout expired task recovery and audited writer handoff',(
     vi.spyOn(Date,'now').mockReturnValue(now+61_000);
     expect(ledger.executionContract('GP-T2')).toMatchObject({
       eligible:true,claimableNow:false,
-      writerBlocker:{code:'ABANDONED_TASK',taskId:'GP-T1',
+      writerBlocker:{code:'REPOSITORY_WRITER_CONFLICT',taskId:'GP-T1',
         writerExpired:true},
     });
-    expect(ledger.next().selectedTaskWriterStatus).toMatchObject({
-      claimableNow:false,writerBlocker:{code:'ABANDONED_TASK',taskId:'GP-T1'},
+    expect(ledger.next()).toMatchObject({
+      nextTask:{id:'GP-T1'},
+      selectedTaskWriterStatus:{claimableNow:true,writerBlocker:null},
     });
     expect(()=>ledger.claim('GP-T2','agent-b',1800))
-      .toThrow(/Expired task GP-T1 must be resumed or reviewed/);
+      .toThrow(/shared Git repository or overlapping frozen file scope/);
     expect(ledger.parkExpiredWriter('GP-T1',{
       ...approval,nextTaskId:'GP-T2',
     })).toMatchObject({taskId:'GP-T1',nextTaskId:'GP-T2',
