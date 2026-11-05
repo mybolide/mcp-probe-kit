@@ -29,6 +29,13 @@
     // separate whole-release plan is already frozen in the same project.
     return [...releaseNodes.filter(item=>!nativeIds.has(item.id)),...native];
   }
+  function pendingReleasePlanningRows(){
+    if(releaseWorkPlan?.status!=="frozen")return [];
+    const frozenIds=new Set((releaseWorkPlan.frozen?.plan?.workItems||[]).map(item=>item.id));
+    // Only proposals outside the frozen source are excluded from progress.
+    // A proposed revision to an existing frozen task must not appear here.
+    return currentReleaseRows().filter(row=>row.pending&&!frozenIds.has(row.item.id));
+  }
   let readabilityLoaded=false,readabilityLoading=false;
   let reviewQueueLoaded=false,reviewQueueLoading=false;
   async function loadTaskSpecReviewQueue(){
@@ -349,11 +356,18 @@
     }
   }
   function setTaskTab(tab){
-    if(!["not_started","in_progress","completed"].includes(tab))return;
+    if(!["not_started","in_progress","completed","planning"].includes(tab))return;
     taskTab=tab;
+    if(tab==="planning"){
+      // A planning tab must always show its own items, even if a filter was
+      // carried over from the previous regular task view.
+      $("task-search").value="";
+      $("task-stage-filter").value="";
+      $("task-type-filter").value="";
+    }
     for(const b of document.querySelectorAll("[data-tasktab]"))
       b.setAttribute("aria-selected",String(b.dataset.tasktab===tab));
-    taskVisibleLimit=12;
+    taskVisibleLimit=tab==="planning"?Math.max(12,pendingReleasePlanningRows().length):12;
     renderTaskList();
   }
   function clearTaskFilters(){
@@ -808,6 +822,9 @@
   function renderTaskList(){
     setupTaskReadability();
     const rows=currentReleaseRows();
+    const planningRows=pendingReleasePlanningRows();
+    const planningIds=new Set(planningRows.map(row=>row.item.id));
+    const formalRows=rows.filter(row=>!planningIds.has(row.item.id));
     for(const [name,key,choices] of [
       ["task-stage-filter","stageId",[...new Set(rows.map(r=>r.item.stageId||r.phase).filter(Boolean))].sort()],
       ["task-type-filter","type",[...new Set(rows.map(r=>r.item.type).filter(Boolean))].sort()],
@@ -821,16 +838,21 @@
       if(choices.includes(selected))select.value=selected;
     }
     for(const bucket of ["not_started","in_progress","completed"]){
-      $("count-"+bucket).textContent=String(rows.filter(row=>taskBucket(row)===bucket).length);
+      $("count-"+bucket).textContent=String(formalRows.filter(row=>taskBucket(row)===bucket).length);
     }
+    $("count-planning").textContent=String(planningRows.length);
     const search=$("task-search").value.trim().toLowerCase();
     const hasFilters=!!(search||$("task-stage-filter").value||$("task-type-filter").value);
     $("task-clear-filters").hidden=!hasFilters;
-    const currentBucket=rows.filter(row=>!!search||taskBucket(row)===taskTab).length;
-    const filtered=rows.filter(row=>{
+    $("task-planning-banner").hidden=taskTab!=="planning";
+    // Global keyword search still searches the entire release, including
+    // proposals. With no search, the first three tabs are frozen work only.
+    const available=taskTab==="planning"?planningRows:search?rows:formalRows;
+    const currentBucket=available.filter(row=>!!search||taskTab==="planning"||taskBucket(row)===taskTab).length;
+    const filtered=available.filter(row=>{
       // Searching a task ID is a project-wide lookup. Never silently hide a
       // Verified or blocked task only because a previous status tab is active.
-      if(!search&&taskBucket(row)!==taskTab)return false;
+      if(!search&&taskTab!=="planning"&&taskBucket(row)!==taskTab)return false;
       const data=row.item;
       if($("task-stage-filter").value&&(data.stageId||row.phase)!==$(
         "task-stage-filter").value)return false;
@@ -846,6 +868,7 @@
     const emptyState=()=>{
       const host=n("div",null,"task-empty-state");
       host.append(n("strong",hasFilters?"没有匹配的工作项":
+        taskTab==="planning"?"当前没有待审批规划":
         taskTab==="completed"?"当前阶段暂无已验证任务":
         taskTab==="in_progress"?"当前没有开发中或待验证任务":
         "当前阶段暂无待开发任务"));
@@ -868,6 +891,7 @@
       for(const row of visible)shell.append(renderTaskCard(row));
       $("task-rows").replaceChildren(filtered.length?shell:emptyState());
       $("task-list-count").textContent="当前版本 "+releaseWorkPlan.release+" · "+
+        (taskTab==="planning"?"待审批规划（未授权执行） · ":"")+
         (search?"全状态搜索 · ":"")+
         (hasFilters?"筛选 "+filtered.length+" / "+currentBucket+" 项":"当前状态 "+filtered.length+" 项")+
         (visible.length<filtered.length?" · 当前显示 "+visible.length+" 项":"")+" · "+(releaseWorkPlan.status==="needs_revision"?

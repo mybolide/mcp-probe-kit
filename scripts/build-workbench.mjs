@@ -15,7 +15,8 @@ const style=readFileSync(resolve(root,'styles.css'),'utf8')+'\n'+
   readFileSync(resolve(root,'design-system.css'),'utf8')+'\n'+
   readFileSync(resolve(root,'fluid-layout.css'),'utf8')+'\n'+
   readFileSync(resolve(root,'home-design-v2.css'),'utf8')+'\n'+
-  readFileSync(resolve(root,'workbench-pages-v2.css'),'utf8');
+  readFileSync(resolve(root,'workbench-pages-v2.css'),'utf8')+'\n'+
+  readFileSync(resolve(root,'workbench-readability.css'),'utf8');
 const css=await transform(style,{loader:'css',minify:true,target:'es2020'});
 const router=readFileSync(resolve(root,'router.js'),'utf8').replace('export function createHashRouter',
   'function createHashRouter');

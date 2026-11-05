@@ -82,8 +82,11 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('fetchJSON("/api/tasks/"+encodeURIComponent');
     expect(html).toContain('["任务说明",contract.purpose||contract.description]');
     expect(html).toContain('["文件修改范围",contract.allowedPaths]');
-    expect(html).toContain('"正式工作项已验证 "');
-    expect(html).toContain('" 冻结工作项已验证 "');
+    expect(html).toContain('"正式工作项已验证"');
+    expect(html).toContain('" 冻结工作项已验证"');
+    expect(html).toContain('id="task-progress-value"');
+    expect(html).toContain('id="task-progress-percent"');
+    expect(html).toContain('id="task-progress-extra"');
     expect(html).toContain('verified+" / "+rows.length');
     expect(html).toContain('currentReleaseRows()');
     expect(html).toContain('gate==="dap_grpc_live"?"待 DAP 数据验收"');

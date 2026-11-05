@@ -1,0 +1,204 @@
+/* The legibility contract for ALL workbench destinations. This sheet must
+ * load after the home and inner-page themes, so 10–12px editorial metadata
+ * cannot silently override readable body and control typography again.
+ * Presentation only. No lifecycle, source, data, or interaction changes. */
+:root{--read-ink:#263e5d;--read-muted:#526a86;--read-subtle:#647c98}
+
+/* Shared page hierarchy, source/reference cards and controls. */
+.view:not(#view-overview):not(#view-tasks)>.sectionhead .sub{
+  font-size:14px;line-height:1.7;color:var(--read-muted)}
+.view:not(#view-overview) .panelhead h2,
+.view:not(#view-overview) .section-row h2{font-size:19px;line-height:1.4}
+.view:not(#view-overview) :is(.panelhead+.sub,.section-row .sub,
+  .insight-meta,.widebox .body){font-size:14px;line-height:1.7;
+  color:var(--read-muted)}
+.view:not(#view-overview) .panelhead .link,
+.view:not(#view-overview) .section-row .link,
+.view:not(#view-overview) button.link{font-size:14px;min-height:36px}
+.view:not(#view-overview) :is(.docitem,.previewbtn) b,
+.view:not(#view-overview) .insight-row strong{font-size:15px;
+  line-height:1.5;color:#203857}
+.view:not(#view-overview) :is(.docitem,.previewbtn) small{
+  font-size:13px;line-height:1.7;color:var(--read-muted)}
+.view:not(#view-overview) .insight-row :is(p,small){
+  font-size:13px;line-height:1.6;color:var(--read-muted)}
+.view:not(#view-overview) .insight-metric span{font-size:14px;
+  line-height:1.5;color:#344e70}
+.view:not(#view-overview) .insight-metric small{font-size:13px;
+  line-height:1.6;color:var(--read-muted)}
+.view:not(#view-overview) :is(input:not([type=checkbox]),select,textarea){
+  font-size:14px;line-height:1.5}
+.view:not(#view-overview) input::placeholder{color:#667b94;opacity:1}
+
+/* App navigation and search appear on every page. */
+.sidebar .navbtn{font-size:14px}
+.sidebar .sidefooter-link{font-size:13px;min-height:37px}
+.brand-project .brand-copy small{font-size:12px}
+.bar .breadcrumbs{font-size:13px}
+.bar .global-search input{font-size:14px}
+.bar .global-search-result strong{font-size:14px}
+.bar .global-search-result small{font-size:12px}
+.bar .refresh-control,.bar .refresh-control select{font-size:13px}
+.bar .refresh-countdown{font-size:12px;color:var(--read-muted)}
+
+/* Homepage. Previously task captions, decision details and the Feature
+ * timeline became 9–11px, especially at mobile widths. */
+#view-overview .hero-main .home-hero-tagline{font-size:14px;line-height:1.7}
+#view-overview .chip{font-size:12px;line-height:1.5}
+#view-overview .hero-aside-kicker{font-size:12px}
+#view-overview .hero-aside-caption{font-size:14px}
+#view-overview .hero-aside-footer{font-size:12px;line-height:1.6;
+  color:var(--read-muted)}
+#view-overview .home-stat-content>span{font-size:14px}
+#view-overview .home-stat-content small{font-size:13px;line-height:1.5;
+  color:var(--read-muted)}
+#view-overview .attention-heading .sub{font-size:13px;line-height:1.6;
+  color:var(--read-muted)}
+#view-overview .attention-item{min-height:104px;gap:10px 13px}
+#view-overview .attention-type,#view-overview .attention-id{font-size:12px}
+#view-overview .attention-id{color:var(--read-muted)}
+#view-overview .attention-item-main strong{font-size:15px;line-height:1.55}
+#view-overview .attention-item-main small{font-size:13px;line-height:1.6;
+  color:var(--read-muted)}
+#view-overview .home-task-status,#view-overview .home-task-owner,
+#view-overview .attention-item-action{font-size:13px}
+#view-overview .home-task-owner{max-width:105px}
+#view-overview .home-task-create,#view-overview .home-task-actions .attention-all-link{
+  font-size:14px;min-height:40px}
+#view-overview .home-side-head h2{font-size:18px}
+#view-overview .home-side-head .attention-all-link{font-size:13px}
+#view-overview .home-decision-detail strong{font-size:14px;line-height:1.5}
+#view-overview .home-decision-detail small{font-size:13px;line-height:1.5;
+  color:var(--read-muted)}
+#view-overview .home-decision-actions button{font-size:13px;min-height:36px}
+#view-overview :is(.home-decision-empty p,.home-side-empty,.home-decision-more){
+  font-size:13px;line-height:1.6;color:var(--read-muted)}
+#view-overview .attention-context{font-size:13px;color:var(--read-muted);
+  line-height:1.6}
+#view-overview .attention-context button{font-size:13px;min-height:36px}
+#view-overview .home-feature-row{grid-template-columns:118px minmax(0,1fr) auto;
+  gap:10px;padding:12px 3px}
+#view-overview .home-feature-time{font-size:12px;color:var(--read-muted)}
+#view-overview .home-feature-name strong{font-size:14px;line-height:1.5}
+#view-overview .home-feature-version{font-size:12px}
+#view-overview .home-support-details summary{font-size:14px}
+#view-overview :is(.overview-primary .sub,.overview-product .body,
+  .overview-process p,.insight-panel>.sub){font-size:14px;line-height:1.7;
+  color:var(--read-muted)}
+#view-overview .overview-primary button,#view-overview .overview-product button{
+  font-size:14px}
+
+/* Requirements and decisions. */
+#view-requirements #decision-request-panel.is-empty #decision-request-list .sub{
+  font-size:14px;line-height:1.6;color:var(--read-muted)}
+#view-requirements .widebox .body{font-size:14px;line-height:1.7}
+#view-requirements .widebox .kpi span{font-size:14px;color:#526b87}
+#view-requirements .widebox>.link{font-size:14px;min-height:38px}
+#view-requirements .requirements-panel .docitem b{font-size:15px}
+#view-requirements .requirements-panel .docitem small{font-size:13px}
+#view-requirements :is(.decision-request-controls label,
+  .decision-request-controls select,.decision-request-controls button){
+  font-size:14px;min-height:40px}
+#view-requirements :is(.idea-disclosure summary,.decision-request-list .sub){
+  font-size:14px;line-height:1.6}
+
+/* Architecture diagrams stay scrollable instead of shrinking their text. */
+#view-architecture .database-table-name{font-size:13px;line-height:1.5}
+#view-architecture #architecture-diagram{font-size:13px;line-height:1.7}
+#view-architecture .widebox .body{font-size:14px;line-height:1.7}
+#view-architecture .architecture-sections .docitem small{font-size:13px}
+
+/* Bugs, history, documentation searches and cards. */
+#view-issues #issues-list :is(.docitem,.previewbtn) b,
+#view-history #history-list :is(.docitem,.previewbtn) b,
+#view-docs #docs-list :is(.docitem,.previewbtn) b{font-size:15px}
+#view-issues #issues-list small,#view-history #history-list small,
+#view-docs #docs-list small{font-size:13px;line-height:1.65;
+  color:var(--read-muted)}
+#view-history .documentbar .search,#view-docs .documentbar .search{
+  font-size:14px;min-height:46px;height:46px}
+#view-history .documentbar .btn{font-size:14px;min-height:46px}
+#view-history .history-shortcuts .btn{font-size:13px;min-height:40px}
+
+/* Guide cards and original tool examples must be readable, not decorative. */
+#view-guide .guide-intent{min-height:140px;padding:22px 23px}
+#view-guide .guide-intent strong{font-size:16px;line-height:1.5}
+#view-guide .guide-intent small{font-size:13px;line-height:1.65;
+  color:var(--read-muted)}
+#view-guide .guide-example{font-size:14px;line-height:1.75;
+  overflow:auto;max-width:100%}
+#view-guide .guide-action{font-size:14px;min-height:40px}
+#view-guide :is(#guide-description,#guide-caution){font-size:14px;
+  line-height:1.7;color:var(--read-muted)}
+
+/* Settings form affordances and help copy. */
+#view-settings .settings-switch-row strong{font-size:16px}
+#view-settings .settings-switch-row p{font-size:14px;line-height:1.65;
+  color:var(--read-muted)}
+#view-settings .settings-form-grid label{font-size:14px;line-height:1.5;
+  color:#375575}
+#view-settings.view .settings-form-grid :is(input:not([type=checkbox]),select){
+  font-size:15px;min-height:48px;height:48px}
+#view-settings :is(.settings-note,.settings-inline-remove,
+  .settings-caption,.settings-help p){font-size:14px;line-height:1.7;
+  color:var(--read-muted)}
+#view-settings .settings-aside .settings-help strong{font-size:16px}
+#view-settings .settings-aside .settings-help p{font-size:14px;
+  line-height:1.7;color:var(--read-muted)}
+#view-settings .settings-save{font-size:15px;min-height:48px}
+#view-settings :is(.settings-row,.settings-row strong,
+  .settings-row span,#settings-feedback){font-size:14px;line-height:1.6}
+
+/* Apply the same readable source labels to task/detail overlays too. */
+.overlay .drawer .source{font-size:13px;line-height:1.65;color:var(--read-muted)}
+.overlay .drawer .content{font-size:16px;line-height:1.8}
+
+@media(max-width:850px){
+  .sidebar .brand-project .brand-copy strong{font-size:12px}
+  .sidebar .brand-project .brand-copy small{font-size:11px}
+  .sidebar .navbtn{font-size:12px;min-height:44px}
+  .sidebar .sidefooter .sidefooter-link{font-size:12px;min-height:36px}
+  .bar .breadcrumbs{font-size:12px}
+  #view-overview .hero-main .home-hero-tagline{font-size:14px}
+  #view-overview .chip{font-size:12px}
+  #view-overview .hero-aside-caption{font-size:13px}
+  #view-overview .hero-aside-footer{font-size:12px}
+  #view-overview .home-stat-content>span{font-size:13px}
+  #view-overview .home-stat-content small{font-size:12px}
+  #view-overview .attention-item{grid-template-columns:100px minmax(0,1fr);
+    min-height:108px}
+  #view-overview .attention-item-main strong{font-size:14px}
+  #view-overview .attention-item-main small{font-size:12px}
+  #view-overview .attention-type,#view-overview .attention-id{font-size:12px}
+  #view-overview .home-task-side{grid-column:2;flex-wrap:wrap}
+  #view-overview .home-feature-row{grid-template-columns:95px minmax(0,1fr) auto;
+    gap:7px}
+  #view-overview .home-feature-time{font-size:12px}
+}
+@media(max-width:620px){
+  .sidebar .navbtn{font-size:12px}
+  .bar .global-search input{font-size:13px}
+  .view:not(#view-overview):not(#view-tasks)>.sectionhead .sub{font-size:13px}
+  #view-overview .attention-work-head{gap:10px}
+  #view-overview .attention-heading .sub{font-size:13px;
+    -webkit-line-clamp:2}
+  #view-overview .home-task-actions{flex-wrap:wrap;justify-content:flex-end}
+  #view-overview .home-task-create,#view-overview .home-task-actions .attention-all-link{
+    font-size:12px;min-height:36px}
+  #view-overview .attention-item{grid-template-columns:88px minmax(0,1fr);
+    gap:9px;min-height:112px}
+  #view-overview .attention-item-main strong{font-size:14px}
+  #view-overview .home-task-status,#view-overview .home-task-owner,
+  #view-overview .attention-item-action{font-size:12px}
+  #view-overview .home-task-owner{max-width:85px}
+  #view-overview .home-decision-detail strong{font-size:14px}
+  #view-overview .home-decision-detail small{font-size:12px}
+  #view-overview .home-feature-row{grid-template-columns:82px minmax(0,1fr);
+    gap:6px 8px}
+  #view-overview .home-feature-name strong{font-size:13px}
+  #view-overview .home-feature-version{grid-column:2;justify-self:start}
+  #view-overview .attention-context{flex-wrap:wrap}
+  #view-guide .guide-intent{min-height:0;padding:18px}
+  #view-guide .guide-example{font-size:13px}
+  #view-history .documentbar .btn{padding:8px 12px}
+}

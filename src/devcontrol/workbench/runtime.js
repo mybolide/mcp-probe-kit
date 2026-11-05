@@ -28,12 +28,16 @@
     $("task-progress-bar").max=Math.max(1,rows.length);
     $("task-progress-bar").value=verified;
     const isFrozen=releaseWorkPlan?.status==="frozen";
-    const extra=isFrozen?Math.max(0,currentReleaseRows().length-rows.length):0;
+    const extra=isFrozen?pendingReleasePlanningRows().length:0;
+    $("task-progress-heading").textContent=isFrozen?
+      releaseWorkPlan.release+" 冻结工作项已验证":"正式工作项已验证";
+    $("task-progress-value").textContent=verified+" / "+rows.length;
+    $("task-progress-percent").textContent=
+      (rows.length?(100*verified/rows.length).toFixed(1):"0.0")+"%";
+    $("task-progress-extra").hidden=!extra;
+    $("task-progress-extra").textContent=extra?
+      "另有 "+extra+" 项待审批规划，未计入正式进度":"";
     $("task-progress-label").textContent=
-      (isFrozen?(releaseWorkPlan.release+" 冻结工作项已验证 "):"正式工作项已验证 ")+
-      verified+" / "+rows.length+"（"+
-      (rows.length?(100*verified/rows.length).toFixed(1):"0.0")+"%）。"+
-      (extra?"另有 "+extra+" 项待审批规划，未计入正式进度。":"")+
       "仅表示工作项 Verified，不代表产品发布 Gate 已通过。";
   }
   function render(){

@@ -17,6 +17,11 @@ describe('v5 lightweight single-project workbench', () => {
     expect(taskView.indexOf('id="task-readability-audit"')).toBeLessThan(taskView.indexOf('class="task-browser-panel"'));
     expect(taskView).toContain('id="task-readability-refresh"');
     expect(taskView).toContain('id="task-spec-review-queue"');
+    expect(taskView).toContain('id="task-progress-extra" class="task-progress-extra" hidden');
+    expect(taskView).toContain('id="task-planning-banner"');
+    expect(taskView).toContain('data-tasktab="planning"');
+    expect(taskView).toContain('id="count-planning"');
+    expect(taskView).not.toContain('id="task-planning-clear"');
   });
 
   test('eight first-level menus, separate architecture, bugs and developer guide', () => {
@@ -137,7 +142,7 @@ describe('v5 lightweight single-project workbench', () => {
     expect(html).toContain('DevControl 工作台');
     expect(html).toContain('home-decision-list');
     expect(html).toContain('home-feature-list');
-    expect(html).toContain('class="task-browser-panel"');
+    expect(html).toContain('class="task-browser-panel" id="task-browser-panel"');
     expect(html).toContain('grid-template-columns:56px minmax(0,1fr)');
     expect(html).toContain('id="global-search"');
     expect(html).toContain('待确认决策');

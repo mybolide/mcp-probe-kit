@@ -40,9 +40,15 @@ try {
   socket.addEventListener('message',h);
   socket.send(JSON.stringify({id,method,params}));
  });
- const evalJS=async expr=>(await send('Runtime.evaluate',{expression:expr,returnByValue:true})).result.value;
+ const evalJS=async expr=>{
+   const response=await send('Runtime.evaluate',{expression:expr,returnByValue:true});
+   if(response.exceptionDetails)throw Error('Browser assertion expression failed: '+
+     (response.exceptionDetails.exception?.description||response.exceptionDetails.text)+
+     '\nExpression: '+expr.slice(0,220));
+   return response.result.value;
+ };
  await send('Page.enable');
- const views=['overview','requirements','architecture','tasks','issues','history','guide','settings'];
+ const views=['overview','requirements','architecture','tasks','issues','history','guide','settings','docs'];
  const results=[],files=[],journeys=[];
  const requestedWidths=(args.widths||'1500,1920,2560,1024,768,390')
    .split(',').map(Number).filter(Number.isFinite);
@@ -151,9 +157,89 @@ try {
      }
      v.reviewLoaded=reviewLoaded;
    }
+   // Every destination must meet the same human-readable type scale.
+   // Check computed browser fonts, not just authored CSS declarations.
+   // Optional data cards are only checked when the real project has them.
+   const typographyRules={
+     overview:[
+       ['#view-overview .hero-main .home-hero-tagline',14,true],
+       ['#view-overview .home-stat-content small',width<=850?12:13,true],
+       ['#view-overview .attention-item-main strong',14,false],
+       ['#view-overview .attention-item-main small',12,false],
+       ['#view-overview .home-decision-detail strong',14,false],
+       ['#view-overview .home-feature-name strong',width<=620?13:14,false]],
+     requirements:[
+       ['#view-requirements>.sectionhead .sub',width<=620?13:14,true],
+       ['#view-requirements .widebox .body',14,true],
+       ['#view-requirements .requirements-panel .docitem small',13,false],
+       ['#view-requirements #decision-request-panel.is-empty #decision-request-list .sub',14,false]],
+     architecture:[
+       ['#view-architecture>.sectionhead .sub',width<=620?13:14,true],
+       ['#view-architecture .widebox .body',14,true],
+       ['#view-architecture .database-table-name',13,false]],
+     issues:[
+       ['#view-issues>.sectionhead .sub',width<=620?13:14,true],
+       ['#view-issues .insight-metric small',13,false],
+       ['#view-issues #issues-list .docitem small',13,false]],
+     history:[
+       ['#view-history>.sectionhead .sub',width<=620?13:14,true],
+       ['#view-history .documentbar .search',14,true],
+       ['#view-history .history-shortcuts .btn',13,true],
+       ['#view-history #history-list .docitem small',13,false]],
+     docs:[
+       ['#view-docs>.sectionhead .sub',width<=620?13:14,true],
+       ['#view-docs .documentbar .search',14,true],
+       ['#view-docs #docs-list .docitem small',13,false]],
+     guide:[
+       ['#view-guide>.sectionhead .sub',width<=620?13:14,true],
+       ['#view-guide .guide-intent strong',16,true],
+       ['#view-guide .guide-intent small',13,true],
+       ['#view-guide .guide-example',width<=620?13:14,true]],
+     settings:[
+       ['#view-settings>.sectionhead .sub',width<=620?13:14,true],
+       ['#view-settings .settings-switch-row p',14,true],
+       ['#view-settings .settings-form-grid input',15,true],
+       ['#view-settings .settings-aside .settings-help p',14,false]],
+   };
+   if(typographyRules[view]){
+     v.readability=await evalJS(`(()=>{
+       const rules=${JSON.stringify(typographyRules[view])};
+       return rules.map(([selector,min,required])=>{
+         const el=document.querySelector(selector);
+         const size=el?parseFloat(getComputedStyle(el).fontSize):null;
+         return {selector,min,required,size,
+           ok:el?size>=min:!required};
+       });
+     })()`);
+   }
    if(view==='tasks'){
      v.hasTaskTitle=await evalJS('document.querySelector("#view-tasks h1")?.textContent.trim()==="任务管理"');
      v.taskFilterReady=await evalJS('!!document.getElementById("task-clear-filters")&&!!document.getElementById("task-stage-filter")');
+     // Prevent visually correct but illegibly tiny task metadata from
+     // passing the browser gate. Measure actual rendered CSS, not source.
+     v.taskTypography=await evalJS(`(()=>{
+       const size=selector=>{const node=document.querySelector(selector);
+         return node?parseFloat(getComputedStyle(node).fontSize):0};
+       const value=document.getElementById('task-progress-value')?.textContent||'';
+       const percent=document.getElementById('task-progress-percent')?.textContent||'';
+       const progress=document.getElementById('task-progress-bar');
+       const parts=value.split(' / ');
+       return {heading:size('#view-tasks .task-page-compact-head .sub'),
+         progressValue:size('#task-progress-value'),
+         progressNote:size('#task-progress-label'),
+         audit:size('#task-readability-audit>summary'),
+         tabs:size('#view-tasks .task-tabs button'),
+         search:size('#task-search'),
+         title:size('#view-tasks .task-card-title'),
+         description:size('#view-tasks .task-card-description'),
+         support:size('#view-tasks .task-card-support'),
+         owner:size('#view-tasks .task-card-owner'),
+         consistent:parts.length===2&&parts.every(part=>/^\\d+$/.test(part))&&
+           Number(parts[0])===Number(progress?.value)&&
+           Number(parts[1])===Number(progress?.max)&&
+           percent===((Number(parts[1])?
+             100*Number(parts[0])/Number(parts[1]):0).toFixed(1)+'%')};
+     })()`);
      v.lifecycleTabs=await evalJS(`(()=>{
        const tabs=[...document.querySelectorAll('#view-tasks [data-tasktab]')];
        const names=tabs.map(b=>b.dataset.tasktab);
@@ -199,7 +285,7 @@ try {
    }
    results.push({view,width,...v});
    if(args.debug==='true')process.stderr.write('checked '+width+' '+view+' loaded='+v.insightsLoaded+'\n');
-   if(width===1500||width===2560&&view==='tasks'||width===1920&&view==='overview'||width===390&&['tasks','overview','settings','architecture'].includes(view)){
+   if(width===1500||width===390||width===2560&&view==='tasks'||width===1920&&view==='overview'){
     const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
     const file=join(out,view+'-'+width+'.png');
     writeFileSync(file,Buffer.from(shot.data,'base64'));files.push(file);
@@ -238,6 +324,40 @@ try {
     journeys.push({width,scenario:'find-verified-from-any-tab',
       passed:!!searchAction.id&&searchAction.found&&searchAction.cleared&&searchAction.restored,
       details:searchAction});
+    const planningAction=await evalJS(`(()=>{
+      const notice=document.getElementById('task-progress-extra');
+      const expected=Number(document.getElementById('count-planning')?.textContent||0);
+      const formalTotal=['not_started','in_progress','completed']
+        .reduce((sum,bucket)=>sum+Number(document.getElementById('count-'+bucket)?.textContent||0),0);
+      const officialTotal=Number(document.getElementById('task-progress-value')?.textContent.split(' / ')[1]||0);
+      const tab=document.querySelector('[data-tasktab="planning"]');
+      tab?.click();
+      const cards=[...document.querySelectorAll('#task-rows .task-card')];
+      const proposalIds=new Set(cards.map(card=>card.getAttribute('aria-label')?.split(' ')[0]));
+      const banner=document.getElementById('task-planning-banner');
+      const selected=tab?.getAttribute('aria-selected');
+      const valid=cards.every(card=>card.querySelector('.issue-state')?.textContent
+        .match(/规划待确认|规划需修订|待二次 Review/));
+      const countLabel=document.getElementById('task-list-count')?.textContent||'';
+      const bannerWasVisible=!banner.hidden;
+      document.querySelector('[data-tasktab="not_started"]').click();
+      const restoredCards=[...document.querySelectorAll('#task-rows .task-card')];
+      return {expected,shown:cards.length,valid,selected,bannerWasVisible,
+        countLabel,noticeVisible:!notice.hidden,
+        noticeCorrect:notice.textContent.includes('另有 '+expected+' 项'),
+        formalTotal,officialTotal,cleared:banner.hidden,
+        restored:restoredCards.length>0,
+        restoredSelected:document.querySelector('[data-tasktab="not_started"]')?.getAttribute('aria-selected'),
+        noPlanningCards:restoredCards.every(card=>!proposalIds.has(card.getAttribute('aria-label')?.split(' ')[0]))};
+    })()`);
+    journeys.push({width,scenario:'planning-fourth-tab-and-return',
+      passed:planningAction.shown===planningAction.expected&&planningAction.valid&&
+        planningAction.selected==='true'&&planningAction.bannerWasVisible&&
+        planningAction.formalTotal===planningAction.officialTotal&&
+        (!planningAction.expected||planningAction.noticeVisible&&planningAction.noticeCorrect)&&
+        planningAction.cleared&&planningAction.restored&&
+        planningAction.restoredSelected==='true'&&planningAction.noPlanningCards,
+      details:planningAction});
     if(width===390){
       const mobileAction=await evalJS(`(()=>{
         const more=document.getElementById('mobile-nav-more');
@@ -263,11 +383,20 @@ try {
  ||(v.selectControls&&v.selectControls.some(control=>!control.ok))||
  v.emptyDecisionCompact===false
  ||(v.view==='tasks'&&(
-   v.lifecycleTabs?.names.join(',')!=='not_started,in_progress,completed'||
+   v.lifecycleTabs?.names.join(',')!=='not_started,in_progress,completed,planning'||
    v.lifecycleTabs?.selected.length!==1||!v.lifecycleTabs?.noAttentionControls))
  ||v.mainRight<v.width-3 ||(v.view==='overview'&&!v.hasPlanning)
+ ||(v.readability&&v.readability.some(item=>!item.ok))
  ||(v.view==='architecture'&&!v.hasArchChanges)
  ||(v.view==='tasks'&&(!v.hasTaskTitle||!v.taskFilterReady))
+ ||(v.view==='tasks'&&(
+   !v.taskTypography?.consistent||
+   v.taskTypography.heading<13||v.taskTypography.progressValue<23||
+   v.taskTypography.progressNote<12||v.taskTypography.audit<14||
+   v.taskTypography.tabs<13||v.taskTypography.search<14||
+   v.taskTypography.title<(v.width<=620?15:16)||
+   v.taskTypography.description<14||v.taskTypography.support<12||
+   v.taskTypography.owner<12))
  // Wide desktops display two readable task columns; narrow layouts collapse
  // to one column without changing the task data or lifecycle categories.
  ||(v.view==='tasks'&&v.width>=1920&&v.taskCols<2)
