@@ -71,7 +71,7 @@ function generateCursorRulesContent(
     "",
     "1. Prefer native mcp-probe-kit tools. Use `devcontrol` as the only formal development workflow.",
     "2. At conversation start, call `history_session_bootstrap`; then use `devcontrol` actions such as `onboard`, `next`, and `execution-contract` to recover the actual SQLite task state.",
-    "3. Only modify approved task files; run real tests, perform a substantive `self-review`, then `gate-review` with `reviewMode=self` and `verify`. A separate Reviewer is optional; follow the Skill.",
+    "3. Only modify approved task files. Run real tests and inspect the original submitted Git revision or immutable source snapshot. Record your own substantive review and real Gate evidence in one `verify` acceptance object. A separate Reviewer is optional; follow the Skill. Legacy review actions are for historical receipts only.",
     "4. If native MCP tools are unavailable, use an already installed, matching `.mcp-probe-kit/bin/probe.*` wrapper only. If it is missing, report the configuration problem; do not install from the current directory or fetch an unpublished release.",
     "5. An installation or repair, if separately authorized, must use the verified absolute project root. Never guess a root from the current working directory.",
     "",
@@ -103,7 +103,7 @@ function generateClaudePointerBlock(
 
 - At conversation start, use \`history_session_bootstrap\` and read the \`mcp-probe:context\` block in \`${agentsPath}\` and Skill \`${skillCanonical}\`.
 - When the user says “continue” or “start”, use \`devcontrol\` actions \`onboard\`, \`next\`, and \`execution-contract\` to recover the approved SQLite task state before changing files.
-- Use \`devcontrol\` for formal development work. Review the committed delivery yourself using \`self-review\`, then \`gate-review\` with \`reviewMode=self\` and \`verify\`. A different Reviewer is optional; never fabricate test evidence.
+- Use \`devcontrol\` for formal development work. Run real tests, inspect the exact submitted Git revision or immutable source snapshot, then record your substantive review and genuine Gate evidence in one \`verify\` acceptance object. A different Reviewer is optional; legacy review actions apply only to historical receipts. Never fabricate test evidence.
 - Never install guidance from the current directory. For any separately authorized installation, verify an absolute project root first.
 ${CLAUDE_BLOCK_END}`;
 }

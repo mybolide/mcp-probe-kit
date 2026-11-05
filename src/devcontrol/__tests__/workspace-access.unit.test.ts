@@ -14,7 +14,7 @@ const roots: string[] = [];
 function project(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "devcontrol-lan-"));
   roots.push(dir);
-  execFileSync("git", ["init", "-q"], { cwd: dir });
+  execFileSync("git", ["init", "-q"], { cwd: dir, windowsHide: true });
   return dir;
 }
 afterEach(() => {
@@ -37,7 +37,7 @@ describe("project workbench LAN access", () => {
     expect(workspaceAccess(first)).toEqual(x);
     expect("accessKey" in x).toBe(false);
     expect(execFileSync("git", ["status", "--porcelain"], {
-      cwd: first, encoding: "utf8",
+      cwd: first, encoding: "utf8", windowsHide: true,
     })).toBe("");
     const file = path.join(first, ".mcp-probe-kit/state/workspace-server.json");
     expect(fs.existsSync(file)).toBe(true);
@@ -94,7 +94,7 @@ describe("project workbench LAN access", () => {
     writeWorkspaceRuntime(first, { ...runtime, port: 39101, pid: 12346 });
     expect(readWorkspaceRuntime(first)).toMatchObject({ port: 39101, pid: 12346 });
     expect(execFileSync("git", ["status", "--porcelain"], {
-      cwd: first, encoding: "utf8",
+      cwd: first, encoding: "utf8", windowsHide: true,
     })).toBe("");
   });
 

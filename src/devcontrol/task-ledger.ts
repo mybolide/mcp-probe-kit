@@ -750,7 +750,7 @@ export class ProjectTaskLedger {
       fail('RECOVERY_HISTORY_CHANGED','Original claim HEAD is not an ancestor');
     const log=spawnSync('git',['rev-list','--first-parent','--reverse',
       base+'..'+head],{cwd:this.root,encoding:'utf8',timeout:20_000,
-      maxBuffer:200_000});
+      maxBuffer:200_000,windowsHide:true});
     if(log.status!==0||log.error)
       fail('GIT_ERROR','Cannot inspect the complete first-parent history');
     const commits=log.stdout.trim().split('\n').filter(Boolean);
@@ -3477,6 +3477,10 @@ export class ProjectTaskLedger {
     const locations=this.repositoryLocations(id);
     const mainGit=fs.realpathSync(path.join(this.root,'.git'));
     const originalRoot=path.resolve(this.root);
+    // macOS /var is often a symlink to /private/var. Compare canonical
+    // locations on both sides while still rejecting symlinked/replaced child
+    // checkouts. Never use the spelling of an ancestor temp path as identity.
+    const canonicalRoot=fs.realpathSync(this.root);
     for(const row of extras){
       const prefix=String(row.prefix);
       if(!prefix||path.posix.isAbsolute(prefix)||prefix.includes('\\')||
@@ -3488,8 +3492,9 @@ export class ProjectTaskLedger {
       const checkout=path.resolve(this.root,prefix);
       if(!checkout.startsWith(originalRoot+path.sep))
         fail('LEGACY_AUXILIARY_SCOPE','Auxiliary checkout escaped the project');
+      const canonicalCheckout=path.resolve(canonicalRoot,prefix);
       const marker=path.join(checkout,'.git');
-      if(!fs.existsSync(checkout)||fs.realpathSync(checkout)!==checkout||
+      if(!fs.existsSync(checkout)||fs.realpathSync(checkout)!==canonicalCheckout||
         !fs.existsSync(marker)||!fs.lstatSync(marker).isFile()||
         fs.lstatSync(marker).isSymbolicLink())
         fail('LEGACY_AUXILIARY_IDENTITY',
@@ -3512,7 +3517,7 @@ export class ProjectTaskLedger {
         git(checkout,['rev-parse','--git-common-dir'])));
       const gitDir=fs.realpathSync(git(checkout,['rev-parse','--absolute-git-dir']));
       const location=locations.get(prefix);
-      if(top!==checkout||common!==mainGit||!location||
+      if(top!==canonicalCheckout||common!==mainGit||!location||
         !location.known.has(gitDir)||
         fs.realpathSync(String(row.git_dir))!==gitDir||
         git(checkout,['rev-parse','HEAD'])!==row.base_head)

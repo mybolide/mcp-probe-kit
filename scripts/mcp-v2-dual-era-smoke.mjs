@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
@@ -26,62 +27,6 @@ try {
   );
 }
 
-async function runPlanLifecycleSmoke(client, projectRoot) {
-  const planId = "feature-production-smoke-abc123";
-  const plan = {
-    planId,
-    mode: "delegated",
-    contractVersion: "2.0.0",
-    workflow: "feature",
-    workflowVersion: "4.0.0",
-    objective: "验证生产版 Plan 状态闭环",
-    steps: [{ id: "verify", action: "verify" }],
-    globalRules: [],
-    completionCriteria: ["步骤与证据一致"],
-    memoryPolicy: {
-      recallBeforeExecution: true,
-      extractAfterValidation: true,
-      writeOnlyReusableKnowledge: true,
-      allowNegativeMemory: true,
-    },
-  };
-  const heartbeat = await client.callTool({
-    name: "plan_heartbeat",
-    arguments: {
-      plan_id: planId,
-      project_root: projectRoot,
-      plan,
-      completed_step_ids: ["verify"],
-      evidence: [
-        { kind: "requirements", summary: "范围已确认" },
-        { kind: "spec", summary: "规格已确认", reference: "smoke-spec" },
-        { kind: "implementation", summary: "实现完成", revision: "abc123" },
-        { kind: "test", summary: "测试通过", reference: "smoke-test" },
-        { kind: "review", summary: "审查通过", reference: "smoke-review" },
-      ],
-    },
-  });
-  assert(heartbeat.structuredContent?.stored === true, "Plan heartbeat was not stored");
-
-  const resumed = await client.callTool({
-    name: "resume_plan",
-    arguments: { plan_id: planId, project_root: projectRoot },
-  });
-  assert(resumed.structuredContent?.found === true, "Plan resume did not find checkpoint");
-
-  const converged = await client.callTool({
-    name: "converge",
-    arguments: { plan_id: planId, project_root: projectRoot },
-  });
-  assert(converged.structuredContent?.passed === true, "Plan did not converge");
-  return {
-    stored: heartbeat.structuredContent?.stored,
-    readySteps: resumed.structuredContent?.readyStepIds?.length,
-    converged: converged.structuredContent?.passed,
-    memoryWriteAllowed: converged.structuredContent?.memoryWriteAllowed,
-  };
-}
-
 async function runLegacySmoke() {
   const projectRoot = await createProjectRoot("legacy");
   const { client, transport, stderr } = await connect("legacy", false);
@@ -94,8 +39,9 @@ async function runLegacySmoke() {
       `Legacy compact tools/list returned ${tools.tools.length}`
     );
     assert(
-      tools.tools.some((tool) => tool.name === "history_session_bootstrap"),
-      "Legacy compact tools/list missing default History Session tools"
+      tools.tools.some((tool) => tool.name === "history_session_bootstrap") &&
+        tools.tools.some((tool) => tool.name === "devcontrol"),
+      "Legacy compact tools/list missing v5 DevControl / History Session tools"
     );
 
     const created = CallToolResultSchema.parse(
@@ -103,11 +49,11 @@ async function runLegacySmoke() {
         {
           method: "tools/call",
           params: {
-            name: "workflow",
+            name: "devcontrol",
             arguments: {
-              intent: "实现订单导出功能",
-              scenario: "feature",
+              action: "next",
               project_root: projectRoot,
+              input: {},
             },
             task: { ttl: 60_000 },
           },
@@ -119,7 +65,7 @@ async function runLegacySmoke() {
     assert(typeof taskId === "string", "Legacy tools/call did not return taskId");
 
     const terminal = await waitForTask(client, taskId);
-    assert(terminal.status === "completed", `Legacy task ended as ${terminal.status}`);
+    assert(terminal.status === "completed", `Legacy task ended as ${terminal.status}: ${JSON.stringify(terminal)}`);
 
     const result = CallToolResultSchema.parse(
       await client.request(
@@ -128,8 +74,9 @@ async function runLegacySmoke() {
       )
     );
     assert(
-      result.structuredContent?.firstTool === "start_feature",
-      "Legacy task result mismatch"
+      result.isError !== true && result.structuredContent &&
+        !JSON.stringify(result.structuredContent).includes('start_feature'),
+      "Legacy v5 DevControl task result mismatch"
     );
 
     return {
@@ -137,7 +84,7 @@ async function runLegacySmoke() {
       tools: tools.tools.length,
       taskStatus: terminal.status,
       taskTtl: created.task?.ttl,
-      firstTool: result.structuredContent?.firstTool,
+      resultType: typeof result.structuredContent,
       started: stderr().includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
     };
   } finally {
@@ -160,7 +107,7 @@ async function runModernSmoke() {
       tools.tools.length === COMPACT_WITH_HISTORY_TOOL_COUNT,
       `Modern compact tools/list returned ${tools.tools.length}`
     );
-    for (const toolName of ["plan_heartbeat", "resume_plan", "converge", "history_session_bootstrap"]) {
+    for (const toolName of ["devcontrol", "history_session_bootstrap", "history_session_checkpoint"]) {
       assert(
         tools.tools.some((tool) => tool.name === toolName),
         `Modern tools/list missing ${toolName}`
@@ -173,7 +120,7 @@ async function runModernSmoke() {
     const statusPayload = JSON.parse(statusContent.text);
     assert(
       statusPayload.protocol.features.inputRequired === true,
-      "Modern input_required capability was not reported"
+      "Modern client capability discovery should retain elicitation support"
     );
     assert(
       statusPayload.protocol.features.modernTasks === false,
@@ -181,32 +128,34 @@ async function runModernSmoke() {
     );
 
     const loopResult = await client.callTool({
-      name: "start_feature",
+      name: "devcontrol",
       arguments: {
-        feature_name: "user-auth",
-        description: "用户认证功能",
-        requirements_mode: "loop",
-        loop_question_budget: 2,
+        action: "feature-create",
         project_root: projectRoot,
+        input: {name:"user-auth",description:"User authentication with explicit credential validation"},
       },
     });
-    assert(elicitationCalls() === 1, "Modern input_required round did not run once");
-    assert(loopResult.isError !== true, "Modern input_required result is an error");
+    assert(elicitationCalls() === 0, "v5 unexpectedly invoked delegated-plan elicitation");
+    assert(loopResult.isError !== true, `Modern v5 create failed: ${JSON.stringify(loopResult.structuredContent)}`);
     assert(
-      loopResult.structuredContent?.metadata?.plan?.workflow === "feature",
-      "Modern requirements loop did not converge to a feature plan"
+      loopResult.structuredContent?.status === "draft" && loopResult.structuredContent?.revision === 1,
+      "Modern v5 feature creation did not produce a SQLite draft"
     );
+    const stored=await client.callTool({name:'devcontrol',arguments:{
+      action:'feature-get',project_root:projectRoot,input:{name:'user-auth'}}});
+    assert(stored.structuredContent?.revision===1&&stored.structuredContent?.name==='user-auth',
+      'Modern v5 feature-get did not find the same SQLite revision');
 
     const fallback = CallToolResultSchema.parse(
       await client.request(
         {
           method: "tools/call",
           params: {
-            name: "workflow",
+            name: "devcontrol",
             arguments: {
-              intent: "实现订单导出功能",
-              scenario: "feature",
+              action: "next",
               project_root: projectRoot,
+              input: {},
             },
             task: { ttl: 60_000 },
           },
@@ -216,11 +165,10 @@ async function runModernSmoke() {
     );
     assert(!fallback.task, "Modern task fallback returned a Legacy task handle");
     assert(
-      fallback.structuredContent?.firstTool === "start_feature",
-      "Modern task sync fallback result mismatch"
+      fallback.isError !== true && fallback.structuredContent &&
+        !JSON.stringify(fallback.structuredContent).includes('start_feature'),
+      "Modern v5 task sync fallback result mismatch"
     );
-
-    const planState = await runPlanLifecycleSmoke(client, projectRoot);
 
     return {
       era: client.getProtocolEra(),
@@ -228,8 +176,8 @@ async function runModernSmoke() {
       inputRequired: statusPayload.protocol.features.inputRequired,
       elicitationCalls: elicitationCalls(),
       modernTasks: statusPayload.protocol.features.modernTasks,
-      taskFallbackFirstTool: fallback.structuredContent?.firstTool,
-      planState,
+      featureRevision: stored.structuredContent?.revision,
+      taskFallbackSynchronous: !fallback.task,
       started: stderr().includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
     };
   } finally {
@@ -246,13 +194,17 @@ async function runFullSurfaceSmoke() {
       tools.tools.length === FULL_TOOL_COUNT,
       `Full tools/list returned ${tools.tools.length}`
     );
-    for (const toolName of ["add_feature", "fix_bug", "sync_ui_data", "ask_user"]) {
+    for (const toolName of ["devcontrol", "ui_design_system", "git_work_report", "history_session_bootstrap"]) {
       assert(
         tools.tools.some((tool) => tool.name === toolName),
-        `Full tools/list missing compatibility tool ${toolName}`
+        `Full v5 tools/list missing active tool ${toolName}`
       );
     }
-    return { tools: tools.tools.length, compatibilitySurface: true };
+    for(const retired of ['workflow','start_feature','resume_plan','converge','add_feature']){
+      assert(!tools.tools.some(tool=>tool.name===retired),
+        `Full v5 tools/list exposed retired delegated-plan tool ${retired}`);
+    }
+    return { tools: tools.tools.length, sqliteOnlySurface: true };
   } finally {
     await client.close().catch(() => undefined);
     await transport.close().catch(() => undefined);
@@ -270,6 +222,7 @@ async function connect(mode, elicitationEnabled, toolset = "compact") {
       MCP_ENABLE_GITNEXUS_BRIDGE: "0",
       MCP_TOOLSET: toolset,
       MCP_HISTORY_SESSION: "1",
+      MCP_DEVCONTROL_AUTOSTART: "0",
       MEMORY_QDRANT_URL: "",
       MEMORY_EMBEDDING_URL: "",
       MEMORY_EMBEDDING_MODEL: "",
@@ -330,6 +283,7 @@ async function waitForTask(client, taskId) {
 async function createProjectRoot(label) {
   const root = await mkdtemp(join(tmpdir(), `mcp-v2-${label}-`));
   roots.push(root);
+  execFileSync('git',['init','-q',root],{timeout:3000,windowsHide:true});
   return root;
 }
 

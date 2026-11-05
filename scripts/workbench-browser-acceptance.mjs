@@ -256,7 +256,9 @@ try {
     }
   }
  }
- const failures=results.filter(v=>v.dataLoaded===false||v.insightsLoaded===false||v.reviewLoaded===false||!v.active||v.font<14||v.titleSize<27||v.scrollWidth>v.width+3||v.navItems!==8
+ // The approved compact mobile treatment uses a 21–24px hero heading;
+ // keep the desktop legibility gate strict without rejecting that layout.
+ const failures=results.filter(v=>v.dataLoaded===false||v.insightsLoaded===false||v.reviewLoaded===false||!v.active||v.font<14||v.titleSize<(v.width<=620?20:27)||v.scrollWidth>v.width+3||v.navItems!==8
  ||!v.githubLinkValid||(v.view==='overview'&&!v.heroReady)||v.searchResetWorks===false
  ||(v.selectControls&&v.selectControls.some(control=>!control.ok))||
  v.emptyDecisionCompact===false
@@ -266,6 +268,8 @@ try {
  ||v.mainRight<v.width-3 ||(v.view==='overview'&&!v.hasPlanning)
  ||(v.view==='architecture'&&!v.hasArchChanges)
  ||(v.view==='tasks'&&(!v.hasTaskTitle||!v.taskFilterReady))
+ // Wide desktops display two readable task columns; narrow layouts collapse
+ // to one column without changing the task data or lifecycle categories.
  ||(v.view==='tasks'&&v.width>=1920&&v.taskCols<2)
  ||(v.view==='tasks'&&v.footerLayout?.broken>0)
  ||(v.width===390&&v.navScroll>v.navWidth+3));

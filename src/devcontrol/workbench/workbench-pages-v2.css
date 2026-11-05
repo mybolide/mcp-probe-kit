@@ -1,0 +1,465 @@
+/* DevControl inner pages — same visual language as the approved homepage.
+ * Pure presentation. Every task state, approval, confirmation and setting
+ * continues to use its original controller and SQLite-backed source. */
+:root{--pages-line:#e0e8f4;--pages-ink:#142544;--pages-muted:#7285a0;
+  --pages-blue:#126bed;--pages-shadow:0 4px 20px #2449780c}
+
+/* Every destination starts with a recognisable product header rather than
+ * an isolated text title. Scaled to the existing responsive layout. */
+.view>.sectionhead{
+  --page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='4' width='16' height='16' rx='3' fill='none' stroke='%23076eea' stroke-width='2'/%3E%3Cpath d='M8 9h8M8 13h8M8 17h5' stroke='%23076eea' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  display:grid;grid-template-columns:56px minmax(0,1fr);
+  column-gap:17px;align-content:center;align-items:center;
+  position:relative;overflow:hidden;min-height:130px;
+  margin:0 0 17px!important;padding:21px 28px;
+  background:linear-gradient(112deg,#fff 58%,#f3f8ff);
+  border:1px solid var(--pages-line);border-radius:17px;
+  box-shadow:var(--pages-shadow)
+}
+@media(min-width:2100px){
+  #view-issues #issues-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+.view:not(#view-overview)>.sectionhead::before{
+  content:"";grid-column:1;grid-row:1/3;
+  width:56px;height:56px;border-radius:14px;z-index:1;
+  background-image:var(--page-symbol),linear-gradient(145deg,#edf5ff,#d8e8ff);
+  background-repeat:no-repeat;background-position:center,center;
+  background-size:29px 29px,cover
+}
+.view:not(#view-overview)>.sectionhead::after{content:"";position:absolute;
+  pointer-events:none;right:0;bottom:0;width:32%;height:65%;opacity:.45;
+  background:linear-gradient(125deg,#e9f3ff,#d5e5ff);
+  clip-path:polygon(0 100%,38% 49%,58% 65%,78% 12%,100% 32%,100% 100%)}
+.view:not(#view-overview)>.sectionhead>.eyebrow{display:none}
+.view:not(#view-overview)>.sectionhead h1{grid-column:2;
+  z-index:1;font-size:clamp(25px,2.1vw,33px)!important;
+  font-weight:790;letter-spacing:-.85px;color:#0c1b3b;
+  line-height:1.22;margin:0 0 6px!important}
+.view:not(#view-overview)>.sectionhead .sub{grid-column:2;
+  position:relative;z-index:1;max-width:850px;
+  font-size:12px;line-height:1.6;margin:0;
+  color:#607591}
+#view-requirements>.sectionhead{--page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 3h8l4 4v14H5V5a2 2 0 0 1 2-2Z' fill='none' stroke='%23076eea' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M14 3v5h5M9 12h6M9 16h6' fill='none' stroke='%23076eea' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+#view-architecture>.sectionhead{--page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='9' y='2' width='6' height='6' rx='1' fill='none' stroke='%23076eea' stroke-width='2'/%3E%3Crect x='2' y='16' width='7' height='6' rx='1' fill='none' stroke='%23076eea' stroke-width='2'/%3E%3Crect x='15' y='16' width='7' height='6' rx='1' fill='none' stroke='%23076eea' stroke-width='2'/%3E%3Cpath d='M12 8v4H5v4m7-4h6v4' fill='none' stroke='%23076eea' stroke-width='2'/%3E%3C/svg%3E")}
+#view-tasks>.sectionhead{--page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3' y='3' width='18' height='18' rx='3' fill='none' stroke='%23076eea' stroke-width='2'/%3E%3Cpath d='m7 9 1.3 1.3 2-2.6M13 9h5m-11 6 1.3 1.3 2-2.6M13 15h5' fill='none' stroke='%23076eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+#view-issues>.sectionhead{--page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 5a3 3 0 0 1 6 0M3 12h4m10 0h4M5 6l3 3m11-3-3 3M4 19l4-3m12 3-4-3' fill='none' stroke='%23076eea' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='7' y='7' width='10' height='14' rx='5' fill='none' stroke='%23076eea' stroke-width='2'/%3E%3Cpath d='M12 11v10' stroke='%23076eea' stroke-width='2'/%3E%3C/svg%3E")}
+#view-history>.sectionhead{--page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 11a9 9 0 1 1 2.5 6M3 4v7h7M12 7v5l4 3' fill='none' stroke='%23076eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+#view-docs>.sectionhead{--page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15' fill='none' stroke='%23076eea' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E")}
+#view-guide>.sectionhead{--page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 3 8 4.5-8 4.5-8-4.5L12 3Zm-8 9 8 4.5 8-4.5M4 16.5l8 4.5 8-4.5' fill='none' stroke='%23076eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+#view-settings>.sectionhead{--page-symbol:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='%23076eea' stroke-width='2'/%3E%3Cpath d='M10 2h4l.5 2.2 2 .9 2-1 2.6 2.6-1 2 1 2 .9.5v4l-2.2.5-.9 2 1 2-2.6 2.6-2-1-2 .9-.5 2.2h-4l-.5-2.2-2-.9-2 1-2.6-2.6 1-2-.9-2L2 14v-4l2.2-.5.9-2-1-2L6.7 3l2 1 2-.9Z' fill='none' stroke='%23076eea' stroke-width='1.3' stroke-linejoin='round'/%3E%3C/svg%3E")}
+
+/* The source data is already structured, so the design system should be too:
+ * same white surfaces, quiet labels, predictable spacing and focus states. */
+.view:not(#view-overview) :is(.panel,.widebox,.settings-section,.insight-panel,.info){
+  border:1px solid var(--pages-line);border-radius:16px;
+  background:#fff;box-shadow:var(--pages-shadow)}
+.view:not(#view-overview) .panelhead{margin-bottom:15px;
+  gap:13px;align-items:center}
+.view:not(#view-overview) .panelhead h2,
+.view:not(#view-overview) .section-row h2{font-size:17px;
+  font-weight:760;color:#14284c;letter-spacing:-.3px;line-height:1.4}
+.view:not(#view-overview) .panelhead .link,
+.view:not(#view-overview) .section-row .link{font-size:12px;color:#116de9}
+.view:not(#view-overview) :is(.sub,.body,.insight-meta){color:var(--pages-muted);line-height:1.6}
+.view:not(#view-overview) .panelhead+.sub{font-size:12px}
+.view:not(#view-overview) .section-row{margin:20px 0 13px;gap:14px}
+.view:not(#view-overview) .section-row .eyebrow{display:none}
+.view:not(#view-overview) .section-row .sub{font-size:12px}
+.view:not(#view-overview) :is(.docitem,.previewbtn,.insight-row,.guide-intent){
+  background:linear-gradient(145deg,#fff,#fcfdff);
+  border:1px solid #e2eaf5;border-radius:12px;
+  box-shadow:0 2px 10px #28487508;
+  transition:background .16s,border-color .16s,box-shadow .16s}
+.view:not(#view-overview) button:is(.docitem,.previewbtn,.insight-row,.guide-intent):hover{
+  border-color:#9bbdef;background:#f6faff;
+  box-shadow:0 5px 18px #2466b814}
+.view:not(#view-overview) :is(.docitem,.previewbtn) b,
+.view:not(#view-overview) .insight-row strong{font-size:13px;
+  color:#1f385a;line-height:1.5}
+.view:not(#view-overview) :is(.docitem,.previewbtn) small{font-size:11px;
+  color:#7b8ca3;line-height:1.6}
+.view:not(#view-overview) .doclist{gap:11px}
+.view:not(#view-overview) .insight-metric{border:1px solid #e0eaf7;
+  background:linear-gradient(140deg,#fff,#f5f9ff);
+  border-radius:13px;padding:16px 19px}
+.view:not(#view-overview) .insight-metric strong{font-size:30px;
+  line-height:1.1;color:#1457a7;letter-spacing:-.5px}
+.view:not(#view-overview) .insight-metric span{font-size:12px;color:#344f73}
+.view:not(#view-overview) .insight-metric small{font-size:11px;color:#8091a6}
+
+/* Task management is one surface, like the working task card on Home.
+ * The three native lifecycle categories and their original state remain. */
+#view-tasks .task-page-compact-head{display:flex;align-items:baseline;
+  gap:10px 16px;flex-wrap:wrap;margin:0 0 12px;padding:1px 2px}
+#view-tasks .task-page-compact-head h1{font-size:28px;line-height:1.3;
+  letter-spacing:-.5px;font-weight:780;color:#10254a;margin:0}
+#view-tasks .task-page-compact-head .sub{font-size:11px;
+  line-height:1.5;margin:0;color:#7588a2}
+#view-tasks .task-secondary{margin:0 0 14px;padding:10px 18px 4px;
+  border:1px solid var(--pages-line);border-radius:15px;
+  background:#fff;box-shadow:var(--pages-shadow)}
+#view-tasks .task-secondary>.task-progress{display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(180px,30%);
+  align-items:center;gap:16px;min-height:56px;margin:0;
+  padding:7px 1px 12px;border:0;border-bottom:1px solid #e9eff7;
+  background:transparent;border-radius:0;box-shadow:none}
+#view-tasks .task-secondary #task-progress-label{max-width:none;
+  font-size:12px;line-height:1.6;color:#294a76;font-weight:660}
+#view-tasks .task-secondary #task-progress-bar{width:100%;max-width:none;
+  height:8px;margin:0;accent-color:#176fe6}
+#view-tasks .task-secondary .task-readability-audit{margin:0;
+  padding:10px 1px!important;background:transparent;
+  border:0;box-shadow:none;border-radius:0}
+#view-tasks .task-secondary .task-readability-audit>summary{
+  min-height:32px;display:flex;align-items:center;
+  flex-wrap:wrap;gap:8px 12px;font-size:12px;
+  color:#2a4b77;line-height:1.5}
+#view-tasks .task-secondary .task-readability-audit>summary span{
+  font-size:11px;color:#7a8da5;font-weight:500}
+#view-tasks .task-browser-panel{background:#fff;border:1px solid var(--pages-line);
+  border-radius:17px;box-shadow:var(--pages-shadow);
+  padding:19px 23px 22px;margin-bottom:16px}
+#view-tasks .task-tabs{display:flex;align-items:stretch;justify-content:flex-start;
+  gap:12px;margin:0 0 18px;padding:0;border:0;border-radius:0;
+  border-bottom:1px solid #e7edf6;background:transparent}
+#view-tasks .task-tabs button{flex:0 0 auto;position:relative;
+  min-width:123px;min-height:44px;border:0;border-radius:0;
+  background:transparent;box-shadow:none!important;padding:11px 12px;
+  font-size:13px;color:#617590;font-weight:670}
+#view-tasks .task-tabs button:hover{color:#175cbb;background:#f6faff}
+#view-tasks .task-tabs button[aria-selected=true]{color:#086ce7;
+  background:transparent;font-weight:760}
+#view-tasks .task-tabs button[aria-selected=true]::after{
+  content:"";position:absolute;bottom:-1px;left:8px;right:8px;
+  height:3px;border-radius:3px 3px 0 0;background:#1175f4}
+#view-tasks .task-tabs .count{margin-left:5px;font-size:11px;
+  color:#6e819c;border-radius:11px;background:#edf2f9;
+  padding:3px 7px;font-variant-numeric:tabular-nums}
+#view-tasks .task-tabs button[aria-selected=true] .count{
+  color:#0969da;background:#dfeeff}
+#view-tasks .issue-controls:has(#task-clear-filters){
+  margin:0 0 13px;gap:10px;
+  grid-template-columns:minmax(210px,1fr) minmax(130px,185px) minmax(130px,185px) auto}
+#view-tasks .issue-controls :is(input,select){min-height:41px;height:41px;
+  background-color:#fff;border:1px solid #d8e2f0;border-radius:10px;
+  font-size:12px;color:#2e5077}
+#view-tasks .issue-controls #task-search{padding-left:15px}
+#view-tasks .task-results-header{margin:15px 0 10px;align-items:center}
+#view-tasks .task-results-header h2{font-size:16px;color:#1a3156;
+  font-weight:740}
+#view-tasks .task-results-header .issue-count{font-size:11px;
+  color:#7b8da5}
+#view-tasks .simple-task-list{gap:0}
+#view-tasks .task-phase{border:0;border-radius:0;box-shadow:none;
+  background:transparent;margin:0 0 12px;overflow:visible}
+#view-tasks .task-phase-head{padding:9px 4px 11px;
+  border:0;border-bottom:1px solid #e8eef7;
+  background:transparent;border-radius:0}
+#view-tasks .task-phase-head strong{font-size:12px;color:#526f96}
+#view-tasks .task-phase-head small{font-size:11px;color:#8495a9}
+#view-tasks .task-phase>.task-collection{grid-template-columns:minmax(0,1fr);
+  gap:0;padding:0}
+#view-tasks .task-phase>.task-collection .task-card{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,230px);
+  grid-template-areas:"leading side" "support side";
+  gap:7px 18px;align-items:center;
+  padding:14px 8px;border-radius:0;border:0;
+  border-bottom:1px solid #edf1f7;
+  background:#fff;box-shadow:none;transform:none}
+#view-tasks .task-phase>.task-collection .task-card:hover{
+  border-bottom-color:#c6daf5;background:#f7faff;box-shadow:none}
+#view-tasks .task-card-leading{gap:5px}
+#view-tasks .task-card-heading{gap:10px;align-items:center}
+#view-tasks .task-card-id{font:710 11px/1.45 var(--font-mono);
+  color:#1168d4;border-radius:6px;background:#eaf3ff;
+  padding:3px 6px;white-space:nowrap}
+#view-tasks .task-card-title{font-size:13px;line-height:1.5;
+  font-weight:730;color:#1b2d50;letter-spacing:0}
+#view-tasks .task-card-description{font-size:11px;line-height:1.5;
+  color:#71829a;-webkit-line-clamp:1}
+#view-tasks .task-card-support{font-size:10px;color:#91a0b3;
+  gap:6px 11px;line-height:1.45}
+#view-tasks .task-phase>.task-collection .task-card-side{
+  display:flex;flex-direction:column;justify-content:center;
+  align-items:flex-start;gap:8px;grid-area:side;
+  padding:1px 0 1px 13px;border:0;border-left:1px solid #e9eff8;
+  min-width:0;width:100%}
+#view-tasks .task-card-chips{display:flex;gap:7px;align-items:center;
+  flex-wrap:wrap}
+#view-tasks .issue-state{font-size:10px;padding:4px 8px}
+#view-tasks .task-card-type{font-size:10px}
+#view-tasks .task-card-owner{font-size:10px;display:flex;gap:5px;
+  width:100%;max-width:100%;color:#617793}
+#view-tasks .task-card-label{font-size:10px}
+#view-tasks .task-card-detail{font-size:11px;justify-self:start}
+#view-tasks .task-show-more{min-height:41px;font-size:12px;
+  border:1px solid #d2e3f7;background:#f7fbff;
+  color:#1769ce;border-radius:9px}
+
+/* Requirements have a decision inbox, a compact PRD summary and the actual
+ * source records; no duplicate summary tab is added. */
+#view-requirements #decision-request-panel{
+  border-color:#dce9fa;background:linear-gradient(115deg,#fff,#fafdff)}
+#view-requirements #decision-request-panel.is-empty{
+  padding:18px 21px;min-height:75px}
+#view-requirements #decision-request-panel.is-empty #decision-request-list .sub{
+  font-size:11px;color:#8091a8}
+#view-requirements .widebox{display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-content:center;gap:8px 25px;padding:25px 28px;
+  min-height:156px;margin-bottom:17px;
+  background:linear-gradient(115deg,#fff 65%,#f6faff)}
+#view-requirements .widebox h2{grid-column:1;grid-row:1;
+  font-size:19px;font-weight:770;color:#172b4d;margin:0}
+#view-requirements .widebox .body{grid-column:1;grid-row:2;
+  font-size:12px;color:#72839d;line-height:1.6;margin:0}
+#view-requirements .widebox .kpirow{grid-column:2;grid-row:1/4;
+  display:flex;align-items:center;gap:10px;margin:0}
+#view-requirements .widebox .kpi{background:#f0f6ff;
+  border:1px solid #e0eaf8;border-radius:11px;
+  min-width:118px;min-height:92px;padding:14px 18px}
+#view-requirements .widebox .kpi b{font-size:29px;font-weight:790;
+  line-height:1.15;color:#24518a}
+#view-requirements .widebox .kpi span{font-size:11px;color:#71849e}
+#view-requirements .widebox>.link{grid-column:1;grid-row:3;
+  justify-self:start;font-size:12px}
+#view-requirements .requirements-panel{padding:23px 25px;margin:0 0 15px}
+#view-requirements .doclist{gap:12px}
+#view-requirements .docitem{padding:17px 19px}
+#view-requirements .requirements-panel .docitem b{font-size:13px}
+#view-requirements .requirements-panel .docitem small{font-size:11px}
+#view-requirements .idea-disclosure{padding:17px 23px;margin:0 0 15px}
+#view-requirements .idea-disclosure summary{margin:0}
+
+/* Engineering architecture: easy-to-scan source/reference cards first, then
+ * full diagrams in a comfortable reader width without horizontal clipping. */
+#view-architecture .database-design-section{padding:23px 26px;margin:0 0 16px}
+#view-architecture .database-design-section .insight-row{padding:16px 18px}
+#view-architecture .database-schema-list{min-width:0}
+#view-architecture .database-tables-grid{gap:9px}
+#view-architecture .database-table-name{background:#f6f9fe;
+  border-color:#e0eafa;color:#2c5683;border-radius:10px;font-size:11px}
+#view-architecture .widebox{padding:24px 27px;margin-bottom:16px}
+#view-architecture .widebox h2{margin:0 0 10px;
+  font-size:19px;font-weight:750;color:#192f52}
+#view-architecture .widebox .body{font-size:13px;line-height:1.7}
+#view-architecture #architecture-diagram{max-width:100%;overflow-x:auto;
+  background:#f4f7fd;border:1px solid #e4eaf5;
+  border-radius:11px;padding:18px 20px}
+#view-architecture .architecture-sections{gap:15px}
+#view-architecture .architecture-sections .panel{padding:22px 23px}
+#view-architecture .architecture-sections .docitem{padding:16px 18px}
+
+/* Quality and history keep all records but make collection browsing lighter. */
+#view-issues .section-row{margin-top:0}
+#view-issues .insight-metrics{margin:12px 0 17px;gap:12px}
+#view-issues .insight-metric{min-height:106px;
+  position:relative;overflow:hidden;box-shadow:var(--pages-shadow)}
+#view-issues .insight-metric::after{content:"";position:absolute;
+  right:17px;top:17px;width:9px;height:9px;border-radius:50%;
+  background:#80b8fa;box-shadow:0 0 0 4px #e8f2ff}
+#view-issues .insight-metric:nth-child(2){background:linear-gradient(135deg,#fff,#f0faf6)}
+#view-issues .insight-metric:nth-child(2)::after{background:#48b98a;box-shadow:0 0 0 4px #e4f7ee}
+#view-issues .insight-metric:nth-child(3){background:linear-gradient(135deg,#fff,#fff8ef)}
+#view-issues .insight-metric:nth-child(3)::after{background:#efaa50;box-shadow:0 0 0 4px #fff0dc}
+#view-issues #issues-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#view-issues #issues-list :is(.docitem,.previewbtn){padding:18px 20px;min-height:117px}
+#view-issues #issues-list :is(.docitem,.previewbtn) b{
+  display:-webkit-box;-webkit-box-orient:vertical;
+  -webkit-line-clamp:2;overflow:hidden;white-space:normal}
+#view-issues #issues-list small{overflow-wrap:anywhere}
+#view-history .documentbar,#view-docs .documentbar{display:flex;
+  align-items:center;gap:10px;padding:15px 17px;margin:0 0 11px;
+  background:#fff;border:1px solid var(--pages-line);
+  box-shadow:var(--pages-shadow);border-radius:13px}
+#view-history .documentbar .search,#view-docs .documentbar .search{
+  height:42px;border:1px solid #d8e3f1;
+  border-radius:9px;background:#fff;font-size:12px}
+#view-history .documentbar .btn{min-height:41px;
+  border:1px solid #076be8;color:#fff;background:#086ff3;
+  border-radius:9px;font-size:12px;padding:8px 16px;white-space:nowrap}
+#view-history .documentbar .btn:hover{background:#095fd5}
+#view-history .history-shortcuts{margin:0 0 17px;gap:7px}
+#view-history .history-shortcuts .btn{font-size:11px;min-height:33px;
+  background:#fff;border-color:#e0e8f4;color:#456a95}
+#view-history .history-shortcuts .btn:hover{border-color:#8bb9f4;
+  background:#edf5ff;color:#135fcb}
+#view-history .section-row{margin:0 0 12px}
+#view-history #history-list,#view-docs #docs-list{gap:12px;
+  grid-template-columns:repeat(3,minmax(0,1fr))}
+#view-history #history-list :is(.docitem,.previewbtn),
+#view-docs #docs-list :is(.docitem,.previewbtn){min-height:111px;padding:19px 20px}
+
+/* Readable guide cards and a clear selection hierarchy. */
+#view-guide .guide-intents{grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;margin:0 0 16px}
+#view-guide .guide-intent{position:relative;min-height:121px;
+  border:1px solid var(--pages-line);padding:21px 22px}
+#view-guide .guide-intent strong{font-size:13px;
+  font-weight:730;color:#20375a;line-height:1.5}
+#view-guide .guide-intent small{font-size:11px;color:#8392a8;
+  line-height:1.5;margin-top:7px}
+#view-guide .guide-intent.selected{border-color:#92bef8;
+  background:linear-gradient(125deg,#f4f9ff,#eaf3ff);
+  box-shadow:inset 3px 0 #1975f1,0 4px 14px #2261aa0a}
+#view-guide .guide-detail,#view-guide .insight-panel{padding:22px 25px;margin:0 0 15px}
+#view-guide .guide-example{background:#f3f6fc;border:1px solid #dfe8f6;
+  border-radius:10px;padding:18px;font-size:12px;
+  line-height:1.7;overflow:auto;max-width:100%}
+#view-guide .guide-action{font-size:11px;border-radius:9px}
+
+/* Settings: calm form fields, exact same select arrow and card language;
+ * no new authentication, fake settings or extra save controls. */
+#view-settings .settings-layout{gap:16px;align-items:start}
+#view-settings .settings-main{gap:15px}
+#view-settings .settings-section{padding:23px 25px}
+#view-settings .settings-section .panelhead{padding-bottom:10px;
+  border-bottom:1px solid #edf1f7;margin-bottom:12px}
+#view-settings .settings-switch-row{padding:16px 1px;
+  border-bottom:1px solid #edf1f7}
+#view-settings .settings-switch-row:last-child{border-bottom:0}
+#view-settings .settings-switch-row strong{font-size:13px;color:#233657}
+#view-settings .settings-switch-row p{font-size:11px;
+  color:#8191a6;margin:3px 0 0}
+#view-settings .settings-form-grid{gap:15px}
+#view-settings .settings-form-grid label{font-size:12px;
+  color:#416084;font-weight:680;gap:7px}
+#view-settings .settings-form-grid :is(input,select){height:42px;
+  min-height:42px;border-radius:9px;border:1px solid #d8e2f0;
+  background-color:#fff;font-size:12px;color:#213c5d}
+#view-settings .settings-section .settings-note,
+#view-settings .settings-inline-remove{font-size:11px;
+  color:#778aa1;line-height:1.6}
+#view-settings .settings-aside .panel{padding:20px 22px}
+#view-settings .settings-aside .settings-help{border:1px solid #d9e9fb;
+  background:#eef6ff;border-radius:13px;padding:19px 21px}
+#view-settings .settings-aside .settings-help strong{font-size:13px}
+#view-settings .settings-aside .settings-help p{font-size:11px;line-height:1.65}
+#view-settings .settings-save{border:1px solid #0768e3;background:#086ef0;
+  color:#fff;min-height:42px;font-size:12px;border-radius:9px;
+  padding:9px 19px;box-shadow:0 3px 11px #086ef022}
+#view-settings .settings-save:hover{background:#075ed0}
+
+/* Keep the existing read-only task/details and document overlays in the
+ * same light visual system. These are styling rules only; the original
+ * modal, navigation, focus and task actions remain unchanged. */
+.overlay.open{background:#132d5270;backdrop-filter:blur(3px)}
+.overlay .drawer{background:#fff;border-left:1px solid #dce7f5;
+  box-shadow:-20px 0 60px #15385b2e;color:var(--pages-ink)}
+.overlay .drawerhead{border-bottom:1px solid #e8eef7;
+  padding-bottom:14px;margin-bottom:12px}
+.overlay .drawer h2{color:#132749;letter-spacing:-.4px}
+.overlay .drawer .source{color:#7185a1}
+.overlay .drawer .content{color:#344d6a}
+.overlay .drawer .content :is(h1,h2,h3){color:#152d50}
+.overlay .drawer .content pre{background:#f5f8fe;
+  border-color:#dce7f6;color:#29507a}
+.overlay .drawer .content blockquote{background:#f1f6ff;
+  border-color:#438bf2;color:#466387}
+.overlay .drawer .content .md-table-scroll{border-color:#dfe8f5}
+.overlay .drawer .content .md-table :is(th,td){border-color:#e0e8f4}
+.overlay .drawer .content .md-table th{background:#edf4ff;
+  color:#234f83}
+.overlay .drawer .content .md-table tbody tr:nth-child(even){background:#f7faff}
+.overlay .drawer .content .md-table tbody tr:hover{background:#edf5ff}
+.overlay .drawer :is(button,a,input,select,summary):focus-visible,
+.view:not(#view-overview) :is(button,a,input,select,summary):focus-visible{
+  outline:2px solid #398afa;outline-offset:3px}
+
+/* Make labels and controls fit on tablets without turning into clipped mini
+ * columns. No invented mobile-only filters or alternate workflow. */
+@media(max-width:1390px){
+  #view-tasks .issue-controls:has(#task-clear-filters){
+    grid-template-columns:minmax(160px,1fr) 150px 150px auto}
+  #view-issues #issues-list,#view-history #history-list,#view-docs #docs-list{
+    grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:1080px){
+  #view-tasks .task-phase>.task-collection .task-card{
+    grid-template-columns:minmax(0,1fr);grid-template-areas:"leading" "support" "side"}
+  #view-tasks .task-phase>.task-collection .task-card-side{
+    border:0;border-top:1px solid #edf1f7;padding:9px 0 0;
+    flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
+  #view-architecture .architecture-sections{grid-template-columns:1fr}
+  #view-guide .guide-intents{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:850px){
+  /* The homepage theme previously hid the entire footer on phones. That
+   * also hid the real Project Docs and GitHub destinations. Keep them
+   * accessible in a slim second row instead of adding another menu. */
+  .sidebar .sidefooter{display:block;margin:6px 0 0;padding:6px 0 0;
+    border-top:1px solid #e9eff8;background:transparent}
+  .sidebar .sidefooter>.status,.sidebar .sidefooter>p{display:none}
+  .sidebar .sidefooter .sidefooter-links{display:flex;flex-wrap:wrap;
+    align-items:center;gap:7px;margin:0;padding:0;border:0}
+  .sidebar .sidefooter .sidefooter-link{display:flex;flex:0 0 auto;
+    width:auto;min-height:30px;padding:5px 12px;
+    font-size:10px;border:1px solid #e3edfa;
+    border-radius:8px;background:#f6faff;color:#285b94}
+  .sidebar .sidefooter .sidefooter-link:hover{background:#e9f3ff}
+  .view:not(#view-overview)>.sectionhead{min-height:113px;
+    grid-template-columns:47px minmax(0,1fr);gap:0 12px;
+    padding:16px 19px;margin-bottom:13px!important}
+  .view:not(#view-overview)>.sectionhead::before{width:47px;height:47px;
+    border-radius:12px;background-size:24px 24px,cover}
+  .view:not(#view-overview)>.sectionhead h1{font-size:25px!important}
+  .view:not(#view-overview)>.sectionhead .sub{font-size:11px}
+  #view-tasks .task-page-compact-head h1{font-size:26px}
+  #view-tasks .issue-controls:has(#task-clear-filters){
+    grid-template-columns:minmax(0,1fr) minmax(125px,160px) minmax(125px,160px)}
+  #view-guide .guide-intents{gap:10px}
+  #view-settings .settings-layout{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  #view-tasks .task-page-compact-head{gap:3px;margin-bottom:10px}
+  #view-tasks .task-page-compact-head h1{font-size:23px;width:100%}
+  #view-tasks .task-secondary{padding:7px 12px 3px;margin-bottom:11px}
+  #view-tasks .task-secondary>.task-progress{grid-template-columns:1fr;
+    gap:7px;padding:8px 0 12px}
+  #view-tasks .task-secondary #task-progress-label{font-size:11px}
+  #view-tasks .task-secondary #task-progress-bar{margin:0}
+  #view-tasks .task-secondary .task-readability-audit>summary{font-size:11px}
+  .overlay .drawer{padding:19px 16px}
+  .view:not(#view-overview)>.sectionhead{grid-template-columns:39px minmax(0,1fr);
+    min-height:100px;padding:14px 13px;gap:0 10px}
+  .view:not(#view-overview)>.sectionhead::before{width:39px;height:39px;
+    background-size:21px 21px,cover;border-radius:10px}
+  .view:not(#view-overview)>.sectionhead h1{font-size:21px!important;
+    letter-spacing:-.45px;margin-bottom:4px!important}
+  .view:not(#view-overview)>.sectionhead .sub{font-size:10px;line-height:1.5}
+  #view-tasks .task-browser-panel{padding:12px 12px 15px;border-radius:13px}
+  #view-tasks .task-tabs{gap:2px;margin:0 0 13px}
+  #view-tasks .task-tabs button{min-width:0;flex:1;font-size:11px;
+    min-height:42px;padding:8px 3px;white-space:normal}
+  #view-tasks .task-tabs .count{font-size:10px;padding:2px 5px}
+  #view-tasks .issue-controls:has(#task-clear-filters){
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #view-tasks .issue-controls :is(input,select){font-size:11px}
+  #view-tasks .task-phase-head{padding:9px 0}
+  #view-tasks .task-phase>.task-collection .task-card{padding:13px 0}
+  #view-tasks .task-card-heading{flex-wrap:wrap;gap:6px}
+  #view-tasks .task-card-heading{align-items:flex-start;text-align:left}
+  #view-tasks .task-card-leading,#view-tasks .task-card-support{
+    align-items:flex-start;text-align:left}
+  #view-tasks .task-card-title{font-size:12px}
+  #view-tasks .task-card-support{font-size:10px}
+  #view-requirements .widebox{display:flex;flex-direction:column;
+    min-height:0;gap:9px;padding:20px}
+  #view-requirements .widebox .kpirow{align-self:stretch;justify-content:flex-start;
+    gap:9px;margin:3px 0}
+  #view-requirements .widebox .kpi{min-width:0;flex:1;min-height:78px;padding:12px 15px}
+  #view-requirements .widebox .kpi b{font-size:26px}
+  #view-requirements .requirements-panel{padding:17px}
+  #view-architecture .database-design-section,
+  #view-architecture .widebox,#view-architecture .architecture-sections .panel{
+    padding:17px}
+  #view-issues #issues-list,#view-history #history-list,#view-docs #docs-list{
+    grid-template-columns:minmax(0,1fr)}
+  #view-issues .insight-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #view-history .documentbar,#view-docs .documentbar{padding:11px;gap:8px}
+  #view-history .documentbar .btn{padding:8px 10px}
+  #view-guide .guide-intents{grid-template-columns:1fr;gap:9px}
+  #view-guide .guide-intent{min-height:0;padding:16px 17px}
+  #view-guide .guide-detail,#view-guide .insight-panel{padding:17px}
+  #view-settings .settings-section{padding:18px}
+}

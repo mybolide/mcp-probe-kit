@@ -102,7 +102,10 @@ export function devControlGuide(input: Record<string, unknown> = {}): Record<str
     '内容':'content','概览':'content','任务说明':'content','双版本':'content',
     '数据库':'database','合并':'database','sqlite':'database',
   };
-  const key = (requested in FLOWS ? requested : alias[requested]) as keyof typeof FLOWS | undefined;
+  // Preserve camelCase action intent keys (for example decisionRequest)
+  // when agents round-trip the intents returned by an unfiltered guide.
+  const canonical = Object.keys(FLOWS).find(intent=>intent.toLowerCase()===requested);
+  const key = (canonical ?? alias[requested]) as keyof typeof FLOWS | undefined;
   return {
     kind:'read-only-v5-action-guide',
     hasSideEffects:false,

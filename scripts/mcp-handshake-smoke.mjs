@@ -15,7 +15,8 @@ function send(msg) {
   return `Content-Length: ${Buffer.byteLength(body, "utf8")}\r\n\r\n${body}`;
 }
 
-const child = spawn("node", [indexJs], { cwd: root, env, stdio: ["pipe", "pipe", "pipe"] });
+const child = spawn("node", [indexJs], { cwd: root, env,
+  stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
 
 let stdout = "";
 let stderr = "";

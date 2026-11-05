@@ -6,6 +6,19 @@ import { gzipSync } from 'node:zlib';
 import { projectHtml } from '../project-html.js';
 
 describe('v5 lightweight single-project workbench', () => {
+  test('task progress and quality summary precede the task browser without a banner card', () => {
+    const html=projectHtml('safe-nonce');
+    const taskView=html.slice(html.indexOf('<section id="view-tasks"'),html.indexOf('<section id="view-issues"'));
+    expect(taskView).toContain('class="task-page-compact-head"');
+    expect(taskView).not.toContain('class="sectionhead task-page-header"');
+    expect(taskView).not.toContain('id="task-tools-jump"');
+    expect(taskView).toContain('id="task-secondary"');
+    expect(taskView.indexOf('id="task-progress-label"')).toBeLessThan(taskView.indexOf('class="task-browser-panel"'));
+    expect(taskView.indexOf('id="task-readability-audit"')).toBeLessThan(taskView.indexOf('class="task-browser-panel"'));
+    expect(taskView).toContain('id="task-readability-refresh"');
+    expect(taskView).toContain('id="task-spec-review-queue"');
+  });
+
   test('eight first-level menus, separate architecture, bugs and developer guide', () => {
     const html=projectHtml('safe-nonce');
     const views=[...html.matchAll(/<button[^>]*class="navbtn[^" ]*[^>]*data-view="([^"]+)"/g)]
@@ -115,8 +128,21 @@ describe('v5 lightweight single-project workbench', () => {
     // without a framework or remote assets. Keep its compressed budget bounded.
     // Keep the entire offline UI small even after the shared select control
     // and compact empty-state accessibility/visual refinements.
-    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(74_000);
+    // Screenshot-faithful homepage uses real offline SVG controls, project
+    // search, Feature history and approved decision lookups. Keep the entire
+    // standalone document under 90 KiB compressed with no remote assets,
+    // including the shared visual language for all eight destinations.
+    expect(gzipSync(Buffer.from(html)).byteLength).toBeLessThan(90_000);
     expect(html).toContain('id="attention-center"');
+    expect(html).toContain('DevControl 工作台');
+    expect(html).toContain('home-decision-list');
+    expect(html).toContain('home-feature-list');
+    expect(html).toContain('class="task-browser-panel"');
+    expect(html).toContain('grid-template-columns:56px minmax(0,1fr)');
+    expect(html).toContain('id="global-search"');
+    expect(html).toContain('待确认决策');
+    expect(html).toContain('function renderHomeDecisions()');
+    expect(html).not.toContain('src/devcontrol/workbench/home-design-v2.css');
     expect(html).toContain('id="attention-list"');
     expect(html).not.toContain('data-tasktab="attention"');
     expect(html).not.toContain('id="task-attention-filters"');

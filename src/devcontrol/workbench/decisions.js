@@ -15,6 +15,7 @@
       const [list]=await Promise.all([fetchJSON('/api/decision-requests')]);
       decisionRequests=list.requests||[];
       renderDecisionRequests();
+      void refreshHomeDecisions();
       if(typeof renderAttentionCenter==='function'&&board)renderAttentionCenter();
     }catch(error){
       $('decision-request-panel').classList.remove('is-empty');

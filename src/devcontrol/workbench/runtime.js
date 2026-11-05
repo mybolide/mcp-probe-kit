@@ -62,6 +62,9 @@
     const governance=all.filter(t=>t.track==="governance");
     renderTaskProgress();
     renderAttentionCenter();
+    renderHomeFeatureChanges();
+    renderGlobalSearch();
+    void refreshHomeDecisions();
     $("governance-count").textContent="工程治理 · "+governance.filter(t=>t.status==="verified").length+"/"+governance.length+" 完成";
     $("next-id").textContent=board.current||"暂无可领取任务";
     const candidate=all.find(t=>t.id===board.current);
@@ -162,6 +165,29 @@
     finally{taskRefreshInProgress=false;resetRefreshClock();}
   }
   for(const b of document.querySelectorAll(".navbtn"))b.addEventListener("click",()=>go(b.dataset.view));
+  $('global-search-form').addEventListener('submit',event=>{
+    event.preventDefault();submitGlobalSearch();
+  });
+  $('global-search').addEventListener('input',renderGlobalSearch);
+  $('global-search').addEventListener('focus',()=>{
+    if($('global-search').value.trim())renderGlobalSearch();
+  });
+  $('global-search').addEventListener('keydown',event=>{
+    if(event.key==='Escape'){
+      event.preventDefault();$('global-search').value='';closeGlobalSearch();
+    }
+  });
+  document.addEventListener('click',event=>{
+    if(!$('global-search-form').contains(event.target))closeGlobalSearch();
+  });
+  document.addEventListener('keydown',event=>{
+    if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){
+      event.preventDefault();go('overview');$('global-search').focus();
+    }
+  });
+  $('header-decisions').addEventListener('click',()=>go('requirements'));
+  $('header-profile').addEventListener('click',()=>go('settings'));
+  $('home-task-create').addEventListener('click',()=>go('guide'));
   $("mobile-nav-more").addEventListener('click',()=>{
     setMobileNavExpanded($("mobile-nav-more").getAttribute('aria-expanded')!=='true');
   });
@@ -178,10 +204,6 @@
   $("task-show-more").addEventListener('click',()=>{
     taskVisibleLimit+=12;
     renderTaskList();
-  });
-  $("task-tools-jump").addEventListener('click',()=>{
-    $('task-secondary').open=true;
-    $('task-secondary').scrollIntoView({block:'start',behavior:'smooth'});
   });
   for(const b of document.querySelectorAll("[data-doc]"))b.addEventListener("click",()=>openDoc(b.dataset.doc));
   for(const b of document.querySelectorAll("[data-tasktab]"))

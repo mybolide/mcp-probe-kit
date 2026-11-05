@@ -12,7 +12,7 @@ suite("DevControl dedicated MCP stdio", () => {
   it("negotiates, enumerates task actions, and returns next eligible task", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "probe-devcontrol-mcp-"));
     try {
-      execFileSync("git", ["init", "-q"], { cwd: root });
+      execFileSync("git", ["init", "-q"], { cwd: root, windowsHide: true });
       fs.mkdirSync(path.join(root, ".neyna"), { recursive: true });
       fs.writeFileSync(path.join(root, ".neyna/devcontrol-plan.json"), JSON.stringify({
         schema_version: 1,
@@ -29,7 +29,7 @@ suite("DevControl dedicated MCP stdio", () => {
         path.join(repository, "src/index.ts"), "devcontrol", "serve",
         "--project-root", root,
       ], {
-        cwd: repository, stdio: ["pipe", "pipe", "pipe"],
+        cwd: repository, stdio: ["pipe", "pipe", "pipe"], windowsHide: true,
         // The JSON-RPC protocol test is not a dashboard startup test:
         // do not leak detached workbench processes from ephemeral fixtures.
         env: { ...process.env, MCP_DEVCONTROL_AUTOSTART: "0" },

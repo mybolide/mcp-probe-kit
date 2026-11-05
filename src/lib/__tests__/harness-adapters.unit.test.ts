@@ -65,11 +65,13 @@ describe("harness-adapters", () => {
       }
     }
     expect(generated[0]).toContain("history_session_bootstrap");
-    expect(generated[0]).toContain('`self-review`');
-    expect(generated[0]).toContain('`reviewMode=self`');
+    expect(generated[0]).toContain('`verify` acceptance object');
+    expect(generated[0]).toContain('Legacy review actions are for historical receipts only');
+    expect(generated[0]).not.toContain('`reviewMode=self`');
     expect(generated[1]).toContain("history_session_bootstrap");
-    expect(generated[1]).toContain('`self-review`');
-    expect(generated[1]).toContain('`reviewMode=self`');
+    expect(generated[1]).toContain('`verify` acceptance object');
+    expect(generated[1]).toContain('legacy review actions apply only to historical receipts');
+    expect(generated[1]).not.toContain('`reviewMode=self`');
     expect(generated[1]).toContain(originalClaude.trim());
 
     const second = ensureHarnessAdapters(root, generateWorkflowSkillContent(VERSION), "AGENTS.md", {});

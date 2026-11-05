@@ -78,7 +78,7 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).toContain('id="task-progress-bar"');
     expect(html).toContain('n("button",null,"task-card")');
     expect(html).toContain('n("span",brief.description||brief.acceptance||');
-    expect(html).toContain('function renderTaskContract(contract)');
+    expect(html).toContain('function renderTaskContract(contract,dual)');
     expect(html).toContain('fetchJSON("/api/tasks/"+encodeURIComponent');
     expect(html).toContain('["任务说明",contract.purpose||contract.description]');
     expect(html).toContain('["文件修改范围",contract.allowedPaths]');
@@ -118,7 +118,7 @@ describe("DevControl documentation Markdown tables", () => {
     expect(html).not.toContain("ENGINEERING OS");
     expect(html).toContain("未分配");
     expect(html).toContain("未排期");
-    expect(html).toContain('function renderTaskContract(contract)');
+    expect(html).toContain('function renderTaskContract(contract,dual)');
     expect(html).toContain('"完成总结："+note.summary');
     expect(html).toContain('"实际交付："+note.implementation');
     expect(html).toContain('taskTab="not_started"');
@@ -311,8 +311,9 @@ describe("DevControl documentation Markdown tables", () => {
     expect(nodes(result, "td").map(node => node.textContent)).toEqual([
       "Apples", "17", "Available", "Pears", "4", "Backordered",
     ]);
-    expect(nodes(result, "th")[1].style.textAlign).toBe("right");
-    expect(nodes(result, "td")[2].style.textAlign).toBe("center");
+    // Alignment is a class in the CSP-safe stylesheet, not an inline style.
+    expect(nodes(result, "th")[1].className).toBe("md-align-right");
+    expect(nodes(result, "td")[2].className).toBe("md-align-center");
     expect(nodes(result, "div").some(node => node.className === "md-table-scroll")).toBe(true);
     expect(nodes(result, "h2")).toHaveLength(1);
     expect(nodes(result, "p").map(node => node.textContent)).toContain("End of report.");

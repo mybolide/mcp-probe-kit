@@ -6,17 +6,19 @@
 <style nonce="__NONCE__">__STYLES__</style></head>
 <body><div class="layout">
 <aside class="sidebar">
-  <div class="brand"><div class="brand-image"><img src="__BRAND_MARK__" alt="mcp-probe-kit 官方 Logo"></div><div class="brand-copy"><strong>mcp-probe-kit</strong><small>研发工作台 <span id="brand-version">v—</span></small></div></div>
-  <div class="group-label">当前项目</div>
+  <div class="brand">
+    <div class="brand-platform"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 35 12 20 21 5 12Z"/><path d="M5 19 20 28 35 19M5 26 20 35 35 26"/></svg><strong>DevControl</strong></div>
+    <div class="brand-project"><div class="brand-image"><img src="__BRAND_MARK__" alt="mcp-probe-kit 官方 Logo"></div><div class="brand-copy"><strong>mcp-probe-kit</strong><small>研发工作台 <span id="brand-version">v—</span></small></div></div>
+  </div>
   <nav class="nav" id="workbench-secondary-nav" aria-label="研发工作台导航">
-    <button type="button" class="navbtn active" data-view="overview"><span class="symbol">▦</span>工作台</button>
-    <button type="button" class="navbtn" data-view="requirements"><span class="symbol">☰</span>需求管理</button>
-    <button type="button" class="navbtn" data-view="architecture"><span class="symbol">⌘</span>技术架构</button>
-    <button type="button" class="navbtn" data-view="tasks"><span class="symbol">▤</span>任务管理</button>
-    <button type="button" class="navbtn" data-view="issues"><span class="symbol">◉</span>Bug 管理</button>
-    <button type="button" class="navbtn" data-view="history"><span class="symbol">◷</span>历史会话</button>
-    <button type="button" class="navbtn" data-view="guide"><span class="symbol">◇</span>研发指南</button>
-    <button type="button" class="navbtn" data-view="settings"><span class="symbol">⚙</span>设置</button>
+    <button type="button" class="navbtn active" data-view="overview"><span class="symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/></svg></span>工作台</button>
+    <button type="button" class="navbtn" data-view="requirements"><span class="symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3.5h8l4 4v12A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5v-14A2 2 0 0 1 6 3.5Z"/><path d="M15.5 3.5V8H20M8 12h8M8 16h8"/></svg></span>需求管理</button>
+    <button type="button" class="navbtn" data-view="architecture"><span class="symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="6" rx="1.3"/><rect x="2" y="16" width="6" height="5.5" rx="1.3"/><rect x="16" y="16" width="6" height="5.5" rx="1.3"/><path d="M12 8.5v4M5 16v-3.5h14V16"/></svg></span>技术架构</button>
+    <button type="button" class="navbtn" data-view="tasks"><span class="symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 9 1.5 1.5L11 8M14 9h4M7 15l1.5 1.5L11 14M14 15h4"/></svg></span>任务管理</button>
+    <button type="button" class="navbtn" data-view="issues"><span class="symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7.5a4 4 0 0 1 8 0M5 11l-2-2M19 11l2-2M3 16h4M17 16h4M6.5 20 8 18M17.5 20 16 18"/><rect x="6.5" y="7.5" width="11" height="13" rx="5.5"/><path d="M12 12v8"/></svg></span>Bug 管理</button>
+    <button type="button" class="navbtn" data-view="history"><span class="symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.2 6M3 4v7h7M12 7v5l3.5 2.5"/></svg></span>历史会话</button>
+    <button type="button" class="navbtn" data-view="guide"><span class="symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5C9.5 3 6 3 3 4.5v15c3-1.5 6.5-1.5 9 0 2.5-1.5 6-1.5 9 0v-15c-3-1.5-6.5-1.5-9 0ZM12 4.5v15"/></svg></span>研发指南</button>
+    <button type="button" class="navbtn" data-view="settings"><span class="symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M10.2 2.7h3.6l.55 2.2 1.7.7 1.95-1.2 2.55 2.55-1.2 1.95.7 1.7 2.2.55v3.6l-2.2.55-.7 1.7 1.2 1.95-2.55 2.55-1.95-1.2-1.7.7-.55 2.2h-3.6l-.55-2.2-1.7-.7-1.95 1.2-2.55-2.55 1.2-1.95-.7-1.7-2.2-.55v-3.6l2.2-.55.7-1.7-1.2-1.95 2.55-2.55 1.95 1.2 1.7-.7Z"/></svg></span>设置</button>
     <button type="button" class="mobile-nav-more" id="mobile-nav-more" aria-expanded="false" aria-controls="workbench-secondary-nav">更多功能 <span aria-hidden="true">⌄</span></button>
   </nav>
   <div class="sidefooter"><div class="status"><span class="pulse" aria-hidden="true"></span>本地工作台</div>
@@ -28,34 +30,30 @@
 </aside>
 <main class="main">
   <header class="bar"><div class="breadcrumbs"><span id="projectcrumb">项目</span><span>/</span><b id="crumb">工作台</b></div>
-  <div class="actions"><span class="badge" id="branch">Git · 读取中</span>
+  <div class="actions">
+    <form class="global-search" id="global-search-form" role="search" autocomplete="off">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.7 15.7 5.1 5.1"/></svg>
+      <input id="global-search" type="search" aria-label="搜索任务或 Feature" aria-controls="global-search-results" aria-expanded="false" placeholder="搜索任务、需求、功能或编号…">
+      <kbd>⌘ K</kbd><div id="global-search-results" class="global-search-results" hidden></div>
+    </form>
+    <span class="badge" id="branch">Git · 读取中</span>
     <label class="refresh-control" id="refresh-control">自动刷新
       <select id="refresh-interval" aria-label="自动刷新间隔">
         <option value="5">5 秒</option><option value="10" selected>10 秒</option>
         <option value="30">30 秒</option><option value="60">1 分钟</option>
       </select></label><span id="refresh-countdown" class="refresh-countdown" role="status">10 秒后刷新</span>
-    <button class="btn" id="share-lan" type="button">连接信息</button>
-    <button class="btn" id="reload" type="button">↻ 同步</button></div></header>
+    <button class="header-icon-btn" id="header-decisions" type="button" aria-label="查看真实待确认决策" title="打开需求管理中的待确认项"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9M10 21h4"/></svg><span id="header-decision-dot" class="header-icon-dot" hidden></span></button>
+    <button class="header-avatar" id="header-profile" type="button" aria-label="打开项目设置" title="本地工作台设置">D</button>
+    <details class="header-tools"><summary aria-label="更多工作台操作" title="更多操作">⌄</summary><div class="header-tools-menu"><button class="btn" id="share-lan" type="button">连接信息</button><button class="btn" id="reload" type="button">↻ 同步</button></div></details>
+  </div></header>
   <section id="view-overview" class="view active">
-    <section class="attention-center" id="attention-center" aria-labelledby="attention-title">
-      <div class="attention-heading"><div><span class="eyebrow">TODAY / WORK IN FOCUS</span><h1 id="attention-title">现在需要关注什么</h1><p class="sub">优先处理真实的待验收与阻塞工作。所有状态只从当前项目记录读取，不在这里直接批准或修改任务。</p></div><button type="button" class="attention-all-link" data-go="tasks">进入任务管理 <span aria-hidden="true">↗</span></button></div>
-      <div class="attention-metrics" id="attention-metrics" aria-label="按工作情况快捷查看">
-        <button type="button" class="attention-metric" data-attention="verification"><span class="attention-metric-name">待验收</span><strong id="attention-verification-count">—</strong><small>需要核对真实证据</small></button>
-        <button type="button" class="attention-metric" data-attention="blocked"><span class="attention-metric-name">前置阻塞</span><strong id="attention-blocked-count">—</strong><small>先处理依赖</small></button>
-        <button type="button" class="attention-metric" data-attention="planning"><span class="attention-metric-name">规划待确认</span><strong id="attention-planning-count">—</strong><small>尚未授权执行</small></button>
-        <button type="button" class="attention-metric" data-attention="ready"><span class="attention-metric-name">可继续</span><strong id="attention-ready-count">—</strong><small>仍需按合同领取</small></button>
-      </div>
-      <div class="attention-work"><div class="attention-work-head"><div><h2>优先查看的工作项</h2><p class="sub" id="attention-description">读取当前工作项…</p></div><button type="button" class="attention-all-link" id="attention-view-all">查看待开发任务 <span aria-hidden="true">↗</span></button></div>
-        <div id="attention-list" class="attention-list" aria-live="polite"><p class="sub">正在读取真实任务状态…</p></div>
-      </div>
-      <div class="attention-context"><span id="attention-idea-summary">正在核对待决策事项…</span><button type="button" data-go="requirements">查看需求与待确认 <span aria-hidden="true">↗</span></button></div>
-    </section>
     <div class="hero">
-      <div class="hero-main"><div class="eyebrow">SINGLE PROJECT · 当前 Git 项目</div>
-        <h1>继续当前项目<span class="hero-period">.</span></h1>
-        <p id="project-intro">正在读取项目研发上下文…</p>
+      <div class="hero-main"><div class="home-hero-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 3 36 13 20 23 4 13Z"/><path d="m4 20 16 10 16-10M4 27l16 10 16-10"/></svg></div><div class="hero-copy">
+        <h1>DevControl 工作台<span class="hero-period">.</span></h1>
+        <p class="home-hero-tagline">面向研发团队的一体化研发管理平台，覆盖需求、任务、决策与交付，提升研发效率与协作体验。</p>
+        <p id="project-intro" hidden>正在读取项目研发上下文…</p>
         <div class="meta-row"><span class="chip" id="projectname">PROJECT</span><span class="chip" id="projectstate">读取项目状态</span><span class="chip" id="governance-count">工程治理 · —</span></div>
-      </div>
+      </div></div>
       <div class="hero-aside" aria-label="本阶段正式工作项的验证进度"><span class="hero-aside-kicker">DELIVERY STATUS · 正式工作项</span><strong class="hero-aside-word" id="hero-verified">—</strong><span class="hero-aside-caption">已验证 / <span id="hero-total">—</span> 项</span><progress id="hero-progress" value="0" max="1" aria-label="工作项 Verified 进度"></progress><span class="hero-aside-footer">工作项 Verified 不代表版本发布 Gate 通过</span></div>
     </div>
     <section class="overview-primary" aria-label="当前工作和审核">
@@ -68,11 +66,26 @@
         <p class="sub">Agent 和开发者遵循同一份需求、架构与任务合同。</p><div class="hide" id="quickdocs"></div></section>
     </section>
     <div class="review-overview hide" id="overview-release-review"></div>
-    <div class="overview-metrics"><div class="overview-metrics-head"><div><span class="eyebrow">EXECUTION</span><h2>研发进度</h2></div><button class="link" data-go="tasks">全部任务 ↗</button></div>
+    <div class="overview-metrics"><span id="s-total" hidden>—</span><div class="overview-metrics-head"><h2>项目进度</h2></div>
     <div class="grid stats">
-      <div class="stat"><strong id="s-total">—</strong><span>正式工作项总数</span></div><div class="stat"><strong id="s-done">—</strong><span>已验证工作项</span></div>
-      <div class="stat"><strong id="s-active">—</strong><span>开发中 / 待验证</span></div><div class="stat"><strong id="s-pending">—</strong><span>未开始（含待审核）</span></div>
+      <div class="stat stat-pending"><span class="home-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 6-6 6 6 6M16 6l6 6-6 6M14 3l-4 18"/></svg></span><span class="home-stat-content"><span>待开发</span><strong id="s-pending">—</strong><small>未开始与待审核</small></span></div>
+      <div class="stat stat-active"><span class="home-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 4a6 6 0 0 0-7 8L3 16a3 3 0 0 0 5 5l5-5a6 6 0 0 0 8-8l-5 5-4-4 5-5Z"/></svg></span><span class="home-stat-content"><span>开发中</span><strong id="s-active">—</strong><small>包含待验收任务</small></span></div>
+      <div class="stat stat-done"><span class="home-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></svg></span><span class="home-stat-content"><span>已验证</span><strong id="s-done">—</strong><small>已通过正式验收</small></span></div>
+      <div class="stat stat-decisions"><span class="home-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4v16M5 6h10l-3 4 3 4H5M19 9v11M19 11h-7"/></svg></span><span class="home-stat-content"><span>待确认决策</span><strong id="s-decision-pending">—</strong><small>需由负责人确认</small></span></div>
     </div></div>
+    <section class="attention-center" id="attention-center" aria-labelledby="attention-title">
+      <div class="attention-work"><div class="attention-work-head"><div class="attention-heading"><div><h2 id="attention-title"><span class="home-list-glyph" aria-hidden="true">☷</span>优先处理的任务</h2><p class="sub" id="attention-description">读取当前工作项…</p></div></div><div class="home-task-actions"><button type="button" class="attention-all-link" id="attention-view-all">全部任务 <span aria-hidden="true">↗</span></button><button type="button" class="home-task-create" id="home-task-create" title="了解如何按正式 DevControl 流程创建任务">＋ 新建任务</button></div></div>
+        <div id="attention-list" class="attention-list" aria-live="polite"><p class="sub">正在读取真实任务状态…</p></div>
+      </div>
+      <section class="home-decision-panel" aria-labelledby="home-decision-title"><div class="home-side-head"><h2 id="home-decision-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg>需求管理 / 待确认决策 <span id="home-decision-heading-count"></span></h2><button type="button" class="attention-all-link" data-go="requirements">查看全部 ↗</button></div><div id="home-decision-list" class="home-decision-list" aria-live="polite"><p class="sub">读取真实待确认问题…</p></div><div class="attention-context"><span id="attention-idea-summary">正在核对待决策事项…</span><button type="button" data-go="requirements">查看需求 ↗</button></div></section>
+      <section class="home-feature-panel" aria-labelledby="home-feature-title"><div class="home-side-head"><h2 id="home-feature-title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 3"/></svg>最近 Feature 变更</h2><button type="button" class="attention-all-link" data-go="requirements">查看全部 ↗</button></div><div id="home-feature-list" class="home-feature-list" aria-live="polite"><p class="sub">读取真实 Feature 修订…</p></div></section>
+      <details class="home-support-details"><summary>其他任务阻断情况</summary><div class="attention-metrics" id="attention-metrics" aria-label="按工作情况快捷查看">
+        <button type="button" class="attention-metric" data-attention="verification"><span class="attention-metric-name">待验收</span><strong id="attention-verification-count">—</strong><small>需要核对真实证据</small></button>
+        <button type="button" class="attention-metric" data-attention="blocked"><span class="attention-metric-name">前置阻塞</span><strong id="attention-blocked-count">—</strong><small>先处理依赖</small></button>
+        <button type="button" class="attention-metric" data-attention="planning"><span class="attention-metric-name">规划待确认</span><strong id="attention-planning-count">—</strong><small>尚未授权执行</small></button>
+        <button type="button" class="attention-metric" data-attention="ready"><span class="attention-metric-name">可继续</span><strong id="attention-ready-count">—</strong><small>仍需按合同领取</small></button>
+      </div></details>
+    </section>
     <section class="panel insight-panel" aria-label="项目研发阻断与待审事项">
       <div class="panelhead"><div><span class="eyebrow">LIVE GOVERNANCE</span><h2>研发阻断与下一步</h2></div><button class="link" data-go="tasks">核查工作项 ↗</button></div>
       <p class="sub">从当前项目 SQLite 汇总。待审核、测试待验证和 Bug 未关闭，都不代表发布 Gate 已通过。</p>
@@ -150,7 +163,26 @@
     </div>
   </section>
   <section id="view-tasks" class="view">
-    <div class="sectionhead task-page-header"><div class="eyebrow">EXECUTION / TASKS</div><h1>任务管理</h1><p class="sub">先找到需要处理的工作项。未批准规划不能领取，任务 Verified 不等于产品发布。</p><button type="button" class="task-tools-jump" id="task-tools-jump">查看版本进度与质量检查 <span aria-hidden="true">↗</span></button></div>
+    <div class="task-page-compact-head"><h1>任务管理</h1><p class="sub">任务 Verified 不等于产品发布 Gate 通过。</p></div>
+    <section class="task-secondary" id="task-secondary" aria-label="版本进度与任务质量检查">
+      <div class="task-progress"><span id="task-progress-label">正在读取已验证的工作项进度…</span>
+        <progress id="task-progress-bar" value="0" max="1" aria-label="正式版本已验证工作项进度"></progress></div>
+      <details class="panel task-readability-audit" id="task-readability-audit">
+        <summary>任务说明完整性检查 <span id="task-readability-count">按需查看 · 只读检查</span></summary>
+        <p class="sub">识别文字不清楚与正式合同缺项，两类问题分开处理。检查结果不改变审批、测试或 Verified 状态。</p>
+        <div id="task-readability-results" aria-live="polite">展开后读取当前项目任务说明。</div>
+        <details class="task-spec-review-queue" id="task-spec-review-queue">
+          <summary>下一批 12 项规格补充评审 <span id="task-spec-review-count">按需查看 · 非正式变更</span></summary>
+          <p class="sub">只列已有冻结来源且尚未开始的任务。根据依赖验证情况排序，展示真实交付条件与待补问题，不自动批准或修改合同。</p>
+          <div id="task-spec-review-results">展开后读取待评估工作项。</div>
+          <p class="sub">开发者可下载本批只读核对材料自行实质审核，或按需要交给独立 Reviewer。材料不等于审核通过。</p>
+          <a class="task-spec-review-export" href="/api/task-spec-review-packet?format=markdown" download="task-spec-review.md">下载本批核对材料</a>
+          <button type="button" class="link" id="task-spec-review-refresh">重新整理本批</button>
+        </details>
+        <button type="button" class="link" id="task-readability-refresh">重新检查</button>
+      </details>
+    </section>
+    <div class="task-browser-panel">
     <div class="task-tabs" role="tablist" aria-label="任务状态">
       <button type="button" role="tab" data-tasktab="not_started" aria-selected="true" aria-controls="task-list-panel">待开发 <span id="count-not_started" class="count">0</span></button>
       <button type="button" role="tab" data-tasktab="in_progress" aria-selected="false" aria-controls="task-list-panel">开发中 <span id="count-in_progress" class="count">0</span></button>
@@ -168,25 +200,7 @@
       <div id="task-rows" class="simple-task-list" aria-live="polite"></div>
       <button type="button" class="task-show-more" id="task-show-more" hidden>显示更多工作项</button>
     </div>
-    <details class="task-secondary" id="task-secondary">
-      <summary>查看版本进度与任务质量检查 <span aria-hidden="true">⌄</span></summary>
-      <div class="task-progress"><span id="task-progress-label">正在读取已验证的工作项进度…</span>
-        <progress id="task-progress-bar" value="0" max="1" aria-label="正式版本已验证工作项进度"></progress></div>
-      <details class="panel task-readability-audit" id="task-readability-audit">
-        <summary>任务说明完整性检查 <span id="task-readability-count">按需查看 · 只读检查</span></summary>
-        <p class="sub">识别文字不清楚与正式合同缺项，两类问题分开处理。检查结果不改变审批、测试或 Verified 状态。</p>
-        <div id="task-readability-results" aria-live="polite">展开后读取当前项目任务说明。</div>
-        <details class="task-spec-review-queue" id="task-spec-review-queue">
-          <summary>下一批 12 项规格补充评审 <span id="task-spec-review-count">按需查看 · 非正式变更</span></summary>
-          <p class="sub">只列已有冻结来源且尚未开始的任务。根据依赖验证情况排序，展示真实交付条件与待补问题，不自动批准或修改合同。</p>
-          <div id="task-spec-review-results">展开后读取待评估工作项。</div>
-          <p class="sub">开发者可下载本批只读核对材料自行实质审核，或按需要交给独立 Reviewer。材料不等于审核通过。</p>
-          <a class="task-spec-review-export" href="/api/task-spec-review-packet?format=markdown" download="task-spec-review.md">下载本批核对材料</a>
-          <button type="button" class="link" id="task-spec-review-refresh">重新整理本批</button>
-        </details>
-        <button type="button" class="link" id="task-readability-refresh">重新检查</button>
-      </details>
-    </details>
+    </div>
   </section>
   <section id="view-issues" class="view">
     <div class="sectionhead"><div class="eyebrow">缺陷管理</div><h1>Bug 管理</h1>

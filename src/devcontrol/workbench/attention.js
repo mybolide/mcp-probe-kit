@@ -21,6 +21,111 @@
     planning:'候选规划未获最终批准，先核对规划及审批记录',
     ready:'已登记的任务没有已知前置阻断，仍须按正式范围领取',
   };
+  let homeDecisionRequests=[];
+  function renderHomeFeatureChanges(){
+    const host=$('home-feature-list');
+    host.replaceChildren();
+    const latest=[...(features||[])].filter(item=>item&&item.updatedAt)
+      .sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,3);
+    if(!latest.length){
+      host.append(n('p','还没有可读取的 Feature 修订记录。','home-side-empty'));
+      return;
+    }
+    for(const feature of latest){
+      const item=n('button',null,'home-feature-row');
+      item.type='button';
+      const date=beijingDateTime(feature.updatedAt);
+      const parsed=new Date(feature.updatedAt);
+      const shortDate=Number.isNaN(parsed.getTime())?date:
+        new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',
+          month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',
+          hour12:false}).format(parsed);
+      const when=n('span',shortDate,'home-feature-time');
+      when.title=date;
+      item.append(when);
+      const detail=n('span',null,'home-feature-name');
+      detail.append(n('strong',feature.description||feature.name),
+        n('small',feature.name));
+      item.append(detail,n('span','v'+feature.revision,'home-feature-version'));
+      item.addEventListener('click',()=>openFeature(feature.name));
+      item.setAttribute('aria-label','查看 Feature '+feature.name+' 的第 '+feature.revision+' 版');
+      host.append(item);
+    }
+  }
+  async function openHomeDecision(id,action){
+    go('requirements');
+    $('decision-request-filter').value='pending';
+    await loadDecisionRequests();
+    const row=[...document.querySelectorAll('#decision-request-list [data-decision-id]')]
+      .find(item=>item.dataset.decisionId===id);
+    if(!row)return;
+    row.scrollIntoView({block:'center',behavior:'smooth'});
+    const select=row.querySelector('select');
+    if(select){
+      const choice=action==='reject'?'__reject':action==='defer'?'__defer':
+        homeDecisionRequests.find(item=>item.id===id)?.recommendedOption;
+      if(choice){select.value=choice;select.dispatchEvent(new Event('change'));}
+      (action==='defer'?row.querySelector('.decision-request-defer input'):select)?.focus();
+    }
+  }
+  function renderHomeDecisions(){
+    const host=$('home-decision-list'),pending=homeDecisionRequests.length;
+    $('s-decision-pending').textContent=String(pending);
+    $('home-decision-heading-count').textContent='('+pending+')';
+    $('header-decision-dot').hidden=pending===0;
+    host.replaceChildren();
+    if(!pending){
+      const empty=n('div',null,'home-decision-empty');
+      empty.append(n('span','✓','home-decision-empty-icon'),
+        n('strong','当前没有待确认决策'),
+        n('p','新的 Feature 问题由 Agent 登记后，会在这里显示。'));
+      host.append(empty);return;
+    }
+    for(const request of homeDecisionRequests.slice(0,3)){
+      const item=n('article',null,'home-decision-row');
+      const head=n('div',null,'home-decision-info');
+      const glyph=n('span',null,'home-decision-glyph');
+      glyph.append(n('span','▤'));
+      const detail=n('div',null,'home-decision-detail');
+      detail.append(n('strong',request.title||request.question),
+        n('small',request.featureName+' · '+
+          (request.stale?'来源已更新，需重新确认':
+            request.options?.find(option=>option.id===request.recommendedOption)?.label?
+              '推荐方案：'+request.options.find(option=>option.id===request.recommendedOption).label:
+              '请查看备选方案')));
+      head.append(glyph,detail);item.append(head);
+      if(request.stale){
+        const btn=n('button','重新查看问题','home-decision-secondary');
+        btn.type='button';btn.addEventListener('click',()=>openHomeDecision(request.id,'view'));
+        item.append(btn);
+      }else{
+        const actions=n('div',null,'home-decision-actions');
+        for(const [action,label,cls] of [
+          ['recommend',request.recommendedOption?'✓ 采用推荐方案':'查看方案','primary'],
+          ['reject','× 不做','secondary'],['defer','◷ 延期','secondary']]){
+          const btn=n('button',label,'home-decision-'+cls);btn.type='button';
+          btn.addEventListener('click',()=>openHomeDecision(request.id,action));
+          actions.append(btn);
+        }
+        item.append(actions);
+      }
+      host.append(item);
+    }
+    if(pending>3)host.append(n('p','另有 '+(pending-3)+' 项待确认，请在需求管理中查看。',
+      'home-decision-more'));
+  }
+  async function refreshHomeDecisions(){
+    try{
+      const response=await fetchJSON('/api/decision-requests?status=pending');
+      homeDecisionRequests=Array.isArray(response.requests)?response.requests:[];
+      renderHomeDecisions();
+    }catch{
+      $('s-decision-pending').textContent='—';
+      $('home-decision-heading-count').textContent='';
+      $('home-decision-list').replaceChildren(n('p',
+        '暂时无法读取决策，请进入需求管理核对真实记录。','home-side-empty'));
+    }
+  }
   function attentionCounts(rows){
     const counts={verification:0,active:0,blocked:0,planning:0,ready:0};
     for(const row of rows){const kind=taskAttentionKind(row);if(kind)counts[kind]++;}
@@ -89,13 +194,26 @@
     for(const row of chosen){
       const kind=taskAttentionKind(row),button=n('button',null,'attention-item');
       button.type='button';button.dataset.taskid=row.item.id;
-      const main=n('span',null,'attention-item-main');
-      const meta=n('span',null,'attention-item-meta');
-      meta.append(n('span',attentionLabels[kind],'attention-type '+kind),
+      const left=n('span',null,'home-task-left');
+      left.append(n('span',attentionLabels[kind],'attention-type '+kind),
         n('span',row.item.id,'attention-id'));
-      main.append(meta,n('strong',displayTaskTitle(row.item)),
+      const main=n('span',null,'attention-item-main');
+      main.append(n('strong',displayTaskTitle(row.item)),
         n('small',taskAttentionReason(row)));
-      button.append(main,n('span','查看详情 ↗','attention-item-action'));
+      const side=n('span',null,'home-task-side');
+      const [status]=taskStatus(row);
+      side.append(n('span',status,'home-task-status '+
+        (row.status==='in_progress'||row.status==='in_review'?'is-active':
+          row.status==='ready'?'is-ready':'is-pending')));
+      const owner=row.current?.owner||row.item.owner;
+      if(owner){
+        const person=n('span',null,'home-task-person');
+        person.append(n('span',String(owner).trim().slice(0,1).toUpperCase(),
+          'home-task-avatar'),n('span',String(owner),'home-task-owner'));
+        side.append(person);
+      }
+      side.append(n('span','查看详情 →','attention-item-action'));
+      button.append(left,main,side);
       button.setAttribute('aria-label',row.item.id+' '+attentionLabels[kind]+' '+displayTaskTitle(row.item)+'，查看真实任务详情');
       button.addEventListener('click',()=>openAttentionTask(row));
       list.append(button);
