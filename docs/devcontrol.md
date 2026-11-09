@@ -1,10 +1,24 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **84 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **118 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
 
 # DevControl — MCP Probe Kit 5.0.0 source-development reference
+
+## Interrupted sessions and review-only permissions (v5 source)
+
+Normal Git submission now issues an independent `reviewToken` once the
+completion and matching evidence exist, and releases the Git writer. The
+legacy `leaseToken` still authenticates an existing frozen review. A new
+chat reads `next.sessionRecoveryCandidates` and `task-closure-status`;
+`resume-session` can recover an expired original coding session or a review
+session without stealing a live writer. `recover-review` only rotates an
+expired version-bound review permission. `reopen-for-rework` requires a
+failed/stale delivery or explicit Owner rework decision, and records a new Git
+baseline while archiving prior review decisions and preserving all original
+completion/evidence rows. These recovery operations do not run tests, alter
+code, or approve any frozen Gate.
 
 > **Current branch contract:** This document describes implemented project governance in the unpublished 5.0.0 feature branch. Dated Neyna V0.1 observations and original migration decisions below are historical examples, not default plans for another project or evidence of release acceptance. For a complete source install, read the [v5 guide](v5-development-guide.md); v4/V1 frozen specs remain historical baselines.
 

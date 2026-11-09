@@ -12,6 +12,7 @@ import {
 import {
   getMcpProbeSkillVersion,
   parseSkillInstalledVersion,
+  SKILL_GUIDANCE_REVISION,
 } from "./workflow-skill-version.js";
 
 const RULES_POINTER_VERSION_KEY = "mcp-probe-kit-harness-adapter-version";
@@ -26,6 +27,15 @@ export interface HarnessAdapterWriteResult {
   created: boolean;
   updated: boolean;
   skipped: boolean;
+}
+
+/** Pure preview used both by the installer and by DevControl's Git gate.
+ * The expected bytes are derived from the committed user-owned CLAUDE.md,
+ * never from a potentially edited working-tree copy. */
+export function previewManagedClaudePointer(existing:string|null,
+  agentsIndexPath:string,version=getMcpProbeSkillVersion()):string {
+  return mergeClaudePointer(existing,generateClaudePointerBlock(
+    CANONICAL_SKILL_REL_PATH,agentsIndexPath,version));
 }
 
 export interface HarnessAdapterEnsureResult {
@@ -66,14 +76,16 @@ function generateCursorRulesContent(
     "# mcp-probe-kit",
     "",
     `> ${RULES_POINTER_VERSION_KEY}: ${version}`,
+    `> mcp-probe:guidance-revision: ${SKILL_GUIDANCE_REVISION}`,
     "",
     `Before coding, read \`${agentsIndexPath}\` and \`${skillCanonical}\`.`,
     "",
     "1. Prefer native mcp-probe-kit tools. Use `devcontrol` as the only formal development workflow.",
     "2. At conversation start, call `history_session_bootstrap`; then use `devcontrol` actions such as `onboard`, `next`, and `execution-contract` to recover the actual SQLite task state.",
-    "3. Only modify approved task files. Run real tests and inspect the original submitted Git revision or immutable source snapshot. Record your own substantive review and real Gate evidence in one `verify` acceptance object. A separate Reviewer is optional; follow the Skill. Legacy review actions are for historical receipts only.",
+    "3. Only modify approved task files. After running real tests and committing approved changes, use `devcontrol` action=`submit` for ordinary in_progress work to record completion and real test evidence atomically. This moves only to in_review, never passes a Gate. Independently review the frozen delivery and use one `verify` acceptance object with real findings for every Gate. A separate Reviewer is optional; follow the Skill. Legacy review actions are for historical receipts only.",
     "4. If native MCP tools are unavailable, use an already installed, matching `.mcp-probe-kit/bin/probe.*` wrapper only. If it is missing, report the configuration problem; do not install from the current directory or fetch an unpublished release.",
     "5. An installation or repair, if separately authorized, must use the verified absolute project root. Never guess a root from the current working directory.",
+    "6. A new chat reads next.sessionRecoveryCandidates and task-closure-status. resume-session reopens expired safe work. A submitted Git review releases the writer and returns independent reviewToken; recover-review rotates expired Review without taking a writer. Only failed or invalidated work uses reopen-for-rework, preserving the previous completion/evidence and Gate.",
     "",
   ].join("\n");
 }
@@ -100,10 +112,12 @@ function generateClaudePointerBlock(
 ## MCP (mcp-probe-kit)
 
 > ${RULES_POINTER_VERSION_KEY}: ${version}
+> mcp-probe:guidance-revision: ${SKILL_GUIDANCE_REVISION}
 
 - At conversation start, use \`history_session_bootstrap\` and read the \`mcp-probe:context\` block in \`${agentsPath}\` and Skill \`${skillCanonical}\`.
 - When the user says “continue” or “start”, use \`devcontrol\` actions \`onboard\`, \`next\`, and \`execution-contract\` to recover the approved SQLite task state before changing files.
-- Use \`devcontrol\` for formal development work. Run real tests, inspect the exact submitted Git revision or immutable source snapshot, then record your substantive review and genuine Gate evidence in one \`verify\` acceptance object. A different Reviewer is optional; legacy review actions apply only to historical receipts. Never fabricate test evidence.
+- Use \`devcontrol\` for formal development work. For ordinary in_progress tasks, run real tests and commit approved source changes, then call \`devcontrol\` action=\`submit\` once with completion details and original test evidence. Submit only records an in_review delivery; it never passes a Gate or makes the task Verified. Independently review the exact frozen Git revision or immutable source snapshot, then use a separate \`verify\` acceptance object with findings for every real Gate. A different Reviewer is optional; legacy \`complete\` / \`report\` and review actions remain available for exceptional or historical receipts. Never fabricate test evidence.
+- New sessions read next.sessionRecoveryCandidates and task-closure-status. resume-session restores expired safe work; submitted Git reviews release the writer and use a separate reviewToken. recover-review rotates an expired review-only permission without taking a Git index. reopen-for-rework creates a new approved-scope attempt ONLY for failed or invalidated reviews, preserving earlier evidence and Gate requirements.
 - Never install guidance from the current directory. For any separately authorized installation, verify an absolute project root first.
 ${CLAUDE_BLOCK_END}`;
 }
@@ -169,10 +183,7 @@ function resolveAdapterContent(
         ? generateComateRulesContent(CANONICAL_SKILL_REL_PATH, version, agentsIndexPath)
         : generateRulesPointerContent(CANONICAL_SKILL_REL_PATH, version, agentsIndexPath);
     case "claude-pointer":
-      return mergeClaudePointer(
-        null,
-        generateClaudePointerBlock(CANONICAL_SKILL_REL_PATH, agentsIndexPath, version)
-      );
+      return previewManagedClaudePointer(null,agentsIndexPath,version);
     default:
       return skillContent;
   }
@@ -186,15 +197,19 @@ function writeAdapterFile(
   agentsIndexPath: string
 ): HarnessAdapterWriteResult {
   const absolute = path.join(projectRoot, adapter.relPath);
-  const existing = fs.existsSync(absolute) ? fs.readFileSync(absolute, "utf8") : null;
+  // `existsSync` follows symlinks and returns false for a dangling link.
+  // Check lstat BEFORE reading or writing so an auto-upgrade cannot follow
+  // CLAUDE.md into an unrelated user file outside the project.
+  let fileStat:fs.Stats|null=null;
+  try{fileStat=fs.lstatSync(absolute);}
+  catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
+  if(adapter.kind==='claude-pointer'&&fileStat&&
+    (!fileStat.isFile()||fileStat.isSymbolicLink()))
+    throw Error('Unsafe managed Claude instructions file: '+adapter.relPath);
+  const existing = fileStat ? fs.readFileSync(absolute, "utf8") : null;
 
   if (adapter.kind === "claude-pointer" && existing) {
-    const block = generateClaudePointerBlock(
-      CANONICAL_SKILL_REL_PATH,
-      agentsIndexPath,
-      version,
-    );
-    const merged = mergeClaudePointer(existing, block);
+    const merged = previewManagedClaudePointer(existing,agentsIndexPath,version);
     if (!adapterNeedsUpdate(existing, merged, adapter.kind, version, agentsIndexPath)) {
       return {
         id: adapter.id,

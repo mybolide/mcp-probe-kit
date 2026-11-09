@@ -1,441 +1,127 @@
-import { createServer } from 'node:http';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+/** v5 read-only protocol and tool contract audit.
+ * Audits the actual installed process and exact manifest surfaces instead of
+ * calling retired v4 delegated-plan tools. The only writes are in a temporary
+ * Git fixture; no project status, user source or Gate is modified. */
+import { readFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import {
-  assertExactToolSurface,
-  deriveExpectedToolSurfaces,
-  loadToolSurfaceBaseline,
-} from './lib/tool-surface-baseline.mjs';
 
-const roots = [];
-const clients = [];
-const cleanupTasks = [];
-const results = [];
-const baseline = await loadToolSurfaceBaseline();
-const expectedSurfaces = deriveExpectedToolSurfaces(baseline);
-const phantomTools = baseline.invariants.phantomTools;
-const compactHiddenTools = baseline.groups.fullCompatibilityOnly;
+const manifest=JSON.parse(await readFile('tools-manifest.json','utf8'));
+const expected=manifest.toolsets;
+const root=await mkdtemp(join(tmpdir(),'mcp-v5-contract-audit-'));
+const entry=resolve('build/index.js');
+const checks=[];
+let client,transport;
 
-try {
-  const projectRoot = await createFixtureProject();
-  const memory = await startMemoryMock();
-
-  const compact = await connect({ toolset: 'compact', projectRoot, memory: false, apps: false });
-  const compactTools = new Set((await compact.client.listTools()).tools.map((tool) => tool.name));
-  const compactSurface = assertExactToolSurface('compact', compactTools, expectedSurfaces.compact);
-  await auditToolSet('compact', compact, compactTools, compactFixtures(projectRoot), {
-    forbiddenTextTools: [...compactHiddenTools, ...phantomTools],
+function assert(ok,message){if(!ok)throw new Error(message);}
+function record(name,passed,detail){checks.push({name,passed,detail});
+  assert(passed,'v5 tool contract '+name+': '+detail);}
+function compare(name,actual,wanted){
+  const have=new Set(actual),target=new Set(wanted);
+  const missing=[...target].filter(x=>!have.has(x));
+  const unexpected=[...have].filter(x=>!target.has(x));
+  record(name,actual.length===have.size&&missing.length===0&&unexpected.length===0,
+    JSON.stringify({actual:actual.length,expected:target.size,missing,unexpected}));
+}
+async function connect({toolset='compact',memory=false}={}){
+  const url='http://127.0.0.1:9';
+  transport=new StdioClientTransport({
+    command:process.execPath,args:[entry],cwd:process.cwd(),stderr:'pipe',
+    env:{...process.env,MCP_PROJECT_ROOT:root,MCP_TOOLSET:toolset,
+      MCP_HISTORY_SESSION:'1',MCP_DEVCONTROL_AUTOSTART:'0',
+      MCP_ENABLE_GITNEXUS_BRIDGE:'0',MCP_ENABLE_UI_APPS:'0',
+      MEMORY_QDRANT_URL:memory?url:'',MEMORY_QDRANT_COLLECTION:'audit',
+      MEMORY_EMBEDDING_URL:memory?url+'/embed':'',
+      MEMORY_EMBEDDING_MODEL:memory?'audit-embed':'',
+      MEMORY_EMBEDDING_PROVIDER:'ollama'},
   });
-
-  const compactMemory = await connect({
-    toolset: 'compact', projectRoot, memory: true, apps: false, memoryUrl: memory.url,
-  });
-  const compactMemoryTools = new Set((await compactMemory.client.listTools()).tools.map((tool) => tool.name));
-  const compactMemorySurface = assertExactToolSurface(
-    'compactWithMemory',
-    compactMemoryTools,
-    expectedSurfaces.compactWithMemory,
-  );
-  await auditMemoryTools(compactMemory, compactMemoryTools, projectRoot);
-  for (const [name, args] of memoryClosureFixtures(projectRoot)) {
-    await auditCall('compact-memory-closure', compactMemory.client, compactMemoryTools, name, args, {
-      forbiddenTextTools: [...compactHiddenTools, ...phantomTools],
-    });
-  }
-
-  const full = await connect({ toolset: 'full', projectRoot, memory: true, apps: false, memoryUrl: memory.url });
-  const fullTools = new Set((await full.client.listTools()).tools.map((tool) => tool.name));
-  const fullSurface = assertExactToolSurface('full', fullTools, expectedSurfaces.full);
-  await auditToolSet('full-compatibility', full, fullTools, fullFixtures(projectRoot), {
-    forbiddenTextTools: phantomTools,
-  });
-
-  const apps = await connect({ toolset: 'compact', projectRoot, memory: true, apps: true, memoryUrl: memory.url });
-  const rawAppTools = (await apps.client.listTools()).tools;
-  const appToolNames = new Set(rawAppTools.map((tool) => tool.name));
-  const appsSurface = assertExactToolSurface(
-    'appsModelVisible',
-    appToolNames,
-    expectedSurfaces.appsModelVisible,
-  );
-  for (const appOnlyName of expectedSurfaces.appOnly) {
-    assert(
-      !appToolNames.has(appOnlyName),
-      `Apps tools/list must not expose app-only ${appOnlyName} to the model`,
-    );
-  }
-  // The hidden action remains callable by a negotiated MCP App when it knows
-  // the action name, but it must not compete on the model-visible tool surface.
-  for (const appOnlyName of expectedSurfaces.appOnly) {
-    await auditCall('app-only', apps.client, appToolNames, appOnlyName, { limit: 20, offset: 0 }, {
-      forbiddenTextTools: phantomTools,
-    });
-  }
-
-  const legacy = await connect({ toolset: 'compact', projectRoot, memory: false, apps: false, era: 'legacy' });
-  const legacyTools = new Set((await legacy.client.listTools()).tools.map((tool) => tool.name));
-  const legacySurface = assertExactToolSurface('legacyCompact', legacyTools, expectedSurfaces.compact);
-  await auditCall('legacy-sample', legacy.client, legacyTools, 'workflow', {
-    intent: '实现审计日志功能', scenario: 'feature', project_root: projectRoot,
-  }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });
-
-  const failed = results.filter((item) => !item.passed);
-  const report = {
-    passed: failed.length === 0,
-    baseline: {
-      id: baseline.baselineId,
-      schemaVersion: baseline.schemaVersion,
-      expectedCounts: baseline.expectedCounts,
-    },
-    generatedAt: new Date().toISOString(),
-    totals: { calls: results.length, passed: results.length - failed.length, failed: failed.length },
-    surfaces: {
-      compact: compactSurface,
-      compactWithMemory: compactMemorySurface,
-      full: fullSurface,
-      appsModelVisible: appsSurface,
-      legacyCompact: legacySurface,
-      appOnly: {
-        count: expectedSurfaces.appOnly.length,
-        names: [...expectedSurfaces.appOnly].sort(),
-      },
-      uniqueCallable: {
-        count: new Set([...fullTools, ...expectedSurfaces.appOnly]).size,
-        names: [...new Set([...fullTools, ...expectedSurfaces.appOnly])].sort(),
-      },
-    },
-    results,
-  };
-  assert(
-    report.surfaces.uniqueCallable.count === baseline.expectedCounts.uniqueCallable,
-    `Unique callable count changed: ${report.surfaces.uniqueCallable.count} !== ${baseline.expectedCounts.uniqueCallable}`,
-  );
-  console.log(JSON.stringify(report, null, 2));
-  if (failed.length > 0) process.exitCode = 1;
-} finally {
-  await Promise.all(clients.splice(0).map(async ({ client, transport }) => {
-    await client.close().catch(() => undefined);
-    await transport.close().catch(() => undefined);
-  }));
-  await Promise.all(cleanupTasks.splice(0).map((task) => task()));
-  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
-}
-
-async function auditToolSet(surface, connection, visible, fixtures, options) {
-  for (const [name, args] of fixtures) {
-    assert(visible.has(name), `${surface} tools/list missing fixture tool ${name}`);
-    await auditCall(surface, connection.client, visible, name, args, options);
-  }
-}
-
-async function auditMemoryTools(connection, visible, projectRoot) {
-  const create = await auditCall('compact-memory', connection.client, visible, 'memorize_asset', {
-    name: 'Audit memory asset',
-    type: 'pattern',
-    description: 'Contract audit fixture',
-    summary: 'Validated reusable audit fixture',
-    content: 'Use contract audit fixtures to validate model-visible tool closure.\n\n【来源参考】audit/project',
-    confidence: 0.9,
-    tags: ['audit', 'contract'],
-  }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });
-  const assetId = findString(create.structured, ['id', 'asset_id', 'assetId']);
-  assert(assetId, 'memorize_asset did not return an asset id');
-
-  await auditCall('compact-memory', connection.client, visible, 'search_memory', {
-    query: 'contract audit fixture', limit: 5,
-  }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });
-  await auditCall('compact-memory', connection.client, visible, 'read_memory_asset', {
-    asset_id: assetId,
-  }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });
-  await auditCall('compact-memory', connection.client, visible, 'update_memory_asset', {
-    asset_id: assetId, summary: 'Updated audit fixture', status: 'active',
-  }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });
-  await auditCall('compact-memory', connection.client, visible, 'scan_and_extract_patterns', {
-    content: 'export function stableRetry(task) { return task(); }',
-    project_name: 'audit-project', max_patterns: 3,
-  }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });
-  await auditCall('compact-memory', connection.client, visible, 'delete_memory_asset', {
-    asset_id: assetId, confirm: true,
-  }, { forbiddenTextTools: [...compactHiddenTools, ...phantomTools] });
-}
-
-async function auditCall(surface, client, visible, name, args, options = {}) {
-  const entry = { surface, tool: name, passed: false, errors: [], references: [] };
-  try {
-    const response = await client.callTool({ name, arguments: args });
-    const text = (response.content ?? [])
-      .filter((item) => item.type === 'text')
-      .map((item) => item.text)
-      .join('\n');
-    const structured = response.structuredContent;
-    entry.isError = response.isError === true;
-    entry.textChars = text.length;
-    entry.hasStructuredContent = structured !== undefined;
-
-    if (response.isError === true) entry.errors.push('fixture returned isError=true');
-    if (!text.trim()) entry.errors.push('text guidance is empty');
-    if (structured === undefined) entry.errors.push('structuredContent is missing');
-
-    const refs = collectToolReferences(structured);
-    entry.references = refs;
-    for (const ref of refs) {
-      if (!visible.has(ref)) entry.errors.push(`structured reference is not visible: ${ref}`);
-      if (!text.includes(ref)) entry.errors.push(`structured reference missing from text: ${ref}`);
-    }
-    for (const forbidden of options.forbiddenTextTools ?? []) {
-      const escaped = escapeRegExp(forbidden);
-      const pattern = new RegExp('(?:调用|call|tool|工具)[^\\n]{0,80}\\b' + escaped + '\\b|`' + escaped + '`', 'i');
-      if (pattern.test(text)) entry.errors.push(`text exposes unavailable/phantom tool: ${forbidden}`);
-    }
-    if (findPlanSteps(structured).some((step) => step.tool === 'manual')) {
-      entry.errors.push('structured plan uses manual as a tool');
-    }
-
-    entry.passed = entry.errors.length === 0;
-    entry.structured = structured;
-    results.push(stripLarge(entry));
-    return { text, structured, response };
-  } catch (error) {
-    entry.errors.push(error instanceof Error ? error.message : String(error));
-    results.push(entry);
-    return { text: '', structured: undefined, response: undefined };
-  }
-}
-
-function compactFixtures(projectRoot) {
-  return [
-    ['init_project', { input: 'Create a small task CLI', project_name: 'audit-app', project_root: join(projectRoot, 'new-app') }],
-    ['gencommit', { changes: 'Added contract audit and tests', type: 'test' }],
-    ['git_work_report', { start_date: '2020-01-01', end_date: '2030-01-01' }],
-    ['code_review', { code: 'export const add = (a, b) => a + b;', focus: 'quality' }],
-    ['code_insight', { mode: 'query', query: 'tool registry', project_root: projectRoot }],
-    ['architecture', {
-      mode: 'assess',
-      description: 'Assess the tool registry architecture boundaries',
-      project_root: projectRoot,
-      collect_evidence: false,
-      current_facts: [{
-        statement: 'Tool Catalog, Schema and Registry are separate compatibility layers',
-        classification: 'fact',
-        evidence: ['src/server/tool-catalog.ts', 'src/server/tool-registry.ts'],
-      }],
-      structural_causes: ['Multiple compatibility surfaces require one registration contract'],
-      protected_invariants: ['Existing tool names and App-only visibility remain stable'],
-    }],
-    ['refactor', { code: 'function f(x){return x}', goal: 'Improve naming and typing' }],
-    ['gentest', { code: 'export const add = (a, b) => a + b;', framework: 'vitest' }],
-    ['workflow', { intent: '实现用户认证和审计功能', scenario: 'feature', project_root: projectRoot }],
-    ['init_project_context', { docs_dir: 'docs', project_root: projectRoot }],
-    ['estimate', { task_description: 'Add authentication and audit logs', team_size: 2 }],
-    ['check_spec', { feature_name: 'audit-feature', docs_dir: 'docs', project_root: projectRoot }],
-    ['start_feature', { feature_name: 'audit-start-feature', description: 'Add account authentication', project_root: projectRoot, spec_layout: 'flat' }],
-    ['start_bugfix', { error_message: 'GET /health returns 500', project_root: projectRoot }],
-    ['start_onboard', { project_path: projectRoot, docs_dir: 'docs' }],
-    ['start_ralph', { goal: 'Run one bounded audit iteration', max_iterations: 1, max_minutes: 1 }],
-    ['interview', { description: 'Add organization invitations', feature_name: 'org-invitations' }],
-    ['ui_design_system', { product_type: 'SaaS', description: 'Developer dashboard', stack: 'react' }],
-    ['ui_search', { mode: 'catalog', category: 'components', limit: 3 }],
-    ['start_ui', { description: 'Developer dashboard', framework: 'react', mode: 'manual', project_root: projectRoot }],
-    ['start_product', { description: 'AI developer tool catalog for teams', product_name: 'Probe Hub', product_type: 'SaaS', docs_dir: 'docs', project_root: projectRoot }],
-    ...historySessionFixtures(projectRoot),
-    ...planLifecycleFixtures(projectRoot),
-  ];
-}
-
-function historySessionFixtures(projectRoot) {
-  return [
-    ['history_session_bootstrap', {
-      project_root: projectRoot,
-      initial_user_input: 'Audit history bootstrap',
-      title: 'Contract audit',
-    }],
-    ['history_session_validate', { project_root: projectRoot, repair: true }],
-    ['history_session_search', { project_root: projectRoot, query: 'Audit', limit: 5 }],
-  ];
-}
-
-function planLifecycleFixtures(projectRoot) {
-  const plan = {
-    planId: 'contract-audit-plan', mode: 'delegated', contractVersion: '2.0.0',
-    workflow: 'feature', workflowVersion: '4.0.0-rc.2', objective: 'Audit plan lifecycle',
-    steps: [{ id: 'verify', type: 'agent_action', action: 'verify', outputs: [] }],
-    globalRules: [], completionCriteria: ['evidence complete'],
-    memoryPolicy: { recallBeforeExecution: false, extractAfterValidation: false, writeOnlyReusableKnowledge: true, allowNegativeMemory: true },
-  };
-  return [
-    ['plan_heartbeat', {
-      plan_id: plan.planId, project_root: projectRoot, plan, completed_step_ids: ['verify'],
-      last_verified_revision: 'audit-revision', unresolved_items: [],
-      evidence: [
-        { kind: 'requirements', summary: 'scope confirmed' },
-        { kind: 'spec', summary: 'spec confirmed', reference: 'audit-spec' },
-        { kind: 'implementation', summary: 'implementation confirmed', revision: 'audit-revision' },
-        { kind: 'test', summary: 'tests passed', reference: 'audit-test' },
-        { kind: 'review', summary: 'review passed', reference: 'audit-review' },
-      ],
-    }],
-    ['resume_plan', { plan_id: plan.planId, project_root: projectRoot }],
-    ['converge', { plan_id: plan.planId, project_root: projectRoot }],
-  ];
-}
-
-function memoryClosureFixtures(projectRoot) {
-  return [
-    ['workflow', { intent: '实现带历史经验复用的登录功能', scenario: 'feature', project_root: projectRoot }],
-    ['start_feature', { feature_name: 'memory-feature', description: 'Add login with reusable validation', project_root: projectRoot, spec_layout: 'flat' }],
-    ['start_ui', { description: 'Login screen', framework: 'react', mode: 'manual', project_root: projectRoot }],
-  ];
-}
-
-function fullFixtures(projectRoot) {
-  return [
-    ['add_feature', { feature_name: 'full-audit-feature', description: 'Compatibility spec fixture', docs_dir: 'docs', spec_layout: 'flat' }],
-    ['fix_bug', { error_message: 'Compatibility fixture failure', project_root: projectRoot }],
-    ['sync_ui_data', { check_only: true, verbose: false }],
-    ['ask_user', { question: 'Confirm compatibility fixture?', context: 'contract audit' }],
-  ];
-}
-
-async function connect({ toolset, projectRoot, memory, memoryUrl, apps, era = 'modern' }) {
-  const env = {
-    ...process.env,
-    MCP_PROTOCOL_MODE: 'auto',
-    MCP_TOOLSET: toolset,
-    MCP_ENABLE_GITNEXUS_BRIDGE: '0',
-    MCP_PROJECT_ROOT: projectRoot,
-    MEMORY_QDRANT_URL: memory ? memoryUrl : '',
-    MEMORY_QDRANT_COLLECTION: 'audit',
-    MEMORY_EMBEDDING_URL: memory ? `${memoryUrl}/embed` : '',
-    MEMORY_EMBEDDING_MODEL: memory ? 'audit-embed' : '',
-    MEMORY_EMBEDDING_PROVIDER: 'ollama',
-    MEMORY_REPO_ID: 'audit/project',
-    MCP_ENABLE_UI_APPS: apps ? 'true' : 'false',
-  };
-  const transport = new StdioClientTransport({
-    command: process.execPath, args: ['build/index.js'], cwd: process.cwd(), env, stderr: 'pipe',
-  });
-  const capabilities = apps
-    ? { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html;profile=mcp-app'] } } }
-    : {};
-  const client = new Client({ name: `tool-contract-${toolset}-${era}`, version: '1.0.0' }, { capabilities });
-  client.setVersionNegotiation({ mode: era === 'legacy' ? 'legacy' : { pin: '2026-07-28' } });
+  client=new Client({name:'v5-tool-audit',version:'1.0.0'},{capabilities:{}});
+  client.setVersionNegotiation({mode:{pin:'2026-07-28'}});
   await client.connect(transport);
-  clients.push({ client, transport });
-  return { client, transport };
+}
+async function close(){
+  await client?.close().catch(()=>undefined);
+  await transport?.close().catch(()=>undefined);
+  client=undefined;transport=undefined;
+}
+async function tool(name,args){
+  const r=await client.callTool({name,arguments:args});
+  record('call:'+name+':'+(args.action??'default'),
+    r.isError!==true&&r.structuredContent!==undefined&&
+      (r.content??[]).some(x=>x.type==='text'&&x.text.trim()),
+    JSON.stringify({isError:r.isError??false,hasStructured:!!r.structuredContent}));
+  return r.structuredContent;
 }
 
-async function createFixtureProject() {
-  const root = await mkdtemp(join(tmpdir(), 'mcp-tool-contract-'));
-  roots.push(root);
-  await mkdir(join(root, 'src'), { recursive: true });
-  await mkdir(join(root, 'docs', 'specs', 'audit-feature'), { recursive: true });
-  await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'audit-project', scripts: { test: 'node -e "process.exit(0)"' } }, null, 2));
-  await writeFile(join(root, 'src', 'index.ts'), 'export const health = () => true;\n');
-  await writeFile(join(root, 'docs', 'specs', 'audit-feature', 'requirements.md'), '# Requirements\n\n## FR-1\nThe audit MUST pass.\n\n### Acceptance Criteria\n- Contract report passes.\n');
-  await writeFile(join(root, 'docs', 'specs', 'audit-feature', 'design.md'), '# Design\n\n## Architecture\nUse an MCP client fixture.\n\n## FR Coverage\n| FR | Design |\n|---|---|\n| FR-1 | Contract audit |\n');
-  await writeFile(join(root, 'docs', 'specs', 'audit-feature', 'tasks.md'), '# Tasks\n\n- [x] 1. Run contract audit _Requirements: FR-1_\n');
-  spawnSync('git', ['init'], { cwd: root, stdio: 'ignore' });
-  spawnSync('git', ['config', 'user.email', 'audit@example.com'], { cwd: root });
-  spawnSync('git', ['config', 'user.name', 'Contract Audit'], { cwd: root });
-  spawnSync('git', ['add', '.'], { cwd: root });
-  spawnSync('git', ['commit', '-m', 'chore: initialize audit fixture'], { cwd: root, stdio: 'ignore' });
-  return root;
-}
+try{
+  // This is a throwaway Git project, not the user's local workspace.
+  await writeFile(join(root,'README.md'),'# v5 tool contract fixture\n');
+  execFileSync('git',['init','-q',root],{timeout:3000,windowsHide:true});
+  execFileSync('git',['-C',root,'config','user.name','Audit Fixture'],{timeout:3000});
+  execFileSync('git',['-C',root,'config','user.email','audit@example.invalid'],{timeout:3000});
+  execFileSync('git',['-C',root,'add','README.md'],{timeout:3000});
+  execFileSync('git',['-C',root,'commit','-qm','initial'],{timeout:3000});
 
-async function startMemoryMock() {
-  const points = new Map();
-  const server = createServer(async (req, res) => {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
-    const url = new URL(req.url, 'http://127.0.0.1');
-    const send = (status, data) => {
-      res.writeHead(status, { 'content-type': 'application/json' });
-      res.end(JSON.stringify(data));
-    };
-    if (url.pathname === '/embed') return send(200, { embedding: [0.1, 0.2, 0.3, 0.4] });
-    if (/\/collections\/[^/]+$/.test(url.pathname)) return send(200, { result: { status: 'green' } });
-    if (url.pathname.endsWith('/points/scroll')) {
-      return send(200, { result: { points: [...points.values()].map((point) => ({ id: point.id, payload: point.payload })), next_page_offset: null } });
-    }
-    if (url.pathname.endsWith('/points/search')) {
-      return send(200, { result: [...points.values()].map((point) => ({ id: point.id, score: 0.95, payload: point.payload })) });
-    }
-    if (url.pathname.endsWith('/points/delete')) {
-      for (const id of body.points ?? []) points.delete(String(id));
-      return send(200, { result: { status: 'completed' } });
-    }
-    const pointMatch = url.pathname.match(/\/points\/([^/]+)$/);
-    if (pointMatch && req.method === 'GET') {
-      const point = points.get(decodeURIComponent(pointMatch[1]));
-      return send(200, { result: point ? { id: point.id, payload: point.payload } : null });
-    }
-    if (url.pathname.includes('/points') && req.method === 'PUT') {
-      for (const point of body.points ?? []) points.set(String(point.id), point);
-      return send(200, { result: { status: 'completed' } });
-    }
-    return send(200, { result: true });
-  });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address();
-  const url = `http://127.0.0.1:${address.port}`;
-  cleanupTasks.push(() => new Promise((resolve) => server.close(resolve)));
-  return { url };
-}
+  record('manifest-v5',manifest.version.startsWith('5.')&&manifest.totalTools===24,
+    JSON.stringify({version:manifest.version,total:manifest.totalTools}));
+  record('model-tools-disjoint',expected.compact.tools.every(x=>
+    !expected.historyConditional.tools.includes(x)&&
+    !expected.memoryConditional.tools.includes(x))&&
+    expected.historyConditional.tools.every(x=>
+      !expected.memoryConditional.tools.includes(x)),
+    'Base, History, and Memory model tools must not overlap');
+  record('retired-delegated-plan-absent',
+    ['workflow','start_feature','resume_plan','plan_heartbeat','converge']
+      .every(x=>!expected.compact.tools.includes(x)&&
+        !expected.workflow.tools.includes(x)),
+    'Retired v4 delegated-plan tools must not return in v5');
 
-function collectToolReferences(value) {
-  const refs = new Set();
-  const visit = (node, path = []) => {
-    if (Array.isArray(node)) return node.forEach((item, index) => visit(item, [...path, String(index)]));
-    if (!node || typeof node !== 'object') return;
-    for (const [childKey, child] of Object.entries(node)) {
-      const childPath = [...path, childKey];
-      const insideHandles = childPath.includes('handles');
-      if (!insideHandles && ['tool', 'next_tool', 'firstTool'].includes(childKey) && typeof child === 'string' && child) {
-        refs.add(child);
-      }
-      visit(child, childPath);
-    }
-  };
-  visit(value);
-  return [...refs].sort();
-}
+  record('base-compact-manifest',expected.compact.tools.length===10,
+    'v5 retains 10 base tools and always adds mandatory SQLite History');
+  await connect();
+  let listed=(await client.listTools()).tools.map(x=>x.name);
+  compare('compact-with-history',listed,expected.compactWithHistory.tools);
+  const next=await tool('devcontrol',{action:'next',project_root:root,input:{}});
+  record('next-is-read-only',next?.nextTask===null||next?.nextTask===undefined,
+    'An empty project must not create or claim an unfinished task');
+  await tool('devcontrol',{action:'guide',project_root:root,input:{intent:'task'}});
+  const created=await tool('devcontrol',{action:'feature-create',project_root:root,
+    input:{name:'contract-audit',description:'Temporary feature with explicit review'}});
+  record('draft-is-not-approved',created?.status==='draft'&&created?.revision===1,
+    'Creating a feature must never imply Owner approval or Verified evidence');
+  const loaded=await tool('devcontrol',{action:'feature-get',project_root:root,
+    input:{name:'contract-audit'}});
+  record('feature-persisted',loaded?.revision===1&&loaded?.name==='contract-audit',
+    'SQLite feature/get must return exactly the previously saved draft');
+  await tool('history_session_bootstrap',{project_root:root,
+    initial_user_input:'v5 contract audit',title:'Temporary audit history'});
+  await close();
 
-function findPlanSteps(value) {
-  const found = [];
-  const visit = (node) => {
-    if (Array.isArray(node)) return node.forEach(visit);
-    if (!node || typeof node !== 'object') return;
-    if (Array.isArray(node.steps)) found.push(...node.steps.filter((step) => step && typeof step === 'object'));
-    Object.values(node).forEach(visit);
-  };
-  visit(value);
-  return found;
-}
+  await connect({memory:true});
+  listed=(await client.listTools()).tools.map(x=>x.name);
+  compare('compact-with-memory',listed,expected.compactWithHistoryAndMemory.tools);
+  await close();
 
-function findString(value, keys) {
-  if (!value || typeof value !== 'object') return '';
-  for (const key of keys) if (typeof value[key] === 'string') return value[key];
-  for (const child of Object.values(value)) {
-    const found = findString(child, keys);
-    if (found) return found;
-  }
-  return '';
-}
+  await connect({toolset:'full'});
+  listed=(await client.listTools()).tools.map(x=>x.name);
+  record('app-only-hidden',expected.appOnly.tools.every(x=>!listed.includes(x)),
+    'App-only tools must not appear as regular model tools');
+  record('full-current-version',listed.length===24&&listed.includes('devcontrol'),
+    'The full v5 surface must contain 24 active tools');
+  // The full group declares a count, while its exact membership is the union
+  // of base/History/Memory and active compatibility-only entries.
+  const permitted=new Set([...expected.compactWithHistoryAndMemory.tools,
+    ...expected.core.tools,...expected.ui.tools,...expected.workflow.tools]);
+  compare('full-v5-tools',listed,[...permitted]);
+  await close();
 
-function stripLarge(entry) {
-  const { structured, ...rest } = entry;
-  return rest;
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
+  console.log(JSON.stringify({passed:true,version:manifest.version,
+    totals:{checks:checks.length,failed:0},checks},null,2));
+} finally {
+  await close();
+  await rm(root,{recursive:true,force:true});
 }

@@ -237,6 +237,10 @@ export function dispatchDevControl(
     case "complete": return ledger.complete(
       String(input.id), String(input.leaseToken), input as CompletionReport,
     );
+    case "submit": return ledger.submit(
+      String(input.id),String(input.leaseToken),input as CompletionReport & {
+        kind:string;reference:string;
+      });
     case "review-handoff": return ledger.handoffReview(String(input.id),{
       leaseToken:input.leaseToken,explicitAuthorization:input.explicitAuthorization===true,
       actor:String(input.actor??''),reason:String(input.reason??''),
@@ -296,6 +300,18 @@ export function dispatchDevControl(
       reason:String(input.reason??''),ttlSeconds:Number(input.ttlSeconds??1800),
       preserveExistingWorktree:input.preserveExistingWorktree===true,
       rebaselineLegacyRepositories:input.rebaselineLegacyRepositories===true,
+    });
+    case "resume-session": return ledger.resumeSession(String(input.id),{
+      actor:String(input.actor??''),reason:String(input.reason??''),
+      ttlSeconds:Number(input.ttlSeconds??1800),
+    });
+    case "recover-review": return ledger.recoverReview(String(input.id),{
+      actor:String(input.actor??''),reason:String(input.reason??''),
+    });
+    case "reopen-for-rework": return ledger.reopenForRework(String(input.id),{
+      actor:String(input.actor??''),reason:String(input.reason??''),
+      reviewToken:typeof input.reviewToken==='string'?input.reviewToken:undefined,
+      explicitAuthorization:input.explicitAuthorization===true,
     });
     case "refresh-protected-worktree": return ledger.refreshProtectedWorktree(
       String(input.id),{

@@ -40,6 +40,23 @@ describe('release readiness', () => {
     expect(report.passed).toBe(true);
   });
 
+  it('v5 拒绝已经删除的旧版工具数量和 Node20 要求', () => {
+    const root=createFixture({version:'5.0.0',serverVersion:'2.4.0',includeMigration:true});
+    const manifestPath=path.join(root,'tools-manifest.json');
+    const manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
+    manifest.toolsets.compact.count=24;
+    manifest.toolsets.full.count=39;
+    fs.writeFileSync(manifestPath,JSON.stringify(manifest));
+    const pkgPath=path.join(root,'package.json');
+    const pkg=JSON.parse(fs.readFileSync(pkgPath,'utf8'));
+    pkg.engines.node='>=20.0.0';
+    fs.writeFileSync(pkgPath,JSON.stringify(pkg));
+    const report=verifyReleaseReadiness(root);
+    expect(report.passed).toBe(false);
+    for(const id of ['node-engine','compact-tool-surface','full-compatibility-surface'])
+      expect(report.checks.find(item=>item.id===id)?.passed).toBe(false);
+  });
+
   it('未经支持的主版本不能悄悄通过版本闸门', () => {
     const root = createFixture({
       version: '6.0.0',
@@ -154,6 +171,7 @@ function createFixture(options: {
   legacyNpmToken?: boolean;
   omitBuildClean?: boolean;
 }): string {
+  const v5=options.version.startsWith('5.');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-release-readiness-'));
   temporaryDirectories.push(root);
   fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
@@ -170,7 +188,7 @@ function createFixture(options: {
   };
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
     version: options.version,
-    engines: { node: '>=20.0.0' },
+    engines: { node: v5 ? '>=22.0.0' : '>=20.0.0' },
     dependencies,
     devDependencies: {
       '@modelcontextprotocol/ext-apps': '1.7.2',
@@ -193,7 +211,8 @@ function createFixture(options: {
   }));
   fs.writeFileSync(
     path.join(root, 'README.md'),
-    '29 model-visible tools by default; 35 when Memory is also configured; 39-tool compatibility surface',
+    v5 ? '15 model-visible tools by default; 21 when Memory is also configured; 24-tool compatibility surface' :
+      '29 model-visible tools by default; 35 when Memory is also configured; 39-tool compatibility surface',
     'utf8',
   );
   fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
@@ -225,23 +244,29 @@ function createFixture(options: {
     'search_memory', 'read_memory_asset', 'memorize_asset',
     'update_memory_asset', 'delete_memory_asset', 'scan_and_extract_patterns',
   ];
+  const v5CompactTools=[
+    'devcontrol','code_insight','architecture','gentest','code_review',
+    'refactor','gencommit','git_work_report','ui_design_system','ui_search',
+  ];
+  const baseTools=v5?v5CompactTools:compactTools;
   fs.writeFileSync(path.join(root, 'tools-manifest.json'), JSON.stringify({
     version: options.version,
     structuredOutput: { version: options.version },
-    totalTools: 39,
+    totalTools: v5 ? 24 : 39,
     toolsets: {
-      compact: { count: 24, tools: compactTools },
-      compactWithHistory: { count: 29, tools: [...compactTools, ...historyTools] },
-      compactWithMemory: { count: 30, tools: [...compactTools, ...memoryTools] },
+      compact: { count: baseTools.length, tools: baseTools },
+      compactWithHistory: { count: baseTools.length+historyTools.length, tools: [...baseTools, ...historyTools] },
+      compactWithMemory: { count: baseTools.length+memoryTools.length, tools: [...baseTools, ...memoryTools] },
       compactWithHistoryAndMemory: {
-        count: 35,
-        tools: [...compactTools, ...historyTools, ...memoryTools],
+        count: baseTools.length+historyTools.length+memoryTools.length,
+        tools: [...baseTools, ...historyTools, ...memoryTools],
       },
       historyConditional: { count: 5, tools: historyTools },
       memoryConditional: { count: 6, tools: memoryTools },
       appOnly: { count: 1, tools: ['list_memory_assets'] },
-      workflow: { tools: ['plan_heartbeat', 'resume_plan', 'converge'] },
-      full: { count: 39 },
+      workflow: { tools: v5 ? ['devcontrol','code_review','gencommit','architecture'] :
+        ['plan_heartbeat', 'resume_plan', 'converge'] },
+      full: { count: v5 ? 24 : 39 },
     },
   }));
   if (!options.omitBuildClean) {
@@ -280,7 +305,7 @@ function createFixture(options: {
   );
   fs.writeFileSync(
     path.join(root, '.github/workflows/release.yml'),
-    'node-version: "20"\nnode-version: "24"\nnpm@11.18.0\nid-token: write\npackage-manager-cache: false\nnpm run release:verify\nubuntu-latest\nmacos-latest\nwindows-latest\nnpm run smoke:gitnexus-sidecar\nneeds: [build, gitnexus-sidecar]\nnpm publish --tag\nprerelease:\npublish_mcp_registry\n' +
+    `${v5 ? 'node-version: "22"' : 'node-version: "20"'}\nnode-version: "24"\nnpm@11.18.0\nid-token: write\npackage-manager-cache: false\nnpm run release:verify\nubuntu-latest\nmacos-latest\nwindows-latest\nnpm run smoke:gitnexus-sidecar\nneeds: [build, gitnexus-sidecar]\nnpm publish --tag\nprerelease:\npublish_mcp_registry\n` +
       (options.legacyNpmToken ? 'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}\n' : '')
   );
   fs.writeFileSync(
@@ -289,7 +314,7 @@ function createFixture(options: {
   );
   fs.writeFileSync(
     path.join(root, '.github/workflows/ci.yml'),
-    'node-version: "20"\nnode-version: "22"\nnpm run release:verify\nubuntu-latest\nmacos-latest\nwindows-latest\nnpm run smoke:gitnexus-sidecar\n'
+    `${v5 ? 'node-version: "22"' : 'node-version: "20"'}\nnode-version: "22"\nnpm run release:verify\nubuntu-latest\nmacos-latest\nwindows-latest\nnpm run smoke:gitnexus-sidecar\n`
   );
   if (options.includeMigration) {
     fs.writeFileSync(path.join(root, 'docs/migration-v3-to-v4.md'), 'migration');

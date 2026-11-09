@@ -23,6 +23,7 @@
   </nav>
   <div class="sidefooter"><div class="status"><span class="pulse" aria-hidden="true"></span>本地工作台</div>
     <p>mcp-probe-kit <span id="footer-version">v—</span> · SQLite</p>
+    <p id="footer-build" aria-label="当前 MCP 运行包构建及指导修订">读取运行构建…</p>
     <div class="sidefooter-links" aria-label="项目资源">
       <button type="button" class="sidefooter-link" data-go="docs" id="sidebar-docs">项目文档 <span aria-hidden="true">↗</span></button>
       <a class="sidefooter-link" id="sidebar-github" href="https://github.com/mybolide/mcp-probe-kit" target="_blank" rel="noopener noreferrer" aria-label="在 GitHub 新窗口查看 mcp-probe-kit 源码">GitHub 仓库 <span aria-hidden="true">↗</span></a>
@@ -297,6 +298,7 @@
       </div>
       <aside class="settings-aside">
         <section class="panel"><div class="panelhead"><h2>当前项目</h2></div><div id="settings-status" class="settings-rows" aria-live="polite"><p class="sub">读取中…</p></div></section>
+        <div class="settings-help"><strong>实际 MCP 运行版本</strong><p id="settings-runtime" role="status">正在读取构建信息…</p><p>此处显示当前工作台进程实际加载的构建，不代表 GitHub 远端已同步，也不代表 npm 包已发布。</p></div>
         <div class="settings-help"><strong>配置优先级</strong><p>已在 MCP 客户端的 mcpServers.env 中设置的变量优先生效；这里保存的项目覆盖配置不会擅自修改 Cursor、Claude、ChatGPT 等客户端文件。只有本机可修改，局域网工作台只读。</p></div>
       </aside>
     </div>

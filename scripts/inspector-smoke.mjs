@@ -13,26 +13,37 @@ const compact = runInspector('compact', COMPACT_WITH_HISTORY_TOOL_COUNT);
 const full = runInspector('full', FULL_TOOL_COUNT);
 
 for (const required of [
-  'workflow',
-  'start_feature',
-  'start_product',
+  'devcontrol',
+  'architecture',
+  'history_session_bootstrap',
   'gencommit',
-  'plan_heartbeat',
-  'resume_plan',
-  'converge',
 ]) {
   assert(compact.modelNames.includes(required), `compact tools/list missing ${required}`);
 }
-for (const hidden of ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user']) {
+for (const hidden of ['workflow','start_feature','plan_heartbeat','resume_plan','converge']) {
   assert(
     !compact.modelNames.includes(hidden),
-    `compact model surface unexpectedly includes ${hidden}`,
+    `compact v5 model surface still includes retired ${hidden}`,
   );
   assert(
-    full.modelNames.includes(hidden),
-    `full compatibility model surface missing ${hidden}`,
+    !full.modelNames.includes(hidden),
+    `full v5 model surface re-exposed retired ${hidden}`,
   );
 }
+const exact=(actual,expected,label)=>{
+  const a=new Set(actual),e=new Set(expected);
+  assert(a.size===actual.length&&a.size===e.size&&
+    [...a].every(name=>e.has(name)),
+    `${label} tools/list must exactly match the v5 manifest`);
+};
+exact(compact.modelNames,toolManifest.toolsets.compactWithHistory.tools,'compact');
+const fullExpected=new Set([
+  ...toolManifest.toolsets.compactWithHistoryAndMemory.tools,
+  ...toolManifest.toolsets.workflow.tools,
+  ...toolManifest.toolsets.core.tools,
+  ...toolManifest.toolsets.ui.tools,
+]);
+exact(full.modelNames,[...fullExpected],'full');
 assert(
   registeredAppOnly.length === 1 && registeredAppOnly[0] === 'list_memory_assets',
   `manifest app-only registry mismatch: ${JSON.stringify(registeredAppOnly)}`,
@@ -63,13 +74,10 @@ console.log(JSON.stringify({
   },
   registeredAppOnly,
   coreTools: [
-    'workflow',
-    'start_feature',
-    'start_product',
+    'devcontrol',
+    'architecture',
     'gencommit',
-    'plan_heartbeat',
-    'resume_plan',
-    'converge',
+    'history_session_bootstrap',
   ],
   serverStarted: compact.stderr.includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
 }, null, 2));

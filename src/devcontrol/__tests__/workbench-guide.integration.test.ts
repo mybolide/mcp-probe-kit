@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { createDevControlBoardServer } from '../board-server.js';
 import { ProjectTaskLedger } from '../task-ledger.js';
 import { VERSION } from '../../version.js';
+import { SKILL_GUIDANCE_REVISION } from '../../lib/workflow-skill-version.js';
 
 const tempRoots:string[]=[];
 afterEach(()=>{for(const p of tempRoots.splice(0))rmSync(p,{recursive:true,force:true});});
@@ -114,13 +115,21 @@ describe('DevControl v5 browser guide and settings API',()=>{
       expect(html).toContain('data-view="settings"');
       expect(html).toContain('data-view="guide"');
       expect(html).toContain('content="light"');
+      expect(html).toContain('id="settings-runtime"');
+      expect(html).toContain('id="footer-build"');
       const meta=await (await fetch(base+'/api/meta')).json() as {
-        schema:string;version:string;product:string;workspaceSchemaVersion:string
+        schema:string;version:string;product:string;workspaceSchemaVersion:string;
+        guidanceRevision:string;buildCommit:string|null;builtAt:string|null;
+        buildDirty:boolean|null
       };
       expect(meta.schema).toBe('devcontrol-project-workspace');
       expect(meta.product).toBe('mcp-probe-kit');
       expect(meta.version).toBe(VERSION);
       expect(meta.workspaceSchemaVersion).toBe('0.12.0');
+      expect(meta.guidanceRevision).toBe(SKILL_GUIDANCE_REVISION);
+      expect(meta.buildCommit).toBe(null);
+      expect(meta.builtAt).toBe(null);
+      expect(meta.buildDirty).toBe(null);
       const access=await (await fetch(base+'/api/access')).json() as {
         lanEnabled:boolean;canManageSettings:boolean;
       };

@@ -5,9 +5,12 @@
  * and the previous committed AGENTS.md are exempt from a task lease.
  */
 import { spawnSync } from "node:child_process";
+import { createHash } from 'node:crypto';
 import fs from "node:fs";
 import path from "node:path";
 import { previewManagedGuidanceSync } from "../lib/workflow-skill-installer.js";
+import { previewManagedClaudePointer } from '../lib/harness-adapters.js';
+import { resolveProjectContextLayout } from '../lib/project-context-layout.js';
 import { MCP_PROBE_SKILL_REL_PATH } from "../lib/workflow-skill-template.js";
 import {
   CLI_CMD_REL_PATH, CLI_POWERSHELL_REL_PATH, CLI_SHELL_REL_PATH,
@@ -16,8 +19,18 @@ import {
 } from "../lib/cli-fallback-installer.js";
 import { VERSION } from "../version.js";
 
-const managedPaths=new Set([MCP_PROBE_SKILL_REL_PATH,"AGENTS.md"]);
+const managedPaths=new Set([MCP_PROBE_SKILL_REL_PATH,"AGENTS.md","CLAUDE.md"]);
 export function isManagedGuidancePath(path:string):boolean{return managedPaths.has(path);}
+
+/** CLAUDE.md mixes user-owned instructions and a generated pointer. Only
+ * bytes derived from the previous committed user text are trusted. Merely
+ * containing an MCP marker never exempts manual edits or a forged pointer. */
+function canonicalManagedGuidance(root:string,file:string,
+  generated:{skill:string;agents:string},priorClaude:string|null):string{
+  if(file==='CLAUDE.md')return previewManagedClaudePointer(
+    priorClaude,resolveProjectContextLayout(root).indexPath);
+  return file==='AGENTS.md'?generated.agents:generated.skill;
+}
 
 const managedCliPaths=new Set([
   CLI_CMD_REL_PATH,CLI_POWERSHELL_REL_PATH,CLI_SHELL_REL_PATH,
@@ -124,6 +137,7 @@ export function trustedUncommittedGuidance(root:string,files:readonly string[]):
   const candidates=files.filter(isManagedGuidancePath);
   if(!candidates.length)return [];
   const committed=gitRead(root,["show","HEAD:AGENTS.md"]);
+  const originalClaude=gitRead(root,['show','HEAD:CLAUDE.md']);
   let generated:{skill:string;agents:string};
   try{generated=previewManagedGuidanceSync(root,committed.ok?committed.text:null);}
   catch{return [];}
@@ -132,7 +146,8 @@ export function trustedUncommittedGuidance(root:string,files:readonly string[]):
       const location=path.resolve(root,file);
       const stat=fs.lstatSync(location);
       if(!stat.isFile()||stat.isSymbolicLink())return false;
-      const expected=file==="AGENTS.md"?generated.agents:generated.skill;
+      const expected=canonicalManagedGuidance(root,file,generated,
+        originalClaude.ok?originalClaude.text:null);
       return fs.readFileSync(location,"utf8")===expected;
     }catch{return false;}
   });
@@ -156,10 +171,12 @@ export function trustedCommittedGuidance(root:string,base:string,delivery:string
       isManagedGuidancePath(file)&&!ignoredPaths.has(file));
     if(!managed.length)continue;
     const old=gitRead(root,['show',parent.text.trim()+':AGENTS.md']);
+    const oldClaude=gitRead(root,['show',parent.text.trim()+':CLAUDE.md']);
     const generated=previewManagedGuidanceSync(root,old.ok?old.text:null);
     for(const file of managed){
       const candidate=gitRead(root,['show',commit+':'+file]);
-      const expected=file==='AGENTS.md'?generated.agents:generated.skill;
+      const expected=canonicalManagedGuidance(root,file,generated,
+        oldClaude.ok?oldClaude.text:null);
       if(!candidate.ok||candidate.text!==expected)
         throw Error('Committed managed guidance does not match its canonical generator: '+file);
       trusted.add(file);
@@ -177,6 +194,7 @@ export function checkManagedGuidanceCommit(root:string,stagedFiles:readonly stri
 
   const issues:string[]=[];
   const headAgents=gitRead(root,["show","HEAD:AGENTS.md"]);
+  const headClaude=gitRead(root,['show','HEAD:CLAUDE.md']);
   const canonical=previewManagedGuidanceSync(root,headAgents.ok?headAgents.text:null);
   for(const file of managedFiles){
     const mode=gitRead(root,["ls-files","--stage","--",file]);
@@ -185,9 +203,13 @@ export function checkManagedGuidanceCommit(root:string,stagedFiles:readonly stri
       continue;
     }
     const staged=gitRead(root,["show",":"+file]);
-    const expected=file==="AGENTS.md"?canonical.agents:canonical.skill;
-    if(!staged.ok||staged.text!==expected)
-      issues.push(file+": staged content differs from the tool-generated guidance; custom changes require an approved task");
+    const expected=canonicalManagedGuidance(root,file,canonical,
+      headClaude.ok?headClaude.text:null);
+    if(!staged.ok||staged.text!==expected){
+      const digest=(value:string)=>createHash('sha256').update(value).digest('hex').slice(0,12);
+      issues.push(file+": staged content differs from the tool-generated guidance; custom changes require an approved task"+
+        ` (expected ${digest(expected)}, staged ${staged.ok?digest(staged.text):'unreadable'})`);
+    }
   }
   for(const file of unique)if(!managedPaths.has(file))
     issues.push(file+": not a managed guidance file; approved task lease required");

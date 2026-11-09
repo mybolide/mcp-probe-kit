@@ -45,7 +45,7 @@ try {
     configuration: { coldRounds, hotCalls, concurrentClients, concurrentCalls },
     totals: {
       scenarios: timings.length,
-      workflowCalls: coldRounds * 2 + hotCalls + concurrentClients * concurrentCalls + 1,
+      devcontrolCalls: coldRounds * 2 + hotCalls + concurrentClients * concurrentCalls + 1,
       failures: 0,
     },
     latencyMs: {
@@ -76,15 +76,17 @@ async function runSession({ era, calls, extraEnv = {} }) {
 
     for (let index = 0; index < calls; index += 1) {
       const result = await session.client.callTool({
-        name: 'workflow',
+        name: 'devcontrol',
         arguments: {
-          intent: `开发稳定 RC 能力 ${index + 1}，覆盖双协议、Agent 路由和发布验证`,
-          scenario: 'feature',
+          action: 'next',
           project_root: projectRoot,
+          input: {},
         },
       });
-      assert(result.isError !== true, `${era} workflow call ${index + 1} failed`);
-      assert(result.structuredContent?.firstTool === 'start_feature', `${era} workflow route mismatch`);
+      assert(result.isError !== true&&result.structuredContent!==undefined,
+        `${era} devcontrol next call ${index + 1} failed`);
+      assert(!result.structuredContent?.nextTask,
+        `${era} next manufactured unapproved work`);
     }
     assert(session.stderr().includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`), `${era} startup marker missing`);
   } finally {
@@ -107,16 +109,20 @@ async function runMemoryDegradation() {
   try {
     const startedAt = performance.now();
     const result = await session.client.callTool({
-      name: 'start_feature',
+      name: 'devcontrol',
       arguments: {
-        feature_name: 'memory-degradation-stability',
-        description: '开发一个简单功能并验证 Memory 服务不可用时仍能生成 delegated plan',
+        action: 'feature-create',
         project_root: projectRoot,
+        input: {
+          name: 'memory-degradation-stability',
+          description: 'A draft must be saved even when optional Memory is unreachable',
+        },
       },
     });
     const durationMs = Math.round(performance.now() - startedAt);
-    assert(result.isError !== true, 'Memory degradation blocked start_feature');
-    assert(result.structuredContent?.metadata?.plan?.workflow === 'feature', 'Memory degradation lost feature plan');
+    assert(result.isError !== true, 'Memory degradation blocked a real v5 draft');
+    assert(result.structuredContent?.status === 'draft',
+      'Memory degradation unexpectedly approved a draft or lost the SQLite Feature');
     assert(durationMs < 10_000, `Memory degradation exceeded 10s: ${durationMs}ms`);
   } finally {
     await session.close();
@@ -151,6 +157,7 @@ async function connect({ era, serverMode, projectRoot, extraEnv = {} }) {
       MCP_PROTOCOL_MODE: serverMode,
       MCP_PROJECT_ROOT: projectRoot,
       MCP_ENABLE_GITNEXUS_BRIDGE: '0',
+      MCP_DEVCONTROL_AUTOSTART: '0',
     },
     stderr: 'pipe',
   });

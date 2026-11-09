@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **74 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **118 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -155,7 +155,7 @@ node /ABSOLUTE/PATH/mcp-probe-kit/build/index.js devcontrol verify --project-roo
 
 The Web workbench reads actual Git/SQLite project data. On Node22+ Git projects it normally starts with the main MCP server on local port `38180`, reuses the same project's persisted port when safe, and avoids terminating unknown listeners. `devcontrol workspace-status` reports its address. `devcontrol lan-enable` and `lan-disable` control optional trusted-LAN viewing. The LAN mode is **unauthenticated HTTP** and should never be port-forwarded to the public Internet. Browser pages are read-only; approvals and writes run through the validated CLI/MCP operations.
 
-The optional separate `devcontrol serve` MCP stdio interface is **not silently added to the main compact toolset**. The main v5 MCP exposes 15 model tools by default (including SQLite History), 21 with Memory, and 24 in full mode, plus one App-only tool. DevControl is one of those model tools; its 74 action values are not separate MCP tool registrations.
+The optional separate `devcontrol serve` MCP stdio interface is **not silently added to the main compact toolset**. The main v5 MCP exposes 15 model tools by default (including SQLite History), 21 with Memory, and 24 in full mode, plus one App-only tool. DevControl is one of those model tools; its 118 action values are not separate MCP tool registrations.
 
 Node.js 20+ remains sufficient for the legacy/non-DevControl tools; DevControl and the SQLite History default need Node.js 22+ with the built-in SQLite module. Local Git Hook checks and owner labels are not a security boundary stronger than the current machine. Physical-device, real HTTP integration and complete release E2E gates must use genuine test runners; unavailable gates must remain Not Run or failed, not silently passed.
 

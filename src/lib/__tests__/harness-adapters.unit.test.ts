@@ -66,11 +66,15 @@ describe("harness-adapters", () => {
     }
     expect(generated[0]).toContain("history_session_bootstrap");
     expect(generated[0]).toContain('`verify` acceptance object');
+    expect(generated[0]).toContain('action=`submit`');
+    expect(generated[0]).toContain('never passes a Gate');
     expect(generated[0]).toContain('Legacy review actions are for historical receipts only');
     expect(generated[0]).not.toContain('`reviewMode=self`');
     expect(generated[1]).toContain("history_session_bootstrap");
     expect(generated[1]).toContain('`verify` acceptance object');
-    expect(generated[1]).toContain('legacy review actions apply only to historical receipts');
+    expect(generated[1]).toContain('action=`submit`');
+    expect(generated[1]).toContain('never passes a Gate');
+    expect(generated[1]).toContain('review actions remain available for exceptional or historical receipts');
     expect(generated[1]).not.toContain('`reviewMode=self`');
     expect(generated[1]).toContain(originalClaude.trim());
 
@@ -113,6 +117,8 @@ describe("harness-adapters", () => {
     expect(content).toContain("`history_session_bootstrap`");
     expect(content).toContain("`devcontrol`");
     expect(content).toContain("`execution-contract`");
+    expect(content).toContain('action=`submit`');
+    expect(content).toContain('session-resume-r44');
     for (const forbidden of ["resume_plan", "plan_heartbeat", "start_*", "converge", "--project-root ."]) {
       expect(content).not.toContain(forbidden);
     }
@@ -122,6 +128,38 @@ describe("harness-adapters", () => {
     const second = ensureHarnessAdapters(root, skill, "AGENTS.md", environment);
     expect(second.adapters[0]?.skipped).toBe(true);
     expect(fs.readFileSync(path.join(root, "CLAUDE.md"), "utf8")).toBe(content);
+
+    // Same package version, but old guidance marker/body must be upgraded.
+    const oldPointer=content.replace('session-resume-r44','efficient-submit-r42')
+      .replace(/- Use `devcontrol` for formal development work\.[^\n]*/,
+        '- Use `devcontrol` for formal development work. Directly verify old receipts.');
+    fs.writeFileSync(path.join(root,'CLAUDE.md'),oldPointer,'utf8');
+    const third=ensureHarnessAdapters(root,skill,'AGENTS.md',environment);
+    expect(third.adapters[0]?.updated).toBe(true);
+    const refreshed=fs.readFileSync(path.join(root,'CLAUDE.md'),'utf8');
+    expect(refreshed).toBe(content);
+    expect(refreshed).toContain('keep-me');
+  });
+
+  test.skipIf(process.platform==='win32')('拒绝已存在或悬空的 CLAUDE.md 软链，不越界覆盖用户文件',()=>{
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),'harness-claude-symlink-'));
+    const outside=fs.mkdtempSync(path.join(os.tmpdir(),'harness-claude-target-'));
+    tempDirs.push(root,outside);
+    fs.mkdirSync(path.join(root,'.claude'));
+    const target=path.join(outside,'instructions.md');
+    const link=path.join(root,'CLAUDE.md');
+    fs.writeFileSync(target,'# User instructions must not be overwritten\n');
+    fs.symlinkSync(target,link);
+    const skill=generateWorkflowSkillContent(VERSION);
+    expect(()=>ensureHarnessAdapters(root,skill,'AGENTS.md',{}))
+      .toThrow(/Unsafe managed Claude instructions/);
+    expect(fs.readFileSync(target,'utf8')).toBe('# User instructions must not be overwritten\n');
+    fs.unlinkSync(link);
+    fs.unlinkSync(target);
+    fs.symlinkSync(target,link);
+    expect(()=>ensureHarnessAdapters(root,skill,'AGENTS.md',{}))
+      .toThrow(/Unsafe managed Claude instructions/);
+    expect(fs.existsSync(target)).toBe(false);
   });
 
   test("patchLayoutManifestHarness 保留 generatedAt 且无变化时不写盘", () => {

@@ -157,6 +157,21 @@ try {
      }
      v.reviewLoaded=reviewLoaded;
    }
+   if(view==='settings'){
+     // Guard against an old installed MCP binary still serving a new UI.
+     // The visible status must be populated from the live server identity.
+     for(let k=0;k<30;k++){
+       v.runtimeIdentity=await evalJS(`(()=>{
+         const text=document.getElementById('settings-runtime')?.textContent||'';
+         const footer=document.getElementById('footer-build')?.textContent||'';
+         return {text,footer,ok:/v\\d+\\.\\d+\\.\\d+/.test(text)&&
+           /构建 [a-f0-9]{9}/i.test(text)&&/指导 r\\d+/.test(text)&&
+           /运行构建 [a-f0-9]{9}/i.test(footer)};
+       })()`);
+       if(v.runtimeIdentity.ok)break;
+       await sleep(100);
+     }
+   }
    // Every destination must meet the same human-readable type scale.
    // Check computed browser fonts, not just authored CSS declarations.
    // Optional data cards are only checked when the real project has them.
@@ -388,6 +403,7 @@ try {
  ||v.mainRight<v.width-3 ||(v.view==='overview'&&!v.hasPlanning)
  ||(v.readability&&v.readability.some(item=>!item.ok))
  ||(v.view==='architecture'&&!v.hasArchChanges)
+ ||(v.view==='settings'&&!v.runtimeIdentity?.ok)
  ||(v.view==='tasks'&&(!v.hasTaskTitle||!v.taskFilterReady))
  ||(v.view==='tasks'&&(
    !v.taskTypography?.consistent||

@@ -1,10 +1,18 @@
-# MCP Probe Kit v5：让 Agent 不必记住 83 个 action
+# MCP Probe Kit v5：让 Agent 不必记住 118 个 action
 
 > **状态**：v5.0.0 源码开发分支，尚未发布 npm / MCP Registry；公开稳定版仍为 v4.1.1。Node.js 22+ 与真实 Git 业务项目是 v5 研发管理的基本条件。
 >
-> **一句话**：对 Agent 而言只有 **一个正式研发管理 MCP 工具 `devcontrol`**；其中 `guide` 是**只读导航入口**，其他 82 个是业务操作。Agent 按意图先导航，再按 SQLite 冻结合同执行；不需要死记参数、也不在 MCP 层执行任何业务项目的测试。
+> **一句话**：对 Agent 而言只有 **一个正式研发管理 MCP 工具 `devcontrol`**；其中 `guide` 是**只读导航入口**，其他 117 个是业务操作。Agent 按意图先导航，再按 SQLite 冻结合同执行；不需要死记参数、也不在 MCP 层执行任何业务项目的测试。
 
-## 如何避免 83 个 action 造成工具选择困难？
+## Session 中断、Review 和 Writer 如何恢复
+
+正常提交 Git 代码并登记同版本测试证据后，`submit` 或旧版 `complete + report` 将任务转入 `in_review`，返回独立的 `reviewToken`，释放原 Git Writer。后续其他已批准且不重叠的任务可以继续开发。旧版 `leaseToken` 验收仍兼容。验收不会由 MCP 自动通过。
+
+新的 ChatGPT Session 先读取 `next.sessionRecoveryCandidates` 和 `task-closure-status`。如果原会话已经过期且 Git 状态安全，`resume-session` 可以恢复原 `in_progress` 开发，或恢复 `in_review` 的独立审查权限。只有 Review 明确失败、交付已失效或 Owner 明确要求返工，才使用 `reopen-for-rework` 生成新的 Git 基线与开发版本。旧 completion、evidence、Gate 和审计记录仍在 SQLite 中；再次提交后必须重新验证。
+
+`park-expired-writer` 现在可以处理已完成交付的过期旧 `in_review` Writer，不必虚构一个 successor；未完成开发仍要求安全交接。冲突响应返回 `nextActions`，不会删除工作树、自动抢占活跃 Writer 或跳过真实测试。
+
+## 如何避免 118 个 action 造成工具选择困难？
 
 当 Agent 不知道下一步使用哪个动作时，先调用：
 
@@ -46,7 +54,7 @@
 4. **拆解**：`feature-task-brief` → `feature-task-review` / `feature-task-stage` / `feature-task-propose`，阶段与父任务仅负责组织，每个叶子任务**只有一个可独立验证的目标**，写清文件范围、依赖、正反测试、证据、不做事项与停止条件。新 Feature 叶子任务建议 30–60 分钟，1–2 小时须说明为什么不能安全拆分，超过 2 小时须继续拆分；旧冻结任务不能直接重写。
 5. **严格分轮复审**：第一轮完成 `feature-task-review` / `feature-task-propose`，保存提案和精确 Hash，结束规划轮次。下一轮必须重新读取已保存的提案，从需求覆盖、依赖、失败场景、文件范围和验收依据重新检查，调用 `feature-task-second-review` 将审阅结果与 Hash 单独存入 SQLite。通过后才能 `feature-task-approve`。同一个开发 Agent 可以执行两个轮次，**不需要另设审核 Agent**，但不能把规划和二次 Review 放在同一轮里。普通子任务不用逐条申请 Owner；新版本范围、重大变更和冻结范围扩展仍需 Owner 明确授权。未经计划确认的草稿可以查看，但**不得领取开发**。
 6. **实施**：`next` → `execution-contract` → `claim`，Agent 只修改受批准路径，使用 Git 提交真实修改。
-7. **验收**：开发 AI 真实测试并提交原始 Git 和报告，随后调用一次带完整 acceptance 的 verify。DevControl 只负责检查冻结任务、全部 Gate 证据和 Verified 依赖。旧 review-handoff、gate-review 仅为兼容，不要求另一个 Agent。
+7. **验收**：开发 AI 真实测试并提交原始 Git，普通任务随后用一次 \`submit\` 同时登记完整说明、真实测试类型及报告引用，进入 in_review。此操作独立检查 Git 冻结范围，写入失败时全部回滚，不会通过任何 Gate。再调用一次带完整 acceptance 的 \`verify\`，由 DevControl 检查冻结任务、所有真实 Gate 证据和 Verified 依赖。特殊延期和旧任务继续使用独立 \`complete\` / \`report\`，不要求额外审核 Agent。
 8. **Writer 不中断研发**：租约过期只是活动提示。原任务持有效令牌且冻结文件范围、Git 索引安全时可以继续；会话丢失后通过 claim 或 recover-task 恢复，保留原冻结 Git 基线。根规划 Git 仓库和多个独立子 Git 仓库可由不同的已批准且互不冲突任务并行写入，next 优先返回可执行任务，不再被一个无关过期 Writer 全局阻断。并行暂存时使用 check 并传入准确任务 id。真正共享 Git 索引、文件范围重叠或工作树证据不可信仍须安全恢复；Owner 授权的隔离或停放只用于这些实际冲突，不用于日常跨仓库继续开发。
 9. **延期验收**：defer-verification 保存原始提交并释放任务，真实设备恢复后通过 resume-verification 补录真实测试，再一次 verify 记录全部验收。不可用的 Gate 不算通过，其他无依赖任务可以继续开发。
 10. **History 交接**：`history_session_checkpoint` 保存用户原话、决策、Commit、测试、租约和下一步，但不能代替 DevControl 的任务交接、审核或 Verified。
@@ -55,7 +63,11 @@
 
 MCP 每次启动在识别目标 Git 项目时检查 `.agents/skills/mcp-probe-kit/SKILL.md` 与 `AGENTS.md` 的 MCP 托管区。**即使包版本号仍是 5.0.0**，指导修订号过期也会更新；重复启动无变化则不改写，用户自己的 AGENTS.md 规则不会被覆盖。启动时找不到项目会跳过写入，首次显式传 `project_root` 的工具调用再检查。旧运行包不会凭空升级：需先本地安装新版构建并重新连接 MCP 客户端。
 
+Claude Code 环境下，MCP 还可能自动更新项目根 `CLAUDE.md` 内的指引段落。DevControl 只认可由当前 MCP 生成器根据 **Git 中原有的用户指令**准确重建的段落，不会把整份 `CLAUDE.md` 无条件忽略。领取任务后发生的可信自动更新不再算作业务文件冲突，单独提交生成内容也不会计入任务交付；手工修改用户规则、伪造指引段落或借符号链接越界仍会被拒绝。租约时间到期不会单独触发 `recover-task`，原有效令牌可以在 Git 范围安全时继续使用。
+
 ## 源码文档与任务总账回归
+
+**MCP 模板维护强制要求**：维护 mcp-probe-kit 源码时，任何 DevControl action、任务/Gate、租约 Writer、工具协议和安装器的行为变化，都必须同步到 `src/lib/v5-sqlite-guidance.ts` 唯一规则源，再更新自动生成的 Skill、AGENTS.md 中英文托管区、CLAUDE.md、Cursor 等客户端指引、README、新用户帮助和 action 清单。修改后提高 `SKILL_GUIDANCE_REVISION`，即使 npm 仍是 5.0.0，也必须让旧项目刷新。至少验证新项目生成、旧项目同版本升级、个人指令保留、重复启动不写盘、`verify-workflow-skill`、`docs:verify`、构建及独立安装包烟测。**仅修改当前 AGENTS.md 或 README 不代表其他用户已经获得新模板**。不要为解决旧检查而擅自 Commit、Push 或发布。
 
 使用 Git 源码开发分支时，运行 `npm run docs:verify` 检查完整文档。权威 `docs/v5-agent-action-guide.md` 必须由 Git 跟踪，不能依赖开发者本机的忽略文件。缺失时应更新 MCP 的源码提交，而不是在使用项目中补一份假指南。
 
@@ -63,7 +75,7 @@ MCP 每次启动在识别目标 Git 项目时检查 `.agents/skills/mcp-probe-ki
 
 ## 工具和安全边界
 
-- v5 主模型工具共 **24 个**；DevControl 通过一个工具暴露 **83 个 action（含只读 `guide`）**，完整分组可见 `docs/v5-sqlite-only.md` 与自动生成的 Skill；这不是 83 个并列 MCP 工具。
+- v5 主模型工具共 **24 个**；DevControl 通过一个工具暴露 **118 个 action（含只读 `guide`）**，完整分组可见 `docs/v5-sqlite-only.md` 与自动生成的 Skill；这不是 118 个并列 MCP 工具。
 - 研发流程状态归 SQLite `dc_*`，会话 History 归同项目 `hs_*`。旧 Markdown History 只允许只读导入，不支持双写/回退文件式工作流。
 - 开发 Agent 执行代码、SQL、测试和独立审核；DevControl 负责组织、权限边界和保存证据。MCP 不需要为每种语言实现测试执行器，也不会独立决定测试真实通过。
 - v4 `start_feature`、`start_bugfix`、`resume_plan`、`plan_heartbeat`、`converge` 均不是 v5 可调用流程。

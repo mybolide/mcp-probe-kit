@@ -7,9 +7,9 @@ import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { V5_DEVC_ACTIONS, V5_DEVC_ACTION_GROUPS } from '../src/devcontrol/action-catalog.js';
 const root=resolve(import.meta.dirname,'..');
-// Only committed actions + this source-controlled guide are documented.
-// Uncommitted experimental changes by another Agent must NOT leak into docs
-// or be silently approved just because docs are being rebuilt concurrently.
+// Git HEAD is only a reference for distinguishing new action registrations.
+// Local source can be fully implemented and tested before the Owner authorizes
+// a commit. A stale HEAD must not block docs:verify or force premature push.
 let committedActions: Set<string>;
 try {
   const old=execFileSync('git',['show','HEAD:src/devcontrol/action-catalog.ts'],
@@ -20,7 +20,20 @@ try {
   committedActions=new Set(V5_DEVC_ACTIONS);
 }
 if(V5_DEVC_ACTIONS.includes('guide'))committedActions.add('guide');
-const count=committedActions.size;
+const sourceActions=new Set(V5_DEVC_ACTIONS);
+if(sourceActions.size!==V5_DEVC_ACTIONS.length)
+  throw Error('Duplicate DevControl action registered; refuse to publish inconsistent docs');
+// Newly declared operations require real dispatch support, not just a name
+// added to a catalog. This is a documentation consistency check, NEVER
+// approval to change task state or a substitute for project tests and Gates.
+const dispatch=readFileSync(resolve(root,'src/devcontrol/command.ts'),'utf8');
+for(const action of sourceActions){
+  if(committedActions.has(action))continue;
+  if(!dispatch.includes(`case "${action}"`) &&
+      !dispatch.includes(`case '${action}'`))
+    throw Error('New DevControl action is not implemented in dispatcher: '+action);
+}
+const count=sourceActions.size;
 function update(file:string,transform:(value:string)=>string) {
   const path=resolve(root,file);
   const source=readFileSync(path,'utf8');
@@ -119,7 +132,7 @@ update('docs/v5-sqlite-only.md',s=>{
   const end=s.indexOf('\n\n',start);
   if(end<0)throw Error('v5 action reference table terminator missing');
   const rows=V5_DEVC_ACTION_GROUPS.map(group=>{
-    const actions=group.actions.filter(a=>committedActions.has(a));
+    const actions=group.actions.filter(a=>sourceActions.has(a));
     if(!actions.length)return '';
     return '| '+group.title+' ('+actions.length+') | '+actions.map(a=>'`'+a+'`').join('、')+' |';
   }).filter(Boolean);

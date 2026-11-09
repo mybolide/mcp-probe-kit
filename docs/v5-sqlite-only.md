@@ -1,5 +1,5 @@
 <!-- v5-agent-action-guide:start -->
-> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **114 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
+> **当前 v5 Agent 调用提示**：主 MCP 只有一个 `devcontrol` 研发管理工具，包含 **118 个 SQLite action（含零副作用 `guide` 导航）**。不知道怎样调用时先用
 > `{"action":"guide","input":{"intent":"feature"}}`（无需 project_root），然后根据返回的示例与真实 Git 项目合同调用下一步。
 > [完整 Agent 调用指南](v5-agent-action-guide.md) · [官网导航页](pages/v5-action-guide.html)。启动自动检查并同步 Skill / AGENTS.md 的指导修订号，保留用户规则。
 <!-- v5-agent-action-guide:end -->
@@ -471,7 +471,7 @@ v5 读取时只兼容**恰好一层**这种历史包装，并验证内层是完�
 重复路径和实际 Owner 文件改动都继续拒绝。这个兼容修复**不会**
 替代原来的测试证据、仓库交付向量、`verify` 或任何 Gate。
 
-**`devcontrol` 统一入口：114 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
+**`devcontrol` 统一入口：118 个受控 `action`，其中 `guide` 只读导航。** 每个动作的输入字段不同，必须以实际 Tool Schema / `execution-contract` 为准，不能把同一 JSON 输入套用到所有操作。它们分组如下：
 
 **独立 Git Worktree 开发（单根 Git 仓库）**：当前 AI 可通过普通 Git 命令创建独立工作树，在领取任务时把其路径作为 project-root。工作树各有自己的 Git 暂存区，但共享主仓库原有的同一份 DevControl SQLite。只有全部前置任务 Verified、不同未验收任务的冻结文件范围不重叠，才允许独立领取。测试记录与技术自审绑定执行任务的工作树，独立交付的准确 Git 提交必须先被 AI 集成进主仓库，才可把任务记为 Verified。DevControl 不运行测试、不替 AI 合并 Git，也不要求其他 Agent。含独立子 Git 仓库的组合项目暂不支持此模式；这里的共享 SQLite 仅限同一台机器，不等于跨电脑同步。
 
@@ -487,12 +487,11 @@ v5 读取时只兼容**恰好一层**这种历史包装，并验证内层是完�
 
 | 流程领域 | 可用 `action` |
 |---|---|
-| 冻结任务说明补充 / Reviewed additive task specification (7) | `task-spec-supplement-get`、`task-spec-supplement-review`、`task-spec-supplement-stage`、`task-spec-supplement-self-review`、`task-spec-supplement-independent-review`、`task-spec-supplement-approve`、`task-spec-supplement-withdraw` |
-| 同一任务的人读与 AI 内容版本 / Reviewed task content (6) | `task-content-get`、`task-content-check`、`task-content-stage`、`task-content-review`、`task-content-approve`、`task-content-withdraw` |
-| Feature 待确认决策 / Lightweight decision inbox (5) | `decision-request-save`、`decision-request-list`、`decision-request-get`、`decision-request-respond`、`decision-request-withdraw` |
 | 操作导航 / Read-only agent navigation (1) | `guide` |
 | 项目与当前任务 / Project and task discovery (6) | `onboard`、`next`、`list`、`get`、`execution-contract`、`task-detail-audit` |
 | SQLite 项目状态差异及安全候选合并 / Local database merge (2) | `sqlite-merge-preview`、`sqlite-merge-candidate` |
+| 冻结任务说明补充 / Reviewed additive task specification (7) | `task-spec-supplement-get`、`task-spec-supplement-review`、`task-spec-supplement-stage`、`task-spec-supplement-self-review`、`task-spec-supplement-independent-review`、`task-spec-supplement-approve`、`task-spec-supplement-withdraw` |
+| 任务双内容版本 / Human overview and AI brief (6) | `task-content-get`、`task-content-check`、`task-content-stage`、`task-content-review`、`task-content-approve`、`task-content-withdraw` |
 | 版本计划 / Release plan approval (5) | `release-plan`、`plan-review`、`plan-propose`、`plan-revise`、`plan-approve` |
 | 正式工作树 / Frozen release work (4) | `release-work-plan`、`release-work-review`、`release-work-stage`、`release-work-approve` |
 | 范围变更 / Reviewed scope amendments (8) | `release-work-scope-review`、`release-work-scope-stage`、`release-work-scope-get`、`release-work-scope-self-review`、`release-work-scope-independent-review`、`release-work-scope-approve`、`release-work-scope-withdraw`、`pause-for-scope` |
@@ -502,8 +501,9 @@ v5 读取时只兼容**恰好一层**这种历史包装，并验证内层是完�
 | Bug / Defect management (3) | `bug-get`、`bug-step-save`、`bug-task-link` |
 | Idea / Proposed change governance (7) | `idea-capture`、`idea-list`、`idea-get`、`idea-assess`、`idea-self-review`、`idea-review`、`idea-decide` |
 | 工件 / Governed artifacts (6) | `artifact-get`、`artifact-check`、`artifact-stage`、`artifact-self-review`、`artifact-independent-review`、`artifact-approve` |
-| 领取、报告与验收 / Execution and evidence (24) | `claim`、`renew`、`recover-task`、`review-recovery-worktree`、`park-expired-writer`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`report`、`rebind-legacy-evidence`、`record-rerun-evidence`、`gate-review`、`review-worktree`、`complete`、`review-handoff`、`review-submit`、`self-review`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
+| 领取、报告与验收 / Execution and evidence (28) | `claim`、`renew`、`recover-task`、`resume-session`、`recover-review`、`reopen-for-rework`、`review-recovery-worktree`、`park-expired-writer`、`refresh-protected-worktree`、`relocate-repository-baselines`、`release`、`defer-verification`、`resume-verification`、`check`、`submit`、`report`、`rebind-legacy-evidence`、`record-rerun-evidence`、`gate-review`、`review-worktree`、`complete`、`self-review`、`review-handoff`、`review-submit`、`reviewed-verify`、`task-closure-status`、`verify`、`trace` |
 | 决策 / Decision records (2) | `decision-save`、`decision-get` |
+| 待确认选择 / Feature decision inbox (no new task lifecycle) (5) | `decision-request-save`、`decision-request-list`、`decision-request-get`、`decision-request-respond`、`decision-request-withdraw` |
 | 本地工具 / Local developer and hooks (3) | `local-developer`、`hook-status`、`hook-install` |
 
 以上分组中的数字仅用于阅读，不影响正式任务批准。DevControl 管理过程和证据，不运行 Python/Go/gRPC/Flutter 等项目业务测试；外部测试结论必须由 Agent 真实执行并实质自审（独立复审可选）记录。**原子任务只允许一个可独立验收结果**，宽泛目标必须先拆解。

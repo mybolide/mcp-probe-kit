@@ -41,13 +41,14 @@ const FLOWS = {
   task: {
     description: '领取当前已批准任务，按冻结合同逐项开发',
     actions: ['next','execution-contract','claim','check','renew','recover-task',
+      'resume-session','recover-review','reopen-for-rework',
       'review-recovery-worktree','park-expired-writer','release'],
     example: {action:'next',project_root:'/ABSOLUTE/PROJECT',input:{}},
-    caution: 'Read next, execution-contract and the frozen allowedPaths before writing. Lease TTL is an activity indicator: an original valid task token can continue safely after expiry, and claim may renew an expired original task without changing its Git base. Tasks in different independent child Git repositories can progress without waiting for the other repository Writer; only an overlapping frozen scope or a genuinely shared Git index blocks. Never reset, stash, delete, silently rebaseline or commit another task\'s work. In single-index conflicts, explicit recovery and audited parking remain available; use them only when the tool identifies a genuine file, history or identity conflict. Review and Gate evidence are always required, not implied by a successful claim.',
+    caution: 'Read next, execution-contract and the frozen allowedPaths before writing. Lease TTL is an activity indicator: an original valid task token can continue safely after expiry; do not call recover-task merely because a clock expired. Tasks in separate root and child Git indexes can progress in parallel; claim and recover-task both check the real frozen scope, original base and Git identity. Canonical MCP updates to AGENTS.md, Skill and the generated CLAUDE.md pointer are tool maintenance only when the original user-authored instructions remain byte-identical; hand edits, symlinks and forged markers remain protected. Never reset, stash, delete, silently rebaseline or commit another task\'s work. Shared-index conflicts still require safe handoff; review and Gate evidence are always required.',
   },
   verification: {
     description: '提交代码和真实测试 → 当前 AI 一次完成正式验收登记 → Verified',
-    actions: ['task-closure-status','check','complete','report',
+    actions: ['task-closure-status','check','submit','complete','report',
       'rebind-legacy-evidence','record-rerun-evidence','verify','trace'],
     example: {action:'verify',project_root:'/ABSOLUTE/PROJECT',
       input:{id:'APPROVED-TASK-ID',leaseToken:'CURRENT-LEASE',
@@ -55,7 +56,7 @@ const FLOWS = {
           findings:'Current AI inspected the exact Git commit or immutable file snapshot, negative cases and genuine test output against frozen acceptance.',
           gates:[{gate:'docs',evidenceReference:'ACTUAL-TEST-REPORT',
             findings:'Actual project-owned docs tests passed for the original source delivery (Git or SHA-256 files).'}]}}},
-    caution: 'DevControl is project management, NEVER a test runner or independent reviewing Agent. Current AI runs real tests, reports their original revision-bound evidence, and uses ONE verify with an acceptance object to record findings for each frozen Gate. For old multi-Git in_review receipts lacking the original frozen Git version vector, rebind-legacy-evidence requires the existing receipt, exact original deliveryHeads, and a real local test output artifact checked by SHA-256 with substantive findings. When the old log is lost, rerun actual tests in exact frozen clean Git checkouts, then record-rerun-evidence with original evidence ID, all testedCheckouts, commandCwd, real command, exitCode and SHA-256 log. Failed runs are recorded but never treated as passing Gate evidence. The original authenticated token may continue a nonconflicting in_progress task after TTL expiry; a different Writer cannot take an overlapping index. The required tests and dependency checks remain strict. Old self-review and gate-review actions remain only for legacy sessions. Missing evidence never means approval.',
+    caution: 'DevControl is project management, NEVER a test runner or independent reviewing Agent. For an ordinary in_progress task, run real project tests and commit the exact frozen files first; then use one submit action with summary, implementation, verification, kind and reference (and deliveryHeads when needed). Submit atomically records the same existing complete/report evidence, moves to in_review, but NEVER passes a Gate or Verified. Use ONE separate verify with an acceptance object for each frozen Gate. Legacy complete/report stay available for deferred and historical review. For old multi-Git in_review receipts lacking the original frozen Git version vector, rebind-legacy-evidence requires the existing receipt, exact original deliveryHeads, and a real local test output artifact checked by SHA-256 with substantive findings. When the old log is lost, rerun actual tests in exact frozen clean Git checkouts, then record-rerun-evidence with original evidence ID, all testedCheckouts, commandCwd, real command, exitCode and SHA-256 log. Failed runs never count as passing Gate evidence. Required tests, dependencies, real Git/index boundaries and original lease token checks remain strict.',
   },
   bug: {
     description: '缺陷记录、调查步骤和关联获批任务',

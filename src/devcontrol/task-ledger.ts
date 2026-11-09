@@ -597,13 +597,44 @@ export class ProjectTaskLedger {
     explicitAuthorization?:boolean;nextTaskId:string}):Row{
     const actor=String(input?.actor??'').trim();
     const reason=String(input?.reason??'').trim();
+    const task=this.requireTask(id);
+    if(task.status==='in_review'){
+      // Review is NOT an unfinished coding writer. This compatibility path
+      // releases a legacy expired review writer without selecting a successor.
+      if(actor.length<2||reason.length<20)
+        fail('PARK_REVIEW_REQUIRED','Identify the actor and reason for releasing a stale review writer');
+      return this.inTransaction(()=>{
+        const writer=this.checkoutWriter();
+        if(!writer||writer.task_id!==id){
+          const session=this.db.prepare(`SELECT writer_released FROM
+            dc_review_sessions WHERE task_id=?`).get(id);
+          if(session?.writer_released===1)return {taskId:id,status:'in_review',
+            alreadyReleased:true,gatePassed:false,nextAction:'task-closure-status'};
+          fail('PARK_REVIEW_WRITER_MISSING','No eligible legacy review writer to release');
+        }
+        if(writer.expires_at>Date.now())
+          fail('PARK_REVIEW_WRITER_ACTIVE','An active review writer needs its original token or explicit handoff');
+        if(!this.latestCompletion(id)||
+          !this.db.prepare('SELECT id FROM dc_evidence WHERE task_id=? LIMIT 1').get(id))
+          fail('PARK_REVIEW_DELIVERY_MISSING','Review must have a completed delivery and evidence');
+        if(stagedChanges(discoverRepositories(this.root,
+          JSON.parse(task.allowed_paths))).length)
+          fail('PARK_STAGED_INDEX','Do not release a Git index containing staged files');
+        this.protectedClaimWorktree(id,task,String(writer.base_head));
+        const review=this.beginReviewSession(id,String(writer.token));
+        this.audit(id,'expired_review_writer_released',actor,{
+          reason,completionHead:this.latestCompletion(id)?.git_head,
+          filesModified:false,gatePassed:false});
+        return {taskId:id,status:'in_review',...review,
+          nextAction:'task-closure-status',gatePassed:false};
+      });
+    }
     if(actor.length<2||reason.length<50||reason.length>2000||
       input?.explicitAuthorization!==true)
       fail('PARK_REVIEW_REQUIRED',
         'Owner must explicitly approve and explain the preserved WIP, old task scope and chosen disjoint next task');
     if(!this.hasRootGit)
       fail('PARK_GIT_REQUIRED','The file-backed writer has a separate recovery contract');
-    const task=this.requireTask(id);
     const next=this.requireTask(String(input.nextTaskId??''));
     const original=this.checkoutWriter();
     if(!original||original.task_id!==id||original.expires_at>Date.now()||
@@ -919,13 +950,99 @@ export class ProjectTaskLedger {
       this.db.prepare("INSERT INTO dc_evidence (task_id,kind,reference,git_head,created_at) VALUES(?,?,?,?,?)")
         .run(id,evidence.kind.trim(),evidence.reference.trim(),
           'files-sha256:'+delivery.submitted.digest,utc());
-      if(readyForReview)this.db.prepare("UPDATE dc_tasks SET status='in_review',updated_at=? WHERE id=?")
-        .run(utc(),id);
+      let review:Row|null=null;
+      if(readyForReview){
+        this.db.prepare("UPDATE dc_tasks SET status='in_review',updated_at=? WHERE id=?")
+          .run(utc(),id);
+        if(this.latestCompletion(id))review=this.beginReviewSession(id,token);
+      }
       this.audit(id,'file_evidence_reported',lease.agent,{
         evidenceKind:'files-sha256-v1',sourceDigest:delivery.submitted.digest,
         kind:evidence.kind,reference:evidence.reference,readyForReview,
       });
-      return this.get(id);
+      return {...this.get(id),...(review??{})};
+    });
+  }
+
+  /** One optional host action for normal delivery. Both existing operations
+   * retain their exact checks and audit entries. This outer transaction makes
+   * evidence, completion, and review-ready state ALL succeed or ALL roll back.
+   * It never runs tests, records acceptance, or marks a Gate / task verified.
+   * report and complete remain supported for historical/deferred workflows. */
+  submit(id:string,token:string,input:CompletionReport & {
+    kind:string;reference:string;
+  }):Row {
+    return this.inTransaction(()=>{
+      const task=this.requireTask(id);
+      if(task.status!=='in_progress')
+        fail('SUBMISSION_ALREADY_RECORDED',
+          'Only an unfinished developing task can submit once; use trace or task-closure-status to inspect the existing delivery');
+      if(typeof input?.kind!=='string'||!input.kind.trim()||
+          typeof input?.reference!=='string'||!input.reference.trim()||
+          ['undefined','null'].includes(input.kind.trim().toLowerCase())||
+          ['undefined','null'].includes(input.reference.trim().toLowerCase()))
+        fail('EVIDENCE_REQUIRED','A concrete test evidence kind and reference are required');
+      const evidence={kind:input.kind.trim(),reference:input.reference.trim(),
+        deliveryHeads:input.deliveryHeads};
+      let completion:Row;
+      let review:Row;
+      if(this.hasRootGit){
+        // For the fast, ordinary one-step path reject out-of-scope commits
+        // BEFORE recording evidence. The existing final verify checks them
+        // again. Complex parked/recovered deliveries retain the separate
+        // report/complete workflow with its own provenance checks.
+        const lease=this.requireLease(id,token);
+        const observed=this.observedTaskRepositories(id,task);
+        const multiRepo=observed.some(repo=>!!repo.prefix);
+        const revisions=multiRepo?
+          this.selectDeliveryRepositories(task,observed,input.deliveryHeads):observed;
+        // Legacy single-Git tasks may have no dc_task_repository_baselines;
+        // their original lease.base_head is still the authoritative root base.
+        const rootRepo=revisions.find(repo=>repo.prefix==='');
+        const rootBase=rootRepo?.baseHead??String(lease.base_head);
+        const rootHead=rootRepo?.head??git(this.root,['rev-parse','HEAD']);
+        const allowed=JSON.parse(task.allowed_paths) as string[];
+        const raw=multiRepo?committedChanges(this.root,revisions):
+          committedFilesBetween(this.root,String(lease.base_head),rootHead);
+        const files=this.deliveryTaskFiles(raw,rootBase,rootHead,allowed);
+        const exactContract=this.executionContract(id);
+        if(!exactContract.eligible||this.blockers(id).length)
+          fail('SUBMISSION_CONTRACT_INVALID',
+            'The original approved execution contract and all Verified prerequisites must remain valid before submitting test evidence');
+        const exact=exactContract.profile==='spec-depth-v3'?
+          (exactContract.spec as ReleasePlanNode)?.allowedChangedFiles:undefined;
+        if(!files.length||files.some(file=>!allowed.some(scope=>
+          pathAllowed(file,scope))||(exact&&!exact.includes(file))))
+          fail('SUBMISSION_SCOPE_INVALID',
+            'Submitted commits contain no approved task files or change paths outside the frozen task scope; inspect the exact Git commits before retrying',
+            {changedFiles:files,allowedPaths:allowed});
+        // Preserve the Git workflow's existing ability to report real test
+        // evidence before freezing its exact delivered HEAD(s).
+        this.report(id,token,evidence,false);
+        completion=this.complete(id,token,input);
+        this.db.prepare("UPDATE dc_tasks SET status='in_review',updated_at=? WHERE id=?")
+          .run(utc(),id);
+        review=this.beginReviewSession(id,token);
+      }else{
+        // File-backed projects must freeze the SHA-256 source snapshot before
+        // evidence can bind to it. The same transaction rolls back both.
+        completion=this.complete(id,token,input);
+        review=this.report(id,token,evidence,true);
+      }
+      this.audit(id,'delivery_submitted',this.requireLease(id,token,'review').agent,{
+        completionRevision:completion.revision,
+        evidenceKind:evidence.kind,evidenceReference:evidence.reference,
+        reviewReady:true,testsExecutedByMcp:false,gatePassed:false,
+        verified:false,
+      });
+      return {taskId:id,status:'in_review',completionRevision:completion.revision,
+        reviewToken:review.reviewToken,gitWriterReleased:review.gitWriterReleased,
+        evidenceReference:evidence.reference,evidenceKind:evidence.kind,
+        gitHead:completion.gitHead??null,
+        evidenceRecorded:true,completionRecorded:true,
+        passedGates:[],verified:false,
+        nextAction:'verify',
+        note:'Real project test evidence and completion were recorded atomically; execute substantive acceptance separately before Verified'};
     });
   }
 
@@ -1495,6 +1612,41 @@ export class ProjectTaskLedger {
         base_head TEXT NOT NULL, expires_at INTEGER NOT NULL,
         worktree_path TEXT NOT NULL DEFAULT ''
       );
+      -- A submitted review is not a Git writer. A separate version-bound
+      -- authorization allows review after the shared index changes hands.
+      -- Old task lease tokens remain readable for legacy reviews.
+      CREATE TABLE IF NOT EXISTS dc_review_sessions (
+        task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
+        token_hash TEXT NOT NULL,
+        agent TEXT NOT NULL,
+        completion_revision INTEGER NOT NULL,
+        completion_head TEXT NOT NULL,
+        writer_released INTEGER NOT NULL DEFAULT 1,
+        issued_at TEXT NOT NULL,
+        expires_at INTEGER NOT NULL
+      );
+      -- A new development attempt never rewrites the historical completion,
+      -- test evidence, or reviewed Git head.
+      CREATE TABLE IF NOT EXISTS dc_task_rework_attempts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        previous_completion_revision INTEGER NOT NULL,
+        previous_completion_head TEXT NOT NULL,
+        original_base_head TEXT NOT NULL,
+        new_base_head TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        opened_at TEXT NOT NULL,
+        completed_revision INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS dc_rework_prior_reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL REFERENCES dc_tasks(id),
+        previous_completion_revision INTEGER NOT NULL,
+        record_kind TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        archived_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS dc_task_integration_ready (
         task_id TEXT PRIMARY KEY REFERENCES dc_tasks(id),
         commit_head TEXT NOT NULL, token_hash TEXT NOT NULL,
@@ -1813,6 +1965,186 @@ export class ProjectTaskLedger {
     return row!;
   }
 
+  /** A new ChatGPT session can recover the REVIEW capability without
+   * acquiring or disturbing somebody else's Git writer. Only an expired
+   * session can be rotated without the prior token. */
+  recoverReview(id:string,input:{actor:string;reason:string}):Row{
+    const actor=String(input?.actor??'').trim(),reason=String(input?.reason??'').trim();
+    if(actor.length<2||reason.length<20)
+      fail('REVIEW_RECOVERY_REASON_REQUIRED','Name the responsible agent and session recovery reason');
+    return this.inTransaction(()=>{
+      const task=this.requireTask(id);
+      const note=this.latestCompletion(id);
+      const lease=this.db.prepare('SELECT * FROM dc_task_leases WHERE task_id=?').get(id);
+      const prior=this.db.prepare('SELECT * FROM dc_review_sessions WHERE task_id=?').get(id);
+      if(task.status!=='in_review'||!note||!lease||
+        !this.db.prepare('SELECT id FROM dc_evidence WHERE task_id=? AND git_head=? LIMIT 1')
+          .get(id,note.git_head))
+        fail('REVIEW_RECOVERY_UNAVAILABLE','No complete version-bound review is available');
+      if(prior&&prior.expires_at>Date.now())
+        fail('REVIEW_SESSION_ACTIVE',
+          'Use the existing review token while it is active; session expiry is not an automatic takeover',
+          {taskId:id,nextActions:[{action:'task-closure-status',input:{id},
+            reason:'Inspect existing review and its expiry before recovery'}]});
+      if(!prior&&lease.expires_at>Date.now())
+        fail('REVIEW_SESSION_ACTIVE','The original review lease remains active');
+      if(this.hasRootGit){
+        this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));
+        this.protectedClaimWorktree(id,task,String(lease.base_head));
+        const obsoleteWriter=this.db.prepare('SELECT * FROM dc_leases WHERE task_id=?').get(id);
+        if(obsoleteWriter){
+          if(obsoleteWriter.expires_at>Date.now()||
+            stagedChanges(discoverRepositories(this.root,
+              JSON.parse(task.allowed_paths))).length)
+            fail('REVIEW_WRITER_STILL_ACTIVE',
+              'An old shared Git index cannot be released while its writer or staged work remains active');
+          this.db.prepare('DELETE FROM dc_leases WHERE task_id=? AND token=?')
+            .run(id,obsoleteWriter.token);
+        }
+      }else{
+        const delivery=this.fileDelivery(id);
+        if(!delivery?.submitted||
+          !this.fileTaskSubmittedUnchanged(delivery.submitted,delivery.baseline,
+            captureFileEvidence(this.root)))
+          fail('FILE_SOURCE_CHANGED','Review source changed since the frozen completion');
+      }
+      const reviewToken=randomUUID()+randomUUID();
+      const expiresAt=Date.now()+24*60*60*1000;
+      this.db.prepare(`INSERT INTO dc_review_sessions
+        (task_id,token_hash,agent,completion_revision,completion_head,
+         writer_released,issued_at,expires_at) VALUES(?,?,?,?,?,?,?,?)
+        ON CONFLICT(task_id) DO UPDATE SET
+        token_hash=excluded.token_hash,agent=excluded.agent,
+        completion_revision=excluded.completion_revision,
+        completion_head=excluded.completion_head,
+        writer_released=excluded.writer_released,
+        issued_at=excluded.issued_at,expires_at=excluded.expires_at`)
+        .run(id,createHash('sha256').update(reviewToken).digest('hex'),
+          actor,note.revision,note.git_head,this.hasRootGit?1:0,utc(),expiresAt);
+      this.audit(id,'review_session_recovered',actor,{
+        reason,completionRevision:note.revision,completionHead:note.git_head,
+        gitWriterNotAcquired:true,sourceFilesModified:false,testsPassed:false});
+      return {taskId:id,status:'in_review',reviewToken,reviewExpiresAt:expiresAt,
+        completionRevision:note.revision,completionHead:note.git_head,
+        writerAcquired:false,nextAction:'verify',gatePassed:false};
+    });
+  }
+
+  /** A failed or invalidated completed delivery starts a NEW coding attempt.
+   * Retain old completion/evidence rows verbatim and archive superseded
+   * review decisions before issuing a new writer token and baseline. */
+  reopenForRework(id:string,input:{actor:string;reason:string;
+    reviewToken?:string;explicitAuthorization?:boolean}):Row{
+    const actor=String(input?.actor??'').trim(),reason=String(input?.reason??'').trim();
+    if(actor.length<2||reason.length<40||reason.length>2000)
+      fail('REWORK_REASON_REQUIRED','Identify the developer and concrete failed review or source change');
+    if(!this.hasRootGit)
+      fail('REWORK_GIT_REQUIRED',
+        'This rework action currently requires a Git delivery; file-manifest review is preserved');
+    const task=this.requireTask(id),note=this.latestCompletion(id);
+    const lease=this.db.prepare('SELECT * FROM dc_task_leases WHERE task_id=?').get(id);
+    if(task.status!=='in_review'||!note||!lease)
+      fail('REWORK_STATE_INVALID','Only a completed in_review delivery can reopen for coding');
+    if(this.db.prepare(`SELECT task_id FROM dc_verification_deferrals
+      WHERE task_id=? AND resumed_at IS NULL`).get(id))
+      fail('REWORK_DEFERRED','Resume the deferred frozen verification before deciding on rework');
+    const repos=discoverRepositories(this.root,JSON.parse(task.allowed_paths));
+    if(repos.length!==1||repos[0].prefix!=='')
+      fail('REWORK_MULTI_REPO_REQUIRES_CHECKPOINTS',
+        'Multi-repository rework requires a new complete version vector, not an invented root-only base');
+    const head=git(this.root,['rev-parse','HEAD']);
+    if(!run(this.root,'git',['merge-base','--is-ancestor',String(note.git_head),head]).passed)
+      fail('REWORK_HISTORY_CHANGED','Original committed delivery is no longer an ancestor of HEAD');
+    const activeWriter=this.checkoutWriter();
+    if(activeWriter&&activeWriter.task_id!==id)
+      fail('REWORK_WRITER_CONFLICT','Another active task owns the same Git index',
+        {taskId:activeWriter.task_id,nextActions:[{action:'task-closure-status',
+          input:{id:activeWriter.task_id},reason:'Wait for a safe writer handoff'}]});
+    const oldReview=this.db.prepare('SELECT * FROM dc_review_sessions WHERE task_id=?').get(id);
+    const authenticated=typeof input.reviewToken==='string'&&
+      (input.reviewToken===lease.token||
+        (!!oldReview&&oldReview.token_hash===createHash('sha256')
+          .update(input.reviewToken).digest('hex')));
+    const failed=!!this.db.prepare(`SELECT task_id FROM dc_task_review_handoffs
+      WHERE task_id=? AND outcome='failed'`).get(id)||
+      !!this.db.prepare(`SELECT task_id FROM dc_external_gate_reviews
+      WHERE task_id=? AND outcome='failed' LIMIT 1`).get(id);
+    let invalidated=false;
+    try{this.checkReviewDeliveryHead(id,String(lease.base_head),String(note.git_head));}
+    catch(error){
+      if(error instanceof DevControlError&&['DELIVERY_SCOPE_CHANGED',
+        'DEFERRED_CODE_CHANGED'].includes(error.code))invalidated=true;
+      else throw error;
+    }
+    if(!failed&&!invalidated&&input.explicitAuthorization!==true)
+      fail('REWORK_NOT_JUSTIFIED',
+        'Healthy review should be verified, not redeveloped. Failed Gate, stale delivery or explicit Owner rework decision required');
+    if(!authenticated&&input.explicitAuthorization!==true&&
+      (oldReview?oldReview.expires_at:lease.expires_at)>Date.now())
+      fail('REWORK_REVIEW_ACTIVE',
+        'An active review must be handed off explicitly; do not invalidate a live session');
+    this.protectedClaimWorktree(id,task,String(lease.base_head));
+    const staged=stagedChanges(discoverRepositories(this.root,JSON.parse(task.allowed_paths)));
+    const snapshot=preservedWorktreeSnapshot(this.root,[]);
+    const scope=JSON.parse(task.allowed_paths) as string[];
+    if(staged.length||snapshot.some(file=>scope.some(pattern=>pathAllowed(file.path,pattern))))
+      fail('REWORK_WORKTREE_DIRTY',
+        'Preserve staged files and scoped uncommitted work; rework can start only on a clean scoped index');
+    return this.inTransaction(()=>{
+      if(git(this.root,['rev-parse','HEAD'])!==head||
+        JSON.stringify(snapshot)!==JSON.stringify(preservedWorktreeSnapshot(this.root,[]))||
+        stagedChanges(discoverRepositories(this.root,scope)).length)
+        fail('REWORK_RACE','Git HEAD or worktree changed during review reopening');
+      if(this.checkoutWriter()?.task_id!==activeWriter?.task_id)
+        fail('REWORK_RACE','Writer changed while reopening');
+      const previous=this.db.prepare(`SELECT id FROM dc_task_rework_attempts
+        WHERE task_id=? AND completed_revision IS NULL`).get(id);
+      if(previous)fail('REWORK_ALREADY_OPEN','Finish the current rework attempt first');
+      for(const table of ['dc_task_acceptances','dc_task_review_handoffs',
+        'dc_external_gate_reviews','dc_verification_deferrals',
+        'dc_review_sessions','dc_task_integration_ready']){
+        const rows=this.db.prepare(`SELECT * FROM ${table} WHERE task_id=?`).all(id);
+        for(const row of rows)this.db.prepare(`INSERT INTO dc_rework_prior_reviews
+          (task_id,previous_completion_revision,record_kind,snapshot_json,archived_at)
+          VALUES(?,?,?,?,?)`).run(id,note.revision,table,JSON.stringify(row),utc());
+        this.db.prepare(`DELETE FROM ${table} WHERE task_id=?`).run(id);
+      }
+      const newToken=randomUUID(),expiry=Date.now()+1800_000;
+      this.db.prepare(`INSERT INTO dc_task_rework_attempts
+        (task_id,previous_completion_revision,previous_completion_head,
+        original_base_head,new_base_head,reason,actor,opened_at)
+        VALUES(?,?,?,?,?,?,?,?)`).run(id,note.revision,note.git_head,
+          lease.base_head,head,reason,actor,utc());
+      this.db.prepare(`UPDATE dc_task_leases SET
+        agent=?,token=?,base_head=?,expires_at=? WHERE task_id=?`)
+        .run(actor,newToken,head,expiry,id);
+      this.db.prepare(`INSERT OR REPLACE INTO dc_leases
+        (singleton,task_id,agent,token,base_head,expires_at)
+        VALUES(1,?,?,?,?,?)`).run(id,actor,newToken,head,expiry);
+      this.db.prepare(`UPDATE dc_tasks SET status='in_progress',updated_at=?
+        WHERE id=?`).run(utc(),id);
+      this.audit(id,'rework_attempt_opened',actor,{
+        reason,previousCompletionRevision:note.revision,
+        previousCompletionHead:note.git_head,originalBaseHead:lease.base_head,
+        newBaseHead:head,previousEvidencePreserved:true,
+        oldReviewArchived:true,sourceFilesModified:false,gatePassed:false});
+      return {taskId:id,status:'in_progress',leaseToken:newToken,
+        baseHead:head,previousCompletionRevision:note.revision,
+        previousCompletionHead:note.git_head,originalEvidencePreserved:true,
+        nextAction:'develop-test-submit',gatePassed:false};
+    });
+  }
+
+  /** A resumed conversation never seizes a live writer on a timer alone. */
+  resumeSession(id:string,input:{actor:string;reason:string;ttlSeconds?:number}):Row{
+    const task=this.requireTask(id);
+    if(task.status==='in_review')return this.recoverReview(id,input);
+    if(task.status!=='in_progress')
+      fail('SESSION_TASK_NOT_RESUMABLE','Only developing or reviewing tasks can resume');
+    return this.recoverTaskLease(id,{
+      actor:input.actor,reason:input.reason,ttlSeconds:input.ttlSeconds});
+  }
+
   /** Recover an abandoned in-progress or in-review task with explicit Owner
    * authorization. Does NOT mark complete, approve tests, or modify Git.
    * The original claim HEAD remains the immutable comparison baseline.
@@ -1837,12 +2169,37 @@ export class ProjectTaskLedger {
       this.requireTask(String(currentWriter.task_id)).status==='verified'&&
       this.hasRootGit&&!this.linkedWorktree&&
       !stagedChanges(discoverRepositories(this.root,[])).length;
-    if(currentWriter&&currentWriter.task_id!==id&&!priorVerifiedWriter)
+    if(currentWriter&&currentWriter.task_id!==id&&!priorVerifiedWriter){
+      // Reuse claim's real frozen-scope and per-repository Git-index checks.
+      // The legacy singleton pointer is not an exclusive project-wide lock.
+      // Keep migration flags on their explicit, separately audited path.
+      if(task.status==='in_progress'&&!input.preserveExistingWorktree&&
+        !input.rebaselineLegacyRepositories&&
+        this.independentRepositoryWriters(task)&&
+        !this.independentWriterConflict(task)){
+        return this.inTransaction(()=>{
+          const resumed=this.claim(id,actor,ttl);
+          if(resumed.baseHead!==String(lease.base_head))
+            fail('CLAIM_BASE_CHANGED','Recovering an independent Git writer must keep its original baseline');
+          this.audit(id,'independent_writer_recovered',actor,{
+            reason,originalBaseHead:lease.base_head,
+            otherWriterTaskId:currentWriter.task_id,
+            frozenScopesRetained:true,sourceFilesModified:false,
+            testsPassed:false,gateApproved:false,
+          });
+          return {taskId:id,status:task.status,leaseToken:resumed.leaseToken,
+            originalBaseHead:lease.base_head,expiresAt:Date.now()+ttl*1000,
+            independentGitIndex:true,testsPassedByRecovery:false,
+            nextActions:['complete','report','verify'],
+            warning:'Original task resumed without changing its source, frozen scope or Gate acceptance'};
+        });
+      }
       fail('RECOVERY_WRITER_CONFLICT',
-        'Another task owns this Git index. Do not recover a second writer over its source; finish or safely yield that task first',
+        'Another task owns the same Git index or frozen file scope. Recover only after its actual conflict is resolved',
         {blockedTask:id,writerTaskId:currentWriter.task_id,
           writerExpired:currentWriter.expires_at<=Date.now(),
-          safeAction:'Use claim for an explicitly parked original task only after the disjoint successor has completed or safely yielded its writer'});
+          safeAction:'Resume the existing writer or safely hand off the shared Git index; unrelated repositories do not need parking'});
+    }
     if(!this.hasRootGit){
       if(input.preserveExistingWorktree||input.rebaselineLegacyRepositories)
         fail('FILE_DELIVERY_MODE','A Git-free project has no Git worktree to migrate');
@@ -1955,6 +2312,7 @@ export class ProjectTaskLedger {
       return {taskId:id,status:task.status,leaseToken:newToken,
         originalBaseHead:lease.base_head,currentHead:head,expiresAt,
         verifiedIndependentDeliveries:attribution?.verified??[],
+        testsPassedByRecovery:false,
         nextActions:['complete','report','review-handoff'],
         warning:'Recovery restores processing rights only; no tests, review or Gate passed'};
     });
@@ -2520,9 +2878,6 @@ export class ProjectTaskLedger {
     if(!lease){
       add('recover-task','task has no retained identity token',
         'Recover the original task without changing its frozen delivery or test evidence');
-    }else if(lease.expires_at<=Date.now()&&task.status!=='in_review'){
-      add('recover-task','writer lease expired',
-        'Restore the original coding task after checking its files and Git history');
     }
     if(!note){
       add('complete','structured delivery missing',
@@ -2572,12 +2927,15 @@ export class ProjectTaskLedger {
         'files-sha256:'+captureFileEvidence(this.root).digest,
       deferredGate:deferred&&!deferred.resumed_at?deferred.gate_name:null,
       leaseActive:!!lease&&lease.expires_at>Date.now(),
+      leaseExpired:!!lease&&lease.expires_at<=Date.now(),
+      originalTokenMayContinue:!!lease&&task.status==='in_progress'&&
+        (()=>{try{this.requireGitWriter(id);return true;}catch{return false;}})(),
       reviewTokenUsable:!!lease&&task.status==='in_review'&&!!note,
       staleLegacyEvidence,frozenDeliveryHeads,
       recordedEvidence:evidence.map(item=>({reference:item.reference,kind:item.kind,head:item.git_head})),
       reviewStatus:handoff?.outcome??(handoff?'awaiting_review':'not_started'),
       reviewCompletionHead:handoff?.completion_head??null,requiredGates:gates,
-      note:'This checklist does not assert passing tests or authorization; follow the current action and inspect real Gate results'};
+      note:'Lease expiry alone is not a recovery step: the original authenticated token can continue when the frozen scope and Git index remain safe. This checklist does not assert passing tests or authorization.'};
   }
 
   /** Persist an engineering decision without generating any ADR/Spec Markdown.
@@ -7349,6 +7707,17 @@ export class ProjectTaskLedger {
         record.verification, record.remaining, JSON.stringify(preserved),
         JSON.stringify(preservedWorktree),
         head, lease.agent, record.createdAt);
+      this.db.prepare(`UPDATE dc_task_rework_attempts SET completed_revision=?
+        WHERE task_id=? AND completed_revision IS NULL`).run(revision,id);
+      // Legacy callers may report readyForReview BEFORE complete. Do not
+      // release the writer until the frozen delivery and matching evidence
+      // have both been recorded.
+      if(task.status==='in_review'&&
+        this.db.prepare(`SELECT id FROM dc_evidence
+          WHERE task_id=? AND git_head=? LIMIT 1`).get(id,head)){
+        const authorization=this.beginReviewSession(id,token);
+        Object.assign(record,authorization);
+      }
       if(multiRepo){
         this.db.prepare(`INSERT INTO dc_completion_repository_revisions
           (task_id,revision,snapshot_json,digest) VALUES(?,?,?,?)`)
@@ -7397,8 +7766,16 @@ export class ProjectTaskLedger {
       if(stagedChanges(discoverRepositories(this.root,
         JSON.parse(previous.allowed_paths))).length)return false;
       const note=this.latestCompletion(previous.id)!;
-      this.checkReviewDeliveryHead(previous.id,String(lease.base_head),
-        String(note.git_head));
+      const released=this.db.prepare(`SELECT writer_released,
+        completion_revision,completion_head FROM dc_review_sessions WHERE task_id=?`)
+        .get(previous.id);
+      // A stale, already released review may need rework, but must never
+      // hold the Git index of a disjoint approved task hostage.
+      if(!released||released.writer_released!==1||
+        released.completion_revision!==note.revision||
+        released.completion_head!==note.git_head)
+        this.checkReviewDeliveryHead(previous.id,String(lease.base_head),
+          String(note.git_head));
       this.protectedClaimWorktree(previous.id,previous,String(lease.base_head));
       if(parkedResumption){
         const row=this.db.prepare(`SELECT preserved_snapshot_json,preserved_digest
@@ -7489,7 +7866,10 @@ export class ProjectTaskLedger {
       return this.db.prepare('SELECT * FROM dc_leases WHERE singleton=1').get();
     return this.db.prepare(`SELECT l.* FROM dc_task_leases l
       JOIN dc_tasks t ON t.id=l.task_id
-      WHERE l.worktree_path=? AND t.status IN ('in_progress','in_review')
+      LEFT JOIN dc_review_sessions r ON r.task_id=l.task_id
+      WHERE l.worktree_path=? AND
+        (t.status='in_progress' OR (t.status='in_review' AND
+        COALESCE(r.writer_released,0)=0))
       ORDER BY l.expires_at DESC LIMIT 1`).get(fs.realpathSync(this.root));
   }
 
@@ -7516,7 +7896,17 @@ export class ProjectTaskLedger {
           return {claimableNow:false,writerBlocker:{
             code:'REPOSITORY_WRITER_CONFLICT',taskId:competing.task_id,
             writerExpired:competing.expires_at<=Date.now(),
-            action:'A shared Git index remains owned; resume its original writer or use an audited safe handoff'}};
+            action:'A shared Git index remains owned; inspect and resume or hand off its original task',
+            nextActions:[
+              {action:'task-closure-status',input:{id:competing.task_id},
+                reason:'Check original task delivery, source ownership and expired token'},
+              {action:'resume-session',input:{id:competing.task_id,
+                actor:'CURRENT_AGENT',reason:'Resume the original interrupted task after checking its frozen files'},
+                requires:'Expired original session and safe Git index'},
+              {action:'park-expired-writer',input:{id:competing.task_id,
+                actor:'CURRENT_AGENT',reason:'Inspect expired writer and its exact frozen source'},
+                requires:'Expired review with submitted evidence, or Owner authorization for in_progress'},
+            ]}};
       }catch(error){return {claimableNow:false,writerBlocker:{
         code:error instanceof DevControlError?error.code:'WORKTREE_CHANGED',
         taskId:competing.task_id,action:'Inspect the exact shared repository conflict'}};}
@@ -7559,6 +7949,12 @@ export class ProjectTaskLedger {
         previous.status==='in_progress'?
           'Review external worktree conflicts, then use park-expired-writer with the exact approved disjoint successor':
           'Complete the existing review or recover only if actual source rework is required',
+      nextActions:[{action:'task-closure-status',input:{id:writer.task_id},
+        reason:'Read the original task status, Git and evidence before any writer change'},
+        {action:previous.status==='in_review'?'recover-review':'resume-session',
+          input:{id:writer.task_id,actor:'CURRENT_AGENT',
+            reason:'Continue the interrupted approved task without rewriting its evidence'},
+          requires:'Previous session expired and frozen worktree checks pass'}],
     }};
   }
 
@@ -7646,16 +8042,61 @@ export class ProjectTaskLedger {
     } catch { return false; }
   }
 
-  private executable(task: Row): boolean {
-    return task.status !== "draft" && task.status !== "cancelled" &&
-      !!(JSON.parse(task.required_gates) as string[]).length &&
-      !this.db.prepare("SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1").get(task.id) &&
-      this.isApprovedForExecution(task) &&
-      this.executionContract(task.id).eligible;
+  /** Read-only next preflight. Reuse the same frozen plan eligibility without
+   * loading task-content, supplements and audience briefs for every candidate.
+   * Explicit execution-contract and claim still perform their full checks. */
+  private executable(task: Row,releasePlans:Map<string,Row>): boolean {
+    if(task.status==='draft'||task.status==='cancelled'||
+      !(JSON.parse(task.required_gates) as string[]).length||
+      this.db.prepare('SELECT id FROM dc_tasks WHERE parent_id=? LIMIT 1').get(task.id)||
+      !this.isApprovedForExecution(task))return false;
+    // The release-work contract's eligible bit is exactly the already
+    // verified approval/roster membership above; no additional Gate shortcut.
+    if(String(task.plan_id??'').startsWith('release-work:'))return true;
+    // Feature contracts include a separate sourceDrift/openQuestions check.
+    // Preserve that full check instead of guessing from the frozen roster.
+    if(String(task.plan_id??'').startsWith('feature:'))
+      return this.executionContract(task.id).eligible;
+    let frozen=releasePlans.get(String(task.release));
+    if(!frozen){frozen=this.releasePlan(String(task.release));
+      releasePlans.set(String(task.release),frozen);}
+    const plan=frozen.frozen as ReleasePlanProposal|null;
+    const node=plan?.nodes.find((item:ReleasePlanNode)=>item.id===task.id);
+    const strict=(plan?.qualityProfile==='spec-depth-v2'||
+      plan?.qualityProfile==='spec-depth-v3')&&!node?.existing;
+    // Legacy / nonstrict plans do not add any execution-contract eligibility
+    // issues. The strict profile still uses its original full validation.
+    return !strict||this.executionContract(task.id).eligible;
   }
 
   next(): Row {
     const tasks = this.list();
+    const taskStatus=new Map(tasks.map(t=>[String(t.id),String(t.status)]));
+    const statusOf=(id:string)=>taskStatus.get(id)??this.requireTask(id).status;
+    const releasePlans=new Map<string,Row>();
+    const blockedBy=new Map<string,string[]>();
+    const blockersOf=(id:string)=>{
+      if(!blockedBy.has(id))blockedBy.set(id,this.blockers(id));
+      return blockedBy.get(id)!;
+    };
+    const scopeReview=new Map<string,boolean>();
+    const incrementalReview=new Map<string,boolean>();
+    const awaitsScope=(t:Row)=>{
+      if(!scopeReview.has(t.id))scopeReview.set(t.id,
+        this.taskAwaitsScopeReview(t.id,t.release));
+      return scopeReview.get(t.id)!;
+    };
+    const awaitsIncremental=(t:Row)=>{
+      if(!incrementalReview.has(t.id))incrementalReview.set(t.id,
+        this.taskAwaitsIncrementalReview(t.id,t.release));
+      return incrementalReview.get(t.id)!;
+    };
+    const availability=new Map<string,Row>();
+    const claimStatus=(id:string)=>{
+      if(!availability.has(id))availability.set(id,
+        this.claimAvailability(this.requireTask(id)));
+      return availability.get(id)!;
+    };
     const active = this.checkoutWriter();
     const activeLease = active && active.expires_at > Date.now()
       ? { taskId: active.task_id, agent: active.agent, expiresAt: active.expires_at } : null;
@@ -7668,6 +8109,20 @@ export class ProjectTaskLedger {
       taskId:item.task_id,agent:item.agent,expiresAt:item.expires_at,
       completionHead:this.latestCompletion(String(item.task_id))?.git_head??null,
     }));
+    const sessionRecoveryCandidates=tasks.filter(t=>
+      t.status==='in_progress'||t.status==='in_review').map(t=>{
+        const lease=this.db.prepare(`SELECT agent,expires_at FROM dc_task_leases
+          WHERE task_id=?`).get(t.id);
+        const review=this.db.prepare(`SELECT expires_at,writer_released
+          FROM dc_review_sessions WHERE task_id=?`).get(t.id);
+        const expired=(review??lease)?.expires_at<=Date.now();
+        return {taskId:t.id,status:t.status,agent:lease?.agent??null,
+          sessionExpired:expired??null,gitWriterReleased:review?.writer_released===1,
+          nextAction:t.status==='in_review'?
+            expired?'resume-session':'task-closure-status':
+            expired?'resume-session':'continue-with-original-lease',
+          noAutomaticWriterTakeover:true};
+      }).slice(0,32);
     // A review requirement is ACTIONABLE agent work, not a background MCP
     // operation. Surface it even if unrelated already-approved tasks remain
     // Ready: otherwise a lone agent sees only an apparently passive wait.
@@ -7689,45 +8144,44 @@ export class ProjectTaskLedger {
     const ready = tasks.filter((t) =>
       (t.status === "ready" || t.status === "in_progress" || t.status === "in_review") &&
       !t.pendingVerification &&
-      !(t.status === "ready" && (this.taskAwaitsScopeReview(t.id,t.release)||
-        this.taskAwaitsIncrementalReview(t.id,t.release))) &&
-      this.executable(this.requireTask(t.id)) &&
-      this.blockers(t.id).length === 0 &&
-      !t.childIds.some((id: string) => this.requireTask(id).status !== "verified"),
+      !(t.status === "ready" && (awaitsScope(t)||awaitsIncremental(t))) &&
+      blockersOf(t.id).length === 0 &&
+      !t.childIds.some((id: string) => statusOf(id) !== "verified") &&
+      this.executable(this.requireTask(t.id),releasePlans),
     );
     // Coding still has one shared Git writer. A completed review does NOT
     // need to hold it while an unrelated, non-overlapping task is developed.
     const claimable=ready.filter(t=>t.status==='ready'&&
-      this.claimAvailability(this.requireTask(t.id)).claimableNow);
+      claimStatus(t.id).claimableNow);
     const selected = claimable.find(t=>t.track==='product')??claimable[0]??
       (activeLease?this.get(activeLease.taskId):
         ready.find(t=>t.status==='in_progress'&&
-          this.claimAvailability(this.requireTask(t.id)).claimableNow)??
+          claimStatus(t.id).claimableNow)??
         ready.find(t=>t.status==='ready'&&t.track==='product')??
         ready.find(t=>t.status==='ready')??ready[0]??null);
     return {
       projectRoot: this.root, nextTask: selected,
       activeLease,
       selectedTaskWriterStatus:selected?
-        this.claimAvailability(this.requireTask(selected.id)):null,
+        claimStatus(selected.id):null,
       parkedReviews,
+      sessionRecoveryCandidates,
       reviewWriterCanYield:claimable.length>0&&!!activeLease,
       pendingAgentActions,
       // A claimed task is finished first; pending reviews never steal leases.
       nextAgentAction:activeLease?null:pendingAgentActions[0]??null,
       blocked: tasks.filter((t) => t.status !== "verified" && (
-        this.blockers(t.id).length ||
-        t.childIds.some((id: string) => this.requireTask(id).status !== "verified") ||
-        (t.status === "ready" && (this.taskAwaitsScopeReview(t.id,t.release)||
-          this.taskAwaitsIncrementalReview(t.id,t.release)))
+        blockersOf(t.id).length ||
+        t.childIds.some((id: string) => statusOf(id) !== "verified") ||
+        (t.status === "ready" && (awaitsScope(t)||awaitsIncremental(t)))
       )).map((t) => ({
-        id: t.id, blockedBy: this.blockers(t.id),
-        unverifiedChildren: t.childIds.filter((id: string) => this.requireTask(id).status !== "verified"),
-        ...(t.status==="ready"&&this.taskAwaitsScopeReview(t.id,t.release)?
+        id: t.id, blockedBy: blockersOf(t.id),
+        unverifiedChildren: t.childIds.filter((id: string) => statusOf(id) !== "verified"),
+        ...(t.status==="ready"&&awaitsScope(t)?
           {pendingScopeReview:true}:{}),
-        ...(t.status==="ready"&&this.taskAwaitsIncrementalReview(t.id,t.release)?
+        ...(t.status==="ready"&&awaitsIncremental(t)?
           {pendingIncrementalReview:true}:{}),
-        ...(t.status==="ready"&&this.taskAwaitsIncrementalReview(t.id,t.release)?
+        ...(t.status==="ready"&&awaitsIncremental(t)?
           {requiredAgentAction:pendingAgentActions.find(action=>
             action.kind==="incremental_work"&&action.release===t.release)}:{}),
       })),
@@ -8135,6 +8589,9 @@ export class ProjectTaskLedger {
         expires_at=excluded.expires_at,worktree_path=excluded.worktree_path`)
         .run(id,agent.trim(),token,claimBase,Date.now()+ttlSeconds*1000,
           this.linkedWorktree?fs.realpathSync(this.root):'');
+      if(task.status==='in_review')
+        this.db.prepare(`UPDATE dc_review_sessions SET writer_released=0
+          WHERE task_id=?`).run(id);
       if(paused){
         this.db.prepare("UPDATE dc_scope_pauses SET resumed_at=? WHERE task_id=?")
           .run(utc(),id);
@@ -8709,6 +9166,46 @@ export class ProjectTaskLedger {
   private clearTaskLease(id:string):void{
     this.db.prepare('DELETE FROM dc_task_leases WHERE task_id=?').run(id);
     this.db.prepare('DELETE FROM dc_leases WHERE task_id=?').run(id);
+    this.db.prepare('DELETE FROM dc_review_sessions WHERE task_id=?').run(id);
+  }
+
+  /** Review permission is version-bound and does not own the Git index.
+   * Retain the old lease row for migration and frozen Git provenance only.
+   * A failed transaction cannot release the writer without recording review.
+   */
+  private beginReviewSession(id:string,writerToken:string):Row{
+    const task=this.requireTask(id);
+    const lease=this.db.prepare('SELECT * FROM dc_task_leases WHERE task_id=?').get(id);
+    const note=this.latestCompletion(id);
+    if(task.status!=='in_review'||!lease||lease.token!==writerToken||!note||
+      !this.db.prepare('SELECT id FROM dc_evidence WHERE task_id=? AND git_head=? LIMIT 1')
+        .get(id,note.git_head))
+      fail('REVIEW_DELIVERY_INCOMPLETE',
+        'A review needs the exact submitted completion and matching real evidence');
+    const reviewToken=randomUUID()+randomUUID();
+    const reviewHash=createHash('sha256').update(reviewToken).digest('hex');
+    const expiresAt=Date.now()+24*60*60*1000;
+    const released=this.hasRootGit;
+    this.db.prepare(`INSERT INTO dc_review_sessions
+      (task_id,token_hash,agent,completion_revision,completion_head,
+       writer_released,issued_at,expires_at) VALUES(?,?,?,?,?,?,?,?)
+      ON CONFLICT(task_id) DO UPDATE SET
+        token_hash=excluded.token_hash,agent=excluded.agent,
+        completion_revision=excluded.completion_revision,
+        completion_head=excluded.completion_head,
+        writer_released=excluded.writer_released,
+        issued_at=excluded.issued_at,expires_at=excluded.expires_at`)
+      .run(id,reviewHash,lease.agent,note.revision,note.git_head,
+        released?1:0,utc(),expiresAt);
+    if(released)this.db.prepare(
+      'DELETE FROM dc_leases WHERE task_id=? AND token=?').run(id,writerToken);
+    this.audit(id,'review_authorization_issued',lease.agent,{
+      completionRevision:note.revision,completionHead:note.git_head,
+      gitWriterReleased:released,tokenStoredAsHash:true,
+      originalDeliveryAndEvidencePreserved:true,gatePassed:false,
+    });
+    return {reviewToken,reviewExpiresAt:expiresAt,
+      gitWriterReleased:released,completionRevision:note.revision};
   }
 
   private requireGitWriter(id:string):void{
@@ -8728,10 +9225,19 @@ export class ProjectTaskLedger {
     purpose:'write'|'review'='write'): Row {
     const row = this.db.prepare("SELECT * FROM dc_task_leases WHERE task_id=?").get(id)??
       this.db.prepare("SELECT * FROM dc_leases WHERE task_id=?").get(id);
-    if (!row || row.token !== token) {
+    const review=purpose==='review'?this.db.prepare(
+      'SELECT * FROM dc_review_sessions WHERE task_id=?').get(id):null;
+    const completion=review?this.latestCompletion(id):null;
+    const separateReview=!!row&&!!review&&!!completion&&
+      this.requireTask(id).status==='in_review'&&
+      review.completion_revision===completion.revision&&
+      review.completion_head===completion.git_head&&
+      review.expires_at>Date.now()&&
+      review.token_hash===createHash('sha256').update(token).digest('hex');
+    if (!row || (row.token !== token&&!separateReview)) {
       fail("LEASE_REQUIRED", "Active task lease token required");
     }
-    if(row.expires_at<=Date.now()){
+    if(!separateReview&&row.expires_at<=Date.now()){
       // Expiry is a liveness indicator, never an automatic revocation of an
       // authenticated original task. File overlap and Git index ownership,
       // not the wall clock, determine whether writes may safely continue.
@@ -8798,16 +9304,18 @@ export class ProjectTaskLedger {
         this.db.prepare(`INSERT INTO dc_evidence_repository_digests(evidence_id,digest)
           VALUES(?,?)`).run(row!.id,this.repositoryEvidenceDigest(id,repositories));
       }
+      let review:Row|null=null;
       if (readyForReview) {
         this.db.prepare(
           "UPDATE dc_tasks SET status='in_review',updated_at=? WHERE id=?",
         ).run(utc(), id);
+        if(this.latestCompletion(id))review=this.beginReviewSession(id,token);
       }
       this.audit(id, "evidence_reported", lease.agent, {
         kind:evidence.kind,reference:evidence.reference,readyForReview,
         gitHead:head,observedHead,resumedVerification:resumedEvidence,
       });
-      return this.get(id);
+      return {...this.get(id),...(review??{})};
     });
   }
 

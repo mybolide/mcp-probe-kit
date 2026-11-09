@@ -11,6 +11,7 @@ import {
   validateMcpToolSkillRegistry,
 } from "../src/lib/mcp-tool-skill-registry.ts";
 import { generateWorkflowSkillContent } from "../src/lib/workflow-skill-template.ts";
+import { previewManagedClaudePointer } from '../src/lib/harness-adapters.ts';
 import { renderV5AgentsMd } from "../src/lib/v5-sqlite-guidance.ts";
 import { SKILL_GUIDANCE_REVISION } from "../src/lib/workflow-skill-version.ts";
 import { VERSION } from "../src/version.ts";
@@ -21,6 +22,17 @@ const result = validateMcpToolSkillRegistry(registeredToolNames);
 if (!result.ok) {
   console.error("[verify-workflow-skill] FAIL\n");
   console.error(formatSkillRegistryMismatchMessage(result));
+  process.exit(1);
+}
+
+const claudePointer=previewManagedClaudePointer(null,'AGENTS.md');
+if(!claudePointer.includes(SKILL_GUIDANCE_REVISION)||
+  !claudePointer.includes('action=`submit`')||
+  !claudePointer.includes('separate `verify`')||
+  !claudePointer.includes('never passes a Gate')||
+  !claudePointer.includes('resume-session')||
+  !claudePointer.includes('reviewToken')){
+  console.error('[verify-workflow-skill] CLAUDE.md generated pointer misses the current revision or atomic-submit acceptance flow');
   process.exit(1);
 }
 
@@ -41,6 +53,14 @@ for(const [name,source] of guidance){
     !source.includes('Gate')||
     !source.includes('self-review'))
     errors.push(name+' omits the unified developer acceptance contract and legacy review compatibility');
+  if(!(source.includes('ONE `devcontrol` action=`submit`')||
+    source.includes('普通 in_progress 任务在真实测试后优先用一次 `submit`')||
+    source.includes('submit one atomic completion')))
+    errors.push(name+' omits the current one-step submit, followed by a separate real verify');
+  if(!(source.includes('When maintaining mcp-probe-kit ITSELF')||
+    source.includes('MCP 源码维护时强制同步全部模板')||
+    source.includes('Maintaining MCP Probe Kit source requires synchronizing ALL guidance')))
+    errors.push(name+' omits the mandatory template sync rule for MCP-source changes');
   if(!source.includes('refresh-protected-worktree'))
     errors.push(name+' omits the Owner-authorized HEAD-restored protected snapshot refresh action');
   if(!source.includes('relocate-repository-baselines'))

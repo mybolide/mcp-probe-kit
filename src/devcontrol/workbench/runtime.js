@@ -120,9 +120,27 @@
       const version=meta.version?'v'+String(meta.version).replace(/^v/,''):'版本未知';
       $('brand-version').textContent=version;
       $('footer-version').textContent=version;
+      const hash=typeof meta.buildCommit==='string'&&/^[a-f0-9]{7,40}$/i.test(meta.buildCommit)?
+        meta.buildCommit.slice(0,9):null;
+      const guidance=typeof meta.guidanceRevision==='string'?
+        meta.guidanceRevision.match(/-r(\d+)$/)?.[1]:null;
+      const sourceState=meta.buildDirty===true?' · 含本地未提交改动':
+        meta.buildDirty===null?' · 源码状态未知':'';
+      $('footer-build').textContent=hash?
+        '运行构建 '+hash+sourceState+(guidance?' · 指导 r'+guidance:''):
+        '旧运行包 / 构建来源未标识';
+      $('settings-runtime').textContent=version+' · '+
+        (hash?'构建 '+hash+sourceState:'构建未标识')+
+        (guidance?' · 指导 r'+guidance:'');
+      $('footer-build').title=hash?
+        '构建来源 HEAD '+meta.buildCommit+sourceState+'；生成时间 '+(meta.builtAt||'未知')+
+          '；指导修订 '+(meta.guidanceRevision||'未知'):
+        '当前运行包没有可验证的构建标记。请核对已安装MCP版本，避免使用旧运行包。';
     }catch{
       $('brand-version').textContent='本地版本';
       $('footer-version').textContent='本地版本';
+      $('footer-build').textContent='运行包状态暂不可读';
+      $('settings-runtime').textContent='无法读取运行构建，请检查 MCP 服务是否在线';
     }
   }
   async function reload(){

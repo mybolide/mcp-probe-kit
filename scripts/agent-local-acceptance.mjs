@@ -1,230 +1,72 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+/** Real v5 Agent acceptance, isolated from the developer's workspace.
+ * No delegated-plan or phantom Gate approval may substitute for SQLite. */
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { COMPACT_WITH_HISTORY_TOOL_COUNT, PACKAGE_VERSION } from './release-surface.mjs';
 
-const projectRoot = await mkdtemp(join(tmpdir(), 'mcp-agent-acceptance-'));
-const transport = new StdioClientTransport({
-  command: process.execPath,
-  args: ['build/index.js'],
-  cwd: process.cwd(),
-  env: {
-    ...process.env,
-    MCP_PROTOCOL_MODE: 'auto',
-    MCP_ENABLE_GITNEXUS_BRIDGE: '0',
-    MCP_TOOLSET: 'compact',
-    MCP_HISTORY_SESSION: '1',
-    MEMORY_QDRANT_URL: '',
-    MEMORY_EMBEDDING_URL: '',
-    MEMORY_EMBEDDING_MODEL: '',
-  },
-  stderr: 'pipe',
-});
-
-let stderrText = '';
-transport.stderr?.on('data', (chunk) => {
-  stderrText += chunk.toString();
-});
-
-const client = new Client(
-  { name: 'mcp-probe-local-agent', version: PACKAGE_VERSION },
-  { capabilities: {} }
-);
-client.setVersionNegotiation({ mode: { pin: '2026-07-28' } });
-
+const projectRoot=await mkdtemp(join(tmpdir(),'mcp-v5-agent-acceptance-'));
+let client,transport;
+const assert=(ok,message)=>{if(!ok)throw Error(message);};
 try {
+  await writeFile(join(projectRoot,'README.md'),'# Disposable AI project\n');
+  execFileSync('git',['init','-q',projectRoot],{timeout:3000});
+  execFileSync('git',['-C',projectRoot,'config','user.name','Agent Acceptance'],{timeout:3000});
+  execFileSync('git',['-C',projectRoot,'config','user.email','accept@example.invalid'],{timeout:3000});
+  execFileSync('git',['-C',projectRoot,'add','README.md'],{timeout:3000});
+  execFileSync('git',['-C',projectRoot,'commit','-qm','initial'],{timeout:3000});
+
+  transport=new StdioClientTransport({command:process.execPath,
+    args:['build/index.js'],cwd:process.cwd(),stderr:'pipe',
+    env:{...process.env,MCP_TOOLSET:'compact',MCP_HISTORY_SESSION:'1',
+      MCP_DEVCONTROL_AUTOSTART:'0',MCP_ENABLE_GITNEXUS_BRIDGE:'0',
+      MEMORY_QDRANT_URL:'',MEMORY_EMBEDDING_URL:'',MEMORY_EMBEDDING_MODEL:''}});
+  client=new Client({name:'v5-independent-agent',version:PACKAGE_VERSION},
+    {capabilities:{}});
+  client.setVersionNegotiation({mode:{pin:'2026-07-28'}});
   await client.connect(transport);
-  const tools = await client.listTools();
-  assert(
-    tools.tools.length === COMPACT_WITH_HISTORY_TOOL_COUNT,
-    `expected ${COMPACT_WITH_HISTORY_TOOL_COUNT} compact tools with History, got ${tools.tools.length}`
-  );
-
-  const fullIntent = [
-    `继续 MCP Probe Kit v${PACKAGE_VERSION} 发布候选开发：`,
-    '- 校验 npm next 标签与 Git Tag/package version 一致性；',
-    '- GitHub Release 标记 prerelease，RC 不覆盖 latest；',
-    '- Node.js 20、Legacy/Modern 双协议与同步降级；',
-    '- Agent Evals、完整 release gate 与 npm pack 校验；',
-    '- 真实客户端兼容矩阵保持 pending，完成实机验收前不得发布稳定版；',
-    '- RC 不发布到正式 MCP Registry。',
-  ].join('\n');
-
-  const routed = await client.callTool({
-    name: 'workflow',
-    arguments: {
-      intent: fullIntent,
-      scenario: 'feature',
-      project_root: projectRoot,
-    },
+  const listed=(await client.listTools()).tools.map(x=>x.name);
+  assert(listed.length===COMPACT_WITH_HISTORY_TOOL_COUNT&&
+    listed.includes('devcontrol')&&listed.includes('history_session_bootstrap')&&
+    !listed.includes('workflow')&&!listed.includes('converge'),
+    'AI client must see the v5 tools, not retired delegated-plan tools');
+  async function call(action,input={}){
+    const r=await client.callTool({name:'devcontrol',arguments:{
+      action,project_root:projectRoot,input}});
+    assert(r.isError!==true&&r.structuredContent!==undefined,
+      `v5 Agent ${action} did not return structured success`);
+    return r.structuredContent;
+  }
+  const first=await call('next');
+  assert(!first.nextTask,'An empty project must not be assigned a phantom task');
+  const guide=await call('guide',{intent:'feature'});
+  assert(guide.hasSideEffects===false,'Agent guidance must never mutate tasks');
+  const draft=await call('feature-create',{
+    name:'agent-acceptance',description:'User-requested idea awaiting actual owner approval',
   });
-  assert(routed.isError !== true, 'explicit feature workflow guide returned an error');
-  assert(routed.structuredContent?.firstTool === 'start_feature', 'explicit feature guide did not return start_feature');
-  assert(
-    routed.structuredContent?.firstToolArgsHint?.spec_layout === 'auto',
-    'explicit feature guide did not preserve spec_layout=auto'
-  );
+  assert(draft.status==='draft'&&draft.revision===1,
+    'Draft creation cannot automatically approve, commit or verify a feature');
+  const loaded=await call('feature-get',{name:'agent-acceptance'});
+  assert(loaded.revision===1&&loaded.status==='draft',
+    'A separate AI call must retrieve the exact SQLite draft without promoted status');
+  const second=await call('next');
+  assert(!second.nextTask,'A draft proposal must not become executable work');
 
-  const feature = await client.callTool({
-    name: 'start_feature',
-    arguments: {
-      feature_name: 'mcp-v4-rc-readiness',
-      description: fullIntent,
-      spec_layout: 'auto',
-      project_root: projectRoot,
-    },
-  });
-  assert(feature.isError !== true, 'start_feature returned an error');
-  const featureMetadata = feature.structuredContent?.metadata;
-  const featurePlan = featureMetadata?.plan;
-  assert(featurePlan?.workflow === 'feature', 'start_feature did not return a feature plan');
-  assert(
-    featureMetadata?.layoutDecision?.resolved === 'parent-child',
-    `expected parent-child, got ${featureMetadata?.layoutDecision?.resolved}`
-  );
-  assert(
-    featurePlan.steps?.some((step) => step.id === 'decompose-spec'),
-    'parent-child plan is missing decompose-spec'
-  );
-
-  const initialHeartbeat = await client.callTool({
-    name: 'plan_heartbeat',
-    arguments: {
-      plan_id: featurePlan.planId,
-      project_root: projectRoot,
-      plan: featurePlan,
-      current_step_id: featurePlan.steps?.[0]?.id,
-      unresolved_items: ['尚未执行规格、实现、测试和审查'],
-      evidence: [{ kind: 'requirements', summary: '已从当前对话重建完整 RC 范围' }],
-    },
-  });
-  assert(initialHeartbeat.structuredContent?.stored === true, 'feature heartbeat was not stored');
-
-  const resumed = await client.callTool({
-    name: 'resume_plan',
-    arguments: { plan_id: featurePlan.planId, project_root: projectRoot },
-  });
-  assert(resumed.structuredContent?.found === true, 'feature plan could not be resumed');
-
-  const resumedAfterContinue = await client.callTool({
-    name: 'resume_plan',
-    arguments: { project_root: projectRoot },
-  });
-  assert(
-    resumedAfterContinue.structuredContent?.found === true,
-    'bare continue recovery could not find the latest unfinished plan'
-  );
-  assert(
-    resumedAfterContinue.structuredContent?.selection === 'latest-resumable',
-    'bare continue recovery did not use latest-resumable selection'
-  );
-  assert(
-    resumedAfterContinue.structuredContent?.record?.planId === featurePlan.planId,
-    'bare continue recovery selected the wrong plan'
-  );
-
-  const rejectedConverge = await client.callTool({
-    name: 'converge',
-    arguments: { plan_id: featurePlan.planId, project_root: projectRoot },
-  });
-  assert(rejectedConverge.structuredContent?.passed === false, 'unfinished feature plan converged unexpectedly');
-  assert(
-    rejectedConverge.structuredContent?.memoryWriteAllowed === false,
-    'unfinished feature plan allowed long-term memory write'
-  );
-
-  const completedPlan = {
-    planId: 'agent-acceptance-completed-plan',
-    mode: 'delegated',
-    contractVersion: '2.0.0',
-    workflow: 'feature',
-    workflowVersion: PACKAGE_VERSION,
-    objective: '验证证据齐全后才允许收敛',
-    steps: [{ id: 'verify-release', action: 'verify' }],
-    globalRules: [],
-    completionCriteria: ['发布证据完整'],
-    memoryPolicy: {
-      recallBeforeExecution: true,
-      extractAfterValidation: true,
-      writeOnlyReusableKnowledge: true,
-      allowNegativeMemory: true,
-    },
-  };
-  const completedHeartbeat = await client.callTool({
-    name: 'plan_heartbeat',
-    arguments: {
-      plan_id: completedPlan.planId,
-      project_root: projectRoot,
-      plan: completedPlan,
-      completed_step_ids: ['verify-release'],
-      last_verified_revision: 'local-agent-acceptance',
-      evidence: [
-        { kind: 'requirements', summary: 'RC 发布范围已确认' },
-        { kind: 'spec', summary: 'RC 发布规则已确认', reference: 'CHANGELOG.md' },
-        { kind: 'implementation', summary: '发布渠道保护已实现', revision: 'local-agent-acceptance' },
-        { kind: 'test', summary: '本地 Agent 验收通过', reference: 'acceptance:agent' },
-        {
-          kind: 'review',
-          summary: 'RC 不覆盖 latest，稳定 Registry 未启用',
-          reference: '.github/workflows/release.yml',
-        },
-      ],
-    },
-  });
-  assert(completedHeartbeat.structuredContent?.stored === true, 'completed heartbeat was not stored');
-
-  const acceptedConverge = await client.callTool({
-    name: 'converge',
-    arguments: { plan_id: completedPlan.planId, project_root: projectRoot },
-  });
-  assert(acceptedConverge.structuredContent?.passed === true, 'completed plan did not converge');
-  assert(
-    acceptedConverge.structuredContent?.memoryWriteAllowed === true,
-    'completed plan did not allow post-convergence memory write'
-  );
-
-  console.log(JSON.stringify({
-    clientEra: client.getProtocolEra(),
-    tools: tools.tools.length,
-    continuationResume: {
-      selection: resumedAfterContinue.structuredContent?.selection,
-      planId: resumedAfterContinue.structuredContent?.record?.planId,
-      nextStep: resumedAfterContinue.structuredContent?.nextStepId,
-      appResource: 'ui://mcp-probe-kit/plan-workbench',
-    },
-    explicitScenarioGuide: {
-      scenario: routed.structuredContent?.scenario,
-      confidence: routed.structuredContent?.confidence,
-      firstTool: routed.structuredContent?.firstTool,
-      specLayoutHint: routed.structuredContent?.firstToolArgsHint?.spec_layout,
-    },
-    featurePlan: {
-      planId: featurePlan.planId,
-      layout: featureMetadata?.layoutDecision?.resolved,
-      layoutScore: featureMetadata?.layoutDecision?.score,
-      layoutReasons: featureMetadata?.layoutDecision?.reasons,
-      hasDecomposeSpec: featurePlan.steps?.some((step) => step.id === 'decompose-spec'),
-      resumedNextStep: resumed.structuredContent?.nextStepId,
-    },
-    unfinishedConverge: {
-      passed: rejectedConverge.structuredContent?.passed,
-      memoryWriteAllowed: rejectedConverge.structuredContent?.memoryWriteAllowed,
-      blockers: rejectedConverge.structuredContent?.blockers,
-    },
-    completedConverge: {
-      passed: acceptedConverge.structuredContent?.passed,
-      memoryWriteAllowed: acceptedConverge.structuredContent?.memoryWriteAllowed,
-    },
-    serverStarted: stderrText.includes(`MCP Probe Kit v${PACKAGE_VERSION} 已启动`),
-  }, null, 2));
+  const history=await client.callTool({name:'history_session_bootstrap',
+    arguments:{project_root:projectRoot,
+      initial_user_input:'Please keep this proposal as a draft',
+      title:'Disposable agent continuity'}});
+  assert(history.isError!==true&&history.structuredContent,
+    'History must remain available without any separate plan-heartbeat gate');
+  console.log(JSON.stringify({passed:true,version:PACKAGE_VERSION,
+    clientEra:client.getProtocolEra(),modelTools:listed.length,
+    draftPreserved:true,unapprovedTaskRemainsUnclaimable:true,
+    historySupported:true,retiredV4ToolsAbsent:true},null,2));
 } finally {
-  await client.close().catch(() => undefined);
-  await transport.close().catch(() => undefined);
-  await rm(projectRoot, { recursive: true, force: true });
-}
-
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
+  await client?.close().catch(()=>undefined);
+  await transport?.close().catch(()=>undefined);
+  await rm(projectRoot,{recursive:true,force:true});
 }

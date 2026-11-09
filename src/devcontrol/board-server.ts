@@ -3,6 +3,13 @@
 import http, { type ServerResponse } from "node:http";
 import { randomBytes } from "node:crypto";
 import { VERSION } from "../version.js";
+import { SKILL_GUIDANCE_REVISION } from '../lib/workflow-skill-version.js';
+
+// Esbuild injects the immutable, source-controlled runtime identity. Tests
+// importing the unbundled TypeScript module safely see null instead.
+declare const __MCP_BUILD_COMMIT__: string | null;
+declare const __MCP_BUILD_TIME__: string;
+declare const __MCP_BUILD_DIRTY__: boolean | null;
 import { ProjectTaskLedger, DevControlError } from "./task-ledger.js";
 import { boardHtml } from "./board-html.js";
 import { projectHtml } from "./project-html.js";
@@ -162,6 +169,10 @@ export function createDevControlBoardServer(
           root: ledger.root, schema: "devcontrol-project-workspace",
           product: "mcp-probe-kit",
           version: VERSION,
+          buildCommit: typeof __MCP_BUILD_COMMIT__ === 'undefined' ? null : __MCP_BUILD_COMMIT__,
+          builtAt: typeof __MCP_BUILD_TIME__ === 'undefined' ? null : __MCP_BUILD_TIME__,
+          buildDirty: typeof __MCP_BUILD_DIRTY__ === 'undefined' ? null : __MCP_BUILD_DIRTY__,
+          guidanceRevision: SKILL_GUIDANCE_REVISION,
           workspaceSchemaVersion: WORKSPACE_SCHEMA_VERSION,
           lanEnabled: enabledNow,
           // Process identity is only exposed to the local supervisor, not LAN guests.

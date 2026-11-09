@@ -35,6 +35,10 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(skill).toContain('guidance');
     expect(skill).toContain('`self-review`');
     expect(skill).toContain('Different independent child Git repositories');
+    expect(skill).toContain('ONE `devcontrol` action=`submit`');
+    expect(skill).toContain('NEVER to Verified');
+    expect(skill).toContain('When maintaining mcp-probe-kit ITSELF');
+    expect(skill).toContain('canonical v5 Skill AND managed');
     expect(skill).toContain('ONE verify');
     expect(skill).toContain('acceptance');
     expect(skill).toContain('optional');
@@ -96,6 +100,10 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(text).toContain('idea-self-review');
     expect(text).toContain('verify');
     expect(text).toContain('acceptance');
+    expect(text).toContain(locale==='zh-CN'?'普通 in_progress 任务在真实测试后优先用一次 `submit`':
+      'submit one atomic completion + test receipt');
+    expect(text).toContain(locale==='zh-CN'?'MCP 源码维护时强制同步全部模板':
+      'Maintaining MCP Probe Kit source requires synchronizing ALL guidance');
     expect(text).not.toContain('DIFFERENT reviewer perform review-submit');
     expect(text).not.toContain('**不同的独立 Reviewer**');
   });
@@ -106,7 +114,7 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     const agentsPath = path.join(root, 'AGENTS.md');
     fs.mkdirSync(path.dirname(skillPath), { recursive:true });
     const stale = generateWorkflowSkillContent(VERSION)
-      .replace(SKILL_GUIDANCE_REVISION, 'v5-sqlite-devcontrol-20261104-committed-ignore-r37')
+      .replace(SKILL_GUIDANCE_REVISION, 'v5-sqlite-devcontrol-20261106-efficient-submit-r41')
       .replace('Different independent child Git repositories',
         'Shared-index parking does NOT yet apply to multi-independent-Git child repositories');
     fs.writeFileSync(skillPath, stale, 'utf8');
@@ -132,9 +140,11 @@ describe('v5 generated Skill and startup AGENTS guidance', () => {
     expect(updatedAgents).toContain('DevControl operation reference');
     expect(updatedSkill).toContain('acceptance');
     expect(updatedSkill).toContain('Different independent child Git repositories');
+    expect(updatedSkill).toContain('action=`submit`');
     expect(updatedSkill).not.toContain('Shared-index parking does NOT yet apply to multi-independent-Git child repositories');
     expect(updatedAgents).toContain('self-review');
     expect(updatedAgents).toContain('Writer lease expiry is an activity signal');
+    expect(updatedAgents).toContain('submit one atomic completion');
     expect(updatedAgents).toContain('refresh-protected-worktree');
     expect(updatedAgents).toContain(outside.trim());
     expect(updatedAgents).not.toContain('OUTDATED v4 workflow guidance');

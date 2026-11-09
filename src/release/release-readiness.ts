@@ -76,6 +76,7 @@ export function verifyReleaseReadiness(
   const checks: ReleaseReadinessCheck[] = [];
   const dependencies = packageJson.dependencies ?? {};
   const packageVersion = packageJson.version ?? '';
+  const isV5 = /^5\./.test(packageVersion);
   const releaseChannel = safeReleaseChannel(packageVersion);
 
   checks.push(check(
@@ -111,19 +112,19 @@ export function verifyReleaseReadiness(
 
   checks.push(check(
     'node-runtime',
-    currentNodeMajor() >= 20,
+    currentNodeMajor() >= (isV5 ? 22 : 20),
     'error',
-    'Node.js >= 20',
+    isV5 ? 'Node.js >= 22' : 'Node.js >= 20',
     process.version,
-    'v4 SDK 运行时必须使用 Node.js 20 或更高版本'
+    '运行时必须满足当前发行版本声明的最低 Node.js 版本'
   ));
   checks.push(check(
     'node-engine',
-    packageJson.engines?.node === '>=20.0.0',
+    packageJson.engines?.node === (isV5 ? '>=22.0.0' : '>=20.0.0'),
     'error',
-    '>=20.0.0',
+    isV5 ? '>=22.0.0' : '>=20.0.0',
     packageJson.engines?.node,
-    'package.json 必须明确声明 Node.js 20 最低版本'
+    'package.json 必须与当前版本的 Node.js 最低要求一致'
   ));
 
   for (const packageName of SDK_PACKAGES) {
@@ -178,11 +179,11 @@ export function verifyReleaseReadiness(
   ));
   checks.push(check(
     'tool-count',
-    toolManifest.totalTools === 39,
+    toolManifest.totalTools === (isV5 ? 24 : 39),
     'error',
-    39,
+    isV5 ? 24 : 39,
     toolManifest.totalTools,
-    'Tool Manifest 必须包含 39 个模型可见工具'
+    'Tool Manifest 必须匹配当前发布版本的真实模型工具数量'
   ));
   const compactTools = toolManifest.toolsets?.compact?.tools ?? [];
   const compactWithHistoryTools =
@@ -198,25 +199,29 @@ export function verifyReleaseReadiness(
   const appOnlyTools = toolManifest.toolsets?.appOnly?.tools ?? [];
   checks.push(check(
     'compact-tool-surface',
-    toolManifest.toolsets?.compact?.count === 24 &&
+    isV5 ? toolManifest.toolsets?.compact?.count === 10 &&
+      compactTools.length === 10 && new Set(compactTools).size === 10 &&
+      ['devcontrol','gencommit','architecture','code_review'].every(name=>compactTools.includes(name)) &&
+      ['converge','resume_plan','plan_heartbeat'].every(name=>!compactTools.includes(name)) :
+      toolManifest.toolsets?.compact?.count === 24 &&
       compactTools.length === 24 &&
       ['start_product', 'gencommit', 'converge', 'architecture'].every((name) => compactTools.includes(name)) &&
-      ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'].every(
-        (name) => !compactTools.includes(name)
-      ),
+      ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'].every(name => !compactTools.includes(name)),
     'error',
-    { count: 24, required: ['start_product', 'gencommit', 'converge', 'architecture'], hidden: ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'] },
+    isV5 ? {count:10,required:['devcontrol','gencommit','architecture','code_review'],hidden:['converge','resume_plan','plan_heartbeat']} :
+      { count: 24, required: ['start_product', 'gencommit', 'converge', 'architecture'], hidden: ['add_feature', 'fix_bug', 'sync_ui_data', 'ask_user'] },
     { count: toolManifest.toolsets?.compact?.count, tools: compactTools },
-    '基础 compact 工具面必须固定为审核后的 24 个工具'
+    '基础 compact 工具面必须符合所发布版本的真实能力，不能包含已删除工具'
   ));
   checks.push(check(
     'history-conditional-surface',
-    toolManifest.toolsets?.compactWithHistory?.count === 29 &&
-      compactWithHistoryTools.length === 29 &&
+    toolManifest.toolsets?.compactWithHistory?.count === (isV5 ? 15 : 29) &&
+      compactWithHistoryTools.length === (isV5 ? 15 : 29) &&
       toolManifest.toolsets?.historyConditional?.count === 5 &&
-      historyConditionalTools.length === 5,
+      historyConditionalTools.length === 5 &&
+      historyConditionalTools.every(name=>!compactTools.includes(name)&&compactWithHistoryTools.includes(name)),
     'error',
-    { compactWithHistory: 29, historyConditional: 5 },
+    { compactWithHistory: isV5 ? 15 : 29, historyConditional: 5 },
     {
       compactWithHistory: toolManifest.toolsets?.compactWithHistory?.count,
       historyConditional: toolManifest.toolsets?.historyConditional?.count,
@@ -225,14 +230,16 @@ export function verifyReleaseReadiness(
   ));
   checks.push(check(
     'memory-conditional-surface',
-    toolManifest.toolsets?.compactWithMemory?.count === 30 &&
-      compactWithMemoryTools.length === 30 &&
+    toolManifest.toolsets?.compactWithMemory?.count === (isV5 ? 16 : 30) &&
+      compactWithMemoryTools.length === (isV5 ? 16 : 30) &&
       toolManifest.toolsets?.memoryConditional?.count === 6 &&
       memoryConditionalTools.length === 6 &&
-      toolManifest.toolsets?.compactWithHistoryAndMemory?.count === 35 &&
-      compactWithHistoryAndMemoryTools.length === 35,
+      memoryConditionalTools.every(name=>!compactTools.includes(name)&&compactWithMemoryTools.includes(name)) &&
+      toolManifest.toolsets?.compactWithHistoryAndMemory?.count === (isV5 ? 21 : 35) &&
+      compactWithHistoryAndMemoryTools.length === (isV5 ? 21 : 35),
     'error',
-    { compactWithMemory: 30, memoryConditional: 6, compactWithHistoryAndMemory: 35 },
+    { compactWithMemory: isV5 ? 16 : 30, memoryConditional: 6,
+      compactWithHistoryAndMemory: isV5 ? 21 : 35 },
     {
       compactWithMemory: toolManifest.toolsets?.compactWithMemory?.count,
       memoryConditional: toolManifest.toolsets?.memoryConditional?.count,
@@ -252,16 +259,20 @@ export function verifyReleaseReadiness(
   ));
   checks.push(check(
     'full-compatibility-surface',
-    toolManifest.toolsets?.full?.count === 39,
+    toolManifest.toolsets?.full?.count === (isV5 ? 24 : 39),
     'error',
-    39,
+    isV5 ? 24 : 39,
     toolManifest.toolsets?.full?.count,
-    'MCP_TOOLSET=full 必须保留 39 工具兼容面'
+    'MCP_TOOLSET=full 必须匹配所发布版本的工具面'
   ));
   const readme = fs.existsSync(path.join(workspaceRoot, 'README.md'))
     ? fs.readFileSync(path.join(workspaceRoot, 'README.md'), 'utf8')
     : '';
-  const readmeToolSurfaceTerms = [
+  const readmeToolSurfaceTerms = isV5 ? [
+    '15 model-visible tools by default',
+    '21 when Memory is also configured',
+    '24-tool compatibility surface',
+  ] : [
     '29 model-visible tools by default',
     '35 when Memory is also configured',
     '39-tool compatibility surface',
@@ -270,22 +281,27 @@ export function verifyReleaseReadiness(
     'readme-tool-surface',
     readmeToolSurfaceTerms.every((term) => readme.includes(term)) &&
       !readme.includes('23 model-visible tools by default') &&
-      !readme.includes('33-tool compatibility surface'),
+      !readme.includes('33-tool compatibility surface') &&
+      (!isV5 || !readme.includes('39-tool compatibility surface')),
     'error',
     readmeToolSurfaceTerms,
     readmeToolSurfaceTerms.filter((term) => readme.includes(term)),
-    'README 工具数量必须与 Tool Manifest 的 29/35/39 工具面一致'
+    'README 工具数量必须与当前 Tool Manifest 的默认、Memory、full 工具面一致'
   ));
 
   checks.push(check(
     'workflow-toolset-plan-tools',
-    ['plan_heartbeat', 'resume_plan', 'converge'].every((toolName) =>
-      toolManifest.toolsets?.workflow?.tools?.includes(toolName)
-    ),
+    isV5 ? ['devcontrol','code_review','gencommit','architecture'].every(name=>
+      toolManifest.toolsets?.workflow?.tools?.includes(name)) &&
+      ['plan_heartbeat','resume_plan','converge'].every(name=>
+        !toolManifest.toolsets?.workflow?.tools?.includes(name)) :
+      ['plan_heartbeat', 'resume_plan', 'converge'].every((toolName) =>
+        toolManifest.toolsets?.workflow?.tools?.includes(toolName)),
     'error',
-    ['plan_heartbeat', 'resume_plan', 'converge'],
+    isV5 ? ['devcontrol','code_review','gencommit','architecture'] :
+      ['plan_heartbeat', 'resume_plan', 'converge'],
     toolManifest.toolsets?.workflow?.tools ?? [],
-    'Workflow 工具集必须暴露计划状态、恢复和收敛工具'
+    'Workflow 工具集必须保留当前任务入口并排除已删除的旧流程工具'
   ));
 
   const requiredPackageFiles = ['build/index.js', 'build/resources/ui-ux-data', 'README.md', 'LICENSE'];
@@ -332,7 +348,7 @@ export function verifyReleaseReadiness(
     workspaceRoot,
     '.github/workflows/release.yml',
     [
-      'node-version: "20"',
+      isV5 ? 'node-version: "22"' : 'node-version: "20"',
       'node-version: "24"',
       'npm@11.18.0',
       'id-token: write',
@@ -368,7 +384,7 @@ export function verifyReleaseReadiness(
     workspaceRoot,
     '.github/workflows/ci.yml',
     [
-      'node-version: "20"',
+      isV5 ? 'node-version: "22"' : 'node-version: "20"',
       'node-version: "22"',
       'npm run release:verify',
       'ubuntu-latest',
@@ -376,7 +392,7 @@ export function verifyReleaseReadiness(
       'windows-latest',
       'npm run smoke:gitnexus-sidecar',
     ],
-    '稳定 RC 必须在 Node 20 最低版本持续回归，并在 Windows、macOS、Linux 验证 GitNexus Sidecar'
+    '稳定 RC 必须在当前声明的最低 Node 版本持续回归，并在 Windows、macOS、Linux 验证 GitNexus Sidecar'
   ));
   checks.push(contentCheck(
     workspaceRoot,

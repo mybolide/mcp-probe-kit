@@ -75,6 +75,39 @@ describe('independent repository writers and soft lease expiry',()=>{
       passed:true,taskId:'NEW-SERVICE',deniedFiles:[]});
   },30000);
 
+  it('recovers the original expired task through recover-task while a disjoint repository Writer is active',()=>{
+    setup();
+    const first=ledger.claim('OLD-APP','agent-app',60);
+    write('app/src/unfinished.ts','Preserve actual unfinished source bytes\n');
+    write('.gitignore','/service/\n/app/\n/.figma.local.json\n');
+    const originalSource=fs.readFileSync(path.join(root,'app/src/unfinished.ts'));
+    const rootConfig=fs.readFileSync(path.join(root,'.gitignore'));
+    const time=Date.now();vi.spyOn(Date,'now').mockReturnValue(time+61_000);
+    ledger.claim('NEW-SERVICE','agent-service',1800);
+    const result=ledger.recoverTaskLease('OLD-APP',{
+      actor:'agent-restored',ttlSeconds:1800,
+      reason:'Original app task was interrupted during legitimate unrelated service repository work; restore its own Git writer without changing source.',
+    });
+    expect(result).toMatchObject({
+      taskId:'OLD-APP',status:'in_progress',independentGitIndex:true,
+      originalBaseHead:first.baseHead,testsPassedByRecovery:false});
+    expect(result.leaseToken).not.toBe(first.leaseToken);
+    expect(fs.readFileSync(path.join(root,'app/src/unfinished.ts')).equals(originalSource)).toBe(true);
+    expect(fs.readFileSync(path.join(root,'.gitignore')).equals(rootConfig)).toBe(true);
+    expect(ledger.get('NEW-SERVICE').status).toBe('in_progress');
+    expect(ledger.get('OLD-APP').status).toBe('in_progress');
+  },30000);
+
+  it('does not ask for recover-task merely because the original lease clock expired',()=>{
+    setup();
+    ledger.claim('OLD-APP','agent-app',60);
+    const time=Date.now();vi.spyOn(Date,'now').mockReturnValue(time+61_000);
+    const status=ledger.taskClosureStatus('OLD-APP');
+    expect(status).toMatchObject({status:'in_progress',leaseExpired:true,
+      originalTokenMayContinue:true,nextAction:'complete'});
+    expect(status.steps.some((step:{action:string})=>step.action==='recover-task')).toBe(false);
+  });
+
   it('keeps a root planning-repository writer independent from active child writers',()=>{
     setup();
     task('ROOT-PLAN',['notes/**']);

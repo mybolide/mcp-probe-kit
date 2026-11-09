@@ -1,6 +1,6 @@
 <!-- v5-action-navigation:start -->
 > **v5 Agent action navigation / v5 Agent 操作导航（source only, unpublished）**
-> Main model tool: **devcontrol**. It exposes **114 SQLite actions, including a read-only guide**; these are *not* 114 different MCP tools.
+> Main model tool: **devcontrol**. It exposes **118 SQLite actions, including a read-only guide**; these are *not* 118 different MCP tools.
 > When unsure call {"action":"guide","input":{"intent":"feature"}} (no project_root, no changes), then follow the returned next action using the real business Git project_root.
 > Requirements → Design → single-outcome atomic Tasks → independent review → explicit Owner hash approval → Agent-run genuine tests → evidence + review → Verified.
 > The v5 MCP checks and refreshes managed Skill/AGENTS.md at startup and again on the first explicit project tool call, preserving user rules and recognizing guidance revisions even with the same 5.0.0 package version.
@@ -66,7 +66,7 @@ Version 5 replaces v4 **file-backed development management** with **SQLite + Dev
 | Project DevControl | Per-Git-project SQLite task ledger (`dc_*`), onboarding, reviewed release plans and dependencies | Work survives chat resets without duplicating project task Markdown |
 | Frozen delivery contract | Requirement/design traceability, full leaf-task Specs, approved paths, gates, plan hashes and execution leases | Agents work from an explicit contract rather than a vague task title |
 | Review and change control | Proposal versus approved work, independent Agent review, explicit Owner decisions, reviewed amendments and protected architecture artifact hashes | New ideas and scope changes cannot silently rewrite approved work |
-| Real acceptance | Scoped Git checks, commit-bound completion notes, test evidence and `complete` / `report` / `verify` | A commit or simulated test alone never means Verified |
+| Real acceptance | Scoped Git checks, commit-bound completion notes, real test evidence, `submit` / `verify` (legacy `complete` / `report` retained) | A commit or simulated test alone never means Verified |
 | Unified workbench | Project overview, goals, requirements, architecture, task progress, Bugs, History and document reader | One read-only project view built from Git documents and SQLite records |
 | Project History | Five `history_session_*` tools using project-local `hs_*` SQLite tables on supported Git/Node 22+ setups | Lossless chat continuity without confusing it with optional vector Memory |
 | Recovery and portability | Lease renewal/reclaim, interrupted-work provenance, safe migration, autostarted local workbench, optional trusted-LAN read access | Continue the same task across reconnects without re-approving it accidentally |
@@ -78,7 +78,7 @@ Version 5 replaces v4 **file-backed development management** with **SQLite + Dev
 2. **Review and freeze.** A reviewer checks the substance and dependencies. An explicit Owner decision approves the exact plan hash with `plan-approve`. New-project execution contracts specify inputs, outputs, preconditions, state changes, forbidden changes, stop conditions and allowed files. Approval labels are audit metadata, not cryptographically authenticated identities.
 3. **Choose and claim.** `next` respects dependencies and unfinished leased work; `claim` returns a bounded task lease and frozen scope. `renew` extends the lease. A missing test prerequisite, unreviewed change or invalid dependency blocks execution.
 4. **Implement and independently assess.** The **Agent**, not DevControl, writes software, investigates evidence, reviews solutions and runs actual SQL, Flutter, Go or device tests where required. `check` and the optional Git Hook check paths. The Agent commits only authorized files and preserves existing user changes.
-5. **Report and verify.** `complete` saves the real implementation, tests and remaining issues against the committed revision; `report` records evidence; `verify` runs the configured real acceptance gates. The task is Verified only on successful verification. Parent progress comes from verified children, not estimates.
+5. **Submit and verify.** After the developer actually runs project tests, one `devcontrol` action `submit` atomically records the completion note and test evidence against the exact scoped committed revision (or SHA-256 source snapshot without Git). It does not execute tests or pass a Gate. A separate `verify` checks the frozen revision and independently reviewed evidence for every required Gate before setting Verified. Legacy `complete` and `report` remain available for exceptional/deferred tasks. Parent progress comes from verified children, not estimates.
 6. **Handle change deliberately.** New ideas use `idea-capture` / `idea-assess` / `idea-review` / `idea-decide` to determine the current task, a future dependency point, or rejection. Frozen scope changes use the reviewed `release-work-scope-*` operations, additional approved work uses `release-work-incremental-*`, and governed architecture documents use `artifact-*`. None of these changes automatically interrupts active work or bypasses Owner authorization.
 
 ### Try the 5.0.0 source branch
@@ -127,7 +127,7 @@ For a field-tested way to run a multi-task project without skipping reviews, tas
 
 > 🚀 AI-Powered Complete Development Toolkit - Covering the Entire Development Lifecycle
 
-A powerful MCP (Model Context Protocol) server with **29 model-visible tools by default** (24 base + 5 History Session; disable History with `MCP_HISTORY_SESSION=0`), **35 when Memory is also configured**, and a **39-tool compatibility surface** available through `MCP_TOOLSET=full`. It covers the complete workflow from product analysis to final release and supports structured output.
+A powerful MCP (Model Context Protocol) server. The **v5 source branch** has **15 model-visible tools by default** (10 base + 5 mandatory SQLite History Session), **21 when Memory is also configured**, and a **24-tool compatibility surface** through `MCP_TOOLSET=full`. History cannot be disabled in v5. The published v4 stable release has a separate, legacy tool surface.
 
 **🎉 v4 stable release**: native MCP Apps, resumable plans, evidence convergence, managed GitNexus Sidecar, parent-child specs, and a version-locked CLI fallback.
 
@@ -135,7 +135,7 @@ A powerful MCP (Model Context Protocol) server with **29 model-visible tools by 
 
 **Protocol Support**: Legacy MCP (2025-era) + Modern MCP 2026-07-28 · **SDK**: split TypeScript SDK v2 packages
 
-**Runtime**: Node.js 20 or newer. `MCP_PROTOCOL_MODE=auto` is the default; use `legacy` or `modern` only for compatibility diagnosis.
+**Runtime**: v5 source requires Node.js 22 or newer; published v4 stable supports Node.js 20. `MCP_PROTOCOL_MODE=auto` is the default; use `legacy` or `modern` only for compatibility diagnosis.
 
 ---
 
@@ -197,24 +197,15 @@ v4 turns delegated Agent work into an observable and verifiable delivery loop. T
 
 ### 📦 Tool Surfaces
 
-The default `compact` surface keeps every independently useful workflow while removing competing internal and maintenance entries from the model context.
+The v5 source branch uses **one `devcontrol` entrypoint** for the SQLite-managed task lifecycle instead of many overlapping orchestration tools. The 10 base tools are `devcontrol`, `code_insight`, `architecture`, `gentest`, `code_review`, `refactor`, `gencommit`, `git_work_report`, `ui_design_system`, and `ui_search`.
 
-- **🧭 Routing** (1) — `workflow`
-- **🔁 Plan State & Convergence** (3) — `plan_heartbeat`, `resume_plan`, `converge`
-- **🔄 Workflow Orchestration** (6) — `start_feature`, `start_bugfix`, `start_onboard`, `start_ui`, `start_product`, `start_ralph`
-- **📦 Project & Specification** (4) — `init_project`, `init_project_context`, `check_spec`, `estimate`
-- **🏗️ Architecture** (1) — `architecture`
-- **🔍 Code, Test & Git** (6) — `code_insight`, `gentest`, `code_review`, `refactor`, `gencommit`, `git_work_report`
-- **🎨 UI/UX Utilities** (2) — `ui_design_system`, `ui_search`
-- **🗣️ Structured Interview** (1) — `interview`
-
-That is **24 base compact tools**, plus **5 History Session tools by default** (`history_session_bootstrap|checkpoint|validate|search|read`) for a **29**-tool model surface. Set `MCP_HISTORY_SESSION=0|false|off` to hide History. When the full Memory stack is configured, six Memory tools are added dynamically, bringing the model-visible surface to **35** (or **30** if History is off):
+Five SQLite History Session tools are mandatory in v5 (`history_session_bootstrap`, `history_session_checkpoint`, `history_session_validate`, `history_session_search`, `history_session_read`). Do not set `MCP_HISTORY_SESSION=0`. When Memory is configured, six tools are added, bringing the default visible total to **21**:
 
 `search_memory`, `read_memory_asset`, `memorize_asset`, `update_memory_asset`, `delete_memory_asset`, `scan_and_extract_patterns`
 
-For compatibility and diagnostics, `MCP_TOOLSET=full` restores all **39 model tools**. The compact surface deliberately omits `add_feature`, `fix_bug`, `sync_ui_data`, and `ask_user`: their implementations remain available through orchestration, maintenance scripts, or full compatibility mode.
+For diagnostics, `MCP_TOOLSET=full` exposes the **24 v5 tools**. It does not restore removed v4 delegated-plan tools such as `converge`, `resume_plan`, or `plan_heartbeat`. Approval, task progress, and Gate evidence live under `devcontrol`.
 
-`workflow` is a **fallback tool-selection guide, not a natural-language intent classifier**. The Agent normally chooses the appropriate MCP tool directly from the current conversation, Skill, and tool descriptions. `scenario=auto` returns guidance only (`firstTool=null`); an explicit `scenario` returns deterministic guidance for a scenario the Agent has already selected.
+Published v4 installations use an older tool surface. Use the v5 development guide for v5-specific commands and upgrades rather than copying v4 examples into a v5 project.
 
 ### 📜 History Session (default ON) — lossless project handoff
 
@@ -223,13 +214,13 @@ Chat hosts forget. History Session keeps a **lossless, project-local archive** s
 **Why it matters**
 
 - Host context windows and “new chat” resets drop prior findings; 5.0.0 History persists them in **project-local SQLite by default on Node22+ Git projects**. Markdown under `docs/history-session/` is preserved for earlier installations and fallback mode (`MCP_HISTORY_STORAGE=files`).
-- **Default ON** and **no Qdrant / embedding stack** — works out of the box alongside the 24 base compact tools (29 model-visible tools total).
+- **Default ON** and **no Qdrant / embedding stack** — works out of the box alongside the 10 base compact tools (15 model-visible tools total in v5).
 - Complements, does not replace, the other layers:
 
 | Layer | Job | Typical tools |
 |---|---|---|
 | **History Session** | This project’s conversation handoff, verbatim user input, turn checkpoints | `history_session_*` |
-| **Delegated Plan** | Resumable steps, evidence, converge gates | `plan_heartbeat` / `resume_plan` / `converge` |
+| **DevControl v5** | SQLite-approved tasks, source scope, test evidence and verification | `devcontrol` |
 | **Memory** | Cross-repo reusable experience (needs `MEMORY_*`) | `search_memory` / `memorize_asset` |
 
 **How Agents use it**
@@ -421,7 +412,7 @@ v4.0.0 uses the official `@modelcontextprotocol/ext-apps` SDK and the stable `io
 - Memory Center uses a responsive master-detail layout for historical browsing, semantic search, full-content inspection, lifecycle state, evidence, stale marking, and confirmed deletion.
 - Feature and Bug Workbenches render a live plan stepper. The App polls `resume_plan` while visible, and progress advances only after the Agent records real step state through `plan_heartbeat`.
 - Product Workbench and Convergence Gate use the same developer-console design system for delivery paths, blockers, and evidence gaps.
-- `list_memory_assets` is an App-only action with `_meta.ui.visibility=["app"]`. It may appear in the raw `tools/list` response of an Apps-capable host, but compliant hosts must not offer it to the model. The model-visible count remains 24 by default or 30 with Memory.
+- `list_memory_assets` is an App-only action with `_meta.ui.visibility=["app"]`. It may appear in the raw `tools/list` response of an Apps-capable host, but compliant hosts must not offer it to the model. The v5 default model-visible count remains 15 (or 21 with Memory).
 - Clients without MCP Apps support continue to receive the normal text and `structuredContent` responses; no GUI capability is required for existing workflows.
 - Trace metadata passthrough remains available through `MCP_ENABLE_EXTENSIONS_CAPABILITY=1`.
 
@@ -989,7 +980,7 @@ This is a known [Cursor-side issue](https://forum.cursor.com/t/mcp-server-connec
 | `latched shared-process MCP routing disabled` + `ipcReady` timeout | Windows `mcpProcess` utility failed; legacy fallback discovers tools but Agent lease stays empty |
 | Settings green dot, Agent `No MCP servers available` | Renderer ↔ shared-process MCP routing not wired for this session |
 
-**What we do:** `tools/list` omits `outputSchema` by default, and the default compact model surface is 29 tools (24 base + 5 History Session). Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or restore the 39-tool compatibility surface with `MCP_TOOLSET=full`.
+**What we do in v5:** `tools/list` omits `outputSchema` by default, and the default compact model surface is 15 tools (10 base + 5 History Session). Structured output still works through `structuredContent` on `tools/call`. Restore output schemas with `MCP_INCLUDE_OUTPUT_SCHEMA=1`, or use the 24-tool v5 full surface with `MCP_TOOLSET=full`.
 
 **What you can try:**
 
