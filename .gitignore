@@ -1,0 +1,12 @@
+# devflow 运行时数据（属于每个项目自己，不进仓库）
+.devflow/
+.mcp-probe-kit/
+
+# 依赖与临时产物
+node_modules/
+*.log
+.DS_Store
+
+# 编辑器
+.idea/
+.vscode/

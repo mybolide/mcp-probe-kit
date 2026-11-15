@@ -1,0 +1,45 @@
+{
+  "name": "mcp-probe-kit",
+  "version": "6.0.0-alpha.1",
+  "description": "研发纪律内核 v6：门禁即内核、单工具 MCP、SQLite 单一真源、控制台随连接自动托管",
+  "type": "module",
+  "bin": {
+    "mcp-probe-kit": "bin/mcp-probe-kit.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "mcp": "node bin/mcp-probe-kit.js mcp"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "license": "MIT",
+  "mcpName": "io.github.mybolide/mcp-probe-kit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mybolide/mcp-probe-kit.git"
+  },
+  "homepage": "https://github.com/mybolide/mcp-probe-kit",
+  "bugs": {
+    "url": "https://github.com/mybolide/mcp-probe-kit/issues"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "devcontrol",
+    "development-discipline",
+    "sqlite",
+    "claude-code",
+    "cursor",
+    "codex",
+    "opencode"
+  ],
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ]
+}

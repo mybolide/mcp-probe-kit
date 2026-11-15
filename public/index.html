@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mcp-probe-kit 控制台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8f9fb; --side: #fff; --surface: #fff; --raised: #f4f7fb;
+        --stroke: #e3e7ef; --text: #17212f; --muted: #526275;
+        --blue: #1769d2; --green: #237c61; --warn: #a86b1a; --red: #c03744;
+        --radius: 16px;
+        --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html { font-size: 16px; }
+      body {
+        margin: 0; background: var(--bg); color: var(--text);
+        font-family: var(--font-ui); font-size: 15px; line-height: 1.6;
+        -webkit-font-smoothing: antialiased; display: grid;
+        grid-template-columns: 246px minmax(0, 1fr); align-items: start; min-height: 100vh;
+      }
+      button, input, select, textarea { font-family: inherit; font-size: inherit; }
+      button { cursor: pointer; }
+      .sidebar {
+        position: sticky; top: 0; height: 100vh; padding: 26px 14px 18px;
+        border-right: 1px solid var(--stroke); background: var(--side);
+        display: flex; flex-direction: column; gap: 6px;
+      }
+      .brand { display: flex; gap: 12px; align-items: center; padding: 0 10px 26px; }
+      .logo {
+        width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+        background: linear-gradient(140deg, #1769d2, #3f8bff); color: #fff;
+        font-weight: 760; letter-spacing: -0.5px; font-size: 15px;
+      }
+      .brand strong { display: block; font-size: 16px; letter-spacing: -0.5px; color: #16243a; font-weight: 750; }
+      .brand small { display: block; font-size: 12px; color: #5a6c81; }
+      .group-label { margin: 6px 14px 8px; font-size: 10.5px; letter-spacing: 0.09em; color: #64748b; font-weight: 700; }
+      .nav { display: flex; flex-direction: column; gap: 4px; }
+      .navbtn {
+        display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 9px 13px;
+        border: 1px solid transparent; border-radius: 11px; background: transparent;
+        color: #344258; font-size: 14.5px; font-weight: 560; text-align: left;
+        transition: background 0.14s, color 0.14s, border-color 0.14s;
+      }
+      .navbtn:hover { background: #f0f4f9; color: #1f344e; }
+      .navbtn.active { background: #eaf3ff; border-color: #d9eafb; color: #0758b7; font-weight: 700; }
+      .navbtn .count {
+        margin-left: auto; font-size: 11.5px; font-weight: 700; color: #536880;
+        background: #eef2f7; border-radius: 999px; padding: 1px 7px;
+      }
+      .navbtn.active .count { background: #d7e9ff; color: #0758b7; }
+      .sidefooter { margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid #edf0f4; font-size: 12.5px; color: #5a6c81; }
+      .sidefooter .conn { font-weight: 650; color: var(--green); }
+      .sidefooter .conn.off { color: var(--warn); }
+      .main { width: 100%; max-width: 1400px; margin: 0 auto; padding: 28px clamp(22px, 3.4vw, 56px) 56px; }
+      .bar { display: flex; align-items: center; gap: 16px; padding: 0 0 18px; margin-bottom: 26px; border-bottom: 1px solid #e4e9f0; flex-wrap: wrap; }
+      .breadcrumbs { display: flex; gap: 8px; align-items: baseline; font-size: 13.5px; color: #4f6077; }
+      .breadcrumbs b { color: #233c60; font-weight: 720; }
+      .actions { margin-left: auto; display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+      .badge {
+        font-size: 12px; color: #536880; background: #fff; border: 1px solid #e0e6ee;
+        border-radius: 9px; padding: 6px 11px; font-family: var(--font-mono);
+      }
+      .btn {
+        font-size: 13.5px; min-height: 36px; padding: 7px 14px; background: #fff; color: #24568a;
+        border: 1px solid #d8e2ee; border-radius: 10px; font-weight: 630;
+      }
+      .btn:hover { border-color: #aec9e8; background: #eff6ff; }
+      .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+      .btn.primary:hover { background: #1259b5; }
+      .btn.danger { color: var(--red); }
+      .btn.danger:hover { border-color: #f0c2c8; background: #fdf3f4; }
+      .sectionhead { margin: 0 0 22px; }
+      .eyebrow { font-size: 10.5px; letter-spacing: 0.105em; color: #1b65bc; font-weight: 770; }
+      h1 { font-size: clamp(26px, 2.4vw, 34px); letter-spacing: -1px; line-height: 1.2; color: #172437; font-weight: 760; margin: 8px 0 10px; }
+      h2 { font-size: 18px; letter-spacing: -0.35px; color: #1d2c40; font-weight: 710; margin: 0 0 14px; }
+      .sub { font-size: 14.5px; color: #526276; margin: 0; max-width: 880px; }
+      .panel { background: var(--surface); border: 1px solid #e2e7ee; border-radius: var(--radius); box-shadow: 0 2px 11px #152b4c07; padding: 22px 24px; }
+      .panel + .panel { margin-top: 18px; }
+      .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+      .metric { background: #fff; border: 1px solid #e2e7ee; border-radius: 14px; padding: 14px 16px; }
+      .metric strong { display: block; font-size: 26px; font-weight: 740; letter-spacing: -0.8px; color: #172437; }
+      .metric span { font-size: 12.5px; color: #5a6c81; }
+      .metric.warn strong { color: var(--warn); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+      .card {
+        background: #fff; border: 1px solid #e2e7ee; border-radius: 14px; padding: 14px 16px;
+        box-shadow: 0 1px 6px #152b4c06; border-left: 3px solid #cfd8e3;
+      }
+      .card.req { border-left-color: var(--blue); }
+      .card.bug { border-left-color: var(--red); }
+      .card.q { border-left-color: var(--warn); }
+      .card.mem { border-left-color: #7a52c7; }
+      .card strong { display: block; font-size: 14.5px; color: #1c2b3f; font-weight: 680; margin-bottom: 4px; }
+      .mu { font-size: 12.5px; color: #61738a; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .row.wrap { margin-top: 10px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+      th { text-align: left; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #6b7c92; font-weight: 700; padding: 8px 10px; border-bottom: 1px solid #e6ebf2; }
+      td { padding: 10px; border-bottom: 1px solid #eef1f5; color: #26364a; vertical-align: top; }
+      tr:last-child td { border-bottom: 0; }
+      code, .mono { font-family: var(--font-mono); font-size: 12.5px; color: #33465d; }
+      .pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #eef2f7; color: #536880; }
+      .pill.doing { background: #e8f1ff; color: #1769d2; }
+      .pill.done { background: #e7f5ee; color: var(--green); }
+      .pill.parked { background: #fdf1e3; color: var(--warn); }
+      .pill.bad { background: #fdeef0; color: var(--red); }
+      .pill.good { background: #e7f5ee; color: var(--green); }
+      input, select, textarea {
+        border: 1px solid #dbe2ec; border-radius: 9px; padding: 7px 9px; background: #fff; color: #1c2b3f;
+      }
+      input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px solid #bcd6fb; outline-offset: 1px; }
+      textarea { width: 100%; resize: vertical; line-height: 1.55; }
+      .form-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+      .form-row > input, .form-row > select { flex: 1; min-width: 120px; }
+      .empty { font-size: 13px; color: #7285a0; padding: 10px 2px; }
+      .outbox { margin-top: 22px; background: #fff; border: 1px solid #e2e7ee; border-radius: 14px; padding: 12px 16px; }
+      .outbox summary { cursor: pointer; font-size: 13px; font-weight: 650; color: #3b4f68; }
+      .outbox pre { background: #f7f9fc; border: 1px solid #e8edf4; border-radius: 10px; padding: 12px; font-size: 12px; max-height: 260px; overflow: auto; margin: 10px 0 0; }
+      .view[hidden] { display: none; }
+      @media (max-width: 900px) {
+        body { grid-template-columns: 1fr; }
+        .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--stroke); }
+        .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+    </style>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">mp</div>
+        <div><strong>mcp-probe-kit</strong><small>研发纪律内核</small></div>
+      </div>
+      <div class="group-label">项目</div>
+      <nav class="nav">
+        <button class="navbtn active" data-nav="inbox">收件箱 <span class="count" id="n-inbox">0</span></button>
+        <button class="navbtn" data-nav="tasks">任务 <span class="count" id="n-tasks">0</span></button>
+        <button class="navbtn" data-nav="release">发布 <span class="count" id="n-rel">0</span></button>
+        <button class="navbtn" data-nav="memory">记忆 <span class="count" id="n-mem">0</span></button>
+        <button class="navbtn" data-nav="docs">文档</button>
+        <button class="navbtn" data-nav="evidence">证据 <span class="count" id="n-runs">0</span></button>
+      </nav>
+      <select id="project-switch" style="margin: 10px 8px 0; width: calc(100% - 16px)" hidden></select>
+      <div class="sidefooter">
+        <div class="conn" id="conn">连接中…</div>
+        <div id="meta" class="mu"></div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="bar">
+        <div class="breadcrumbs"><b id="view-title">收件箱</b><span id="project" class="mu"></span></div>
+        <div class="actions">
+          <span class="badge" id="head">HEAD —</span>
+          <button class="btn" id="refresh">刷新</button>
+        </div>
+      </div>
+
+      <section class="view" data-view="inbox">
+        <div class="sectionhead">
+          <span class="eyebrow">INBOX</span>
+          <h1>需要你决定的</h1>
+          <p class="sub">批准需求与 Path、回答 Agent 的提问、裁决 Bug、把隔离区里的经验提炼成通则。其余工序由内核和 Agent 走完。</p>
+        </div>
+        <div class="metrics" id="metrics"></div>
+        <div class="grid" id="inbox"></div>
+        <div class="panel" style="margin-top: 18px">
+          <h2>新建</h2>
+          <div class="form-row">
+            <select id="kind"><option value="requirement">需求</option><option value="bug">Bug</option></select>
+            <input id="title" placeholder="标题" />
+          </div>
+          <textarea id="detail" rows="3" placeholder="目标 / 现象（需求填目标，Bug 填复现步骤）"></textarea>
+          <div class="form-row" style="margin-top: 8px">
+            <input id="assertion" placeholder="验收断言，例如 npm test :: exit==0" />
+            <button class="btn primary" id="create" style="flex: 0 0 auto">提交</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="tasks" hidden>
+        <div class="sectionhead">
+          <span class="eyebrow">TASKS</span>
+          <h1>任务与覆盖</h1>
+          <p class="sub">下一步由内核排序：先收口、再领依赖已满足的、再补拆没有被任务覆盖的验收。</p>
+        </div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>ID</th><th>类型</th><th>标题</th><th>状态</th><th>验收</th><th>操作</th></tr></thead>
+            <tbody id="tasks"></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h2>需求 / Path</h2>
+          <div id="reqs"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="release" hidden>
+        <div class="sectionhead">
+          <span class="eyebrow">RELEASE</span>
+          <h1>发布</h1>
+          <p class="sub">一次交付 = 一组任务。全部任务 done 才能 ship；没做完的会在这里点出来。</p>
+        </div>
+        <div class="panel"><div id="releases"></div></div>
+      </section>
+
+      <section class="view" data-view="memory" hidden>
+        <div class="sectionhead">
+          <span class="eyebrow">MEMORY</span>
+          <h1>跨项目记忆</h1>
+          <p class="sub">只收「别人以后再遇到还会用到」的经验。不够通用的进隔离区，改一句话就能收进来。</p>
+        </div>
+        <div class="panel">
+          <h2>待提炼</h2>
+          <div class="grid" id="mem-cand"></div>
+        </div>
+        <div class="panel">
+          <h2>已收录</h2>
+          <table>
+            <thead><tr><th>ID</th><th>标题</th><th>类型</th><th>出处</th><th>命中</th></tr></thead>
+            <tbody id="mem-active"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="view" data-view="docs" hidden>
+        <div class="sectionhead">
+          <span class="eyebrow">DOCS</span>
+          <h1>登记文档</h1>
+          <p class="sub">登记后改动会被 doctor 抓成漂移：<code>mcp-probe-kit doc add &lt;文件&gt;</code>。</p>
+        </div>
+        <div class="panel"><div id="docs"></div></div>
+      </section>
+
+      <section class="view" data-view="evidence" hidden>
+        <div class="sectionhead">
+          <span class="eyebrow">EVIDENCE</span>
+          <h1>每次重跑</h1>
+          <p class="sub">收口时在干净检出里重跑验收：命令、退出码、HEAD、scope 指纹，全部可复核。</p>
+        </div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>时间</th><th>任务</th><th>命令</th><th>退出</th><th>HEAD</th><th>指纹</th><th>耗时</th></tr></thead>
+            <tbody id="runs"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <details class="outbox">
+        <summary>输出（最近一次动作的结果）</summary>
+        <pre id="out">—</pre>
+      </details>
+    </main>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      const show = (v) => ($("out").textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2));
+      const VIEWS = { inbox: "收件箱", tasks: "任务", release: "发布", memory: "记忆", docs: "文档", evidence: "证据" };
+      let currentProject = localStorage.getItem("mcp-probe-kit.project") || "";
+      const tag = (s) => `<span class="pill ${s === "doing" ? "doing" : s === "done" ? "done" : s === "parked" ? "parked" : ""}">${esc(s)}</span>`;
+
+      async function api(path, body) {
+        const res = await fetch(path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {});
+        return res.json();
+      }
+      async function owner(action, payload) {
+        const res = await api("/api/owner", { action, payload, project: currentProject || undefined });
+        show(res);
+        if (res.ok) await tick();
+        return res;
+      }
+      function switchView(view) {
+        for (const btn of document.querySelectorAll(".navbtn")) btn.classList.toggle("active", btn.dataset.nav === view);
+        for (const sec of document.querySelectorAll(".view")) sec.hidden = sec.dataset.view !== view;
+        $("view-title").textContent = VIEWS[view] ?? view;
+      }
+
+      function renderMetrics(d) {
+        const c = d.counts ?? {};
+        const items = [
+          ["待领取", c.todo ?? 0, ""],
+          ["在办", c.doing ?? 0, "warn"],
+          ["阻塞", c.blocked ?? 0, c.blocked ? "warn" : ""],
+          ["完成", c.done ?? 0, ""],
+          ["parked", c.parked ?? 0, c.parked ? "warn" : ""],
+        ];
+        $("metrics").innerHTML = items.map(([label, n, cls]) => `<div class="metric ${cls}"><strong>${n}</strong><span>${label}</span></div>`).join("");
+      }
+
+      function renderInbox(s) {
+        const cards = [];
+        for (const r of s.requirements.filter((x) => x.status === "draft")) {
+          const paths = s.paths.filter((p) => !p.requirement_id).map((p) => `<button class="btn primary" data-approve="${r.id}" data-path="${p.id}">批准 + ${esc(p.id)}</button>`).join("");
+          cards.push(`<div class="card req"><strong>${esc(r.id)} ${esc(r.title)}</strong>
+            <div class="mu">待批准需求 · ${r.acceptance.length} 条验收</div>
+            <div class="row wrap">${paths || `<span class="mu">没有可绑定的 Path 草稿</span>`}</div></div>`);
+        }
+        for (const q of s.questions.filter((x) => x.status === "open")) {
+          cards.push(`<div class="card q"><strong>${esc(q.id)} ${esc(q.question)}</strong>
+            <div class="mu">Agent 在等回答</div>
+            <div class="row wrap"><input id="ans-${q.id}" placeholder="回答" /><button class="btn primary" data-answer="${q.id}">回答</button></div></div>`);
+        }
+        for (const b of (s.bugs || []).filter((x) => x.status === "new")) {
+          cards.push(`<div class="card bug"><strong>${esc(b.id)} ${esc(b.title)}</strong>
+            <div class="mu">${esc(b.severity)} · ${esc(b.symptom || "（无现象描述）")}</div>
+            <div class="row wrap"><button class="btn primary" data-decide="${b.id}" data-decision="accept">采纳</button><button class="btn danger" data-decide="${b.id}" data-decision="reject">驳回</button></div></div>`);
+        }
+        for (const t of s.tasks.filter((x) => x.status === "parked")) {
+          cards.push(`<div class="card"><strong>${esc(t.id)} 已 parked</strong>
+            <div class="mu">${esc(t.title)} · 连续失败或等待超时</div>
+            <div class="row wrap"><button class="btn" data-reopen="${t.id}">打回重做</button></div></div>`);
+        }
+        for (const m of s.memories || []) {
+          cards.push(`<div class="card mem"><strong>${esc(m.title)}</strong>
+            <div class="mu">待提炼 · ${esc(m.kind)}${m.project ? ` · 出自 ${esc(m.project)}` : ""}</div>
+            <textarea id="mem-${m.id}" rows="3" style="margin-top:8px">${esc(m.body)}</textarea>
+            <div class="row wrap"><button class="btn primary" data-mem-accept="${m.id}">收进记忆</button><button class="btn danger" data-mem-drop="${m.id}">丢弃</button></div></div>`);
+        }
+        $("inbox").innerHTML = cards.join("") || `<div class="empty">没有待处理项，交给 Agent 继续跑就行。</div>`;
+        $("n-inbox").textContent = String(cards.length);
+      }
+
+      function taskRow(t) {
+        return `<tr><td class="mono">${esc(t.id)}</td><td>${esc(t.kind)}</td><td>${esc(t.title)}</td><td>${tag(t.status)}</td>
+          <td class="mu">${t.acceptance.map((a) => esc(a.assertion)).join("<br>")}</td>
+          <td><div class="row">
+            <button class="btn" data-handoff="${t.id}">交接卡</button>
+            ${t.status === "done" || t.status === "parked" ? `<button class="btn danger" data-reopen="${t.id}">打回</button>` : ""}
+            ${t.status === "doing" ? `<button class="btn danger" data-override="${t.id}">放行</button>` : ""}
+          </div></td></tr>`;
+      }
+      function renderTasks(s) {
+        $("tasks").innerHTML = s.tasks.map(taskRow).join("") || `<tr><td colspan="6" class="empty">还没有任务</td></tr>`;
+        $("n-tasks").textContent = String(s.tasks.length);
+        const covOf = (id) => (s.digest.plan || []).find((p) => p.id === id);
+        $("reqs").innerHTML = s.requirements
+          .map((r) => {
+            const p = covOf(r.id);
+            const cov = p ? `<span class="pill ${p.missing.length ? "parked" : "good"}">覆盖 ${esc(p.covered)}</span>` : "";
+            const miss = p && p.missing.length ? `<div class="mu" style="color:#a86b1a">待补拆：${p.missing.map(esc).join("；")}</div>` : "";
+            return `<div class="card" style="margin-bottom:10px"><strong>${esc(r.id)} ${esc(r.title)} ${cov}</strong>
+              <div class="mu">${r.acceptance.map((a) => esc(a)).join(" · ")}</div>${miss}</div>`;
+          })
+          .join("") || `<div class="empty">没有需求</div>`;
+      }
+
+      function renderReleases(s) {
+        const rows = s.releases || [];
+        $("n-rel").textContent = String(rows.filter((r) => r.status !== "shipped").length);
+        $("releases").innerHTML =
+          rows
+            .map((r) => {
+              const pill = r.status === "shipped" ? `<span class="pill good">已发布</span>` : r.pending ? `<span class="pill doing">进行中</span>` : `<span class="pill parked">待发布</span>`;
+              const tasks = r.tasks.map((t) => `<span class="pill ${t.status === "done" ? "done" : ""}">${esc(t.id)} ${esc(t.status)}</span>`).join(" ") || `<span class="mu">还没有挂任务</span>`;
+              const ship = r.status !== "shipped" && r.tasks.length && r.pending === 0 ? `<button class="btn primary" data-ship="${r.id}">ship ${esc(r.id)}</button>` : "";
+              return `<div class="card" style="margin-bottom:12px"><strong>${pill} ${esc(r.title)} <span class="mu">${esc(r.id)}${r.target_date ? ` · ${esc(r.target_date)}` : ""}</span></strong>
+                <div class="mu">${r.tasks.length - r.pending}/${r.tasks.length} 个任务完成</div>
+                <div class="row wrap">${tasks}</div>
+                <div class="row wrap">${ship}</div></div>`;
+            })
+            .join("") || `<div class="empty">还没有发布：mcp-probe-kit release create "v0.1"</div>`;
+      }
+
+      function renderMemory(s) {
+        const cand = (s.memories || []).map((m) => `<div class="card mem"><strong>${esc(m.title)}</strong>
+            <div class="mu">待提炼 · ${esc(m.kind)}${m.project ? ` · 出自 ${esc(m.project)}` : ""}</div>
+            <textarea id="mem2-${m.id}" rows="3" style="margin-top:8px">${esc(m.body)}</textarea>
+            <div class="row wrap"><button class="btn primary" data-mem-accept="${m.id}">收进记忆</button><button class="btn danger" data-mem-drop="${m.id}">丢弃</button></div></div>`);
+        $("mem-cand").innerHTML = cand.join("") || `<div class="empty">没有待提炼的经验。</div>`;
+        $("n-mem").textContent = String((s.memoriesActive || []).length);
+        $("mem-active").innerHTML = (s.memoriesActive || [])
+          .map((m) => `<tr><td class="mono">${esc(m.id)}</td><td>${esc(m.title)}</td><td>${esc(m.kind)}</td><td class="mu">${esc(m.project || "—")}</td><td>${m.hits ?? 0}</td></tr>`)
+          .join("") || `<tr><td colspan="5" class="empty">还没有收录任何经验</td></tr>`;
+      }
+
+      function renderDocs(s) {
+        $("docs").innerHTML = (s.docs || [])
+          .map((d) => {
+            const pill = d.drift === "missing" ? `<span class="pill bad">文件丢失</span>` : d.drift === "changed" ? `<span class="pill parked">漂移</span>` : `<span class="pill good">OK</span>`;
+            return `<div class="card" style="margin-bottom:10px"><strong>${pill} <span class="mono">${esc(d.path)}</span></strong>
+              <div class="mu">${esc(d.title || "")}</div></div>`;
+          })
+          .join("") || `<div class="empty">还没有登记文档：mcp-probe-kit doc add &lt;文件&gt;</div>`;
+      }
+
+      function renderEvidence(s) {
+        $("n-runs").textContent = String((s.runs || []).length);
+        $("runs").innerHTML = (s.runs || [])
+          .map(
+            (r) => `<tr><td class="mu">${esc((r.started_at || "").slice(11, 19))}</td>
+              <td class="mono">${esc(r.task_id || "")}</td>
+              <td><code>${esc(r.command)}</code></td>
+              <td>${r.exit_code === 0 ? `<span class="pill good">0</span>` : `<span class="pill bad">${r.exit_code}</span>`}</td>
+              <td class="mono">${esc((r.head || "").slice(0, 8))}</td>
+              <td class="mono">${esc((r.fingerprint || "").slice(0, 8))}</td>
+              <td class="mu">${r.duration_ms}ms</td></tr>`,
+          )
+          .join("") || `<tr><td colspan="7" class="empty">还没有重跑记录</td></tr>`;
+      }
+
+      async function load() {
+        const q = currentProject ? `?project=${encodeURIComponent(currentProject)}` : "";
+        const s = await api(`/api/state${q}`);
+        if (s.project?.root) currentProject = s.project.root;
+        const switcher = $("project-switch");
+        if ((s.projects || []).length > 1) {
+          switcher.hidden = false;
+          switcher.innerHTML = s.projects.map((p) => `<option value="${esc(p.root)}"${p.current ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+        } else {
+          switcher.hidden = true;
+        }
+        $("project").textContent = `· ${s.project?.name ?? ""} · ${s.digest.requirement?.id ?? ""} ${s.digest.path?.id ?? ""}`.trim();
+        $("head").textContent = s.digest.head ? `HEAD ${s.digest.head}` : "HEAD —";
+        $("meta").textContent = `${s.digest.path?.allowed?.join(", ") ?? ""} · r${s.digest.task?.reviewRound ?? 0}`;
+        renderMetrics(s.digest);
+        renderInbox(s);
+        renderTasks(s);
+        renderReleases(s);
+        renderMemory(s);
+        renderDocs(s);
+        renderEvidence(s);
+        return s;
+      }
+
+      async function tick() {
+        if (document.hidden) return;
+        try {
+          await load();
+          $("conn").textContent = `已连接 · ${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`;
+          $("conn").classList.remove("off");
+        } catch {
+          $("conn").textContent = "重连中…";
+          $("conn").classList.add("off");
+        }
+      }
+
+      document.addEventListener("click", async (e) => {
+        const nav = e.target.closest("[data-nav]");
+        if (nav) return switchView(nav.dataset.nav);
+        const b = e.target.closest("button");
+        if (!b) return;
+        if (b.id === "refresh") return tick();
+        if (b.id === "create") {
+          const kind = $("kind").value;
+          const payload =
+            kind === "bug"
+              ? { type: "bug", title: $("title").value, symptom: $("detail").value, expected: "", repro: [$("detail").value] }
+              : { type: "requirement", title: $("title").value, goal: $("detail").value, acceptance: [$("assertion").value || "npm test :: exit==0"] };
+          return owner("intake", payload);
+        }
+        if (b.dataset.approve) return owner("approve", { requirementId: b.dataset.approve, pathId: b.dataset.path });
+        if (b.dataset.answer) return owner("answer", { questionId: b.dataset.answer, answer: ($(`ans-${b.dataset.answer}`) || {}).value });
+        if (b.dataset.decide) return owner("decide", { bugId: b.dataset.decide, decision: b.dataset.decision });
+        if (b.dataset.handoff) {
+          const res = await owner("handoff", { taskId: b.dataset.handoff });
+          if (res.ok && navigator.clipboard) await navigator.clipboard.writeText(res.result.text);
+          return;
+        }
+        if (b.dataset.reopen) return owner("reopen", { taskId: b.dataset.reopen, reason: prompt("打回理由") ?? "" });
+        if (b.dataset.override) {
+          const code = prompt("放行哪个拦截？E_ASSERTION_FAILED / E_DIFF_BUDGET / E_DEP_OR_TEST_TOUCH / E_TEST_CONFIG_TOUCH / E_SCOPE_VIOLATION", "E_ASSERTION_FAILED");
+          if (!code) return;
+          const reason = prompt("override 理由（≥30 字，写进事件日志）");
+          if (!reason) return;
+          return owner("override", { taskId: b.dataset.override, code, mode: "waive", reason });
+        }
+        if (b.dataset.memAccept) {
+          const id = b.dataset.memAccept;
+          const box = $(`mem-${id}`) || $(`mem2-${id}`);
+          return owner("memory.edit", { id, body: box ? box.value : undefined });
+        }
+        if (b.dataset.memDrop) return owner("memory.drop", { id: b.dataset.memDrop });
+        if (b.dataset.ship) return owner("release.ship", { id: b.dataset.ship });
+      });
+
+      $("project-switch").addEventListener("change", (e) => {
+        currentProject = e.target.value;
+        localStorage.setItem("mcp-probe-kit.project", currentProject);
+        tick();
+      });
+
+      switchView("inbox");
+      tick();
+      setInterval(tick, 4000);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) tick();
+      });
+    </script>
+  </body>
+</html>
