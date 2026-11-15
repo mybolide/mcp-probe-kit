@@ -1,4 +1,4 @@
-# devflow 运行时数据（属于每个项目自己，不进仓库）
+# mcp-probe-kit 运行时数据（属于每个项目自己，不进仓库）
 .devflow/
 .mcp-probe-kit/
 

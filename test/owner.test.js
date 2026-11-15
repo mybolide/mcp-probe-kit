@@ -163,7 +163,7 @@ test("MCP：initialize / tools/list / claim 默认 actor / bootstrap", async () 
   const task = newTask(db, root, reqId);
   const mcp = startMcp(root);
   try {
-    const init = await mcp.call("initialize", { protocolVersion: "2025-06-18" });
+    const init = await mcp.call("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "1" } });
     assert.match(init.result.instructions, /bootstrap/);
     const list = await mcp.call("tools/list");
     const tool = list.result.tools[0];
@@ -427,22 +427,29 @@ test("MCP 客户端提前断开不崩（EPIPE 容错）", async () => {
   assert.doesNotMatch(stderr, /EPIPE|Unhandled/);
 });
 
-test("MCP 协议协商：认识就回显，不认识回落到最新并声明支持列表", async () => {
+test("MCP 协议协商（官方 SDK）：支持的就回显，不认识的回落而不是报错", async () => {
   const root = makeRepo();
   initFlow(root);
+  const init = (protocolVersion) => ({ protocolVersion, capabilities: {}, clientInfo: { name: "t", version: "1" } });
   const mcp = startMcp(root);
   try {
-    const known = await mcp.call("initialize", { protocolVersion: "2025-03-26" });
+    const known = await mcp.call("initialize", init("2025-03-26"));
     assert.equal(known.result.protocolVersion, "2025-03-26");
-    assert.equal(known.result._meta.negotiated, true);
+    assert.equal(known.result.serverInfo.name, "mcp-probe-kit");
     assert.equal(known.result.serverInfo.version, "6.0.0-alpha.1");
-
-    const unknown = await mcp.call("initialize", { protocolVersion: "1999-01-01" });
-    assert.equal(unknown.result.protocolVersion, "2025-06-18");
-    assert.equal(unknown.result._meta.negotiated, false);
-    assert.deepEqual(unknown.result._meta.supported, ["2025-06-18", "2025-03-26"]);
+    assert.match(known.result.instructions, /bootstrap/);
   } finally {
     mcp.close();
+  }
+
+  const mcp2 = startMcp(root);
+  try {
+    const unknown = await mcp2.call("initialize", init("1999-01-01"));
+    assert.ok(unknown.result, "不认识的版本不能报错");
+    assert.notEqual(unknown.result.protocolVersion, "1999-01-01", "不能回显一个自己都不支持的版本");
+    assert.match(unknown.result.protocolVersion, /^\d{4}-\d{2}-\d{2}$/);
+  } finally {
+    mcp2.close();
   }
 });
 

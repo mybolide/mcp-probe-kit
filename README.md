@@ -19,13 +19,14 @@
 ```bash
 # Node ≥ 22.5（需要内置 node:sqlite 的 DatabaseSync），git ≥ 2.30
 node -v && git --version
+npm install          # 唯一依赖：@modelcontextprotocol/sdk
 
 cd mcp-probe-kit
 npm link            # 之后任意目录可用 mcp-probe-kit
 # 或者不 link，直接用绝对路径：node /path/to/mcp-probe-kit/bin/mcp-probe-kit.js ...
 ```
 
-无需 build、无运行时依赖、不联网。
+无需 build；运行时依赖只有官方 `@modelcontextprotocol/sdk`（协议层），业务与存储全部用 Node 内置模块（`node:sqlite` / `node:http` / `node:child_process`），不联网。
 
 ## 2. 在项目里初始化
 

@@ -41,5 +41,8 @@
     "scripts",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2"
+  }
 }

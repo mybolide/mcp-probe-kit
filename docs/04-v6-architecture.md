@@ -108,9 +108,11 @@ Agent 侧纪律（`AGENTS.md` 与 MCP `instructions` 同源）：**只调用 `ac
 
 ## 5. 协议
 
-`src/protocol.js`：`SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26"]`，`LATEST_PROTOCOL = 2025-06-18`。
-`initialize` 回显客户端版本（若支持），否则回落 `LATEST` 并在 `_meta.negotiated=false`、`_meta.supported` 里说明；未知版本不报错。
-v5 的 `2026-07-28` dual-era 属于待办：等客户端普遍升级后再加，加的时候只改这一处。
+**协议层交给官方 SDK**：`@modelcontextprotocol/sdk` 的 `McpServer` + `StdioServerTransport`。
+- `initialize` 版本协商、`tools/list`、`tools/call`、错误码、取消、通知，全部由 SDK 按规范实现，不再手写 JSON-RPC。
+- 业务在 `dispatch()` 里，SDK 只负责协议；工具 schema 用 zod 声明，SDK 负责转换成 JSON Schema 并做参数校验。
+- SDK 的 `StdioServerTransport` 不监听 stdin EOF，`runMcp` 自己补了 `end`/`close` 收尾，客户端断开即退出。
+- 工具名 `mcp-probe-kit`，serverInfo 同名，版本取 `src/protocol.js::VERSION`。
 
 ## 6. 版本与目录
 
